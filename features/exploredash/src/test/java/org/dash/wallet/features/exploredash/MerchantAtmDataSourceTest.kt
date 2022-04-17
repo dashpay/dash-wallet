@@ -23,11 +23,9 @@ import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.MerchantAtmDataSource
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
-import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.MerchantInfo
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.junit.Test
-import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.kotlin.*
 

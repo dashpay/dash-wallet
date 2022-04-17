@@ -17,45 +17,35 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Application
-import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
+import android.os.Bundle
 import androidx.core.os.bundleOf
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.ui.InputParser.StringInputParser
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
-import de.schildbach.wallet.ui.send.SweepWalletActivity
-import de.schildbach.wallet_test.R
-import org.bitcoinj.core.PrefixedChecksummedBytes
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel
 class MainActivityViewModel @Inject constructor(
-    application: Application,
     private val analytics: AnalyticsService,
     private val clipboardManager: ClipboardManager
-) : AndroidViewModel(application) {
-
-    companion object {
-        private val log = LoggerFactory.getLogger(MainActivityViewModel::class.java)
-    }
+) : ViewModel() {
+    val onTransactionsUpdated = SingleLiveEvent<Unit>()
 
     fun logEvent(event: String) {
         analytics.logEvent(event, bundleOf())
     }
 
-    private fun handlePaste() {
+    fun logError(ex: Exception, details: String) {
+        analytics.logError(ex, details)
+    }
+
+    fun getClipboardInput(): String {
         var input: String? = null
 
         if (clipboardManager.hasPrimaryClip()) {
-            val clip = clipboardManager.primaryClip ?: return
+            val clip = clipboardManager.primaryClip ?: return ""
             val clipDescription = clip.description
 
             if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
@@ -67,53 +57,6 @@ class MainActivityViewModel @Inject constructor(
             }
         }
 
-        if (input != null) {
-            handleString(
-                input,
-                R.string.scan_to_pay_error_dialog_title,
-                R.string.scan_to_pay_error_dialog_message
-            )
-        } else {
-//            baseAlertDialogBuilder.title = getString(R.string.scan_to_pay_error_dialog_title)
-//            baseAlertDialogBuilder.message =
-//                getString(R.string.scan_to_pay_error_dialog_message_no_data)
-//            baseAlertDialogBuilder.neutralText = getString(R.string.button_dismiss)
-//            alertDialog = baseAlertDialogBuilder.buildAlertDialog()
-//            alertDialog.show()
-        }
-    }
-
-    private fun handleString(
-        input: String,
-        errorDialogTitleResId: Int,
-        cannotClassifyCustomMessageResId: Int
-    ) {
-        object : StringInputParser(input, true) {
-            override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
-                SendCoinsInternalActivity.start(this@WalletActivity, paymentIntent, true)
-            }
-
-            override fun handlePrivateKey(key: PrefixedChecksummedBytes) {
-                SweepWalletActivity.start(this@WalletActivity, key, true)
-            }
-
-            @Throws(VerificationException::class)
-            override fun handleDirectTransaction(tx: Transaction) {
-                application.processDirectTransaction(tx)
-            }
-
-            override fun error(x: Exception, messageResId: Int, vararg messageArgs: Any) {
-                baseAlertDialogBuilder.title = getString(errorDialogTitleResId)
-                baseAlertDialogBuilder.message = getString(messageResId, *messageArgs)
-                baseAlertDialogBuilder.neutralText = getString(R.string.button_dismiss)
-                alertDialog = baseAlertDialogBuilder.buildAlertDialog()
-                alertDialog.show()
-            }
-
-            override fun cannotClassify(input: String) {
-                AbstractWalletActivity.log.info("cannot classify: '{}'", input)
-                error(null, cannotClassifyCustomMessageResId, input)
-            }
-        }.parse()
+        return input ?: ""
     }
 }

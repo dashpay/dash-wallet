@@ -42,8 +42,8 @@ import kotlin.coroutines.resumeWithException
 class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
     companion object {
         private const val ICON_RES_ARG = "icon_res"
-        private const val TITLE_ARG = "title"
-        private const val MESSAGE_ARG = "message"
+        const val TITLE_ARG = "title"
+        const val MESSAGE_ARG = "message"
         private const val POS_BUTTON_ARG = "positive_text"
         private const val NEG_BUTTON_ARG = "negative_text"
 
@@ -63,8 +63,9 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
             )
         }
 
+        @JvmStatic
         fun create(
-            @DrawableRes icon: Int,
+            @DrawableRes icon: Int?,
             title: String,
             message: String,
             negativeButtonText: String,
@@ -103,6 +104,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
     }
 
     private var onResultListener: ((Boolean?) -> Unit)? = null
+    var isMessageSelectable = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -140,6 +142,8 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
 
         if (isMessageShown) {
             messageView.post {
+                messageView.setTextIsSelectable(isMessageSelectable)
+
                 if (messageView.lineCount > 3) {
                     titleView?.gravity = Gravity.START
                     messageView.gravity = Gravity.START

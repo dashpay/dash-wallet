@@ -17,12 +17,7 @@
 
 package de.schildbach.wallet.ui;
 
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.net.Uri;
-
-import androidx.appcompat.app.AlertDialog;
 
 import com.google.common.hash.Hashing;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -47,7 +42,6 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.protocols.payments.PaymentSession;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,8 +54,6 @@ import java.security.KeyStoreException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.regex.Pattern;
-
-import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
@@ -421,27 +413,6 @@ public abstract class InputParser {
         log.info("cannot classify: '{}'", input);
 
         error(null, R.string.input_parser_cannot_classify, input);
-    }
-
-    public static void dialog(final Context context,
-                              @Nullable final OnClickListener dismissListener,
-                              final int titleResId,
-                              final int messageResId, final Object... messageArgs) {
-        dialog(context, dismissListener, titleResId, context.getString(messageResId, messageArgs));
-    }
-
-    public static void dialog(final Context context,
-                              @Nullable final OnClickListener dismissListener,
-                              final int titleResId,
-                              String message) {
-        final BaseAlertDialogBuilder inputParserAlertDialogBuilder = new BaseAlertDialogBuilder(context);
-        if (titleResId != 0){
-            inputParserAlertDialogBuilder.setTitle(context.getString(titleResId));
-        }
-        inputParserAlertDialogBuilder.setMessage(message);
-        final AlertDialog alertDialog = inputParserAlertDialogBuilder.buildAlertDialog();
-        alertDialog.setButton(DialogInterface.BUTTON_NEUTRAL, context.getString(R.string.button_dismiss), dismissListener);
-        alertDialog.show();
     }
 
     private static final Pattern PATTERN_BITCOIN_ADDRESS = Pattern
