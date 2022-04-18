@@ -20,7 +20,6 @@ package org.dash.wallet.common.ui.dialogs
 import android.content.DialogInterface
 import android.graphics.drawable.InsetDrawable
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -32,7 +31,6 @@ import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
-import kotlinx.android.synthetic.main.dialog_title.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
@@ -42,8 +40,8 @@ import kotlin.coroutines.resumeWithException
 class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
     companion object {
         private const val ICON_RES_ARG = "icon_res"
-        const val TITLE_ARG = "title"
-        const val MESSAGE_ARG = "message"
+        private const val TITLE_ARG = "title"
+        private const val MESSAGE_ARG = "message"
         private const val POS_BUTTON_ARG = "positive_text"
         private const val NEG_BUTTON_ARG = "negative_text"
 
