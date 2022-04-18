@@ -40,7 +40,6 @@ import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseConvertCryptoBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
@@ -123,8 +122,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         convertViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
             val swapValueErrorType = convertViewModel.checkEnteredAmountValue()
             if (swapValueErrorType == SwapValueErrorType.NOError) {
-                if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
-
+                if (!pair.first && convertViewModel.dashToCrypto.value == true) {
                     pair.second?.first?.let { fait ->
                         if ((viewModel.userPreference.lastCoinbaseBalance?.toDouble() ?: 0.0) <fait.toPlainString().toDouble()) {
                             val placeBuyOrderError = CoinbaseGenericErrorUIModel(
@@ -140,10 +138,11 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                             )
                         }
                     }
-                }
-                selectedCoinBaseAccount?.let {
-                    pair.second?.first?.let { fait ->
-                        viewModel.swapTrade(fait, it, pair.first)
+                } else {
+                    selectedCoinBaseAccount?.let {
+                        pair.second?.first?.let { fait ->
+                            viewModel.swapTrade(fait, it, pair.first)
+                        }
                     }
                 }
             } else {
@@ -294,11 +293,24 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
     @SuppressLint("SetTextI18n")
     private fun setMaxAmountError() {
-        convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
-            selectedCoinBaseAccount?.getCoinBaseExchangeRateConversion(rate)?.first?.let {
-                binding.limitDesc.text = "${getString(
-                    R.string.entered_amount_is_too_high
-                )} $it"
+        if (convertViewModel.dashToCrypto.value == true) {
+            viewModel.dashWalletBalance.value?.let { dash ->
+                convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
+                    val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
+                    val fiatAmount = GenericUtils.fiatToString(currencyRate.coinToFiat(dash))
+
+                    binding.limitDesc.text = "${
+                    getString(
+                        R.string.entered_amount_is_too_high
+                    )
+                    } $fiatAmount"
+                }
+            }
+        } else {
+            convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
+                selectedCoinBaseAccount?.getCoinBaseExchangeRateConversion(rate)?.first?.let {
+                    binding.limitDesc.text = "${getString(R.string.entered_amount_is_too_high)} $it"
+                }
             }
         }
     }
