@@ -255,7 +255,7 @@ class WalletActivityTest {
         input = "dash:${dashAddress}?amount=234¤cy=USD&local=96.20" // Payment request with an error
         walletActivity.handlePaste(input)
 
-        assertTrue(!paymentIntentSlot.captured.shouldConfirmAddress)
+        assertTrue(paymentIntentSlot.captured.shouldConfirmAddress)
         verify(exactly = 2) { AdaptiveDialog.Companion.custom(any(), any(), confirmDialogTitle, dashAddress, any(), any()) }
         assertEquals(dashAddress, paymentIntentSlot.captured.address?.toBase58())
         verify(exactly = 2) { SendCoinsInternalActivity.start(any(), any(), any(), any(), any()) }
