@@ -25,6 +25,7 @@ import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.send.SweepWalletActivity
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertTrue
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.params.MainNetParams
@@ -47,13 +48,13 @@ class WalletActivityTest {
         val mockedDialog = spyk(AdaptiveDialog(0))
         val walletActivity = spyk(WalletActivity())
 
-        every { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any()) } returns mockedDialog
+        every { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any(), any()) } returns mockedDialog
         every { mockedDialog.show(walletActivity, any()) } returns Unit
         every { walletActivity.getString(any()) } returns dialogMessage
 
         walletActivity.handlePaste("")
 
-        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any(), any(), dialogMessage, dialogMessage, any()) }
+        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any(), any(), dialogMessage, dialogMessage, any(), any()) }
         verify(exactly = 1) { mockedDialog.show(walletActivity, any()) }
     }
 
@@ -67,14 +68,14 @@ class WalletActivityTest {
         val mockedDialog = spyk(AdaptiveDialog(0))
         val walletActivity = spyk(WalletActivity())
 
-        every { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any()) } returns mockedDialog
+        every { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any(), any()) } returns mockedDialog
         every { walletActivity.getString(any()) } returns errorDialogTitle
         every { walletActivity.getString(any(), any()) } returns errorDialogTitle
         every { mockedDialog.show(walletActivity, any()) } returns Unit
 
         walletActivity.handlePaste(input)
 
-        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any()) }
+        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any(), any()) }
         verify(exactly = 1) { mockedDialog.show(walletActivity, any()) }
     }
 
@@ -112,8 +113,6 @@ class WalletActivityTest {
             "yeEpP1q7ow319JYbnQCq7ucwPcjkeSyuoz"
         }
 
-        val request = "dash:${dashAddress}?amount=${amount}&cy=USD&local=96.20"
-
         val walletActivity = spyk(WalletActivity())
         mockkStatic(SendCoinsInternalActivity::class)
         val slot = slot<PaymentIntent>()
@@ -126,8 +125,17 @@ class WalletActivityTest {
         }
         every { SendCoinsInternalActivity.start(any(), any(), capture(slot), any(), any()) } returns Unit
 
+        var request = "dash:${dashAddress}?amount=${amount}&cy=USD&local=96.20"
+
         walletActivity.handlePaste(request)
         verify(exactly = 1) { SendCoinsInternalActivity.start(any(), any(), any(), any(), any()) }
+        assertEquals(dashAddress, slot.captured.address?.toBase58())
+        assertEquals(Coin.parseCoin(amount.toString()), slot.captured.amount)
+
+        request = "pay:${dashAddress}?amount=${amount}"
+
+        walletActivity.handlePaste(request)
+        verify(exactly = 2) { SendCoinsInternalActivity.start(any(), any(), any(), any(), any()) }
         assertEquals(dashAddress, slot.captured.address?.toBase58())
         assertEquals(Coin.parseCoin(amount.toString()), slot.captured.amount)
     }
@@ -143,18 +151,17 @@ class WalletActivityTest {
         }
 
         mockkObject(AdaptiveDialog.Companion)
-
         val mockedDialog = spyk(AdaptiveDialog(0))
         val walletActivity = spyk(WalletActivity())
 
-        every { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any()) } returns mockedDialog
+        every { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any(), any()) } returns mockedDialog
         every { walletActivity.getString(any()) } returns errorDialogTitle
         every { walletActivity.getString(any(), any()) } returns errorDialogTitle
         every { mockedDialog.show(walletActivity, any()) } returns Unit
 
         walletActivity.handlePaste(dashAddress)
 
-        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any(), any(), errorDialogTitle, errorDialogTitle, any()) }
+        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any(), any(), errorDialogTitle, errorDialogTitle, any(), any()) }
         verify(exactly = 1) { mockedDialog.show(walletActivity, any()) }
     }
 
@@ -203,5 +210,54 @@ class WalletActivityTest {
 
         walletActivity.handlePaste(privateKey)
         verify(exactly = 1) { SweepWalletActivity.start(any(), any(), any()) }
+    }
+
+    @Test
+    fun handlePaste_inputWithDashAddress_confirmsAndStartsSendCoins() {
+        val confirmDialogTitle = "CONFIRM_DIALOG_TITLE"
+        val dashAddress = if (Constants.NETWORK_PARAMETERS == MainNetParams.get()) {
+            "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"
+        } else {
+            "yeEpP1q7ow319JYbnQCq7ucwPcjkeSyuoz"
+        }
+
+        mockkObject(AdaptiveDialog.Companion)
+        mockkStatic(SendCoinsInternalActivity::class)
+        val mockedDialog = spyk(AdaptiveDialog(0))
+        val walletActivity = spyk(WalletActivity())
+
+        val dialogCallbackSlot = slot<(Boolean?) -> Unit>()
+        val paymentIntentSlot = slot<PaymentIntent>()
+
+        every { AdaptiveDialog.Companion.custom(any(), any(), any(), any(), any(), any()) } returns mockedDialog
+        every { walletActivity.getString(any()) } returns confirmDialogTitle
+        every { walletActivity.getString(any(), any()) } returns confirmDialogTitle
+        every { mockedDialog.show(walletActivity, capture(dialogCallbackSlot)) } answers {
+            dialogCallbackSlot.captured.invoke(true)
+        }
+
+        every { SendCoinsInternalActivity.start(any(), capture(paymentIntentSlot)) } answers {
+            SendCoinsInternalActivity.start(mockk(), "", paymentIntentSlot.captured, true, true)
+        }
+        every { SendCoinsInternalActivity.start(any(), capture(paymentIntentSlot), any()) } answers {
+            SendCoinsInternalActivity.start(mockk(), "", paymentIntentSlot.captured, true, true)
+        }
+        every { SendCoinsInternalActivity.start(any(), any(), capture(paymentIntentSlot), any(), any()) } returns Unit
+
+        var input = "some text $dashAddress some text"
+        walletActivity.handlePaste(input)
+
+        assertTrue(paymentIntentSlot.captured.shouldConfirmAddress)
+        verify(exactly = 1) { AdaptiveDialog.Companion.custom(any(), any(), confirmDialogTitle, dashAddress, any(), any()) }
+        assertEquals(dashAddress, paymentIntentSlot.captured.address?.toBase58())
+        verify(exactly = 1) { SendCoinsInternalActivity.start(any(), any(), any(), any(), any()) }
+
+        input = "dash:${dashAddress}?amount=234¤cy=USD&local=96.20" // Payment request with an error
+        walletActivity.handlePaste(input)
+
+        assertTrue(!paymentIntentSlot.captured.shouldConfirmAddress)
+        verify(exactly = 2) { AdaptiveDialog.Companion.custom(any(), any(), confirmDialogTitle, dashAddress, any(), any()) }
+        assertEquals(dashAddress, paymentIntentSlot.captured.address?.toBase58())
+        verify(exactly = 2) { SendCoinsInternalActivity.start(any(), any(), any(), any(), any()) }
     }
 }

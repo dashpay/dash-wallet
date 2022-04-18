@@ -53,6 +53,7 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import de.schildbach.wallet.Constants;
@@ -113,9 +114,10 @@ public abstract class InputParser {
 
                     handlePaymentIntent(PaymentIntent.fromBitcoinUri(bitcoinUri));
                 } catch (final BitcoinURIParseException x) {
-                    log.info("got invalid bitcoin uri: '" + input + "'", x);
-
-                    error(x, R.string.input_parser_invalid_bitcoin_uri, input);
+                    if (!tryFindAnyMatch(input)) {
+                        log.info("got invalid bitcoin uri: '" + input + "'", x);
+                        error(x, R.string.input_parser_invalid_bitcoin_uri, input);
+                    }
                 }
             } else if (PATTERN_BITCOIN_ADDRESS.matcher(input).matches()) {
                 try {
@@ -165,9 +167,32 @@ public abstract class InputParser {
 
                     error(x, R.string.input_parser_invalid_transaction, x.getMessage());
                 }
-            } else {
+            } else if (!tryFindAnyMatch(input)) {
                 cannotClassify(input);
             }
+        }
+
+        private boolean tryFindAnyMatch(String input) {
+            Matcher matcher = PATTERN_BITCOIN_ADDRESS.matcher(input);
+
+            if (matcher.find() && matcher.group(0) != null) {
+                try {
+                    String addressStr = matcher.group(0);
+                    assert addressStr != null;
+                    final Address address = Address.fromString(Constants.NETWORK_PARAMETERS, addressStr);
+                    PaymentIntent intent = PaymentIntent.fromAddress(address, null);
+                    intent.setShouldConfirmAddress(true);
+
+                    handlePaymentIntent(intent);
+                } catch (final AddressFormatException x) {
+                    log.info("got invalid address", x);
+                    error(x, R.string.input_parser_invalid_address);
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         protected void handlePrivateKey(final PrefixedChecksummedBytes key) {

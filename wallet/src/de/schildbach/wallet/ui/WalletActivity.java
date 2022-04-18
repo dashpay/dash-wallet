@@ -331,7 +331,23 @@ public final class WalletActivity extends AbstractBindServiceActivity
         new InputParser.StringInputParser(input, true) {
             @Override
             protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                SendCoinsInternalActivity.start(WalletActivity.this, paymentIntent, true);
+                if (paymentIntent.shouldConfirmAddress) {
+                    AdaptiveDialog.create(
+                            null,
+                            getString(R.string.pay_to_confirm_address),
+                            paymentIntent.getAddress().toBase58(),
+                            getString(R.string.button_cancel),
+                            getString(R.string.confirm)
+                    ).show(WalletActivity.this, confirmed -> {
+                        if (confirmed != null && confirmed) {
+                            SendCoinsInternalActivity.start(WalletActivity.this, paymentIntent, true);
+                        }
+
+                        return Unit.INSTANCE;
+                    });
+                } else {
+                    SendCoinsInternalActivity.start(WalletActivity.this, paymentIntent, true);
+                }
             }
 
             @Override
