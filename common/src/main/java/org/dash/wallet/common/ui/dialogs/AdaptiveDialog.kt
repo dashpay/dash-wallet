@@ -145,8 +145,10 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
                 if (messageView.lineCount > 3) {
                     titleView?.gravity = Gravity.START
                     messageView.gravity = Gravity.START
-                    iconView?.updateLayoutParams<LinearLayout.LayoutParams> {
-                        gravity = Gravity.START
+                    if (iconView?.layoutParams is LinearLayout.LayoutParams) {
+                        iconView.updateLayoutParams<LinearLayout.LayoutParams> {
+                            gravity = Gravity.START
+                        }
                     }
                 }
             }
