@@ -44,4 +44,5 @@ interface WalletDataProvider {
 
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
 
+    fun processDirectTransaction(tx: Transaction)
 }

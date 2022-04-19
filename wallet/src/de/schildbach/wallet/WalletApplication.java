@@ -643,6 +643,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
     }
 
+    @Override
     public void processDirectTransaction(final Transaction tx) throws VerificationException {
         if (wallet.isTransactionRelevant(tx)) {
             wallet.receivePending(tx, null);
