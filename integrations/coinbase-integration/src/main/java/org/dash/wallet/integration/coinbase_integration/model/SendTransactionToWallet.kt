@@ -111,6 +111,7 @@ sealed class TransactionType: Parcelable {
     @Parcelize object BuyDash: TransactionType()
     @Parcelize object SellSwap: TransactionType()
     @Parcelize object BuySwap: TransactionType()
+    @Parcelize object TransferDash: TransactionType()
 }
 
 @Parcelize

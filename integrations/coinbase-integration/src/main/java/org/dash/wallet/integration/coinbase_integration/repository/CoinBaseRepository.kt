@@ -145,6 +145,22 @@ class CoinBaseRepository @Inject constructor(
         WithdrawalLimitUIModel(userPreferences.coinbaseUserWithdrawalLimitAmount, userPreferences.coinbaseSendLimitCurrency)
     }
 
+    override suspend fun getExchangeRateFromCoinbase(): ResponseResource<CoinbaseToDashExchangeRateUIModel> = safeApiCall {
+        val apiResponse = servicesApi.getUserAccounts()
+        val userAccountData = apiResponse?.data?.firstOrNull {
+            it.balance?.currency?.equals(DASH_CURRENCY) ?: false
+        }
+        val exchangeRates = servicesApi.getExchangeRates(userPreferences.exchangeCurrencyCode)?.data
+
+        return@safeApiCall userAccountData?.let {
+            val currencyToDashExchangeRate = exchangeRates?.rates?.get(DASH_CURRENCY).orEmpty()
+            CoinbaseToDashExchangeRateUIModel(
+                it,
+                currencyToDashExchangeRate
+            )
+        } ?: CoinbaseToDashExchangeRateUIModel.EMPTY
+    }
+
     override suspend fun createAddress() = safeApiCall {
         servicesApi.createAddress(accountId = userPreferences.coinbaseUserAccountId)?.addresses?.address
     }
@@ -170,6 +186,7 @@ interface CoinBaseRepositoryInt {
     suspend fun commitSwapTrade(buyOrderId: String): ResponseResource<SwapTradeUIModel>
     suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean>
     suspend fun getWithdrawalLimit(): ResponseResource<WithdrawalLimitUIModel>
+    suspend fun getExchangeRateFromCoinbase(): ResponseResource<CoinbaseToDashExchangeRateUIModel>
 }
 
 data class WithdrawalLimitUIModel(
