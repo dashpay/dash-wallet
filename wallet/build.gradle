@@ -86,20 +86,15 @@ dependencies {
 
     implementation 'com.github.MikeOrtiz:TouchImageView:3.0.3'
 
+    // Firebase
     // Import the BoM for the Firebase platform
     implementation platform("com.google.firebase:firebase-bom:$firebaseVersion")
-
+    implementation 'com.google.firebase:firebase-database-ktx:20.0.2'
+    implementation 'com.google.firebase:firebase-auth-ktx'
     implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-inappmessaging-display'
     implementation 'com.google.firebase:firebase-installations'
-
-    // Declare the dependency for the Performance Monitoring library
-    // When using the BoM, you don't specify versions in Firebase library dependencies
-    //implementation 'com.google.firebase:firebase-perf-ktx'
-
-    // Firebase
-    implementation 'com.google.firebase:firebase-database-ktx:20.0.2'
-    implementation 'com.google.firebase:firebase-auth-ktx'
+    implementation 'com.google.firebase:firebase-messaging-ktx'
 
     // Google Drive Dependencies
     implementation('com.google.api-client:google-api-client-android:1.26.0') {
@@ -123,11 +118,15 @@ dependencies {
 
     // Unit tests
     testImplementation 'junit:junit:4.13.2'
+    testImplementation "io.mockk:mockk:1.12.3"
+    androidTestImplementation "androidx.test.ext:junit:$junitExtVersion"
+    testImplementation "androidx.arch.core:core-testing:2.1.0"
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 
     // Instrumental tests
     androidTestImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.0"
     androidTestImplementation "androidx.room:room-testing:$roomVersion"
-    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+    androidTestImplementation "androidx.test.ext:junit:$junitExtVersion"
     androidTestImplementation('androidx.test:runner:1.3.0') {
         exclude group: 'com.android.support', module: 'support-annotations'
     }

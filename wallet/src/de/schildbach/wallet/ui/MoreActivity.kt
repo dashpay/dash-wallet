@@ -33,8 +33,6 @@ import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
 class MoreActivity : GlobalFooterActivity() {
 
-    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

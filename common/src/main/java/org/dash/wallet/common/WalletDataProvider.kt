@@ -47,4 +47,6 @@ interface WalletDataProvider {
     fun getWalletBalance(): Coin
 
     fun createSentDashAddress(address: String): Address
+
+    fun processDirectTransaction(tx: Transaction)
 }
