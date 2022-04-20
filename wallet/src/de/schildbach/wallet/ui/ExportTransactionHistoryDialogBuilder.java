@@ -118,7 +118,7 @@ public abstract class ExportTransactionHistoryDialogBuilder extends BaseAlertDia
             final CharSequence walletDump = collectWalletDump();
 
             if (walletDump != null) {
-                final File file = File.createTempFile("taxbit-transaction-history.", ".csv", reportDir);
+                final File file = File.createTempFile("transaction-history.", ".csv", reportDir);
 
                 final Writer writer = new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8);
                 writer.write(walletDump.toString());
