@@ -37,9 +37,11 @@ import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.livedata.EventObserver
 import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integration.coinbase_integration.MIN_SWAP_DASH_AMOUNT_VALUE
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseConvertCryptoBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
@@ -288,6 +290,18 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         when (swapValueErrorType) {
             SwapValueErrorType.LessThanMin -> setMinAmountErrorMessage()
             SwapValueErrorType.MoreThanMax -> setMaxAmountError()
+            SwapValueErrorType.UnAuthorizedValue ->
+
+                binding.authLimitBanner.warningLimitInfo.setOnClickListener {
+                    AdaptiveDialog.custom(
+                        R.layout.dialog_withdrawal_limit_info,
+                        null,
+                        getString(R.string.set_auth_limit),
+                        getString(R.string.change_withdrawal_limit),
+                        "",
+                        getString(R.string.got_it)
+                    ).show(requireActivity()) { }
+                }
         }
     }
 
@@ -319,9 +333,10 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     private fun setMinAmountErrorMessage() {
         convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
             selectedCoinBaseAccount?.currencyToDashExchangeRate?.let { currencyToDashExchangeRate ->
+
                 val cleanedValue =
                     (
-                        "0.01909299".toBigDecimal() /
+                        MIN_SWAP_DASH_AMOUNT_VALUE.toBigDecimal() /
                             currencyToDashExchangeRate.toBigDecimal()
                         )
                 val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
