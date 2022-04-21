@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.ui
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
@@ -26,18 +27,21 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.livedata.EventObserver
 import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
+import org.dash.wallet.integration.coinbase_integration.MIN_SWAP_DASH_AMOUNT_VALUE
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseConvertCryptoBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
@@ -49,6 +53,7 @@ import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.mode
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.crypto_wallets.CryptoWalletsDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseConvertCryptoViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
+import java.math.RoundingMode
 
 
 @ExperimentalCoroutinesApi
@@ -63,6 +68,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(8).optionalDecimals()
 
+    private lateinit var fragment: ConvertViewFragment
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -71,7 +77,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         if (savedInstanceState == null) {
-            val fragment = ConvertViewFragment.newInstance()
+            fragment = ConvertViewFragment.newInstance()
             fragment.setViewDetails(getString(R.string.get_quote), null)
 
             parentFragmentManager.commit {
@@ -79,6 +85,11 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 add(R.id.enter_amount_fragment_placeholder, fragment)
                 // addToBackStack(null)
             }
+        }
+
+        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
+            fragment.handleNetworkState(hasInternet)
+            cryptoWalletsDialog?.handleNetworkState(hasInternet)
         }
 
         viewModel.showLoading.observe(
@@ -98,6 +109,14 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             )
         }
 
+        convertViewModel.dashToCrypto.value?.let {
+            if (it) {
+                viewModel.dashWalletBalance.value?.let { dashInput ->
+                    binding.convertView.dashInput = dashInput
+                }
+                binding.convertView.dashToCrypto = it
+            }
+        }
         convertViewModel.selectedCryptoCurrencyAccount.observe(viewLifecycleOwner) { account ->
             selectedCoinBaseAccount = account
         }
@@ -105,18 +124,26 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         convertViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
             val swapValueErrorType = convertViewModel.checkEnteredAmountValue()
             if (swapValueErrorType == SwapValueErrorType.NOError) {
-                if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
-                    selectedCoinBaseAccount?.let {
-                        pair.second?.first?.let { fait ->
-                            viewModel.swapTrade(fait, it, pair.first)
+                if (!pair.first && convertViewModel.dashToCrypto.value == true) {
+                    pair.second?.first?.let { fait ->
+                        if ((viewModel.userPreference.lastCoinbaseBalance?.toDouble() ?: 0.0) <fait.toPlainString().toDouble()) {
+                            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
+                                R.string.we_didnt_find_any_assets,
+                                image = R.drawable.ic_info_red,
+                                positiveButtonText = R.string.buy_crypto_on_coinbase,
+                                negativeButtonText = R.string.close
+                            )
+                            safeNavigate(
+                                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                                    placeBuyOrderError
+                                )
+                            )
                         }
                     }
                 } else {
-                    pair.second?.second?.let { coin ->
-                        selectedCoinBaseAccount?.let {
-                            pair.second?.first?.let { fait ->
-                                viewModel.sellDashToCoinBase(coin, fait, it)
-                            }
+                    selectedCoinBaseAccount?.let {
+                        pair.second?.first?.let { fait ->
+                            viewModel.swapTrade(fait, it, pair.first)
                         }
                     }
                 }
@@ -135,49 +162,6 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             }
         )
 
-
-        viewModel.getUserAccountAddressFailedCallback.observe(viewLifecycleOwner) {
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.error,
-                getString(R.string.error),
-                R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    placeBuyOrderError
-                )
-            )
-        }
-
-
-        viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.insufficient_money_title,
-                getString(R.string.insufficient_money_msg),
-                R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    placeBuyOrderError
-                )
-            )
-        }
-
-        viewModel.onFailure.observe(viewLifecycleOwner) {
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.send_coins_error_msg,
-                getString(R.string.insufficient_money_msg),
-                R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    placeBuyOrderError
-                )
-            )
-        }
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
             val placeBuyOrderError = CoinbaseGenericErrorUIModel(
@@ -251,6 +235,11 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                             dialog.dismiss()
                         }
                         if (this.cryptoWalletsDialog?.isVisible == false) {
+
+                            viewModel.isDeviceConnectedToInternet.value?.let { hasInternet ->
+                                cryptoWalletsDialog?.handleNetworkState(hasInternet)
+                            }
+
                             cryptoWalletsDialog?.show(fragmentManager, "payment_method")
                         }
                     }
@@ -273,20 +262,79 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         viewModel.dashWalletBalance.observe(
             viewLifecycleOwner
         ) {
-
             binding.convertView.dashInput = it
         }
 
         convertViewModel.validSwapValue.observe(viewLifecycleOwner) {
             binding.limitDesc.isGone = true
+            setGuidelinePercent(true)
         }
+
+        monitorNetworkChanges()
+    }
+
+    private fun setGuidelinePercent(isErrorHidden: Boolean) {
+        val guideLine = binding.amountViewGuide
+        val params = guideLine.layoutParams as ConstraintLayout.LayoutParams
+        if (isErrorHidden) {
+            params.guidePercent = 0.08f // 45% // range: 0 <-> 1
+        } else {
+            params.guidePercent = 0.12f
+        }
+        guideLine.layoutParams = params
     }
 
     private fun showSwapValueErrorView(swapValueErrorType: SwapValueErrorType) {
         binding.limitDesc.isGone = swapValueErrorType == SwapValueErrorType.NOError
+        setGuidelinePercent(binding.limitDesc.isGone)
         when (swapValueErrorType) {
-            SwapValueErrorType.LessThanMin -> binding.limitDesc.setText(R.string.entered_amount_is_too_low)
-            SwapValueErrorType.MoreThanMax -> binding.limitDesc.setText(R.string.entered_amount_is_too_high)
+            SwapValueErrorType.LessThanMin -> setMinAmountErrorMessage()
+            SwapValueErrorType.MoreThanMax -> setMaxAmountError()
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun setMaxAmountError() {
+        if (convertViewModel.dashToCrypto.value == true) {
+            viewModel.dashWalletBalance.value?.let { dash ->
+                convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
+                    val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
+                    val fiatAmount = GenericUtils.fiatToString(currencyRate.coinToFiat(dash))
+
+                    binding.limitDesc.text = "${
+                    getString(
+                        R.string.entered_amount_is_too_high
+                    )
+                    } $fiatAmount"
+                }
+            }
+        } else {
+            convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
+                selectedCoinBaseAccount?.getCoinBaseExchangeRateConversion(rate)?.first?.let {
+                    binding.limitDesc.text = "${getString(R.string.entered_amount_is_too_high)} $it"
+                }
+            }
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun setMinAmountErrorMessage() {
+        convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
+            selectedCoinBaseAccount?.currencyToDashExchangeRate?.let { currencyToDashExchangeRate ->
+
+                val cleanedValue =
+                    (
+                        MIN_SWAP_DASH_AMOUNT_VALUE.toBigDecimal() /
+                            currencyToDashExchangeRate.toBigDecimal()
+                        )
+                val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
+
+                val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
+                val fiatAmount = Fiat.parseFiat(currencyRate.fiat.currencyCode, bd.toString())
+                binding.limitDesc.text = "${getString(
+                    R.string.entered_amount_is_too_low
+                )} ${GenericUtils.fiatToString(fiatAmount)}"
+            }
         }
     }
 
@@ -338,6 +386,17 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     private fun dismissProgress() {
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        convertViewModel.clear()
+    }
+
+    private fun monitorNetworkChanges() {
+        lifecycleScope.launchWhenResumed {
+            viewModel.monitorNetworkStateChange()
         }
     }
 }

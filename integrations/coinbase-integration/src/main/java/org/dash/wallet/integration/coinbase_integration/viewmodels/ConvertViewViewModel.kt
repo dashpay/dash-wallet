@@ -44,7 +44,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ConvertViewViewModel @Inject constructor(
     var exchangeRates: ExchangeRatesProvider,
-    var configuration: Configuration,
+    var userPreference: Configuration,
     private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
 
@@ -66,18 +66,19 @@ class ConvertViewViewModel @Inject constructor(
     var minAllowedSwapDashCoin: Coin = Coin.ZERO
     private var maxForDashCoinBaseAccount: Coin = Coin.ZERO
 
+
     private val _selectedCryptoCurrencyAccount = MutableLiveData<CoinBaseUserAccountDataUIModel?>()
     val selectedCryptoCurrencyAccount: LiveData<CoinBaseUserAccountDataUIModel?>
         get() = this._selectedCryptoCurrencyAccount
 
-    private val _selectedLocalCurrencyCode = MutableStateFlow(configuration.exchangeCurrencyCode)
+    private val _selectedLocalCurrencyCode = MutableStateFlow(userPreference.exchangeCurrencyCode)
     var selectedLocalCurrencyCode: String
         get() = _selectedLocalCurrencyCode.value
         set(value) {
             _selectedLocalCurrencyCode.value = value
         }
 
-    private val _selectedPickerCurrencyCode = MutableStateFlow(configuration.exchangeCurrencyCode)
+    private val _selectedPickerCurrencyCode = MutableStateFlow(userPreference.exchangeCurrencyCode)
     var selectedPickerCurrencyCode: String
         get() = _selectedPickerCurrencyCode.value
         set(value) {
@@ -175,7 +176,9 @@ class ConvertViewViewModel @Inject constructor(
             return when {
                 it.isZero -> SwapValueErrorType.NOError
                 it.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.LessThanMin
-                it.isGreaterThan(coin) -> SwapValueErrorType.MoreThanMax
+                it.isGreaterThan(coin) -> SwapValueErrorType.MoreThanMax.apply {
+                    amount = maxCoinBaseAccountAmount
+                }
                 else -> SwapValueErrorType.NOError
             }
         }
@@ -192,6 +195,10 @@ class ConvertViewViewModel @Inject constructor(
         _dashToCrypto.value = dashToCrypto
     }
 
+    fun clear() {
+        _selectedCryptoCurrencyAccount.value = null
+        _dashToCrypto.value = false
+    }
 
     private fun setDashWalletBalance() {
         val balance = walletDataProvider.getWalletBalance()
@@ -199,11 +206,6 @@ class ConvertViewViewModel @Inject constructor(
 
         maxForDashWalletAmount = dashFormat.minDecimals(0)
             .optionalDecimals(0, 8).format(balance).toString()
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        _selectedCryptoCurrencyAccount.value = null
     }
 }
 
