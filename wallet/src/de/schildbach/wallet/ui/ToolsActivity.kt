@@ -86,6 +86,7 @@ class ToolsActivity : BaseMenuActivity() {
                     null,
                     getString(R.string.report_transaction_history_not_synced_title),
                     getString(R.string.report_transaction_history_not_synced_message),
+                    "",
                     getString(R.string.close))
                 dialog.show(supportFragmentManager, "requireSyncing")
             } else {
