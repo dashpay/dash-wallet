@@ -41,10 +41,14 @@ import java.util.*
 class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, attrs) {
     private val binding = ItemDetailsViewBinding.inflate(LayoutInflater.from(context), this)
 
-    private var onSendDashClicked: (() -> Unit)? = null
+    private var onSendDashClicked: ((isPayingWithDash: Boolean) -> Unit)? = null
     private var onReceiveDashClicked: (() -> Unit)? = null
     private var onShowAllLocationsClicked: (() -> Unit)? = null
     private var onBackButtonClicked: (() -> Unit)? = null
+    private var onNavigationButtonClicked: (() -> Unit)? = null
+    private var onDialPhoneButtonClicked: (() -> Unit)? = null
+    private var onOpenWebsiteButtonClicked: (() -> Unit)? = null
+    private var onBuyGiftCardButtonClicked: (() -> Unit)? = null
 
     init {
         orientation = VERTICAL
@@ -60,7 +64,7 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
         }
     }
 
-    fun setOnSendDashClicked(listener: () -> Unit) {
+    fun setOnSendDashClicked(listener: (Boolean) -> Unit) {
         onSendDashClicked = listener
     }
 
@@ -74,6 +78,22 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
 
     fun setOnBackButtonClicked(listener: () -> Unit) {
         onBackButtonClicked = listener
+    }
+
+    fun setOnNavigationButtonClicked(listener: () -> Unit) {
+        onNavigationButtonClicked = listener
+    }
+
+    fun setOnDialPhoneButtonClicked(listener: () -> Unit) {
+        onDialPhoneButtonClicked = listener
+    }
+
+    fun setOnOpenWebsiteButtonClicked(listener: () -> Unit) {
+        onOpenWebsiteButtonClicked = listener
+    }
+
+    fun setOnBuyGiftCardButtonClicked(listener: () -> Unit) {
+        onBuyGiftCardButtonClicked = listener
     }
 
     fun getMerchantType(type: String?): String {
@@ -102,6 +122,7 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
             linkBtn.isVisible = !item.website.isNullOrEmpty()
             linkBtn.setOnClickListener {
                 openWebsite(item.website!!)
+                onOpenWebsiteButtonClicked?.invoke()
             }
 
             directionBtn.isVisible = !isOnline &&
@@ -109,11 +130,13 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
                             !item.googleMaps.isNullOrBlank())
             directionBtn.setOnClickListener {
                 openMaps(item)
+                onNavigationButtonClicked?.invoke()
             }
 
             callBtn.isVisible = !isOnline && !item.phone.isNullOrEmpty()
             callBtn.setOnClickListener {
                 dialPhone(item.phone!!)
+                onDialPhoneButtonClicked?.invoke()
             }
         }
     }
@@ -142,11 +165,14 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
             if (isDash) {
                 payBtn.isVisible = true
                 payBtn.text = context.getText(R.string.explore_pay_with_dash)
-                payBtn.setOnClickListener { onSendDashClicked?.invoke() }
+                payBtn.setOnClickListener { onSendDashClicked?.invoke(true) }
             } else {
                 payBtn.isVisible = !merchant.deeplink.isNullOrBlank()
                 payBtn.text = context.getText(R.string.explore_buy_gift_card)
-                payBtn.setOnClickListener { openDeeplink(merchant.deeplink!!) }
+                payBtn.setOnClickListener {
+                    openDeeplink(merchant.deeplink!!)
+                    onBuyGiftCardButtonClicked?.invoke()
+                }
             }
 
             showAllBtn.setOnClickListener { onShowAllLocationsClicked?.invoke() }
@@ -177,7 +203,7 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
             showAllBtn.isVisible = false
             backButton.isVisible = false
 
-            sellBtn.setOnClickListener { onSendDashClicked?.invoke() }
+            sellBtn.setOnClickListener { onSendDashClicked?.invoke(false) }
             buyBtn.setOnClickListener { onReceiveDashClicked?.invoke() }
 
             buyBtn.isVisible = atm.type != AtmType.SELL

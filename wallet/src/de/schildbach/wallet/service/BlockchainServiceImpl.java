@@ -278,7 +278,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         final NotificationCompat.Builder notification = new NotificationCompat.Builder(this,
                 Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS);
-        notification.setSmallIcon(R.drawable.ic_dash_d_white_bottom);
+        notification.setSmallIcon(R.drawable.ic_dash_d_white);
         notification.setTicker(tickerMsg);
         notification.setContentTitle(msg);
         if (text.length() > 0)
@@ -965,7 +965,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         return new NotificationCompat.Builder(this,
                 Constants.NOTIFICATION_CHANNEL_ID_ONGOING)
-                .setSmallIcon(R.drawable.ic_dash_d_white_bottom)
+                .setSmallIcon(R.drawable.ic_dash_d_white)
                 .setContentTitle(getString(R.string.app_name))
                 .setContentText(message)
                 .setContentIntent(pendingIntent).build();

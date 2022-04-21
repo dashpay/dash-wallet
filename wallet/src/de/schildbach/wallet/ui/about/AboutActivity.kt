@@ -1,20 +1,21 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2019 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.about
 
 import android.content.*
 import android.content.Intent.ACTION_VIEW
@@ -22,31 +23,23 @@ import android.net.Uri
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.widget.TextView
-import androidx.core.os.bundleOf
+import androidx.activity.viewModels
 import androidx.core.view.isVisible
-import androidx.lifecycle.lifecycleScope
-import com.google.firebase.installations.FirebaseInstallations
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ExploreSyncWorker
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.BaseMenuActivity
+import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_about.*
-import kotlinx.coroutines.launch
 import org.bitcoinj.core.VersionMessage
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import java.lang.Exception
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class AboutActivity : BaseMenuActivity() {
-    @Inject
-    lateinit var analytics: AnalyticsService
-    @Inject
-    lateinit var exploreRepository: ExploreRepository
+    private val viewModel by viewModels<AboutViewModel>()
 
     override fun getLayoutId(): Int {
         return R.layout.activity_about
@@ -67,44 +60,47 @@ class AboutActivity : BaseMenuActivity() {
         }
         review_and_rate.setOnClickListener { openReviewAppIntent() }
         contact_support.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT, bundleOf())
+            viewModel.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT)
             handleReportIssue()
         }
 
-        showFirebaseInstallationId()
+        showFirebaseIds()
         showExploreDashSyncStatus()
     }
 
-    private fun showFirebaseInstallationId() {
-        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-            firebase_installation_id.isVisible = task.isSuccessful && BuildConfig.DEBUG
-            if (task.isSuccessful) {
-                firebase_installation_id.text = task.result
-            }
-            firebase_installation_id.setCopyable("Firebase Installation ID")
+    private fun showFirebaseIds() {
+        firebase_installation_id.setCopyable("Firebase Installation ID")
+        fcm_token.setCopyable("FCM token")
+
+        viewModel.firebaseInstallationId.observe(this) {
+            firebase_installation_id.isVisible = it.isNotEmpty()
+            firebase_installation_id.text = it
+        }
+
+        viewModel.firebaseCloudMessagingToken.observe(this) {
+            fcm_token.isVisible = it.isNotEmpty()
+            fcm_token.text = it
         }
     }
 
     private fun showExploreDashSyncStatus() {
-        lifecycleScope.launch {
-            val formatFlags = DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or DateUtils.FORMAT_SHOW_TIME
+        val formatFlags = DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or DateUtils.FORMAT_SHOW_TIME
+        explore_dash_last_sync.setCopyable("Explore Dash last sync")
 
+        viewModel.exploreRemoteTimestamp.observe(this) { timestamp ->
             val formattedUpdateTime = try {
-                val timestamp = exploreRepository.getRemoteTimestamp()
                 DateUtils.formatDateTime(applicationContext, timestamp, formatFlags)
             } catch (ex: Exception) {
                 getString(R.string.about_last_explore_dash_update_error)
             }
 
-            val lastSync = exploreRepository.localTimestamp
-            val formattedSyncTime = if (lastSync == 0L) {
+            val formattedSyncTime = if (viewModel.exploreLastSync == 0L) {
                 getString(R.string.about_last_explore_dash_sync_never)
             } else {
-                DateUtils.formatDateTime(applicationContext, lastSync, formatFlags)
+                DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSync, formatFlags)
             }
 
             explore_dash_last_sync.text = getString(R.string.about_last_explore_dash_sync, formattedUpdateTime, formattedSyncTime)
-            explore_dash_last_sync.setCopyable("Explore Dash last sync")
         }
     }
 
@@ -129,8 +125,10 @@ class AboutActivity : BaseMenuActivity() {
     }
 
     private fun handleReportIssue() {
-        alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
-                WalletApplication.getInstance()).buildAlertDialog()
+        alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
+            this,
+            WalletApplication.getInstance()
+        ).buildAlertDialog()
         alertDialog.show()
     }
 

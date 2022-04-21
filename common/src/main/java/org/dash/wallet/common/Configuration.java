@@ -78,7 +78,6 @@ public class Configuration {
     private static final String PREFS_KEY_LAST_RESTORE = "last_restore";
     private static final String PREFS_KEY_LAST_ENCRYPT_KEYS = "last_encrypt_keys";
     private static final String PREFS_KEY_LAST_BLOCKCHAIN_RESET = "last_blockchain_reset";
-    private static final String PREFS_KEY_LAST_BLUETOOTH_ADDRESS = "last_bluetooth_address";
 
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     private static final String PREFS_ENABLE_FINGERPRINT = "enable_fingerprint";
@@ -92,9 +91,7 @@ public class Configuration {
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
     public static final String PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION = "is_dash_to_fiat_direction";
-    public static final String PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY = "send_payment_exchange_currency";
-    public static final String PREFS_KEY_DEFAULT_FIAT_CURRENCY_CHANGED = "fiat_currency_changed";
-    public static final String PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED = "current_fiat_currency_changed";
+    public static final String PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER = "show_notifications_explainer";
 
     // Explore Dash
     public static final String PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY = "has_info_screen_been_shown";
@@ -488,32 +485,16 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION, isDashToFiatDirection).apply();
     }
 
-    /*
-     * If no sendPayment currency code is found, set the local currency as the default
-     */
-    public String getSendPaymentExchangeCurrencyCode() {
-        return prefs.getString(PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY, getExchangeCurrencyCode());
+    public boolean getShowNotificationsExplainer() {
+        return prefs.getBoolean(PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER, false);
     }
 
-    public void setSendPaymentExchangeCurrencyCode(final String exchangeCurrencyCode) {
-        prefs.edit().putString(PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY, exchangeCurrencyCode).apply();
+    public void setShowNotificationsExplainer(boolean needToShow) {
+        prefs.edit().putBoolean(PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER, needToShow).apply();
     }
 
-    public boolean isDefaultFiatCurrencyChanged() {
-        return prefs.getBoolean(PREFS_KEY_DEFAULT_FIAT_CURRENCY_CHANGED, false);
-    }
 
-    public void setDefaultFiatCurrencyChanged(boolean isChanged) {
-        prefs.edit().putBoolean(PREFS_KEY_DEFAULT_FIAT_CURRENCY_CHANGED, isChanged).apply();
-    }
-
-    public boolean isCurrentFiatCurrencyChanged() {
-        return prefs.getBoolean(PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED, false);
-    }
-
-    public void setCurrentFiatCurrencyChanged(boolean isChanged) {
-        prefs.edit().putBoolean(PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED, isChanged).apply();
-    }
+    // Explore Dash
 
     public boolean hasExploreDashInfoScreenBeenShown() {
         return prefs.getBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, false);

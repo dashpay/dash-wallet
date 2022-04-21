@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">Unable to load wallet!</string>
 
     <string name="set_pin_create_new_wallet">Create a New Wallet</string>
+    <string name="set_pin_upgrade_wallet">Upgrade Wallet</string>
     <string name="set_pin_restore_wallet">Restore Wallet</string>
     <string name="set_pin_enter_pin">Enter old PIN</string>
     <string name="set_pin_set_pin">Set PIN</string>
@@ -62,6 +63,7 @@
     <string name="scan_to_pay_error_dialog_title">Scan to Send</string>
     <string name="scan_to_pay_error_dialog_message">Not a valid Dash Address or URL request in clipboard:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Not a valid Dash Address or URL request in clipboard.</string>
+    <string name="pay_to_confirm_address">Is this the Dash address you want to send payment to?</string>
 
     <string name="receive_title">Receive</string>
     <string name="receive_enter_amount_message">Specify the amount to be received</string>
@@ -184,6 +186,11 @@
     <string name="notification_transactions_channel_description">Receive alerts about incoming transactions.</string>
     <string name="notification_synchronization_channel_name">Synchronization</string>
     <string name="notification_synchronization_channel_description">Shows a notification when the app is synchronizing with the network.</string>
+    <string name="notification_push_channel_name">Push Notifications</string>
+    <string name="notification_push_channel_description">Shows push notifications sent to you by Dash</string>
+    <string name="notification_settings_title">Notifications</string>
+    <string name="notification_explainer_title">Dash Wallet would like to send you notifications</string>
+    <string name="notification_explainer_message">Notifications may include alerts, sounds, and icon badges. These can be configured in phone Settings.</string>
 
     <string name="net_type_indicator" />
 
@@ -365,5 +372,5 @@
     <string name="wallet_encryption_error_message">There is a problem creating the wallet.  Please report this to the Support Desk.</string>
     <string name="wallet_not_encrypted_error_message">There is a problem with your wallet.\n\nIf you have no Dash in this wallet, then uninstall and reinstall this app. Then create a new wallet.\n\nIf you have a recovery phrase or a backup file, then uninstall this app and reinstall it.\n\nOtherwise, please report this to the Support Desk.</string>
 
-
+    <string name="fcm_notification_channel_id" translatable="false">dash.notifications.push</string>
 </resources>

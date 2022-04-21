@@ -113,7 +113,7 @@
                             android:layout_height="20dp"
                             android:layout_gravity="center"
                             android:layout_marginTop="4dp"
-                            app:srcCompat="@drawable/ic_dash_d_white_bottom"
+                            app:srcCompat="@drawable/ic_dash_d_white"
                             app:tint="@color/colorPrimary" />
 
                         <TextView

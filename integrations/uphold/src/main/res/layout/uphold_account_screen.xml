@@ -79,7 +79,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_marginTop="4dp"
-                android:src="@drawable/ic_dash_d_white_bottom"
+                android:src="@drawable/ic_dash_d_white"
                 app:tint="@color/colorPrimary" />
 
             <org.dash.wallet.common.ui.CurrencyTextView
