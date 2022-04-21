@@ -125,8 +125,6 @@ class ToolsActivity : BaseMenuActivity() {
         }
         alertDialog = baseAlertDialogBuilder.buildAlertDialog()
         alertDialog.show()
-
-        AdaptiveDialog
     }
 
     private fun createAndLaunchShareIntent(xpub: String) {
