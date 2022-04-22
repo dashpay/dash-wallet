@@ -32,8 +32,8 @@
         android:layout_marginHorizontal="15dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:layout="@layout/vertical_segmented_picker"
-        tools:visibility="visible" />
+        android:layout="@layout/vertical_segmented_picker"
+         />
 
     <LinearLayout
         android:id="@+id/input_wrapper"
@@ -44,8 +44,7 @@
         app:layout_constraintBottom_toBottomOf="@+id/currency_options"
         app:layout_constraintEnd_toStartOf="@id/currency_options"
         app:layout_constraintStart_toEndOf="@+id/max_button_wrapper"
-        app:layout_constraintTop_toTopOf="@id/currency_options"
-        tools:visibility="visible">
+        app:layout_constraintTop_toTopOf="@id/currency_options">
 
         <me.grantland.widget.AutofitTextView
             android:id="@+id/input_amount"
@@ -68,11 +67,9 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
         android:background="@color/background_primary"
-        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@+id/currency_options"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/currency_options"
-        tools:visibility="visible">
+        app:layout_constraintTop_toTopOf="@id/currency_options">
 
         <Button
             android:id="@+id/max_button"

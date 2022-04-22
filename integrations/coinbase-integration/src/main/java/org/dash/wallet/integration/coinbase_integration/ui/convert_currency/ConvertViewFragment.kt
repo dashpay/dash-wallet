@@ -93,7 +93,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 binding.currencyOptions.pickedOption
             )?.let {
                 viewModel.onContinueEvent.value = Pair(
-                    viewModel.dashToCrypto.value ?: false,
+                    viewModel.dashToCrypto.value ?: false,//dash -> coinbase
                     it
                 )
             }
@@ -191,13 +191,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         viewModel.selectedCryptoCurrencyAccount.value?.let { userAccountData ->
 
 
-            val cleanedValue =
-                if (viewModel.selectedPickerCurrencyCode !== pickedCurrencyOption &&
-                    (
-                        viewModel.enteredConvertAmount.toBigDecimalOrNull()
-                            ?: BigDecimal.ZERO
-                        ) > BigDecimal.ZERO
-                ) {
+            val cleanedValue = if (viewModel.selectedPickerCurrencyCode !== pickedCurrencyOption && (viewModel.enteredConvertAmount.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO) {
                     val convertedValue = when {
                         (userAccountData.coinBaseUserAccountData.balance?.currency == viewModel.selectedPickerCurrencyCode) -> {
                             if (pickedCurrencyOption == viewModel.selectedLocalCurrencyCode) {

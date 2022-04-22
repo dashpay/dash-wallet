@@ -134,15 +134,9 @@ class CryptoConvertItem @JvmOverloads constructor(
         }
     }
 
-    var showSubTitle: Boolean = true
-        set(value) {
-            field = value
-            binding.convertFromDashSubtitle.isVisible = value
-        }
-
-    var showCryptoTitle: Boolean = true
-        set(value) {
-            field = value
-            binding.cryptoCoinGroup.isVisible = value
-        }
+    fun hideComponents(){
+        binding.convertFromDashSubtitle.isVisible = false
+        binding.selectTheCoinTitle.isVisible = false
+        binding.convertFormDashArrow.isVisible = false
+    }
 }

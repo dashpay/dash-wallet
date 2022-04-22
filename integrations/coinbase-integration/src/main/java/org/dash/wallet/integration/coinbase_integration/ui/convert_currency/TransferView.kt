@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integration.coinbase_integration.ui.convert_currency
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
@@ -27,10 +28,14 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.VALUE_ZERO
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.ConvertViewBinding
+import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseServiceWallet
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs) {
 
@@ -40,41 +45,43 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
 
     private var onTransferDirectionBtnClicked: (() -> Unit)? = null
 
-    var dashBalance: Coin = Coin.ZERO
+    var inputInDash: Coin = Coin.ZERO
     var fiatAmount: Fiat = Fiat.valueOf("USD", 0)
         private set
 
     var exchangeRate: ExchangeRate? = null
-
+    var balanceOnCoinbase: BaseServiceWallet? = null
     var walletToCoinbase: Boolean = false
         set(value) {
             if (field != value){
                 field = value
                 updateSymbols()
+                updateAmount()
             }
         }
 
     private fun updateSymbols() {
         if (walletToCoinbase){
             binding.convertFromBtn.setConvertItemTitle(R.string.dash_wallet_name)
+            binding.convertToBtn.setConvertItemTitle(R.string.coinbase)
             ContextCompat.getDrawable(context, R.drawable.ic_dash_blue_filled)
                 ?.let { binding.convertFromBtn.setConvertItemIcon(it) }
+            ContextCompat.getDrawable(context, R.drawable.ic_coinbase)
+                ?.let { binding.convertToBtn.setConvertItemIcon(it) }
         } else {
             binding.convertFromBtn.setConvertItemTitle(R.string.coinbase)
+            binding.convertToBtn.setConvertItemTitle(R.string.dash_wallet_name)
             ContextCompat.getDrawable(context, R.drawable.ic_coinbase)
                 ?.let { binding.convertFromBtn.setConvertItemIcon(it) }
+            ContextCompat.getDrawable(context, R.drawable.ic_dash_blue_filled)
+                ?.let { binding.convertToBtn.setConvertItemIcon(it) }
         }
     }
 
-    private var _input = "0"
-    var input: String
-        get() = _input
-        set(value) {
-            _input = value.ifEmpty { VALUE_ZERO }
-        }
-
     init {
         initUI()
+        updateSymbols()
+        updateAmount()
         binding.swapBtn.setOnClickListener {
             walletToCoinbase = !walletToCoinbase
             onTransferDirectionBtnClicked?.invoke()
@@ -86,17 +93,46 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
     }
 
     private fun initUI(){
+        binding.convertFromBtn.setCryptoItemGroupVisibility(true)
+        binding.convertToBtn.setCryptoItemGroupVisibility(true)
         binding.convertFromDashBalance.isVisible = true
         binding.convertFromDashFiatAmount.isVisible = true
-        binding.convertFromBtn.showCryptoTitle = false
-        binding.convertToBtn.showCryptoTitle = false
+        binding.convertFromBtn.hideComponents()
+        binding.convertToBtn.hideComponents()
         binding.convertFromBtn.setIconConstraint()
         binding.convertFromBtn.setTitleConstraint()
         binding.convertToBtn.setIconConstraint()
         binding.convertToBtn.setTitleConstraint()
-        binding.convertFromBtn.setCryptoItemGroupVisibility(true)
-        binding.convertToBtn.setCryptoItemGroupVisibility(true)
-        binding.convertFromBtn.showSubTitle = false
-        binding.convertToBtn.showSubTitle = false
+        binding.convertFromDashBalance.isVisible = (balanceOnCoinbase != null)
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun updateAmount(){
+        if (walletToCoinbase){
+            val currencyRate = ExchangeRate(Coin.COIN, exchangeRate?.fiat)
+            val fiatAmount = GenericUtils.fiatToString(currencyRate.coinToFiat(inputInDash))
+            binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
+                .optionalDecimals(0,8).format(inputInDash)} Dash"
+            binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
+        } else {
+            balanceOnCoinbase?.let {
+                exchangeRate?.let { _ ->
+                    val balance = it.balance?.toBigDecimal()?.setScale(8, RoundingMode.HALF_UP).toString()
+                    val coin = try {
+                        Coin.parseCoin(balance)
+                    } catch (x: Exception) {
+                        Coin.ZERO
+                    }
+
+                    binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
+                        .optionalDecimals(0,8).format(coin)} ${it.currency}"
+
+                    binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} ${it.faitAmount}"
+                }
+            }
+            binding.convertFromDashBalance.isVisible = (balanceOnCoinbase != null)
+            binding.convertFromDashFiatAmount.isVisible = (balanceOnCoinbase != null)
+            //binding.walletIcon.isVisible = (balanceOnCoinbase != null)
+        }
     }
 }

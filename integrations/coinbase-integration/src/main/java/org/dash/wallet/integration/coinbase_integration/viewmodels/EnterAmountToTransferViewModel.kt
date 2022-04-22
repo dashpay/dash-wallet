@@ -17,17 +17,11 @@
 
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
@@ -58,7 +52,7 @@ class EnterAmountToTransferViewModel@Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt
 ) : ViewModel() {
 
-    var maxAmountInDashWallet = VALUE_ZERO
+    private var maxAmountInDashWalletFormatted : String = VALUE_ZERO
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
     val decimalSeparator =
@@ -69,8 +63,8 @@ class EnterAmountToTransferViewModel@Inject constructor(
     var inputValue: String = VALUE_ZERO
     var isMaxAmountSelected: Boolean = false
     var formattedValue: String = ""
-    val onContinueTransferEvent = SingleLiveEvent<Pair<Boolean, Pair<Fiat?, Coin?>>>()
-    var isFiatSelected: Boolean = true
+    val onContinueTransferEvent = SingleLiveEvent<Pair<Fiat, Coin>>()
+    var isFiatSelected: Boolean = false
         set(value) {
             if (field != value){
                 field = value
@@ -84,9 +78,13 @@ class EnterAmountToTransferViewModel@Inject constructor(
             _localCurrencyCode.value = value
         }
 
-    private val _isTransferFromWalletToCoinbase = MutableLiveData<Boolean>()
+    private val _isTransferFromWalletToCoinbase = MutableStateFlow(false)
     val transferDirectionState: LiveData<Boolean>
-        get() = _isTransferFromWalletToCoinbase
+        get() = _isTransferFromWalletToCoinbase.asLiveData()
+
+    private val _dashBalanceInWallet = MutableStateFlow(walletDataProvider.getWalletBalance())
+    val dashBalanceInWalletState: StateFlow<Coin>
+        get() = _dashBalanceInWallet
 
     private val _localCurrencyExchangeRate = MutableLiveData<ExchangeRate>()
     val localCurrencyExchangeRate: LiveData<ExchangeRate>
@@ -99,6 +97,8 @@ class EnterAmountToTransferViewModel@Inject constructor(
     private val _userAccountDataWithExchangeRate = MutableLiveData<CoinbaseToDashExchangeRateUIModel>()
     val userAccountOnCoinbaseState: LiveData<CoinbaseToDashExchangeRateUIModel>
         get() = _userAccountDataWithExchangeRate
+
+    val dashWalletEmptyCallback = SingleLiveEvent<Unit>()
 
     fun setEnteredConvertDashAmount(value: Coin){
         _enteredConvertDashAmount.value = value
@@ -126,8 +126,8 @@ class EnterAmountToTransferViewModel@Inject constructor(
     }
 
     private fun setDashWalletBalance() {
-        maxAmountInDashWallet = dashFormat.minDecimals(0)
-            .optionalDecimals(0, 8).format(walletBalance).toString()
+        maxAmountInDashWalletFormatted = dashFormat.minDecimals(0)
+            .optionalDecimals(0, 8).format(dashBalanceInWalletState.value).toString()
     }
 
     fun applyNewValue(value: String, monetaryCode: String): String {
@@ -186,16 +186,27 @@ class EnterAmountToTransferViewModel@Inject constructor(
         setEnteredConvertDashAmount(dashAmount)
     }
 
-    private val walletBalance = walletDataProvider.getWalletBalance()
+    fun setOnTransferDirectionListener(walletToCoinbase: Boolean) {
+        if (walletToCoinbase && dashBalanceInWalletState.value.isZero){
+            dashWalletEmptyCallback.call()
+            return
+        }
+        _isTransferFromWalletToCoinbase.value = walletToCoinbase
+    }
+
 
     val maxValue: String
         get() {
-            return if (transferDirectionState.value == true) {
-                userAccountOnCoinbaseState.value?.let { uiModel ->
-                    val cleanedValue = maxAmountInDashWallet.toBigDecimal() / uiModel.currencyToDashExchangeRate.toBigDecimal()
-                    cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
-                } ?: VALUE_ZERO
-            } else maxAmountCoinbaseAccount
+            val amount = if (_isTransferFromWalletToCoinbase.value) {
+                maxAmountInDashWalletFormatted
+            } else {
+                maxAmountCoinbaseAccount
+            }
+            val cleanedValue = if (isFiatSelected){
+                applyCoinbaseExchangeRate(amount)
+            } else amount
+
+            return cleanedValue
         }
 
     val maxAmountCoinbaseAccount : String
@@ -205,8 +216,20 @@ class EnterAmountToTransferViewModel@Inject constructor(
             } ?: VALUE_ZERO
         }
 
-    val isInputNull: Boolean
-        get() = inputValue.toBigDecimalOrNull() ?: BigDecimal.ZERO > BigDecimal.ZERO
+    fun applyCoinbaseExchangeRate(amount: String): String {
+        return userAccountOnCoinbaseState.value?.let { uiModel ->
+            val cleanedValue = amount.toBigDecimal() / uiModel.currencyToDashExchangeRate.toBigDecimal()
+            cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
+        } ?: VALUE_ZERO
+    }
+
+    fun applyCoinbaseExchangeRateOnDash(amount: String): String {
+        return userAccountOnCoinbaseState.value?.let { uiModel ->
+            val cleanedValue = amount.toBigDecimal() * uiModel.currencyToDashExchangeRate.toBigDecimal()
+            cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
+        } ?: VALUE_ZERO
+    }
+
 
     val applyCoinbaseExchangeRateToFiat: String
         get() {
@@ -223,26 +246,21 @@ class EnterAmountToTransferViewModel@Inject constructor(
             } ?: VALUE_ZERO.toBigDecimal().toPlainString()
         }
 
-    val applyCoinbaseExchangeRateToDash: String
-        get() {
-            return userAccountOnCoinbaseState.value?.let { uiModel ->
-                val cleanedValue = inputValue.toBigDecimal() / uiModel.currencyToDashExchangeRate.toBigDecimal()
-                cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
-            } ?: VALUE_ZERO.toBigDecimal().toPlainString()
-        }
+    val coinbaseExchangeRateAppliedOnInput: String
+        get() = applyCoinbaseExchangeRate(inputValue)
 
+    val coinbaseExchangeRateAppliedOnWalletBalance: String
+        get() = applyCoinbaseExchangeRate(maxAmountInDashWalletFormatted)
 
     val formatInput: String
         get() {
-            return if (isInputNull){
-                inputValue
-            } else {
-                if (isFiatSelected) {
-                    applyCoinbaseExchangeRateToFiat
+            return if ((inputValue.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO){
+                if (isFiatSelected){
+                    coinbaseExchangeRateAppliedOnInput
                 } else {
-                    applyCoinbaseExchangeRateToDash
+                    applyCoinbaseExchangeRateToFiat
                 }
-            }
+            } else inputValue
         }
 
 

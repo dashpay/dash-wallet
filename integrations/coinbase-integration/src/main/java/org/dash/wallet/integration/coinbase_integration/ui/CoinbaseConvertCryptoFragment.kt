@@ -103,14 +103,16 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
         convertViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
             val swapValueErrorType = convertViewModel.checkEnteredAmountValue()
-            if (swapValueErrorType == SwapValueErrorType.NOError) {
+            if (swapValueErrorType == SwapValueErrorType.NOError) {// dash -> coinbase
                 if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
+                    //coinbase -> wallet
                     selectedCoinBaseAccount?.let {
                         pair.second?.first?.let { fait ->
                             viewModel.swapTrade(fait, it, pair.first)
                         }
                     }
                 } else {
+                    // wallet -> coinbase
                     pair.second?.second?.let { coin ->
                         selectedCoinBaseAccount?.let {
                             pair.second?.first?.let { fait ->

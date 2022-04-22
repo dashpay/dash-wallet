@@ -58,10 +58,10 @@
         app:layout_constraintTop_toBottomOf="@id/top_guide_line" />
 
     <org.dash.wallet.integration.coinbase_integration.ui.convert_currency.TransferView
-        android:id="@+id/convert_view"
+        android:id="@+id/transfer_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="18dp"
+        android:layout_marginTop="106dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/top_guide_line" />
@@ -76,7 +76,7 @@
         android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/convert_view"
+        app:layout_constraintTop_toBottomOf="@id/transfer_view"
         tools:visibility="visible" />
 
     <androidx.constraintlayout.widget.Guideline
@@ -84,6 +84,29 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_percent="@dimen/coinbase_convert_amount_top_guide" />
+        app:layout_constraintGuide_percent="0.09" />
+
+    <include
+        android:id="@+id/auth_limit_banner"
+        android:layout_height="46dp"
+        android:layout_width="match_parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        layout="@layout/authorization_limit_banner"
+        android:visibility="gone"
+        />
+
+    <TextView
+        android:id="@+id/dash_wallet_limit_banner"
+        style="@style/Caption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/red_300"
+        android:gravity="center"
+        android:paddingVertical="8dp"
+        android:text="@string/dash_wallet_limit_description"
+        android:textColor="@color/dash_white"
+        android:textSize="12sp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/toolbar" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

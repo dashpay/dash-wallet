@@ -110,12 +110,14 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
     private fun setConvertFromBtnData() {
         binding.convertFromBtn.setCryptoItemArrowVisibility(!dashToCrypto)
         if (dashToCrypto) {
+            // wallet -> coinbase
             binding.convertFromBtn.setCryptoItemGroupVisibility(true)
             binding.convertFromBtn.setConvertItemServiceName(R.string.dash_wallet_name)
             binding.convertFromBtn.setConvertItemTitle(R.string.dash)
             ContextCompat.getDrawable(context, R.drawable.ic_dash_blue_filled)
                 ?.let { binding.convertFromBtn.setConvertItemIcon(it) }
         } else {
+            // coinbase -> wallet
             setFromBtnData()
         }
     }
@@ -124,16 +126,18 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
     private fun setConvertToBtnData() {
         binding.convertToBtn.setCryptoItemArrowVisibility(dashToCrypto)
         if (!dashToCrypto) {
+            // coinbase -> wallet
             binding.convertToBtn.setCryptoItemGroupVisibility(true)
             binding.convertToBtn.setConvertItemServiceName(R.string.dash_wallet_name)
             binding.convertToBtn.setConvertItemTitle(R.string.dash)
             ContextCompat.getDrawable(context, R.drawable.ic_dash_blue_filled)
                 ?.let { binding.convertToBtn.setConvertItemIcon(it) }
         } else {
+            // wallet -> coinbase
             setToBtnData()
         }
     }
-
+    // coinbase -> wallet
     @SuppressLint("SetTextI18n")
     private fun setFromBtnData() {
         binding.convertFromBtn.setCryptoItemGroupVisibility(input != null)
@@ -146,7 +150,7 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
 
             exchangeRate?.let { _ ->
 
-                val balance = it.balance.toBigDecimal().setScale(8, RoundingMode.HALF_UP).toString()
+                val balance = it.balance?.toBigDecimal()?.setScale(8, RoundingMode.HALF_UP).toString()
                 val coin = try {
                     Coin.parseCoin(balance)
                 } catch (x: Exception) {
@@ -160,7 +164,7 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
             }
         }
     }
-
+    // wallet -> coinbase
     @SuppressLint("SetTextI18n")
     private fun setToBtnData() {
         binding.convertToBtn.setCryptoItemGroupVisibility(input != null)
@@ -195,8 +199,10 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
     private fun updateAmount() {
 
         if (dashToCrypto) {
+            // wallet -> coinbase
             setToBtnData()
         } else {
+            // coinbase -> wallet
             setFromBtnData()
         }
     }

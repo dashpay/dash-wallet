@@ -89,15 +89,7 @@
             android:id="@+id/from_data_group"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:constraint_referenced_ids="convertFromDash_icon,convertFromDash_title"
+            app:constraint_referenced_ids="convertFromDash_icon,convertFromDash_title,convertFromDash_subtitle"
             tools:visibility="gone" />
-
-        <androidx.constraintlayout.widget.Group
-            android:id="@+id/crypto_coin_group"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:constraint_referenced_ids="select_the_coin_title,convert_form_dash_arrow"
-            />
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 </merge>

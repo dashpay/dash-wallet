@@ -128,3 +128,14 @@ open class CoinbaseToDashExchangeRateUIModel (
         val EMPTY = CoinbaseToDashExchangeRateUIModel(CoinBaseUserAccountData.EMPTY, "")
     }
 }
+
+fun CoinbaseToDashExchangeRateUIModel.getBalanceWithCoinbaseExchangeRate(
+    currentExchangeRate: ExchangeRate
+): String {
+    val cleanedValue = this.coinBaseUserAccountData.balance?.amount?.toBigDecimal()!! *
+            this.currencyToDashExchangeRate.toBigDecimal()
+    val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
+    val currencyRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
+    val fiatAmount = Fiat.parseFiat(currencyRate.fiat.currencyCode, bd.toString())
+    return GenericUtils.fiatToString(fiatAmount)
+}

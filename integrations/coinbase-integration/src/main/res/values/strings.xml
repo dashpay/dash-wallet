@@ -103,4 +103,5 @@
     <string name="verify_code">Verify</string>
     <string name="transfer_dash">Transfer Dash</string>
     <string name="transfer_amount">Transfer</string>
+    <string name="dash_wallet_limit_description">The amount is higher than your balance</string>
 </resources>

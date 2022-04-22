@@ -25,14 +25,17 @@ import android.text.style.RelativeSizeSpan
 import androidx.fragment.app.Fragment
 import android.view.View
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.collect
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.VALUE_ZERO
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.EnterAmountToTransferFragmentBinding
@@ -50,11 +53,18 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
     private val viewModel by activityViewModels<EnterAmountToTransferViewModel>()
     private val binding  by viewBinding(EnterAmountToTransferFragmentBinding::bind)
     private var exchangeRate: ExchangeRate? = null
+    private var isTransferFromWalletToCoinbase: Boolean = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        viewModel.isFiatSelected = false
+        viewModel.isMaxAmountSelected = false
+        binding.currencyOptions.apply {
+            pickedOptionIndex = 0
+            provideOptions(listOf(DASH_CURRENCY, viewModel.localCurrencyCode))
+        }
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
-        binding.currencyOptions.pickedOptionIndex = 0
+        formatTransferredAmount(VALUE_ZERO)
 
         binding.currencyOptions.setOnOptionPickedListener { value, index ->
             viewModel.isFiatSelected = index == 1
@@ -62,12 +72,16 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             formatTransferredAmount(cleanedValue)
         }
 
+        viewModel.transferDirectionState.observe(viewLifecycleOwner){
+            isTransferFromWalletToCoinbase = it
+        }
+
         binding.transferBtn.setOnClickListener {
             exchangeRate?.let { rate ->
                 val fiatAmount = if (viewModel.isFiatSelected){
                     Fiat.parseFiat(rate.fiat.currencyCode, viewModel.inputValue)
                 } else {
-                    val value = viewModel.applyCoinbaseExchangeRateToDash
+                    val value = viewModel.coinbaseExchangeRateAppliedOnInput
                     Fiat.parseFiat(rate.fiat.currencyCode, value)
                 }
 
@@ -77,18 +91,14 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
                 } catch (x: Exception) {
                     Coin.ZERO
                 }
-                val pair = Pair(fiatAmount, coin)
-                viewModel.onContinueTransferEvent.value = Pair(
-                    viewModel.transferDirectionState.value ?: false, pair
-                )
+                viewModel.onContinueTransferEvent.value = Pair(fiatAmount, coin)
             }
 
         }
 
         binding.maxButton.setOnClickListener {
-            binding.currencyOptions.pickedOptionIndex = 0
-            formatTransferredAmount(viewModel.maxValue)
             viewModel.isMaxAmountSelected = true
+            formatTransferredAmount(viewModel.maxValue)
         }
 
         viewModel.localCurrencyExchangeRate.observe(viewLifecycleOwner){
@@ -113,7 +123,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
         binding.inputAmount.text = spannableString
         binding.transferBtn.isEnabled = viewModel.hasBalance
 
-        convertAmountTransferred()
+        //convertAmountTransferred()
     }
 
     private fun spanAmount(spannable: SpannableString, from: Int, to: Int): SpannableString {
@@ -161,37 +171,36 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
 
         private fun appendIfValidAfter(number: String) {
             try {
-                value.append(number)
+                //value.append(number)
                 val formattedValue = GenericUtils.formatFiatWithoutComma(value.toString())
                 Coin.parseCoin(formattedValue)
+                formatTransferredAmount(value.toString())
             } catch (e: Exception) {
                 value.deleteCharAt(value.length - 1)
+                formatTransferredAmount(value.toString())
             }
         }
 
         override fun onNumber(number: Int) {
             refreshValue()
             if (value.toString() == VALUE_ZERO) {
-                return
+                value.clear()
             }
-            val isFraction = value.toString().indexOf(viewModel.decimalSeparator) > -1
+            val formattedValue = value.toString()
+            val isFraction = formattedValue.indexOf(viewModel.decimalSeparator) > -1
 
             if (isFraction) {
-                val lengthOfDecimalPart = value.toString().length - value.toString().indexOf(viewModel.decimalSeparator)
+                val lengthOfDecimalPart = formattedValue.length - formattedValue.indexOf(viewModel.decimalSeparator)
                 val decimalsThreshold = if (binding.currencyOptions.pickedOptionIndex == 1) 2 else 8
 
                 if (lengthOfDecimalPart > decimalsThreshold) {
                     return
                 }
             }
+
             if (!viewModel.isMaxAmountSelected){
-                try {
-                    appendIfValidAfter(number.toString())
-                    formatTransferredAmount(value.toString())
-                } catch (e: Exception){
-                    value.deleteCharAt(value.length - 1)
-                    formatTransferredAmount(value.toString())
-                }
+                value.append(number)
+                appendIfValidAfter(number.toString())
             }
 
         }
@@ -210,13 +219,22 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
         override fun onFunction() {
             if (viewModel.isMaxAmountSelected) return
             refreshValue()
-            if (value.indexOf(DECIMAL_SEPARATOR) == -1) {
+            if (value.indexOf(DECIMAL_SEPARATOR) < 0) {
                 if (value.isEmpty()) {
                     value.append(VALUE_ZERO)
                 }
                 value.append(DECIMAL_SEPARATOR)
             }
             formatTransferredAmount(value.toString())
+        }
+    }
+
+    fun setViewDetails(continueText: String, keyboardHeader: View?) {
+        lifecycleScope.launchWhenStarted {
+            binding.transferBtn.text = continueText
+            keyboardHeader?.let {
+                binding.keyboardContainer.addView(keyboardHeader, 0)
+            }
         }
     }
 }
