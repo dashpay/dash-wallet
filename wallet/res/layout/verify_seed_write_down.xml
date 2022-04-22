@@ -6,7 +6,7 @@
     android:id="@+id/linearLayout2"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_less_bright"
+    android:background="@color/background_primary_light"
     android:gravity="center_horizontal"
     tools:context="de.schildbach.wallet.ui.VerifySeedWriteDownFragment">
 

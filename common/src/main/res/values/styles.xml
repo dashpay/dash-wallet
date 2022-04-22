@@ -944,6 +944,18 @@
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
+    <style name="PrimaryButtonTheme.Small">
+        <item name="titleTextColor">@color/gray_900</item>
+        <item name="cornerRadius">16dp</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.Small.Round">
+        <item name="cornerRadius">16dp</item>
+        <item name="backgroundColor">@color/max_button_bg</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
     <style name="PrimaryButtonTheme.ExtraSmall">
         <item name="cornerRadius">6dp</item>
         <item name="titleTextColor">@color/gray_900</item>
@@ -992,6 +1004,15 @@
 
     <style name="Button.Primary.Small.Blue">
         <item name="android:theme">@style/PrimaryButtonTheme.ExtraSmall.Blue</item>
+    </style>
+
+    <style name="Button.Primary.Small.Round">
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">0dp</item>
+        <item name="android:minHeight">20dp</item>
+        <item name="android:minWidth">20dp</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:theme">@style/PrimaryButtonTheme.Small.Round</item>
     </style>
 
     <style name="Button.Primary.ExtraSmall">

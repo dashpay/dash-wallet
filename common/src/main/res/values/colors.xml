@@ -8,7 +8,6 @@
     <color name="dash_black">#111921</color>
     <color name="dash_gray">#787878</color>
     <color name="dash_light_gray">#d8d8d8</color>
-    <color name="dash_lighter_gray">#f7f7f7</color>
     <color name="dash_white">#ffffff</color>
     <color name="dash_orange">#E78010</color>
     <color name="dash_red">#d0021b</color>
@@ -42,7 +41,6 @@
 
     <!-- background -->
     <color name="bg_bright">#ffffffff</color>
-    <color name="bg_less_bright">#fff7f7f7</color>
     <color name="bg_action_bar">#ff222222</color>
     <color name="bg_panel">#fff2f2f8</color>
     <color name="bg_form">@android:color/white</color>
@@ -68,6 +66,7 @@
 
     <!-- Background -->
     <color name="background_primary">#eff0f4</color>
+    <color name="background_primary_light">#F7F7F7</color>
     <color name="background_secondary">@color/white</color>
     <color name="background_tertiary">@color/gray_40</color>
     <color name="overlay_primary">#B3000000</color>
@@ -75,6 +74,7 @@
     <color name="background_accuracy_circle">#26008DE4</color>
     <color name="button_ripple_color">#1f000000</color>
     <color name="disabled_button_bg">#eeeeee</color>
+    <color name="max_button_bg">#ebebeb</color>
 
     <!-- Palette -->
     <color name="blue_50">#F0F8FE</color>
