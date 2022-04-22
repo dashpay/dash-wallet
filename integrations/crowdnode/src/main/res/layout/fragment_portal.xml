@@ -58,6 +58,7 @@
         android:layout_height="wrap_content"
         android:text="@string/crowdnode_balance"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:alpha="0.5"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/wallet_balance_dash"

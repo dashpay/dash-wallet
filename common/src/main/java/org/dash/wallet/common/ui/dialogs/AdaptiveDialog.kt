@@ -154,7 +154,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
 
         val iconView: ImageView? = view.findViewById(R.id.dialog_icon)
         val titleView: TextView? = view.findViewById(R.id.dialog_title)
-        val messageView: TextView = view.findViewById(R.id.dialog_message)
+        val messageView: TextView? = view.findViewById(R.id.dialog_message)
         val positiveButton: TextView? = view.findViewById(R.id.dialog_positive_button)
         val negativeButton: TextView? = view.findViewById(R.id.dialog_negative_button)
         val negativeButtonSecondary: TextView? = view.findViewById(R.id.dialog_negative_button_secondary)
@@ -166,7 +166,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         val isPositiveButtonShown = showIfNotEmpty(positiveButton, POS_BUTTON_ARG)
 
         if (isMessageShown) {
-            messageView.post {
+            messageView?.post {
                 messageView.setTextIsSelectable(isMessageSelectable)
 
                 if (messageView.lineCount > 3) {

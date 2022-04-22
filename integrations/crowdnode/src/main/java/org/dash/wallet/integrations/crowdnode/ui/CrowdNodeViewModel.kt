@@ -72,6 +72,7 @@ class CrowdNodeViewModel @Inject constructor(
 
     var signUpStatus: LiveData<SignUpStatus> = MediatorLiveData<SignUpStatus>().apply {
         addSource(crowdNodeApi.signUpStatus.asLiveData(), this::setValue)
+        value = crowdNodeApi.signUpStatus.value
     }
 
     var crowdNodeError: LiveData<Exception?> = MediatorLiveData<Exception?>().apply {
