@@ -70,6 +70,7 @@ public final class Constants {
                 IS_PROD_BUILD = true;
                 FILENAME_NETWORK_SUFFIX = "";
                 WALLET_NAME_CURRENCY_CODE = "dash";
+                org.dash.wallet.common.Constants.EXPLORE_GC_FILE_PATH = "explore/explore.db";
                 break;
             }
             case "_testNet3": {
@@ -79,6 +80,7 @@ public final class Constants {
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-testnet";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
+                org.dash.wallet.common.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-testnet.db";
                 break;
             }
             default: {

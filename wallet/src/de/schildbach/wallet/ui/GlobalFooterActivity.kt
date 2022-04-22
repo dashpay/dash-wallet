@@ -23,7 +23,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.widget.GlobalFooterView
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
+import javax.inject.Inject
 
 
 @SuppressLint("Registered")
@@ -31,7 +33,9 @@ import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 open class GlobalFooterActivity : LockScreenActivity(), GlobalFooterView.OnFooterActionListener {
 
     private lateinit var globalFooterView: GlobalFooterView
-    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
+
+    @Inject
+    lateinit var analytics: AnalyticsService
 
     fun setContentViewWithFooter(layoutResId: Int) {
         globalFooterView = GlobalFooterView.encloseContentView(this, layoutResId)

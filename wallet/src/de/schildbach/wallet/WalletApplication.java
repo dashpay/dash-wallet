@@ -349,6 +349,12 @@ public class WalletApplication extends BaseWalletApplication
                 R.string.notification_generic_channel_name,
                 R.string.notification_generic_channel_description,
                 NotificationManager.IMPORTANCE_HIGH);
+
+        // Push notifications
+        createNotificationChannel(getString(R.string.fcm_notification_channel_id),
+                R.string.notification_push_channel_name,
+                R.string.notification_push_channel_description,
+                NotificationManager.IMPORTANCE_HIGH);
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -665,6 +671,7 @@ public class WalletApplication extends BaseWalletApplication
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
     }
 
+    @Override
     public void processDirectTransaction(final Transaction tx) throws VerificationException {
         if (wallet.isTransactionRelevant(tx)) {
             wallet.receivePending(tx, null);

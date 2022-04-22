@@ -43,6 +43,7 @@
     <string name="button_info">info</string>
     <string name="button_copy_address">Copy address</string>
     <string name="button_understand">I understand</string>
+    <string name="button_okay">Okay</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>

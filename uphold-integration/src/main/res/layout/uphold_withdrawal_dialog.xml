@@ -22,7 +22,7 @@
 
             <ImageView
                 android:id="@+id/uphold_withdrawal_amount_icon"
-                android:src="@drawable/ic_dash_d_white_bottom"
+                android:src="@drawable/ic_dash_d_white"
                 app:tint="@color/medium_gray"
                 android:layout_marginTop="1dp"
                 android:layout_height="14dp"

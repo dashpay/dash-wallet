@@ -22,4 +22,6 @@ public class Constants {
     public static Coin MAX_MONEY = MainNetParams.get().getMaxMoney();
     public static final Coin ECONOMIC_FEE = Coin.valueOf(1000);
     public static final MonetaryFormat SEND_PAYMENT_LOCAL_FORMAT = new MonetaryFormat().withLocale(GenericUtils.getDeviceLocale()).minDecimals(2).optionalDecimals();
+
+    public static String EXPLORE_GC_FILE_PATH;
 }

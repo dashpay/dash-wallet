@@ -56,4 +56,6 @@ interface WalletDataProvider {
     fun attachOnWalletWipedListener(listener: () -> Unit)
 
     fun detachOnWalletWipedListener(listener: () -> Unit)
+
+    fun processDirectTransaction(tx: Transaction)
 }
