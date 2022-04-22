@@ -274,6 +274,7 @@
     <string name="tools_address_book">Address Book</string>
     <string name="tools_import_private_key">Import Private Key</string>
     <string name="tools_network_monitor">Network Monitor</string>
+    <string name="tools_show_xpub">Extended Public Key</string>
 
     <string name="about_help_us_improve">Help us improve your experience</string>
     <string name="about_review_and_rate">Review &amp; Rate the app</string>

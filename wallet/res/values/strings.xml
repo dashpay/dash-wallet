@@ -303,6 +303,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Append wallet dump</string>
     <string name="report_issue_dialog_mail_intent_chooser">Send report using…</string>
     <string name="report_issue_dialog_mail_intent_failed">Sending report failed.</string>
+    <string name="report_transaction_history_export">Export</string>
+    <string name="report_transaction_history_title">CSV Export</string>
+    <string name="report_transaction_history_not_synced_title">CSV Export</string>
+    <string name="report_transaction_history_not_synced_message">Please wait until the wallet is fully synced before exporting your transaction history.</string>
+    <string name="report_transaction_history_message">The full transaction history will be exported.\n\nAll payments will be considered as a sale and all incoming transactions will be income.  The owner of this wallet is responsible for making any cost basis adjustments in their chosen tax reporting system.</string>
+    <string name="report_transaction_history_mail_intent_chooser">Send transaction history using…</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">Sending transaction history failed.</string>
+
     <string name="about_title">About</string>
     <string name="about_version_title">Version</string>
     <string name="about_copyright_title">Copyright</string>
