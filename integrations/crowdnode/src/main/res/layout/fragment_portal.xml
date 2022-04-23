@@ -27,7 +27,7 @@
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:background="@color/colorPrimary"
+        android:background="@drawable/bg_gradient_light"
         android:orientation="vertical"
         android:paddingHorizontal="20dp"
         app:layout_constraintTop_toTopOf="parent"
@@ -39,27 +39,17 @@
         android:layout_height="?attr/actionBarSize"
         app:menu="@menu/menu_info"
         app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@drawable/ic_arrow_back_white">
-
-        <TextView
-            android:id="@+id/toolbar_title"
-            style="@style/Subtitle1.White"
-            android:text="@string/staking_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center" />
-    </androidx.appcompat.widget.Toolbar>
+        app:navigationIcon="@drawable/ic_arrow_back_white"/>
 
     <TextView
         android:id="@+id/balance_label"
-        style="@style/Caption.White"
-        android:textSize="13sp"
+        style="@style/Overline.White"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/crowdnode_balance"
         android:gravity="center"
         android:textAlignment="gravity"
-        android:alpha="0.5"
+        android:alpha="1"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/wallet_balance_dash"
         app:layout_constraintVertical_chainStyle="packed" />
@@ -110,6 +100,7 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="15dp"
         android:layout_marginTop="-30dp"
+        app:cardCornerRadius="16dp"
         app:layout_constraintTop_toBottomOf="@id/header"
         app:layout_constraintVertical_chainStyle="packed">
 
@@ -122,7 +113,7 @@
                 android:id="@+id/deposit_btn"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackground"
+                android:foreground="?attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true"
                 android:paddingTop="21dp"
@@ -135,7 +126,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="1dp"
                     android:layout_marginTop="2dp"
-                    android:src="@drawable/ic_buy_dash_green"
+                    android:src="@drawable/ic_deposit"
                     app:layout_constraintEnd_toStartOf="@id/deposit_title"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -160,6 +151,31 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="@+id/deposit_title"
                     app:layout_constraintTop_toBottomOf="@+id/deposit_title" />
+
+                <ImageView
+                    android:id="@+id/deposit_nav_icon"
+                    style="@style/CrowdNodeNavigationIconStyle"
+                    android:layout_marginEnd="1dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/deposit_icon"
+                    app:layout_constraintBottom_toBottomOf="@id/deposit_icon" />
+
+                <TextView
+                    android:id="@+id/minimum_dash_requirement"
+                    style="@style/Caption.Blue400"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="15dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/rounded_background"
+                    android:theme="@style/TextHighlightBlueTheme"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="6dp"
+                    android:gravity="center_horizontal"
+                    android:textAlignment="gravity"
+                    app:layout_constraintTop_toBottomOf="@id/deposit_subtitle"
+                    tools:text="Deposit 0.21 DASH more to start earning"
+                    tools:background="@color/text_highlight_blue_bg" />
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <View
@@ -184,7 +200,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:src="@drawable/ic_left_right_arrows"
+                    android:src="@drawable/ic_withdraw_disabled"
                     app:layout_constraintEnd_toStartOf="@id/withdraw_title"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -209,6 +225,14 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="@+id/withdraw_title"
                     app:layout_constraintTop_toBottomOf="@+id/withdraw_title" />
+
+                <ImageView
+                    android:id="@+id/withdraw_nav_icon"
+                    style="@style/CrowdNodeNavigationIconStyle"
+                    android:layout_marginEnd="1dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/withdraw_icon"
+                    app:layout_constraintBottom_toBottomOf="@id/withdraw_icon" />
             </androidx.constraintlayout.widget.ConstraintLayout>
         </LinearLayout>
     </androidx.cardview.widget.CardView>
@@ -220,6 +244,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="15dp"
         android:layout_marginHorizontal="15dp"
+        app:cardCornerRadius="16dp"
         app:layout_constraintTop_toBottomOf="@id/actions_view">
 
         <LinearLayout
@@ -255,7 +280,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="63dp"
-                    android:text="@string/online_account"
+                    android:text="@string/online_account_create"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
@@ -268,15 +293,6 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="@+id/online_account_title"
                     app:layout_constraintTop_toBottomOf="@+id/online_account_title" />
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_info_white"
-                    app:tint="#AFB6BF"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="@id/online_account_icon"
-                    app:layout_constraintBottom_toBottomOf="@id/online_account_icon"/>
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <View
@@ -301,7 +317,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:src="@drawable/ic_question_mark_circle"
+                    android:src="@drawable/ic_lifebuoy"
                     app:layout_constraintEnd_toStartOf="@id/support_title"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -314,18 +330,16 @@
                     android:layout_marginStart="63dp"
                     android:text="@string/crowdnode_support"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
 
-                <TextView
-                    android:id="@+id/support_subtitle"
-                    style="@style/Caption.SteelGray"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="@string/support_troubleshoot"
+                <ImageView
+                    android:id="@+id/support_nav_icon"
+                    style="@style/CrowdNodeNavigationIconStyle"
+                    android:layout_marginEnd="1dp"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="@+id/support_title"
-                    app:layout_constraintTop_toBottomOf="@+id/support_title" />
+                    app:layout_constraintTop_toTopOf="@id/support_icon"
+                    app:layout_constraintBottom_toBottomOf="@id/support_icon" />
             </androidx.constraintlayout.widget.ConstraintLayout>
         </LinearLayout>
     </androidx.cardview.widget.CardView>

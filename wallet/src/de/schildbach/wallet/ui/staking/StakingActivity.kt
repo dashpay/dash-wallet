@@ -63,6 +63,7 @@ class StakingActivity : LockScreenActivity() {
                         WalletApplication.getInstance()).buildAlertDialog()
                     alertDialog.show()
                 }
+                else -> { }
             }
         }
 
