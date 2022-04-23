@@ -24,8 +24,8 @@
     tools:layout_height="wrap_content">
 
     <ImageView
-        android:layout_width="18dp"
-        android:layout_height="18dp"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
         android:layout_marginVertical="4dp"
         android:src="@drawable/ic_dash_pay" />
 

@@ -58,8 +58,8 @@
 
     <ImageView
         android:id="@+id/source_icon"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:layout_marginTop="8dp"
         android:src="@drawable/ic_dash_pay"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
@@ -77,19 +77,16 @@
         android:layout_marginStart="8dp"
         app:layout_constraintStart_toEndOf="@id/source_icon"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/source_icon"
-        app:layout_constraintBottom_toBottomOf="@id/source_icon" />
+        app:layout_constraintTop_toTopOf="@id/source_icon" />
 
     <TextView
         android:id="@+id/balance_text"
         style="@style/Caption.SteelGray"
-        android:gravity="center"
-        android:textAlignment="gravity"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="5dp"
-        app:layout_constraintBottom_toTopOf="@id/enter_amount_fragment_placeholder"
-        tools:text="Available: 200,00 US$" />
+        app:layout_constraintStart_toStartOf="@id/source_label"
+        app:layout_constraintBottom_toBottomOf="@id/source_icon"
+        tools:text="Balance: 200,00 US$" />
 
     <LinearLayout
         android:id="@+id/enter_amount_fragment_placeholder"
