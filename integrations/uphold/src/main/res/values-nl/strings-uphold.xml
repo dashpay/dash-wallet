@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold</string>
+    <string name="uphold_buy_dash_activity_title">Koop/Verkoop Dash met Uphold</string>
+    <string name="uphold_buy_dash_with_uphold">Koop Dash met Uphold-rekening</string>
+    <string name="uphold_buy_dash_button">Koop Dash</string>
+    <string name="uphold_transfer_to_this_wallet_button">Maak over vanaf Uphold</string>
+    <string name="uphold_link_account">Koppel Uphold-rekening</string>
+    <string name="uphold_account_dash_balance">Je Dash-saldo in je Uphold-rekening is</string>
+    <string name="uphold_transfer_to_this_wallet">Maak Dash van je Uphold-rekening over naar deze portemonnee</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">Kosten worden ingehouden van het gevraagde bedrag.</string>
+    <string name="uphold_withdrawal_instructions">Voer het bedrag in om te verplaatsen</string>
+    <string name="uphold_withdrawal_success_title">Succes</string>
+    <string name="uphold_withdrawal_success_message">Je transactie is verstuurd en het bedrag zou binnen enkele minuten moeten verschijnen in je portemonnee. \n\nTransactie-id: %s</string>
+    <string name="uphold_otp_dialog_title">Voer hieronder uw 2FA code in</string>
+    <string name="uphold_transfer">Overdracht</string>
+    <string name="uphold_see_on_uphold">Kijk bij Uphold</string>
+    <string name="uphold_logout_title">Bij Uphold uitloggen</string>
+    <string name="uphold_logout">Uitloggen</string>
+    <string name="uphold_logout_explanation_text">Je dient ook nog uit te loggen bij Uphold website in je webbrowser.</string>
+    <string name="uphold_go_to_website">Ga naar website</string>
+    <string name="uphold_error">Uphold fout</string>
+    <string name="uphold_error_not_logged_in">Dash Wallet is niet langer gekoppeld aan uw Uphold-rekening. Druk Link Uphold-rekening in het volgende scherm.</string>
+    <string name="uphold_error_not_available">De service van Uphold is niet beschikbaar. Probeer het later opnieuw.</string>
+    <string name="uphold_error_report_issue">Meld dit probleem aan het Dash Wallet team met behulp van "Probleem melden" in het hoofdmenu.</string>
+
+    <string name="uphold_general_error_title">Fout</string>
+    <string name="uphold_api_error_title">Uphold fout</string>
+    <string name="uphold_api_error_identity">Uw Uphold-rekening is nog niet geverifieerd. Geld kan niet worden opgenomen.</string>
+    <string name="uphold_api_error_403_description">Je Uphold-rekening is gemarkeerd voor een review.\n\nUphold heeft je rekening tijdelijk beperkingen opgelegd en je het is niet mogelijk om geld op te nemen.\n\n%s</string>
+    <string name="uphold_api_error_403_generic">Uphold neemt contact met je op om dit spoedig op te lossen.</string>
+    <string name="uphold_api_error_403_due_diligence">Ga a.u.b. naar je Uphold-rekening om wat vragen over jezelf te beantwoorden.</string>
+    <string name="uphold_api_error_403_identity">Ga a.u.b. naar je Uphold-rekening om je identiteit te verifiëren.</string>
+    <string name="uphold_api_error_400_description">Overboekingen worden 24 uur lang geblokkeerd.\n\nU heeft met %svoldoende saldo voor deze overboeking.</string>
+    <string name="uphold_api_error_400_locked">Uphold saldo (%1$s %2$s) worden maximaal 65 dagen geblokkeerd.\n\nEr is voldoende saldo voor deze overboeking over%3$s.</string>
+    <string name="uphold_api_error_400_tx_insufficentfunds">U heeft niet voldoende saldo voor deze overboeking</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">Het over te maken bedrag zou minder dan %s DASH moeten zijn.</string>
+    <string name="uphold_api_error_400_greater_than_or_equal_to">Het over te maken bedrag zou meer dan %s DASH moeten zijn.</string>
+    <string name="uphold_api_error_400_tx_validation">Kan niet zoveel overboeken met deze app (max $3000)</string>
+    <string name="uphold_api_error_400_password_reset">Tegoeden zijn vergrendeld vanwege een recente wachtwoordwijziging.\n\nJe moet %s wachten tot voordat je geld kunt overboeken.</string>
+    <string name="uphold_api_error_400_authentication_change">Tegoeden zijn vergrendeld vanwege een recente wijziging in authenticatiemethode.\n\nJe moet %s wachten tot voordat je geld kunt overboeken.</string>
+
+    <string name="uphold_api_error_400_invalid_beneficiary">Kan niet zoveel overboeken met deze app (max $3000)\n\nGebruik je Uphold-rekening om de overboeking uit te voeren.</string>
+    <string name="uphold_api_error_400_required">Kan niet zoveel overboeken met deze app (max $3000)\n\nGebruik je Uphold-rekening om de overboeking uit te voeren.</string>
+
+</resources>
