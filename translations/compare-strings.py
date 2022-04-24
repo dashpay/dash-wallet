@@ -27,7 +27,7 @@ from fuzzywuzzy import process
 androidFiles = {"../wallet/res/values/strings.xml",
                 "../wallet/res/values/strings-extra.xml",
                 "../common/src/main/res/values/strings.xml",
-                "../uphold-integration/src/main/res/values/strings-uphold.xml"
+                "../integrations/uphold/src/main/res/values/strings-uphold.xml"
                 }
 
 iOSFiles = {"iOS/app-localizable-strings.strings", "iOS/dashsync-localizable-strings.strings"}

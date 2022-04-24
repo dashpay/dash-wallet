@@ -60,7 +60,7 @@ import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
 import org.dash.wallet.integration.liquid.ui.LiquidSplashActivity
 import org.dash.wallet.integration.liquid.ui.LiquidViewModel
 import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
-import org.dash.wallet.integration.uphold.data.UpholdClient
+import org.dash.wallet.integration.uphold.api.UpholdClient
 import org.dash.wallet.integration.uphold.data.UpholdConstants
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.json.JSONObject
