@@ -83,8 +83,9 @@
     <string name="crowdnode_sending_to">Sending to CrowdNode account</string>
     <string name="wallet_sending_to">Sending to Dash Wallet on this device</string>
     <string name="available_balance">Balance: %s</string>
-    <string name="minimum_dash_deposit">Deposit at least %s to start earning</string>
-    <string name="minimum_dash_deposit_difference">Deposit %s more to start earning</string>
+    <string name="crowdnode_minimum_deposit">Deposit at least %s to start earning</string>
+    <string name="crowdnode_minimum_deposit_difference">Deposit %s more to start earning</string>
+    <string name="crowdnode_first_deposit">First deposit should be more than %s</string>
 
     <string name="crowdnode_website" translatable="false">https://crowdnode.io/</string>
     <string name="crowdnode_terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>

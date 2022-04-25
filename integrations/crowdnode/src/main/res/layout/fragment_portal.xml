@@ -162,7 +162,7 @@
 
                 <TextView
                     android:id="@+id/minimum_dash_requirement"
-                    style="@style/Caption.Blue400"
+                    style="@style/Caption.Blue"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="15dp"

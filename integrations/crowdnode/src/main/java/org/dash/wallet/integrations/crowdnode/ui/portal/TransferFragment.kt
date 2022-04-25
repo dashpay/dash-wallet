@@ -30,6 +30,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -50,6 +51,11 @@ import javax.inject.Inject
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
 class TransferFragment : Fragment(R.layout.fragment_transfer) {
+    companion object {
+        private val MINIMUM_DASH_FORMAT = MonetaryFormat.BTC.minDecimals(1)
+            .repeatOptionalDecimals(1, 3).postfixCode()
+    }
+
     private val binding by viewBinding(FragmentTransferBinding::bind)
     private val args by navArgs<TransferFragmentArgs>()
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
@@ -98,6 +104,11 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             binding.sourceIcon.setImageResource(R.drawable.ic_dash_pay)
             binding.sourceLabel.text = getString(R.string.from_wallet)
         }
+
+        binding.bannerMessageText.text = getString(
+            R.string.crowdnode_first_deposit,
+            MINIMUM_DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
+        )
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()

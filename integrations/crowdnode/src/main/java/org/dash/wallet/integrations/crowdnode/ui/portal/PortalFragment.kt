@@ -191,12 +191,12 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
 
             if (balance < NEGLIGIBLE_AMOUNT) {
                 binding.minimumDashRequirement.text = getString(
-                    R.string.minimum_dash_deposit,
+                    R.string.crowdnode_minimum_deposit,
                     DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
                 )
             } else {
                 binding.minimumDashRequirement.text = getString(
-                    R.string.minimum_dash_deposit_difference,
+                    R.string.crowdnode_minimum_deposit_difference,
                     DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT - balance)
                 )
             }
