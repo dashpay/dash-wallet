@@ -138,7 +138,7 @@ class ConvertViewViewModel @Inject constructor(
         minAllowedSwapDashCoin = coin
 
         val value =
-            (maxCoinBaseAccountAmount.toBigDecimal() * account.currencyToDashExchangeRate.toBigDecimal())
+            (maxCoinBaseAccountAmount.toBigDecimal() * account.cryptoCurrencyToDashExchangeRate.toBigDecimal())
                 .setScale(8, RoundingMode.HALF_UP)
 
         val maxCoinValue = try {
@@ -175,6 +175,8 @@ class ConvertViewViewModel @Inject constructor(
         _enteredConvertDashAmount.value?.let {
             return when {
                 it.isZero -> SwapValueErrorType.NOError
+                (it == minAllowedSwapDashCoin || it.isGreaterThan(minAllowedSwapDashCoin)) &&
+                    coin.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.NO_ENOUGH_BALANCE
                 it.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.LessThanMin
                 it.isGreaterThan(coin) -> SwapValueErrorType.MoreThanMax.apply {
                     amount = maxCoinBaseAccountAmount

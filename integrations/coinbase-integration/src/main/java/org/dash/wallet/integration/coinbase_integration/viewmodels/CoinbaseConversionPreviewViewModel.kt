@@ -18,7 +18,6 @@ package org.dash.wallet.integration.coinbase_integration.viewmodels
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -61,11 +60,13 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
 
     val commitSwapTradeSuccessState = SingleLiveEvent<SendTransactionToWalletParams>()
     val sellSwapSuccessState = SingleLiveEvent<Unit>()
-    val swapTradeFailureState = SingleLiveEvent<String>()
+    val swapTradeFailureState = SingleLiveEvent<String?>()
 
     val getUserAccountAddressFailedCallback = SingleLiveEvent<Unit>()
-    val onFailure = SingleLiveEvent<String>()
+    val onFailure = SingleLiveEvent<String?>()
     val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
+
+    var isFirstTime = true
 
     fun commitSwapTrade(tradeId: String, inputCurrency: String, inputAmount: String) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true

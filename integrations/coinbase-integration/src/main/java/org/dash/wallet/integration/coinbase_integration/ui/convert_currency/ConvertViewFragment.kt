@@ -23,7 +23,6 @@ import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.view.View
-import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -175,8 +174,8 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             binding.currencyOptions.isVisible = true
             binding.maxButtonWrapper.isVisible = true
             binding.inputWrapper.isVisible = true
-            if(hasInternet)
-            binding.bottomCard.isVisible = true
+            if (hasInternet)
+                binding.bottomCard.isVisible = true
         }
     }
 
@@ -542,7 +541,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
 
     fun handleNetworkState(hasInternet: Boolean) {
         lifecycleScope.launchWhenStarted {
-            this@ConvertViewFragment.hasInternet=hasInternet
+            this@ConvertViewFragment.hasInternet = hasInternet
             viewModel.selectedCryptoCurrencyAccount.value?.let {
                 binding.bottomCard.isVisible = hasInternet
             }

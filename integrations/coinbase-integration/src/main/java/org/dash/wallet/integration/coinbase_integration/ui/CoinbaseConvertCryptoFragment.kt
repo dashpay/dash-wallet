@@ -41,7 +41,6 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.integration.coinbase_integration.MIN_SWAP_DASH_AMOUNT_VALUE
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseConvertCryptoBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
@@ -53,7 +52,6 @@ import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.mode
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.crypto_wallets.CryptoWalletsDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseConvertCryptoViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
-import java.math.RoundingMode
 
 
 @ExperimentalCoroutinesApi
@@ -141,15 +139,30 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                         }
                     }
                 } else {
-                    selectedCoinBaseAccount?.let {
-                        pair.second?.first?.let { fait ->
-                            viewModel.swapTrade(fait, it, pair.first)
+                    if (pair.second?.second != null && viewModel.isInputGreaterThanLimit(pair.second?.second!!)) {
+                        showSwapValueErrorView(SwapValueErrorType.UnAuthorizedValue)
+                    } else {
+                        selectedCoinBaseAccount?.let {
+                            pair.second?.first?.let { fait ->
+                                viewModel.swapTrade(fait, it, pair.first)
+                            }
                         }
                     }
                 }
             } else {
                 showSwapValueErrorView(swapValueErrorType)
             }
+        }
+
+        binding.authLimitBanner.warningLimitInfo.setOnClickListener {
+            AdaptiveDialog.custom(
+                R.layout.dialog_withdrawal_limit_info,
+                null,
+                getString(R.string.set_auth_limit),
+                getString(R.string.change_withdrawal_limit),
+                "",
+                getString(R.string.got_it)
+            ).show(requireActivity()) { }
         }
 
         viewModel.swapTradeOrder.observe(
@@ -164,9 +177,13 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
+            val message = if (it.isNullOrBlank())
+                requireContext().getString(R.string.something_wrong_title)
+            else
+                it
             val placeBuyOrderError = CoinbaseGenericErrorUIModel(
                 R.string.error,
-                it,
+                message,
                 R.drawable.ic_info_red,
                 negativeButtonText = R.string.close
             )
@@ -249,8 +266,8 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
         convertViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner) { balance ->
             val hasBalance = !balance.isZero
-            binding.youWillReceiveLabel.isVisible = hasBalance
-            binding.youWillReceiveValue.isVisible = hasBalance
+            binding.youWillReceiveLabel.isVisible = hasBalance && binding.convertView.dashToCrypto == false
+            binding.youWillReceiveValue.isVisible = hasBalance && binding.convertView.dashToCrypto == false
             if (hasBalance) {
                 binding.youWillReceiveValue.text = context?.getString(
                     R.string.you_will_receive_dash,
@@ -267,6 +284,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
         convertViewModel.validSwapValue.observe(viewLifecycleOwner) {
             binding.limitDesc.isGone = true
+            binding.authLimitBanner.root.isGone = true
             setGuidelinePercent(true)
         }
 
@@ -279,18 +297,25 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         if (isErrorHidden) {
             params.guidePercent = 0.08f // 45% // range: 0 <-> 1
         } else {
-            params.guidePercent = 0.12f
+            params.guidePercent = 0.15f
         }
         guideLine.layoutParams = params
     }
 
     private fun showSwapValueErrorView(swapValueErrorType: SwapValueErrorType) {
         binding.limitDesc.isGone = swapValueErrorType == SwapValueErrorType.NOError
-        setGuidelinePercent(binding.limitDesc.isGone)
+        binding.authLimitBanner.root.isVisible = swapValueErrorType == SwapValueErrorType.UnAuthorizedValue
+        setGuidelinePercent(binding.limitDesc.isGone && binding.authLimitBanner.root.isGone)
         when (swapValueErrorType) {
             SwapValueErrorType.LessThanMin -> setMinAmountErrorMessage()
             SwapValueErrorType.MoreThanMax -> setMaxAmountError()
+            SwapValueErrorType.NO_ENOUGH_BALANCE -> setNoEnoughBalanceError()
         }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun setNoEnoughBalanceError() {
+        binding.limitDesc.setText(R.string.you_dont_have_enough_balance)
     }
 
     @SuppressLint("SetTextI18n")
@@ -321,16 +346,8 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     private fun setMinAmountErrorMessage() {
         convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
             selectedCoinBaseAccount?.currencyToDashExchangeRate?.let { currencyToDashExchangeRate ->
-
-                val cleanedValue =
-                    (
-                        MIN_SWAP_DASH_AMOUNT_VALUE.toBigDecimal() /
-                            currencyToDashExchangeRate.toBigDecimal()
-                        )
-                val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
-
                 val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
-                val fiatAmount = Fiat.parseFiat(currencyRate.fiat.currencyCode, bd.toString())
+                val fiatAmount = Fiat.parseFiat(currencyRate.fiat.currencyCode, convertViewModel.minAllowedSwapAmount)
                 binding.limitDesc.text = "${getString(
                     R.string.entered_amount_is_too_low
                 )} ${GenericUtils.fiatToString(fiatAmount)}"
