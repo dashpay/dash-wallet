@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.crowdnode.ui.portal
 import android.animation.ObjectAnimator
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
@@ -45,17 +46,13 @@ import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardDepositHea
 import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardWithdrawHeaderBinding
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
+import org.dash.wallet.integrations.crowdnode.ui.dialogs.StakingDialog
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Inject
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
 class TransferFragment : Fragment(R.layout.fragment_transfer) {
-    companion object {
-        private val MINIMUM_DASH_FORMAT = MonetaryFormat.BTC.minDecimals(1)
-            .repeatOptionalDecimals(1, 3).postfixCode()
-    }
-
     private val binding by viewBinding(FragmentTransferBinding::bind)
     private val args by navArgs<TransferFragmentArgs>()
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
@@ -95,51 +92,14 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             }
         }
 
-        if (args.withdraw) {
-            binding.toolbarTitle.text = getString(R.string.withdraw)
-            binding.sourceIcon.setImageResource(R.drawable.ic_crowdnode_logo)
-            binding.sourceLabel.text = getString(R.string.from_crowdnode)
-        } else {
-            binding.toolbarTitle.text = getString(R.string.deposit)
-            binding.sourceIcon.setImageResource(R.drawable.ic_dash_pay)
-            binding.sourceLabel.text = getString(R.string.from_wallet)
-        }
-
-        binding.bannerMessageText.text = getString(
-            R.string.crowdnode_first_deposit,
-            MINIMUM_DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
-        )
-
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
 
         if (args.withdraw) {
-            viewModel.crowdNodeBalance.observe(viewLifecycleOwner) {
-                updateAvailableBalance()
-            }
-
-            this.balanceAnimator = ObjectAnimator.ofFloat(
-                binding.balanceText,
-                View.ALPHA.name,
-                0f, 0.5f
-            ).apply {
-                duration = 500
-                repeatCount = ObjectAnimator.INFINITE
-                repeatMode = ObjectAnimator.REVERSE
-            }
-
-            viewModel.isBalanceLoading.observe(viewLifecycleOwner) { isLoading ->
-                if (isLoading) {
-                    this.balanceAnimator?.start()
-                } else {
-                    this.balanceAnimator?.end()
-                }
-            }
+            setupWithdraw()
         } else {
-            viewModel.dashBalance.observe(viewLifecycleOwner) {
-                updateAvailableBalance()
-            }
+            setupDeposit()
         }
 
         viewModel.crowdNodeError.observe(viewLifecycleOwner) { error ->
@@ -188,6 +148,55 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             lifecycleScope.launch {
                 continueTransfer(pair.first)
             }
+        }
+    }
+
+    private fun setupWithdraw() {
+        binding.toolbarTitle.text = getString(R.string.withdraw)
+        binding.sourceIcon.setImageResource(R.drawable.ic_crowdnode_logo)
+        binding.sourceLabel.text = getString(R.string.from_crowdnode)
+
+        viewModel.crowdNodeBalance.observe(viewLifecycleOwner) {
+            updateAvailableBalance()
+        }
+
+        this.balanceAnimator = ObjectAnimator.ofFloat(
+            binding.balanceText,
+            View.ALPHA.name,
+            0f, 0.5f
+        ).apply {
+            duration = 500
+            repeatCount = ObjectAnimator.INFINITE
+            repeatMode = ObjectAnimator.REVERSE
+        }
+
+        viewModel.isBalanceLoading.observe(viewLifecycleOwner) { isLoading ->
+            if (isLoading) {
+                this.balanceAnimator?.start()
+            } else {
+                this.balanceAnimator?.end()
+            }
+        }
+    }
+
+    private fun setupDeposit() {
+        binding.toolbarTitle.text = getString(R.string.deposit)
+        binding.sourceIcon.setImageResource(R.drawable.ic_dash_pay)
+        binding.sourceLabel.text = getString(R.string.from_wallet)
+
+        if (!viewModel.hasAnyDeposits()) {
+            binding.messageBanner.isVisible = true
+            binding.bannerMessageText.text = getString(
+                R.string.crowdnode_first_deposit,
+                CrowdNodeConstants.DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
+            )
+            binding.messageBanner.setOnClickListener {
+                StakingDialog().show(parentFragmentManager, "staking")
+            }
+        }
+
+        viewModel.dashBalance.observe(viewLifecycleOwner) {
+            updateAvailableBalance()
         }
     }
 

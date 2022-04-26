@@ -29,7 +29,6 @@ import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.params.MainNetParams
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -45,8 +44,6 @@ import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 class PortalFragment : Fragment(R.layout.fragment_portal) {
     companion object {
         private val NEGLIGIBLE_AMOUNT: Coin = CrowdNodeConstants.MINIMUM_DASH_DEPOSIT.div(50)
-        private val DASH_FORMAT = MonetaryFormat.BTC.minDecimals(1)
-            .repeatOptionalDecimals(1, 3).postfixCode()
     }
 
     private val binding by viewBinding(FragmentPortalBinding::bind)
@@ -192,12 +189,12 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             if (balance < NEGLIGIBLE_AMOUNT) {
                 binding.minimumDashRequirement.text = getString(
                     R.string.crowdnode_minimum_deposit,
-                    DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
+                    CrowdNodeConstants.DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
                 )
             } else {
                 binding.minimumDashRequirement.text = getString(
                     R.string.crowdnode_minimum_deposit_difference,
-                    DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT - balance)
+                    CrowdNodeConstants.DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT - balance)
                 )
             }
         } else {

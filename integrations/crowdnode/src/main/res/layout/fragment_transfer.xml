@@ -59,11 +59,14 @@
     <LinearLayout
         android:id="@+id/message_banner"
         android:layout_width="match_parent"
-        android:layout_height="32dp"
+        android:layout_height="@dimen/banner_message_height"
         android:background="@color/dash_blue"
         android:gravity="center_horizontal"
         android:orientation="horizontal"
         android:translationZ="5dp"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
         tools:visibility="visible">
 
@@ -89,7 +92,8 @@
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:src="@drawable/ic_dash_pay"
-        app:layout_constraintTop_toBottomOf="@id/message_banner"
+        android:layout_marginTop="@dimen/banner_message_height"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/source_label"
         app:layout_constraintBottom_toTopOf="@id/enter_amount_fragment_placeholder"
