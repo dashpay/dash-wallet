@@ -200,6 +200,10 @@ class CrowdNodeViewModel @Inject constructor(
         return crowdNodeApi.withdraw(coin)
     }
 
+    fun hasAnyDeposits(): Boolean {
+        return crowdNodeApi.hasAnyDeposits()
+    }
+
     private suspend fun getOrCreateAccountAddress(): Address {
         val existingAddress = crowdNodeApi.accountAddress
 

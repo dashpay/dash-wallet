@@ -91,6 +91,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -909,6 +910,29 @@ public class WalletApplication extends BaseWalletApplication
     @Override
     public Flow<Transaction> observeTransactions(@NonNull TransactionFilter... filters) {
         return new WalletTransactionObserver(wallet).observe(filters);
+    }
+
+    @NonNull
+    @Override
+    public Collection<Transaction> getTransactions(@NonNull TransactionFilter... filters) {
+        Set<Transaction> transactions = wallet.getTransactions(true);
+
+        if (filters.length == 0) {
+            return transactions;
+        }
+
+        ArrayList<Transaction> filteredTransactions = new ArrayList<>();
+
+        for (Transaction tx : transactions) {
+            for (TransactionFilter filter : filters) {
+                if (filter.matches(tx)) {
+                    filteredTransactions.add(tx);
+                    break;
+                }
+            }
+        }
+
+        return filteredTransactions;
     }
 
     @NonNull
