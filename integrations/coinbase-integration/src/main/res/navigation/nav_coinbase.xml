@@ -168,6 +168,10 @@
             android:name="transactionParams"
             app:argType="org.dash.wallet.integration.coinbase_integration.model.CoinbaseTransactionParams"
             />
+        <action
+            android:id="@+id/conversionPreviewToTwoFaCode"
+            app:destination="@id/enterTwoFaCodeFragment"
+            />
     </fragment>
     <fragment
         android:id="@+id/transferDashFragment"

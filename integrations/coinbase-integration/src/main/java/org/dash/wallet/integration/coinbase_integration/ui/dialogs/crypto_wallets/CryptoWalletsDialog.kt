@@ -32,6 +32,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
@@ -40,6 +41,7 @@ import org.dash.wallet.common.R
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.databinding.DialogOptionPickerBinding
 import org.dash.wallet.common.ui.ListDividerDecorator
+import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.radio_group.IconSelectMode
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
@@ -50,6 +52,7 @@ import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccoun
 import org.dash.wallet.integration.coinbase_integration.model.getCoinBaseExchangeRateConversion
 
 @AndroidEntryPoint
+@ExperimentalCoroutinesApi
 class CryptoWalletsDialog(
     private val userAccountsWithBalance: List<CoinBaseUserAccountDataUIModel>,
     private val selectedCurrencyCode: String = "USD",
@@ -60,9 +63,8 @@ class CryptoWalletsDialog(
     private val viewModel: CryptoWalletsDialogViewModel by viewModels()
     private var itemList = listOf<IconifiedViewItem>()
     private var didFocusOnSelected = false
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-        .noCode().minDecimals(6).optionalDecimals()
-    private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
+
+    private var currentExchangeRate: ExchangeRate? = null
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -174,8 +176,19 @@ class CryptoWalletsDialog(
                 binding.contentList.scrollToPosition(scrollPosition)
             }
         }
+
+        childFragmentManager.beginTransaction()
+            .replace(R.id.dialog_network_status_container, NetworkUnavailableFragment.newInstance())
+            .commit()
     }
 
+    fun handleNetworkState(hasInternet: Boolean) {
+        lifecycleScope.launchWhenStarted {
+            binding.dialogNetworkStatusContainer.isVisible = !hasInternet
+            binding.searchBox.isVisible = hasInternet
+            binding.contentList.isVisible = hasInternet
+        }
+    }
     private fun setLocalFaitAmount(coinBaseUserAccountData: CoinBaseUserAccountDataUIModel): Pair<String, Coin>? {
 
         currentExchangeRate?.let {

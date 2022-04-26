@@ -16,13 +16,17 @@
  */
 package org.dash.wallet.integration.coinbase_integration.ui.dialogs
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import android.widget.Toast
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
@@ -76,6 +80,10 @@ class CoinBaseBuyDashDialog : DialogFragment() {
             dismiss()
             findNavController().popBackStack()
             findNavController().popBackStack()
+        }
+
+        binding.buyDialogContactCoinbaseSupport.setOnClickListener {
+            openCoinbaseHelp()
         }
     }
 
@@ -199,5 +207,16 @@ class CoinBaseBuyDashDialog : DialogFragment() {
 
     interface CoinBaseBuyDashDialogButtonsClickListener {
         fun onPositiveButtonClick(type: Type)
+    }
+
+    private fun openCoinbaseHelp() {
+        val helpUrl = "https://help.coinbase.com/en/contact-us"
+        try {
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.data = Uri.parse(helpUrl)
+            startActivity(intent)
+        }catch (e: ActivityNotFoundException){
+            Toast.makeText(requireActivity(), helpUrl, Toast.LENGTH_SHORT).show()
+        }
     }
 }

@@ -70,7 +70,7 @@ class EnterTwoFaCodeViewModel @Inject constructor(
                     _loadingState.value = false
                     try {
                         val error = result.errorBody?.string()
-                        if (result.errorCode == 400 || result.errorCode == 402) {
+                        if (result.errorCode == 400 || result.errorCode == 402 || result.errorCode == 429) {
                             error?.let { errorMsg ->
                                 val errorContent = CoinbaseErrorResponse.getErrorMessage(errorMsg)
                                 if (errorContent?.id.equals(ERROR_ID_INVALID_REQUEST, true)
@@ -80,7 +80,7 @@ class EnterTwoFaCodeViewModel @Inject constructor(
                                     _transactionState.value = TransactionState(false, errorContent?.message)
                                 }
                             }
-                        }else {
+                        } else {
                             _transactionState.value = TransactionState(false, null)
                         }
                     } catch (e: IOException) {

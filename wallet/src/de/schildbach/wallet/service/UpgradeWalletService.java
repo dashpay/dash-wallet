@@ -66,7 +66,7 @@ public final class UpgradeWalletService extends IntentService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             final NotificationCompat.Builder notification = new NotificationCompat.Builder(this,
                     Constants.NOTIFICATION_CHANNEL_ID_ONGOING);
-            notification.setSmallIcon(R.drawable.ic_dash_d_white_bottom);
+            notification.setSmallIcon(R.drawable.ic_dash_d_white);
             notification.setWhen(System.currentTimeMillis());
             notification.setOngoing(true);
             startForeground(Constants.NOTIFICATION_ID_UPGRADE_WALLET, notification.build());

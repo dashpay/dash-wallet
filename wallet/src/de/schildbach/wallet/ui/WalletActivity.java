@@ -19,8 +19,6 @@ package de.schildbach.wallet.ui;
 import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
-import android.content.ClipData;
-import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -36,7 +34,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.LocaleList;
 import android.telephony.TelephonyManager;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
@@ -61,13 +58,16 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.CheckPinSharedModel;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
+
 import java.io.IOException;
 import java.util.Currency;
 import java.util.Locale;
+
+import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.AppDatabase;
@@ -76,7 +76,6 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
-import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment;
 import de.schildbach.wallet.ui.backup.RestoreFromFileHelper;
 import de.schildbach.wallet.ui.explore.ExploreActivity;
@@ -93,7 +92,6 @@ import kotlin.Pair;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
 
-import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
 
 /**
  * @author Andreas Schildbach
@@ -130,13 +128,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private boolean isRestoringBackup;
 
-    private ClipboardManager clipboardManager;
-
     private boolean showBackupWalletDialog = false;
     private de.schildbach.wallet.data.BlockchainState blockchainState;
 
-    private final FirebaseAnalyticsServiceImpl analytics =
-            FirebaseAnalyticsServiceImpl.Companion.getInstance();
+    private MainActivityViewModel viewModel;
+    @Inject
+    public WalletDataProvider walletDataProvider;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -166,8 +163,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
         }
 
-        this.clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-
         View appBar = findViewById(R.id.app_bar);
         CoordinatorLayout.LayoutParams params = (CoordinatorLayout.LayoutParams) appBar.getLayoutParams();
         if (params.getBehavior() == null) {
@@ -191,14 +186,27 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         });
 
-        RefreshUpdateShortcutsPaneViewModel model = new ViewModelProvider(this).get(RefreshUpdateShortcutsPaneViewModel.class);
-        model.getOnTransactionsUpdated().observe(this, aVoid -> {
-            refreshShortcutBar();
-        });
+        initViewModel();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        if (!getLockScreenDisplayed() && config.getShowNotificationsExplainer()) {
+            explainPushNotifications();
+        }
     }
 
     private void initView() {
         initShortcutActions();
+    }
+
+    private void initViewModel() {
+        viewModel = new ViewModelProvider(this).get(MainActivityViewModel.class);
+        viewModel.getOnTransactionsUpdated().observe(this, aVoid -> {
+            refreshShortcutBar();
+        });
     }
 
     private void initShortcutActions() {
@@ -207,19 +215,18 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Override
             public void onClick(View v) {
                 if (v == shortcutsPane.getSecureNowButton()) {
-                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_SECURE_WALLET, Bundle.EMPTY);
+                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SECURE_WALLET);
                     handleBackupWalletToSeed();
                 } else if (v == shortcutsPane.getScanToPayButton()) {
-                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_SCAN_TO_PAY, Bundle.EMPTY);
+                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SCAN_TO_PAY);
                     handleScan(v);
                 } else if (v == shortcutsPane.getBuySellButton()) {
-                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL, Bundle.EMPTY);
+                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL);
                     startUpholdActivity();
                 } else if (v == shortcutsPane.getPayToAddressButton()) {
-                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_SEND_TO_ADDRESS, Bundle.EMPTY);
-                    handlePaste();
+                    handlePayToAddress();
                 } else if (v == shortcutsPane.getReceiveButton()) {
-                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE, Bundle.EMPTY);
+                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE);
                     startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_RECEIVE));
                 } else if (v == shortcutsPane.getImportPrivateKey()) {
                     SweepWalletActivity.start(WalletActivity.this, true);
@@ -295,7 +302,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
                 @Override
                 protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                    baseAlertDialogBuilder.setMessage(formatString(WalletActivity.this, messageResId, messageArgs));
+                    baseAlertDialogBuilder.setMessage(getString(messageResId, messageArgs));
                     baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
                     alertDialog = baseAlertDialogBuilder.buildAlertDialog();
                     alertDialog.show();
@@ -332,10 +339,26 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void handleString(String input, final int errorDialogTitleResId, final int cannotClassifyCustomMessageResId) {
-        new StringInputParser(input, true) {
+        new InputParser.StringInputParser(input, true) {
             @Override
             protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                SendCoinsInternalActivity.start(WalletActivity.this, paymentIntent, true);
+                if (paymentIntent.shouldConfirmAddress) {
+                    AdaptiveDialog.create(
+                            null,
+                            getString(R.string.pay_to_confirm_address),
+                            paymentIntent.getAddress().toBase58(),
+                            getString(R.string.button_cancel),
+                            getString(R.string.confirm)
+                    ).show(WalletActivity.this, confirmed -> {
+                        if (confirmed != null && confirmed) {
+                            SendCoinsInternalActivity.start(WalletActivity.this, paymentIntent, true);
+                        }
+
+                        return Unit.INSTANCE;
+                    });
+                } else {
+                    SendCoinsInternalActivity.start(WalletActivity.this, paymentIntent, true);
+                }
             }
 
             @Override
@@ -345,14 +368,20 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
             @Override
             protected void handleDirectTransaction(final Transaction tx) throws VerificationException {
-                application.processDirectTransaction(tx);
+                walletDataProvider.processDirectTransaction(tx);
             }
 
             @Override
             protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                baseAlertDialogBuilder.setTitle(getString(errorDialogTitleResId));
-                baseAlertDialogBuilder.setMessage(formatString(WalletActivity.this, messageResId, messageArgs));
-                baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                AdaptiveDialog dialog = AdaptiveDialog.create(
+                        R.drawable.ic_info_red,
+                        getString(errorDialogTitleResId),
+                        messageArgs.length > 0 ? getString(messageResId, messageArgs) : getString(messageResId),
+                        getString(R.string.close),
+                        null
+                );
+                dialog.setMessageSelectable(true);
+                dialog.show(WalletActivity.this, reportIssue -> Unit.INSTANCE);
             }
 
             @Override
@@ -361,85 +390,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 error(null, cannotClassifyCustomMessageResId, input);
             }
         }.parse();
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(final Menu menu) {
-        getMenuInflater().inflate(R.menu.wallet_options, menu);
-        super.onCreateOptionsMenu(menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(final MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.wallet_options_request:
-                handleRequestCoins();
-                return true;
-
-            case R.id.wallet_options_send:
-                handleSendCoins();
-                return true;
-
-			/*case R.id.wallet_options_scan:
-                handleScan();
-				return true;
-
-			case R.id.wallet_options_address_book:
-				AddressBookActivity.start(this);
-				return true;
-
-			case R.id.wallet_options_exchange_rates:
-				startActivity(new Intent(this, ExchangeRatesActivity.class));
-				return true;
-
-			case R.id.wallet_options_sweep_wallet:
-				SweepWalletActivity.start(this);
-				return true;
-
-			case R.id.wallet_options_network_monitor:
-				startActivity(new Intent(this, NetworkMonitorActivity.class));
-				return true;
-
-			case R.id.wallet_options_restore_wallet:
-				handleRestoreWallet();
-				return true;
-
-			case R.id.wallet_options_backup_wallet:
-				handleBackupWallet();
-				return true;
-
-			case R.id.wallet_options_encrypt_keys:
-				handleEncryptKeys();
-				return true;
-
-			case R.id.wallet_options_preferences:
-				startActivity(new Intent(this, PreferenceActivity.class));
-				return true;
-
-			case R.id.wallet_options_safety:
-				HelpDialogFragment.page(getFragmentManager(), R.string.help_safety);
-				return true;
-*/
-            case R.id.wallet_options_report_issue:
-                handleReportIssue();
-                return true;
-
-            case R.id.options_paste:
-                handlePaste();
-                return true;
-
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    public void handleRequestCoins() {
-        startActivity(new Intent(this, RequestCoinsActivity.class));
-    }
-
-    public void handleSendCoins() {
-        SendCoinsInternalActivity.start(this, null, true);
     }
 
     public void handleScan(View clickView) {
@@ -506,35 +456,23 @@ public final class WalletActivity extends AbstractBindServiceActivity
         alertDialog.show();
     }
 
-    private void handlePaste() {
-        String input = null;
-        if (clipboardManager.hasPrimaryClip()) {
-            final ClipData clip = clipboardManager.getPrimaryClip();
-            if (clip == null) {
-                return;
-            }
-            final ClipDescription clipDescription = clip.getDescription();
-            if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
-                final Uri clipUri = clip.getItemAt(0).getUri();
-                if (clipUri != null) {
-                    input = clipUri.toString();
-                }
-            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)
-                    || clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)) {
-                final CharSequence clipText = clip.getItemAt(0).getText();
-                if (clipText != null) {
-                    input = clipText.toString();
-                }
-            }
-        }
-        if (input != null) {
+    private void handlePayToAddress() {
+        viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SEND_TO_ADDRESS);
+        String input = viewModel.getClipboardInput();
+        handlePaste(input);
+    }
+
+    public void handlePaste(String input) {
+        if (!input.isEmpty()) {
             handleString(input, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message);
         } else {
-            baseAlertDialogBuilder.setTitle(getString(R.string.scan_to_pay_error_dialog_title));
-            baseAlertDialogBuilder.setMessage(getString(R.string.scan_to_pay_error_dialog_message_no_data));
-            baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-            alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-            alertDialog.show();
+            AdaptiveDialog.create(
+                    R.drawable.ic_info_red,
+                    getString(R.string.shortcut_pay_to_address),
+                    getString(R.string.scan_to_pay_error_dialog_message_no_data),
+                    getString(R.string.close),
+                    null
+            ).show(this, reportIssue -> Unit.INSTANCE);
         }
     }
 
@@ -614,62 +552,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 .newBuilder();
         url.addEncodedQueryParameter("package", packageInfo.packageName);
         url.addQueryParameter("current", Integer.toString(packageInfo.versionCode));
-
-		/*new HttpGetThread(url.build(), application.httpUserAgent()) {
-			@Override
-			protected void handleLine(final String line, final long serverTime) {
-				final int serverVersionCode = Integer.parseInt(line.split("\\s+")[0]);
-
-				log.info("according to \"" + url + "\", strongly recommended minimum app version is "
-						+ serverVersionCode);
-
-				if (serverTime > 0) {
-					final long diffMinutes = Math
-							.abs((System.currentTimeMillis() - serverTime) / DateUtils.MINUTE_IN_MILLIS);
-
-					if (diffMinutes >= 60) {
-						log.info("according to \"" + url + "\", system clock is off by " + diffMinutes + " minutes");
-
-						runOnUiThread(new Runnable() {
-							@Override
-							public void run() {
-								if (!isFinishing())
-									return;
-								final Bundle args = new Bundle();
-								args.putLong("diff_minutes", diffMinutes);
-								showDialog(DIALOG_TIMESKEW_ALERT, args);
-							}
-						});
-
-						return;
-					}
-				}
-
-				if (serverVersionCode > packageInfo.versionCode) {
-					runOnUiThread(new Runnable() {
-						@Override
-						public void run() {
-							if (isFinishing())
-								return;
-							showDialog(DIALOG_VERSION_ALERT);
-						}
-					});
-
-					return;
-				}
-			}
-
-			@Override
-			protected void handleException(final Exception x) {
-				if (x instanceof UnknownHostException || x instanceof SocketException
-						|| x instanceof SocketTimeoutException) {
-					// swallow
-					log.debug("problem reading", x);
-				} else {
-					CrashReporter.saveBackgroundTrace(new RuntimeException(url.toString(), x), packageInfo);
-				}
-			}
-		}.start();*/
 
         if (CrashReporter.hasSavedCrashTrace()) {
             final StringBuilder stackTrace = new StringBuilder();
@@ -805,7 +687,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private void checkWalletEncryptionDialog() {
         if (!wallet.isEncrypted()) {
             log.info("the wallet is not encrypted");
-            analytics.logError(new Exception("the wallet is not encrypted / OnboardingActivity"),
+            viewModel.logError(new Exception("the wallet is not encrypted / OnboardingActivity"),
                     "no other details are available without the user submitting a report");
             AdaptiveDialog dialog = AdaptiveDialog.custom(R.layout.dialog_adaptive,
                     R.drawable.ic_error,
@@ -1130,4 +1012,24 @@ public final class WalletActivity extends AbstractBindServiceActivity
         finish();
         return Unit.INSTANCE;
     };
+
+    @Override
+    public void onLockScreenDeactivated() {
+        if (config.getShowNotificationsExplainer()) {
+            explainPushNotifications();
+        }
+    }
+
+    private void explainPushNotifications() {
+        AdaptiveDialog dialog = AdaptiveDialog.create(
+                null,
+                getString(R.string.notification_explainer_title),
+                getString(R.string.notification_explainer_message),
+                "",
+                getString(R.string.button_okay)
+        );
+
+        dialog.show(this, result -> Unit.INSTANCE);
+        config.setShowNotificationsExplainer(false);
+    }
 }

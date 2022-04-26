@@ -33,8 +33,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Constants
+import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -56,14 +56,8 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         private const val DECIMAL_SEPARATOR = '.'
 
         @JvmStatic
-        fun newInstance(
-            dashToCrypto: Boolean = false,
-        ): ConvertViewFragment {
-            val args = bundleOf(ARG_DASH_TO_FIAT to dashToCrypto)
-
-            return ConvertViewFragment().apply {
-                arguments = args
-            }
+        fun newInstance(): ConvertViewFragment {
+            return ConvertViewFragment()
         }
     }
 
@@ -75,20 +69,14 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
     private var maxAmountSelected: Boolean = false
     var selectedCurrencyCodeExchangeRate: ExchangeRate? = null
     var currencyConversionOptionList: List<String> = emptyList()
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-        .noCode().minDecimals(6).optionalDecimals()
-
+    private var hasInternet: Boolean = true
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val args = requireArguments()
-
-        val dashToCrypto = args.getBoolean(ARG_DASH_TO_FIAT)
-        viewModel.setOnSwapDashFromToCryptoClicked(dashToCrypto)
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.isEnabled = false
         binding.continueBtn.setOnClickListener {
-            getFaitAmount(
+            getFiatAmount(
                 viewModel.enteredConvertAmount,
                 binding.currencyOptions.pickedOption
             )?.let {
@@ -150,6 +138,10 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             setAmountValue(value, viewModel.enteredConvertAmount)
             viewModel.selectedPickerCurrencyCode = value
         }
+
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.convert_view_network_status_container, NetworkUnavailableFragment.newInstance())
+            .commit()
     }
 
     private fun getMaxAmount(): String? {
@@ -183,6 +175,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             binding.currencyOptions.isVisible = true
             binding.maxButtonWrapper.isVisible = true
             binding.inputWrapper.isVisible = true
+            if(hasInternet)
             binding.bottomCard.isVisible = true
         }
     }
@@ -483,7 +476,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         }
     }
 
-    private fun getFaitAmount(balance: String, currencyCode: String): Pair<Fiat?, Coin?>? {
+    private fun getFiatAmount(balance: String, currencyCode: String): Pair<Fiat?, Coin?>? {
         viewModel.selectedCryptoCurrencyAccount.value?.let {
             selectedCurrencyCodeExchangeRate?.let { rate ->
                 val fiatAmount = when {
@@ -540,5 +533,15 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
 
     private fun checkTheUserEnteredValue(hasBalance: Boolean) {
         binding.continueBtn.isEnabled = hasBalance
+    }
+
+    fun handleNetworkState(hasInternet: Boolean) {
+        lifecycleScope.launchWhenStarted {
+            this@ConvertViewFragment.hasInternet=hasInternet
+            viewModel.selectedCryptoCurrencyAccount.value?.let {
+                binding.bottomCard.isVisible = hasInternet
+            }
+            binding.convertViewNetworkStatusContainer.isVisible = !hasInternet
+        }
     }
 }

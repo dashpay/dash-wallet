@@ -29,5 +29,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">닫기</string>
     <string name="network_unavailable_return">지갑으로 돌아가기</string>
+    <string name="button_continue">계속</string>
 
+    <string name="max">최대</string>
+    <string name="select_currency">통화 선택</string>
 </resources>
