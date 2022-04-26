@@ -42,10 +42,12 @@ import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
+import org.dash.wallet.common.ui.CheckPinSharedModel
+import org.dash.wallet.common.PinInteractor
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.slf4j.LoggerFactory
 
-open class CheckPinDialog : DialogFragment() {
+open class CheckPinDialog : DialogFragment(), PinInteractor {
 
     companion object {
 
@@ -326,5 +328,9 @@ open class CheckPinDialog : DialogFragment() {
             message = pinRetryController.getWalletTemporaryLockedMessage(context)
             positiveText = context.getString(android.R.string.ok)
         }.buildAlertDialog().show()
+    }
+
+    override fun showPinDialog(activity: FragmentActivity) {
+        show(activity)
     }
 }

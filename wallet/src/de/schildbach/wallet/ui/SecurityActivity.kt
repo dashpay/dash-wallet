@@ -26,7 +26,6 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.core.os.bundleOf
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet.util.FingerprintHelper
@@ -35,6 +34,7 @@ import kotlinx.android.synthetic.main.activity_security.*
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.BuildConfig
+import org.dash.wallet.common.ui.CheckPinSharedModel
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 

@@ -76,14 +76,16 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
     private fun setTransactionState(transactionType: TransactionType, state: TransactionState) {
        if (state.isTransactionSuccessful){
            when(transactionType){
-               TransactionType.BuyDash -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS)
+               TransactionType.BuyDash -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.DEPOSIT_SUCCESS)
                TransactionType.BuySwap -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS)
+               TransactionType.TransferDash -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.TRANSFER_DASH_SUCCESS)
                else -> {}
            }
        } else {
            when(transactionType){
-               TransactionType.BuyDash -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.TRANSFER_ERROR, state.responseMessage)
+               TransactionType.BuyDash -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.DEPOSIT_ERROR, state.responseMessage)
                TransactionType.BuySwap -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.CONVERSION_ERROR, state.responseMessage)
+               TransactionType.TransferDash -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.TRANSFER_DASH_ERROR, state.responseMessage)
                else -> {}
            }
        }
@@ -161,11 +163,11 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
                 object : CoinBaseBuyDashDialog.CoinBaseBuyDashDialogButtonsClickListener {
                     override fun onPositiveButtonClick(type: CoinBaseBuyDashDialog.Type) {
                         when (type) {
-                            CoinBaseBuyDashDialog.Type.CONVERSION_ERROR, CoinBaseBuyDashDialog.Type.TRANSFER_ERROR -> {
+                            CoinBaseBuyDashDialog.Type.CONVERSION_ERROR, CoinBaseBuyDashDialog.Type.DEPOSIT_ERROR, CoinBaseBuyDashDialog.Type.TRANSFER_DASH_ERROR -> {
                                 dismiss()
                                 findNavController().popBackStack()
                             }
-                            CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS, CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS -> {
+                            CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS, CoinBaseBuyDashDialog.Type.DEPOSIT_SUCCESS, CoinBaseBuyDashDialog.Type.TRANSFER_DASH_SUCCESS -> {
                                 dismiss()
                                 requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
                                 requireActivity().finish()

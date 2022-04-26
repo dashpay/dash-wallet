@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui
+package org.dash.wallet.common.ui
 
 import androidx.lifecycle.ViewModel
+import org.dash.wallet.common.data.SingleLiveEvent
 
 
 open class CheckPinSharedModel : ViewModel() {
 
-    val onCorrectPinCallback = SingleLiveEventExt<Pair<Int, String>>()
+    val onCorrectPinCallback = SingleLiveEvent<Pair<Int, String>>()
 
-    val onCancelCallback = SingleLiveEventExt<Void>()
+    val onCancelCallback = SingleLiveEvent<Unit>()
 
-    val onWalletEncryptedCallback = SingleLiveEventExt<String?>()
+    val onWalletEncryptedCallback = SingleLiveEvent<String?>()
 }

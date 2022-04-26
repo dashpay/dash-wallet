@@ -59,10 +59,12 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         arguments?. getInt("Type")?.let { type ->
             when (type) {
                 Type.PURCHASE_ERROR.ordinal -> setPurchaseError()
-                Type.TRANSFER_ERROR.ordinal -> setTransferError()
-                Type.TRANSFER_SUCCESS.ordinal -> setTransferSuccess()
+                Type.DEPOSIT_ERROR.ordinal -> setDepositError()
+                Type.DEPOSIT_SUCCESS.ordinal -> setDepositSuccess()
                 Type.CONVERSION_SUCCESS.ordinal -> setConversionSuccess()
                 Type.CONVERSION_ERROR.ordinal -> setConversionError()
+                Type.TRANSFER_DASH_SUCCESS.ordinal -> setTransferDashSuccess()
+                Type.TRANSFER_DASH_ERROR.ordinal -> setTransferDashFailure()
             }
 
             binding.coinbaseBuyDialogPositiveButton.setOnClickListener {
@@ -91,7 +93,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.close)
     }
-    private fun setTransferError() {
+    private fun setDepositError() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
         binding.coinbaseBuyDialogTitle.setText(R.string.transfer_failed)
         val errorMessage = arguments?.getString(ARG_MESSAGE)
@@ -111,7 +113,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.retry)
     }
-    private fun setTransferSuccess() {
+    private fun setDepositSuccess() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Green)
@@ -140,6 +142,35 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.close)
     }
+
+    private fun setTransferDashSuccess() {
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
+        binding.coinbaseBuyDialogTitle.setText(R.string.transfer_dash_successful)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Green)
+        binding.coinbaseBuyDialogMessage.setText(R.string.it_could_take_up_to_10_minutes)
+        binding.buyDialogContactCoinbaseSupport.isGone = true
+        binding.coinbaseBuyDialogNegativeButton.isGone = true
+        binding.coinbaseBuyDialogPositiveButton.setText(R.string.close)
+    }
+
+    private fun setTransferDashFailure() {
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
+        binding.coinbaseBuyDialogTitle.setText(R.string.transfer_failed)
+        val errorMessage = arguments?.getString(ARG_MESSAGE)
+        when {
+            errorMessage.isNullOrEmpty() -> {
+                binding.coinbaseBuyDialogMessage.setText(R.string.transfer_dash_failed_msg)
+            }
+            else -> binding.coinbaseBuyDialogMessage.text = errorMessage
+        }
+
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red300)
+        binding.buyDialogContactCoinbaseSupport.isVisible = true
+        binding.coinbaseBuyDialogNegativeButton.isVisible = true
+        binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)
+        binding.coinbaseBuyDialogPositiveButton.setText(R.string.retry)
+    }
+
     companion object {
         const val ARG_MESSAGE: String = "ARG_RESPONSE_MESSAGE"
         fun newInstance(
@@ -157,11 +188,13 @@ class CoinBaseBuyDashDialog : DialogFragment() {
     }
 
     enum class Type {
-        TRANSFER_SUCCESS,
-        TRANSFER_ERROR,
+        DEPOSIT_SUCCESS,
+        DEPOSIT_ERROR,
         PURCHASE_ERROR,
         CONVERSION_SUCCESS,
-        CONVERSION_ERROR
+        CONVERSION_ERROR,
+        TRANSFER_DASH_SUCCESS,
+        TRANSFER_DASH_ERROR
     }
 
     interface CoinBaseBuyDashDialogButtonsClickListener {

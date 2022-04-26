@@ -162,7 +162,7 @@ class CoinBaseRepository @Inject constructor(
     }
 
     override suspend fun createAddress() = safeApiCall {
-        servicesApi.createAddress(accountId = userPreferences.coinbaseUserAccountId)?.addresses?.address
+        servicesApi.createAddress(accountId = userPreferences.coinbaseUserAccountId)?.addresses?.address ?: ""
     }
 }
 
@@ -174,7 +174,7 @@ interface CoinBaseRepositoryInt {
     suspend fun disconnectCoinbaseAccount()
     fun saveLastCoinbaseDashAccountBalance(amount: String?)
     fun saveUserAccountId(accountId: String?)
-    suspend fun createAddress(): ResponseResource<String?>
+    suspend fun createAddress(): ResponseResource<String>
     suspend fun getUserAccountAddress(): ResponseResource<String>
     suspend fun getActivePaymentMethods(): ResponseResource<List<PaymentMethodsData>>
     suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams): ResponseResource<PlaceBuyOrderUIModel>

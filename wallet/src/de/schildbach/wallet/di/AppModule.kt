@@ -26,6 +26,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
+import de.schildbach.wallet.ui.PinInteractorImpl
+import org.dash.wallet.common.PinInteractor
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -55,4 +57,7 @@ abstract class AppModule {
     abstract fun bindSendPaymentService(
         sendCoinsTaskRunner: SendCoinsTaskRunner
     ): SendPaymentService
+
+    @Binds
+    abstract fun bindInteractor(interactor: PinInteractorImpl): PinInteractor
 }

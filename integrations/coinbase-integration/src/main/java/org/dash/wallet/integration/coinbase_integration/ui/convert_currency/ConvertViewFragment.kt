@@ -154,14 +154,14 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
 
     private fun getMaxAmount(): String? {
 
-        if (viewModel.dashToCrypto.value == true) {
+        if (viewModel.dashToCrypto.value == true) {//from wallet -> coinbase
             viewModel.selectedCryptoCurrencyAccount.value?.let { account ->
                 val cleanedValue =
                     viewModel.maxForDashWalletAmount.toBigDecimal() /
                         account.cryptoCurrencyToDashExchangeRate.toBigDecimal()
                 return cleanedValue.setScale(8, RoundingMode.HALF_UP).toString()
             }
-        } else {
+        } else {  // coinbase -> wallet
             return viewModel.maxCoinBaseAccountAmount
         }
         return null
@@ -430,7 +430,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                             }
                         }
                         (viewModel.selectedLocalCurrencyCode == currencyCode && it.coinBaseUserAccountData.balance?.currency != DASH_CURRENCY) -> {
-
+                            // USD
                             val bd =
                                 toDashValue(balance, it)
                             try {
@@ -441,6 +441,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                         }
 
                         else -> {
+                            // DASH
                             val formattedValue = GenericUtils.formatFiatWithoutComma(balance)
                             try {
                                 Coin.parseCoin(formattedValue)

@@ -126,16 +126,9 @@ open class CoinbaseToDashExchangeRateUIModel (
 ): Parcelable {
     companion object {
         val EMPTY = CoinbaseToDashExchangeRateUIModel(CoinBaseUserAccountData.EMPTY, "")
+        val TEMP = CoinbaseToDashExchangeRateUIModel(
+            CoinBaseUserAccountData(true, true, CoinBaseBalance("2.81635775", "DASH"), "2021-10-28T19:01:51Z", null, "1234", "DASH Wallet", true, "account", "resPath", "wallet", "2021-12-18T07:07:26Z"),
+            "0.010658140154543031"
+        )
     }
-}
-
-fun CoinbaseToDashExchangeRateUIModel.getBalanceWithCoinbaseExchangeRate(
-    currentExchangeRate: ExchangeRate
-): String {
-    val cleanedValue = this.coinBaseUserAccountData.balance?.amount?.toBigDecimal()!! *
-            this.currencyToDashExchangeRate.toBigDecimal()
-    val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
-    val currencyRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
-    val fiatAmount = Fiat.parseFiat(currencyRate.fiat.currencyCode, bd.toString())
-    return GenericUtils.fiatToString(fiatAmount)
 }

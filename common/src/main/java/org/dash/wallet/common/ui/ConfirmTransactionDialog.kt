@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui.send
+package org.dash.wallet.common.ui
 
 
 import android.os.Bundle
@@ -28,10 +28,8 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProviders
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
-import de.schildbach.wallet.ui.SingleActionSharedViewModel
-import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
+import org.dash.wallet.common.R
 
 
 class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
@@ -106,7 +104,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         }
         confirm_payment.setOnClickListener {
             dismiss()
-            sharedViewModel.clickConfirmButtonEvent.call(true)
+            sharedViewModel.clickConfirmButtonEvent.call()
         }
         dialog?.setOnShowListener { dialog ->
             // apply wrap_content height

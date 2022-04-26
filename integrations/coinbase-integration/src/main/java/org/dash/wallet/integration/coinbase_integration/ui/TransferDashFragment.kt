@@ -17,31 +17,39 @@
 package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.View
-import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
-import org.dash.wallet.common.ui.FancyAlertDialog
+import org.bitcoinj.utils.Fiat
+import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.Constants
+import org.dash.wallet.common.PinInteractor
+import org.dash.wallet.common.ui.*
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.R
+import org.dash.wallet.integration.coinbase_integration.VALUE_ZERO
 import org.dash.wallet.integration.coinbase_integration.databinding.TransferDashFragmentBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
-import org.dash.wallet.integration.coinbase_integration.model.getBalanceWithCoinbaseExchangeRate
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseServiceWallet
+import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseBuyDashDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.EnterAmountToTransferViewModel
+import org.dash.wallet.integration.coinbase_integration.viewmodels.SendDashResponseState
 import org.dash.wallet.integration.coinbase_integration.viewmodels.TransferDashViewModel
+import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
@@ -53,13 +61,18 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
     private val enterAmountToTransferViewModel by activityViewModels<EnterAmountToTransferViewModel>()
     private val transferDashViewModel by activityViewModels<TransferDashViewModel>()
+    private val checkPinViewModel by activityViewModels<CheckPinSharedModel>()
+    private val confirmTransferActionViewModel by activityViewModels<SingleActionSharedViewModel>()
     private val binding by viewBinding(TransferDashFragmentBinding::bind)
     private var loadingDialog: FancyAlertDialog? = null
+    @Inject lateinit var pinInteractor: PinInteractor
+    private var dashValue: Coin = Coin.ZERO
+    private var fiatValue: Fiat? = null
+    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+        .noCode().minDecimals(2).optionalDecimals()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){ findNavController().popBackStack() }
         binding.authLimitBanner.warningLimitIcon.isVisible = false
         binding.authLimitBanner.authLimitDesc.updateLayoutParams<ConstraintLayout.LayoutParams> {
             marginStart = 32
@@ -77,6 +90,10 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             }
         }
 
+        parentFragmentManager.beginTransaction()
+            .replace(org.dash.wallet.common.R.id.network_status_container, NetworkUnavailableFragment.newInstance())
+            .commit()
+
         transferDashViewModel.observeLoadingState.observe(viewLifecycleOwner){
             setLoadingState(it)
         }
@@ -89,54 +106,52 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             binding.transferView.inputInDash = it
         }
 
-        enterAmountToTransferViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner){
-            //TODO handle case balance is empty
-        }
         enterAmountToTransferViewModel.localCurrencyExchangeRate.observe(viewLifecycleOwner){ rate ->
             binding.transferView.exchangeRate = ExchangeRate(Coin.COIN, rate.fiat)
         }
 
         enterAmountToTransferViewModel.onContinueTransferEvent.observe(viewLifecycleOwner){
+            fiatValue = it.first
+            dashValue = it.second
             if (binding.transferView.walletToCoinbase){
+                val coinInput = it.second
+                val coinBalance = enterAmountToTransferViewModel.dashBalanceInWalletState.value
                 binding.authLimitBanner.root.isVisible = false
                 binding.dashWalletLimitBanner.isVisible =
                     transferDashViewModel.isInputGreaterThanWalletBalance(
-                        enterAmountToTransferViewModel.coinbaseExchangeRateAppliedOnInput,
-                        enterAmountToTransferViewModel.coinbaseExchangeRateAppliedOnWalletBalance
+                        coinInput,
+                        coinBalance
                     )
 
                 binding.topGuideLine.updateLayoutParams<ConstraintLayout.LayoutParams> {
                     guidePercent = if (binding.dashWalletLimitBanner.isVisible) 0.13f else 0.09f
                 }
 
-                if (! binding.dashWalletLimitBanner.isVisible){
-                    // continue
+                if (!binding.dashWalletLimitBanner.isVisible && transferDashViewModel.isUserAuthorized()){
+                    pinInteractor.showPinDialog(requireActivity())
                 }
-                Toast.makeText(requireActivity(), "transfer from wallet to coinbase", Toast.LENGTH_SHORT).show()
-                // wallet -> coinbase
-                //transferDashViewModel.transferDashToCoinbase()
             } else {
                 binding.dashWalletLimitBanner.isVisible = false
-                binding.authLimitBanner.root.isVisible = transferDashViewModel.isInputGreaterThanCoinbaseLimit(it.second)
+                binding.authLimitBanner.root.isVisible = transferDashViewModel.isInputGreaterThanCoinbaseWithdrawalLimit(it.first)
                 binding.topGuideLine.updateLayoutParams<ConstraintLayout.LayoutParams> {
                     guidePercent = if (binding.authLimitBanner.root.isVisible) 0.15f else 0.09f
                 }
 
                 if (!binding.authLimitBanner.root.isVisible){
-                    // continue
+                    transferDashViewModel.reviewTransfer(dashValue.toPlainString())
                 }
-                Toast.makeText(requireActivity(), "transfer from coinbase to wallet", Toast.LENGTH_SHORT).show()
-
-                // coinbase -> wallet
-                //transferDashViewModel.transferDashToWallet()
             }
         }
 
-        enterAmountToTransferViewModel.userAccountOnCoinbaseState.observe(viewLifecycleOwner){
+        transferDashViewModel.userAccountOnCoinbaseState.observe(viewLifecycleOwner){
+            enterAmountToTransferViewModel.coinbaseExchangeRate = it
+
+            val fiatVal = it.coinBaseUserAccountData.balance?.amount?.let { amount ->
+                enterAmountToTransferViewModel.getCoinbaseBalanceInFiatFormat(amount)
+            } ?: VALUE_ZERO
             binding.transferView.balanceOnCoinbase = BaseServiceWallet(
-                it.coinBaseUserAccountData.balance?.amount,
-                it.coinBaseUserAccountData.balance?.currency,
-                it.getBalanceWithCoinbaseExchangeRate(enterAmountToTransferViewModel.localCurrencyExchangeRate.value!!))
+                it.coinBaseUserAccountData.balance?.amount ?: VALUE_ZERO,
+                fiatVal)
         }
 
         enterAmountToTransferViewModel.dashWalletEmptyCallback.observe(viewLifecycleOwner){
@@ -152,6 +167,32 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             )
         }
 
+        enterAmountToTransferViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner){
+            val dashInStr = dashFormat.optionalDecimals(0,6).format(it.second)
+            val amountFiat = dashFormat.format(it.first).toString()
+            val fiatSymbol = GenericUtils.currencySymbol(it.first.currencyCode)
+
+            val formatDashValue = "$dashInStr $DASH_CURRENCY"
+
+            val formatFiatValue = if (GenericUtils.isCurrencyFirst(it.first)) {
+                "$fiatSymbol $amountFiat"
+            } else {
+                "$amountFiat $fiatSymbol"
+            }
+
+            binding.amountReceived.text = getString(R.string.amount_to_transfer, formatDashValue, Constants.PREFIX_ALMOST_EQUAL_TO, formatFiatValue)
+            binding.amountReceived.isVisible = enterAmountToTransferViewModel.hasBalance
+        }
+
+        enterAmountToTransferViewModel.removeBannerCallback.observe(viewLifecycleOwner){
+            hideBanners()
+        }
+
+        enterAmountToTransferViewModel.transferDirectionState.observe(viewLifecycleOwner){
+            binding.transferView.walletToCoinbase = it
+            hideBanners()
+        }
+
         binding.authLimitBanner.warningLimitInfo.setOnClickListener {
             AdaptiveDialog.custom(
                 R.layout.dialog_withdrawal_limit_info,
@@ -162,16 +203,126 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 getString(R.string.got_it)
             ).show(requireActivity()) { }
         }
-    }
 
-    private fun setLoadingState(showLoading: Boolean) {
-        if (loadingDialog != null && loadingDialog?.isAdded == true){
-            loadingDialog?.dismissAllowingStateLoss()
-            if (showLoading){
-                loadingDialog = FancyAlertDialog.newProgress(R.string.loading)
-                loadingDialog?.show(parentFragmentManager, "progress")
-            }
+        checkPinViewModel.onCorrectPinCallback.observe(viewLifecycleOwner){
+            transferDashViewModel.createAddressForAccount()
+        }
+
+        transferDashViewModel.observeCoinbaseAddressState.observe(viewLifecycleOwner){ address ->
+            val amountFiat = if (fiatValue != null) dashFormat.format(fiatValue).toString() else getString(R.string.transaction_row_rate_not_available)
+            val fiatSymbol = if (fiatValue != null) GenericUtils.currencySymbol(fiatValue?.currencyCode) else ""
+            val amountStr = dashValue.toPlainString()
+            val fee = VALUE_ZERO
+            val total = dashValue.toPlainString()
+            val dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat, fiatSymbol, fee, total, null, null, null)
+            dialog.showNow(parentFragmentManager, "ConfirmTransactionDialog")
+        }
+
+        transferDashViewModel.onAddressCreationFailedCallback.observe(viewLifecycleOwner){
+            val addressCreationError = CoinbaseGenericErrorUIModel(
+                R.string.error,
+                getString(R.string.address_creation_failed),
+                R.drawable.ic_info_red,
+                negativeButtonText = R.string.close
+            )
+            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(addressCreationError))
+        }
+
+        confirmTransferActionViewModel.clickConfirmButtonEvent.observe(viewLifecycleOwner){
+            transferDashViewModel.sendDash(dashValue)
+        }
+
+        transferDashViewModel.observeSendDashToCoinbaseState.observe(viewLifecycleOwner){
+            setTransactionState(it)
+        }
+
+        transferDashViewModel.onBuildTransactionParamsCallback.observe(viewLifecycleOwner){
+            safeNavigate(TransferDashFragmentDirections.transferDashToTwoFaCode(it))
+        }
+
+        monitorNetworkChanges()
+
+        transferDashViewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
+            setInternetAccessState(hasInternet)
         }
     }
 
+    private fun handleBackButtonPress(){
+        binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){ findNavController().popBackStack() }
+    }
+
+    private fun setInternetAccessState(hasInternet: Boolean) {
+        binding.networkStatusContainer.isVisible = !hasInternet
+        binding.transferView.isDeviceConnectedToInternet = hasInternet
+        enterAmountToTransferViewModel.keyboardStateCallback.value = hasInternet
+    }
+
+    private fun setTransactionState(responseState: SendDashResponseState) {
+        val pair: Pair<CoinBaseBuyDashDialog.Type, String?> = when(responseState){
+            is SendDashResponseState.SuccessState -> {
+                Pair(if (responseState.isTransactionPending) CoinBaseBuyDashDialog.Type.TRANSFER_DASH_SUCCESS else CoinBaseBuyDashDialog.Type.TRANSFER_DASH_ERROR, null)
+            }
+            is SendDashResponseState.FailureState -> Pair(CoinBaseBuyDashDialog.Type.TRANSFER_DASH_ERROR, responseState.failureMessage)
+            is SendDashResponseState.InsufficientMoneyState -> Pair(CoinBaseBuyDashDialog.Type.TRANSFER_DASH_ERROR, getString(R.string.insufficient_money_to_transfer))
+            else -> Pair(CoinBaseBuyDashDialog.Type.TRANSFER_DASH_ERROR, null)
+        }
+
+        val transactionStateDialog = CoinBaseBuyDashDialog.newInstance(pair.first, pair.second).apply {
+            onCoinBaseBuyDashDialogButtonsClickListener = object : CoinBaseBuyDashDialog.CoinBaseBuyDashDialogButtonsClickListener {
+                override fun onPositiveButtonClick(type: CoinBaseBuyDashDialog.Type) {
+                    when(type){
+                        CoinBaseBuyDashDialog.Type.TRANSFER_DASH_SUCCESS -> {
+                            dismiss()
+                            requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
+                            requireActivity().finish()
+                        }
+                        else -> {
+                            dismiss()
+                            findNavController().popBackStack()
+                        }
+                    }
+                }
+            }
+        }
+
+        transactionStateDialog.showNow(parentFragmentManager, "TransactionStateDialog")
+    }
+
+    private fun setLoadingState(showLoading: Boolean) {
+        if (showLoading){
+            displayProgressDialog()
+        } else {
+            hideProgressDialog()
+
+        }
+    }
+
+    private fun hideProgressDialog() {
+        if (loadingDialog != null && loadingDialog?.isAdded == true) {
+            loadingDialog?.dismissAllowingStateLoss()
+        }
+    }
+
+    private fun displayProgressDialog() {
+        if (loadingDialog != null && loadingDialog?.isAdded == true) {
+            loadingDialog?.dismissAllowingStateLoss()
+        }
+        loadingDialog = FancyAlertDialog.newProgress(R.string.loading, 0)
+        loadingDialog?.show(parentFragmentManager, "progress")
+    }
+
+    private fun hideBanners(){
+        binding.dashWalletLimitBanner.isVisible = false
+        binding.authLimitBanner.root.isVisible = false
+        binding.topGuideLine.updateLayoutParams<ConstraintLayout.LayoutParams> {
+            guidePercent = 0.09f
+        }
+    }
+
+    private fun monitorNetworkChanges(){
+        lifecycleScope.launchWhenResumed {
+            transferDashViewModel.monitorNetworkStateChange()
+        }
+    }
 }

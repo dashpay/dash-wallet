@@ -5,6 +5,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import org.dash.wallet.common.PinInteractor
 import org.dash.wallet.common.WalletDataProvider
 import javax.inject.Singleton
 

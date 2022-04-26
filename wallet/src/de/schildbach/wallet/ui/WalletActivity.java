@@ -59,6 +59,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.ui.CheckPinSharedModel;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;

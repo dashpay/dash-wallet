@@ -14,20 +14,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model
 
-import org.dash.wallet.integration.coinbase_integration.VALUE_ZERO
+package de.schildbach.wallet.ui
 
-data class ServiceWallet(
-    val cryptoWalletName: String,
-    val cryptoWalletService: String,
-    override var balance: String,
-    val currency: String,
-    override var faitAmount: String,
-    val icon: String?
-): BaseServiceWallet(balance, faitAmount)
+import androidx.fragment.app.FragmentActivity
+import org.dash.wallet.common.PinInteractor
+import org.dash.wallet.common.REQ_CODE
+import javax.inject.Inject
 
-open class BaseServiceWallet(
-    open var balance: String = VALUE_ZERO,
-    open var faitAmount: String = VALUE_ZERO
-)
+class PinInteractorImpl @Inject constructor(): PinInteractor {
+    override fun showPinDialog(activity: FragmentActivity) {
+        CheckPinDialog.show(activity, REQ_CODE)
+    }
+
+}
