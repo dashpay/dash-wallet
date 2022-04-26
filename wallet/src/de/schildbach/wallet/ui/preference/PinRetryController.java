@@ -4,8 +4,6 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.jakewharton.processphoenix.ProcessPhoenix;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +26,7 @@ public class PinRetryController {
     private final static String PREFS_FAILED_PINS = "failed_pins";
     private final static int RETRY_FAIL_TOLERANCE = 3;
     private final static int POW_LOCK_TIME_BASE = 6;
-    private final static int FAIL_LIMIT = 8;
+    private final static int FAIL_LIMIT = 3;
     private final static long ONE_MINUTE_MILLIS = TimeUnit.MINUTES.toMillis(1);
 
     private static final Logger log = LoggerFactory.getLogger(PinRetryController.class);
@@ -96,7 +94,7 @@ public class PinRetryController {
             if (failCount >= FAIL_LIMIT) {
                 prefsEditor.commit();
                 // wallet permanently locked, restart the app and show wallet disabled screen
-                // ProcessPhoenix.triggerRebirth(WalletApplication.getInstance());
+                // the caller needs to handle the app restart
                 return true;
             } else {
                 prefsEditor.putLong(PREFS_FAIL_HEIGHT, secureTime + System.currentTimeMillis());

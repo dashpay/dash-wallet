@@ -50,7 +50,6 @@ import androidx.work.WorkManager;
 import androidx.work.WorkRequest;
 
 import com.google.common.base.Stopwatch;
-import com.jakewharton.processphoenix.ProcessPhoenix;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.CoinDefinition;

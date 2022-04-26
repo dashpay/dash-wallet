@@ -111,7 +111,6 @@ dependencies {
 
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
-    implementation 'com.jakewharton:process-phoenix:2.0.0'
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
