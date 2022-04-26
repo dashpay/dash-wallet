@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.di
 
+import android.content.ClipboardManager
 import android.content.Context
 import dagger.Binds
 import dagger.Module
@@ -44,6 +45,11 @@ abstract class AppModule {
         @Singleton
         @Provides
         fun provideLockScreenBroadcaster(): LockScreenBroadcaster = LockScreenBroadcaster()
+
+        @Provides
+        fun provideClipboardManager(
+            @ApplicationContext context: Context
+        ) = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     }
 
     @Binds

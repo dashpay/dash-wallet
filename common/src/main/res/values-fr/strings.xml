@@ -29,5 +29,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Ignorer</string>
     <string name="network_unavailable_return">Retourner au portefeuille</string>
+    <string name="button_continue">Continuer</string>
 
+    <string name="max">Maximum</string>
+    <string name="select_currency">Choisir la monnaie</string>
 </resources>

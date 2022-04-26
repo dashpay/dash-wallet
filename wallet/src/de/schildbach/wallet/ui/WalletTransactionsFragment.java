@@ -88,6 +88,7 @@ import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 /**
  * @author Andreas Schildbach
@@ -114,7 +115,7 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
     private TransactionsAdapter adapter;
     private TextView syncingText;
     private TransactionsFilterSharedViewModel transactionsFilterSharedViewModel;
-    private RefreshUpdateShortcutsPaneViewModel refreshShortcutsPaneViewModel;
+    private MainActivityViewModel mainActivityViewModel;
 
     @Nullable
     private Direction direction;
@@ -181,7 +182,7 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
             dialogFragment.show(getChildFragmentManager(), null);
         });
 
-        refreshShortcutsPaneViewModel = new ViewModelProvider(requireActivity()).get(RefreshUpdateShortcutsPaneViewModel.class);
+        mainActivityViewModel = new ViewModelProvider(requireActivity()).get(MainActivityViewModel.class);
 
         recyclerView = view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -596,7 +597,7 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
 
     private void updateView() {
         adapter.setFormat(config.getFormat());
-        refreshShortcutsPaneViewModel.getOnTransactionsUpdated().call();
+        mainActivityViewModel.getOnTransactionsUpdated().call(Unit.INSTANCE);
     }
 
     public boolean isHistoryEmpty() {

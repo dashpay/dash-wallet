@@ -253,7 +253,6 @@
     <string name="menu_rescan_blockchain">블록체인 재스캔</string>
     <string name="menu_contact_support_title">고객 지원부에 문의하기</string>
     <string name="menu_contact_support_subtitle">오류 보고하기</string>
-
     <string name="tools_address_book">주소록</string>
     <string name="tools_import_private_key">프라이빗 키 가져오기</string>
     <string name="tools_network_monitor">블럭체인 모니터링</string>
@@ -262,7 +261,6 @@
     <string name="about_review_and_rate">어플 리뷰 &amp; 별점 매기기</string>
     <string name="about_contact_support">고객 지원부에 문의하기</string>
     <string name="about_fork_disclaimer">이 어플은 비트코인 지갑에서 포크한 오픈 소스 어플입니다.</string>
-    <string name="about_copyright">Copyright © 2022 대시 코어</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">대시 지갑 %s</string>
 

@@ -66,7 +66,4 @@ abstract class BaseMenuActivity : LockScreenActivity() {
         }
         return super.onOptionsItemSelected(item)
     }
-
-    protected val configuration: Configuration
-        get() = walletApplication.configuration
 }

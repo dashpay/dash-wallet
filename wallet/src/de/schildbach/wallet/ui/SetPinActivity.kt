@@ -73,6 +73,10 @@ class SetPinActivity : InteractionAwareActivity() {
         intent.getBooleanExtra(CHANGE_PIN, false)
     }
 
+    private val upgradingWallet by lazy {
+        intent.getBooleanExtra(UPGRADING_WALLET, false)
+    }
+
     private enum class State {
         DECRYPT,
         DECRYPTING,
@@ -91,15 +95,20 @@ class SetPinActivity : InteractionAwareActivity() {
         private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
         private const val EXTRA_PASSWORD = "extra_password"
         private const val CHANGE_PIN = "change_pin"
+        private const val UPGRADING_WALLET = "upgrading_wallet"
 
         @JvmOverloads
         @JvmStatic
-        fun createIntent(context: Context, titleResId: Int,
-                         changePin: Boolean = false, pin: String? = null): Intent {
+        fun createIntent(
+            context: Context, titleResId: Int,
+            changePin: Boolean = false, pin: String? = null,
+            upgradingWallet: Boolean = false
+        ): Intent {
             val intent = Intent(context, SetPinActivity::class.java)
             intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
             intent.putExtra(CHANGE_PIN, changePin)
             intent.putExtra(EXTRA_PASSWORD, pin)
+            intent.putExtra(UPGRADING_WALLET, upgradingWallet)
             return intent
         }
 
@@ -216,7 +225,7 @@ class SetPinActivity : InteractionAwareActivity() {
                     if (changePin) {
                         viewModel.changePin()
                     } else {
-                        viewModel.savePinAndEncrypt()
+                        viewModel.savePinAndEncrypt(!upgradingWallet)
                     }
                 }, 200)
             } else {

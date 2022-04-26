@@ -59,20 +59,30 @@
             android:layout_marginTop="?attr/actionBarSize"
             app:layout_behavior="org.dash.wallet.features.exploredash.ui.bottomsheetbehavior.ExploreMapBottomSheetBehavior" />
 
-        <ImageButton
-            android:id="@+id/recenter_map_btn"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/round_corners_white_bg"
-            android:src="@drawable/ic_current_location"
-            app:tint="@color/dash_blue"
-            tools:tint="@color/dash_blue"
-            android:layout_gravity="top|right"
-            android:layout_marginTop="64dp"
-            android:layout_marginRight="8dp"
-            android:padding="8dp"
-            tools:visibility="visible"
-            android:visibility="visible" />
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:id="@+id/recenter_map_btn_spacer"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp" />
+            <ImageButton
+                android:id="@+id/recenter_map_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/round_corners_white_bg"
+                android:src="@drawable/ic_current_location"
+                app:tint="@color/dash_blue"
+                tools:tint="@color/dash_blue"
+                android:layout_gravity="top|right"
+                android:layout_marginTop="64dp"
+                android:layout_marginRight="8dp"
+                android:padding="8dp"
+                tools:visibility="visible"
+                android:visibility="visible" />
+        </LinearLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/content_panel"
@@ -180,6 +190,41 @@
                 app:layout_constraintHeight_percent="@dimen/merchant_details_height_ratio" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+    <LinearLayout
+        android:id="@+id/sync_status"
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:layout_marginTop="?attr/actionBarSize"
+        android:alpha="0.9"
+        android:background="@color/dash_blue"
+        android:gravity="center_horizontal"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <ProgressBar
+            android:id="@+id/progress"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginStart="26dp"
+            android:layout_marginTop="7dp"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/dash_white"
+            android:indeterminateTintMode="src_atop" />
+
+        <TextView
+            android:id="@+id/syncMessage"
+            style="@style/Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="8dp"
+            android:ellipsize="end"
+            android:text="@string/sync_in_progress_not_complete"
+            android:textColor="@color/white" />
+    </LinearLayout>
 
     <LinearLayout
         android:orientation="vertical"

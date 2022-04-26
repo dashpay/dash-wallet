@@ -29,5 +29,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Chiudi</string>
     <string name="network_unavailable_return">Torna al Portafoglio</string>
+    <string name="button_continue">Continua</string>
 
+    <string name="max">Massimo</string>
+    <string name="select_currency">Seleziona Valuta</string>
 </resources>

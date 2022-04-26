@@ -28,6 +28,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import net.lingala.zip4j.ZipFile
+import org.dash.wallet.common.Constants
 import org.slf4j.LoggerFactory
 import java.io.*
 import java.lang.System.currentTimeMillis
@@ -54,7 +55,6 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
     companion object {
         const val DATA_FILE_NAME = "explore.db"
         const val DATA_TMP_FILE_NAME = "explore.tmp"
-        private const val GC_FILE_PATH = "explore/explore.db"
         private const val DB_ASSET_FILE_NAME = "explore/$DATA_FILE_NAME"
 
         private const val SHARED_PREFS_NAME = "explore"
@@ -85,10 +85,10 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
     override suspend fun getRemoteTimestamp(): Long {
         ensureAuthenticated()
         val remoteDataInfo = try {
-            remoteDataRef = storage.reference.child(GC_FILE_PATH)
+            remoteDataRef = storage.reference.child(Constants.EXPLORE_GC_FILE_PATH)
             remoteDataRef!!.metadata.await()
         } catch (ex: Exception) {
-            log.warn("error getting remote data timestamp")
+            log.warn("error getting remote data timestamp", ex)
             null
         }
         val dataTimestamp = remoteDataInfo?.getCustomMetadata("Data-Timestamp")?.toLong()
@@ -148,7 +148,8 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
     override fun getDatabaseInputStream(file: File): InputStream? {
         val zipFile = ZipFile(file)
         val comment: Array<String> = zipFile.comment.split("#".toRegex()).toTypedArray()
-        updateTimestampCache = comment[0].toLong()
+        // use the current time instead of the file time (comment[0].toLong())
+        updateTimestampCache = currentTimeMillis()
         val checksum = comment[1]
         log.info("package timestamp {}, checksum {}", updateTimestampCache, checksum)
         zipFile.setPassword(checksum.toCharArray())

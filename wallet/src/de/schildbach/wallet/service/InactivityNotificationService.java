@@ -110,7 +110,7 @@ public final class InactivityNotificationService extends Service {
             final NotificationCompat.Builder notification = new NotificationCompat.Builder(this,
                     Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS);
             notification.setStyle(new NotificationCompat.BigTextStyle().bigText(text));
-            notification.setSmallIcon(R.drawable.ic_dash_d_white_bottom);
+            notification.setSmallIcon(R.drawable.ic_dash_d_white);
             notification.setContentTitle(title);
             notification.setContentText(text);
             notification
