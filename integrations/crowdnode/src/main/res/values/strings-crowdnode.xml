@@ -84,7 +84,7 @@
     <string name="wallet_sending_to">Sending to Dash Wallet on this device</string>
     <string name="available_balance">Balance: %s</string>
     <string name="crowdnode_minimum_deposit">Deposit at least %s to start earning</string>
-    <string name="crowdnode_minimum_deposit_difference">Deposit %s more to start earning</string>
+    <string name="crowdnode_minimum_deposit_difference">Deposit %s to start earning</string>
     <string name="crowdnode_first_deposit">First deposit should be more than %s</string>
     <string name="crowdnode_staking_info_title">How staking works</string>
     <string name="crowdnode_staking_info_message">You start earning if your CrowdNode account has more than %s</string>
