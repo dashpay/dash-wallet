@@ -67,6 +67,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
                 Type.TRANSFER_SUCCESS.ordinal -> setTransferSuccess()
                 Type.CONVERSION_SUCCESS.ordinal -> setConversionSuccess()
                 Type.CONVERSION_ERROR.ordinal -> setConversionError()
+                Type.SWAP_ERROR.ordinal -> setSwapError()
             }
 
             binding.coinbaseBuyDialogPositiveButton.setOnClickListener {
@@ -90,7 +91,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_failed)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red300)
         val errorMessage = arguments?.getString(ARG_MESSAGE)
-        if (errorMessage.isNullOrEmpty()){
+        if (errorMessage.isNullOrEmpty()) {
             binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
         } else {
             binding.coinbaseBuyDialogMessage.text = errorMessage
@@ -139,6 +140,17 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.retry)
     }
+
+    private fun setSwapError() {
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
+        binding.coinbaseBuyDialogTitle.setText(R.string.conversion_failed)
+        binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red300)
+        binding.buyDialogContactCoinbaseSupport.isVisible = true
+        binding.coinbaseBuyDialogNegativeButton.isVisible = true
+        binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)
+        binding.coinbaseBuyDialogPositiveButton.isVisible = false
+    }
     private fun setConversionSuccess() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_successful)
@@ -169,7 +181,8 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         TRANSFER_ERROR,
         PURCHASE_ERROR,
         CONVERSION_SUCCESS,
-        CONVERSION_ERROR
+        CONVERSION_ERROR,
+        SWAP_ERROR
     }
 
     interface CoinBaseBuyDashDialogButtonsClickListener {
@@ -182,7 +195,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
             val intent = Intent(Intent.ACTION_VIEW)
             intent.data = Uri.parse(helpUrl)
             startActivity(intent)
-        }catch (e: ActivityNotFoundException){
+        } catch (e: ActivityNotFoundException) {
             Toast.makeText(requireActivity(), helpUrl, Toast.LENGTH_SHORT).show()
         }
     }

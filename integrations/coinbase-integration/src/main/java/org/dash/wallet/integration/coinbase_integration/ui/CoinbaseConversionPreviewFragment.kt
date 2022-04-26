@@ -19,6 +19,8 @@ package org.dash.wallet.integration.coinbase_integration.ui
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.View
+import androidx.annotation.ColorRes
+import androidx.annotation.StyleRes
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -31,6 +33,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
+import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
@@ -59,15 +62,15 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
             override fun onTick(millisUntilFinished: Long) {
                 binding.confirmBtn.text = getString(R.string.confirm_sec, (millisUntilFinished / 1000).toString())
                 binding.retryIcon.visibility = View.GONE
+                setConfirmBtnStyle(org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_Blue, org.dash.wallet.common.R.color.dash_white)
             }
 
             override fun onFinish() {
-                binding.confirmBtn.text = getString(R.string.retry)
-                binding.retryIcon.visibility = View.VISIBLE
-                isRetrying = true
+                setRetryStatus()
             }
         }
     }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -125,13 +128,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         viewModel.swapTradeFailureState.observe(viewLifecycleOwner) {
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.something_wrong_title,
-                getString(R.string.retry_later_message),
-                R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(CoinbaseConversionPreviewFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.SWAP_ERROR, it)
         }
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
@@ -292,6 +289,11 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                             dismiss()
                             findNavController().popBackStack()
                         }
+                        CoinBaseBuyDashDialog.Type.SWAP_ERROR -> {
+                            dismiss()
+                            findNavController().popBackStack()
+                            findNavController().popBackStack()
+                        }
                         CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS -> {
                             dismiss()
                             requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
@@ -307,7 +309,12 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
     override fun onResume() {
         super.onResume()
-        countDownTimer.start()
+        if (viewModel.isFirstTime) {
+            viewModel.isFirstTime = false
+            countDownTimer.start()
+        } else {
+            setRetryStatus()
+        }
         viewModel.monitorNetworkStateChange()
     }
 
@@ -327,5 +334,17 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
     private fun getNewCommitOrder() {
         viewModel.onRefreshOrderClicked(swapTradeUIModel)
+    }
+
+    private fun setRetryStatus() {
+        binding.confirmBtn.text = getString(R.string.retry)
+        binding.retryIcon.visibility = View.VISIBLE
+        isRetrying = true
+        setConfirmBtnStyle(org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_TransparentBlue, org.dash.wallet.common.R.color.dash_blue)
+    }
+
+    private fun setConfirmBtnStyle(@StyleRes buttonStyle: Int, @ColorRes colorRes: Int) {
+        binding.confirmBtnContainer.background = resources.getRoundedBackground(buttonStyle)
+        binding.confirmBtn.setTextColor(resources.getColor(colorRes))
     }
 }

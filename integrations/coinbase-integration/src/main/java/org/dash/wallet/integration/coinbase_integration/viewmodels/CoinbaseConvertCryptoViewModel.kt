@@ -60,7 +60,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     val swapTradeOrder: LiveData<Event<SwapTradeUIModel>>
         get() = _swapTradeOrder
 
-    val swapTradeFailedCallback = SingleLiveEvent<String>()
+    val swapTradeFailedCallback = SingleLiveEvent<String?>()
 
     private val _userAccountsWithBalance: MutableLiveData<Event<List<CoinBaseUserAccountDataUIModel>>> = MutableLiveData()
     val userAccountsWithBalance: LiveData<Event<List<CoinBaseUserAccountDataUIModel>>>
