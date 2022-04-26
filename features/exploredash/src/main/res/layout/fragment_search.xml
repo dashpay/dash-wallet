@@ -169,6 +169,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
+                    android:textAlignment="gravity"
                     android:text="@string/explore_no_results" />
 
                 <Button
@@ -193,7 +194,7 @@
     <LinearLayout
         android:id="@+id/sync_status"
         android:layout_width="match_parent"
-        android:layout_height="32dp"
+        android:layout_height="@dimen/banner_message_height"
         android:layout_marginTop="?attr/actionBarSize"
         android:alpha="0.9"
         android:background="@color/dash_blue"

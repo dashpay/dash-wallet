@@ -40,4 +40,5 @@
     <dimen name="payment_method_padding_end">5dp</dimen>
     <dimen name="payment_method_image_height">11dp</dimen>
     <dimen name="dialog_horizontal_inset">15dp</dimen>
+    <dimen name="banner_message_height">32dp</dimen>
 </resources>

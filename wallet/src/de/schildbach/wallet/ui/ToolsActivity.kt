@@ -87,7 +87,7 @@ class ToolsActivity : BaseMenuActivity() {
                     getString(R.string.report_transaction_history_not_synced_title),
                     getString(R.string.report_transaction_history_not_synced_message),
                     "",
-                    getString(R.string.close))
+                    getString(R.string.button_close))
                 dialog.show(supportFragmentManager, "requireSyncing")
             } else {
                 alertDialog = ExportTransactionHistoryDialogBuilder.createExportTransactionDialog(this,
@@ -148,7 +148,7 @@ class ToolsActivity : BaseMenuActivity() {
     private fun handleCopyAddress(xpub: String) {
         viewModel.copyXpubToClipboard()
 
-        Toast(this).toast(R.string.receive_copied)
+        Toast(this).toast(R.string.copied)
         log.info("xpub copied to clipboard: {}", xpub)
     }
 }

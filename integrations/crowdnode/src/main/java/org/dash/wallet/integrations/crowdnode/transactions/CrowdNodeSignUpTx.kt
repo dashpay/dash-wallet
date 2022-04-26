@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.crowdnode.transactions
 
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.transactions.CoinsToAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
@@ -29,5 +30,9 @@ class CrowdNodeSignUpTx(networkParams: NetworkParameters): CoinsToAddressTxFilte
     companion object {
         val SIGNUP_REQUEST_CODE: Coin =
             CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.SignUp.code)
+    }
+
+    override fun matches(tx: Transaction): Boolean {
+        return super.matches(tx) && fromAddresses.size == 1
     }
 }

@@ -18,8 +18,10 @@
 package org.dash.wallet.integrations.crowdnode.ui.portal
 
 import android.animation.ObjectAnimator
+import android.animation.TimeInterpolator
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
@@ -44,7 +46,10 @@ import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardDepositHea
 import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardWithdrawHeaderBinding
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
+import org.dash.wallet.integrations.crowdnode.ui.dialogs.StakingDialog
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
+import kotlin.math.exp
+import kotlin.math.sin
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -64,7 +69,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
         if (savedInstanceState == null) {
             val fragment = EnterAmountFragment.newInstance(
-                dashToFiat = amountViewModel.dashToFiatDirection.value ?: false,
+                dashToFiat = amountViewModel.dashToFiatDirection.value ?: true,
                 isMaxButtonVisible = true,
                 showCurrencySelector = true
             )
@@ -89,46 +94,14 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             }
         }
 
-        if (args.withdraw) {
-            binding.toolbarTitle.text = getString(R.string.withdraw)
-            binding.sourceIcon.setImageResource(R.drawable.ic_crowdnode_logo)
-            binding.sourceLabel.text = getString(R.string.from_crowdnode)
-        } else {
-            binding.toolbarTitle.text = getString(R.string.deposit)
-            binding.sourceIcon.setImageResource(R.drawable.ic_dash_pay)
-            binding.sourceLabel.text = getString(R.string.from_wallet)
-        }
-
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
 
         if (args.withdraw) {
-            viewModel.crowdNodeBalance.observe(viewLifecycleOwner) {
-                updateAvailableBalance()
-            }
-
-            this.balanceAnimator = ObjectAnimator.ofFloat(
-                binding.balanceText,
-                View.ALPHA.name,
-                0f, 0.5f
-            ).apply {
-                duration = 500
-                repeatCount = ObjectAnimator.INFINITE
-                repeatMode = ObjectAnimator.REVERSE
-            }
-
-            viewModel.isBalanceLoading.observe(viewLifecycleOwner) { isLoading ->
-                if (isLoading) {
-                    this.balanceAnimator?.start()
-                } else {
-                    this.balanceAnimator?.end()
-                }
-            }
+            setupWithdraw()
         } else {
-            viewModel.dashBalance.observe(viewLifecycleOwner) {
-                updateAvailableBalance()
-            }
+            setupDeposit()
         }
 
         viewModel.crowdNodeError.observe(viewLifecycleOwner) { error ->
@@ -175,18 +148,74 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
         amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
             lifecycleScope.launch {
-                continueTransfer(pair.first)
+                continueTransfer(pair.first, args.withdraw)
             }
         }
     }
 
-    private suspend fun continueTransfer(value: Coin) {
-        if (!args.withdraw) {
+    private fun setupWithdraw() {
+        binding.toolbarTitle.text = getString(R.string.withdraw)
+        binding.sourceIcon.setImageResource(R.drawable.ic_crowdnode_logo)
+        binding.sourceLabel.text = getString(R.string.from_crowdnode)
+
+        viewModel.crowdNodeBalance.observe(viewLifecycleOwner) {
+            updateAvailableBalance()
+        }
+
+        this.balanceAnimator = ObjectAnimator.ofFloat(
+            binding.balanceText,
+            View.ALPHA.name,
+            0f, 0.5f
+        ).apply {
+            duration = 500
+            repeatCount = ObjectAnimator.INFINITE
+            repeatMode = ObjectAnimator.REVERSE
+        }
+
+        viewModel.isBalanceLoading.observe(viewLifecycleOwner) { isLoading ->
+            if (isLoading) {
+                this.balanceAnimator?.start()
+            } else {
+                this.balanceAnimator?.end()
+            }
+        }
+    }
+
+    private fun setupDeposit() {
+        binding.toolbarTitle.text = getString(R.string.deposit)
+        binding.sourceIcon.setImageResource(R.drawable.ic_dash_pay)
+        binding.sourceLabel.text = getString(R.string.from_wallet)
+
+        if (viewModel.isFirstDeposit) {
+            binding.messageBanner.isVisible = true
+            binding.bannerMessageText.text = getString(
+                R.string.crowdnode_first_deposit,
+                CrowdNodeConstants.DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
+            )
+            binding.messageBanner.setOnClickListener {
+                StakingDialog().show(parentFragmentManager, "staking")
+            }
+        }
+
+        viewModel.dashBalance.observe(viewLifecycleOwner) {
+            updateAvailableBalance()
+        }
+    }
+
+    private suspend fun continueTransfer(value: Coin, isWithdraw: Boolean) {
+        if (!isWithdraw) {
+            if (viewModel.isFirstDeposit &&
+                value.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
+            ) {
+                showBannerError()
+                return
+            }
+
             securityModel.requestPinCode(requireActivity()) ?: return
         }
 
         val isSuccess = AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
-            if (args.withdraw) {
+            if (isWithdraw) {
                 viewModel.withdraw(value)
             } else {
                 viewModel.deposit(value)
@@ -195,7 +224,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
 
         if (isSuccess) {
-            if (args.withdraw) {
+            if (isWithdraw) {
                 safeNavigate(TransferFragmentDirections.transferToResult(
                     false,
                     getString(R.string.withdrawal_requested),
@@ -241,5 +270,25 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 GenericUtils.fiatToString(rate.coinToFiat(balance)))
             else -> ""
         }
+    }
+
+    private fun showBannerError() {
+        binding.messageBanner.setBackgroundColor(resources.getColor(R.color.red_300, null))
+        runWiggleAnimation(binding.messageBanner)
+    }
+
+    private fun runWiggleAnimation(view: View) {
+        val frequency = 3f
+        val decay = 2f
+        val decayingSineWave = TimeInterpolator { input ->
+            val raw = sin(frequency * input * 2 * Math.PI)
+            (raw * exp((-input * decay).toDouble())).toFloat()
+        }
+
+        view.animate()
+            .xBy(-100f)
+            .setInterpolator(decayingSineWave)
+            .setDuration(300)
+            .start()
     }
 }

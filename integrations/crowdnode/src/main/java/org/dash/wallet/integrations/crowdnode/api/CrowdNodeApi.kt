@@ -74,6 +74,7 @@ interface CrowdNodeApi {
     suspend fun signUp(accountAddress: Address)
     suspend fun deposit(amount: Coin): Boolean
     suspend fun withdraw(amount: Coin): Boolean
+    fun hasAnyDeposits(): Boolean
     fun refreshBalance(retries: Int = 0)
     suspend fun reset()
 }
@@ -239,6 +240,14 @@ class CrowdNodeBlockchainApi @Inject constructor(
             handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
             false
         }
+    }
+
+    override fun hasAnyDeposits(): Boolean {
+        val accountAddress = this.accountAddress
+        requireNotNull(accountAddress) { "Account address is null, make sure to sign up" }
+        val deposits = walletDataProvider.getTransactions(CrowdNodeDepositTx(accountAddress))
+
+        return deposits.any()
     }
 
     override fun refreshBalance(retries: Int) {

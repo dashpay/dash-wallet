@@ -64,6 +64,7 @@ class ExploreActivity : BaseMenuActivity() {
                 NavigationRequest.Staking -> {
                     handleStakingNavigation()
                 }
+                else -> { }
             }
         }
     }

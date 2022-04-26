@@ -41,7 +41,7 @@ class CrowdNodeFullTxSet(networkParams: NetworkParameters): TransactionWrapper {
         get() = matchedFilters.any { it is CrowdNodeWelcomeToApiResponse }
 
     val accountAddress: Address?
-        get() = (matchedFilters.firstOrNull { it is CrowdNodeSignUpTx } as? CrowdNodeSignUpTx)?.fromAddress
+        get() = (matchedFilters.firstOrNull { it is CrowdNodeSignUpTx } as? CrowdNodeSignUpTx)?.fromAddresses?.first()
 
     override fun tryInclude(tx: Transaction): Boolean {
         val matchedFilter = crowdNodeTxFilters.firstOrNull { it.matches(tx) }

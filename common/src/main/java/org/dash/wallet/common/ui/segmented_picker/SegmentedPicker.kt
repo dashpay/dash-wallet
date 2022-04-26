@@ -22,6 +22,7 @@ import android.graphics.Canvas
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.FrameLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat.animate
@@ -95,7 +96,13 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
         val thumbWidth = binding.thumb.layoutParams.width
         val minX = optionsParams.leftMargin.toFloat()
         val maxX = trackWidth - thumbWidth + minX
-        val animateTo = optionWidth * index - (thumbWidth - optionWidth - minX) / 2f
+        val position = if (resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL) {
+            options.size - index - 1
+        } else {
+            index
+        }
+
+        val animateTo = optionWidth * position - (thumbWidth - optionWidth - minX) / 2f
         val actualX = max(minX, min(animateTo, maxX))
 
         if (animate) {

@@ -95,6 +95,7 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
                     val deterministicSeed = it.data!!.first
                     seed = deterministicSeed!!.mnemonicCode!!.toTypedArray()
                 }
+                else -> { }
             }
         }
     }

@@ -52,6 +52,7 @@
             android:layout_marginHorizontal="15dp"
             android:layout_marginTop="18dp"
             android:gravity="center_horizontal"
+            android:textAlignment="gravity"
             android:text="@string/crowdnode_get_started" />
 
         <TextView
@@ -61,6 +62,7 @@
             android:layout_marginHorizontal="15dp"
             android:layout_marginTop="10dp"
             android:gravity="center_horizontal"
+            android:textAlignment="gravity"
             android:text="@string/crowdnode_get_started_hint" />
 
         <androidx.cardview.widget.CardView

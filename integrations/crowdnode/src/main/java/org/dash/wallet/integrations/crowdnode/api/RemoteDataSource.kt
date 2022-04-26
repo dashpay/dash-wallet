@@ -20,21 +20,17 @@ package org.dash.wallet.integrations.crowdnode.api
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.dash.wallet.common.BuildConfig
-import org.dash.wallet.common.Configuration
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Inject
 
 class RemoteDataSource @Inject constructor() {
-    companion object {
-        private const val BASE_URL = "https://test.crowdnode.io/"
-    }
-
     fun <Api> buildApi(
         api: Class<Api>,
+        baseUrl: String
     ): Api {
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(baseUrl)
             .client(getRetrofitClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()

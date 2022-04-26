@@ -51,17 +51,17 @@
     <string name="deposit">Deposit</string>
     <string name="deposit_sent">Deposit sent</string>
     <string name="deposit_sent_message">It can take a minute for your balance to be updated.</string>
-    <string name="crowdnode_deposit_from_wallet">From Dash Wallet to CrowdNode</string>
-    <string name="from_wallet">From Dash Wallet</string>
-    <string name="from_crowdnode">From CrowdNode</string>
+    <string name="crowdnode_deposit_from_wallet">DashWallet ➝ CrowdNode</string>
+    <string name="from_wallet">from Dash Wallet</string>
+    <string name="from_crowdnode">from CrowdNode</string>
     <string name="withdraw">Withdraw</string>
     <string name="withdrawal_requested">Withdrawal requested</string>
     <string name="withdrawal_requested_message">It can take a minute for your funds to arrive.</string>
-    <string name="crowdnode_withdraw_to_wallet">From CrowdNode to Dash Wallet</string>
+    <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
     <string name="online_account">Online Account</string>
-    <string name="secure_online_account">Make it as secure as possible</string>
+    <string name="online_account_create">Create Online Account</string>
+    <string name="secure_online_account">Protect your earnings</string>
     <string name="crowdnode_support">CrowdNode Support</string>
-    <string name="support_troubleshoot">Troubleshoot an issue you’re having</string>
     <string name="unlink_account">Unlink Account</string>
     <string name="online_account_title">What is online account and why do you need it?</string>
     <string name="account_recovery">Account Recovery</string>
@@ -82,7 +82,12 @@
     <string name="daily_rewards_info">Receive your share of rewards daily.</string>
     <string name="crowdnode_sending_to">Sending to CrowdNode account</string>
     <string name="wallet_sending_to">Sending to Dash Wallet on this device</string>
-    <string name="available_balance">Available: %s</string>
+    <string name="available_balance">Balance: %s</string>
+    <string name="crowdnode_minimum_deposit">Deposit at least %s to start earning</string>
+    <string name="crowdnode_minimum_deposit_difference">Deposit %s to start earning</string>
+    <string name="crowdnode_first_deposit">First deposit should be more than %s</string>
+    <string name="crowdnode_staking_info_title">How staking works</string>
+    <string name="crowdnode_staking_info_message">You start earning if your CrowdNode account has more than %s</string>
 
     <string name="crowdnode_website" translatable="false">https://crowdnode.io/</string>
     <string name="crowdnode_terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>

@@ -21,14 +21,21 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.MainNetParams
+import org.bitcoinj.utils.MonetaryFormat
 
 object CrowdNodeConstants {
     private const val CROWDNODE_TESTNET_ADDRESS = "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"
     private const val CROWDNODE_MAINNET_ADDRESS = "XjbaGWaGnvEtuQAUoBgDxJWe8ZNv45upG2"
 
+    private const val MAINNET_BASE_URL = "https://app.crowdnode.io/"
+    private const val TESTNET_BASE_URL = "https://test.crowdnode.io/"
+
     val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(1000000)
     val REQUIRED_FOR_SIGNUP: Coin = MINIMUM_REQUIRED_DASH - Coin.valueOf(100000)
     val API_OFFSET: Coin = Coin.valueOf(20000)
+    val MINIMUM_DASH_DEPOSIT: Coin = Coin.COIN.div(2)
+    val DASH_FORMAT = MonetaryFormat.BTC.minDecimals(1)
+        .repeatOptionalDecimals(1, 3).postfixCode()
 
     fun getCrowdNodeAddress(params: NetworkParameters): Address {
         return Address.fromBase58(params, if (params == MainNetParams.get()) {
@@ -36,5 +43,13 @@ object CrowdNodeConstants {
         } else {
             CROWDNODE_TESTNET_ADDRESS
         })
+    }
+
+    fun getCrowdNodeBaseUrl(params: NetworkParameters): String {
+        return if (params == MainNetParams.get()) {
+            MAINNET_BASE_URL
+        } else {
+            TESTNET_BASE_URL
+        }
     }
 }

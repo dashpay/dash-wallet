@@ -18,12 +18,12 @@
 package org.dash.wallet.integrations.crowdnode.model
 
 enum class ApiCode(val code: Long, val isRequest: Boolean = false) {
-    PleaseAcceptTerms(2, true),
-    WelcomeToApi(4, true),
-    DepositReceived(8, true),
-    WithdrawalQueue(16, true),
-    WithdrawAll(1000, false),
-    SignUp(131072, false),
-    AcceptTerms(65536, false),
-    MaxCode(131072, false)
+    PleaseAcceptTerms(2, false),
+    WelcomeToApi(4, false),
+    DepositReceived(8, false),
+    WithdrawalQueue(16, false),
+    WithdrawAll(1000, true),
+    SignUp(131072, true),
+    AcceptTerms(65536, true),
+    MaxCode(SignUp.code, SignUp.isRequest)
 }

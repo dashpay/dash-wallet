@@ -23,6 +23,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
@@ -37,9 +38,14 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentPortalBinding
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 @AndroidEntryPoint
 class PortalFragment : Fragment(R.layout.fragment_portal) {
+    companion object {
+        private val NEGLIGIBLE_AMOUNT: Coin = CrowdNodeConstants.MINIMUM_DASH_DEPOSIT.div(50)
+    }
+
     private val binding by viewBinding(FragmentPortalBinding::bind)
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
     private var balanceAnimator: ObjectAnimator? = null
@@ -112,7 +118,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             }
         }
 
-        viewModel.networkErrorEvent.observe(viewLifecycleOwner) {
+        viewModel.networkError.observe(viewLifecycleOwner) {
             Toast.makeText(
                 requireContext(),
                 R.string.network_unavailable_balance_not_accurate,
@@ -135,7 +141,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         this.balanceAnimator = ObjectAnimator.ofFloat(
             binding.balanceLabel,
             View.ALPHA.name,
-            0f, 0.5f
+            0f, 1f
         ).apply {
             duration = 500
             repeatCount = ObjectAnimator.INFINITE
@@ -153,10 +159,46 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         viewModel.crowdNodeBalance.observe(viewLifecycleOwner) { balance ->
             binding.walletBalanceDash.setAmount(balance)
             updateFiatAmount(balance, viewModel.exchangeRate.value)
+            setWithdrawalEnabled(balance)
+            setMinimumEarningDepositReminder(balance)
         }
 
         viewModel.exchangeRate.observe(viewLifecycleOwner) { rate ->
             updateFiatAmount(viewModel.crowdNodeBalance.value ?: Coin.ZERO, rate)
+        }
+    }
+
+    private fun setWithdrawalEnabled(balance: Coin) {
+        binding.withdrawBtn.isEnabled = balance.isPositive
+
+        if (balance.isPositive) {
+            binding.withdrawIcon.setImageResource(R.drawable.ic_left_right_arrows)
+            binding.withdrawTitle.setTextColor(resources.getColor(R.color.content_primary, null))
+            binding.withdrawSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
+        } else {
+            binding.withdrawIcon.setImageResource(R.drawable.ic_withdraw_disabled)
+            binding.withdrawTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
+            binding.withdrawSubtitle.setTextColor(resources.getColor(R.color.content_disabled, null))
+        }
+    }
+
+    private fun setMinimumEarningDepositReminder(balance: Coin) {
+        if (balance < CrowdNodeConstants.MINIMUM_DASH_DEPOSIT) {
+            binding.minimumDashRequirement.isVisible = true
+
+            if (balance < NEGLIGIBLE_AMOUNT) {
+                binding.minimumDashRequirement.text = getString(
+                    R.string.crowdnode_minimum_deposit,
+                    CrowdNodeConstants.DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
+                )
+            } else {
+                binding.minimumDashRequirement.text = getString(
+                    R.string.crowdnode_minimum_deposit_difference,
+                    CrowdNodeConstants.DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT - balance)
+                )
+            }
+        } else {
+            binding.minimumDashRequirement.isVisible = false
         }
     }
 

@@ -23,7 +23,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integrations.crowdnode.api.*
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Singleton
 
 @Module
@@ -34,8 +36,10 @@ abstract class CrowdNodeModule {
         @Provides
         fun provideWebApi(
             remoteDataSource: RemoteDataSource,
+            walletDataProvider: WalletDataProvider
         ): CrowdNodeWebApi {
-            return remoteDataSource.buildApi(CrowdNodeWebApi::class.java)
+            val baseUrl = CrowdNodeConstants.getCrowdNodeBaseUrl(walletDataProvider.networkParameters)
+            return remoteDataSource.buildApi(CrowdNodeWebApi::class.java, baseUrl)
         }
     }
 

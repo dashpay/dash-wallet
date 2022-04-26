@@ -27,6 +27,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:text="@string/explore_location_request"
         tools:visibility="visible" />
 

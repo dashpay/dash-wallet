@@ -20,7 +20,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary"
+    android:background="@color/background_primary_light"
     tools:context=".ui.portal.TransferFragment">
 
     <androidx.appcompat.widget.Toolbar
@@ -36,7 +36,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginRight="68dp">
+            android:layout_marginEnd="68dp">
 
             <TextView
                 android:id="@+id/toolbar_title"
@@ -56,16 +56,47 @@
         </LinearLayout>
     </androidx.appcompat.widget.Toolbar>
 
+    <LinearLayout
+        android:id="@+id/message_banner"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/banner_message_height"
+        android:background="@color/dash_blue"
+        android:gravity="center_horizontal"
+        android:orientation="horizontal"
+        android:translationZ="4dp"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/banner_message_text"
+            style="@style/Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="@string/crowdnode_first_deposit"
+            android:textColor="@color/white" />
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_marginStart="10dp"
+            android:layout_gravity="center_vertical"
+            android:src="@drawable/ic_info_white" />
+    </LinearLayout>
+
     <ImageView
         android:id="@+id/source_icon"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:layout_marginTop="8dp"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:src="@drawable/ic_dash_pay"
+        android:layout_marginTop="@dimen/banner_message_height"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/source_label"
-        app:layout_constraintBottom_toTopOf="@id/balance_text"
+        app:layout_constraintBottom_toTopOf="@id/enter_amount_fragment_placeholder"
         app:layout_constraintHorizontal_chainStyle="packed" />
 
     <TextView
@@ -77,25 +108,22 @@
         android:layout_marginStart="8dp"
         app:layout_constraintStart_toEndOf="@id/source_icon"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/source_icon"
-        app:layout_constraintBottom_toBottomOf="@id/source_icon" />
+        app:layout_constraintTop_toTopOf="@id/source_icon" />
 
     <TextView
         android:id="@+id/balance_text"
         style="@style/Caption.SteelGray"
-        android:gravity="center"
-        android:textAlignment="gravity"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="5dp"
-        app:layout_constraintBottom_toTopOf="@id/enter_amount_fragment_placeholder"
-        tools:text="Available: 200,00 US$" />
+        app:layout_constraintStart_toStartOf="@id/source_label"
+        app:layout_constraintBottom_toBottomOf="@id/source_icon"
+        tools:text="Balance: 200,00 US$" />
 
     <LinearLayout
         android:id="@+id/enter_amount_fragment_placeholder"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:orientation="vertical"
-        app:layout_constraintHeight_percent="0.8"
+        app:layout_constraintHeight_percent="0.74"
         app:layout_constraintBottom_toBottomOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>
