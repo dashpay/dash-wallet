@@ -31,6 +31,7 @@ import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
@@ -61,6 +62,8 @@ class SetPinActivity : InteractionAwareActivity() {
 
     @Inject
     lateinit var analytics: AnalyticsService
+    @Inject
+    lateinit var restartService: RestartService
 
     val pin = arrayListOf<Int>()
     var seed = listOf<String>()
@@ -355,9 +358,12 @@ class SetPinActivity : InteractionAwareActivity() {
             when (it.status) {
                 Status.ERROR -> {
                     if (changePin) {
-                        pinRetryController.failedAttempt(viewModel.getPinAsString())
-                        if (pinRetryController.isLocked) {
-                            setState(State.LOCKED)
+                        if(pinRetryController.failedAttempt(viewModel.getPinAsString())) {
+
+                        } else {
+                            if (pinRetryController.isLocked) {
+                                setState(State.LOCKED)
+                            }
                         }
                     } else {
                         if (state == State.DECRYPTING) {
@@ -400,14 +406,17 @@ class SetPinActivity : InteractionAwareActivity() {
                 }
             }
         })
-        viewModel.checkPinLiveData.observe(this, Observer {
+        viewModel.checkPinLiveData.observe(this) {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(viewModel.getPinAsString())
-                    if (pinRetryController.isLocked) {
-                        setState(State.LOCKED)
+                    if(pinRetryController.failedAttempt(viewModel.getPinAsString())) {
+                        restartService.performRestart(this, true)
                     } else {
-                        setState(if (changePin) State.INVALID_PIN else State.DECRYPT)
+                        if (pinRetryController.isLocked) {
+                            setState(State.LOCKED)
+                        } else {
+                            setState(if (changePin) State.INVALID_PIN else State.DECRYPT)
+                        }
                     }
                 }
                 Status.LOADING -> {
@@ -419,7 +428,7 @@ class SetPinActivity : InteractionAwareActivity() {
                     setState(State.SET_PIN)
                 }
             }
-        })
+        }
         viewModel.startNextActivity.observe(this, Observer {
             setResult(Activity.RESULT_OK)
             if (it) {

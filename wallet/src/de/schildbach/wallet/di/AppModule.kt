@@ -26,6 +26,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.AppRestartService
+import de.schildbach.wallet.service.RestartService
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
@@ -48,6 +50,10 @@ abstract class AppModule {
         fun provideWalletApplication(
             @ApplicationContext context: Context
         ) = context as WalletApplication
+
+        @Singleton
+        @Provides
+        fun provideRestartService(): RestartService = AppRestartService()
     }
 
     @Binds

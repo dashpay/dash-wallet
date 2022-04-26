@@ -87,6 +87,8 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Inject;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.android.LogcatAppender;
@@ -99,6 +101,7 @@ import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
+import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.security.SecurityGuard;
 import de.schildbach.wallet.util.CrashReporter;
@@ -138,6 +141,9 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
 
     private AutoLogout autoLogout;
 
+    @Inject
+    RestartService restartService;
+
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
@@ -165,12 +171,12 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
             }
 
             @Override
-            protected void onStartedAny(boolean isTheFirstOne) {
-                super.onStartedAny(isTheFirstOne);
+            protected void onStartedAny(boolean isTheFirstOne, Activity activity) {
+                super.onStartedAny(isTheFirstOne, activity);
                 // force restart if the app was updated
                 if (!BuildConfig.DEBUG && myPackageReplaced) {
                     myPackageReplaced = false;
-                    ProcessPhoenix.triggerRebirth(WalletApplication.this);
+                    restartService.performRestart(activity, true);
                 }
             }
 

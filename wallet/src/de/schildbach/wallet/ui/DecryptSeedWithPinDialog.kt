@@ -53,7 +53,10 @@ class DecryptSeedWithPinDialog : CheckPinDialog() {
         (viewModel as DecryptSeedViewModel).decryptSeedLiveData.observe(viewLifecycleOwner, Observer {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(it.data!!.second!!)
+                    if (pinRetryController.failedAttempt(it.data!!.second!!)) {
+                        restartService.performRestart(requireActivity(), true)
+                        return@Observer
+                    }
                     if (pinRetryController.isLocked) {
                         showLockedAlert(requireContext())
                         dismiss()

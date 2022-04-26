@@ -40,6 +40,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.preference.PinRetryController
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
@@ -71,6 +72,7 @@ open class LockScreenActivity : SecureActivity() {
     @Inject lateinit var walletApplication: WalletApplication
     @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     @Inject lateinit var configuration: Configuration
+    @Inject lateinit var restartService: RestartService
     private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
 
     private lateinit var checkPinViewModel: CheckPinViewModel
@@ -274,11 +276,14 @@ open class LockScreenActivity : SecureActivity() {
         checkPinViewModel.checkPinLiveData.observe(this) {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(it.data!!)
-                    if (pinRetryController.isLocked) {
-                        setLockState(State.LOCKED)
+                    if (pinRetryController.failedAttempt(it.data!!)) {
+                        restartService.performRestart(this, true)
                     } else {
-                        setLockState(State.INVALID_PIN)
+                        if (pinRetryController.isLocked) {
+                            setLockState(State.LOCKED)
+                        } else {
+                            setLockState(State.INVALID_PIN)
+                        }
                     }
                 }
                 Status.LOADING -> {

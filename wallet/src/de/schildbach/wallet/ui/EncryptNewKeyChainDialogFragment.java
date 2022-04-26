@@ -19,6 +19,7 @@ import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
 import org.bouncycastle.crypto.params.KeyParameter;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.send.DecryptSeedTask;
 import de.schildbach.wallet.ui.send.DeriveKeyTask;
@@ -28,7 +29,7 @@ import de.schildbach.wallet_test.R;
 /**
  * Created by Hash Engineering on 4/5/2018.
  */
-
+@AndroidEntryPoint
 public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment {
 
     private static final String FRAGMENT_TAG = EncryptNewKeyChainDialogFragment.class.getName();

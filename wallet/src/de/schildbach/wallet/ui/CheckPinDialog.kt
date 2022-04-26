@@ -34,8 +34,10 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.preference.PinRetryController
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
@@ -44,7 +46,9 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
+@AndroidEntryPoint
 open class CheckPinDialog : DialogFragment() {
 
     companion object {
@@ -95,6 +99,9 @@ open class CheckPinDialog : DialogFragment() {
         INVALID_PIN,
         DECRYPTING
     }
+
+    @Inject
+    lateinit var restartService: RestartService
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
@@ -171,7 +178,10 @@ open class CheckPinDialog : DialogFragment() {
         viewModel.checkPinLiveData.observe(viewLifecycleOwner, Observer {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(it.data!!)
+                    if (pinRetryController.failedAttempt(it.data!!)) {
+                        restartService.performRestart(requireActivity(), true)
+                        return@Observer
+                    }
                     if (pinRetryController.isLocked) {
                         showLockedAlert(requireContext())
                         dismiss()
