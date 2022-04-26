@@ -266,12 +266,24 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
         convertViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner) { balance ->
             val hasBalance = !balance.isZero
-            binding.youWillReceiveLabel.isVisible = hasBalance && binding.convertView.dashToCrypto == false
-            binding.youWillReceiveValue.isVisible = hasBalance && binding.convertView.dashToCrypto == false
-            if (hasBalance) {
+            binding.youWillReceiveLabel.isVisible = hasBalance
+            binding.youWillReceiveValue.isVisible = hasBalance
+            if (hasBalance && !binding.convertView.dashToCrypto) {
                 binding.youWillReceiveValue.text = context?.getString(
                     R.string.you_will_receive_dash,
                     dashFormat.format(balance).toString()
+                )
+            }
+        }
+
+        convertViewModel.enteredConvertCryptoAmount.observe(viewLifecycleOwner) { balance ->
+            binding.youWillReceiveLabel.isVisible = balance.second.isNotEmpty()
+            binding.youWillReceiveValue.isVisible = balance.second.isNotEmpty()
+            if (binding.convertView.dashToCrypto) {
+                binding.youWillReceiveValue.text = getString(
+                    R.string.fiat_balance_with_currency,
+                    balance.first,
+                    GenericUtils.currencySymbol(balance.second)
                 )
             }
         }

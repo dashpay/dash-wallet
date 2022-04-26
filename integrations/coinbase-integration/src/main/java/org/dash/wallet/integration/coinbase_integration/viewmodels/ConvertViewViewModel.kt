@@ -89,6 +89,10 @@ class ConvertViewViewModel @Inject constructor(
     val enteredConvertDashAmount: LiveData<Coin>
         get() = _enteredConvertDashAmount
 
+    private val _enteredConvertCryptoAmount = MutableLiveData<Pair<String, String>>()
+    val enteredConvertCryptoAmount: LiveData<Pair<String, String>>
+        get() = _enteredConvertCryptoAmount
+
     private val _selectedLocalExchangeRate = MutableLiveData<ExchangeRate>()
     val selectedLocalExchangeRate: LiveData<ExchangeRate>
         get() = _selectedLocalExchangeRate
@@ -152,6 +156,21 @@ class ConvertViewViewModel @Inject constructor(
 
     fun setEnteredConvertDashAmount(value: Coin) {
         _enteredConvertDashAmount.value = value
+        if (!value.isZero) {
+            _selectedCryptoCurrencyAccount.value?.let {
+                val cryptoCurrency =
+                    (
+                        dashFormat.minDecimals(0)
+                            .optionalDecimals(0, 8).format(value).toString().toBigDecimal() /
+                            it.cryptoCurrencyToDashExchangeRate.toBigDecimal()
+                        )
+                        .setScale(8, RoundingMode.HALF_UP).toString()
+
+                _enteredConvertCryptoAmount.value =
+                    Pair(cryptoCurrency, it.coinBaseUserAccountData.currency?.code.toString())
+            }
+        }
+
         if (value.isZero)
             resetSwapValueError()
     }
