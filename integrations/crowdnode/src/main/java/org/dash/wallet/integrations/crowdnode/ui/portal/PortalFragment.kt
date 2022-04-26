@@ -118,7 +118,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             }
         }
 
-        viewModel.networkErrorEvent.observe(viewLifecycleOwner) {
+        viewModel.networkError.observe(viewLifecycleOwner) {
             Toast.makeText(
                 requireContext(),
                 R.string.network_unavailable_balance_not_accurate,

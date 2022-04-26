@@ -51,7 +51,7 @@ class CrowdNodeViewModel @Inject constructor(
     exchangeRatesProvider: ExchangeRatesProvider
 ) : ViewModel() {
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
-    val networkErrorEvent = SingleLiveEvent<Unit>()
+    val networkError = SingleLiveEvent<Unit>()
 
     private val _accountAddress = MutableLiveData<Address>()
     val accountAddress: LiveData<Address>
@@ -98,6 +98,9 @@ class CrowdNodeViewModel @Inject constructor(
     val networkParameters: NetworkParameters
         get() = walletDataProvider.networkParameters
 
+    val isFirstDeposit: Boolean
+        get() = !crowdNodeApi.hasAnyDeposits()
+
     init {
         walletDataProvider.observeBalance()
             .distinctUntilChanged()
@@ -124,7 +127,7 @@ class CrowdNodeViewModel @Inject constructor(
                     }
                     Status.ERROR -> {
                         _isBalanceLoading.postValue(false)
-                        networkErrorEvent.call()
+                        networkError.call()
                     }
                     else -> _isBalanceLoading.postValue(false)
                 }
@@ -192,16 +195,12 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
-    suspend fun deposit(coin: Coin): Boolean {
-        return crowdNodeApi.deposit(coin)
+    suspend fun deposit(value: Coin): Boolean {
+        return crowdNodeApi.deposit(value)
     }
 
-    suspend fun withdraw(coin: Coin): Boolean {
-        return crowdNodeApi.withdraw(coin)
-    }
-
-    fun hasAnyDeposits(): Boolean {
-        return crowdNodeApi.hasAnyDeposits()
+    suspend fun withdraw(value: Coin): Boolean {
+        return crowdNodeApi.withdraw(value)
     }
 
     private suspend fun getOrCreateAccountAddress(): Address {

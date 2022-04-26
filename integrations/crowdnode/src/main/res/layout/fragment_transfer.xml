@@ -63,7 +63,7 @@
         android:background="@color/dash_blue"
         android:gravity="center_horizontal"
         android:orientation="horizontal"
-        android:translationZ="5dp"
+        android:translationZ="4dp"
         android:visibility="gone"
         android:clickable="true"
         android:focusable="true"

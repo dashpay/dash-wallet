@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.crowdnode.ui.portal
 
 import android.animation.ObjectAnimator
+import android.animation.TimeInterpolator
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
@@ -31,7 +32,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -48,6 +48,8 @@ import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.StakingDialog
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
+import kotlin.math.exp
+import kotlin.math.sin
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -67,7 +69,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
         if (savedInstanceState == null) {
             val fragment = EnterAmountFragment.newInstance(
-                dashToFiat = amountViewModel.dashToFiatDirection.value ?: false,
+                dashToFiat = amountViewModel.dashToFiatDirection.value ?: true,
                 isMaxButtonVisible = true,
                 showCurrencySelector = true
             )
@@ -146,7 +148,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
         amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
             lifecycleScope.launch {
-                continueTransfer(pair.first)
+                continueTransfer(pair.first, args.withdraw)
             }
         }
     }
@@ -184,7 +186,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         binding.sourceIcon.setImageResource(R.drawable.ic_dash_pay)
         binding.sourceLabel.text = getString(R.string.from_wallet)
 
-        if (!viewModel.hasAnyDeposits()) {
+        if (viewModel.isFirstDeposit) {
             binding.messageBanner.isVisible = true
             binding.bannerMessageText.text = getString(
                 R.string.crowdnode_first_deposit,
@@ -200,13 +202,20 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         }
     }
 
-    private suspend fun continueTransfer(value: Coin) {
-        if (!args.withdraw) {
+    private suspend fun continueTransfer(value: Coin, isWithdraw: Boolean) {
+        if (!isWithdraw) {
+            if (viewModel.isFirstDeposit &&
+                value.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
+            ) {
+                showBannerError()
+                return
+            }
+
             securityModel.requestPinCode(requireActivity()) ?: return
         }
 
         val isSuccess = AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
-            if (args.withdraw) {
+            if (isWithdraw) {
                 viewModel.withdraw(value)
             } else {
                 viewModel.deposit(value)
@@ -215,7 +224,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
 
         if (isSuccess) {
-            if (args.withdraw) {
+            if (isWithdraw) {
                 safeNavigate(TransferFragmentDirections.transferToResult(
                     false,
                     getString(R.string.withdrawal_requested),
@@ -261,5 +270,25 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 GenericUtils.fiatToString(rate.coinToFiat(balance)))
             else -> ""
         }
+    }
+
+    private fun showBannerError() {
+        binding.messageBanner.setBackgroundColor(resources.getColor(R.color.red_300, null))
+        runWiggleAnimation(binding.messageBanner)
+    }
+
+    private fun runWiggleAnimation(view: View) {
+        val frequency = 3f
+        val decay = 2f
+        val decayingSineWave = TimeInterpolator { input ->
+            val raw = sin(frequency * input * 2 * Math.PI)
+            (raw * exp((-input * decay).toDouble())).toFloat()
+        }
+
+        view.animate()
+            .xBy(-100f)
+            .setInterpolator(decayingSineWave)
+            .setDuration(300)
+            .start()
     }
 }
