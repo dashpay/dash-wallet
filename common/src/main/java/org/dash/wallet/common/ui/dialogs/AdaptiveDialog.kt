@@ -104,6 +104,8 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
     private var onResultListener: ((Boolean?) -> Unit)? = null
     var isMessageSelectable = false
 
+    constructor() : this(R.layout.dialog_simple)
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
