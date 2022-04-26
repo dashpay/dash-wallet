@@ -15,6 +15,9 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import android.app.ActivityManager
+import android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+import android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE
 import android.content.Intent
 import android.os.Handler
 import android.os.HandlerThread
@@ -73,9 +76,6 @@ import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -1205,13 +1205,30 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         preDownloadBlocks.set(false)
     }
 
+    private fun isRunningInForeground(): Boolean {
+        val appProcessInfo = ActivityManager.RunningAppProcessInfo();
+        ActivityManager.getMyMemoryState(appProcessInfo);
+        return (appProcessInfo.importance == IMPORTANCE_FOREGROUND || appProcessInfo.importance == IMPORTANCE_VISIBLE)
+    }
+
+
     private fun updateBloomFilters() {
+        // if we are not running in the foreground, don't try to start to update the bloom filters
+        // This should be OK, since the blockchain shouldn't be syncing.
+
+        // Nevertheless, platformSyncJob should be inactive when the BlockchainService is destroyed
+        // Perhaps the updateContactRequests method is being run while the job is canceled
         if (platformSyncJob.isActive) {
-            val intent = Intent(
-                BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
-                BlockchainServiceImpl::class.java
-            )
-            walletApplication.startService(intent)
+            if (isRunningInForeground()) {
+                log.info("attempting to update bloom filters when the app is in the foreground")
+                val intent = Intent(
+                    BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
+                    BlockchainServiceImpl::class.java
+                )
+                walletApplication.startService(intent)
+            } else {
+                log.info("attempting to update bloom filters when the app is in the background")
+            }
         }
     }
 
