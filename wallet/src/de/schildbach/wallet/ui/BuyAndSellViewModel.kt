@@ -31,7 +31,7 @@ import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
-import org.dash.wallet.integration.uphold.data.UpholdClient
+import org.dash.wallet.integration.uphold.api.UpholdClient
 import java.math.BigDecimal
 import javax.inject.Inject
 import kotlin.coroutines.suspendCoroutine
@@ -49,7 +49,7 @@ class BuyAndSellViewModel
 )
     : ConnectivityViewModel(networkState) {
 
-    // TODO: move this into UpholdViewModel
+    //TODO: move this into UpholdViewModel
     private val triggerUploadBalanceUpdate = MutableLiveData<Unit>()
 
     fun updateUpholdBalance() {

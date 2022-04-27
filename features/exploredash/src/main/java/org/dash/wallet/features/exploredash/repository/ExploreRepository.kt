@@ -40,6 +40,7 @@ import kotlin.coroutines.resumeWithException
 interface ExploreRepository {
     suspend fun getRemoteTimestamp(): Long
     fun getDatabaseInputStream(file: File): InputStream?
+    fun getTimestamp(file: File): Long
     fun getUpdateFile(): File
     var localTimestamp: Long
     suspend fun download()
@@ -144,10 +145,21 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
         }
     }
 
+    private fun extractComment(zipFile: ZipFile) : Array<String>{
+        return zipFile.comment.split("#".toRegex()).toTypedArray()
+    }
+
+    @Throws(IOException::class)
+    override fun getTimestamp(file: File): Long {
+        val zipFile = ZipFile(file)
+        val comment = extractComment(zipFile)
+        return comment[0].toLong()
+    }
+
     @Throws(IOException::class)
     override fun getDatabaseInputStream(file: File): InputStream? {
         val zipFile = ZipFile(file)
-        val comment: Array<String> = zipFile.comment.split("#".toRegex()).toTypedArray()
+        val comment = extractComment(zipFile)
         // use the current time instead of the file time (comment[0].toLong())
         updateTimestampCache = currentTimeMillis()
         val checksum = comment[1]
@@ -163,21 +175,18 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
 
     override fun deleteOldDB(dbFile: File) {
         try {
-            var dbDelete = false
             if (dbFile.exists()) {
-                dbDelete = dbFile.delete()
+                dbFile.deleteOnExit()
             }
             val dbShmFile = File(dbFile.absolutePath + "-shm")
-            var dbShmDelete = false
             if (dbShmFile.exists()) {
-                dbShmDelete = dbShmFile.delete()
+                dbShmFile.deleteOnExit()
             }
             val dbWalFile = File(dbFile.absolutePath + "-wal")
-            var dbWalDelete = false
             if (dbWalFile.exists()) {
-                dbWalDelete = dbWalFile.delete()
+                dbWalFile.deleteOnExit()
             }
-            log.info("delete existing explore db ({}, {}, {})", dbDelete, dbShmDelete, dbWalDelete)
+            log.info("existing explore db files to be deleted on exit")
         } catch (ex: SecurityException) {
             log.warn("unable to delete explore db", ex)
         }

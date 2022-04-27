@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold</string>
+    <string name="uphold_buy_dash_activity_title">用Uphold帳戶來 購買/出售 達世幣</string>
+    <string name="uphold_buy_dash_with_uphold">用Uphold帳戶來購買達世幣</string>
+    <string name="uphold_buy_dash_button">購買達世幣</string>
+    <string name="uphold_transfer_to_this_wallet_button">從Uphold帳戶轉帳</string>
+    <string name="uphold_link_account">連結 Uphold 帳戶</string>
+    <string name="uphold_account_dash_balance">您的Uphold帳戶內的達世幣餘額是</string>
+    <string name="uphold_transfer_to_this_wallet">將達世幣從您的Uphold帳戶轉移到此錢包</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">費用將從要求的金額中扣除。</string>
+    <string name="uphold_withdrawal_instructions">輸入要轉帳的金額</string>
+    <string name="uphold_withdrawal_success_title">成功</string>
+    <string name="uphold_withdrawal_success_message">您的交易已發送，金額應在幾分鐘內在您的錢包中顯示。\n\n交易ID: %s</string>
+    <string name="uphold_otp_dialog_title">在下面輸入您的 2FA 代碼</string>
+    <string name="uphold_transfer">轉帳</string>
+    <string name="uphold_see_on_uphold">參見Uphold</string>
+    <string name="uphold_logout_title">從Uphold登出</string>
+    <string name="uphold_logout">登出</string>
+    <string name="uphold_logout_explanation_text">您還需要從瀏覽器中登出Uphold網站</string>
+    <string name="uphold_go_to_website">前往網站</string>
+    <string name="uphold_error">Uphold 錯誤</string>
+    <string name="uphold_error_not_logged_in">達世幣錢包不再與您的Uphold帳戶相關聯。 請在下一個屏幕上按Link Uphold帳戶。</string>
+    <string name="uphold_error_not_available">Uphold服務不可用。 請稍後再試。</string>
+    <string name="uphold_error_report_issue">請使用主菜單中的“報告問題”向達世幣支持團隊報告此問題。</string>
+
+    <string name="uphold_general_error_title">錯誤</string>
+    <string name="uphold_api_error_title">Uphold 錯誤</string>
+    <string name="uphold_api_error_identity">您的Uphold帳戶尚未驗證。 所以無法提取資金。</string>
+    <string name="uphold_api_error_400_description">Uphold 資金將鎖定24小時。\n\n在 %s 之後，您將有足夠的資金用於此交易</string>
+    <string name="uphold_api_error_400_locked">Uphold 帳戶的資金 (%1$s %2$s) 被鎖定最多 65 天。\n\n您將在 %3$s之後才有足夠的資金用於這次轉帳。</string>
+    <string name="uphold_api_error_400_tx_insufficentfunds">您沒有足夠的資金進行這次轉賬</string>
+    <string name="uphold_api_error_400_tx_validation">不能用這個應用程序轉移那麼多錢 (最高 $3000 美元)</string>
+    <string name="uphold_api_error_400_password_reset">由於最近更改了密碼，因此Uphold 帳戶的資金被鎖定。\n\n您必須等到 %s 後才能轉移資金。</string>
+    <string name="uphold_api_error_400_authentication_change">由於最近的身份驗證方法有所更改，因此Uphold 帳戶的資金被鎖定。\n\n您必須等到 %s 後才能轉移資金。</string>
+
+    <string name="uphold_api_error_400_invalid_beneficiary">使用此應用無法轉賬那麼多錢 (最多 $3000 美元)\n\n請使用您的 Uphold 帳戶進行轉賬。</string>
+    <string name="uphold_api_error_400_required">使用此應用無法轉賬那麼多錢 (最多 $3000 美元)\n\n請使用您的 Uphold 帳戶進行轉賬。</string>
+
+</resources>

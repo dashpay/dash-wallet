@@ -13,6 +13,9 @@ buildscript {
         recyclerViewVersion = "1.2.1"
         glideVersion = '4.12.0'
         slf4jVersion = '1.7.32'
+        junitVersion = '4.13.2'
+        mockitoVersion = '4.0.0'
+        espressoVersion = '3.4.0'
         coilVersion = '1.4.0'
         junitExtVersion = '1.1.3'
     }
