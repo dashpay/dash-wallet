@@ -49,7 +49,7 @@ class BuyAndSellViewModel
 )
     : ConnectivityViewModel(networkState) {
 
-    // TODO: move this into UpholdViewModel
+    //TODO: move this into UpholdViewModel
     private val triggerUploadBalanceUpdate = MutableLiveData<Unit>()
 
     fun updateUpholdBalance() {
