@@ -67,6 +67,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
                 Type.DEPOSIT_SUCCESS.ordinal -> setDepositSuccess()
                 Type.CONVERSION_SUCCESS.ordinal -> setConversionSuccess()
                 Type.CONVERSION_ERROR.ordinal -> setConversionError()
+                Type.SWAP_ERROR.ordinal -> setSwapError()
                 Type.TRANSFER_DASH_SUCCESS.ordinal -> setTransferDashSuccess()
                 Type.TRANSFER_DASH_ERROR.ordinal -> setTransferDashFailure()
             }
@@ -141,6 +142,17 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.retry)
     }
+
+    private fun setSwapError() {
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
+        binding.coinbaseBuyDialogTitle.setText(R.string.conversion_failed)
+        binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red300)
+        binding.buyDialogContactCoinbaseSupport.isVisible = true
+        binding.coinbaseBuyDialogNegativeButton.isVisible = true
+        binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)
+        binding.coinbaseBuyDialogPositiveButton.isVisible = false
+    }
     private fun setConversionSuccess() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_successful)
@@ -201,6 +213,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         PURCHASE_ERROR,
         CONVERSION_SUCCESS,
         CONVERSION_ERROR,
+        SWAP_ERROR,
         TRANSFER_DASH_SUCCESS,
         TRANSFER_DASH_ERROR
     }

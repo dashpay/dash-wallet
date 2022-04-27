@@ -144,7 +144,6 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
         }
 
         override fun onFunction() {}
-
     }
 
     private fun applyNewValue(value: String) {

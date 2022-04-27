@@ -60,21 +60,22 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     private var newBuyOrderId: String? = null
     @Inject
     lateinit var analyticsService: AnalyticsService
-    private val countDownTimer by lazy {   object : CountDownTimer(10000, 1000) {
+    private val countDownTimer by lazy {
+        object : CountDownTimer(10000, 1000) {
 
-        override fun onTick(millisUntilFinished: Long) {
-            binding.confirmBtn.text = getString(R.string.confirm_sec, (millisUntilFinished / 1000).toString())
-            binding.retryIcon.visibility = View.GONE
-            setConfirmBtnStyle(org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_Blue, org.dash.wallet.common.R.color.dash_white)
-        }
+            override fun onTick(millisUntilFinished: Long) {
+                binding.confirmBtn.text = getString(R.string.confirm_sec, (millisUntilFinished / 1000).toString())
+                binding.retryIcon.visibility = View.GONE
+                setConfirmBtnStyle(org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_Blue, org.dash.wallet.common.R.color.dash_white)
+            }
 
-        override fun onFinish() {
-            binding.confirmBtn.text = getString(R.string.retry)
-            binding.retryIcon.visibility = View.VISIBLE
-            isRetrying =true
-            setConfirmBtnStyle(org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_TransparentBlue, org.dash.wallet.common.R.color.dash_blue)
+            override fun onFinish() {
+                binding.confirmBtn.text = getString(R.string.retry)
+                binding.retryIcon.visibility = View.VISIBLE
+                isRetrying = true
+                setConfirmBtnStyle(org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_TransparentBlue, org.dash.wallet.common.R.color.dash_blue)
+            }
         }
-     }
     }
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -126,9 +127,11 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
 
 
         viewModel.commitBuyOrderSuccessState.observe(viewLifecycleOwner) { params ->
-            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseBuyDashOrderReviewToTwoFaCode(
-                CoinbaseTransactionParams(params, TransactionType.BuyDash)
-            ))
+            safeNavigate(
+                CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseBuyDashOrderReviewToTwoFaCode(
+                    CoinbaseTransactionParams(params, TransactionType.BuyDash)
+                )
+            )
         }
         viewModel.showLoading.observe(viewLifecycleOwner) { showLoading ->
             if (showLoading) {
@@ -166,7 +169,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
             .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
             .commit()
 
-        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
+        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
             setNetworkState(hasInternet)
         }
         observeNavigationCallBack()
@@ -239,7 +242,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         super.onPause()
     }
 
-    private fun setNetworkState(hasInternet: Boolean){
+    private fun setNetworkState(hasInternet: Boolean) {
         binding.networkStatusContainer.isVisible = !hasInternet
         binding.previewOfflineGroup.isVisible = hasInternet
     }
@@ -251,14 +254,14 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
 
     private fun observeNavigationCallBack() {
         findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Boolean>("resume_review")
-            ?.observe(viewLifecycleOwner){ isOrderReviewResumed ->
-                if (isOrderReviewResumed){
+            ?.observe(viewLifecycleOwner) { isOrderReviewResumed ->
+                if (isOrderReviewResumed) {
                     getNewBuyOrder()
                 }
             }
     }
 
-    private fun getNewBuyOrder(){
+    private fun getNewBuyOrder() {
         viewModel.onRefreshOrderClicked(
             amountViewModel.onContinueEvent.value?.second,
             selectedPaymentMethodId
