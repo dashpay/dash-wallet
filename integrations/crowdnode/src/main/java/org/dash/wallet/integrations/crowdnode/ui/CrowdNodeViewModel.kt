@@ -186,12 +186,12 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     suspend fun getIsInfoShown(): Boolean {
-        return config.isInfoShown.first()
+        return config.getPreference(ModuleConfiguration.INFO_SHOWN) ?: false
     }
 
     fun setInfoShown(isShown: Boolean) {
         viewModelScope.launch {
-            config.setIsInfoShown(isShown)
+            config.setPreference(ModuleConfiguration.INFO_SHOWN, isShown)
         }
     }
 
@@ -207,13 +207,13 @@ class CrowdNodeViewModel @Inject constructor(
         val existingAddress = crowdNodeApi.accountAddress
 
         if (existingAddress != null) {
-            config.setAccountAddress(existingAddress.toBase58())
+            config.setPreference(ModuleConfiguration.ACCOUNT_ADDRESS, existingAddress.toBase58())
             return existingAddress
         }
 
-        val savedAddress = config.accountAddress.first()
+        val savedAddress = config.getPreference(ModuleConfiguration.ACCOUNT_ADDRESS)
 
-        return if (savedAddress.isEmpty()) {
+        return if (savedAddress.isNullOrEmpty()) {
             return createNewAccountAddress()
         } else {
             Address.fromString(walletDataProvider.networkParameters, savedAddress)
@@ -222,7 +222,7 @@ class CrowdNodeViewModel @Inject constructor(
 
     private suspend fun createNewAccountAddress(): Address {
         val address = walletDataProvider.freshReceiveAddress()
-        config.setAccountAddress(address.toBase58())
+        config.setPreference(ModuleConfiguration.ACCOUNT_ADDRESS, address.toBase58())
 
         return address
     }

@@ -92,7 +92,7 @@ class StakingActivity : LockScreenActivity() {
 
         navGraph.startDestination =
             when (status) {
-                SignUpStatus.Finished -> R.id.crowdNodePortalFragment
+                SignUpStatus.Finished, SignUpStatus.LinkedOnline -> R.id.crowdNodePortalFragment
                 SignUpStatus.NotStarted -> {
                     val isInfoShown = runBlocking { viewModel.getIsInfoShown() }
                     if (isInfoShown) R.id.entryPointFragment else R.id.firstTimeInfo

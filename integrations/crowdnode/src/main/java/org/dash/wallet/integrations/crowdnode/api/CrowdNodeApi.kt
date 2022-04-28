@@ -54,6 +54,7 @@ import javax.inject.Inject
 import kotlin.math.min
 
 enum class SignUpStatus {
+    LinkedOnline,
     NotStarted,
     FundingWallet,
     SigningUp,
@@ -161,7 +162,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
             apiError.value = ex
             signUpStatus.value = SignUpStatus.Error
-            config.setCrowdNodeError(ex.message ?: "")
+            config.setPreference(ModuleConfiguration.ERROR, ex.message ?: "")
             notifyIfNeeded(appContext.getString(R.string.crowdnode_signup_error), "crowdnode_error")
         }
     }
@@ -252,7 +253,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
     override fun refreshBalance(retries: Int) {
         responseScope.launch {
-            val lastBalance = config.lastBalance.first()
+            val lastBalance = config.getPreference(ModuleConfiguration.LAST_BALANCE) ?: 0L
             var currentBalance = Resource.loading(Coin.valueOf(lastBalance))
             balance.value = currentBalance
 
@@ -284,13 +285,24 @@ class CrowdNodeBlockchainApi @Inject constructor(
     private fun restoreStatus() {
         if (signUpStatus.value == SignUpStatus.NotStarted) {
             log.info("restoring CrowdNode status")
-            val savedError = runBlocking { config.crowdNodeError.first() }
+            val savedError = runBlocking { config.getPreference(ModuleConfiguration.ERROR) ?: "" }
 
             if (savedError.isNotEmpty()) {
                 signUpStatus.value = SignUpStatus.Error
                 apiError.value = CrowdNodeException(savedError)
-                configScope.launch { config.setCrowdNodeError("") }
+                configScope.launch { config.setPreference(ModuleConfiguration.ERROR, "") }
                 log.info("found an error: $savedError")
+                return
+            }
+
+            val isLinked = runBlocking { config.getPreference(ModuleConfiguration.ONLINE_ACCOUNT_LINKED) ?: false }
+
+            if (isLinked) {
+                val address = runBlocking { config.getPreference(ModuleConfiguration.ACCOUNT_ADDRESS) }
+                requireNotNull(address) { "ONLINE_ACCOUNT_LINKED is set but no address found" }
+                this.accountAddress = Address.fromBase58(params, address)
+                signUpStatus.value = SignUpStatus.LinkedOnline
+                log.info("found a linked account")
                 return
             }
 
@@ -361,7 +373,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
         return if (address != null) {
             try {
                 val balance = Coin.parseCoin(fetchBalance(address.toBase58()))
-                config.setLastBalance(balance.value)
+                config.setPreference(ModuleConfiguration.LAST_BALANCE, balance.value)
                 Resource.success(balance)
             } catch (ex: HttpException) {
                 Resource.error(ex)
