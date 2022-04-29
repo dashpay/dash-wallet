@@ -29,7 +29,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ModuleConfiguration @Inject constructor(private val context: Context) {
+open class ModuleConfiguration @Inject constructor(private val context: Context) {
     companion object {
         val INFO_SHOWN = booleanPreferencesKey("info_shown")
         val ACCOUNT_ADDRESS = stringPreferencesKey("account_address")
@@ -48,21 +48,21 @@ class ModuleConfiguration @Inject constructor(private val context: Context) {
             }
         }
 
-    fun <T> observePreference(key: Preferences.Key<T>): Flow<T?> {
+    open fun <T> observePreference(key: Preferences.Key<T>): Flow<T?> {
         return dataStore.map { preferences -> preferences[key] }
     }
 
-    suspend fun <T> getPreference(key: Preferences.Key<T>): T? {
+    open suspend fun <T> getPreference(key: Preferences.Key<T>): T? {
         return dataStore.map { preferences -> preferences[key] }.first()
     }
 
-    suspend fun <T> setPreference(key: Preferences.Key<T>, value: T) {
+    open suspend fun <T> setPreference(key: Preferences.Key<T>, value: T) {
         context.dataStore.edit { preferences ->
             preferences[key] = value
         }
     }
 
-    suspend fun clearAll() {
+    open suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
     }
 }
