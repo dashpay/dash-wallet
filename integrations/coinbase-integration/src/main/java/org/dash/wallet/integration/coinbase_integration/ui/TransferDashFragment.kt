@@ -29,12 +29,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Constants
-import org.dash.wallet.common.PinInteractor
+import org.dash.wallet.common.services.ConfirmTransactionService
+import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.ui.*
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.GenericUtils
@@ -61,11 +63,10 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
     private val enterAmountToTransferViewModel by activityViewModels<EnterAmountToTransferViewModel>()
     private val transferDashViewModel by activityViewModels<TransferDashViewModel>()
-    private val checkPinViewModel by activityViewModels<CheckPinSharedModel>()
-    private val confirmTransferActionViewModel by activityViewModels<SingleActionSharedViewModel>()
     private val binding by viewBinding(TransferDashFragmentBinding::bind)
     private var loadingDialog: FancyAlertDialog? = null
-    @Inject lateinit var pinInteractor: PinInteractor
+    @Inject lateinit var securityModel: SecurityModel
+    @Inject lateinit var confirmTransactionLauncher: ConfirmTransactionService
     private var dashValue: Coin = Coin.ZERO
     private var fiatValue: Fiat? = null
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
@@ -73,6 +74,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        handleBackButtonPress()
         binding.authLimitBanner.warningLimitIcon.isVisible = false
         binding.authLimitBanner.authLimitDesc.updateLayoutParams<ConstraintLayout.LayoutParams> {
             marginStart = 32
@@ -128,7 +130,11 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 }
 
                 if (!binding.dashWalletLimitBanner.isVisible && transferDashViewModel.isUserAuthorized()){
-                    pinInteractor.showPinDialog(requireActivity())
+                    lifecycleScope.launch {
+                        securityModel.requestPinCode(requireActivity())?.let {
+                            transferDashViewModel.createAddressForAccount()
+                        }
+                    }
                 }
             } else {
                 binding.dashWalletLimitBanner.isVisible = false
@@ -204,18 +210,20 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             ).show(requireActivity()) { }
         }
 
-        checkPinViewModel.onCorrectPinCallback.observe(viewLifecycleOwner){
-            transferDashViewModel.createAddressForAccount()
-        }
-
         transferDashViewModel.observeCoinbaseAddressState.observe(viewLifecycleOwner){ address ->
             val amountFiat = if (fiatValue != null) dashFormat.format(fiatValue).toString() else getString(R.string.transaction_row_rate_not_available)
             val fiatSymbol = if (fiatValue != null) GenericUtils.currencySymbol(fiatValue?.currencyCode) else ""
             val amountStr = dashValue.toPlainString()
             val fee = VALUE_ZERO
             val total = dashValue.toPlainString()
-            val dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat, fiatSymbol, fee, total, null, null, null)
-            dialog.showNow(parentFragmentManager, "ConfirmTransactionDialog")
+            lifecycleScope.launch {
+                val isTransactionConfirmed = confirmTransactionLauncher.showTransactionDetailsPreview(
+                    requireActivity(),
+                    address, amountStr, amountFiat, fiatSymbol, fee, total, null, null, null)
+                if (isTransactionConfirmed){
+                    transferDashViewModel.sendDash(dashValue)
+                }
+            }
         }
 
         transferDashViewModel.onAddressCreationFailedCallback.observe(viewLifecycleOwner){
@@ -226,10 +234,6 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 negativeButtonText = R.string.close
             )
             safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(addressCreationError))
-        }
-
-        confirmTransferActionViewModel.clickConfirmButtonEvent.observe(viewLifecycleOwner){
-            transferDashViewModel.sendDash(dashValue)
         }
 
         transferDashViewModel.observeSendDashToCoinbaseState.observe(viewLifecycleOwner){

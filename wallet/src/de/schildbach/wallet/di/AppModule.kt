@@ -27,9 +27,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
-import de.schildbach.wallet.ui.PinInteractorImpl
-import org.dash.wallet.common.PinInteractor
 import de.schildbach.wallet.ui.security.PinCodeRequestLauncher
+import de.schildbach.wallet.ui.send.ConfirmTransactionLauncher
+import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.services.SendPaymentService
@@ -67,10 +67,12 @@ abstract class AppModule {
     ): SendPaymentService
 
     @Binds
-    abstract fun bindInteractor(interactor: PinInteractorImpl): PinInteractor
-
-    @Binds
     abstract fun bindSecurityModel(
         pinCodeRequestLauncher: PinCodeRequestLauncher
     ): SecurityModel
+
+    @Binds
+    abstract fun bindConfirmTransactionService(
+        confirmTransactionLauncher: ConfirmTransactionLauncher
+    ): ConfirmTransactionService
 }

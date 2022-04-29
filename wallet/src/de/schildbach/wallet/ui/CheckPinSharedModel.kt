@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-package org.dash.wallet.common.ui
-
+package de.schildbach.wallet.ui
 
 import androidx.lifecycle.ViewModel
-import dagger.hilt.android.lifecycle.HiltViewModel
 import org.dash.wallet.common.data.SingleLiveEvent
-import javax.inject.Inject
 
-@HiltViewModel
-class SingleActionSharedViewModel @Inject constructor() : ViewModel() {
 
-    val clickConfirmButtonEvent = SingleLiveEvent<Boolean>()
+open class CheckPinSharedModel : ViewModel() {
+
+    val onCorrectPinCallback = SingleLiveEvent<Pair<Int, String>>()
+
+    val onCancelCallback = SingleLiveEvent<Unit>()
+
+    val onWalletEncryptedCallback = SingleLiveEvent<String?>()
 }

@@ -17,7 +17,6 @@
 package de.schildbach.wallet.ui
 
 import org.bitcoinj.wallet.DeterministicSeed
-import org.dash.wallet.common.ui.CheckPinSharedModel
 
 /**
  * @author:  Eric Britten

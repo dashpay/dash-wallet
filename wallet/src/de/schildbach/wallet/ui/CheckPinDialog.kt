@@ -44,7 +44,6 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentEnterPinBinding
 import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
-import org.dash.wallet.common.PinInteractor
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
@@ -52,7 +51,7 @@ import kotlin.coroutines.resumeWithException
 
 open class CheckPinDialog(
     private val onSuccessOrDismiss: ((String?) -> Unit)? = null
-) : DialogFragment(), PinInteractor {
+) : DialogFragment() {
 
     companion object {
 
@@ -355,9 +354,5 @@ open class CheckPinDialog(
             message = pinRetryController.getWalletTemporaryLockedMessage(context)
             positiveText = context.getString(android.R.string.ok)
         }.buildAlertDialog().show()
-    }
-
-    override fun showPinDialog(activity: FragmentActivity) {
-        show(activity)
     }
 }

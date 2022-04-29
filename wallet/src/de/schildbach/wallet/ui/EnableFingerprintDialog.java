@@ -29,7 +29,6 @@ import androidx.core.os.CancellationSignal;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 
-import org.dash.wallet.common.ui.CheckPinSharedModel;
 import org.dash.wallet.common.ui.BaseDialogFragment;
 
 import de.schildbach.wallet.WalletApplication;

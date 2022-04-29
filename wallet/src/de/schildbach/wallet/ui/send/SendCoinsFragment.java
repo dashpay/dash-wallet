@@ -53,7 +53,6 @@ import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
 import org.bitcoinj.wallet.Wallet.DustySendRequested;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.ui.ConfirmTransactionDialog;
 import org.dash.wallet.common.util.GenericUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -70,9 +69,9 @@ import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.livedata.Resource;
 import org.dash.wallet.common.ui.BaseLockScreenFragment;
 import de.schildbach.wallet.ui.CheckPinDialog;
-import org.dash.wallet.common.ui.CheckPinSharedModel;
+import de.schildbach.wallet.ui.CheckPinSharedModel;
 
-import org.dash.wallet.common.ui.SingleActionSharedViewModel;
+import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
@@ -594,10 +593,8 @@ public class SendCoinsFragment extends BaseLockScreenFragment {
         String fiatSymbol = fiatAmount != null ? GenericUtils.currencySymbol(fiatAmount.currencyCode) : "";
         String fee = txFee.toPlainString();
 
-        dialogFragment = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
+        ConfirmTransactionDialog.createDialog(requireActivity(), address, amountStr, amountFiat,
                 fiatSymbol, fee, total, null, null, null);
-
-        dialogFragment.show(getParentFragmentManager(), "ConfirmTransactionDialog");
     }
 
 

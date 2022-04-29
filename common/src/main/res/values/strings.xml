@@ -54,13 +54,4 @@
     <string name="dash_wallet_name">Dash Wallet</string>
     <string name="from">from</string>
     <string name="to">to</string>
-
-    <!-- Imported resources -->
-    <string name="button_pay">Send</string>
-    <string name="dialog_confirm_confirm">Confirm</string>
-    <string name="dialog_confirm_total">Total</string>
-    <string name="dialog_confirm_pay_to">Send to</string>
-    <string name="dialog_confirm_fee">Network fee</string>
-    <string name="dialog_confirm_secured_by">Secured by</string>
-
 </resources>
