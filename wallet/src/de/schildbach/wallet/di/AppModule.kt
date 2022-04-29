@@ -26,9 +26,11 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.security.PinCodeRequestLauncher
 import de.schildbach.wallet.service.AppRestartService
 import de.schildbach.wallet.service.RestartService
 import org.dash.wallet.common.services.LockScreenBroadcaster
+import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import javax.inject.Singleton
@@ -60,4 +62,9 @@ abstract class AppModule {
     abstract fun bindAnalyticsService(
         analyticsService: FirebaseAnalyticsServiceImpl
     ): AnalyticsService
+
+    @Binds
+    abstract fun bindSecurityModel(
+        pinCodeRequestLauncher: PinCodeRequestLauncher
+    ): SecurityModel
 }
