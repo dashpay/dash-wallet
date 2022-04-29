@@ -25,6 +25,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.security.SecurityGuard
@@ -34,6 +35,7 @@ import kotlinx.android.synthetic.main.activity_app_update.*
 import org.dash.wallet.common.Configuration
 import java.util.concurrent.TimeUnit
 
+@AndroidEntryPoint
 class AppUpgradeActivity : AppCompatActivity() {
 
     companion object {
