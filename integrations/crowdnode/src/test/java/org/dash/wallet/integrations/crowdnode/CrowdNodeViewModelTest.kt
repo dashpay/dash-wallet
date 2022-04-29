@@ -36,7 +36,7 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
-import org.dash.wallet.integrations.crowdnode.utils.ModuleConfiguration
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
@@ -82,7 +82,7 @@ class CrowdNodeViewModelTest {
         on { exchangeCurrencyCode } doReturn "USD"
     }
 
-    private val localConfig = mock<ModuleConfiguration> {
+    private val localConfig = mock<CrowdNodeConfig> {
         onBlocking { getPreference<String>(any()) } doReturn "yLW8Vfeb6sJfB3deb4KGsa5vY9g5pAqWQi"
     }
 

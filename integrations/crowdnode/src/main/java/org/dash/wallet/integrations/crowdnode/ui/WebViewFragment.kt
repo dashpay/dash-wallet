@@ -17,7 +17,9 @@
 
 package org.dash.wallet.integrations.crowdnode.ui
 
+import android.graphics.Bitmap
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -42,7 +44,16 @@ class WebViewFragment : Fragment(R.layout.fragment_webview) {
         val binding = binding // Avoids IllegalStateException in onPageFinished callback
         binding.webView.webViewClient = object: WebViewClient() {
             override fun onPageFinished(view: WebView, url: String?) {
+                Log.i("CROWDNODE", "onPageFinished: ${url}")
                 binding.progressBar.isVisible = false
+            }
+
+            override fun onLoadResource(view: WebView?, url: String?) {
+                Log.i("CROWDNODE", "onLoadResource: ${url}")
+            }
+
+            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                Log.i("CROWDNODE", "onPageStarted: ${url}")
             }
         }
 

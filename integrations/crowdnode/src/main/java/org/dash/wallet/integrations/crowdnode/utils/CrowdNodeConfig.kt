@@ -29,12 +29,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-open class ModuleConfiguration @Inject constructor(private val context: Context) {
+open class CrowdNodeConfig @Inject constructor(private val context: Context) {
     companion object {
         val INFO_SHOWN = booleanPreferencesKey("info_shown")
         val ACCOUNT_ADDRESS = stringPreferencesKey("account_address")
         val ERROR = stringPreferencesKey("error")
-        val ONLINE_ACCOUNT_LINKED = booleanPreferencesKey("online_account_linked")
+//        val ONLINE_ACCOUNT_LINKED = booleanPreferencesKey("online_account_linked")
         val LAST_BALANCE = longPreferencesKey("last_balance")
     }
 

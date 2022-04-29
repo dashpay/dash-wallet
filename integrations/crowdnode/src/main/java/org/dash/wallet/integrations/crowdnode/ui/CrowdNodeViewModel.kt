@@ -35,7 +35,7 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
-import org.dash.wallet.integrations.crowdnode.utils.ModuleConfiguration
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import javax.inject.Inject
 
 enum class NavigationRequest {
@@ -45,7 +45,7 @@ enum class NavigationRequest {
 @HiltViewModel
 class CrowdNodeViewModel @Inject constructor(
     private val globalConfig: Configuration,
-    private val config: ModuleConfiguration,
+    private val config: CrowdNodeConfig,
     private val walletDataProvider: WalletDataProvider,
     private val crowdNodeApi: CrowdNodeApi,
     exchangeRatesProvider: ExchangeRatesProvider
@@ -186,12 +186,12 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     suspend fun getIsInfoShown(): Boolean {
-        return config.getPreference(ModuleConfiguration.INFO_SHOWN) ?: false
+        return config.getPreference(CrowdNodeConfig.INFO_SHOWN) ?: false
     }
 
     fun setInfoShown(isShown: Boolean) {
         viewModelScope.launch {
-            config.setPreference(ModuleConfiguration.INFO_SHOWN, isShown)
+            config.setPreference(CrowdNodeConfig.INFO_SHOWN, isShown)
         }
     }
 
@@ -207,11 +207,11 @@ class CrowdNodeViewModel @Inject constructor(
         val existingAddress = crowdNodeApi.accountAddress
 
         if (existingAddress != null) {
-            config.setPreference(ModuleConfiguration.ACCOUNT_ADDRESS, existingAddress.toBase58())
+            config.setPreference(CrowdNodeConfig.ACCOUNT_ADDRESS, existingAddress.toBase58())
             return existingAddress
         }
 
-        val savedAddress = config.getPreference(ModuleConfiguration.ACCOUNT_ADDRESS)
+        val savedAddress = config.getPreference(CrowdNodeConfig.ACCOUNT_ADDRESS)
 
         return if (savedAddress.isNullOrEmpty()) {
             return createNewAccountAddress()
@@ -222,7 +222,7 @@ class CrowdNodeViewModel @Inject constructor(
 
     private suspend fun createNewAccountAddress(): Address {
         val address = walletDataProvider.freshReceiveAddress()
-        config.setPreference(ModuleConfiguration.ACCOUNT_ADDRESS, address.toBase58())
+        config.setPreference(CrowdNodeConfig.ACCOUNT_ADDRESS, address.toBase58())
 
         return address
     }
