@@ -491,7 +491,7 @@ public class WalletUtils {
             stringBuilder.append(",");
 
             // Blockchain Transaction Hash
-            stringBuilder.append(tx.getTxId()).append(",");
+            stringBuilder.append(tx.getTxId());
 
             stringBuilder.append("\n");
         }
