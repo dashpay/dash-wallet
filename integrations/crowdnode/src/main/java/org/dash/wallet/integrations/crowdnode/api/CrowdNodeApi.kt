@@ -73,7 +73,7 @@ interface CrowdNodeApi {
 
     fun persistentSignUp(accountAddress: Address)
     suspend fun signUp(accountAddress: Address)
-    suspend fun deposit(amount: Coin): Boolean
+    suspend fun deposit(amount: Coin, emptyWallet: Boolean): Boolean
     suspend fun withdraw(amount: Coin): Boolean
     fun hasAnyDeposits(): Boolean
     fun refreshBalance(retries: Int = 0)
@@ -167,16 +167,16 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
-    override suspend fun deposit(amount: Coin): Boolean {
+    override suspend fun deposit(amount: Coin, emptyWallet: Boolean): Boolean {
         val accountAddress = this.accountAddress
         requireNotNull(accountAddress) { "Account address is null, make sure to sign up" }
 
         return try {
             apiError.value = null
-            val topUpTx = topUpAddress(accountAddress, amount + Constants.ECONOMIC_FEE)
+            val topUpTx = topUpAddress(accountAddress, amount + Constants.ECONOMIC_FEE, emptyWallet)
             log.info("topUpTx id: ${topUpTx.txId}")
             val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
-            val depositTx = paymentService.sendCoins(crowdNodeAddress, amount, accountAddress)
+            val depositTx = paymentService.sendCoins(crowdNodeAddress, amount, accountAddress, emptyWallet)
             log.info("depositTx id: ${depositTx.txId}")
 
             responseScope.launch {
@@ -326,8 +326,8 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
-    private suspend fun topUpAddress(accountAddress: Address, amount: Coin): Transaction {
-        val topUpTx = paymentService.sendCoins(accountAddress, amount)
+    private suspend fun topUpAddress(accountAddress: Address, amount: Coin, emptyWallet: Boolean = false): Transaction {
+        val topUpTx = paymentService.sendCoins(accountAddress, amount, null, emptyWallet)
         return walletDataProvider.observeTransactions(LockedTransaction(topUpTx.txId)).first()
     }
 

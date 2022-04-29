@@ -45,9 +45,9 @@ enum class NavigationRequest {
 @HiltViewModel
 class CrowdNodeViewModel @Inject constructor(
     private val globalConfig: Configuration,
+    private val config: ModuleConfiguration,
     private val walletDataProvider: WalletDataProvider,
     private val crowdNodeApi: CrowdNodeApi,
-    private val config: ModuleConfiguration,
     exchangeRatesProvider: ExchangeRatesProvider
 ) : ViewModel() {
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
@@ -196,7 +196,7 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     suspend fun deposit(value: Coin): Boolean {
-        return crowdNodeApi.deposit(value)
+        return crowdNodeApi.deposit(value, emptyWallet = value >= dashBalance.value)
     }
 
     suspend fun withdraw(value: Coin): Boolean {
