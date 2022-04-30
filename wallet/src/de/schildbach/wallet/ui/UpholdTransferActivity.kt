@@ -150,7 +150,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
 
                 val fee = transaction.origin.fee.toPlainString()
                 val total = transaction.origin.amount.toPlainString()
-                ConfirmTransactionDialog.createDialog(this@UpholdTransferActivity, address, amountStr, amountFiat, fiatSymbol, fee, total, getString(R.string.uphold_transfer))
+                ConfirmTransactionDialog.showDialog(this@UpholdTransferActivity, address, amountStr, amountFiat, fiatSymbol, fee, total, getString(R.string.uphold_transfer))
             }
 
             override fun onTransfer() {

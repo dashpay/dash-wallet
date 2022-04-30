@@ -17,6 +17,6 @@ class ConfirmTransactionLauncher @Inject constructor(): ConfirmTransactionServic
         payeeVerifiedBy: String?,
         buttonText: String?
     ): Boolean {
-        return ConfirmTransactionDialog.showAsync(activity, address, amount, amountFiat, fiatSymbol, fee, total)
+        return ConfirmTransactionDialog.showDialogAsync(activity, address, amount, amountFiat, fiatSymbol, fee, total)
     }
 }

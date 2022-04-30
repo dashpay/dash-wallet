@@ -593,7 +593,7 @@ public class SendCoinsFragment extends BaseLockScreenFragment {
         String fiatSymbol = fiatAmount != null ? GenericUtils.currencySymbol(fiatAmount.currencyCode) : "";
         String fee = txFee.toPlainString();
 
-        ConfirmTransactionDialog.createDialog(requireActivity(), address, amountStr, amountFiat,
+        ConfirmTransactionDialog.showDialog(requireActivity(), address, amountStr, amountFiat,
                 fiatSymbol, fee, total, null, null, null);
     }
 

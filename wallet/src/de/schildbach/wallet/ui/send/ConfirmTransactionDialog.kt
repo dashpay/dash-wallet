@@ -24,7 +24,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProviders
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -53,14 +52,14 @@ class ConfirmTransactionDialog(private val onTransactionConfirmed: ((Boolean) ->
         private const val ARG_PAYEE_VERIFIED_BY = "arg_payee_verified_by"
 
         @JvmStatic
-        fun createDialog(
+        fun showDialog(
             activity: FragmentActivity,
             address: String, amount: String, amountFiat: String, fiatSymbol: String, fee: String, total: String,
                          payeeName: String? = null, payeeVerifiedBy: String? = null, buttonText: String? = null,
         ) {
             val dialog = ConfirmTransactionDialog()
             val bundle = setBundle(address, amount, amountFiat, fiatSymbol, fee, total, payeeName, payeeVerifiedBy, buttonText)
-            showDialog(dialog, bundle, activity)
+            show(dialog, bundle, activity)
         }
 
         private fun setBundle(
@@ -80,16 +79,16 @@ class ConfirmTransactionDialog(private val onTransactionConfirmed: ((Boolean) ->
             }
         }
 
-        private fun showDialog(confirmTransactionDialog: ConfirmTransactionDialog,
-                               bundle: Bundle,
-                               activity: FragmentActivity){
+        private fun show(confirmTransactionDialog: ConfirmTransactionDialog,
+                         bundle: Bundle,
+                         activity: FragmentActivity){
             confirmTransactionDialog.arguments = bundle
             confirmTransactionDialog.show(activity.supportFragmentManager, TAG)
         }
 
-        suspend fun showAsync(activity: FragmentActivity,
-                              address: String, amount: String, amountFiat: String, fiatSymbol: String,
-                              fee: String, total: String) = suspendCancellableCoroutine<Boolean> { coroutine ->
+        suspend fun showDialogAsync(activity: FragmentActivity,
+                                    address: String, amount: String, amountFiat: String, fiatSymbol: String,
+                                    fee: String, total: String) = suspendCancellableCoroutine<Boolean> { coroutine ->
             val confirmTransactionDialog = ConfirmTransactionDialog {
                 if (coroutine.isActive){
                     coroutine.resume(it)
@@ -97,7 +96,7 @@ class ConfirmTransactionDialog(private val onTransactionConfirmed: ((Boolean) ->
             }
             try {
                 val bundle = setBundle(address, amount, amountFiat, fiatSymbol, fee, total)
-                showDialog(confirmTransactionDialog, bundle, activity)
+                show(confirmTransactionDialog, bundle, activity)
             } catch (e: Exception){
                 if (coroutine.isActive){
                     coroutine.resumeWithException(e)
