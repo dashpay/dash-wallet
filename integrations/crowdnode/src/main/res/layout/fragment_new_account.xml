@@ -39,9 +39,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="?attr/actionBarSize"
-            tools:text="@string/new_account" />
+            android:text="@string/new_account" />
 
         <TextView
+            android:id="@+id/description_1"
             style="@style/Body2.White"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -49,6 +50,7 @@
             android:text="@string/crowdnode_new_account_warning_1" />
 
         <TextView
+            android:id="@+id/description_2"
             style="@style/Body2.White"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -144,7 +146,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_marginTop="18dp"
-                tools:text="@string/account_create" />
+                android:text="@string/account_create" />
         </LinearLayout>
 
         <LinearLayout

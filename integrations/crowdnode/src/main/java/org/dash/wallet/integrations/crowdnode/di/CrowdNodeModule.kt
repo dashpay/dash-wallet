@@ -23,14 +23,18 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integrations.crowdnode.api.*
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Singleton
+import kotlin.time.ExperimentalTime
 
 @Module
 @InstallIn(SingletonComponent::class)
 @ExperimentalCoroutinesApi
+@ExperimentalTime
+@FlowPreview
 abstract class CrowdNodeModule {
     companion object {
         @Provides

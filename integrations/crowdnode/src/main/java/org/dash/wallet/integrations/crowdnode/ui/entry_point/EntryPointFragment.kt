@@ -49,12 +49,11 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         )
 
         binding.newAccountBtn.setOnClickListener {
-            safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount())
+            safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount(false))
         }
 
         binding.existingAccountBtn.setOnClickListener {
-            // TODO: online account
-            safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount())
+            safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount(true))
         }
 
         binding.backupPassphraseHint.setOnClickListener {

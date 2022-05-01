@@ -33,7 +33,8 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
-import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
+import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
+import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import javax.inject.Inject
@@ -73,6 +74,11 @@ class CrowdNodeViewModel @Inject constructor(
     var signUpStatus: LiveData<SignUpStatus> = MediatorLiveData<SignUpStatus>().apply {
         addSource(crowdNodeApi.signUpStatus.asLiveData(), this::setValue)
         value = crowdNodeApi.signUpStatus.value
+    }
+
+    var onlineAccountStatus: LiveData<OnlineAccountStatus> = MediatorLiveData<OnlineAccountStatus>().apply {
+        addSource(crowdNodeApi.onlineAccountStatus.asLiveData(), this::setValue)
+        value = crowdNodeApi.onlineAccountStatus.value
     }
 
     var crowdNodeError: LiveData<Exception?> = MediatorLiveData<Exception?>().apply {
@@ -160,6 +166,14 @@ class CrowdNodeViewModel @Inject constructor(
         crowdNodeApi.persistentSignUp(_accountAddress.value!!)
     }
 
+    fun linkOnlineAccount() {
+        crowdNodeApi.startTrackingLinked(_accountAddress.value!!)
+    }
+
+    fun cancelLinkingOnlineAccount() {
+        crowdNodeApi.stopTrackingLinked()
+    }
+
     fun resetSignUp() {
         viewModelScope.launch {
             resetAddressAndApi()
@@ -204,20 +218,7 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     private suspend fun getOrCreateAccountAddress(): Address {
-        val existingAddress = crowdNodeApi.accountAddress
-
-        if (existingAddress != null) {
-            config.setPreference(CrowdNodeConfig.ACCOUNT_ADDRESS, existingAddress.toBase58())
-            return existingAddress
-        }
-
-        val savedAddress = config.getPreference(CrowdNodeConfig.ACCOUNT_ADDRESS)
-
-        return if (savedAddress.isNullOrEmpty()) {
-            return createNewAccountAddress()
-        } else {
-            Address.fromString(walletDataProvider.networkParameters, savedAddress)
-        }
+        return crowdNodeApi.accountAddress ?: createNewAccountAddress()
     }
 
     private suspend fun createNewAccountAddress(): Address {

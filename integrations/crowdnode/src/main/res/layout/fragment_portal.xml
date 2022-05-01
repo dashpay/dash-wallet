@@ -285,6 +285,7 @@
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
+                    android:id="@+id/online_account_status"
                     style="@style/Caption.SteelGray"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"

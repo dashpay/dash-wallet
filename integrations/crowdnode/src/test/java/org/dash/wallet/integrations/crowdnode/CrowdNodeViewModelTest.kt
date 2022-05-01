@@ -34,7 +34,8 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
-import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
+import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
+import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.junit.Rule
@@ -73,6 +74,7 @@ class CrowdNodeViewModelTest {
     private val api = mock<CrowdNodeApi> {
         onBlocking { deposit(any(), any()) } doReturn true
         on { signUpStatus } doReturn MutableStateFlow(SignUpStatus.Finished)
+        on { onlineAccountStatus } doReturn MutableStateFlow(OnlineAccountStatus.None)
         on { apiError } doReturn MutableStateFlow(null)
         on { balance } doReturn MutableStateFlow(Resource.success(Coin.ZERO))
         doNothing().whenever(mock).refreshBalance()
@@ -83,7 +85,7 @@ class CrowdNodeViewModelTest {
     }
 
     private val localConfig = mock<CrowdNodeConfig> {
-        onBlocking { getPreference<String>(any()) } doReturn "yLW8Vfeb6sJfB3deb4KGsa5vY9g5pAqWQi"
+        onBlocking { getPreference(CrowdNodeConfig.ACCOUNT_ADDRESS) } doReturn "yLW8Vfeb6sJfB3deb4KGsa5vY9g5pAqWQi"
     }
 
     private val walletData = mock<WalletDataProvider> {

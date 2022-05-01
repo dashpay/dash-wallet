@@ -33,8 +33,8 @@ import org.bitcoinj.wallet.Wallet.DustySendRequested
 import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
-import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentResultBinding
+import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import javax.inject.Inject
 
 @AndroidEntryPoint

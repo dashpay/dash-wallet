@@ -21,6 +21,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
@@ -30,15 +31,18 @@ import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.services.SecurityModel
-import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
+import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
+import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.NavigationRequest
+import org.dash.wallet.integrations.crowdnode.ui.WebViewFragmentDirections
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class StakingActivity : LockScreenActivity() {
     private val viewModel: CrowdNodeViewModel by viewModels()
     private lateinit var binding: ActivityStakingBinding
+    private lateinit var navController: NavController
 
     @Inject
     lateinit var securityModel: SecurityModel
@@ -47,21 +51,18 @@ class StakingActivity : LockScreenActivity() {
         super.onCreate(savedInstanceState)
 
         binding = ActivityStakingBinding.inflate(layoutInflater)
-        setNavigationGraph()
+        navController = setNavigationGraph()
 
-        viewModel.navigationCallback.observe(this) { request ->
-            when (request) {
-                NavigationRequest.BackupPassphrase -> checkPinAndBackupPassphrase()
-                NavigationRequest.RestoreWallet -> {
-                    ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
-                }
-                NavigationRequest.BuyDash -> {
-                    startActivity(BuyAndSellLiquidUpholdActivity.createIntent(this))
-                }
-                NavigationRequest.SendReport -> {
-                    alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
-                        WalletApplication.getInstance()).buildAlertDialog()
-                    alertDialog.show()
+        viewModel.navigationCallback.observe(this, ::handleNavigationRequest)
+        viewModel.onlineAccountStatus.observe(this) { status ->
+            when (status) {
+                OnlineAccountStatus.Linking -> super.turnOffAutoLogout()
+                OnlineAccountStatus.Confirming, OnlineAccountStatus.Done -> {
+                    if (navController.currentDestination?.id == R.id.crowdNodeWebViewFragment) {
+                        navController.navigate(WebViewFragmentDirections.webViewToPortal())
+                    }
+                    viewModel.cancelLinkingOnlineAccount()
+                    super.turnOnAutoLogout()
                 }
                 else -> { }
             }
@@ -71,6 +72,24 @@ class StakingActivity : LockScreenActivity() {
         viewModel.setNotificationIntent(intent)
 
         setContentView(binding.root)
+    }
+
+    private fun handleNavigationRequest(request: NavigationRequest) {
+        when (request) {
+            NavigationRequest.BackupPassphrase -> checkPinAndBackupPassphrase()
+            NavigationRequest.RestoreWallet -> {
+                ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
+            }
+            NavigationRequest.BuyDash -> {
+                startActivity(BuyAndSellLiquidUpholdActivity.createIntent(this))
+            }
+            NavigationRequest.SendReport -> {
+                alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
+                    WalletApplication.getInstance()).buildAlertDialog()
+                alertDialog.show()
+            }
+            else -> { }
+        }
     }
 
     private fun checkPinAndBackupPassphrase() {
@@ -84,7 +103,7 @@ class StakingActivity : LockScreenActivity() {
         }
     }
 
-    private fun setNavigationGraph() {
+    private fun setNavigationGraph(): NavController {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.nav_crowdnode)
@@ -92,7 +111,7 @@ class StakingActivity : LockScreenActivity() {
 
         navGraph.startDestination =
             when (status) {
-                SignUpStatus.Finished, SignUpStatus.LinkedOnline -> R.id.crowdNodePortalFragment
+                SignUpStatus.LinkedOnline, SignUpStatus.Finished -> R.id.crowdNodePortalFragment
                 SignUpStatus.NotStarted -> {
                     val isInfoShown = runBlocking { viewModel.getIsInfoShown() }
                     if (isInfoShown) R.id.entryPointFragment else R.id.firstTimeInfo
@@ -101,15 +120,23 @@ class StakingActivity : LockScreenActivity() {
             }
 
         navController.graph = navGraph
+
+        return navController
     }
 
     override fun onPause() {
         super.onPause()
         viewModel.changeNotifyWhenDone(true)
+        viewModel.cancelLinkingOnlineAccount()
     }
 
     override fun onResume() {
         super.onResume()
         viewModel.changeNotifyWhenDone(false)
+
+        if (this::navController.isInitialized &&
+            navController.currentDestination?.id == R.id.crowdNodeWebViewFragment) {
+            viewModel.linkOnlineAccount()
+        }
     }
 }

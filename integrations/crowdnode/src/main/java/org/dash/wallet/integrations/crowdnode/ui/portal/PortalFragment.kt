@@ -37,6 +37,8 @@ import org.dash.wallet.common.util.copy
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentPortalBinding
+import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
+import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
@@ -53,6 +55,37 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setupUI(binding)
+
+        viewModel.crowdNodeError.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                safeNavigate(PortalFragmentDirections.portalToResult(
+                    true,
+                    getString(R.string.crowdnode_transfer_error),
+                    ""
+                ))
+            }
+        }
+
+        viewModel.networkError.observe(viewLifecycleOwner) {
+            Toast.makeText(
+                requireContext(),
+                R.string.network_unavailable_balance_not_accurate,
+                Toast.LENGTH_LONG
+            ).show()
+        }
+
+        if (viewModel.signUpStatus.value == SignUpStatus.LinkedOnline) {
+            viewModel.onlineAccountStatus.observe(viewLifecycleOwner) { status ->
+                val balance = viewModel.crowdNodeBalance.value ?: Coin.ZERO
+                setWithdrawalEnabled(balance, status)
+                setDepositsEnabled(balance, status)
+                setOnlineAccountStatus(status)
+            }
+        }
+    }
+
+    private fun setupUI(binding: FragmentPortalBinding) {
         binding.toolbar.setNavigationOnClickListener {
             requireActivity().finish()
         }
@@ -107,24 +140,6 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
 
         handleBalance(binding)
-
-        viewModel.crowdNodeError.observe(viewLifecycleOwner) { error ->
-            error?.let {
-                safeNavigate(PortalFragmentDirections.portalToResult(
-                    true,
-                    getString(R.string.crowdnode_transfer_error),
-                    ""
-                ))
-            }
-        }
-
-        viewModel.networkError.observe(viewLifecycleOwner) {
-            Toast.makeText(
-                requireContext(),
-                R.string.network_unavailable_balance_not_accurate,
-                Toast.LENGTH_LONG
-            ).show()
-        }
     }
 
     private fun updateFiatAmount(balance: Coin?, exchangeRate: ExchangeRate?) {
@@ -159,8 +174,14 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         viewModel.crowdNodeBalance.observe(viewLifecycleOwner) { balance ->
             binding.walletBalanceDash.setAmount(balance)
             updateFiatAmount(balance, viewModel.exchangeRate.value)
-            setWithdrawalEnabled(balance)
+            val status = viewModel.onlineAccountStatus.value ?: OnlineAccountStatus.None
+            setWithdrawalEnabled(balance, status)
             setMinimumEarningDepositReminder(balance)
+        }
+
+        viewModel.dashBalance.observe(viewLifecycleOwner) { balance ->
+            val status = viewModel.onlineAccountStatus.value ?: OnlineAccountStatus.None
+            setDepositsEnabled(balance, status)
         }
 
         viewModel.exchangeRate.observe(viewLifecycleOwner) { rate ->
@@ -168,10 +189,11 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
     }
 
-    private fun setWithdrawalEnabled(balance: Coin) {
-        binding.withdrawBtn.isEnabled = balance.isPositive
+    private fun setWithdrawalEnabled(balance: Coin, onlineStatus: OnlineAccountStatus) {
+        val isEnabled = balance.isPositive && onlineStatus != OnlineAccountStatus.Confirming
+        binding.withdrawBtn.isEnabled = isEnabled
 
-        if (balance.isPositive) {
+        if (isEnabled) {
             binding.withdrawIcon.setImageResource(R.drawable.ic_left_right_arrows)
             binding.withdrawTitle.setTextColor(resources.getColor(R.color.content_primary, null))
             binding.withdrawSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
@@ -179,6 +201,21 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             binding.withdrawIcon.setImageResource(R.drawable.ic_withdraw_disabled)
             binding.withdrawTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
             binding.withdrawSubtitle.setTextColor(resources.getColor(R.color.content_disabled, null))
+        }
+    }
+
+    private fun setDepositsEnabled(balance: Coin, onlineStatus: OnlineAccountStatus) {
+        val isEnabled = balance.isPositive && onlineStatus != OnlineAccountStatus.Confirming
+        binding.depositBtn.isEnabled = isEnabled
+
+        if (isEnabled) {
+            binding.depositIcon.setColorFilter(resources.getColor(R.color.green_300, null))
+            binding.depositTitle.setTextColor(resources.getColor(R.color.content_primary, null))
+            binding.depositSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
+        } else {
+            binding.depositIcon.clearColorFilter()
+            binding.depositTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
+            binding.depositSubtitle.setTextColor(resources.getColor(R.color.content_disabled, null))
         }
     }
 
@@ -200,6 +237,14 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         } else {
             binding.minimumDashRequirement.isVisible = false
         }
+    }
+
+    private fun setOnlineAccountStatus(status: OnlineAccountStatus) {
+         binding.onlineAccountStatus.text = getText(when (status) {
+             OnlineAccountStatus.Confirming -> R.string.crowdnode_online_unconfirmed
+             OnlineAccountStatus.Done -> R.string.crowdnode_online_synced
+             else -> R.string.secure_online_account
+        })
     }
 
     override fun onDestroy() {
