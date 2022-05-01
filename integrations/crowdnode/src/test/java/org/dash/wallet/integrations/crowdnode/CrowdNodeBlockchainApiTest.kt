@@ -51,7 +51,7 @@ class CrowdNodeBlockchainApiTest {
     }
 
     private val webApi = mock<CrowdNodeWebApi> {
-        onBlocking { isAddressInUse(any()) } doReturn Response.success(CrowdNodeIsAddressInUse((false)))
+        onBlocking { isAddressInUse(any()) } doReturn Response.success(CrowdNodeIsAddressInUse(false, null))
         onBlocking { getBalance(any()) } doReturn Response.success(CrowdNodeBalance("XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U", 0.7, 0.7, 0.1))
     }
 
