@@ -20,6 +20,8 @@ package org.dash.wallet.integrations.crowdnode.model
 import com.google.gson.annotations.SerializedName
 
 data class CrowdNodeIsAddressInUse (
-    @SerializedName("value")
-    val isInUse : Boolean
+    @SerializedName("inUse")
+    val isInUse : Boolean,
+    @SerializedName("DashAddress")
+    val primaryAddress : String?
 )
