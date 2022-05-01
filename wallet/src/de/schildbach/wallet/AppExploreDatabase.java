@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase;
 import androidx.room.TypeConverters;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
+import org.dash.wallet.common.Configuration;
 import org.dash.wallet.features.exploredash.data.AtmDao;
 import org.dash.wallet.features.exploredash.data.MerchantDao;
 import org.dash.wallet.features.exploredash.data.model.Atm;
@@ -36,8 +37,6 @@ public abstract class AppExploreDatabase extends RoomDatabase {
 
     private static final Logger log = LoggerFactory.getLogger(AppExploreDatabase.class);
 
-    private final static String DB_FILE_NAME = "explore-database";
-
     private static AppExploreDatabase instance;
 
     public abstract MerchantDao merchantDao();
@@ -59,21 +58,32 @@ public abstract class AppExploreDatabase extends RoomDatabase {
 
     private static AppExploreDatabase create() {
         WalletApplication walletApp = WalletApplication.getInstance();
+        Configuration appConfiguration = walletApp.getConfiguration();
+        String exploreDatabaseName = appConfiguration.getExploreDatabaseName();
+
         AppExploreDatabaseEntryPoint entryPoint = EntryPointAccessors.fromApplication(walletApp, AppExploreDatabaseEntryPoint.class);
         ExploreRepository exploreRepository = entryPoint.getExploreRepository();
-        Builder<AppExploreDatabase> dbBuilder = Room.databaseBuilder(walletApp, AppExploreDatabase.class, DB_FILE_NAME);
 
-        File dbFile = walletApp.getDatabasePath(DB_FILE_NAME);
+        File dbFile = walletApp.getDatabasePath(exploreDatabaseName);
         File dbUpdateFile = exploreRepository.getUpdateFile();
         if (!dbFile.exists() && !dbUpdateFile.exists()) {
             exploreRepository.preloadFromAssets(dbUpdateFile);
         }
+
+        Builder<AppExploreDatabase> dbBuilder;
         if (dbUpdateFile.exists()) {
             log.info("found explore db update package {}", dbUpdateFile.getAbsolutePath());
 
-            // old db files have to be deleted in order createFromInputStream() to be called
             exploreRepository.deleteOldDB(dbFile);
 
+            long dbTimestamp = exploreRepository.getTimestamp(dbUpdateFile);
+            exploreDatabaseName = appConfiguration.setExploreDatabaseName(dbTimestamp);
+        }
+
+        dbBuilder = Room.databaseBuilder(walletApp, AppExploreDatabase.class, exploreDatabaseName);
+
+        if (dbUpdateFile.exists()) {
+            log.info("create explore db from InputStream {}", exploreDatabaseName);
             dbBuilder.createFromInputStream(
                     () -> exploreRepository.getDatabaseInputStream(dbUpdateFile),
                     new PrepackagedDatabaseCallback() {
@@ -82,6 +92,8 @@ public abstract class AppExploreDatabase extends RoomDatabase {
                             exploreRepository.finalizeUpdate(dbUpdateFile);
                         }
                     });
+        } else {
+            log.info("create empty explore db");
         }
 
         AppExploreDatabase database = dbBuilder.fallbackToDestructiveMigration().build();
