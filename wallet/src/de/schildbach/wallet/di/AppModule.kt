@@ -28,11 +28,11 @@ import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
+import org.dash.wallet.common.services.NotificationService
+import org.dash.wallet.common.services.SendPaymentService
 import de.schildbach.wallet.ui.security.PinCodeRequestLauncher
 import org.dash.wallet.common.services.LockScreenBroadcaster
-import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SecurityModel
-import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import javax.inject.Singleton
