@@ -44,7 +44,24 @@ data class CoinBaseUserAccountData(
     val resource_path: String? = null,
     val type: String? = null,
     val updated_at: String? = null
-) : Parcelable
+) : Parcelable {
+    companion object {
+        val EMPTY = CoinBaseUserAccountData(
+            allow_deposits = false,
+            allow_withdrawals = false,
+            balance = null,
+            created_at = "",
+            currency = null,
+            id = null,
+            name = null,
+            primary = null,
+            resource = null,
+            resource_path = null,
+            type = null,
+            updated_at = null
+        )
+    }
+}
 
 @Parcelize
 data class Pagination(
@@ -81,12 +98,11 @@ data class CoinBaseBalance(
 
 @Parcelize
 data class CoinBaseUserAccountDataUIModel(
-    val coinBaseUserAccountData: CoinBaseUserAccountData,
+    override val coinBaseUserAccountData: CoinBaseUserAccountData,
     val currencyToCryptoCurrencyExchangeRate: String,
-    val currencyToDashExchangeRate: String,
+    override val currencyToDashExchangeRate: String,
     val cryptoCurrencyToDashExchangeRate: String
-
-) : Parcelable
+) : CoinbaseToDashExchangeRateUIModel(coinBaseUserAccountData, currencyToDashExchangeRate), Parcelable
 
 fun CoinBaseUserAccountDataUIModel.getCoinBaseExchangeRateConversion(
     currentExchangeRate: ExchangeRate
@@ -101,4 +117,18 @@ fun CoinBaseUserAccountDataUIModel.getCoinBaseExchangeRateConversion(
     val dashAmount = currencyRate.fiatToCoin(fiatAmount)
 
     return Pair(GenericUtils.fiatToString(fiatAmount), dashAmount)
+}
+
+@Parcelize
+open class CoinbaseToDashExchangeRateUIModel (
+    open val coinBaseUserAccountData: CoinBaseUserAccountData,
+    open val currencyToDashExchangeRate: String
+): Parcelable {
+    companion object {
+        val EMPTY = CoinbaseToDashExchangeRateUIModel(CoinBaseUserAccountData.EMPTY, "")
+        val TEMP = CoinbaseToDashExchangeRateUIModel(
+            CoinBaseUserAccountData(true, true, CoinBaseBalance("2.81635775", "DASH"), "2021-10-28T19:01:51Z", null, "1234", "DASH Wallet", true, "account", "resPath", "wallet", "2021-12-18T07:07:26Z"),
+            "0.010658140154543031"
+        )
+    }
 }

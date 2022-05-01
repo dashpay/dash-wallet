@@ -20,10 +20,14 @@ import android.content.Context
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import androidx.annotation.DrawableRes
+import androidx.annotation.IntegerRes
 import androidx.annotation.StringRes
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.withStyledAttributes
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import coil.load
 import coil.size.Scale
 import coil.transform.CircleCropTransformation
@@ -114,5 +118,25 @@ class CryptoConvertItem @JvmOverloads constructor(
 
     interface ConvertItemClickListener {
         fun onConvertItemClickListener()
+    }
+
+    fun setIconConstraint(){
+        binding.convertFromDashIcon.updateLayoutParams<ConstraintLayout.LayoutParams> {
+            topToTop = ConstraintSet.PARENT_ID
+            bottomToBottom = ConstraintSet.PARENT_ID
+        }
+    }
+
+    fun setTitleConstraint(){
+        binding.convertFromDashTitle.updateLayoutParams<ConstraintLayout.LayoutParams> {
+            topToTop = binding.convertFromDashIcon.id
+            bottomToBottom = binding.convertFromDashIcon.id
+        }
+    }
+
+    fun hideComponents(){
+        binding.convertFromDashSubtitle.isVisible = false
+        binding.selectTheCoinTitle.isVisible = false
+        binding.convertFormDashArrow.isVisible = false
     }
 }

@@ -38,6 +38,12 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+        <action
+            android:id="@+id/services_to_transfer_dash"
+            app:destination="@id/transferDashFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <action
@@ -161,6 +167,21 @@
         <argument
             android:name="transactionParams"
             app:argType="org.dash.wallet.integration.coinbase_integration.model.CoinbaseTransactionParams"
+            />
+        <action
+            android:id="@+id/conversionPreviewToTwoFaCode"
+            app:destination="@id/enterTwoFaCodeFragment"
+            />
+    </fragment>
+    <fragment
+        android:id="@+id/transferDashFragment"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.TransferDashFragment"
+        tools:layout="@layout/transfer_dash_fragment"
+        android:label="TransferDash">
+
+        <action
+            android:id="@+id/transferDashToTwoFaCode"
+            app:destination="@id/enterTwoFaCodeFragment"
             />
     </fragment>
 </navigation>

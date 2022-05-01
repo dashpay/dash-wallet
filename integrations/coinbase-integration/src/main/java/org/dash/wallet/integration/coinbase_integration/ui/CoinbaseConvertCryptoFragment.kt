@@ -81,7 +81,6 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             parentFragmentManager.commit {
                 setReorderingAllowed(true)
                 add(R.id.enter_amount_fragment_placeholder, fragment)
-                // addToBackStack(null)
             }
         }
 

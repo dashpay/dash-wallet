@@ -74,6 +74,10 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         binding.convertDashBtn.setOnClickListener {
             safeNavigate(CoinbaseServicesFragmentDirections.servicesToConvertCrypto(true))
         }
+
+        binding.transferDashBtn.setOnClickListener {
+            safeNavigate(CoinbaseServicesFragmentDirections.servicesToTransferDash())
+        }
         viewModel.activePaymentMethods.observe(viewLifecycleOwner){ event ->
             event.getContentIfNotHandled()?.toTypedArray()?.let { paymentMethodsArray ->
                 CoinbaseServicesFragmentDirections.servicesToBuyDash(paymentMethodsArray)

@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui;
 import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;

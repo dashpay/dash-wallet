@@ -26,7 +26,6 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.core.os.bundleOf
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet.util.FingerprintHelper

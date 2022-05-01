@@ -27,7 +27,6 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.preference.PinRetryController
-import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_app_update.*
@@ -90,7 +89,7 @@ class AppUpgradeActivity : AppCompatActivity() {
                 onCorrectPin(pin)
             }
         })
-        checkPinSharedModel.onCancelCallback.observe(this, Observer<Void> {
+        checkPinSharedModel.onCancelCallback.observe(this, Observer<Unit> {
             temporaryLockCheckRunnable.run()
         })
         SetupPinDuringUpgradeDialog.show(this, 0)

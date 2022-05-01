@@ -102,5 +102,14 @@
     <string name="invalid_code">That code was invalid. Please try again</string>
     <string name="verify_code">Verify</string>
     <string name="you_dont_have_enough_balance">You don’t have enough balance</string>
-
+    <string name="transfer_dash">Transfer Dash</string>
+    <string name="transfer_amount">Transfer</string>
+    <string name="dash_wallet_limit_description">The amount is higher than your balance</string>
+    <string name="address_creation_failed">We could not create an address for your account to complete your transaction. Please try later.</string>
+    <string name="transaction_row_rate_not_available">Not available</string>
+    <string name="transfer_dash_successful">Transfer successful</string>
+    <string name="it_could_take_up_to_10_minutes">It could take up to 10 minutes to transfer Dash from Coinbase to the Dash wallet of this device.</string>
+    <string name="transfer_dash_failed_msg"> There was a problem transferring it to Dash Wallet on this device.</string>
+    <string name="insufficient_money_to_transfer">The amount of coins in the wallet is too small to transfer.</string>
+    <string name="amount_to_transfer">You will receive %s %s %s</string>
 </resources>
