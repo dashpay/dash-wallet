@@ -618,6 +618,21 @@ public class WalletApplication extends BaseWalletApplication
         }
     }
 
+    private void clearDatastorePrefs() {
+        final File folder = new File(getFilesDir(), Constants.Files.DATASTORE_PREFS_DIRECTORY);
+
+        if (folder.isDirectory()) {
+            log.info("removing datastore preferences");
+            final File[] files = folder.listFiles();
+
+            if (files != null) {
+                for (File file: files) {
+                    file.delete();
+                }
+            }
+        }
+    }
+
     public void startBlockchainService(final boolean cancelCoinsReceived) {
         // hack for Android P bug https://issuetracker.google.com/issues/113122354
         ActivityManager activityManager = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
@@ -832,6 +847,7 @@ public class WalletApplication extends BaseWalletApplication
         shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
+        clearDatastorePrefs();
         notifyWalletWipe();
         PinRetryController.getInstance().clearPinFailPrefs();
         MnemonicCodeExt.clearWordlistPath(this);
