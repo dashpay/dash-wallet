@@ -25,9 +25,10 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.ViewModelProviders
+import androidx.fragment.app.viewModels
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet_test.R
@@ -38,7 +39,7 @@ import org.dash.wallet.common.ui.viewBinding
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-
+@AndroidEntryPoint
 class ConfirmTransactionDialog(private val onTransactionConfirmed: ((Boolean) -> Unit)? = null) : BaseBottomSheetDialogFragment() {
 
     companion object {
@@ -107,7 +108,7 @@ class ConfirmTransactionDialog(private val onTransactionConfirmed: ((Boolean) ->
         }
     }
 
-    private lateinit var sharedViewModel: SingleActionSharedViewModel
+    private val sharedViewModel by viewModels<SingleActionSharedViewModel>()
     private val binding by viewBinding(DialogConfirmTransactionBinding::bind)
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_confirm_transaction, container, false)
@@ -158,12 +159,5 @@ class ConfirmTransactionDialog(private val onTransactionConfirmed: ((Boolean) ->
             bottomSheetBehavior.peekHeight = bottomSheet.height
             coordinatorLayout.parent.requestLayout()
         }
-    }
-
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        sharedViewModel = activity?.run {
-            ViewModelProviders.of(this)[SingleActionSharedViewModel::class.java]
-        } ?: throw IllegalStateException("Invalid Activity")
     }
 }
