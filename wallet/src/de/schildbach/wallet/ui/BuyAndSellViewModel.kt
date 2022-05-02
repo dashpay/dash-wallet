@@ -193,7 +193,10 @@ class BuyAndSellViewModel
                     _coinbaseBalance.value = response.value?.balance?.amount
                 }
                 is ResponseResource.Failure -> {
-                    _coinbaseBalance.value = config.lastCoinbaseBalance
+                    _coinbaseBalance.value =  if (config.lastCoinbaseBalance.isNullOrEmpty()) {
+                            config.lastCoinbaseBalance
+                        } else "0.0"
+                    }
                 }
             }
         }
