@@ -18,7 +18,6 @@
 package org.dash.wallet.integrations.crowdnode.ui.entry_point
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -62,9 +61,9 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
             viewModel.backupPassphrase()
         }
 
-        binding.restoreWalletHint.setOnClickListener {
-            viewModel.restoreWallet()
-        }
+//        binding.restoreWalletHint.setOnClickListener {
+//            viewModel.restoreWallet()
+//        }
 
         binding.backupPassphraseHint.setOnClickListener {
             val dialog = AdaptiveDialog.create(
@@ -101,27 +100,27 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
             }
         }
 
-        binding.crowdnodeTransactionHint.setOnClickListener {
-            val dialog = AdaptiveDialog.create(
-                R.drawable.ic_dialog_arrows,
-                getString(R.string.crowdnode_required_transaction),
-                getString(R.string.crowdnode_restore_wallet),
-                getString(R.string.button_close),
-                getString(R.string.restore_wallet)
-            )
-
-            dialog.show(requireActivity()) { result ->
-                if (result == true) {
-                    viewModel.restoreWallet()
-                }
-            }
-        }
+//        binding.crowdnodeTransactionHint.setOnClickListener {
+//            val dialog = AdaptiveDialog.create(
+//                R.drawable.ic_dialog_arrows,
+//                getString(R.string.crowdnode_required_transaction),
+//                getString(R.string.crowdnode_restore_wallet),
+//                getString(R.string.button_close),
+//                getString(R.string.restore_wallet)
+//            )
+//
+//            dialog.show(requireActivity()) { result ->
+//                if (result == true) {
+//                    viewModel.restoreWallet()
+//                }
+//            }
+//        }
 
         viewModel.hasEnoughBalance.observe(viewLifecycleOwner) {
             displayNewAccountRequirements(viewModel.needPassphraseBackUp, it)
         }
 
-        displayExistingAccountRequirements(false) // TODO online account
+        // displayExistingAccountRequirements(false) // TODO online account
     }
 
     private fun displayNewAccountRequirements(needBackup: Boolean, enoughBalance: Boolean) {
@@ -135,28 +134,36 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         binding.newAccountNavIcon.isVisible = !disableNewAccount
 
         if (disableNewAccount) {
-            binding.newAccountImg.clearColorFilter()
+            // binding.newAccountImg.clearColorFilter()
+            binding.newAccountImg.alpha = 0.2f
+            binding.newAccountSubtitle.alpha = 0.2f
+            binding.newAccountNavIcon.alpha = 0.2f
         } else {
-            binding.newAccountImg.setColorFilter(resources.getColor(R.color.blue_300, null))
+            binding.newAccountImg.alpha = 1f
+            binding.newAccountSubtitle.alpha = 1f
+            binding.newAccountNavIcon.alpha = 1f
+
+
+            // binding.newAccountImg.setColorFilter(resources.getColor(R.color.blue_300, null))
         }
     }
 
 
-    private fun displayExistingAccountRequirements(hasExistingAccount: Boolean) {
-        binding.crowdnodeTransactionError.isVisible = !hasExistingAccount
-        binding.restoreWalletHint.isVisible = !hasExistingAccount
-
-        binding.existingAccountBtn.isClickable = hasExistingAccount
-        binding.existingAccountBtn.isFocusable = hasExistingAccount
-        binding.existingAccountDivider.isVisible = !hasExistingAccount
-        binding.existingAccountNavIcon.isVisible = hasExistingAccount
-
-        if (!hasExistingAccount) {
-            binding.existingAccountImg.clearColorFilter()
-        } else {
-            binding.existingAccountImg.setColorFilter(resources.getColor(R.color.green_300, null))
-        }
-    }
+//    private fun displayExistingAccountRequirements(hasExistingAccount: Boolean) {
+//        binding.crowdnodeTransactionError.isVisible = !hasExistingAccount
+//        binding.restoreWalletHint.isVisible = !hasExistingAccount
+//
+//        binding.existingAccountBtn.isClickable = hasExistingAccount
+//        binding.existingAccountBtn.isFocusable = hasExistingAccount
+//        binding.existingAccountDivider.isVisible = !hasExistingAccount
+//        binding.existingAccountNavIcon.isVisible = hasExistingAccount
+//
+//        if (!hasExistingAccount) {
+//            binding.existingAccountImg.clearColorFilter()
+//        } else {
+//            binding.existingAccountImg.setColorFilter(resources.getColor(R.color.green_300, null))
+//        }
+//    }
 
     override fun onResume() {
         super.onResume()

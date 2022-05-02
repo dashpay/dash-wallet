@@ -93,9 +93,10 @@
                         android:id="@+id/new_account_img"
                         android:layout_width="34dp"
                         android:layout_height="34dp"
-                        android:src="@drawable/ic_account_new" />
+                        android:src="@drawable/ic_new_account" />
 
                     <TextView
+                        android:id="@+id/new_account_subtitle"
                         style="@style/Subtitle2"
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
@@ -149,7 +150,7 @@
                         android:id="@+id/backup_passphrase_hint"
                         android:layout_height="22dp"
                         android:layout_width="22dp"
-                        android:src="@drawable/ic_question_mark"
+                        android:src="@drawable/ic_info_circle"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:layout_gravity="end|center" />
                 </LinearLayout>
@@ -182,7 +183,7 @@
                         android:id="@+id/required_dash_hint"
                         android:layout_height="22dp"
                         android:layout_width="22dp"
-                        android:src="@drawable/ic_question_mark"
+                        android:src="@drawable/ic_info_circle"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:layout_gravity="end|center" />
                 </LinearLayout>
@@ -216,7 +217,7 @@
                         android:id="@+id/existing_account_img"
                         android:layout_width="34dp"
                         android:layout_height="34dp"
-                        android:src="@drawable/ic_account_existing" />
+                        android:src="@drawable/ic_link_account" />
 
                     <TextView
                         style="@style/Subtitle2"
@@ -233,62 +234,62 @@
                         android:layout_gravity="end|center" />
                 </LinearLayout>
 
-                <View
-                    android:id="@+id/existing_account_divider"
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="14dp"
-                    android:layout_marginEnd="4dp"
-                    android:background="@color/divider_color"
-                    android:visibility="gone"
-                    tools:visibility="visible" />
+<!--                <View-->
+<!--                    android:id="@+id/existing_account_divider"-->
+<!--                    android:layout_width="match_parent"-->
+<!--                    android:layout_height="1dp"-->
+<!--                    android:layout_marginTop="14dp"-->
+<!--                    android:layout_marginEnd="4dp"-->
+<!--                    android:background="@color/divider_color"-->
+<!--                    android:visibility="gone"-->
+<!--                    tools:visibility="visible" />-->
 
-                <LinearLayout
-                    android:id="@+id/crowdnode_transaction_error"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:orientation="horizontal"
-                    android:visibility="gone"
-                    tools:visibility="visible">
+<!--                <LinearLayout-->
+<!--                    android:id="@+id/crowdnode_transaction_error"-->
+<!--                    android:layout_width="match_parent"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_marginTop="6dp"-->
+<!--                    android:orientation="horizontal"-->
+<!--                    android:visibility="gone"-->
+<!--                    tools:visibility="visible">-->
 
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:layout_marginTop="4dp"
-                        android:layout_gravity="start|top"
-                        android:src="@drawable/ic_bullet_error" />
+<!--                    <ImageView-->
+<!--                        android:layout_width="16dp"-->
+<!--                        android:layout_height="16dp"-->
+<!--                        android:layout_marginTop="4dp"-->
+<!--                        android:layout_gravity="start|top"-->
+<!--                        android:src="@drawable/ic_bullet_error" />-->
 
-                    <TextView
-                        style="@style/Caption"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_marginEnd="12dp"
-                        android:layout_marginTop="4dp"
-                        android:layout_weight="1"
-                        android:text="@string/crowdnode_required_transaction" />
+<!--                    <TextView-->
+<!--                        style="@style/Caption"-->
+<!--                        android:layout_width="0dp"-->
+<!--                        android:layout_height="wrap_content"-->
+<!--                        android:layout_marginStart="8dp"-->
+<!--                        android:layout_marginEnd="12dp"-->
+<!--                        android:layout_marginTop="4dp"-->
+<!--                        android:layout_weight="1"-->
+<!--                        android:text="@string/crowdnode_required_transaction" />-->
 
-                    <ImageButton
-                        android:id="@+id/crowdnode_transaction_hint"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:layout_height="22dp"
-                        android:layout_width="22dp"
-                        android:src="@drawable/ic_question_mark"
-                        android:layout_gravity="end|top" />
-                </LinearLayout>
+<!--                    <ImageButton-->
+<!--                        android:id="@+id/crowdnode_transaction_hint"-->
+<!--                        android:background="?attr/selectableItemBackgroundBorderless"-->
+<!--                        android:layout_height="22dp"-->
+<!--                        android:layout_width="22dp"-->
+<!--                        android:src="@drawable/ic_question_mark"-->
+<!--                        android:layout_gravity="end|top" />-->
+<!--                </LinearLayout>-->
 
-                <TextView
-                    android:id="@+id/restore_wallet_hint"
-                    style="@style/Caption"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="24dp"
-                    android:layout_marginEnd="28dp"
-                    android:layout_marginTop="7dp"
-                    android:visibility="gone"
-                    android:text="@string/crowdnode_restore_hint"
-                    tools:visibility="visible" />
+<!--                <TextView-->
+<!--                    android:id="@+id/restore_wallet_hint"-->
+<!--                    style="@style/Caption"-->
+<!--                    android:layout_width="match_parent"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_marginStart="24dp"-->
+<!--                    android:layout_marginEnd="28dp"-->
+<!--                    android:layout_marginTop="7dp"-->
+<!--                    android:visibility="gone"-->
+<!--                    android:text="@string/crowdnode_restore_hint"-->
+<!--                    tools:visibility="visible" />-->
             </LinearLayout>
         </androidx.cardview.widget.CardView>
     </LinearLayout>
