@@ -249,6 +249,17 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         transferDashViewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
             setInternetAccessState(hasInternet)
         }
+
+        transferDashViewModel.onFetchUserDataOnCoinbaseFailedCallback.observe(viewLifecycleOwner){
+            val failure = CoinbaseGenericErrorUIModel(
+                R.string.coinbase_dash_wallet_error_title,
+                getString(R.string.coinbase_dash_wallet_error_message),
+                R.drawable.ic_info_red,
+                R.string.CreateـDashـAccount,
+                R.string.close
+            )
+            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(failure))
+        }
     }
 
     private fun handleBackButtonPress(){

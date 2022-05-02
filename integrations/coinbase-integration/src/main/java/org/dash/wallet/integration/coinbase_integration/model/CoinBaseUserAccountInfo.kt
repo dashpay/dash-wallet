@@ -112,7 +112,7 @@ fun CoinBaseUserAccountDataUIModel.getCoinBaseExchangeRateConversion(
             this.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
     val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
-    val currencyRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
+    val currencyRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
     val fiatAmount = Fiat.parseFiat(currencyRate.fiat.currencyCode, bd.toString())
     val dashAmount = currencyRate.fiatToCoin(fiatAmount)
 

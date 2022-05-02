@@ -66,6 +66,7 @@ class TransferDashViewModel @Inject constructor(
     val userAccountOnCoinbaseState: LiveData<CoinbaseToDashExchangeRateUIModel>
         get() = _userAccountDataWithExchangeRate
 
+    val onFetchUserDataOnCoinbaseFailedCallback = SingleLiveEvent<Unit>()
 
     init {
         getWithdrawalLimitOnCoinbase()
@@ -119,7 +120,7 @@ class TransferDashViewModel @Inject constructor(
         _loadingState.value = true
         when(val result = coinBaseRepository.createAddress()){
             is ResponseResource.Success -> {
-                if (result.value.isNullOrEmpty()){
+                if (result.value.isEmpty()){
                     onAddressCreationFailedCallback.call()
                 } else {
                     observeCoinbaseAddressState.value = result.value
@@ -176,12 +177,18 @@ class TransferDashViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.Main){
             when(val response = coinBaseRepository.getExchangeRateFromCoinbase()){
                 is ResponseResource.Success -> {
-                    _userAccountDataWithExchangeRate.value = response.value!!
+                    val userData = response.value
+                    if (userData == CoinbaseToDashExchangeRateUIModel.EMPTY){
+                        onFetchUserDataOnCoinbaseFailedCallback.call()
+                    } else {
+                        _userAccountDataWithExchangeRate.value = userData
+                    }
                     _loadingState.value = false
                 }
 
                 is ResponseResource.Failure -> {
                     _loadingState.value = false
+                    onFetchUserDataOnCoinbaseFailedCallback.call()
                 }
             }
         }
