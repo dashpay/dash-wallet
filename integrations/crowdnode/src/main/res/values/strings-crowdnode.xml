@@ -17,7 +17,7 @@
 <resources>
     <string name="crowdnode_get_started">Getting started with CrowdNode</string>
     <string name="crowdnode_get_started_hint">To start staking, create an account on CrowdNode or connect to an existing one.</string>
-    <string name="new_account">New Account</string>
+    <string name="new_account">New CrowdNode Account</string>
     <string name="account_create">Create Account</string>
     <string name="account_link">Link Account</string>
     <string name="account_exist">Link Existing Account</string>
