@@ -19,7 +19,7 @@ package de.schildbach.wallet.util.viewModels
 
 import android.content.ClipDescription
 import android.content.ClipboardManager
-import de.schildbach.wallet.ui.MainActivityViewModel
+import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
 import org.junit.Test
@@ -28,7 +28,7 @@ class MainViewModelTest {
     @Test
     fun getClipboardInput_noClip_returnsEmptyString() {
         val clipboardManagerMock = mockk<ClipboardManager>()
-        val viewModel = spyk(MainActivityViewModel(mockk(), clipboardManagerMock))
+        val viewModel = spyk(MainViewModel(mockk(), clipboardManagerMock))
 
         every { clipboardManagerMock.hasPrimaryClip() } returns false
 
@@ -41,7 +41,7 @@ class MainViewModelTest {
         val mockUri = "mock://example.uri"
         val mockText = "some text"
         val clipboardManagerMock = mockk<ClipboardManager>()
-        val viewModel = spyk(MainActivityViewModel(mockk(), clipboardManagerMock))
+        val viewModel = spyk(MainViewModel(mockk(), clipboardManagerMock))
         val clipDescription = mockk<ClipDescription>()
 
         every { clipboardManagerMock.hasPrimaryClip() } returns true

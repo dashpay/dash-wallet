@@ -40,6 +40,7 @@ import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -53,6 +54,7 @@ import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
@@ -99,12 +101,14 @@ import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
+import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.security.SecurityGuard;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
+import kotlinx.coroutines.flow.Flow;
 
 /**
  * @author Andreas Schildbach
@@ -853,6 +857,12 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     @Override
     public Address currentReceiveAddress() {
         return wallet.currentReceiveAddress();
+    }
+
+    @NonNull
+    @Override
+    public Flow<Coin> observeBalance() {
+        return new WalletBalanceObserver(wallet).observe();
     }
 
     // wallets from v5.17.5 and earlier do not have a BIP44 path

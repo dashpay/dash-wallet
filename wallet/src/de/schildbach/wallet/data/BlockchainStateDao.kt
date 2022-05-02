@@ -22,6 +22,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 /**
  * @author Samuel Barbosa
@@ -45,4 +46,6 @@ abstract class BlockchainStateDao {
     @Query("SELECT * FROM blockchain_state LIMIT 1")
     abstract fun loadSync(): BlockchainState?
 
+    @Query("SELECT * FROM blockchain_state LIMIT 1")
+    abstract fun observeState(): Flow<BlockchainState?>
 }

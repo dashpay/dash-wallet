@@ -49,7 +49,8 @@ import javax.annotation.Nullable;
 import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.rates.ExchangeRatesViewModel;
+import de.schildbach.wallet.ui.rates.ExchangeRatesActivity;
+import de.schildbach.wallet.ui.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet_test.R;
 
 /**

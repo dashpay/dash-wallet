@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 the original author or authors.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.ui.main;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -33,6 +33,7 @@ import android.os.Handler;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.format.DateUtils;
+import android.util.Log;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -82,6 +83,13 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.ui.AbstractWalletActivity;
+import de.schildbach.wallet.ui.EditAddressBookEntryFragment;
+import de.schildbach.wallet.ui.ReportIssueDialogBuilder;
+import de.schildbach.wallet.ui.TransactionDetailsDialogFragment;
+import de.schildbach.wallet.ui.TransactionsAdapter;
+import de.schildbach.wallet.ui.TransactionsFilterDialog;
+import de.schildbach.wallet.ui.TransactionsFilterSharedViewModel;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Qr;
@@ -115,7 +123,7 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
     private TransactionsAdapter adapter;
     private TextView syncingText;
     private TransactionsFilterSharedViewModel transactionsFilterSharedViewModel;
-    private MainActivityViewModel mainActivityViewModel;
+    private MainViewModel mainViewModel;
 
     @Nullable
     private Direction direction;
@@ -182,7 +190,7 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
             dialogFragment.show(getChildFragmentManager(), null);
         });
 
-        mainActivityViewModel = new ViewModelProvider(requireActivity()).get(MainActivityViewModel.class);
+        mainViewModel = new ViewModelProvider(requireActivity()).get(MainViewModel.class);
 
         recyclerView = view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -422,7 +430,9 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
         }
 
         int percentage = blockchainState.getPercentageSync();
+        Log.i("SYNCING", "tx fragment percentage: " + percentage);
         if (blockchainState.getReplaying() && blockchainState.getPercentageSync() == 100) {
+            Log.i("SYNCING", "resetting percentage");
             //This is to prevent showing 100% when using the Rescan blockchain function.
             //The first few broadcasted blockchainStates are with percentage sync at 100%
             percentage = 0;
@@ -597,7 +607,7 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
 
     private void updateView() {
         adapter.setFormat(config.getFormat());
-        mainActivityViewModel.getOnTransactionsUpdated().call(Unit.INSTANCE);
+        mainViewModel.getOnTransactionsUpdated().call(Unit.INSTANCE);
     }
 
     public boolean isHistoryEmpty() {
