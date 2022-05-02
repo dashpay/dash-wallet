@@ -37,6 +37,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.SecurityModel
+import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.ui.*
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.GenericUtils
@@ -67,8 +68,8 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private var loadingDialog: FancyAlertDialog? = null
     @Inject lateinit var securityModel: SecurityModel
     @Inject lateinit var confirmTransactionLauncher: ConfirmTransactionService
+    @Inject lateinit var transactionDetails: SendPaymentService
     private var dashValue: Coin = Coin.ZERO
-    private var fiatValue: Fiat? = null
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(2).optionalDecimals()
 
@@ -113,7 +114,6 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
 
         enterAmountToTransferViewModel.onContinueTransferEvent.observe(viewLifecycleOwner){
-            fiatValue = it.first
             dashValue = it.second
             if (binding.transferView.walletToCoinbase){
                 val coinInput = it.second
@@ -211,15 +211,17 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
 
         transferDashViewModel.observeCoinbaseAddressState.observe(viewLifecycleOwner){ address ->
-            val amountFiat = if (fiatValue != null) dashFormat.format(fiatValue).toString() else getString(R.string.transaction_row_rate_not_available)
-            val fiatSymbol = if (fiatValue != null) GenericUtils.currencySymbol(fiatValue?.currencyCode) else ""
-            val amountStr = dashValue.toPlainString()
-            val fee = VALUE_ZERO
-            val total = dashValue.toPlainString()
+            val fiatVal = enterAmountToTransferViewModel.getFiat(dashValue.toPlainString())
+            val amountFiat = dashFormat.format(fiatVal).toString()
+            val fiatSymbol = GenericUtils.currencySymbol(fiatVal.currencyCode)
+
             lifecycleScope.launch {
+                val details = transactionDetails.estimateNetworkFee(transferDashViewModel.dashAddress, dashValue)
+                val amountStr = details.amountToSend.toPlainString()
+
                 val isTransactionConfirmed = confirmTransactionLauncher.showTransactionDetailsPreview(
-                    requireActivity(),
-                    address, amountStr, amountFiat, fiatSymbol, fee, total, null, null, null)
+                    requireActivity(), address, amountStr, amountFiat, fiatSymbol, details.fee,
+                    details.totalAmount, null, null, null)
                 if (isTransactionConfirmed){
                     transferDashViewModel.sendDash(dashValue)
                 }

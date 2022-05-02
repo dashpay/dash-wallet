@@ -7,6 +7,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.utils.Fiat
@@ -143,9 +144,8 @@ class TransferDashViewModel @Inject constructor(
     }
 
     private suspend fun checkTransaction(coin: Coin): SendDashResponseState{
-        val address = walletDataProvider.createSentDashAddress(observeCoinbaseAddressState.value ?: "")
         return try {
-            val transaction = sendPaymentService.sendCoins(address, coin)
+            val transaction = sendPaymentService.sendCoins(dashAddress, coin)
             SendDashResponseState.SuccessState(transaction.isPending)
         } catch (e: InsufficientMoneyException){
             e.printStackTrace()
@@ -193,6 +193,9 @@ class TransferDashViewModel @Inject constructor(
             }
         }
     }
+
+    val dashAddress: Address
+        get() = walletDataProvider.createSentDashAddress(observeCoinbaseAddressState.value ?: "")
 }
 
 sealed class SendDashResponseState{

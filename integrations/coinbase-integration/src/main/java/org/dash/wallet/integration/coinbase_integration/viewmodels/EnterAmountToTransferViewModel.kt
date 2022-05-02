@@ -202,21 +202,6 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
             return if (dashAmount.isZero) VALUE_ZERO.toBigDecimal()
                 .toPlainString() else cleanedValue
-            /*
-            return coinbaseExchangeRate?.let {
-                val cleanedValue =
-                    inputValue.toBigDecimal() * it.currencyToDashExchangeRate.toBigDecimal()
-                val plainValue = cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
-                val dashAmount = try {
-                    Coin.parseCoin(plainValue)
-                } catch (x: Exception) {
-                    Coin.ZERO
-                }
-
-                return if (dashAmount.isZero) VALUE_ZERO.toBigDecimal()
-                    .toPlainString() else plainValue
-            } ?: VALUE_ZERO.toBigDecimal().toPlainString()
-            */
         }
 
     private val amountInDash: Coin
@@ -263,27 +248,24 @@ class EnterAmountToTransferViewModel @Inject constructor(
     }
 
     fun getCoinbaseBalanceInFiatFormat(dashAmt: String): String {
-        val rateApplied = applyCoinbaseExchangeRate(dashAmt)
-        val formattedValue = GenericUtils.formatFiatWithoutComma(rateApplied)
-        val fiatAmt = Fiat.parseFiat(localCurrencyCode, formattedValue)
-        val fiatSymbol = GenericUtils.currencySymbol(localCurrencyCode)
-        val formatFiat = dashFormat.minDecimals(2).format(fiatAmt).toString()
+        val fiat = getFiat(dashAmt)
+        val formatFiat = dashFormat.minDecimals(2).format(fiat).toString()
 
-        return if (GenericUtils.isCurrencyFirst(fiatAmt)) {
-            "$fiatSymbol $formatFiat"
+        return if (GenericUtils.isCurrencyFirst(fiat)) {
+            "$localFiatSymbol $formatFiat"
         } else {
-            "$formatFiat $fiatSymbol"
+            "$formatFiat $localFiatSymbol"
         }
     }
 
-    fun scaleValue(valueToScale: String): String {
+    private fun scaleValue(valueToScale: String): String {
         return coinbaseExchangeRate?.let {
             val cleanedValue = valueToScale.toBigDecimal() * it.currencyToDashExchangeRate.toBigDecimal()
             cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
         } ?: ""
     }
 
-    fun toCoin(inputVal: String) : Coin {
+    private fun toCoin(inputVal: String) : Coin {
         val formattedValue = GenericUtils.formatFiatWithoutComma(inputVal)
         return try {
             Coin.parseCoin(formattedValue)
@@ -292,4 +274,12 @@ class EnterAmountToTransferViewModel @Inject constructor(
         }
     }
 
+    private val localFiatSymbol: String
+        get() = GenericUtils.currencySymbol(localCurrencyCode)
+
+    fun getFiat(dashValue: String): Fiat {
+        val rateApplied = applyCoinbaseExchangeRate(dashValue)
+        val formattedValue = GenericUtils.formatFiatWithoutComma(rateApplied)
+        return Fiat.parseFiat(localCurrencyCode, formattedValue)
+    }
 }
