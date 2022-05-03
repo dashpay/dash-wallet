@@ -33,6 +33,7 @@ import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.slf4j.LoggerFactory
+import java.security.GeneralSecurityException
 import javax.inject.Inject
 
 
@@ -55,17 +56,63 @@ class SendCoinsTaskRunner @Inject constructor(
         return sendCoins(wallet, sendRequest, scryptIterationsTarget)
     }
 
+    override suspend fun estimateNetworkFee(
+        address: Address,
+        amount: Coin,
+        constrainInputsTo: Address?,
+        emptyWallet: Boolean
+    ): SendPaymentService.TransactionDetails {
+        val wallet = walletApplication.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
+        var sendRequest = createSendRequest(address, amount, constrainInputsTo, emptyWallet, false)
+        try {
+            val securityGuard = SecurityGuard()
+            val password = securityGuard.retrievePassword()
+            val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
+            val encryptionKey = deriveKey(wallet, password, scryptIterationsTarget)
+
+            sendRequest.aesKey = encryptionKey
+
+            wallet.completeTx(sendRequest)
+            if (checkDust(sendRequest)){
+                sendRequest = createSendRequest(address, amount, constrainInputsTo, emptyWallet)
+                wallet.completeTx(sendRequest)
+            }
+
+        } catch (e: Exception){
+            e.printStackTrace()
+        } catch (e: GeneralSecurityException){
+            e.printStackTrace()
+        }
+
+        val txFee = sendRequest.tx.fee
+
+        val amountToSend = if (sendRequest.emptyWallet){
+            amount.minus(txFee)
+        } else {
+            amount
+        }
+
+        val totalAmount = if (sendRequest.emptyWallet){
+            amount.toPlainString()
+        } else {
+            amount.add(txFee).toPlainString()
+        }
+
+        return SendPaymentService.TransactionDetails(txFee.toPlainString(), amountToSend, totalAmount)
+    }
+
     private fun createSendRequest(
         address: Address,
         amount: Coin,
         constrainInputsTo: Address? = null,
-        emptyWallet: Boolean = false
+        emptyWallet: Boolean = false,
+        forceMinFee: Boolean = true
     ): SendRequest {
         return SendRequest.to(address, amount).apply {
             coinSelector = ZeroConfCoinSelector.get()
             coinSelector = if (constrainInputsTo == null) ZeroConfCoinSelector.get() else ByAddressCoinSelector(constrainInputsTo)
             feePerKb = Constants.ECONOMIC_FEE
-            ensureMinRequiredFee = true
+            ensureMinRequiredFee = forceMinFee
             changeAddress = constrainInputsTo
             this.emptyWallet = emptyWallet
         }
@@ -148,5 +195,14 @@ class SendCoinsTaskRunner @Inject constructor(
 
         // Hand back the (possibly changed) encryption key.
         return key
+    }
+
+    private fun checkDust(req: SendRequest): Boolean {
+        if (req.tx != null) {
+            for (output in req.tx.outputs) {
+                if (output.isDust) return true
+            }
+        }
+        return false
     }
 }
