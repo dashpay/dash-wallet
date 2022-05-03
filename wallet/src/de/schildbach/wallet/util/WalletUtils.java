@@ -448,11 +448,11 @@ public class WalletUtils {
     // This creates the TaxBit CSV format
     public static String getTransactionHistory(Wallet wallet) {
         Set<Transaction> txSet = wallet.getTransactions(false);
-        List<Object> txList = Arrays.asList(txSet.toArray());
+        List<Transaction> txList = Arrays.asList(txSet.toArray(new Transaction[0]));
 
         Collections.sort(txList, (o1, o2) -> {
-            Date tx1 = getTransactionDate((Transaction) o1);
-            Date tx2 = getTransactionDate((Transaction) o2);
+            Date tx1 = getTransactionDate(o1);
+            Date tx2 = getTransactionDate(o2);
             return tx1.compareTo(tx2);
         });
 
@@ -462,7 +462,7 @@ public class WalletUtils {
         TimeZone tz = TimeZone.getTimeZone("UTC");
         DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
         format.setTimeZone(tz);
-        for (Transaction tx : txSet) {
+        for (Transaction tx : txList) {
             if (isEntirelySelf(tx, wallet))
                 continue;
             Coin value = tx.getValue(wallet);
