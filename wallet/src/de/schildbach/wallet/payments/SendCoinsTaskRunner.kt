@@ -41,7 +41,6 @@ class SendCoinsTaskRunner @Inject constructor(
     private val walletApplication: WalletApplication
 ) : SendPaymentService {
     private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
-    val wallet = walletApplication.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
 
     override suspend fun sendCoins(
         address: Address,
@@ -49,6 +48,7 @@ class SendCoinsTaskRunner @Inject constructor(
         constrainInputsTo: Address?,
         emptyWallet: Boolean
     ): Transaction {
+        val wallet = walletApplication.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
         Context.propagate(wallet.context)
         val sendRequest = createSendRequest(address, amount, constrainInputsTo, emptyWallet)
         val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
@@ -62,7 +62,7 @@ class SendCoinsTaskRunner @Inject constructor(
         constrainInputsTo: Address?,
         emptyWallet: Boolean
     ): SendPaymentService.TransactionDetails {
-
+        val wallet = walletApplication.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
         var sendRequest = createSendRequest(address, amount, constrainInputsTo, emptyWallet, false)
         try {
             val securityGuard = SecurityGuard()
