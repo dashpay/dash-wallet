@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.Flow
 abstract class BlockchainStateDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    abstract fun insert(blockchainState: BlockchainState)
+    protected abstract fun insert(blockchainState: BlockchainState)
 
     fun save(blockchainState: BlockchainState) {
         if (blockchainState.replaying && blockchainState.percentageSync == 100) {

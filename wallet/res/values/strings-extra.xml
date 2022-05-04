@@ -332,7 +332,6 @@
     <string name="welcome_screen_subtitle_3">Have complete control and customize your wallet based on your needs</string>
 
     <string name="sync_status_wait">Please wait for the sync to complete</string>
-    <string name="sync_status_syncing_title">Syncing %1$d</string>
     <string name="sync_status_syncing_sub_title">with Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Unable to connect</string>
     <string name="sync_status_check_connection">Check your connection</string>

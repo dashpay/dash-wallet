@@ -33,7 +33,6 @@ import android.os.Handler;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.format.DateUtils;
-import android.util.Log;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -430,9 +429,7 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
         }
 
         int percentage = blockchainState.getPercentageSync();
-        Log.i("SYNCING", "tx fragment percentage: " + percentage);
         if (blockchainState.getReplaying() && blockchainState.getPercentageSync() == 100) {
-            Log.i("SYNCING", "resetting percentage");
             //This is to prevent showing 100% when using the Rescan blockchain function.
             //The first few broadcasted blockchainStates are with percentage sync at 100%
             percentage = 0;
@@ -443,12 +440,19 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
         } else {
             syncingText.setVisibility(View.VISIBLE);
             String syncing = getString(R.string.syncing);
-            SpannableStringBuilder str = new SpannableStringBuilder(syncing + " " + percentage + "%");
-            int start = syncing.length() + 1;
-            int end = str.length();
-            str.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end,
-                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-            syncingText.setText(str);
+
+            if (percentage == 0) {
+                syncing += "…";
+            } else {
+                SpannableStringBuilder str = new SpannableStringBuilder(syncing + " " + percentage + "%");
+                int start = syncing.length() + 1;
+                int end = str.length();
+                str.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                syncing = str.toString();
+            }
+
+            syncingText.setText(syncing);
         }
     }
 

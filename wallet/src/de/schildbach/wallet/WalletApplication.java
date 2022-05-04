@@ -89,6 +89,8 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Inject;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.android.LogcatAppender;
@@ -98,6 +100,7 @@ import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import dagger.hilt.android.HiltAndroidApp;
 import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
@@ -141,6 +144,9 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     public boolean myPackageReplaced = false;
 
     private AutoLogout autoLogout;
+
+    @Inject
+    BlockchainStateDao blockchainStateDao;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -204,6 +210,8 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
             log.error(ex.getMessage(), ex);
             CrashReporter.saveBackgroundTrace(ex, packageInfo);
         }
+
+        resetBlockchainSyncProgress();
     }
 
     private void syncExploreData() {
@@ -616,11 +624,8 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     }
 
     public void resetBlockchainState() {
-        Executors.newSingleThreadExecutor().execute(new Runnable() {
-            @Override
-            public void run() {
-                AppDatabase.getAppDatabase().blockchainStateDao().save(new BlockchainState(true));
-            }
+        Executors.newSingleThreadExecutor().execute(() -> {
+            blockchainStateDao.save(new BlockchainState(true));
         });
     }
 
@@ -630,6 +635,16 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         Intent blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
                 BlockchainServiceImpl.class);
         startService(blockchainServiceResetBlockchainIntent);
+    }
+
+    private void resetBlockchainSyncProgress() {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            BlockchainState blockchainState = blockchainStateDao.loadSync();
+            if (blockchainState != null) {
+                blockchainState.setPercentageSync(0);
+                blockchainStateDao.save(blockchainState);
+            }
+        });
     }
 
     public void replaceWallet(final Wallet newWallet) {

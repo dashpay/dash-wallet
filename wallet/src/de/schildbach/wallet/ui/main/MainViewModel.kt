@@ -20,7 +20,6 @@ package de.schildbach.wallet.ui.main
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,7 +55,7 @@ class MainViewModel @Inject constructor(
 
     private val _isBlockchainSynced = MutableLiveData<Boolean>()
     val isBlockchainSynced: LiveData<Boolean>
-        get() = _isBlockchainSyncFailed
+        get() = _isBlockchainSynced
 
     private val _isBlockchainSyncFailed = MutableLiveData<Boolean>()
     val isBlockchainSyncFailed: LiveData<Boolean>
@@ -82,8 +81,6 @@ class MainViewModel @Inject constructor(
             .onEach {
                 _isBlockchainSynced.postValue(it.isSynced())
                 _isBlockchainSyncFailed.postValue(it.syncFailed())
-                Log.i("SYNCING", "vm isReplaying: ${it.replaying}")
-                Log.i("SYNCING", "vm percentage: ${it.percentageSync}")
             }
             .launchIn(viewModelScope)
 
