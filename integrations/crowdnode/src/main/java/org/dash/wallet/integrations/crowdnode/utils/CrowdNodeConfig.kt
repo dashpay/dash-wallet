@@ -22,18 +22,20 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ModuleConfiguration @Inject constructor(private val context: Context) {
+open class CrowdNodeConfig @Inject constructor(private val context: Context) {
     companion object {
-        private val INFO_SHOWN_KEY = booleanPreferencesKey("info_shown")
-        private val ACCOUNT_ADDRESS_KEY = stringPreferencesKey("account_address")
-        private val CROWDNODE_ERROR_KEY = stringPreferencesKey("error")
-        private val LAST_BALANCE_KEY = longPreferencesKey("last_balance")
+        val INFO_SHOWN = booleanPreferencesKey("info_shown")
+        val ACCOUNT_ADDRESS = stringPreferencesKey("account_address")
+        val ERROR = stringPreferencesKey("error")
+        val ONLINE_ACCOUNT_STATUS = intPreferencesKey("online_account_status")
+        val LAST_BALANCE = longPreferencesKey("last_balance")
     }
 
     private val Context.dataStore by preferencesDataStore("crowdnode")
@@ -46,55 +48,21 @@ class ModuleConfiguration @Inject constructor(private val context: Context) {
             }
         }
 
-    val accountAddress: Flow<String> = dataStore
-        .map { preferences ->
-            preferences[ACCOUNT_ADDRESS_KEY] ?: ""
-        }
+    open fun <T> observePreference(key: Preferences.Key<T>): Flow<T?> {
+        return dataStore.map { preferences -> preferences[key] }
+    }
 
+    open suspend fun <T> getPreference(key: Preferences.Key<T>): T? {
+        return dataStore.map { preferences -> preferences[key] }.first()
+    }
 
-    suspend fun setAccountAddress(address: String) {
+    open suspend fun <T> setPreference(key: Preferences.Key<T>, value: T) {
         context.dataStore.edit { preferences ->
-            preferences[ACCOUNT_ADDRESS_KEY] = address
+            preferences[key] = value
         }
     }
 
-    val crowdNodeError: Flow<String> = dataStore
-        .map { preferences ->
-            preferences[CROWDNODE_ERROR_KEY] ?: ""
-        }
-
-
-    suspend fun setCrowdNodeError(error: String) {
-        context.dataStore.edit { preferences ->
-            preferences[CROWDNODE_ERROR_KEY] = error
-        }
-    }
-
-    val lastBalance: Flow<Long> = dataStore
-        .map { preferences ->
-            preferences[LAST_BALANCE_KEY] ?: 0L
-        }
-
-
-    suspend fun setLastBalance(balance: Long) {
-        context.dataStore.edit { preferences ->
-            preferences[LAST_BALANCE_KEY] = balance
-        }
-    }
-
-    val isInfoShown: Flow<Boolean> = dataStore
-        .map { preferences ->
-            preferences[INFO_SHOWN_KEY] ?: false
-        }
-
-
-    suspend fun setIsInfoShown(isShown: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[INFO_SHOWN_KEY] = isShown
-        }
-    }
-
-    suspend fun clearAll() {
+    open suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
     }
 }

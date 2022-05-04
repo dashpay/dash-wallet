@@ -107,6 +107,9 @@ public final class Constants {
         /** Filename of the automatic wallet backup. */
         public static final String WALLET_KEY_BACKUP_PROTOBUF = "key-backup-protobuf" + FILENAME_NETWORK_SUFFIX;
 
+        /** Folder with datastore preferences. */
+        public static final String DATASTORE_PREFS_DIRECTORY = "datastore";
+
         /** Path to external storage */
         public static final File EXTERNAL_STORAGE_DIR = Environment.getExternalStorageDirectory();
 

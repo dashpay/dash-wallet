@@ -40,6 +40,7 @@ class WebViewFragment : Fragment(R.layout.fragment_webview) {
         binding.toolbarTitle.text = args.title
 
         val binding = binding // Avoids IllegalStateException in onPageFinished callback
+        binding.webView.settings.javaScriptEnabled = args.enableJavaScript
         binding.webView.webViewClient = object: WebViewClient() {
             override fun onPageFinished(view: WebView, url: String?) {
                 binding.progressBar.isVisible = false

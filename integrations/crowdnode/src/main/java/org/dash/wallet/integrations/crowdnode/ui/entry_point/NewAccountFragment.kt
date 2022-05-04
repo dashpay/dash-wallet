@@ -29,6 +29,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.SecurityModel
@@ -36,15 +37,18 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.copy
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
-import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentNewAccountBinding
+import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
+import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
     private val binding by viewBinding(FragmentNewAccountBinding::bind)
     private val viewModel: CrowdNodeViewModel by activityViewModels()
+    private val args by navArgs<NewAccountFragmentArgs>()
 
     @Inject
     lateinit var securityModel: SecurityModel
@@ -52,19 +56,12 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val existingAccount = false // TODO: online account
-
-        binding.title.setText(if (existingAccount) {
-            R.string.account_exist_title
-        } else {
-            R.string.new_account
-        })
-
-        binding.createAccountBtn.setText(if (existingAccount) {
-            R.string.account_link
-        } else {
-            R.string.account_create
-        })
+        if (args.existingAccount) {
+            binding.title.setText(R.string.crowdnode_link)
+            binding.createAccountBtn.setText(R.string.crowdnode_login)
+            binding.description1.setText(R.string.crowdnode_link_account_description)
+            binding.description2.isVisible = false
+        }
 
         binding.titleBar.setNavigationOnClickListener {
             if (findNavController().previousBackStackEntry != null) {
@@ -75,10 +72,10 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         binding.createAccountBtn.setOnClickListener {
-            lifecycleScope.launch {
-                securityModel.requestPinCode(requireActivity())?.let {
-                    viewModel.signUp()
-                }
+            if (args.existingAccount) {
+                continueLinking()
+            } else {
+                continueSignUp()
             }
         }
 
@@ -115,6 +112,38 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
                 else -> binding.progressMessage.text = getString(R.string.crowdnode_creating)
             }
         }
+
+        viewModel.onlineAccountStatus.observe(viewLifecycleOwner) { onlineStatus ->
+            if (onlineStatus != null && onlineStatus.ordinal >= OnlineAccountStatus.Confirming.ordinal) {
+                safeNavigate(NewAccountFragmentDirections.newAccountToPortal())
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        if (viewModel.onlineAccountStatus.value == OnlineAccountStatus.Linking) {
+            viewModel.cancelLinkingOnlineAccount()
+        }
+    }
+
+    private fun continueSignUp() {
+        lifecycleScope.launch {
+            securityModel.requestPinCode(requireActivity())?.let {
+                viewModel.signUp()
+            }
+        }
+    }
+
+    private fun continueLinking() {
+        viewModel.linkOnlineAccount()
+        val apiLinkUrl = CrowdNodeConstants.getApiLinkUrl(viewModel.accountAddress.value!!)
+        safeNavigate(NewAccountFragmentDirections.newAccountToWebview(
+            getString(R.string.crowdnode_login),
+            apiLinkUrl,
+            true
+        ))
     }
 
     private fun setTermsTextView(textView: TextView) {

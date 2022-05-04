@@ -41,7 +41,7 @@ import org.dash.wallet.integration.uphold.data.UpholdConstants
 import org.dash.wallet.integration.uphold.data.UpholdTransaction
 import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper
 import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper.OnTransferListener
-import org.dash.wallet.integration.uphold.ui.openCustomTab
+import org.dash.wallet.common.util.openCustomTab
 import java.math.BigDecimal
 
 @AndroidEntryPoint

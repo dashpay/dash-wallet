@@ -36,9 +36,11 @@
         android:name="org.dash.wallet.integrations.crowdnode.ui.entry_point.NewAccountFragment"
         android:label="NewAccountFragment">
 
+        <argument android:name="existingAccount" app:argType="boolean" />
+
         <action
             android:id="@+id/new_account_to_webview"
-            app:destination="@id/webViewFragment"
+            app:destination="@id/crowdNodeWebViewFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
@@ -61,12 +63,22 @@
     </fragment>
 
     <fragment
-        android:id="@+id/webViewFragment"
+        android:id="@+id/crowdNodeWebViewFragment"
         android:name="org.dash.wallet.integrations.crowdnode.ui.WebViewFragment"
         android:label="WebViewFragment">
 
         <argument android:name="title" app:argType="string" />
         <argument android:name="url" app:argType="string" />
+        <argument android:name="enableJavaScript" app:argType="boolean" android:defaultValue="false" />
+
+        <action
+            android:id="@+id/webView_to_portal"
+            app:destination="@id/crowdNodePortalFragment"
+            app:popUpTo="@id/nav_crowdnode"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment

@@ -17,8 +17,8 @@
 <resources>
     <style name="CrowdNodeLogoBackground">
         <item name="backgroundColor">@color/white</item>
-        <item name="strokeColor">@color/gray_40</item>
-        <item name="cornerRadius">20dp</item>
+        <item name="strokeColor">@color/white</item>
+        <item name="cornerRadius">50dp</item>
     </style>
 
     <style name="TextHighlightBlueTheme">
