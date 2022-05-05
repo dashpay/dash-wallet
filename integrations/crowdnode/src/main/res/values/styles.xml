@@ -46,4 +46,8 @@
         <item name="strokeColor">@color/ultra_light_gray</item>
         <item name="cornerRadius">12dp</item>
     </style>
+
+    <style name="DashQRLogo" parent="SecondaryBackground">
+        <item name="cornerRadius">35dp</item>
+    </style>
 </resources>

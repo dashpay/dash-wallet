@@ -36,7 +36,7 @@
         android:text="@string/crowdnode_verify_api_address" />
 
     <TextView
-        android:id="@+id/create_account_btn"
+        android:id="@+id/how_to_btn"
         style="@style/Caption.SemiBold.Blue"
         android:textSize="13sp"
         android:layout_width="match_parent"
@@ -74,6 +74,7 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
+            android:id="@+id/primary_dash_address"
             style="@style/Caption"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -82,13 +83,13 @@
             android:ellipsize="middle"
             android:gravity="center_vertical"
             android:maxLines="1"
-            app:layout_constraintEnd_toStartOf="@id/share_primary_address_btn"
+            app:layout_constraintEnd_toStartOf="@id/copy_primary_address_btn"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            android:text="XjfK5ivsGw7Ynxj99CEAJpcB5qNjsJpMH2" />
+            tools:text="XjfK5ivsGw7Ynxj99CEAJpcB5qNjsJpMH2" />
 
         <ImageButton
-            android:id="@+id/share_primary_address_btn"
+            android:id="@+id/copy_primary_address_btn"
             style="@style/Button.Tertiary.Square"
             android:layout_width="40dp"
             android:layout_height="40dp"
@@ -127,7 +128,7 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
-            android:id="@+id/dash_address_txt"
+            android:id="@+id/dash_address"
             style="@style/Caption"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -136,13 +137,13 @@
             android:ellipsize="middle"
             android:gravity="center_vertical"
             android:maxLines="1"
-            app:layout_constraintEnd_toStartOf="@id/share_address_btn"
+            app:layout_constraintEnd_toStartOf="@id/copy_address_btn"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            android:text="Xkvwp3vkTdUbUuEupDB3Sfa2wCvKYevzcc" />
+            tools:text="Xkvwp3vkTdUbUuEupDB3Sfa2wCvKYevzcc" />
 
         <ImageButton
-            android:id="@+id/share_address_btn"
+            android:id="@+id/copy_address_btn"
             style="@style/Button.Tertiary.Square"
             android:layout_width="40dp"
             android:layout_height="40dp"
@@ -194,7 +195,7 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/show_url_btn"
+            android:id="@+id/share_url_btn"
             style="@style/Button.Primary.Small.UltraLightGray"
             android:layout_width="0dp"
             android:layout_weight="1"

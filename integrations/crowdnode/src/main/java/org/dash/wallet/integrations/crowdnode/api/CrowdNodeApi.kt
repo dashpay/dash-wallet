@@ -281,8 +281,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
     override fun startTrackingLinked(address: Address) {
         changeOnlineStatus(OnlineAccountStatus.Linking)
         trackingApiAddress = address
-//        tickerJob = TickerFlow(period = 2.seconds, initialDelay = 10.seconds) TODO
-        tickerJob = TickerFlow(period = 2.seconds, initialDelay = 2.seconds)
+        tickerJob = TickerFlow(period = 2.seconds, initialDelay = 10.seconds)
             .onEach { checkIfAddressIsInUse(address) }
             .launchIn(responseScope)
     }
@@ -475,19 +474,19 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
     private suspend fun resolveIsAddressInUse(address: Address): Boolean {
         try {
-//            val result = crowdNodeWebApi.isAddressInUse(address.toString())
+            val result = crowdNodeWebApi.isAddressInUse(address.toString())
 
-//            if (result.isSuccessful && result.body()?.isInUse == true) {
-//                val primary = result.body()!!.primaryAddress
+            if (result.isSuccessful && result.body()?.isInUse == true) {
+                val primary = result.body()!!.primaryAddress
 
-//                if (primary != null) {
-//                    primaryAddress = Address.fromBase58(params, primary)
-//                } else {
-//                    log.info("isAddressInUse returns true but missing primary address")
-//                }
+                if (primary != null) {
+                    primaryAddress = Address.fromBase58(params, primary)
+                } else {
+                    log.info("isAddressInUse returns true but missing primary address")
+                }
 
                 return true
-//            }
+            }
         } catch (ex: Exception) {
             log.error("Error while resolving isAddressInUse: $ex")
 
@@ -525,8 +524,8 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
         onlineAccountStatus.value = status
 
-//        if (save) {
-//            configScope.launch { config.setPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, status.ordinal) }
-//        }
+        if (save) {
+            configScope.launch { config.setPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, status.ordinal) }
+        }
     }
 }

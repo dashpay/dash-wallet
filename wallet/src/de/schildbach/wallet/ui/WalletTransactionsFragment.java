@@ -84,7 +84,7 @@ import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.Qr;
+import org.dash.wallet.common.util.Qr;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;

@@ -17,18 +17,25 @@
 
 package org.dash.wallet.integrations.crowdnode.ui.portal
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.fragment.app.activityViewModels
+import org.bitcoinj.uri.BitcoinURI
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentConfirmationBinding
+import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 class ConfirmationDialog: OffsetDialogFragment() {
     private val binding by viewBinding(FragmentConfirmationBinding::bind)
+    private val viewModel by activityViewModels<CrowdNodeViewModel>()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -41,12 +48,42 @@ class ConfirmationDialog: OffsetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val accountAddress = viewModel.accountAddress.value
+        requireNotNull(accountAddress)
+        val amount = CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT
+
         binding.description1.text = getString(
             R.string.crowdnode_how_to_verify_description1,
-            CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT.toFriendlyString()
+            amount.toFriendlyString()
         )
-        binding.showQrBtn.setOnClickListener {
+        binding.primaryDashAddress.text = viewModel.primaryDashAddress.toString()
+        binding.copyPrimaryAddressBtn.setOnClickListener {
+            viewModel.copyPrimaryAddress()
+            Toast.makeText(requireContext(), getString(R.string.copied), Toast.LENGTH_SHORT).show()
+        }
+        binding.dashAddress.text = viewModel.accountAddress.value.toString()
+        binding.copyAddressBtn.setOnClickListener {
+            viewModel.copyAccountAddress()
+            Toast.makeText(requireContext(), getString(R.string.copied), Toast.LENGTH_SHORT).show()
+        }
 
+        binding.howToBtn.setOnClickListener {
+            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.crowdnode_how_to_verify_url)))
+            startActivity(browserIntent)
+        }
+        binding.showQrBtn.setOnClickListener {
+            QRDialog(accountAddress, amount).show(parentFragmentManager, "qr_dialog")
+        }
+        binding.shareUrlBtn.setOnClickListener {
+            val paymentRequestUri = BitcoinURI.convertToBitcoinURI(accountAddress, amount, "", "")
+            val sendIntent = Intent().apply {
+                action = Intent.ACTION_SEND
+                putExtra(Intent.EXTRA_TEXT, paymentRequestUri)
+                type = "text/plain"
+            }
+
+            val shareIntent = Intent.createChooser(sendIntent, null)
+            startActivity(shareIntent)
         }
     }
 }

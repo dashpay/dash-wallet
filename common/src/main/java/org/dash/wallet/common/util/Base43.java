@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.util;
+package org.dash.wallet.common.util;
 
 import com.google.common.base.Charsets;
 

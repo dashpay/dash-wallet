@@ -17,6 +17,9 @@
 
 package org.dash.wallet.integrations.crowdnode.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,7 +52,8 @@ class CrowdNodeViewModel @Inject constructor(
     private val config: CrowdNodeConfig,
     private val walletDataProvider: WalletDataProvider,
     private val crowdNodeApi: CrowdNodeApi,
-    exchangeRatesProvider: ExchangeRatesProvider
+    private val clipboardManager: ClipboardManager,
+    exchangeRatesProvider: ExchangeRatesProvider,
 ) : ViewModel() {
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
     val networkError = SingleLiveEvent<Unit>()
@@ -57,6 +61,9 @@ class CrowdNodeViewModel @Inject constructor(
     private val _accountAddress = MutableLiveData<Address>()
     val accountAddress: LiveData<Address>
         get() = _accountAddress
+
+    val primaryDashAddress
+        get() = crowdNodeApi.primaryAddress
 
     val needPassphraseBackUp
         get() = globalConfig.remindBackupSeed
@@ -141,7 +148,6 @@ class CrowdNodeViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         viewModelScope.launch {
-            config.setPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, OnlineAccountStatus.None.ordinal) // TODO
             _accountAddress.value = getOrCreateAccountAddress()
             crowdNodeApi.refreshBalance()
         }
@@ -216,6 +222,24 @@ class CrowdNodeViewModel @Inject constructor(
 
     suspend fun withdraw(value: Coin): Boolean {
         return crowdNodeApi.withdraw(value)
+    }
+
+    fun copyPrimaryAddress() {
+        clipboardManager.setPrimaryClip(
+            ClipData.newPlainText(
+                "primary dash address",
+                primaryDashAddress.toString()
+            )
+        )
+    }
+
+    fun copyAccountAddress() {
+        clipboardManager.setPrimaryClip(
+            ClipData.newPlainText(
+                "dash address",
+                accountAddress.value.toString()
+            )
+        )
     }
 
     private suspend fun getOrCreateAccountAddress(): Address {
