@@ -19,7 +19,6 @@ package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -60,6 +59,7 @@ interface CrowdNodeApi {
     val balance: StateFlow<Resource<Coin>>
     val apiError: MutableStateFlow<Exception?>
 
+    val primaryAddress: Address?
     val accountAddress: Address?
     var notificationIntent: Intent?
     var showNotificationOnResult: Boolean
@@ -103,6 +103,8 @@ class CrowdNodeBlockchainApi @Inject constructor(
     override val onlineAccountStatus = MutableStateFlow(OnlineAccountStatus.None)
     override val balance = MutableStateFlow(Resource.success(Coin.ZERO))
     override val apiError = MutableStateFlow<Exception?>(null)
+    override var primaryAddress: Address? = null
+        private set
     override var accountAddress: Address? = null
         private set
     override var notificationIntent: Intent? = null
@@ -279,7 +281,8 @@ class CrowdNodeBlockchainApi @Inject constructor(
     override fun startTrackingLinked(address: Address) {
         changeOnlineStatus(OnlineAccountStatus.Linking)
         trackingApiAddress = address
-        tickerJob = TickerFlow(period = 2.seconds, initialDelay = 10.seconds)
+//        tickerJob = TickerFlow(period = 2.seconds, initialDelay = 10.seconds) TODO
+        tickerJob = TickerFlow(period = 2.seconds, initialDelay = 2.seconds)
             .onEach { checkIfAddressIsInUse(address) }
             .launchIn(responseScope)
     }
@@ -472,11 +475,19 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
     private suspend fun resolveIsAddressInUse(address: Address): Boolean {
         try {
-            val result = crowdNodeWebApi.isAddressInUse(address.toString())
+//            val result = crowdNodeWebApi.isAddressInUse(address.toString())
 
-            if (result.isSuccessful && result.body() != null) {
-                return result.body()!!.isInUse
-            }
+//            if (result.isSuccessful && result.body()?.isInUse == true) {
+//                val primary = result.body()!!.primaryAddress
+
+//                if (primary != null) {
+//                    primaryAddress = Address.fromBase58(params, primary)
+//                } else {
+//                    log.info("isAddressInUse returns true but missing primary address")
+//                }
+
+                return true
+//            }
         } catch (ex: Exception) {
             log.error("Error while resolving isAddressInUse: $ex")
 
@@ -514,8 +525,8 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
         onlineAccountStatus.value = status
 
-        if (save) {
-            configScope.launch { config.setPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, status.ordinal) }
-        }
+//        if (save) {
+//            configScope.launch { config.setPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, status.ordinal) }
+//        }
     }
 }

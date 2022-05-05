@@ -18,4 +18,5 @@
 
 <resources>
     <color name="entry_info_circle_color">#BABAC1</color>
+    <color name="light_core_yellow">#FFC043</color>
 </resources>

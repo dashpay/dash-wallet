@@ -26,7 +26,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeWebApi
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeBalance
-import org.dash.wallet.integrations.crowdnode.model.CrowdNodeIsAddressInUse
+import org.dash.wallet.integrations.crowdnode.model.IsAddressInUse
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
@@ -51,7 +51,7 @@ class CrowdNodeBlockchainApiTest {
     }
 
     private val webApi = mock<CrowdNodeWebApi> {
-        onBlocking { isAddressInUse(any()) } doReturn Response.success(CrowdNodeIsAddressInUse(false, null))
+        onBlocking { isAddressInUse(any()) } doReturn Response.success(IsAddressInUse(false, null))
         onBlocking { getBalance(any()) } doReturn Response.success(CrowdNodeBalance("XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U", 0.7, 0.7, 0.1))
     }
 

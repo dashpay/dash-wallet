@@ -79,6 +79,15 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/webView_to_confirmation"
+            app:destination="@id/crowdNodeAddressConfirmation"
+            app:popUpTo="@id/newAccountFragment"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -117,6 +126,16 @@
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
     </fragment>
+
+    <dialog
+        android:id="@+id/crowdNodeAddressConfirmation"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.portal.ConfirmationDialog"
+        android:label="addressConfirmation">
+
+<!--        <action-->
+<!--            android:id="@+id/info_to_gift_card_detail"-->
+<!--            app:destination="@id/buyGiftCardInfoDialog" />-->
+    </dialog>
 
     <fragment
         android:id="@+id/onlineAccountInfo"

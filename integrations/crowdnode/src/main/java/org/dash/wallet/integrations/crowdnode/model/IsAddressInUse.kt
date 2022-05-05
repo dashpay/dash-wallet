@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,22 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.dialogs
+package org.dash.wallet.integrations.crowdnode.model
 
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
-import org.dash.wallet.features.exploredash.R
+import com.google.gson.annotations.SerializedName
 
-class BuyGiftCardDescriptionDialog : OffsetDialogFragment() {
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.buy_gift_card_description, container, false)
-    }
-}
+data class IsAddressInUse (
+    @SerializedName("inUse")
+    val isInUse : Boolean,
+    @SerializedName("DashAddress")
+    val primaryAddress : String?
+)

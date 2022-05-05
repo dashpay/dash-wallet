@@ -59,7 +59,12 @@ class StakingActivity : LockScreenActivity() {
                 OnlineAccountStatus.Linking -> super.turnOffAutoLogout()
                 OnlineAccountStatus.Confirming, OnlineAccountStatus.Done -> {
                     if (navController.currentDestination?.id == R.id.crowdNodeWebViewFragment) {
-                        navController.navigate(WebViewFragmentDirections.webViewToPortal())
+                        val direction = if (status == OnlineAccountStatus.Done) {
+                            WebViewFragmentDirections.webViewToPortal()
+                        } else {
+                            WebViewFragmentDirections.webViewToConfirmation()
+                        }
+                        navController.navigate(direction)
                     }
                     viewModel.cancelLinkingOnlineAccount()
                     super.turnOnAutoLogout()

@@ -24,7 +24,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
@@ -50,7 +49,7 @@ import org.dash.wallet.common.ui.viewBinding
 class ExchangeRatesDialog(
     private val selectedCurrencyCode: String = "USD",
     private val clickListener: (ExchangeRate, Int, DialogFragment) -> Unit
-) : OffsetDialogFragment<LinearLayout>() {
+) : OffsetDialogFragment() {
     override val forceExpand: Boolean = true
     private val binding by viewBinding(DialogOptionPickerBinding::bind)
     private val viewModel: ExchangeRatesViewModel by viewModels()

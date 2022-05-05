@@ -346,7 +346,6 @@
     <string name="button_copy">Copy</string>
     <string name="button_copy_request">Copy request</string>
     <string name="button_paste">Paste</string>
-    <string name="button_share">Share</string>
     <string name="button_set_as_default">Set as default</string>
     <string name="button_request_coins">Request Dash</string>
     <string name="button_send_coins">Send Dash</string>

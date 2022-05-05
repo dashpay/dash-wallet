@@ -1,30 +1,24 @@
-<!--
-  ~ Copyright 2022 Dash Core Group.
-  ~
-  ~ This program is free software: you can redistribute it and/or modify
-  ~ it under the terms of the GNU General Public License as published by
-  ~ the Free Software Foundation, either version 3 of the License, or
-  ~ (at your option) any later version.
-  ~
-  ~ This program is distributed in the hope that it will be useful,
-  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
-  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  ~ GNU General Public License for more details.
-  ~
-  ~ You should have received a copy of the GNU General Public License
-  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="20dp"
-    android:height="20dp"
-    android:viewportWidth="20"
-    android:viewportHeight="20">
-  <path
-      android:pathData="M9.1,8.1753C8.5892,8.1753 8.175,8.5894 8.175,9.1003V17.2003C8.175,17.7112 8.5892,18.1253 9.1,18.1253H17.2C17.7109,18.1253 18.125,17.7112 18.125,17.2003V9.1003C18.125,8.5894 17.7109,8.1753 17.2,8.1753H9.1ZM6.425,9.1003C6.425,7.6229 7.6227,6.4253 9.1,6.4253H17.2C18.6774,6.4253 19.875,7.6229 19.875,9.1003V17.2003C19.875,18.6777 18.6774,19.8753 17.2,19.8753H9.1C7.6227,19.8753 6.425,18.6777 6.425,17.2003V9.1003Z"
-      android:fillColor="#008DE4"
-      android:fillType="evenOdd"/>
-  <path
-      android:pathData="M2.8,1.875C2.5547,1.875 2.3194,1.9725 2.1459,2.1459C1.9725,2.3194 1.875,2.5547 1.875,2.8V10.9C1.875,11.1453 1.9725,11.3806 2.1459,11.5541C2.3194,11.7275 2.5547,11.825 2.8,11.825H3.7C4.1832,11.825 4.575,12.2168 4.575,12.7C4.575,13.1832 4.1832,13.575 3.7,13.575H2.8C2.0905,13.575 1.4102,13.2932 0.9085,12.7915C0.4068,12.2899 0.125,11.6095 0.125,10.9V2.8C0.125,2.0905 0.4068,1.4102 0.9085,0.9085C1.4102,0.4068 2.0905,0.125 2.8,0.125H10.9C11.6095,0.125 12.2899,0.4068 12.7915,0.9085C13.2932,1.4102 13.575,2.0905 13.575,2.8V3.7C13.575,4.1832 13.1832,4.575 12.7,4.575C12.2168,4.575 11.825,4.1832 11.825,3.7V2.8C11.825,2.5547 11.7275,2.3194 11.5541,2.1459C11.3806,1.9725 11.1453,1.875 10.9,1.875H2.8Z"
-      android:fillColor="#008DE4"
-      android:fillType="evenOdd"/>
+    android:width="16dp"
+    android:height="16dp"
+    android:viewportWidth="16"
+    android:viewportHeight="16">
+  <group>
+    <clip-path
+        android:pathData="M0,0h16.0001v16h-16.0001z"/>
+    <path
+        android:pathData="M13.9302,5.8438H7.3152C6.5034,5.8438 5.8452,6.5019 5.8452,7.3137V13.9288C5.8452,14.7406 6.5034,15.3988 7.3152,15.3988H13.9302C14.7421,15.3988 15.4002,14.7406 15.4002,13.9288V7.3137C15.4002,6.5019 14.7421,5.8438 13.9302,5.8438Z"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.25"
+        android:fillColor="#00000000"
+        android:strokeColor="#191C1F"
+        android:strokeLineCap="round"/>
+    <path
+        android:pathData="M2.9052,10.2542H2.1702C1.7803,10.2542 1.4064,10.0993 1.1307,9.8237C0.8551,9.548 0.7002,9.1741 0.7002,8.7842V2.1692C0.7002,1.7794 0.8551,1.4054 1.1307,1.1298C1.4064,0.8541 1.7803,0.6992 2.1702,0.6992H8.7852C9.1751,0.6992 9.549,0.8541 9.8246,1.1298C10.1003,1.4054 10.2552,1.7794 10.2552,2.1692V2.9042"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.25"
+        android:fillColor="#00000000"
+        android:strokeColor="#191C1F"
+        android:strokeLineCap="round"/>
+  </group>
 </vector>

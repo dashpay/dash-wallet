@@ -141,6 +141,7 @@ class CrowdNodeViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         viewModelScope.launch {
+            config.setPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, OnlineAccountStatus.None.ordinal) // TODO
             _accountAddress.value = getOrCreateAccountAddress()
             crowdNodeApi.refreshBalance()
         }
