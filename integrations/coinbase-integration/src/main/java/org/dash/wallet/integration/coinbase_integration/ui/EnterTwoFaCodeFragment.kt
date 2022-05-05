@@ -31,6 +31,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.Constants
+import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.getRoundedBackground
@@ -41,6 +42,7 @@ import org.dash.wallet.integration.coinbase_integration.model.TransactionType
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseBuyDashDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.EnterTwoFaCodeViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.TransactionState
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
@@ -48,7 +50,8 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
     private val binding by viewBinding(EnterTwoFaCodeFragmentBinding::bind)
     private val viewModel by viewModels<EnterTwoFaCodeViewModel>()
     private lateinit var loadingDialog: FancyAlertDialog
-
+    @Inject
+    lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     companion object {
         fun newInstance() = EnterTwoFaCodeFragment()
     }
@@ -79,6 +82,10 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
 
         binding.contactCoinbaseSupport.setOnClickListener {
             openCoinbaseHelp()
+        }
+
+        lockScreenBroadcaster.activatingLockScreen.observe(viewLifecycleOwner){
+            findNavController().popBackStack(R.id.coinbaseServicesFragment, false)
         }
     }
 
