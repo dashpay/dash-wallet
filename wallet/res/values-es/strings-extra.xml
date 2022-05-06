@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">¡No se puede cargar la billetera!</string>
 
     <string name="set_pin_create_new_wallet">Crear una Nueva Billetera</string>
+    <string name="set_pin_upgrade_wallet">Actualizar billetera</string>
     <string name="set_pin_restore_wallet">Restaurar Billetera</string>
     <string name="set_pin_enter_pin">Ingresa el PIN antiguo</string>
     <string name="set_pin_set_pin">Establecer PIN</string>
@@ -15,6 +16,7 @@
     <string name="set_pin_decrypting">Desencriptando billetera</string>
     <string name="set_pin_verifying_pin">Verificando PIN</string>
     <string name="set_pin_message">Este PIN será requerido para desbloquear tu app cada vez que la utilices.</string>
+    <string name="set_pin_confirm_pin_incorrect">PIN incorrecto</string>
 
     <string name="home_available_balance">Saldo disponible</string>
     <string name="home_balance_hidden">Saldo oculto</string>
@@ -61,6 +63,7 @@
     <string name="scan_to_pay_error_dialog_title">Escanear para Enviar</string>
     <string name="scan_to_pay_error_dialog_message">Dirección de Dash o solicitud de URL no válida en el portapapeles:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Dirección de Dash o solicitud de URL no válida en el portapapeles</string>
+    <string name="pay_to_confirm_address">¿Es esta la dirección de Dash a la que deseas enviar el pago?</string>
 
     <string name="receive_title">Recibir</string>
     <string name="receive_enter_amount_message">Especificar la cantidad a recibir</string>
@@ -145,6 +148,8 @@
     <string name="wallet_lock_try_again">Intente nuevamente en %1$d %2$s</string>
     <string name="wallet_lock_reset">Reiniciar</string>
     <string name="wallet_lock_wrong_pin">¡PIN incorrecto! %s</string>
+    <string name="wallet_last_attempt">Último intento de PIN</string>
+    <string name="wallet_last_attempt_message">Otro intento fallido requerirá mi frase de contraseña para recuperar mi billetera</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d intento restante</item>
@@ -179,6 +184,11 @@
     <string name="notification_transactions_channel_description">Recibir alerta sobre transacciones entrantes</string>
     <string name="notification_synchronization_channel_name">Sincronización</string>
     <string name="notification_synchronization_channel_description">Muestra una notificación cuando la app está sincronizando con la red.</string>
+    <string name="notification_push_channel_name">Notificaciones push</string>
+    <string name="notification_push_channel_description">Muestra notificaciones push enviadas por Dash</string>
+    <string name="notification_settings_title">Notificaciones</string>
+    <string name="notification_explainer_title">La billetera de Dash desea enviarte notificaciones</string>
+    <string name="notification_explainer_message">Las notificaciones pueden incluir alertas, sonidos e íconos distintivos. Estos se pueden configurar en la configuración del teléfono.</string>
 
     <string name="net_type_indicator" />
 
@@ -257,9 +267,12 @@
     <string name="menu_contact_support_title">Contactar Soporte</string>
     <string name="menu_contact_support_subtitle">Reportar un problema</string>
     <string name="menu_explore_title">Explorar</string>
+    <string name="menu_explore_subtitle">Compra con DASH en más de 155,000 comerciantes</string>
+
     <string name="tools_address_book">Libreta de direcciones</string>
     <string name="tools_import_private_key">Barrer billetera de papel</string>
     <string name="tools_network_monitor">Monitor de Red</string>
+    <string name="tools_show_xpub">Extender llave publica</string>
 
     <string name="about_help_us_improve">Ayúdanos a mejorar tu experiencia</string>
     <string name="about_review_and_rate">Evaluar la app</string>

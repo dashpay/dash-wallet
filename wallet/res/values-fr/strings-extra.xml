@@ -179,7 +179,7 @@
     <string name="notification_transactions_channel_description">Recevoir des alertes sur les transactions entrantes.</string>
     <string name="notification_synchronization_channel_name">Synchronisation</string>
     <string name="notification_synchronization_channel_description">Affiche une notification quand l\'application se synchronise au réseau.</string>
-
+    <string name="notification_settings_title">Notifications</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Utilisez votre empreinte digitale pour déverrouiller</string>
@@ -260,6 +260,7 @@
     <string name="tools_address_book">Carnet d\'adresses</string>
     <string name="tools_import_private_key">Importer une clé privée</string>
     <string name="tools_network_monitor">Surveillance du réseau</string>
+    <string name="tools_show_xpub">Clé privée étendue</string>
 
     <string name="about_help_us_improve">Aidez-nous à améliorer votre expérience</string>
     <string name="about_review_and_rate">Évaluer &amp; noter cette appli</string>

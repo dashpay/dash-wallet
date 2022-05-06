@@ -30,6 +30,7 @@
     <string name="button_dismiss">Son Ver</string>
     <string name="network_unavailable_return">Cüzdan\'a Dön</string>
     <string name="button_continue">Devam</string>
+    <string name="button_okay">Tamam</string>
 
     <string name="max">Maksimum</string>
     <string name="select_currency">Para Birimini Seçin</string>

@@ -245,6 +245,7 @@
     <string name="tools_address_book">Адресна книга</string>
     <string name="tools_import_private_key">Импортиране на частен ключ.</string>
     <string name="tools_network_monitor">Наблюдение на мрежата</string>
+    <string name="tools_show_xpub">Разширен публичен ключ</string>
 
     <string name="about_help_us_improve">Помогнете ни да подобрим вашето преживяване</string>
     <string name="about_review_and_rate">Ревю &amp; Оценка на приложението</string>

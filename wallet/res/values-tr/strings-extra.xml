@@ -145,7 +145,6 @@
     <string name="wallet_lock_try_again">%1$d %2$s içinde tekrar dene</string>
     <string name="wallet_lock_reset">Yeniden Başlat</string>
     <string name="wallet_lock_wrong_pin">Yanlış PIN! %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d deneme hakkı kaldı</item>
         <item quantity="other">%d deneme hakkı kaldı</item>
@@ -179,7 +178,7 @@
     <string name="notification_transactions_channel_description">Yaklaşan işlemlerle ilgili uyarı al.</string>
     <string name="notification_synchronization_channel_name">Eşleştirme</string>
     <string name="notification_synchronization_channel_description">Uygulama ağ ile eşleşirken bir bildirim gösterir.</string>
-
+    <string name="notification_settings_title">Bildirimler</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Açmak için parmak izini kullan.</string>
@@ -260,6 +259,7 @@
     <string name="tools_address_book">Adres Rehberi</string>
     <string name="tools_import_private_key">Özel anahtar içeri al</string>
     <string name="tools_network_monitor">Ağ monitörü</string>
+    <string name="tools_show_xpub">Genişletilmiş Genel Anahtar</string>
 
     <string name="about_help_us_improve">Deneyiminizi geliştirmemize yardımcı olun</string>
     <string name="about_review_and_rate">Uygulamamızı değerlendirip &amp; Puanlayın</string>

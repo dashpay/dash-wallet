@@ -38,4 +38,4 @@
     <string name="uphold_api_error_400_invalid_beneficiary">Du kannst nicht so viel mit dieser App versenden (max. 3000$)\n\nVerwende für diese Transaktion bitte dein Uphold-Konto.</string>
     <string name="uphold_api_error_400_required">Du kannst nicht so viel mit dieser App versenden (max. 3000$)\n\nVerwende für diese Transaktion bitte dein Uphold-Konto.</string>
 
-</resources>
+    </resources>

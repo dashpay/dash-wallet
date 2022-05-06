@@ -30,6 +30,7 @@
     <string name="button_dismiss">Zrušiť</string>
     <string name="network_unavailable_return">Návrat do Peňaženky</string>
     <string name="button_continue">Pokračovať</string>
+    <string name="button_okay">Dobre</string>
 
     <string name="max">Max</string>
     <string name="select_currency">Vyberte menu</string>

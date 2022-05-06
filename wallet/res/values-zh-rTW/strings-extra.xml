@@ -15,7 +15,6 @@
     <string name="set_pin_decrypting">正在解密錢包</string>
     <string name="set_pin_verifying_pin">驗證密碼</string>
     <string name="set_pin_message">每次使用時，都需要使用此密碼來解鎖您的應用程式。</string>
-
     <string name="home_available_balance">可用餘額</string>
     <string name="home_balance_hidden">餘額已隱藏</string>
     <string name="home_balance_show_hint">點按即可取消隱藏餘額</string>
@@ -176,7 +175,7 @@
     <string name="notification_transactions_channel_description">接收有關接收交易的警報。</string>
     <string name="notification_synchronization_channel_name">同步</string>
     <string name="notification_synchronization_channel_description">應用程序與網絡同步時顯示通知。</string>
-
+    <string name="notification_settings_title">通知</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">使用指紋解鎖。</string>
@@ -256,6 +255,7 @@
     <string name="tools_address_book">地址簿</string>
     <string name="tools_import_private_key">導入私鑰</string>
     <string name="tools_network_monitor">網路監視器</string>
+    <string name="tools_show_xpub">擴展的公鑰</string>
 
     <string name="about_help_us_improve">幫助我們改善您的體驗</string>
     <string name="about_review_and_rate">對應用程序進行評價 &amp; 和評分</string>

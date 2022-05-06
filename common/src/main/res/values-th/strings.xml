@@ -30,6 +30,7 @@
     <string name="button_dismiss">ยกเลิก</string>
     <string name="network_unavailable_return">รีเซ็ตกระเป๋าสตางค์</string>
     <string name="button_continue">ดำเนินการต่อ</string>
+    <string name="button_okay">ตกลง</string>
 
     <string name="max">สูงสุด</string>
     <string name="select_currency">เลือกสกุลเงิน</string>

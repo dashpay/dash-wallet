@@ -61,7 +61,6 @@
     <string name="scan_to_pay_error_dialog_title">مسح للإرسال</string>
     <string name="scan_to_pay_error_dialog_message">عنوان داش أو عنوان URL غير صالح في الحافظة:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">عنوان داش أو عنوان URL غير صالح في الحافظة.</string>
-
     <string name="receive_title">إستقبال</string>
     <string name="receive_enter_amount_message">حدد المبلغ المراد استلامه</string>
     <string name="receive_enter_amount_button">حدد المبلغ</string>
@@ -272,6 +271,7 @@
     <string name="tools_address_book">دليل العناوين</string>
     <string name="tools_import_private_key">استيراد مفتاح خاص</string>
     <string name="tools_network_monitor">مراقب الشبكة</string>
+    <string name="tools_show_xpub">مفتاح عام ممتد</string>
 
     <string name="about_help_us_improve">ساعدنا على تحسين تجربتك</string>
     <string name="about_review_and_rate">مراجعة &amp; تقييم التطبيق</string>

@@ -1,4 +1,4 @@
-主な特徴
+﻿MAIN DESCRIPTION
 
 Dash Walletは、ビットコインの代替となる支払い特化型の革新的なデジタルキャッシュであるDashのためにDash Core Groupが管理している標準Androidウォレットです。
 
