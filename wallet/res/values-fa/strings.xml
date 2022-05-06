@@ -215,7 +215,7 @@
     <string name="backup_wallet_dialog_message">نسخه پشتیبان با گذرواژه انتخابی رمزگذاری شده و بر روی حافظه خارجی نوشته می‌شود.</string>
     <string name="backup_wallet_dialog_warning_encrypted">کیف پول‌تان توسط رمزپرداخت حفاظت می‌شود. اطمینان یابید که علاوه بر گذرواژه نسخه پشتیبان، این رمز را نیز به خاطر داشته باشید!</string>
     <string name="export_keys_dialog_button_export">ایجاد نسخه پشتیبان</string>
-    <string name="export_keys_dialog_success"><![CDATA<p>نسخه پشتیبان از کیف پول‌تان روی <tt>%s</tt></p> قرار دارد. <p><b>اگر کیف پول‌تان فقط روی این دستگاه قرار دارد، با این خطر مواجهید که هر دوی آنها را همزمان از دست بدهید. </b></p><p>در هر صورت، اطمینان یابید که گذرواژه بازیابی را به خاطر خواهید داشت. </p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>نسخه پشتیبان از کیف پول‌تان روی <tt>%s</tt></p> قرار دارد. <p><b>اگر کیف پول‌تان فقط روی این دستگاه قرار دارد، با این خطر مواجهید که هر دوی آنها را همزمان از دست بدهید. </b></p><p>در هر صورت، اطمینان یابید که گذرواژه بازیابی را به خاطر خواهید داشت. </p>]]></string>
     <string name="export_keys_dialog_failure">امکان تهیه نسخه پشتیبان از کیف پول‌تان وجود ندارد: n/ %s</string>
     <string name="export_keys_dialog_button_archive">بایگانی</string>
     <string name="export_keys_dialog_mail_subject">نسخه پشتیبان دش والت</string>
