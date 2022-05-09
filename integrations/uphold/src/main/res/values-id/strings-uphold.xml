@@ -38,4 +38,4 @@
     <string name="uphold_api_error_400_invalid_beneficiary">Tidak dapat mentransfer sebanyak itu dengan aplikasi ini (maks. $3000)\n\nSilakan gunakan akun Uphold Anda untuk melakukan transfer.</string>
     <string name="uphold_api_error_400_required">Tidak dapat mentransfer sebanyak itu dengan aplikasi ini (maks. $3000)\n\nSilakan gunakan akun Uphold Anda untuk melakukan transfer.</string>
 
-</resources>
+    </resources>

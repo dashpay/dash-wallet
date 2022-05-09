@@ -179,7 +179,7 @@
     <string name="notification_transactions_channel_description">Benachrichtigungen zu eingehenden Transaktionen erhalten.</string>
     <string name="notification_synchronization_channel_name">Synchronisierung</string>
     <string name="notification_synchronization_channel_description">Eine Benachrichtigung anzeigen, wenn die App sich mit dem Netzwerk synchronisiert.</string>
-
+    <string name="notification_settings_title">Benachrichtigungen</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Fingerabdruck zum Entsperren verwenden.</string>
@@ -260,6 +260,7 @@
     <string name="tools_address_book">Adressbuch</string>
     <string name="tools_import_private_key">Privaten Schlüssel importieren</string>
     <string name="tools_network_monitor">Netzwerk-Monitor</string>
+    <string name="tools_show_xpub">Extended Public Key</string>
 
     <string name="about_help_us_improve">Hilf uns, deine Erfahrung zu verbessern</string>
     <string name="about_review_and_rate">Rezensiere &amp; bewerte die App</string>

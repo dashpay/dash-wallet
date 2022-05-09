@@ -1,4 +1,4 @@
-DESCRIÇÃO PRINCIPAL
+﻿MAIN DESCRIPTION
 
 Dash Wallet é a carteira referência de Dash - Digital Cash para Android mantida por Dash Core Group. Dash - Digital Cash é uma inovadora alternativa a Bitcoin que é explicitamente projetada para pagamentos.
 

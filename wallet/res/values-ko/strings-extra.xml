@@ -176,7 +176,7 @@
     <string name="notification_transactions_channel_description">들어오는 거래에 대한 알람 수신</string>
     <string name="notification_synchronization_channel_name">동기화</string>
     <string name="notification_synchronization_channel_description">어플이 네트워크와 동기화될 때 알람을 보여줍니다.</string>
-
+    <string name="notification_settings_title">알림</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">잠금 해제를 위해서 지문을 사용합니다</string>
@@ -256,6 +256,7 @@
     <string name="tools_address_book">주소록</string>
     <string name="tools_import_private_key">프라이빗 키 가져오기</string>
     <string name="tools_network_monitor">블럭체인 모니터링</string>
+    <string name="tools_show_xpub">확장된 공개 키</string>
 
     <string name="about_help_us_improve">우리가 당신의 경험을 향상할 수 있도록 도와주세요</string>
     <string name="about_review_and_rate">어플 리뷰 &amp; 별점 매기기</string>

@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">Не удалось загрузить кошелёк!</string>
 
     <string name="set_pin_create_new_wallet">Создать новый кошелёк</string>
+    <string name="set_pin_upgrade_wallet">Обновить кошелёк</string>
     <string name="set_pin_restore_wallet">Восстановить кошелёк</string>
     <string name="set_pin_enter_pin">Введите старый PIN</string>
     <string name="set_pin_set_pin">Установите PIN</string>
@@ -15,6 +16,7 @@
     <string name="set_pin_decrypting">Расшифровка кошелька</string>
     <string name="set_pin_verifying_pin">Подтверждение PIN-кода</string>
     <string name="set_pin_message">Этот PIN нужно будет вводить для разблокировки приложения при каждом его использовании.</string>
+    <string name="set_pin_confirm_pin_incorrect">Неверный PIN</string>
 
     <string name="home_available_balance">Доступный баланс</string>
     <string name="home_balance_hidden">Баланс скрыт</string>
@@ -61,6 +63,7 @@
     <string name="scan_to_pay_error_dialog_title">Сканировать</string>
     <string name="scan_to_pay_error_dialog_message">Некорректный адрес Dash или URL запрос в буфере обмена:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Некорректный адрес Dash или URL запрос в буфере обмена.</string>
+    <string name="pay_to_confirm_address">Вы хотите отправить средства на этот адрес Dash?</string>
 
     <string name="receive_title">Получить</string>
     <string name="receive_enter_amount_message">Введите сумму для получения</string>
@@ -145,6 +148,8 @@
     <string name="wallet_lock_try_again">Попробуйте снова через %1$d%2$s</string>
     <string name="wallet_lock_reset">Сброс</string>
     <string name="wallet_lock_wrong_pin">Неправильный ПИН-код! %s</string>
+    <string name="wallet_last_attempt">Последняя попытка ввести PIN</string>
+    <string name="wallet_last_attempt_message">После ещё одной неудачной попытки для восстановления кошелька потребуется фраза восстановления</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">Осталось попыток: %d</item>
@@ -185,6 +190,11 @@
     <string name="notification_transactions_channel_description">Получать оповещения о входящих транзакциях.</string>
     <string name="notification_synchronization_channel_name"> Синхронизация</string>
     <string name="notification_synchronization_channel_description">Показывает уведомление, когда приложение синхронизируется с сетью.</string>
+    <string name="notification_push_channel_name">Пуш-уведомления</string>
+    <string name="notification_push_channel_description">Показывать пуш-уведомления от Dash</string>
+    <string name="notification_settings_title">Уведомления</string>
+    <string name="notification_explainer_title">Dash Wallet хочет отправлять вам уведомления</string>
+    <string name="notification_explainer_message">В уведомлениях могут быть оповещения, звуки или иконки. Их можно настроить в Настройках телефона.</string>
 
     <string name="net_type_indicator" />
 
@@ -262,17 +272,24 @@
     <string name="menu_rescan_blockchain">Пересканировать блокчейн</string>
     <string name="menu_contact_support_title">Связаться с поддержкой</string>
     <string name="menu_contact_support_subtitle">Сообщить о проблеме</string>
+    <string name="menu_explore_title">Исследовать</string>
+    <string name="menu_explore_subtitle">Покупайте за DASH в более чем 155 000 магазинах</string>
 
     <string name="tools_address_book">Адресная книга</string>
     <string name="tools_import_private_key">Импортировать приватный ключ</string>
     <string name="tools_network_monitor">Сетевой монитор</string>
+    <string name="tools_show_xpub">Расширенный  публичный ключ</string>
 
     <string name="about_help_us_improve">Помогите нам стать лучше</string>
     <string name="about_review_and_rate">Оставить отзыв &amp; Оценить приложение</string>
     <string name="about_contact_support">Связаться с поддержкой</string>
     <string name="about_fork_disclaimer">Это приложение с открытым кодом, основанное на Bitcoin Wallet</string>
+    <string name="about_copyright">Все права защищены © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_dash_sync">Данные Explore Dash были обновлены %1$s\nПоследняя синхронизация:%2$s</string>
+    <string name="about_last_explore_dash_update_error">Невозможно получить</string>
+    <string name="about_last_explore_dash_sync_never">никогда</string>
 
     <string name="block">Блок</string>
     <string name="time">Время</string>
@@ -352,4 +369,9 @@
     <string name="all_transactions">Все</string>
     <string name="received_transactions">Получено</string>
     <string name="sent_transactions">Отправлено</string>
+    <string name="set_pin_error_missing_wallet_title">Ошибка: отсутствует кошелёк</string>
+    <string name="set_pin_error_missing_wallet_message">Кошелёк отсутствует. Пожалуйста, обратитесь в Службу поддержки.</string>
+    <string name="wallet_encryption_error_title">Ошибка при создании кошелька</string>
+    <string name="wallet_encryption_error_message">При создании кошелька возникла проблема. Пожалуйста, обратитесь в Службу поддержки.</string>
+    <string name="wallet_not_encrypted_error_message">С вашим кошельком возникла проблема.\n\nЕсли в вашем кошельке нет Dash, тогда удалите и установите это приложение заново. Затем создайте новый кошелёк.\n\nЕсли у вас есть фраза восстановления или резервная копия, тогда удалите это приложение и установите его заново.\n\nВ иных случаях обратитесь в Службу поддержки.</string>
 </resources>
