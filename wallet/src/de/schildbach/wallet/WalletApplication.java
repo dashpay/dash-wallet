@@ -39,6 +39,7 @@ import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
 import android.util.Log;
+import android.webkit.CookieManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -618,6 +619,26 @@ public class WalletApplication extends BaseWalletApplication
         }
     }
 
+    private void clearDatastorePrefs() {
+        final File folder = new File(getFilesDir(), Constants.Files.DATASTORE_PREFS_DIRECTORY);
+
+        if (folder.isDirectory()) {
+            log.info("removing datastore preferences");
+            final File[] files = folder.listFiles();
+
+            if (files != null) {
+                for (File file: files) {
+                    file.delete();
+                }
+            }
+        }
+    }
+
+    private void clearWebCookies() {
+        CookieManager.getInstance().removeAllCookies(null);
+        CookieManager.getInstance().flush();
+    }
+
     public void startBlockchainService(final boolean cancelCoinsReceived) {
         // hack for Android P bug https://issuetracker.google.com/issues/113122354
         ActivityManager activityManager = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
@@ -832,6 +853,8 @@ public class WalletApplication extends BaseWalletApplication
         shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
+        clearDatastorePrefs();
+        clearWebCookies();
         notifyWalletWipe();
         PinRetryController.getInstance().clearPinFailPrefs();
         MnemonicCodeExt.clearWordlistPath(this);

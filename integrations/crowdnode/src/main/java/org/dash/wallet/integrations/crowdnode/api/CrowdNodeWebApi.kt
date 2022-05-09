@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.crowdnode.api
 
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeBalance
+import org.dash.wallet.integrations.crowdnode.model.CrowdNodeIsAddressInUse
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeTx
 import retrofit2.Response
 import retrofit2.http.*
@@ -32,4 +33,9 @@ interface CrowdNodeWebApi {
     suspend fun getBalance(
         @Path("address") address: String
     ): Response<CrowdNodeBalance>
+
+    @GET("odata/apiaddresses/IsAddressInUse(address='{address}')")
+    suspend fun isAddressInUse(
+        @Path("address") address: String
+    ): Response<CrowdNodeIsAddressInUse>
 }

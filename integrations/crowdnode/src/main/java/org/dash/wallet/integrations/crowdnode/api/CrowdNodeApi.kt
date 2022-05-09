@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -26,9 +27,7 @@ import androidx.work.workDataOf
 import com.google.common.math.LongMath.pow
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
@@ -39,48 +38,45 @@ import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.LockedTransaction
+import org.dash.wallet.common.util.TickerFlow
 import org.dash.wallet.integrations.crowdnode.R
-import org.dash.wallet.integrations.crowdnode.model.ApiCode
+import org.dash.wallet.integrations.crowdnode.model.*
 import org.dash.wallet.integrations.crowdnode.transactions.*
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
-import org.dash.wallet.integrations.crowdnode.utils.ModuleConfiguration
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.slf4j.LoggerFactory
 import retrofit2.HttpException
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.min
-
-enum class SignUpStatus {
-    NotStarted,
-    FundingWallet,
-    SigningUp,
-    AcceptingTerms,
-    Finished,
-    Error
-}
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
 
 interface CrowdNodeApi {
     val signUpStatus: StateFlow<SignUpStatus>
+    val onlineAccountStatus: StateFlow<OnlineAccountStatus>
     val balance: StateFlow<Resource<Coin>>
     val apiError: MutableStateFlow<Exception?>
+
     val accountAddress: Address?
     var notificationIntent: Intent?
     var showNotificationOnResult: Boolean
 
     fun persistentSignUp(accountAddress: Address)
     suspend fun signUp(accountAddress: Address)
-    suspend fun deposit(amount: Coin): Boolean
+    suspend fun deposit(amount: Coin, emptyWallet: Boolean): Boolean
     suspend fun withdraw(amount: Coin): Boolean
     fun hasAnyDeposits(): Boolean
     fun refreshBalance(retries: Int = 0)
+    fun startTrackingLinked(address: Address)
+    fun stopTrackingLinked()
     suspend fun reset()
 }
 
-class CrowdNodeException(message: String): Exception(message)
-
+@FlowPreview
+@ExperimentalTime
 @ExperimentalCoroutinesApi
 class CrowdNodeBlockchainApi @Inject constructor(
     private val crowdNodeWebApi: CrowdNodeWebApi,
@@ -88,7 +84,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val notificationService: NotificationService,
     private val analyticsService: AnalyticsService,
-    private val config: ModuleConfiguration,
+    private val config: CrowdNodeConfig,
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {
     companion object {
@@ -96,12 +92,15 @@ class CrowdNodeBlockchainApi @Inject constructor(
     }
 
     private val params = walletDataProvider.networkParameters
+    private var tickerJob: Job? = null
+    private var trackingApiAddress: Address? = null
     private val configScope = CoroutineScope(Dispatchers.IO)
     private val responseScope = CoroutineScope(
         Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     )
 
     override val signUpStatus = MutableStateFlow(SignUpStatus.NotStarted)
+    override val onlineAccountStatus = MutableStateFlow(OnlineAccountStatus.None)
     override val balance = MutableStateFlow(Resource.success(Coin.ZERO))
     override val apiError = MutableStateFlow<Exception?>(null)
     override var accountAddress: Address? = null
@@ -161,21 +160,21 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
             apiError.value = ex
             signUpStatus.value = SignUpStatus.Error
-            config.setCrowdNodeError(ex.message ?: "")
+            config.setPreference(CrowdNodeConfig.ERROR, ex.message ?: "")
             notifyIfNeeded(appContext.getString(R.string.crowdnode_signup_error), "crowdnode_error")
         }
     }
 
-    override suspend fun deposit(amount: Coin): Boolean {
+    override suspend fun deposit(amount: Coin, emptyWallet: Boolean): Boolean {
         val accountAddress = this.accountAddress
         requireNotNull(accountAddress) { "Account address is null, make sure to sign up" }
 
         return try {
             apiError.value = null
-            val topUpTx = topUpAddress(accountAddress, amount + Constants.ECONOMIC_FEE)
+            val topUpTx = topUpAddress(accountAddress, amount + Constants.ECONOMIC_FEE, emptyWallet)
             log.info("topUpTx id: ${topUpTx.txId}")
             val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
-            val depositTx = paymentService.sendCoins(crowdNodeAddress, amount, accountAddress)
+            val depositTx = paymentService.sendCoins(crowdNodeAddress, amount, accountAddress, emptyWallet)
             log.info("depositTx id: ${depositTx.txId}")
 
             responseScope.launch {
@@ -251,14 +250,18 @@ class CrowdNodeBlockchainApi @Inject constructor(
     }
 
     override fun refreshBalance(retries: Int) {
+        if (signUpStatus.value == SignUpStatus.NotStarted) {
+            return
+        }
+
         responseScope.launch {
-            val lastBalance = config.lastBalance.first()
+            val lastBalance = config.getPreference(CrowdNodeConfig.LAST_BALANCE) ?: 0L
             var currentBalance = Resource.loading(Coin.valueOf(lastBalance))
             balance.value = currentBalance
 
             for (i in 0..retries) {
                 if (i != 0) {
-                    delay(TimeUnit.SECONDS.toMillis(pow(5, i)))
+                    delay(pow(5, i).seconds)
                 }
 
                 currentBalance = resolveBalance()
@@ -273,6 +276,27 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
+    override fun startTrackingLinked(address: Address) {
+        changeOnlineStatus(OnlineAccountStatus.Linking)
+        trackingApiAddress = address
+        tickerJob = TickerFlow(period = 2.seconds, initialDelay = 10.seconds)
+            .onEach { checkIfAddressIsInUse(address) }
+            .launchIn(responseScope)
+    }
+
+    override fun stopTrackingLinked() {
+        val address = trackingApiAddress
+        cancelTrackingJob()
+
+        address?.let {
+            responseScope.launch {
+                // One last check just in case
+                delay(5.seconds)
+                checkIfAddressIsInUse(address)
+            }
+        }
+    }
+
     override suspend fun reset() {
         log.info("reset is triggered")
         signUpStatus.value = SignUpStatus.NotStarted
@@ -284,38 +308,83 @@ class CrowdNodeBlockchainApi @Inject constructor(
     private fun restoreStatus() {
         if (signUpStatus.value == SignUpStatus.NotStarted) {
             log.info("restoring CrowdNode status")
-            val savedError = runBlocking { config.crowdNodeError.first() }
 
-            if (savedError.isNotEmpty()) {
-                signUpStatus.value = SignUpStatus.Error
-                apiError.value = CrowdNodeException(savedError)
-                configScope.launch { config.setCrowdNodeError("") }
-                log.info("found an error: $savedError")
+            if (isError()) {
                 return
             }
 
-            val wrappedTransactions = walletDataProvider.wrapAllTransactions(CrowdNodeFullTxSet(params))
-            val crowdNodeFullSet = wrappedTransactions.firstOrNull { it is CrowdNodeFullTxSet }
-            (crowdNodeFullSet as? CrowdNodeFullTxSet)?.let { set ->
-                accountAddress = set.accountAddress
+            if (tryRestoreSignUp()) {
+                return
+            }
 
-                if (set.hasWelcomeToApiResponse) {
-                    log.info("found finished sign up")
-                    signUpStatus.value = SignUpStatus.Finished
-                    return
-                }
-
-                if (set.hasAcceptTermsResponse) {
-                    log.info("found accept terms response")
-                    signUpStatus.value = SignUpStatus.AcceptingTerms
-                    persistentSignUp(accountAddress!!)
-                }
+            val savedAddress = runBlocking { config.getPreference(CrowdNodeConfig.ACCOUNT_ADDRESS) }
+            savedAddress?.let {
+                accountAddress = Address.fromString(walletDataProvider.networkParameters, savedAddress)
+                tryRestoreOnlineAccount(accountAddress!!)
             }
         }
     }
 
-    private suspend fun topUpAddress(accountAddress: Address, amount: Coin): Transaction {
-        val topUpTx = paymentService.sendCoins(accountAddress, amount)
+    private fun isError(): Boolean {
+        val savedError = runBlocking { config.getPreference(CrowdNodeConfig.ERROR) ?: "" }
+
+        if (savedError.isNotEmpty()) {
+            signUpStatus.value = SignUpStatus.Error
+            apiError.value = CrowdNodeException(savedError)
+            configScope.launch { config.setPreference(CrowdNodeConfig.ERROR, "") }
+            log.info("found an error: $savedError")
+            return true
+        }
+
+        return false
+    }
+
+    private fun tryRestoreSignUp(): Boolean {
+        val wrappedTransactions = walletDataProvider.wrapAllTransactions(CrowdNodeFullTxSet(params))
+        val crowdNodeFullSet = wrappedTransactions.firstOrNull { it is CrowdNodeFullTxSet }
+        (crowdNodeFullSet as? CrowdNodeFullTxSet)?.let { set ->
+            accountAddress = set.accountAddress
+            requireNotNull(accountAddress) { "Restored signup tx set but address is null" }
+            configScope.launch { config.setPreference(CrowdNodeConfig.ACCOUNT_ADDRESS, accountAddress!!.toBase58()) }
+
+            if (set.hasWelcomeToApiResponse) {
+                log.info("found finished sign up")
+                signUpStatus.value = SignUpStatus.Finished
+                return true
+            }
+
+            if (set.hasAcceptTermsResponse) {
+                log.info("found accept terms response")
+                signUpStatus.value = SignUpStatus.AcceptingTerms
+                persistentSignUp(accountAddress!!)
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private fun tryRestoreOnlineAccount(address: Address) {
+        val statusOrdinal = runBlocking {
+            config.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) ?: OnlineAccountStatus.None.ordinal
+        }
+
+        when (val status = OnlineAccountStatus.values()[statusOrdinal]) {
+            OnlineAccountStatus.Linking -> {
+                log.info("found linking in process")
+                responseScope.launch { checkIfAddressIsInUse(address) }
+            }
+            OnlineAccountStatus.Confirming, OnlineAccountStatus.Done -> {
+                log.info("found a linked account")
+                changeOnlineStatus(status, save = false)
+            }
+            else -> { }
+        }
+    }
+
+
+    private suspend fun topUpAddress(accountAddress: Address, amount: Coin, emptyWallet: Boolean = false): Transaction {
+        val topUpTx = paymentService.sendCoins(accountAddress, amount, null, emptyWallet)
         return walletDataProvider.observeTransactions(LockedTransaction(topUpTx.txId)).first()
     }
 
@@ -361,7 +430,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
         return if (address != null) {
             try {
                 val balance = Coin.parseCoin(fetchBalance(address.toBase58()))
-                config.setLastBalance(balance.value)
+                config.setPreference(CrowdNodeConfig.LAST_BALANCE, balance.value)
                 Resource.success(balance)
             } catch (ex: HttpException) {
                 Resource.error(ex)
@@ -382,6 +451,43 @@ class CrowdNodeBlockchainApi @Inject constructor(
         return balance.setScale(8, RoundingMode.HALF_UP).toString()
     }
 
+    private suspend fun checkIfAddressIsInUse(address: Address) {
+        val isInUse = resolveIsAddressInUse(address)
+
+        if (isInUse && onlineAccountStatus.value.ordinal <= OnlineAccountStatus.Linking.ordinal) {
+            changeOnlineStatus(OnlineAccountStatus.Confirming)
+            cancelTrackingJob()
+        }
+    }
+
+    private fun cancelTrackingJob() {
+        tickerJob?.cancel()
+        tickerJob = null
+        trackingApiAddress = null
+
+        if (onlineAccountStatus.value == OnlineAccountStatus.Linking) {
+            changeOnlineStatus(OnlineAccountStatus.None)
+        }
+    }
+
+    private suspend fun resolveIsAddressInUse(address: Address): Boolean {
+        try {
+            val result = crowdNodeWebApi.isAddressInUse(address.toString())
+
+            if (result.isSuccessful && result.body() != null) {
+                return result.body()!!.isInUse
+            }
+        } catch (ex: Exception) {
+            log.error("Error while resolving isAddressInUse: $ex")
+
+            if (ex !is HttpException) {
+                analyticsService.logError(ex)
+            }
+        }
+
+        return false
+    }
+
     private fun handleError(ex: Exception, error: String) {
         apiError.value = ex
         notifyIfNeeded(error, "crowdnode_error")
@@ -397,6 +503,19 @@ class CrowdNodeBlockchainApi @Inject constructor(
                 false,
                 notificationIntent
             )
+        }
+    }
+
+    private fun changeOnlineStatus(status: OnlineAccountStatus, save: Boolean = true) {
+        signUpStatus.value = if (status.ordinal < OnlineAccountStatus.Confirming.ordinal) {
+            SignUpStatus.NotStarted
+        } else {
+            SignUpStatus.LinkedOnline
+        }
+        onlineAccountStatus.value = status
+
+        if (save) {
+            configScope.launch { config.setPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, status.ordinal) }
         }
     }
 }

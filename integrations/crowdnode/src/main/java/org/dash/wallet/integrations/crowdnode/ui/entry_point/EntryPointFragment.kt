@@ -18,7 +18,6 @@
 package org.dash.wallet.integrations.crowdnode.ui.entry_point
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -50,25 +49,16 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         )
 
         binding.newAccountBtn.setOnClickListener {
-            safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount())
+            safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount(false))
         }
 
         binding.existingAccountBtn.setOnClickListener {
-            // TODO: online account
-            safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount())
-        }
-
-        binding.backupPassphraseLink.setOnClickListener {
-            viewModel.backupPassphrase()
-        }
-
-        binding.restoreWalletHint.setOnClickListener {
-            viewModel.restoreWallet()
+            safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount(true))
         }
 
         binding.backupPassphraseHint.setOnClickListener {
             val dialog = AdaptiveDialog.create(
-                R.drawable.ic_info_blue_encircled,
+                null,
                 getString(R.string.crowdnode_secure_wallet),
                 getString(R.string.crowdnode_secure_wallet_explainer),
                 getString(R.string.button_close),
@@ -84,7 +74,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
 
         binding.requiredDashHint.setOnClickListener {
             val dialog = AdaptiveDialog.create(
-                R.drawable.ic_info_blue_encircled,
+                null,
                 getString(R.string.insufficient_funds),
                 getString(
                     R.string.crowdnode_minimum_dash,
@@ -101,27 +91,9 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
             }
         }
 
-        binding.crowdnodeTransactionHint.setOnClickListener {
-            val dialog = AdaptiveDialog.create(
-                R.drawable.ic_dialog_arrows,
-                getString(R.string.crowdnode_required_transaction),
-                getString(R.string.crowdnode_restore_wallet),
-                getString(R.string.button_close),
-                getString(R.string.restore_wallet)
-            )
-
-            dialog.show(requireActivity()) { result ->
-                if (result == true) {
-                    viewModel.restoreWallet()
-                }
-            }
-        }
-
         viewModel.hasEnoughBalance.observe(viewLifecycleOwner) {
             displayNewAccountRequirements(viewModel.needPassphraseBackUp, it)
         }
-
-        displayExistingAccountRequirements(false) // TODO online account
     }
 
     private fun displayNewAccountRequirements(needBackup: Boolean, enoughBalance: Boolean) {
@@ -131,30 +103,11 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         val disableNewAccount = needBackup || !enoughBalance
         binding.newAccountBtn.isClickable = !disableNewAccount
         binding.newAccountBtn.isFocusable = !disableNewAccount
-        binding.newAccountDivider.isVisible = disableNewAccount
-        binding.newAccountNavIcon.isVisible = !disableNewAccount
 
         if (disableNewAccount) {
-            binding.newAccountImg.clearColorFilter()
+            binding.newAccountBtnTitle.alpha = 0.2f
         } else {
-            binding.newAccountImg.setColorFilter(resources.getColor(R.color.blue_300, null))
-        }
-    }
-
-
-    private fun displayExistingAccountRequirements(hasExistingAccount: Boolean) {
-        binding.crowdnodeTransactionError.isVisible = !hasExistingAccount
-        binding.restoreWalletHint.isVisible = !hasExistingAccount
-
-        binding.existingAccountBtn.isClickable = hasExistingAccount
-        binding.existingAccountBtn.isFocusable = hasExistingAccount
-        binding.existingAccountDivider.isVisible = !hasExistingAccount
-        binding.existingAccountNavIcon.isVisible = hasExistingAccount
-
-        if (!hasExistingAccount) {
-            binding.existingAccountImg.clearColorFilter()
-        } else {
-            binding.existingAccountImg.setColorFilter(resources.getColor(R.color.green_300, null))
+            binding.newAccountBtnTitle.alpha = 1f
         }
     }
 

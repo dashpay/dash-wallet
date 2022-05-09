@@ -52,4 +52,12 @@ object CrowdNodeConstants {
             TESTNET_BASE_URL
         }
     }
+
+    fun getApiLinkUrl(address: Address): String {
+        return if (address.parameters == MainNetParams.get()) {
+            MAINNET_BASE_URL
+        } else {
+            TESTNET_BASE_URL
+        } + "APILink/${address.toBase58()}"
+    }
 }

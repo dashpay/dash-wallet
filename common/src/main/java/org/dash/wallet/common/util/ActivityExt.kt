@@ -15,16 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integration.uphold.ui
+package org.dash.wallet.common.util
 
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
+import org.dash.wallet.common.R
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
-import org.dash.wallet.common.customtabs.CustomTabActivityHelper.CustomTabFallback
-import org.dash.wallet.integration.uphold.R
 
 fun Activity.openCustomTab(url: String) {
     val builder = CustomTabsIntent.Builder()
