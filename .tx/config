@@ -57,3 +57,10 @@ lang_map = sl_SI:sl, zh_TW:zh-rTW
 source_file = features/exploredash/src/main/res/values/strings-explore-dash.xml
 source_lang = en
 type = ANDROID
+
+[dash-mobile-wallets.strings-crowdnode]
+file_filter = integrations/crowdnode/src/main/res/values-<lang>/strings-crowdnode.xml
+lang_map = sl_SI:sl, zh_TW:zh-rTW
+source_file = integrations/crowdnode/src/main/res/values/strings-crowdnode.xml
+source_lang = en
+type = ANDROID
