@@ -75,7 +75,7 @@ class ExploreActivity : BaseMenuActivity() {
                 startActivity(Intent(this@ExploreActivity, StakingActivity::class.java))
             } else {
                 val openWebsite = AdaptiveDialog.create(
-                    R.drawable.ic_syncing,
+                    null,
                     getString(R.string.chain_syncing),
                     getString(R.string.crowdnode_wait_for_sync),
                     getString(R.string.button_close),
