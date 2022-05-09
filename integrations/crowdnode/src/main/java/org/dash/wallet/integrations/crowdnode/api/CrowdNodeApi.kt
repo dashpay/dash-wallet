@@ -30,19 +30,21 @@ import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.transactions.LockedTransaction
 import org.dash.wallet.common.util.TickerFlow
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.model.*
 import org.dash.wallet.integrations.crowdnode.transactions.*
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
 import retrofit2.HttpException
 import java.math.BigDecimal
@@ -85,6 +87,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
     private val notificationService: NotificationService,
     private val analyticsService: AnalyticsService,
     private val config: CrowdNodeConfig,
+    private val globalConfig: Configuration,
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {
     companion object {
@@ -176,7 +179,8 @@ class CrowdNodeBlockchainApi @Inject constructor(
             val topUpTx = topUpAddress(accountAddress, amount + Constants.ECONOMIC_FEE, emptyWallet)
             log.info("topUpTx id: ${topUpTx.txId}")
             val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
-            val depositTx = paymentService.sendCoins(crowdNodeAddress, amount, accountAddress, emptyWallet)
+            val selector = ByAddressCoinSelector(accountAddress)
+            val depositTx = paymentService.sendCoins(crowdNodeAddress, amount, selector, emptyWallet)
             log.info("depositTx id: ${depositTx.txId}")
 
             responseScope.launch {
@@ -219,7 +223,8 @@ class CrowdNodeBlockchainApi @Inject constructor(
             log.info("topUpTx id: ${topUpTx.txId}")
 
             val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
-            val withdrawTx = paymentService.sendCoins(crowdNodeAddress, requestValue, accountAddress)
+            val selector = ByAddressCoinSelector(accountAddress)
+            val withdrawTx = paymentService.sendCoins(crowdNodeAddress, requestValue, selector)
             log.info("withdrawTx id: ${withdrawTx.txId}")
 
             responseScope.launch {
@@ -319,8 +324,9 @@ class CrowdNodeBlockchainApi @Inject constructor(
                 return
             }
 
-            val savedAddress = runBlocking { config.getPreference(CrowdNodeConfig.ACCOUNT_ADDRESS) }
-            savedAddress?.let {
+            val savedAddress = globalConfig.crowdNodeAccountAddress
+
+            if (savedAddress.isNotEmpty()) {
                 accountAddress = Address.fromString(walletDataProvider.networkParameters, savedAddress)
                 tryRestoreOnlineAccount(accountAddress!!)
             }
@@ -347,7 +353,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
         (crowdNodeFullSet as? CrowdNodeFullTxSet)?.let { set ->
             accountAddress = set.accountAddress
             requireNotNull(accountAddress) { "Restored signup tx set but address is null" }
-            configScope.launch { config.setPreference(CrowdNodeConfig.ACCOUNT_ADDRESS, accountAddress!!.toBase58()) }
+            configScope.launch { globalConfig.crowdNodeAccountAddress = accountAddress!!.toBase58() }
 
             if (set.hasWelcomeToApiResponse) {
                 log.info("found finished sign up")
@@ -384,7 +390,6 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
-
     private suspend fun topUpAddress(accountAddress: Address, amount: Coin, emptyWallet: Boolean = false): Transaction {
         val topUpTx = paymentService.sendCoins(accountAddress, amount, null, emptyWallet)
         return walletDataProvider.observeTransactions(LockedTransaction(topUpTx.txId)).first()
@@ -393,7 +398,8 @@ class CrowdNodeBlockchainApi @Inject constructor(
     private suspend fun makeSignUpRequest(accountAddress: Address): Transaction {
         val requestValue = CrowdNodeSignUpTx.SIGNUP_REQUEST_CODE
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
-        val signUpTx = paymentService.sendCoins(crowdNodeAddress, requestValue, accountAddress)
+        val selector = ByAddressCoinSelector(accountAddress)
+        val signUpTx = paymentService.sendCoins(crowdNodeAddress, requestValue, selector)
         log.info("signUpTx id: ${signUpTx.txId}")
         val errorResponse = CrowdNodeErrorResponse(params, requestValue)
         val tx = walletDataProvider.observeTransactions(
@@ -411,7 +417,8 @@ class CrowdNodeBlockchainApi @Inject constructor(
     private suspend fun acceptTerms(accountAddress: Address): Transaction {
         val requestValue = CrowdNodeAcceptTermsTx.ACCEPT_TERMS_REQUEST_CODE
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
-        val acceptTx = paymentService.sendCoins(crowdNodeAddress, requestValue, accountAddress)
+        val selector = ByAddressCoinSelector(accountAddress)
+        val acceptTx = paymentService.sendCoins(crowdNodeAddress, requestValue, selector)
         log.info("acceptTx id: ${acceptTx.txId}")
         val errorResponse = CrowdNodeErrorResponse(params, requestValue)
         val tx = walletDataProvider.observeTransactions(
@@ -459,6 +466,9 @@ class CrowdNodeBlockchainApi @Inject constructor(
         if (isInUse && onlineAccountStatus.value.ordinal <= OnlineAccountStatus.Linking.ordinal) {
             changeOnlineStatus(OnlineAccountStatus.Confirming)
             cancelTrackingJob()
+            primaryAddress?.toBase58()?.let {
+                config.setPreference(CrowdNodeConfig.PRIMARY_ACCOUNT_ADDRESS, it)
+            }
         }
     }
 

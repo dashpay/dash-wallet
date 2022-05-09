@@ -39,6 +39,7 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.text.format.DateUtils;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
@@ -83,10 +84,14 @@ import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.NotificationService;
+import org.dash.wallet.common.services.SendPaymentService;
+import org.dash.wallet.common.transactions.CoinsToAddressTxFilter;
 import org.dash.wallet.common.transactions.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.TransactionFilter;
+import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeAPIConfirmationHandler;
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeDepositReceivedResponse;
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWithdrawalReceivedTx;
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -137,8 +142,11 @@ import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 @AndroidEntryPoint
 public class BlockchainServiceImpl extends LifecycleService implements BlockchainService {
 
-    private WalletApplication application;
-    private Configuration config;
+    @Inject WalletApplication application;
+    @Inject Configuration config;
+    @Inject NotificationService notificationService;
+    @Inject CrowdNodeConfig crowdNodeConfig;
+    @Inject SendPaymentService sendPaymentService;
 
     private BlockStore blockStore;
     private File blockChainFile;
@@ -188,19 +196,18 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     AllowLockTimeRiskAnalysis.Analyzer riskAnalyzer;
     DefaultRiskAnalysis.Analyzer defaultRiskAnalyzer = DefaultRiskAnalysis.FACTORY;
 
-    @Inject
-    public NotificationService notificationService;
+    private final List<TransactionFilter> crowdnodeFilters = Arrays.asList(
+            new NotFromAddressTxFilter(CrowdNodeConstants.INSTANCE.getCrowdNodeAddress(Constants.NETWORK_PARAMETERS)),
+            new CrowdNodeWithdrawalReceivedTx(Constants.NETWORK_PARAMETERS)
+    );
+
+    private final CrowdNodeDepositReceivedResponse depositReceivedResponse =
+            new CrowdNodeDepositReceivedResponse(Constants.NETWORK_PARAMETERS);
+
+    private TransactionFilter addressConfirmationReceived;
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
-
-        private final List<TransactionFilter> crowdnodeFilters = Arrays.asList(
-            new NotFromAddressTxFilter(CrowdNodeConstants.INSTANCE.getCrowdNodeAddress(Constants.NETWORK_PARAMETERS)),
-            new CrowdNodeWithdrawalReceivedTx(Constants.NETWORK_PARAMETERS)
-        );
-
-        private final CrowdNodeDepositReceivedResponse depositReceivedResponse =
-                new CrowdNodeDepositReceivedResponse(Constants.NETWORK_PARAMETERS);
 
         @Override
         public void onThrottledWalletChanged() {
@@ -244,15 +251,23 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 final boolean isReceived = amount.signum() > 0;
                 final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
 
-                if (depositReceivedResponse.matches(tx)) {
-                    notificationService.showNotification(
-                        "deposit_received",
-                        getString(R.string.crowdnode_deposit_received),
-                        false,
-                        new Intent(BlockchainServiceImpl.this, StakingActivity.class)
-                    );
-                } else if (isReceived && !isReplayedTx && passFilters(tx)) {
-                    notifyCoinsReceived(address, amount, tx.getExchangeRate());
+                if (isReceived && !isReplayedTx) {
+                    if (depositReceivedResponse.matches(tx)) {
+                        notificationService.showNotification(
+                                "deposit_received",
+                                getString(R.string.crowdnode_deposit_received),
+                                false,
+                                new Intent(BlockchainServiceImpl.this, StakingActivity.class)
+                        );
+                    } else if (addressConfirmationReceived != null && addressConfirmationReceived.matches(tx)) {
+                        new CrowdNodeAPIConfirmationHandler(
+                                crowdNodeConfig,
+                                sendPaymentService,
+                                wallet.getNetworkParameters()
+                        ).handle(tx);
+                    } else if (passFilters(tx)) {
+                        notifyCoinsReceived(address, amount, tx.getExchangeRate());
+                    }
                 }
             });
             updateAppWidget();
@@ -276,6 +291,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             }
 
             return passFilters;
+        }
+    };
+
+    private final OnSharedPreferenceChangeListener sharedPrefsChangeListener = (sharedPreferences, key) -> {
+        if (key.equals(Configuration.PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS)) {
+            registerCrowdNodeConfirmedAddressFilter();
         }
     };
 
@@ -736,8 +757,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         super.onCreate();
 
-        application = (WalletApplication) getApplication();
-
         nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
@@ -750,7 +769,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             startForeground();
         }
 
-        config = application.getConfiguration();
         final Wallet wallet = application.getWallet();
 
         peerConnectivityListener = new PeerConnectivityListener();
@@ -825,6 +843,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         application.getWallet().addCoinsReceivedEventListener(Threading.SAME_THREAD, walletEventListener);
         application.getWallet().addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener);
         application.getWallet().addChangeEventListener(Threading.SAME_THREAD, walletEventListener);
+        config.registerOnSharedPreferenceChangeListener(sharedPrefsChangeListener);
 
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
@@ -838,6 +857,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 handleBlockchainStateNotification(blockchainState);
             }
         });
+
+        registerCrowdNodeConfirmedAddressFilter();
     }
 
     @Override
@@ -917,6 +938,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         application.getWallet().removeChangeEventListener(walletEventListener);
         application.getWallet().removeCoinsSentEventListener(walletEventListener);
         application.getWallet().removeCoinsReceivedEventListener(walletEventListener);
+        config.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener);
 
         unregisterReceiver(connectivityReceiver);
 
@@ -1127,6 +1149,22 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             ContextCompat.startForegroundService(this, intent);
             // call startForeground just after startForegroundService.
             startForeground();
+        }
+    }
+
+    private void registerCrowdNodeConfirmedAddressFilter() {
+        String addressStr = config.getCrowdNodeAccountAddress();
+
+        if (!addressStr.isEmpty()) {
+            Address address = Address.fromBase58(Constants.NETWORK_PARAMETERS, addressStr);
+            addressConfirmationReceived = new CoinsToAddressTxFilter(
+                    address,
+                    CrowdNodeConstants.INSTANCE.getAPI_CONFIRMATION_DASH_AMOUNT()
+            );
+            Log.i("CROWDNODE", "Registered addressConfirmationReceived: " + addressStr);
+        } else {
+            Log.i("CROWDNODE", "Unregistered addressConfirmationReceived");
+            addressConfirmationReceived = null;
         }
     }
 }

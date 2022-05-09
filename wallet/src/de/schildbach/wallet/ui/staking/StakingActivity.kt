@@ -54,24 +54,7 @@ class StakingActivity : LockScreenActivity() {
         navController = setNavigationGraph()
 
         viewModel.navigationCallback.observe(this, ::handleNavigationRequest)
-        viewModel.onlineAccountStatus.observe(this) { status ->
-            when (status) {
-                OnlineAccountStatus.Linking -> super.turnOffAutoLogout()
-                OnlineAccountStatus.Confirming, OnlineAccountStatus.Done -> {
-                    if (navController.currentDestination?.id == R.id.crowdNodeWebViewFragment) {
-                        val direction = if (status == OnlineAccountStatus.Done) {
-                            WebViewFragmentDirections.webViewToPortal()
-                        } else {
-                            WebViewFragmentDirections.webViewToConfirmation()
-                        }
-                        navController.navigate(direction)
-                    }
-                    viewModel.cancelLinkingOnlineAccount()
-                    super.turnOnAutoLogout()
-                }
-                else -> { }
-            }
-        }
+        viewModel.onlineAccountStatus.observe(this, ::handleOnlineAccountStatus)
 
         val intent = Intent(this, StakingActivity::class.java)
         viewModel.setNotificationIntent(intent)
@@ -92,6 +75,28 @@ class StakingActivity : LockScreenActivity() {
                 alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
                     WalletApplication.getInstance()).buildAlertDialog()
                 alertDialog.show()
+            }
+            else -> { }
+        }
+    }
+
+    private fun handleOnlineAccountStatus(status: OnlineAccountStatus) {
+        when (status) {
+            OnlineAccountStatus.Linking -> super.turnOffAutoLogout()
+            OnlineAccountStatus.Confirming, OnlineAccountStatus.Done -> {
+                if (navController.currentDestination?.id == R.id.crowdNodeWebViewFragment) {
+                    val direction = if (status == OnlineAccountStatus.Done) {
+                        WebViewFragmentDirections.webViewToPortal()
+                    } else {
+                        requireNotNull(viewModel.primaryDashAddress) {
+                            "Requested Confirming API address but primary is missing"
+                        }
+                        WebViewFragmentDirections.webViewToConfirmation()
+                    }
+                    navController.navigate(direction)
+                }
+                viewModel.cancelLinkingOnlineAccount()
+                super.turnOnAutoLogout()
             }
             else -> { }
         }

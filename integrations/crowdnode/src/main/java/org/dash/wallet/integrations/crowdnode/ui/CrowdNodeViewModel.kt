@@ -248,7 +248,7 @@ class CrowdNodeViewModel @Inject constructor(
 
     private suspend fun createNewAccountAddress(): Address {
         val address = walletDataProvider.freshReceiveAddress()
-        config.setPreference(CrowdNodeConfig.ACCOUNT_ADDRESS, address.toBase58())
+        globalConfig.crowdNodeAccountAddress = address.toBase58()
 
         return address
     }

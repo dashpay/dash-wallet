@@ -17,27 +17,17 @@
 
 package org.dash.wallet.common.transactions
 
-import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.TransactionOutput
-import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.wallet.CoinSelection
 import org.bitcoinj.wallet.CoinSelector
-import org.bitcoinj.wallet.ZeroConfCoinSelector
 
-class ByAddressCoinSelector(val address: Address) : CoinSelector {
-    private val selector = ZeroConfCoinSelector.get()
-
+class ExactOutputsSelector(private val outputs: List<TransactionOutput>) : CoinSelector {
     override fun select(
         target: Coin,
         candidates: MutableList<TransactionOutput>
     ): CoinSelection {
-        val filtered = candidates.filter { output ->
-            val script = output.scriptPubKey
-            (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-                    script.getToAddress(address.parameters) == address
-        }
-
-        return selector.select(target, filtered)
+        val value = Coin.valueOf(outputs.sumOf { it.value.value })
+        return CoinSelection(value, outputs)
     }
 }
