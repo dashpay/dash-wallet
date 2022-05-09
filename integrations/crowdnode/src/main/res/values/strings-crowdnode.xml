@@ -25,8 +25,8 @@
     <string name="required_passphrase_backup">You have to backup your passphrase in Dash Wallet</string>
     <string name="backup_passphrase">Backup Passphrase</string>
     <string name="required_dash_amount">You need at least %s Dash on your Dash Wallet</string>
-    <string name="crowdnode_new_account_warning_1">CrowdNode uses this address as your account ID. You will lose access to your funds in within this wallet and your CrowdNode account if you lose the passphrase associated to this address.</string>
-    <string name="crowdnode_new_account_warning_2">Very small amounts of Dash will be sent to CrowdNode to verify that you are the owner of this wallet address.</string>
+    <string name="crowdnode_new_account_warning_1">CrowdNode uses this address as your account ID. You will lose access to your funds within this wallet and your CrowdNode account if you lose the passphrase associated to this address.</string>
+    <string name="crowdnode_new_account_warning_2">Very small amounts of Dash will be sent to and from CrowdNode to verify that you are the owner of this wallet address.</string>
     <string name="crowdnode_link_account_description">All transfers to and from CrowdNode from this device will be performed with the below Dash address from this device.</string>
     <string name="dash_address">Dash Address</string>
     <string name="crowdnode_secure_wallet">Backup your passphrase to create a CrowdNode account</string>
