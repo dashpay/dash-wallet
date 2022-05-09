@@ -112,7 +112,7 @@ class CoinbaseServicesViewModel @Inject constructor(
                         response.value.filter { it.isBuyingAllowed == true }
                             .map {
                                 val type = paymentMethodTypeFromCoinbaseType(it.type ?: "")
-                                val nameAccountPair = splitNameAndAccount(it.name)
+                                val nameAccountPair = splitNameAndAccount(it.name, type)
                                 PaymentMethod(
                                     it.id ?: "",
                                     nameAccountPair.first,
@@ -130,14 +130,23 @@ class CoinbaseServicesViewModel @Inject constructor(
         }
     }
 
-    private fun splitNameAndAccount(nameAccount: String?): Pair<String, String> {
+    private fun splitNameAndAccount(nameAccount: String?, type: PaymentMethodType): Pair<String, String> {
         nameAccount?.let {
-            val match = "(\\d+)?\\s?[a-z]?\\*+".toRegex().find(nameAccount)
-            match?.range?.first?.let { index ->
+            val match = when(type) {
+                PaymentMethodType.BankAccount, PaymentMethodType.Card, PaymentMethodType.PayPal -> {
+                    "(\\d+)?\\s?[a-z]?\\*+".toRegex().find(nameAccount)
+                }
+                PaymentMethodType.Fiat -> {
+                    "\\(.*\\)".toRegex().find(nameAccount)
+                }
+                else -> null
+            }
+
+            return match?.range?.first?.let { index ->
                 val name = nameAccount.substring(0, index).trim(' ', '-', ',', ':')
                 val account = nameAccount.substring(index, nameAccount.length).trim()
                 return Pair(name, account)
-            }
+            } ?: Pair(nameAccount, "")
         }
 
         return Pair("", "")
