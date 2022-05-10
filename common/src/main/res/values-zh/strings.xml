@@ -36,5 +36,7 @@
     <string name="button_retry">重试</string>
     <string name="button_close">关闭</string>
     <string name="button_continue">继续</string>
+    <string name="button_okay">好的</string>
+
     <string name="max">最大</string>
-</resources>
+    </resources>

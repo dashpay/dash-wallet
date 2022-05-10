@@ -36,6 +36,8 @@
     <string name="button_retry">재시도</string>
     <string name="button_close">닫기</string>
     <string name="button_continue">계속</string>
+    <string name="button_okay">알겠습니다</string>
+
     <string name="max">최대</string>
     <string name="select_currency">통화 선택</string>
 </resources>

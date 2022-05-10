@@ -35,5 +35,7 @@
     <string name="button_retry">Opakovat</string>
     <string name="button_close">Zavřít</string>
     <string name="button_continue">Pokračovat</string>
+    <string name="button_okay">Dobře</string>
+
     <string name="max">Max</string>
-</resources>
+    </resources>

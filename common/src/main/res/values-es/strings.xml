@@ -33,6 +33,8 @@
     <string name="button_dismiss">Rechazar</string>
     <string name="network_unavailable_return">Regresar a la billetera</string>
     <string name="button_continue">Continuar</string>
+    <string name="button_understand">Yo entiendo</string>
+    <string name="button_okay">¡Listo!</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Buscar</string>

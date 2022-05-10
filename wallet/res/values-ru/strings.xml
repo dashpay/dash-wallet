@@ -303,6 +303,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Добавить дамп памяти кошелька</string>
     <string name="report_issue_dialog_mail_intent_chooser">Отправить отчёт, используя…</string>
     <string name="report_issue_dialog_mail_intent_failed">Ошибка при отправке отчёта.</string>
+    <string name="report_transaction_history_export">Экспортировать</string>
+    <string name="report_transaction_history_title">Экспортировать CSV</string>
+    <string name="report_transaction_history_not_synced_title">Экспортировать CSV</string>
+    <string name="report_transaction_history_not_synced_message">Перед экспортированием истории транзакций дождитесь полной синхронизации кошелька </string>
+    <string name="report_transaction_history_message">Будет экспортирована полная история транзакций.\n\nВсе платежи будут считаться расходами, а все входящие транзакции - доходами. Ответственность за корректировку данных о балансовой стоимости несёт владелец кошелька согласно выбранной им системе налоговой отчётности. </string>
+    <string name="report_transaction_history_mail_intent_chooser">Отправить историю транзакций с помощью...</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">Ошибка при отправке истории транзакций.</string>
+
     <string name="about_title">О программе</string>
     <string name="about_version_title">Версия</string>
     <string name="about_copyright_title">Авторское право</string>

@@ -40,7 +40,7 @@ import kotlin.time.ExperimentalTime
 @ExperimentalCoroutinesApi
 class CrowdNodeBlockchainApiTest {
     private val localConfig = mock<CrowdNodeConfig> {
-        onBlocking { getPreference(CrowdNodeConfig.ACCOUNT_ADDRESS) } doReturn "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"
+        onBlocking { getPreference(CrowdNodeConfig.PRIMARY_ACCOUNT_ADDRESS) } doReturn "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"
         onBlocking { getPreference(CrowdNodeConfig.ERROR) } doReturn ""
     }
 
@@ -60,7 +60,7 @@ class CrowdNodeBlockchainApiTest {
         localConfig.stub {
             onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.Linking.ordinal
         }
-        val api = CrowdNodeBlockchainApi(webApi, mock(), walletData, mock(), mock(), localConfig, mock())
+        val api = CrowdNodeBlockchainApi(webApi, mock(), walletData, mock(), mock(), localConfig, mock(), mock())
         api.stopTrackingLinked()
 
         assertEquals(OnlineAccountStatus.None, api.onlineAccountStatus.value)
@@ -72,7 +72,7 @@ class CrowdNodeBlockchainApiTest {
         localConfig.stub {
             onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.Confirming.ordinal
         }
-        val api = CrowdNodeBlockchainApi(mock(), mock(), walletData, mock(), mock(), localConfig, mock())
+        val api = CrowdNodeBlockchainApi(mock(), mock(), walletData, mock(), mock(), localConfig, mock(), mock())
         api.stopTrackingLinked()
 
         assertEquals(OnlineAccountStatus.Confirming, api.onlineAccountStatus.value)
@@ -85,7 +85,7 @@ class CrowdNodeBlockchainApiTest {
             localConfig.stub {
                 onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
             }
-            val api = CrowdNodeBlockchainApi(webApi, mock(), walletData, mock(), mock(), localConfig, mock())
+            val api = CrowdNodeBlockchainApi(webApi, mock(), walletData, mock(), mock(), localConfig, mock(), mock())
             api.refreshBalance()
 
             assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)

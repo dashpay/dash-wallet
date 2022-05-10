@@ -260,6 +260,7 @@
     <string name="tools_address_book">دفترچه نشانی‌ها</string>
     <string name="tools_import_private_key">وارد کردن کلید خصوصی</string>
     <string name="tools_network_monitor">پایش شبکه</string>
+    <string name="tools_show_xpub">کلید عمومی جامع</string>
 
     <string name="about_help_us_improve">به ما برای بهبود تجربه‌تان کمک کنید</string>
     <string name="about_review_and_rate">نقد و بررسی &amp;؛ نمره‌دهی به اپلیکیشن</string>

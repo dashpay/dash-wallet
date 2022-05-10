@@ -36,6 +36,8 @@
     <string name="button_retry">Znovu</string>
     <string name="button_close">Zatvoriť</string>
     <string name="button_continue">Pokračovať</string>
+    <string name="button_okay">Dobre</string>
+
     <string name="max">Max</string>
     <string name="select_currency">Vyberte menu</string>
 </resources>

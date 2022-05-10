@@ -19,7 +19,6 @@ package org.dash.wallet.integrations.crowdnode.ui
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -53,7 +52,7 @@ class CrowdNodeViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val crowdNodeApi: CrowdNodeApi,
     private val clipboardManager: ClipboardManager,
-    exchangeRatesProvider: ExchangeRatesProvider,
+    exchangeRatesProvider: ExchangeRatesProvider
 ) : ViewModel() {
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
     val networkError = SingleLiveEvent<Unit>()
@@ -242,11 +241,11 @@ class CrowdNodeViewModel @Inject constructor(
         )
     }
 
-    private suspend fun getOrCreateAccountAddress(): Address {
+    private fun getOrCreateAccountAddress(): Address {
         return crowdNodeApi.accountAddress ?: createNewAccountAddress()
     }
 
-    private suspend fun createNewAccountAddress(): Address {
+    private fun createNewAccountAddress(): Address {
         val address = walletDataProvider.freshReceiveAddress()
         globalConfig.crowdNodeAccountAddress = address.toBase58()
 

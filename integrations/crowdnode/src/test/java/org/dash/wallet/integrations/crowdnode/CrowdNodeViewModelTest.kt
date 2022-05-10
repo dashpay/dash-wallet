@@ -87,7 +87,7 @@ class CrowdNodeViewModelTest {
     }
 
     private val localConfig = mock<CrowdNodeConfig> {
-        onBlocking { getPreference(CrowdNodeConfig.ACCOUNT_ADDRESS) } doReturn "yLW8Vfeb6sJfB3deb4KGsa5vY9g5pAqWQi"
+        onBlocking { getPreference(CrowdNodeConfig.PRIMARY_ACCOUNT_ADDRESS) } doReturn "yLW8Vfeb6sJfB3deb4KGsa5vY9g5pAqWQi"
     }
 
     private val walletData = mock<WalletDataProvider> {

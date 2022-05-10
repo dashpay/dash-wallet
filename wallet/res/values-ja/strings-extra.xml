@@ -176,7 +176,7 @@
     <string name="notification_transactions_channel_description">着金時にアラートを受信する。</string>
     <string name="notification_synchronization_channel_name">同期</string>
     <string name="notification_synchronization_channel_description">アプリがネットワークと同期している時に通知を表示する。</string>
-
+    <string name="notification_settings_title">通知</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">ロック解除に指紋認証を使う。</string>
@@ -264,6 +264,7 @@
     <string name="tools_address_book">アドレスブック</string>
     <string name="tools_import_private_key">秘密鍵をインポート</string>
     <string name="tools_network_monitor">ネットワークモニター</string>
+    <string name="tools_show_xpub">拡張公開鍵</string>
 
     <string name="about_help_us_improve">品質を向上させるためにご協力ください</string>
     <string name="about_review_and_rate">レビュー &amp; アプリを評価する</string>

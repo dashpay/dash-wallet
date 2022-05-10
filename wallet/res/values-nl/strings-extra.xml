@@ -177,7 +177,7 @@
     <string name="notification_transactions_channel_description">Ontvang notificaties over binnenkomende transacties.</string>
     <string name="notification_synchronization_channel_name">Synchronisatie</string>
     <string name="notification_synchronization_channel_description">Toont een notificatie als de app met het netwerk aan het synchroniseren is.</string>
-
+    <string name="notification_settings_title">Notificaties</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Gebruik je vingerafdruk om te ontgrendelen.</string>
@@ -260,6 +260,7 @@
     <string name="tools_address_book">Adresboek</string>
     <string name="tools_import_private_key">Importeer persoonlijke sleutel</string>
     <string name="tools_network_monitor">Netwerk monitor</string>
+    <string name="tools_show_xpub">Uitgebreide publieke sleutel</string>
 
     <string name="about_help_us_improve">Help ons je ervaring te verbeteren</string>
     <string name="about_review_and_rate">Schrijf een recensie &amp; Beoordeel de app</string>

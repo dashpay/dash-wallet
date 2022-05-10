@@ -184,7 +184,7 @@
     <string name="notification_transactions_channel_description">Otrzymuj powiadomienia o nadchodzących transakcjach.</string>
     <string name="notification_synchronization_channel_name">Synchronizacja</string>
     <string name="notification_synchronization_channel_description">Wyświetla powiadomienie, gdy aplikacja synchronizuje się z siecią.</string>
-
+    <string name="notification_settings_title">Powiadomienia</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Użyj odcisku palca by odblokować.</string>
@@ -265,6 +265,7 @@
     <string name="tools_address_book">Książka Adresowa</string>
     <string name="tools_import_private_key">Zaimportuj Klucz Prywatny</string>
     <string name="tools_network_monitor">Monitor Sieci</string>
+    <string name="tools_show_xpub">Wydłużony Publiczny Klucz</string>
 
     <string name="about_help_us_improve">Pomóż nam poprawić Twoje wrażenia</string>
     <string name="about_review_and_rate">Wyraź swoją opinię o Aplikacj &amp;i Oceń ją</string>

@@ -151,4 +151,12 @@
     <string name="find_merchant_text">Encontrar un comercio.</string>
     <string name="buy_gift_card_with_dash_text">Compra un tarjeta de regalo con tus Dash.</string>
     <string name="redeem_gift_card_text">Canjea tu tarjeta de regalo en línea en segundos o en el cajero.</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Sincronización en curso... Es posible que los resultados no estén completos.</string>
+    <string name="sync_in_progress_error">Sincronización en curso... Ha ocurrido un error.</string>
+    <string name="sync_in_progress_canceled">Sincronización cancelada... Se realizará otro intento más tarde.</string>
+
+    <string name="sync_in_progress_file_not_found">Error de compilación: ¡No se encontró la base de datos!</string>
+    <string name="sync_in_progress_network_error">Sincronización interrumpida... La red está desconectada o inaccesible</string>
 </resources>

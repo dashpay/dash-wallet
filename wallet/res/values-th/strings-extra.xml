@@ -175,7 +175,7 @@
     <string name="notification_transactions_channel_description">รับการแจ้งเตือนเกี่ยวกับการทำธุรกรรมที่เข้ามา</string>
     <string name="notification_synchronization_channel_name">ซิงโครไนซ์</string>
     <string name="notification_synchronization_channel_description">แสดงการแจ้งเตือนเมื่อแอพพลิเคชั่นกำลังซิงโครไนซ์กับเครือข่าย</string>
-
+    <string name="notification_settings_title">การแจ้งเตือน</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">ใช้ลายนิ้วมือของคุณเพื่อปลดล็อค</string>
@@ -256,6 +256,7 @@
     <string name="tools_address_book">สมุดที่อยู่</string>
     <string name="tools_import_private_key">นำเข้าคีย์ส่วนตัว</string>
     <string name="tools_network_monitor">จอภาพเครือข่าย</string>
+    <string name="tools_show_xpub">ขยาย Public key</string>
 
     <string name="about_help_us_improve">ช่วยเราเพื่อพัฒนาประการณ์ของคุณ</string>
     <string name="about_review_and_rate">วิจารณ์และให้คะแนนแอพพลิเคชั่นนี้</string>
