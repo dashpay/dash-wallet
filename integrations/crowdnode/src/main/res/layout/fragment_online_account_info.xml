@@ -77,6 +77,7 @@
                 android:text="@string/account_recovery"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/info_icon_1"
+                app:layout_constraintBottom_toBottomOf="@id/info_icon_1"
                 app:layout_constraintTop_toTopOf="@id/info_icon_1" />
 
             <TextView
@@ -111,7 +112,8 @@
                 android:text="@string/transaction_history"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/info_icon_2"
-                app:layout_constraintTop_toTopOf="@id/info_icon_2" />
+                app:layout_constraintTop_toTopOf="@id/info_icon_2"
+                app:layout_constraintBottom_toBottomOf="@id/info_icon_2" />
 
             <TextView
                 android:id="@+id/info_text_2"
@@ -145,7 +147,8 @@
                 android:layout_marginTop="3dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/info_icon_3"
-                app:layout_constraintTop_toTopOf="@id/info_icon_3" />
+                app:layout_constraintTop_toTopOf="@id/info_icon_3"
+                app:layout_constraintBottom_toBottomOf="@id/info_icon_3" />
 
             <TextView
                 android:id="@+id/info_text_3"
@@ -166,7 +169,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="15dp"
-        android:text="@string/account_create"
+        android:text="@string/button_continue"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
