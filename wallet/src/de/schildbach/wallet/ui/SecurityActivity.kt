@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -37,6 +38,7 @@ import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
 class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
 
@@ -160,7 +162,22 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun resetWallet(view: View) {
-        ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
+        val resetWalletDialog = AdaptiveDialog.create(
+            null,
+            getString(R.string.reset_wallet_title),
+            getString(R.string.reset_wallet_message),
+            getString(R.string.button_cancel),
+            getString(R.string.positive_reset_text)
+        )
+        resetWalletDialog.show(this){
+            if (it == true){
+                analytics.logEvent(AnalyticsConstants.Security.RESET_WALLET, bundleOf())
+                toAbstractBindService()?.unbindServiceServiceConnection()
+                WalletApplication.getInstance().triggerWipe(this)
+                startActivity(OnboardingActivity.createIntent(this))
+                finishAffinity()
+            }
+        }
     }
 
     // required by UnlockWalletDialogFragment
@@ -179,4 +196,8 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         val intent = ViewSeedActivity.createIntent(this, seedArray)
         startActivity(intent)
     }
+}
+
+fun Activity.toAbstractBindService(): AbstractBindServiceActivity? {
+    return this as? AbstractBindServiceActivity
 }

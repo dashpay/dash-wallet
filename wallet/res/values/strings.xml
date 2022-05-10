@@ -393,5 +393,7 @@
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
     <string name="clear_filter">Clear Filter</string>
     <string name="select_currency">Select Currency</string>
-
+    <string name="reset_wallet_title">Are you sure you want to reset the wallet?</string>
+    <string name="reset_wallet_message"> If you reset your wallet the only way to get access to it is to recover the wallet with the recovery phrase.</string>
+    <string name="positive_reset_text">"Yes, Reset Wallet"</string>
 </resources>
