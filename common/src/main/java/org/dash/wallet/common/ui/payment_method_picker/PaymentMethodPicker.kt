@@ -123,6 +123,7 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
             PaymentMethodType.Card -> R.drawable.ic_card
             PaymentMethodType.BankAccount -> R.drawable.ic_bank
             PaymentMethodType.PayPal -> R.drawable.ic_paypal
+            PaymentMethodType.Fiat -> R.drawable.ic_cash_account
             else -> null
         }
     }
