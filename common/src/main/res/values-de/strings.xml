@@ -35,6 +35,8 @@
     <string name="button_retry">Wiederholen</string>
     <string name="button_close">Schließen</string>
     <string name="button_continue">Fortfahren</string>
+    <string name="button_okay">OK</string>
+
     <string name="max">Max</string>
     <string name="select_currency">Währung auswählen</string>
 </resources>

@@ -35,6 +35,8 @@
     <string name="button_retry">Subukang muli</string>
     <string name="button_close">Sarado</string>
     <string name="button_continue">Ipagpatuloy</string>
+    <string name="button_okay">Okay</string>
+
     <string name="max">Max</string>
     <string name="select_currency">Piliin ang Pera</string>
 </resources>

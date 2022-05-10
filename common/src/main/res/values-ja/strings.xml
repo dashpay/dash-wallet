@@ -30,6 +30,7 @@
     <string name="button_dismiss">閉じる</string>
     <string name="network_unavailable_return">ウォレットに返金</string>
     <string name="button_continue">続ける</string>
+    <string name="button_okay">OK</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">検索</string>

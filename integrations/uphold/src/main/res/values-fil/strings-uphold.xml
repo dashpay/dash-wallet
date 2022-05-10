@@ -38,4 +38,4 @@
     <string name="uphold_api_error_400_invalid_beneficiary">Hindi mailipat ang ganyang halaga sa app na ito (max $3000)\n\nMangyaring gamitin ang iyong Uphold account upang magawa ang paglipat.</string>
     <string name="uphold_api_error_400_required">Hindi mailipat ang ganyang halaga sa app na ito (max $3000)\n\nMangyaring gamitin ang iyong Uphold account upang magawa ang paglipat.</string>
 
-</resources>
+    </resources>

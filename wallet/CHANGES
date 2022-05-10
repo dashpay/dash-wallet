@@ -1,4 +1,15 @@
 Dash Wallet
+v7.4.8
+* Use dashj 0.17.11 (support version 3 transactions)
+* Show version 2 transactions when they are received
+* optimize Explore Dash database sync and show status
+* Show warning on Lock Screen if 1 PIN attempt remains
+* Handle upgrades v6.x or earlier that have no PIN
+* Add push messaging support
+* Add export transaction history and show XPUB
+* Improve scanning clipboard for Dash Addresses
+* Fixes related to errors with clipboard data
+
 v7.4.7
 * Fix Explore Dash sync system (prevent downloads if explore.db in access its same as cloud)
 * Remove old Explore Dash data from database

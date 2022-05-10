@@ -178,7 +178,7 @@
     <string name="notification_transactions_channel_description">Makatanggap ng alerto tungkol sa parating na mga transaksyon.</string>
     <string name="notification_synchronization_channel_name">Pagtutugma</string>
     <string name="notification_synchronization_channel_description">Magpakita ng notipikasyon kapag ang app ay tumugma sa network.</string>
-
+    <string name="notification_settings_title">Mga Notipikasyon</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Gamitin ang iyong fingerprint para mabuksan.</string>
@@ -259,6 +259,7 @@
     <string name="tools_address_book">Adresbuk</string>
     <string name="tools_import_private_key">I-import ang private key</string>
     <string name="tools_network_monitor">Network monitor</string>
+    <string name="tools_show_xpub">Pinalawak na Public Key</string>
 
     <string name="about_help_us_improve">Tulungan kaming mapabuti ang iyong karanasan</string>
     <string name="about_review_and_rate">I-rebyu at bigyang marka ang app</string>

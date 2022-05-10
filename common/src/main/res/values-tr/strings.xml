@@ -36,6 +36,8 @@
     <string name="button_retry">Tekrar dene</string>
     <string name="button_close">Kapat</string>
     <string name="button_continue">Devam</string>
+    <string name="button_okay">Tamam</string>
+
     <string name="max">Maksimum</string>
     <string name="select_currency">Para Birimini Seçin</string>
 </resources>

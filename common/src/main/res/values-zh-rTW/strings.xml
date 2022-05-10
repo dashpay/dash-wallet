@@ -36,6 +36,8 @@
     <string name="button_retry">重試</string>
     <string name="button_close">關閉</string>
     <string name="button_continue">繼續</string>
+    <string name="button_okay">好的</string>
+
     <string name="max">最大值</string>
     <string name="select_currency">選擇貨幣</string>
 </resources>

@@ -35,6 +35,8 @@
     <string name="button_retry">إعادة المحاولة</string>
     <string name="button_close">اغلاق</string>
     <string name="button_continue">استمر</string>
+    <string name="button_okay">اوك</string>
+
     <string name="max">الحد الأقصى</string>
     <string name="select_currency">اختر العملة</string>
 </resources>

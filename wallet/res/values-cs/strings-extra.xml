@@ -15,7 +15,6 @@
     <string name="set_pin_decrypting">Dešifrování peněženky</string>
     <string name="set_pin_verifying_pin">Ověřování PIN kódu</string>
     <string name="set_pin_message">Tento PIN bude požadován pro odemčení aplikace pokaždé, když ji budete chtít použít.</string>
-
     <string name="home_available_balance">Dostupný zůstatek</string>
     <string name="home_balance_hidden">Skrytý zůstatek</string>
     <string name="home_balance_show_hint">Klepněte pro zobrazení zůstatku</string>
@@ -61,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Poslat skenováním</string>
     <string name="scan_to_pay_error_dialog_message">Ve schránce pro kopírování není platná Dash adresa nebo URL požadavek:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Ve schránce pro kopírování není platná Dash adresa nebo URL požadavek.</string>
-
     <string name="receive_title">Přijmout</string>
     <string name="receive_enter_amount_message">Určte částku, kterou chcete obdržet</string>
     <string name="receive_enter_amount_button">Uvést částku</string>
@@ -144,7 +142,6 @@
     <string name="wallet_lock_try_again">Zkuste to znovu za %1$d %2$s</string>
     <string name="wallet_lock_reset">Resetovat</string>
     <string name="wallet_lock_wrong_pin">Špatný PIN! %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">Zbývá %d pokus.</item>
         <item quantity="few">Zbývá %d pokusů.</item>
@@ -184,7 +181,7 @@
     <string name="notification_transactions_channel_description">Dostávat upozornění o příchozích transakcích.</string>
     <string name="notification_synchronization_channel_name">Synchronizace</string>
     <string name="notification_synchronization_channel_description">Ukazuje notifikaci, když se aplikace synchronizuje se sítí.</string>
-
+    <string name="notification_settings_title">Notifikace</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">K odemčení použijte otisk prstu.</string>
@@ -261,10 +258,10 @@
     <string name="menu_rescan_blockchain">Znovu Skenovat Blockchain</string>
     <string name="menu_contact_support_title">Podpora</string>
     <string name="menu_contact_support_subtitle">Nahlásit problém</string>
-
     <string name="tools_address_book">Adresář</string>
     <string name="tools_import_private_key">Importovat Privátní Klíč</string>
     <string name="tools_network_monitor">Monitor Sítě</string>
+    <string name="tools_show_xpub">Rozšířený veřejný klíč</string>
 
     <string name="about_help_us_improve">Pomoztne nám aplikaci vylepšit</string>
     <string name="about_review_and_rate">Ohodnotit aplikaci</string>
@@ -272,7 +269,6 @@
     <string name="about_fork_disclaimer">Toto je aplikace s otevřeným zdrojovým kódem vycházející z bitcoinové peněženky.</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-
     <string name="block">Blok</string>
     <string name="time">Čas</string>
     <string name="hash">Hash</string>
@@ -350,4 +346,4 @@
     <string name="all_transactions">Vše</string>
     <string name="received_transactions">Přijato</string>
     <string name="sent_transactions">Odesláno</string>
-</resources>
+    </resources>
