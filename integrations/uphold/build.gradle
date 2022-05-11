@@ -58,4 +58,6 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:$espressoVersion", {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
+    implementation "androidx.core:core-ktx:$jetpackVersion"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }

@@ -21,20 +21,27 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.CoinsToAddressTxFilter
 import org.dash.wallet.common.transactions.ExactOutputsSelector
+import org.dash.wallet.common.transactions.TransactionFilter
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import java.util.concurrent.Executors
 
+open class CrowdNodeAPIConfirmationTx(
+    address: Address
+) : CoinsToAddressTxFilter(address, CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT)
+
 class CrowdNodeAPIConfirmationHandler(
+    address: Address,
     private val config: CrowdNodeConfig,
     private val paymentService: SendPaymentService,
     private val networkParameters: NetworkParameters
-) {
+): CrowdNodeAPIConfirmationTx(address) {
     private val handlerScope = CoroutineScope(
         Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     )

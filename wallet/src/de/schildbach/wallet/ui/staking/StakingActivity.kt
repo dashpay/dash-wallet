@@ -85,15 +85,7 @@ class StakingActivity : LockScreenActivity() {
             OnlineAccountStatus.Linking -> super.turnOffAutoLogout()
             OnlineAccountStatus.Confirming, OnlineAccountStatus.Done -> {
                 if (navController.currentDestination?.id == R.id.crowdNodeWebViewFragment) {
-                    val direction = if (status == OnlineAccountStatus.Done) {
-                        WebViewFragmentDirections.webViewToPortal()
-                    } else {
-                        requireNotNull(viewModel.primaryDashAddress) {
-                            "Requested Confirming API address but primary is missing"
-                        }
-                        WebViewFragmentDirections.webViewToConfirmation()
-                    }
-                    navController.navigate(direction)
+                    navController.navigate(WebViewFragmentDirections.webViewToPortal())
                 }
                 viewModel.cancelLinkingOnlineAccount()
                 super.turnOnAutoLogout()

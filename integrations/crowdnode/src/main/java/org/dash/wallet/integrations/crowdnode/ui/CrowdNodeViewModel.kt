@@ -215,6 +215,17 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
+    suspend fun getShouldShowConfirmationDialog(): Boolean {
+        return crowdNodeApi.onlineAccountStatus.value == OnlineAccountStatus.Confirming &&
+               !(config.getPreference(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN) ?: false)
+    }
+
+    fun setConfirmationDialogShown(isShown: Boolean) {
+        viewModelScope.launch {
+            config.setPreference(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN, isShown)
+        }
+    }
+
     suspend fun deposit(value: Coin): Boolean {
         return crowdNodeApi.deposit(value, emptyWallet = value >= dashBalance.value)
     }

@@ -41,7 +41,7 @@ interface CrowdNodeWebApi {
     ): Response<IsAddressInUse>
 
     @GET("odata/apiaddresses/AddressStatus(address='{address}')")
-    suspend fun AddressStatus(
+    suspend fun addressStatus(
         @Path("address") address: String
     ): Response<AddressStatus>
 }

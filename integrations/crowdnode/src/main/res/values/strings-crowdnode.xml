@@ -96,6 +96,7 @@
     <string name="button_show_qr">Show QR</string>
     <string name="scan_qr">Scan QR</string>
     <string name="qr_contains_request">This QR already contains the payment request for %s Dash</string>
+    <string name="verification_required">Verification Required</string>
 
     <string name="crowdnode_website" translatable="false">https://crowdnode.io/</string>
     <string name="crowdnode_terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>

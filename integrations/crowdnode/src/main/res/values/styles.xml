@@ -47,6 +47,12 @@
         <item name="cornerRadius">12dp</item>
     </style>
 
+    <style name="QuaternaryBackgroundTheme">
+        <item name="backgroundColor">@color/quaternary_background</item>
+        <item name="strokeColor">@color/quaternary_background</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
     <style name="DashQRLogo" parent="SecondaryBackground">
         <item name="cornerRadius">35dp</item>
     </style>

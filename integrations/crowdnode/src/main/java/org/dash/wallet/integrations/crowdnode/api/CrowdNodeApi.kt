@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -92,14 +93,16 @@ class CrowdNodeBlockchainApi @Inject constructor(
 ): CrowdNodeApi {
     companion object {
         private val log = LoggerFactory.getLogger(CrowdNodeBlockchainApi::class.java)
+        private const val CONFIRMED_STATUS = "Confirmed"
     }
 
     private val params = walletDataProvider.networkParameters
     private var tickerJob: Job? = null
     private var trackingApiAddress: Address? = null
     private val configScope = CoroutineScope(Dispatchers.IO)
+    private val responseSupervisor = SupervisorJob()
     private val responseScope = CoroutineScope(
-        Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+        Executors.newSingleThreadExecutor().asCoroutineDispatcher() + responseSupervisor
     )
 
     override val signUpStatus = MutableStateFlow(SignUpStatus.NotStarted)
@@ -291,15 +294,31 @@ class CrowdNodeBlockchainApi @Inject constructor(
             .launchIn(responseScope)
     }
 
+    private suspend fun startTrackingConfirmed(accountAddress: Address) {
+        val filter = CrowdNodeAPIConfirmationTx(accountAddress)
+        val confirmationTx = walletDataProvider.getTransactions(filter).firstOrNull() ?:
+            walletDataProvider.observeTransactions(filter).first()
+
+        Log.i("CROWDNODE", "confirmation tx found: ${confirmationTx}")
+
+        // TODO check confirmationTx if wrong address
+        tickerJob = TickerFlow(period = 20.seconds, initialDelay = 0.seconds)
+            .onEach { checkIsAddressConfirmed(accountAddress) }
+            .launchIn(responseScope)
+    }
+
     override fun stopTrackingLinked() {
         val address = trackingApiAddress
-        cancelTrackingJob()
 
-        address?.let {
-            responseScope.launch {
-                // One last check just in case
-                delay(5.seconds)
-                checkIfAddressIsInUse(address)
+        if (onlineAccountStatus.value.ordinal <= OnlineAccountStatus.Linking.ordinal) {
+            cancelTrackingJob()
+
+            address?.let {
+                responseScope.launch {
+                    // One last check just in case
+                    delay(5.seconds)
+                    checkIfAddressIsInUse(address)
+                }
             }
         }
     }
@@ -373,17 +392,30 @@ class CrowdNodeBlockchainApi @Inject constructor(
     }
 
     private fun tryRestoreOnlineAccount(address: Address) {
-        val statusOrdinal = runBlocking {
-            config.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) ?: OnlineAccountStatus.None.ordinal
+        var statusOrdinal: Int
+        var primaryAddressStr: String
+
+        runBlocking {
+            statusOrdinal = config.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) ?: OnlineAccountStatus.None.ordinal
+            primaryAddressStr = config.getPreference(CrowdNodeConfig.PRIMARY_ACCOUNT_ADDRESS) ?: ""
+        }
+
+        if (primaryAddressStr.isNotEmpty()) {
+            primaryAddress = Address.fromBase58(params, primaryAddressStr)
         }
 
         when (val status = OnlineAccountStatus.values()[statusOrdinal]) {
             OnlineAccountStatus.Linking -> {
-                log.info("found linking in process")
+                log.info("found linking online account in progress")
                 responseScope.launch { checkIfAddressIsInUse(address) }
             }
-            OnlineAccountStatus.Confirming, OnlineAccountStatus.Done -> {
-                log.info("found a linked account")
+            OnlineAccountStatus.Confirming -> {
+                log.info("found a linked online account")
+                changeOnlineStatus(status, save = false)
+                responseScope.launch { startTrackingConfirmed(address) }
+            }
+            OnlineAccountStatus.Done -> {
+                log.info("found confirmed online account")
                 changeOnlineStatus(status, save = false)
             }
             else -> { }
@@ -472,40 +504,61 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
-    private fun cancelTrackingJob() {
-        tickerJob?.cancel()
-        tickerJob = null
-        trackingApiAddress = null
+    private suspend fun checkIsAddressConfirmed(address: Address) {
+        val isConfirmed = resolveIsAddressConfirmed(address)
 
-        if (onlineAccountStatus.value == OnlineAccountStatus.Linking) {
-            changeOnlineStatus(OnlineAccountStatus.None)
+        if (isConfirmed) {
+            changeOnlineStatus(OnlineAccountStatus.Done)
+            cancelTrackingJob()
         }
     }
 
     private suspend fun resolveIsAddressInUse(address: Address): Boolean {
-        try {
+        return networkResolve {
             val result = crowdNodeWebApi.isAddressInUse(address.toString())
+            val isSuccess = result.isSuccessful && result.body()?.isInUse == true
 
-            if (result.isSuccessful && result.body()?.isInUse == true) {
+            if (isSuccess) {
                 val primary = result.body()!!.primaryAddress
-
-                if (primary != null) {
-                    primaryAddress = Address.fromBase58(params, primary)
-                } else {
-                    log.info("isAddressInUse returns true but missing primary address")
-                }
-
-                return true
+                requireNotNull(primary) { "isAddressInUse returns true but missing primary address" }
+                primaryAddress = Address.fromBase58(params, primary)
             }
+
+            isSuccess
+        }
+    }
+
+    private suspend fun resolveIsAddressConfirmed(address: Address): Boolean {
+        return networkResolve {
+            val result = crowdNodeWebApi.addressStatus(address.toString())
+            Log.i("CROWDNODE", "status: ${result.body()?.status ?: "null"}")
+            result.isSuccessful && result.body()?.status == CONFIRMED_STATUS
+        }
+    }
+
+    private suspend fun networkResolve(action: suspend () -> Boolean): Boolean {
+        return try {
+            action.invoke()
         } catch (ex: Exception) {
-            log.error("Error while resolving isAddressInUse: $ex")
+            log.error("Error in networkResolve: $ex")
 
             if (ex !is HttpException) {
                 analyticsService.logError(ex)
             }
-        }
 
-        return false
+            false
+        }
+    }
+
+    private fun cancelTrackingJob() {
+        Log.i("CROWDNODE", "cancelTrackingJob")
+        tickerJob?.cancel()
+        tickerJob = null
+        trackingApiAddress = null
+
+        if (onlineAccountStatus.value.ordinal <= OnlineAccountStatus.Linking.ordinal) {
+            changeOnlineStatus(OnlineAccountStatus.None)
+        }
     }
 
     private fun handleError(ex: Exception, error: String) {

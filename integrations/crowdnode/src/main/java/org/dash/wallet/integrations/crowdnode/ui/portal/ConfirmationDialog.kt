@@ -85,5 +85,7 @@ class ConfirmationDialog: OffsetDialogFragment() {
             val shareIntent = Intent.createChooser(sendIntent, null)
             startActivity(shareIntent)
         }
+
+        viewModel.setConfirmationDialogShown(true)
     }
 }

@@ -209,7 +209,6 @@
     <string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
 
     <string name="verify_continue">Continue</string>
-    <string name="verify">Verify</string>
     <string name="verify_backup_wallet">Backup Wallet</string>
     <string name="verify_show_recovery_phrase">Show Recovery Phrase</string>
     <string name="verify_secure_now">Secure Wallet Now</string>

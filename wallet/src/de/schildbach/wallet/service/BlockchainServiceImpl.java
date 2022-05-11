@@ -85,7 +85,6 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.NotificationService;
 import org.dash.wallet.common.services.SendPaymentService;
-import org.dash.wallet.common.transactions.CoinsToAddressTxFilter;
 import org.dash.wallet.common.transactions.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.TransactionFilter;
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeAPIConfirmationHandler;
@@ -204,7 +203,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private final CrowdNodeDepositReceivedResponse depositReceivedResponse =
             new CrowdNodeDepositReceivedResponse(Constants.NETWORK_PARAMETERS);
 
-    private TransactionFilter addressConfirmationReceived;
+    private CrowdNodeAPIConfirmationHandler apiConfirmationHandler;
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
@@ -259,12 +258,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                 false,
                                 new Intent(BlockchainServiceImpl.this, StakingActivity.class)
                         );
-                    } else if (addressConfirmationReceived != null && addressConfirmationReceived.matches(tx)) {
-                        new CrowdNodeAPIConfirmationHandler(
-                                crowdNodeConfig,
-                                sendPaymentService,
-                                wallet.getNetworkParameters()
-                        ).handle(tx);
+                    } else if (apiConfirmationHandler != null && apiConfirmationHandler.matches(tx)) {
+                        apiConfirmationHandler.handle(tx);
                     } else if (passFilters(tx)) {
                         notifyCoinsReceived(address, amount, tx.getExchangeRate());
                     }
@@ -1157,14 +1152,16 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         if (!addressStr.isEmpty()) {
             Address address = Address.fromBase58(Constants.NETWORK_PARAMETERS, addressStr);
-            addressConfirmationReceived = new CoinsToAddressTxFilter(
+            apiConfirmationHandler = new CrowdNodeAPIConfirmationHandler(
                     address,
-                    CrowdNodeConstants.INSTANCE.getAPI_CONFIRMATION_DASH_AMOUNT()
+                    crowdNodeConfig,
+                    sendPaymentService,
+                    application.getWallet().getNetworkParameters()
             );
             Log.i("CROWDNODE", "Registered addressConfirmationReceived: " + addressStr);
         } else {
             Log.i("CROWDNODE", "Unregistered addressConfirmationReceived");
-            addressConfirmationReceived = null;
+            apiConfirmationHandler = null;
         }
     }
 }

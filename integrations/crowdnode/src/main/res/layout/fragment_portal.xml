@@ -200,7 +200,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:src="@drawable/ic_withdraw_disabled"
+                    android:src="@drawable/ic_left_right_arrows"
                     app:layout_constraintEnd_toStartOf="@id/withdraw_title"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -234,6 +234,45 @@
                     app:layout_constraintTop_toTopOf="@id/withdraw_icon"
                     app:layout_constraintBottom_toBottomOf="@id/withdraw_icon" />
             </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <LinearLayout
+                android:id="@+id/verification_required_warning"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginBottom="15dp"
+                android:visibility="gone"
+                android:background="@drawable/rounded_background"
+                android:theme="@style/QuaternaryBackgroundTheme"
+                tools:background="@color/quaternary_background"
+                tools:visibility="visible">
+
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginStart="8dp"
+                    android:src="@drawable/ic_warning_filled" />
+
+                <TextView
+                    style="@style/Caption.SemiBold.Red"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="10dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/verification_required" />
+
+                <Button
+                    android:id="@+id/verify_btn"
+                    style="@style/Button.Primary.ExtraSmall.WhiteRaised"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="7dp"
+                    android:layout_gravity="center_vertical"
+                    android:text="@string/verify" />
+            </LinearLayout>
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
@@ -300,6 +339,7 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
+                android:visibility="gone"
                 android:layout_marginStart="63dp"
                 android:background="@color/divider_color" />
 
@@ -312,7 +352,7 @@
                 android:focusable="true"
                 android:paddingTop="12dp"
                 android:paddingEnd="15dp"
-                android:paddingBottom="22dp">
+                android:paddingBottom="15dp"> <!-- TODO: change to 22dp when Online button is back -->
 
                 <ImageView
                     android:id="@+id/support_icon"

@@ -26,7 +26,9 @@ import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.data.ExchangeRate
@@ -82,6 +84,16 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
                 setDepositsEnabled(balance, status)
                 setOnlineAccountStatus(status)
             }
+
+            lifecycleScope.launch {
+                if (viewModel.getShouldShowConfirmationDialog()) {
+                    showConfirmationDialog()
+                }
+            }
+        }
+
+        binding.verifyBtn.setOnClickListener {
+            showConfirmationDialog()
         }
     }
 
@@ -190,7 +202,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun setWithdrawalEnabled(balance: Coin, onlineStatus: OnlineAccountStatus) {
-        val isEnabled = balance.isPositive && onlineStatus != OnlineAccountStatus.Confirming
+        val isEnabled = balance.isPositive && onlineStatus == OnlineAccountStatus.Done
         binding.withdrawBtn.isEnabled = isEnabled
 
         if (isEnabled) {
@@ -205,15 +217,15 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun setDepositsEnabled(balance: Coin, onlineStatus: OnlineAccountStatus) {
-        val isEnabled = balance.isPositive && onlineStatus != OnlineAccountStatus.Confirming
+        val isEnabled = balance.isPositive && onlineStatus == OnlineAccountStatus.Done
         binding.depositBtn.isEnabled = isEnabled
 
         if (isEnabled) {
-            binding.depositIcon.setColorFilter(resources.getColor(R.color.green_300, null))
+            binding.depositIcon.setImageResource(R.drawable.ic_deposit)
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_primary, null))
             binding.depositSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
         } else {
-            binding.depositIcon.clearColorFilter()
+            binding.depositIcon.setImageResource(R.drawable.ic_deposit_disabled)
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
             binding.depositSubtitle.setTextColor(resources.getColor(R.color.content_disabled, null))
         }
@@ -245,6 +257,12 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
              OnlineAccountStatus.Done -> R.string.crowdnode_online_synced
              else -> R.string.secure_online_account
         })
+
+        binding.verificationRequiredWarning.isVisible = status == OnlineAccountStatus.Confirming
+    }
+
+    private fun showConfirmationDialog() {
+        ConfirmationDialog().show(parentFragmentManager, "confirmation_dialog")
     }
 
     override fun onDestroy() {
