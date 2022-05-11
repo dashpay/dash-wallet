@@ -37,7 +37,7 @@ import org.dash.wallet.common.UserInteractionAwareCallback
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
+class AdaptiveDialog(@LayoutRes private val layout: Int = R.layout.dialog_simple): DialogFragment() {
     companion object {
         private const val ICON_RES_ARG = "icon_res"
         private const val TITLE_ARG = "title"
@@ -103,8 +103,6 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
 
     private var onResultListener: ((Boolean?) -> Unit)? = null
     var isMessageSelectable = false
-
-    constructor() : this(R.layout.dialog_simple)
 
     override fun onCreateView(
         inflater: LayoutInflater,
