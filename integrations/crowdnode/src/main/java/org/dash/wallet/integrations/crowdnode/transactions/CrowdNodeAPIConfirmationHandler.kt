@@ -37,11 +37,10 @@ open class CrowdNodeAPIConfirmationTx(
 ) : CoinsToAddressTxFilter(address, CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT)
 
 class CrowdNodeAPIConfirmationHandler(
-    address: Address,
-    private val config: CrowdNodeConfig,
-    private val paymentService: SendPaymentService,
-    private val networkParameters: NetworkParameters
-): CrowdNodeAPIConfirmationTx(address) {
+    private val apiAddress: Address,
+    private val primaryAddress: Address,
+    private val paymentService: SendPaymentService
+): CrowdNodeAPIConfirmationTx(apiAddress) {
     private val handlerScope = CoroutineScope(
         Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     )
@@ -53,7 +52,7 @@ class CrowdNodeAPIConfirmationHandler(
                 listOf(tx.outputs.first { it.value == CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT })
             )
             val resendTx = paymentService.sendCoins(
-                CrowdNodeConstants.getCrowdNodeAddress(networkParameters),
+                CrowdNodeConstants.getCrowdNodeAddress(apiAddress.parameters),
                 CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT,
                 selector,
                 true

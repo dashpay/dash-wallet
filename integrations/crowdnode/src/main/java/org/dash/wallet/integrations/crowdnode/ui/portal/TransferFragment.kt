@@ -104,7 +104,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             setupDeposit()
         }
 
-        viewModel.crowdNodeError.observe(viewLifecycleOwner) { error ->
+        viewModel.observeCrowdNodeError().observe(viewLifecycleOwner) { error ->
             error?.let {
                 safeNavigate(TransferFragmentDirections.transferToResult(
                     true,
@@ -138,7 +138,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             val maxValue = if (args.withdraw) viewModel.crowdNodeBalance else viewModel.dashBalance
 
             binding.balanceText.setTextAppearance(
-                if (amount > maxValue.value ?: Coin.ZERO) {
+                if (amount > (maxValue.value ?: Coin.ZERO)) {
                     R.style.Caption_Red
                 } else {
                     R.style.Caption_SteelGray

@@ -54,7 +54,7 @@ class StakingActivity : LockScreenActivity() {
         navController = setNavigationGraph()
 
         viewModel.navigationCallback.observe(this, ::handleNavigationRequest)
-        viewModel.onlineAccountStatus.observe(this, ::handleOnlineAccountStatus)
+        viewModel.observeOnlineAccountStatus().observe(this, ::handleOnlineAccountStatus)
 
         val intent = Intent(this, StakingActivity::class.java)
         viewModel.setNotificationIntent(intent)
@@ -82,15 +82,15 @@ class StakingActivity : LockScreenActivity() {
 
     private fun handleOnlineAccountStatus(status: OnlineAccountStatus) {
         when (status) {
+            OnlineAccountStatus.None -> { }
             OnlineAccountStatus.Linking -> super.turnOffAutoLogout()
-            OnlineAccountStatus.Confirming, OnlineAccountStatus.Done -> {
+            else -> {
                 if (navController.currentDestination?.id == R.id.crowdNodeWebViewFragment) {
                     navController.navigate(WebViewFragmentDirections.webViewToPortal())
                 }
-                viewModel.cancelLinkingOnlineAccount()
+//                viewModel.cancelLinkingOnlineAccount()
                 super.turnOnAutoLogout()
             }
-            else -> { }
         }
     }
 
@@ -109,10 +109,9 @@ class StakingActivity : LockScreenActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.nav_crowdnode)
-        val status = viewModel.signUpStatus.value ?: SignUpStatus.NotStarted
 
         navGraph.startDestination =
-            when (status) {
+            when (viewModel.signUpStatus) {
                 SignUpStatus.LinkedOnline, SignUpStatus.Finished -> R.id.crowdNodePortalFragment
                 SignUpStatus.NotStarted -> {
                     val isInfoShown = runBlocking { viewModel.getIsInfoShown() }

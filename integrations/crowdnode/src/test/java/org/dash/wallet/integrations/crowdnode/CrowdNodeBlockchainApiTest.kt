@@ -40,7 +40,6 @@ import kotlin.time.ExperimentalTime
 @ExperimentalCoroutinesApi
 class CrowdNodeBlockchainApiTest {
     private val localConfig = mock<CrowdNodeConfig> {
-        onBlocking { getPreference(CrowdNodeConfig.PRIMARY_ACCOUNT_ADDRESS) } doReturn "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"
         onBlocking { getPreference(CrowdNodeConfig.ERROR) } doReturn ""
     }
 

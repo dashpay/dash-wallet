@@ -77,20 +77,14 @@ class CrowdNodeViewModel @Inject constructor(
     val dashBalance: LiveData<Coin>
         get() = _dashBalance
 
-    var signUpStatus: LiveData<SignUpStatus> = MediatorLiveData<SignUpStatus>().apply {
-        addSource(crowdNodeApi.signUpStatus.asLiveData(), this::setValue)
-        value = crowdNodeApi.signUpStatus.value
-    }
+    val signUpStatus: SignUpStatus
+        get() = crowdNodeApi.signUpStatus.value
 
-    var onlineAccountStatus: LiveData<OnlineAccountStatus> = MediatorLiveData<OnlineAccountStatus>().apply {
-        addSource(crowdNodeApi.onlineAccountStatus.asLiveData(), this::setValue)
-        value = crowdNodeApi.onlineAccountStatus.value
-    }
+    val onlineAccountStatus: OnlineAccountStatus
+        get() = crowdNodeApi.onlineAccountStatus.value
 
-    var crowdNodeError: LiveData<Exception?> = MediatorLiveData<Exception?>().apply {
-        addSource(crowdNodeApi.apiError.asLiveData(), this::setValue)
-        value = crowdNodeApi.apiError.value
-    }
+    val crowdNodeError: Exception?
+        get() = crowdNodeApi.apiError.value
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
     val exchangeRate: LiveData<ExchangeRate>
@@ -176,9 +170,9 @@ class CrowdNodeViewModel @Inject constructor(
         crowdNodeApi.startTrackingLinked(_accountAddress.value!!)
     }
 
-    fun cancelLinkingOnlineAccount() {
-        crowdNodeApi.stopTrackingLinked()
-    }
+//    fun cancelLinkingOnlineAccount() {
+//        crowdNodeApi.stopTrackingLinked()
+//    }
 
     fun resetSignUp() {
         viewModelScope.launch {
@@ -250,6 +244,18 @@ class CrowdNodeViewModel @Inject constructor(
                 accountAddress.value.toString()
             )
         )
+    }
+
+    fun observeSignUpStatus(): LiveData<SignUpStatus> {
+        return crowdNodeApi.signUpStatus.asLiveData()
+    }
+
+    fun observeOnlineAccountStatus(): LiveData<OnlineAccountStatus> {
+        return crowdNodeApi.onlineAccountStatus.asLiveData()
+    }
+
+    fun observeCrowdNodeError(): LiveData<Exception?> {
+        return crowdNodeApi.apiError.asLiveData()
     }
 
     private fun getOrCreateAccountAddress(): Address {

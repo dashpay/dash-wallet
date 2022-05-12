@@ -50,9 +50,13 @@ class WalletTransactionObserver(private val wallet: Wallet) {
                 newBalance: Coin?
             ) {
                 super.onCoinsReceived(wallet, tx, prevBalance, newBalance)
+                Log.i("CROWDNODE", "tx: ${tx?.txId}")
 
                 if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
+                    Log.i("CROWDNODE", "matches: true")
                     trySend(tx)
+                } else {
+                    Log.i("CROWDNODE", "matches: false")
                 }
             }
 

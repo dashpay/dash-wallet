@@ -144,7 +144,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject WalletApplication application;
     @Inject Configuration config;
     @Inject NotificationService notificationService;
-    @Inject CrowdNodeConfig crowdNodeConfig;
     @Inject SendPaymentService sendPaymentService;
 
     private BlockStore blockStore;
@@ -290,7 +289,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     };
 
     private final OnSharedPreferenceChangeListener sharedPrefsChangeListener = (sharedPreferences, key) -> {
-        if (key.equals(Configuration.PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS)) {
+        if (key.equals(Configuration.PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS)) {
             registerCrowdNodeConfirmedAddressFilter();
         }
     };
@@ -1148,17 +1147,19 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     private void registerCrowdNodeConfirmedAddressFilter() {
-        String addressStr = config.getCrowdNodeAccountAddress();
+        String apiAddressStr = config.getCrowdNodeAccountAddress();
+        String primaryAddressStr = config.getCrowdNodeAccountAddress();
 
-        if (!addressStr.isEmpty()) {
-            Address address = Address.fromBase58(Constants.NETWORK_PARAMETERS, addressStr);
+        if (!apiAddressStr.isEmpty() && !primaryAddressStr.isEmpty()) {
+            Address apiAddress = Address.fromBase58(Constants.NETWORK_PARAMETERS, apiAddressStr);
+            Address primaryAddress = Address.fromBase58(Constants.NETWORK_PARAMETERS, primaryAddressStr);
+
             apiConfirmationHandler = new CrowdNodeAPIConfirmationHandler(
-                    address,
-                    crowdNodeConfig,
-                    sendPaymentService,
-                    application.getWallet().getNetworkParameters()
+                    apiAddress,
+                    primaryAddress,
+                    sendPaymentService
             );
-            Log.i("CROWDNODE", "Registered addressConfirmationReceived: " + addressStr);
+            Log.i("CROWDNODE", "Registered addressConfirmationReceived: " + apiAddressStr);
         } else {
             Log.i("CROWDNODE", "Unregistered addressConfirmationReceived");
             apiConfirmationHandler = null;

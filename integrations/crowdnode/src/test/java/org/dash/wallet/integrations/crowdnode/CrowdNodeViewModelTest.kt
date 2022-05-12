@@ -86,10 +86,6 @@ class CrowdNodeViewModelTest {
         on { exchangeCurrencyCode } doReturn "USD"
     }
 
-    private val localConfig = mock<CrowdNodeConfig> {
-        onBlocking { getPreference(CrowdNodeConfig.PRIMARY_ACCOUNT_ADDRESS) } doReturn "yLW8Vfeb6sJfB3deb4KGsa5vY9g5pAqWQi"
-    }
-
     private val walletData = mock<WalletDataProvider> {
         on { observeBalance() } doReturn MutableStateFlow(balance)
         on { freshReceiveAddress() } doReturn Address.fromBase58(TestNet3Params.get(), "ydW78zVxRgNhANX2qtG4saSCC5ejNQjw2U")
@@ -102,7 +98,7 @@ class CrowdNodeViewModelTest {
     @Test
     fun deposit_fullBalance_setsEmptyWallet() {
         runBlocking {
-            val viewModel = CrowdNodeViewModel(globalConfig, localConfig, walletData, api, mock(), exchangeRatesMock)
+            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock)
             viewModel.deposit(balance)
             verify(api).deposit(balance, true)
         }
@@ -112,7 +108,7 @@ class CrowdNodeViewModelTest {
     fun deposit_lessThanFullBalance_doesNotSetEmptyWallet() {
         runBlocking {
             val partial = balance.div(6)
-            val viewModel = CrowdNodeViewModel(globalConfig, localConfig, walletData, api, mock(),exchangeRatesMock)
+            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(),exchangeRatesMock)
             viewModel.deposit(partial)
             verify(api).deposit(partial, false)
         }

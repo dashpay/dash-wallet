@@ -61,7 +61,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
             binding.negativeBtn.isVisible = true
             binding.positiveBtn.text = getString(R.string.button_retry)
 
-            viewModel.crowdNodeError.value?.let { ex ->
+            viewModel.crowdNodeError?.let { ex ->
                 setErrorMessage(ex)
             }
 
@@ -70,7 +70,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
             }
 
             binding.positiveBtn.setOnClickListener {
-                if (viewModel.signUpStatus.value == SignUpStatus.Error) {
+                if (viewModel.signUpStatus == SignUpStatus.Error) {
                     // For signup error, launching a retry attempt
                     lifecycleScope.launch {
                         securityModel.requestPinCode(requireActivity())?.let {
@@ -85,7 +85,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
             }
 
             binding.negativeBtn.setOnClickListener {
-                if (viewModel.signUpStatus.value == SignUpStatus.Error) {
+                if (viewModel.signUpStatus == SignUpStatus.Error) {
                     viewModel.resetSignUp()
                     findNavController().popBackStack()
                 } else {

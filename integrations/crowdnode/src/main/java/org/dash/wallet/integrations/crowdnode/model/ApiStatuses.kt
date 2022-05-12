@@ -32,6 +32,7 @@ enum class SignUpStatus {
 enum class OnlineAccountStatus {
     None,
     Linking,
+    Validating,
     Confirming,
     Done
 }

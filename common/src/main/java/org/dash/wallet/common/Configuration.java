@@ -102,6 +102,7 @@ public class Configuration {
 
     // CrowdNode
     public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
+    public static final String PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS = "crowdnode_primary_address";
 
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
@@ -538,5 +539,14 @@ public class Configuration {
 
     public void setCrowdNodeAccountAddress(@NonNull String address) {
         prefs.edit().putString(PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS, address).apply();
+    }
+
+    @NonNull
+    public String getCrowdNodePrimaryAddress() {
+        return prefs.getString(PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS, "");
+    }
+
+    public void setCrowdNodePrimaryAddress(@NonNull String address) {
+        prefs.edit().putString(PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS, address).apply();
     }
 }

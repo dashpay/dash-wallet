@@ -22,6 +22,7 @@ enum class ApiCode(val code: Long, val isRequest: Boolean = false) {
     WelcomeToApi(4, false),
     DepositReceived(8, false),
     WithdrawalQueue(16, false),
+    WithdrawalDenied(32, false),
     WithdrawAll(1000, true),
     SignUp(131072, true),
     AcceptTerms(65536, true),

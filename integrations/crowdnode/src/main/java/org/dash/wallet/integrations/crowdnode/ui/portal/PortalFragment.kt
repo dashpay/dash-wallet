@@ -21,6 +21,7 @@ import android.animation.ObjectAnimator
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.core.view.isVisible
@@ -54,12 +55,16 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
     private var balanceAnimator: ObjectAnimator? = null
 
+    private val isConfirmed: Boolean
+        get() = viewModel.signUpStatus === SignUpStatus.Finished ||
+                viewModel.onlineAccountStatus == OnlineAccountStatus.Done
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         setupUI(binding)
 
-        viewModel.crowdNodeError.observe(viewLifecycleOwner) { error ->
+        viewModel.observeCrowdNodeError().observe(viewLifecycleOwner) { error ->
             error?.let {
                 safeNavigate(PortalFragmentDirections.portalToResult(
                     true,
@@ -77,16 +82,19 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             ).show()
         }
 
-        if (viewModel.signUpStatus.value == SignUpStatus.LinkedOnline) {
-            viewModel.onlineAccountStatus.observe(viewLifecycleOwner) { status ->
+        if (viewModel.signUpStatus == SignUpStatus.LinkedOnline) {
+            viewModel.observeOnlineAccountStatus().observe(viewLifecycleOwner) { status ->
                 val balance = viewModel.crowdNodeBalance.value ?: Coin.ZERO
                 setWithdrawalEnabled(balance, status)
                 setDepositsEnabled(balance, status)
                 setOnlineAccountStatus(status)
+                setMinimumEarningDepositReminder(balance, isConfirmed)
             }
 
             lifecycleScope.launch {
-                if (viewModel.getShouldShowConfirmationDialog()) {
+                val should = viewModel.getShouldShowConfirmationDialog()
+                Log.i("CROWDNODE", "Portal, getShouldShowConfirmationDialog: ${should}")
+                if (should) {
                     showConfirmationDialog()
                 }
             }
@@ -186,14 +194,12 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         viewModel.crowdNodeBalance.observe(viewLifecycleOwner) { balance ->
             binding.walletBalanceDash.setAmount(balance)
             updateFiatAmount(balance, viewModel.exchangeRate.value)
-            val status = viewModel.onlineAccountStatus.value ?: OnlineAccountStatus.None
-            setWithdrawalEnabled(balance, status)
-            setMinimumEarningDepositReminder(balance)
+            setWithdrawalEnabled(balance, viewModel.onlineAccountStatus)
+            setMinimumEarningDepositReminder(balance, isConfirmed)
         }
 
         viewModel.dashBalance.observe(viewLifecycleOwner) { balance ->
-            val status = viewModel.onlineAccountStatus.value ?: OnlineAccountStatus.None
-            setDepositsEnabled(balance, status)
+            setDepositsEnabled(balance, viewModel.onlineAccountStatus)
         }
 
         viewModel.exchangeRate.observe(viewLifecycleOwner) { rate ->
@@ -231,8 +237,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
     }
 
-    private fun setMinimumEarningDepositReminder(balance: Coin) {
-        if (balance < CrowdNodeConstants.MINIMUM_DASH_DEPOSIT) {
+    private fun setMinimumEarningDepositReminder(balance: Coin, isConfirmed: Boolean) {
+        val balanceLessThanMinimum = balance < CrowdNodeConstants.MINIMUM_DASH_DEPOSIT
+
+        if (balanceLessThanMinimum && isConfirmed) {
             binding.minimumDashRequirement.isVisible = true
 
             if (balance < NEGLIGIBLE_AMOUNT) {
