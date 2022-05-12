@@ -97,6 +97,10 @@
     <string name="scan_qr">Scan QR</string>
     <string name="qr_contains_request">This QR already contains the payment request for %s Dash</string>
     <string name="verification_required">Verification Required</string>
+    <string name="validating_address">Validating address…</string>
+    <string name="crowdnode_address_validated">Your CrowdNode address has been validated, but verification is required.</string>
+    <string name="crowdnode_address_confirmed">Your CrowdNode address has been confirmed.</string>
+    <string name="crowdnode_bad_confirmation">Confirmation sent from a wrong primary address</string>
 
     <string name="crowdnode_website" translatable="false">https://crowdnode.io/</string>
     <string name="crowdnode_terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>

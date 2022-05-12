@@ -17,12 +17,36 @@
 
 package org.dash.wallet.integrations.crowdnode.transactions
 
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.script.Script
+import org.bitcoinj.script.ScriptPattern
 import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-// TODO: consider making sure that `toAddress` matches our account address
-class CrowdNodeErrorResponse(networkParams: NetworkParameters, requestValue: Coin): CoinsFromAddressTxFilter(
-    CrowdNodeConstants.getCrowdNodeAddress(networkParams), requestValue, includeFee = true
-)
+class CrowdNodeErrorResponse(
+    private val networkParams: NetworkParameters,
+    private val requestValue: Coin
+): CoinsFromAddressTxFilter(
+    CrowdNodeConstants.getCrowdNodeAddress(networkParams),
+    requestValue,
+    includeFee = true
+) {
+    override fun matches(tx: Transaction): Boolean {
+        return super.matches(tx) || isChangeSentBackToCrowdNode(tx)
+    }
+
+    private fun isChangeSentBackToCrowdNode(tx: Transaction): Boolean {
+        val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(networkParams)
+        return tx.outputs.size > 2 &&
+                tx.outputs.first().value + (tx.fee ?: Coin.ZERO) == requestValue &&
+                tx.outputs.drop(1).any { addressMatch(it.scriptPubKey, crowdNodeAddress) }
+    }
+
+    private fun addressMatch(script: Script, address: Address): Boolean {
+        return (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
+            script.getToAddress(address.parameters) == address
+    }
+}

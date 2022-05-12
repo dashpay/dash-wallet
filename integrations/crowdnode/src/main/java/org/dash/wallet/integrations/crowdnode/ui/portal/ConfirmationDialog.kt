@@ -24,18 +24,21 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import org.bitcoinj.uri.BitcoinURI
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentConfirmationBinding
+import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 class ConfirmationDialog: OffsetDialogFragment() {
     private val binding by viewBinding(FragmentConfirmationBinding::bind)
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
+    private var qrDialog: DialogFragment? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -72,7 +75,8 @@ class ConfirmationDialog: OffsetDialogFragment() {
             startActivity(browserIntent)
         }
         binding.showQrBtn.setOnClickListener {
-            QRDialog(accountAddress, amount).show(parentFragmentManager, "qr_dialog")
+            qrDialog = QRDialog(accountAddress, amount)
+            qrDialog?.show(parentFragmentManager, "qr_dialog")
         }
         binding.shareUrlBtn.setOnClickListener {
             val paymentRequestUri = BitcoinURI.convertToBitcoinURI(accountAddress, amount, "", "")
@@ -87,5 +91,17 @@ class ConfirmationDialog: OffsetDialogFragment() {
         }
 
         viewModel.setConfirmationDialogShown(true)
+        viewModel.observeOnlineAccountStatus().observe(viewLifecycleOwner) { status ->
+            if (status == OnlineAccountStatus.Done) {
+                qrDialog?.dismiss()
+                dismiss()
+            }
+        }
+        viewModel.observeCrowdNodeError().observe(viewLifecycleOwner) { error ->
+            if (error != null) {
+                qrDialog?.dismiss()
+                dismiss()
+            }
+        }
     }
 }

@@ -24,8 +24,13 @@ import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.wallet.CoinSelection
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.ZeroConfCoinSelector
+import org.slf4j.LoggerFactory
 
 class ByAddressCoinSelector(val address: Address) : CoinSelector {
+    companion object {
+        private val log = LoggerFactory.getLogger(ByAddressCoinSelector::class.java)
+    }
+
     private val selector = ZeroConfCoinSelector.get()
 
     override fun select(
@@ -38,6 +43,8 @@ class ByAddressCoinSelector(val address: Address) : CoinSelector {
                     script.getToAddress(address.parameters) == address
         }
 
+        log.info("selected ${filtered.size} outputs with value ${filtered.sumOf { it.value.value }} " +
+                "from ${candidates.size} candidates with value ${filtered.sumOf { it.value.value }}")
         return selector.select(target, filtered)
     }
 }

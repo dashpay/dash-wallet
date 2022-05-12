@@ -21,7 +21,7 @@ import android.animation.ObjectAnimator
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
+import android.view.Gravity
 import android.view.View
 import android.widget.Toast
 import androidx.core.view.isVisible
@@ -40,6 +40,7 @@ import org.dash.wallet.common.util.copy
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentPortalBinding
+import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
@@ -68,7 +69,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             error?.let {
                 safeNavigate(PortalFragmentDirections.portalToResult(
                     true,
-                    getString(R.string.crowdnode_transfer_error),
+                    getErrorMessage(it),
                     ""
                 ))
             }
@@ -89,13 +90,11 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
                 setDepositsEnabled(balance, status)
                 setOnlineAccountStatus(status)
                 setMinimumEarningDepositReminder(balance, isConfirmed)
-            }
 
-            lifecycleScope.launch {
-                val should = viewModel.getShouldShowConfirmationDialog()
-                Log.i("CROWDNODE", "Portal, getShouldShowConfirmationDialog: ${should}")
-                if (should) {
-                    showConfirmationDialog()
+                lifecycleScope.launch {
+                    if (viewModel.getShouldShowConfirmationDialog()) {
+                        showConfirmationDialog()
+                    }
                 }
             }
         }
@@ -266,11 +265,38 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
              else -> R.string.secure_online_account
         })
 
-        binding.verificationRequiredWarning.isVisible = status == OnlineAccountStatus.Confirming
+        binding.addressStatusWarning.isVisible =
+            status == OnlineAccountStatus.Validating ||
+            status == OnlineAccountStatus.Confirming
+
+        binding.warningIcon.isVisible = status == OnlineAccountStatus.Confirming
+        binding.verifyBtn.isVisible = status == OnlineAccountStatus.Confirming
+        binding.warningMessage.text = getString(
+            if (status == OnlineAccountStatus.Confirming) {
+                R.string.verification_required
+            } else {
+                R.string.validating_address
+            }
+        )
+        binding.warningMessage.gravity =
+            if (status == OnlineAccountStatus.Confirming) {
+                Gravity.START
+            } else {
+                Gravity.CENTER
+            }
     }
 
     private fun showConfirmationDialog() {
         ConfirmationDialog().show(parentFragmentManager, "confirmation_dialog")
+    }
+
+    private fun getErrorMessage(exception: Exception): String {
+        return getString(when(exception.message) {
+            CrowdNodeException.WITHDRAWAL_ERROR -> R.string.crowdnode_withdraw_error
+            CrowdNodeException.DEPOSIT_ERROR -> R.string.crowdnode_deposit_error
+            CrowdNodeException.CONFIRMATION_ERROR -> R.string.crowdnode_bad_confirmation
+            else -> R.string.crowdnode_transfer_error
+        })
     }
 
     override fun onDestroy() {

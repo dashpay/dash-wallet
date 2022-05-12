@@ -49,5 +49,5 @@ abstract class CrowdNodeModule {
 
     @Binds
     @Singleton
-    abstract fun bindCrowdNodeApi(crowdNodeApi: CrowdNodeBlockchainApi): CrowdNodeApi
+    abstract fun bindCrowdNodeApi(crowdNodeApi: CrowdNodeApiAggregator): CrowdNodeApi
 }

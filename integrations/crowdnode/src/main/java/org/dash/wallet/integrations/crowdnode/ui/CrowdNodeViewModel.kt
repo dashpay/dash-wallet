@@ -28,6 +28,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
@@ -167,12 +168,12 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     fun linkOnlineAccount() {
-        crowdNodeApi.startTrackingLinked(_accountAddress.value!!)
+        crowdNodeApi.trackLinkingAccount(_accountAddress.value!!)
     }
 
-//    fun cancelLinkingOnlineAccount() {
-//        crowdNodeApi.stopTrackingLinked()
-//    }
+    fun cancelLinkingOnlineAccount() {
+        crowdNodeApi.stopTrackingLinked()
+    }
 
     fun resetSignUp() {
         viewModelScope.launch {

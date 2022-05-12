@@ -84,10 +84,10 @@ import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.NotificationService;
-import org.dash.wallet.common.services.SendPaymentService;
 import org.dash.wallet.common.transactions.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.TransactionFilter;
-import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeAPIConfirmationHandler;
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationHandler;
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi;
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeDepositReceivedResponse;
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWithdrawalReceivedTx;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
@@ -144,7 +144,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject WalletApplication application;
     @Inject Configuration config;
     @Inject NotificationService notificationService;
-    @Inject SendPaymentService sendPaymentService;
+    @Inject CrowdNodeBlockchainApi crowdNodeBlockchainApi;
+    @Inject CrowdNodeConfig crowdNodeConfig;
 
     private BlockStore blockStore;
     private File blockChainFile;
@@ -589,14 +590,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                 log.info("DMN List peer discovery failed: "+ x.getMessage());
                             }
 
-                            if(peers.size() < MINIMUM_PEER_COUNT) {
-                                if (Constants.NETWORK_PARAMETERS.getAddrSeeds() != null) {
-                                    log.info("DNM peer discovery returned less than 16 nodes.  Adding seed peers to the list to increase connections");
-                                    peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
-                                } else {
-                                    log.info("DNS peer discovery returned less than 16 nodes.  Unable to add seed peers (it is not specified for this network).");
-                                }
-                            }
+//                            if(peers.size() < MINIMUM_PEER_COUNT) {
+//                                if (Constants.NETWORK_PARAMETERS.getAddrSeeds() != null) {
+//                                    log.info("DNM peer discovery returned less than 16 nodes.  Adding seed peers to the list to increase connections");
+//                                    peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+//                                } else {
+//                                    log.info("DNS peer discovery returned less than 16 nodes.  Unable to add seed peers (it is not specified for this network).");
+//                                }
+//                            }
 
                             if(peers.size() < MINIMUM_PEER_COUNT) {
                                 log.info("Masternode peer discovery returned less than 16 nodes.  Adding DMN peers to the list to increase connections");
@@ -1148,7 +1149,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private void registerCrowdNodeConfirmedAddressFilter() {
         String apiAddressStr = config.getCrowdNodeAccountAddress();
-        String primaryAddressStr = config.getCrowdNodeAccountAddress();
+        String primaryAddressStr = config.getCrowdNodePrimaryAddress();
 
         if (!apiAddressStr.isEmpty() && !primaryAddressStr.isEmpty()) {
             Address apiAddress = Address.fromBase58(Constants.NETWORK_PARAMETERS, apiAddressStr);
@@ -1157,7 +1158,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             apiConfirmationHandler = new CrowdNodeAPIConfirmationHandler(
                     apiAddress,
                     primaryAddress,
-                    sendPaymentService
+                    crowdNodeBlockchainApi,
+                    notificationService,
+                    crowdNodeConfig,
+                    getResources(),
+                    new Intent(this, StakingActivity.class)
             );
             Log.i("CROWDNODE", "Registered addressConfirmationReceived: " + apiAddressStr);
         } else {

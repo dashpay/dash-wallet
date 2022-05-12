@@ -23,7 +23,7 @@ import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.transactions.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
 
-class CrowdNodeFullTxSet(networkParams: NetworkParameters): TransactionWrapper {
+class FullCrowdNodeSignUpTxSet(networkParams: NetworkParameters): TransactionWrapper {
     private val crowdNodeTxFilters = listOf(
         CrowdNodeSignUpTx(networkParams),
         CrowdNodeAcceptTermsResponse(networkParams),

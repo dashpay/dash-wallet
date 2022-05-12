@@ -62,13 +62,16 @@ class SendCoinsTaskRunner @Inject constructor(
         emptyWallet: Boolean = false
     ): SendRequest {
         return SendRequest.to(address, amount).apply {
-            this.coinSelector = coinSelector
             this.feePerKb = Constants.ECONOMIC_FEE
             this.ensureMinRequiredFee = true
             this.emptyWallet = emptyWallet
 
-            if (coinSelector is ByAddressCoinSelector) {
-                changeAddress = coinSelector.address
+            coinSelector?.let {
+                this.coinSelector = it
+
+                if (coinSelector is ByAddressCoinSelector) {
+                    changeAddress = coinSelector.address
+                }
             }
         }
     }
