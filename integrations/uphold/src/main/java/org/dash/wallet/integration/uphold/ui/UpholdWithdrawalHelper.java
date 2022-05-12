@@ -135,7 +135,8 @@ public class UpholdWithdrawalHelper {
                 activity.getString(R.string.uphold_api_error_title),
                 activity.getString(R.string.uphold_requirement_not_met_base_message, messageDetails),
                 activity.getString(R.string.button_dismiss),
-                activity.getString(R.string.uphold_go_to_website)
+                activity.getString(R.string.uphold_go_to_website),
+                null
         );
         dialog.show(activity, result -> {
             if (result != null && result) {

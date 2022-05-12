@@ -347,7 +347,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                             getString(R.string.pay_to_confirm_address),
                             paymentIntent.getAddress().toBase58(),
                             getString(R.string.button_cancel),
-                            getString(R.string.confirm)
+                            getString(R.string.confirm),
+                            null
                     ).show(WalletActivity.this, confirmed -> {
                         if (confirmed != null && confirmed) {
                             SendCoinsInternalActivity.start(WalletActivity.this, paymentIntent, true);
@@ -377,6 +378,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                         getString(errorDialogTitleResId),
                         messageArgs.length > 0 ? getString(messageResId, messageArgs) : getString(messageResId),
                         getString(R.string.close),
+                        null,
                         null
                 );
                 dialog.setMessageSelectable(true);
@@ -429,7 +431,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void startVerifySeedActivity(String pin) {
-        Intent intent = VerifySeedActivity.createIntent(this, pin);
+        Intent intent = VerifySeedActivity.createIntent(this, pin, false);
         startActivity(intent);
     }
 
@@ -470,6 +472,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     getString(R.string.shortcut_pay_to_address),
                     getString(R.string.scan_to_pay_error_dialog_message_no_data),
                     getString(R.string.close),
+                    null,
                     null
             ).show(this, reportIssue -> Unit.INSTANCE);
         }
@@ -693,7 +696,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     getString(R.string.wallet_encryption_error_title),
                     getString(R.string.wallet_not_encrypted_error_message),
                     getString(R.string.button_cancel),
-                    getString(R.string.button_ok)
+                    getString(R.string.button_ok),
+                    null
             );
             dialog.setCancelable(false);
             dialog.show(this, reportIssue -> {
@@ -1025,7 +1029,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 getString(R.string.notification_explainer_title),
                 getString(R.string.notification_explainer_message),
                 "",
-                getString(R.string.button_okay)
+                getString(R.string.button_okay),
+                null
         );
 
         dialog.show(this, result -> Unit.INSTANCE);

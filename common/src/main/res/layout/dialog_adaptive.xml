@@ -51,6 +51,20 @@
         app:layout_constraintTop_toTopOf="@id/title"
         tools:text="Please use a valid Dash QR code" />
 
+    <TextView
+        android:id="@+id/dialog_extra_message"
+        style="@style/Caption.SemiBold.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="25dp"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="@id/title"
+        tools:text="Back up recovery phase"
+        android:visibility="gone"
+        android:textSize="12sp"
+        />
+
     <Button
         android:id="@+id/dialog_positive_button"
         style="@style/Button.Primary.Blue"
