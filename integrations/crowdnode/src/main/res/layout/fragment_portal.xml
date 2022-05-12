@@ -236,7 +236,7 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <LinearLayout
-                android:id="@+id/verification_required_warning"
+                android:id="@+id/address_status_warning"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="horizontal"
@@ -249,6 +249,7 @@
                 tools:visibility="visible">
 
                 <ImageView
+                    android:id="@+id/warning_icon"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
@@ -256,12 +257,15 @@
                     android:src="@drawable/ic_warning_filled" />
 
                 <TextView
+                    android:id="@+id/warning_message"
                     style="@style/Caption.SemiBold.Red"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="10dp"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
+                    android:gravity="start"
+                    android:textAlignment="gravity"
                     android:text="@string/verification_required" />
 
                 <Button

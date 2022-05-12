@@ -22,6 +22,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.View
 import android.widget.Toast
 import androidx.core.view.isVisible
@@ -89,13 +90,11 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
                 setDepositsEnabled(balance, status)
                 setOnlineAccountStatus(status)
                 setMinimumEarningDepositReminder(balance, isConfirmed)
-            }
 
-            lifecycleScope.launch {
-                val should = viewModel.getShouldShowConfirmationDialog()
-                Log.i("CROWDNODE", "Portal, getShouldShowConfirmationDialog: ${should}")
-                if (should) {
-                    showConfirmationDialog()
+                lifecycleScope.launch {
+                    if (viewModel.getShouldShowConfirmationDialog()) {
+                        showConfirmationDialog()
+                    }
                 }
             }
         }
@@ -266,7 +265,25 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
              else -> R.string.secure_online_account
         })
 
-        binding.verificationRequiredWarning.isVisible = status == OnlineAccountStatus.Confirming
+        binding.addressStatusWarning.isVisible =
+            status == OnlineAccountStatus.Validating ||
+            status == OnlineAccountStatus.Confirming
+
+        binding.warningIcon.isVisible = status == OnlineAccountStatus.Confirming
+        binding.verifyBtn.isVisible = status == OnlineAccountStatus.Confirming
+        binding.warningMessage.text = getString(
+            if (status == OnlineAccountStatus.Confirming) {
+                R.string.verification_required
+            } else {
+                R.string.validating_address
+            }
+        )
+        binding.warningMessage.gravity =
+            if (status == OnlineAccountStatus.Confirming) {
+                Gravity.START
+            } else {
+                Gravity.CENTER
+            }
     }
 
     private fun showConfirmationDialog() {

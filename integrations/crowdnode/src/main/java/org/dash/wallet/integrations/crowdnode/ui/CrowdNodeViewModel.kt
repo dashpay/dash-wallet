@@ -167,12 +167,12 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     fun linkOnlineAccount() {
-        crowdNodeApi.startTrackingLinked(_accountAddress.value!!)
+        crowdNodeApi.trackLinkingAccount(_accountAddress.value!!)
     }
 
-//    fun cancelLinkingOnlineAccount() {
-//        crowdNodeApi.stopTrackingLinked()
-//    }
+    fun cancelLinkingOnlineAccount() {
+        crowdNodeApi.stopTrackingLinked()
+    }
 
     fun resetSignUp() {
         viewModelScope.launch {

@@ -73,8 +73,8 @@ interface CrowdNodeApi {
     suspend fun withdraw(amount: Coin): Boolean
     fun hasAnyDeposits(): Boolean
     fun refreshBalance(retries: Int = 0)
-    fun startTrackingLinked(address: Address)
-//    fun stopTrackingLinked()
+    fun trackLinkingAccount(address: Address)
+    fun stopTrackingLinked()
     suspend fun reset()
 }
 
@@ -129,6 +129,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
             .onEach { status ->
                 cancelTrackingJob()
                 when(status) {
+                    OnlineAccountStatus.Linking -> startTrackingLinked(linkingApiAddress!!)
                     OnlineAccountStatus.Validating -> startTrackingValidated(accountAddress!!)
                     OnlineAccountStatus.Confirming -> startTrackingConfirmed(accountAddress!!)
                     else -> { }
@@ -307,10 +308,13 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
-    override fun startTrackingLinked(address: Address) {
+    override fun trackLinkingAccount(address: Address) {
         iii = 0
-        changeOnlineStatus(OnlineAccountStatus.Linking)
         linkingApiAddress = address
+        changeOnlineStatus(OnlineAccountStatus.Linking)
+    }
+
+    private fun startTrackingLinked(address: Address) {
         tickerJob = TickerFlow(period = 2.seconds, initialDelay = 10.seconds)
             .cancellable()
             .onEach { checkIfAddressIsInUse(address) }
@@ -318,7 +322,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
     }
 
     private suspend fun startTrackingValidated(accountAddress: Address) {
-        tickerJob = TickerFlow(period = 30.seconds, initialDelay = 10.seconds)
+        tickerJob = TickerFlow(period = 5.seconds, initialDelay = 5.seconds) // TODO: 30 10
             .cancellable()
             .onEach { checkIsAddressValidated(accountAddress) }
             .launchIn(statusScope)
@@ -335,27 +339,27 @@ class CrowdNodeBlockchainApi @Inject constructor(
         Log.i("CROWDNODE", "confirmation tx found: ${confirmationTx}")
 
         // TODO check confirmationTx if wrong address
-        tickerJob = TickerFlow(period = 20.seconds, initialDelay = 5.seconds)
+        tickerJob = TickerFlow(period = 5.seconds, initialDelay = 5.seconds) // TODO 20 5
             .cancellable()
             .onEach { checkIsAddressConfirmed(accountAddress) }
             .launchIn(statusScope)
     }
 
-//    override fun stopTrackingLinked() {
-//        val address = linkingApiAddress
-//
-//        if (onlineAccountStatus.value.ordinal <= OnlineAccountStatus.Linking.ordinal) {
-//            changeOnlineStatus(OnlineAccountStatus.None)
-//
-//            address?.let {
-//                responseScope.launch {
-//                    // One last check just in case
-//                    delay(5.seconds)
-//                    checkIfAddressIsInUse(address)
-//                }
-//            }
-//        }
-//    }
+    override fun stopTrackingLinked() {
+        val address = linkingApiAddress
+
+        if (onlineAccountStatus.value.ordinal <= OnlineAccountStatus.Linking.ordinal) {
+            changeOnlineStatus(OnlineAccountStatus.None)
+
+            address?.let {
+                responseScope.launch {
+                    // One last check just in case
+                    delay(5.seconds)
+                    checkIfAddressIsInUse(address)
+                }
+            }
+        }
+    }
 
     override suspend fun reset() {
         log.info("reset is triggered")
@@ -536,22 +540,44 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
+    private var jjj = 0
     private suspend fun checkIsAddressValidated(address: Address) {
-        val status = resolveAddressStatus(address)
-        Log.i("CROWDNODE", "is validated, address status: ${status}")
-
-        if (status?.lowercase() == VALID_STATUS) {
+        if (jjj >= 3) {
+            Log.i("CROWDNODE", "Validated: True")
             changeOnlineStatus(OnlineAccountStatus.Confirming)
+            notifyIfNeeded(appContext.getString(R.string.crowdnode_address_validated), "crowdnode_validated")
+        } else {
+            Log.i("CROWDNODE", "Validated: False")
+            jjj++
         }
+
+//        val status = resolveAddressStatus(address)
+//        Log.i("CROWDNODE", "is validated, address status: ${status}")
+//
+//        if (status?.lowercase() == VALID_STATUS) {
+//            changeOnlineStatus(OnlineAccountStatus.Confirming)
+//        notifyIfNeeded(appContext.getString(R.string.crowdnode_address_validated), "crowdnode_validated")
+//        }
     }
 
+    private var kkk = 0
     private suspend fun checkIsAddressConfirmed(address: Address) {
-        val status = resolveAddressStatus(address)
-        Log.i("CROWDNODE", "is confirmed, address status: ${status}")
-
-        if (status?.lowercase() == CONFIRMED_STATUS) {
+        if (kkk >= 3) {
             changeOnlineStatus(OnlineAccountStatus.Done)
+            Log.i("CROWDNODE", "Confirmed: True")
+            notifyIfNeeded(appContext.getString(R.string.crowdnode_address_confirmed), "crowdnode_confirmed")
+        } else {
+            kkk++
+            Log.i("CROWDNODE", "Confirmed: False")
         }
+
+//        val status = resolveAddressStatus(address)
+//        Log.i("CROWDNODE", "is confirmed, address status: ${status}")
+//
+//        if (status?.lowercase() == CONFIRMED_STATUS) {
+//            changeOnlineStatus(OnlineAccountStatus.Done)
+//        notifyIfNeeded(appContext.getString(R.string.crowdnode_address_confirmed), "crowdnode_confirmed")
+//        }
     }
 
     private var iii = 0
@@ -605,7 +631,6 @@ class CrowdNodeBlockchainApi @Inject constructor(
         Log.i("CROWDNODE", "cancelTrackingJob")
         tickerJob?.cancel()
         tickerJob = null
-        linkingApiAddress = null
     }
 
     private fun handleError(ex: Exception, error: String) {
@@ -613,17 +638,6 @@ class CrowdNodeBlockchainApi @Inject constructor(
         notifyIfNeeded(error, "crowdnode_error")
         log.error("$error: $ex")
         analyticsService.logError(ex)
-    }
-
-    private fun notifyIfNeeded(message: String, tag: String) {
-        if (showNotificationOnResult) {
-            notificationService.showNotification(
-                tag,
-                message,
-                false,
-                notificationIntent
-            )
-        }
     }
 
     private fun changeOnlineStatus(status: OnlineAccountStatus, save: Boolean = true) {
@@ -636,6 +650,17 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
         if (save) {
             configScope.launch { config.setPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, status.ordinal) }
+        }
+    }
+
+    private fun notifyIfNeeded(message: String, tag: String) {
+        if (showNotificationOnResult) {
+            notificationService.showNotification(
+                tag,
+                message,
+                false,
+                notificationIntent
+            )
         }
     }
 }
