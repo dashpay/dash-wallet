@@ -44,6 +44,7 @@ import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialogExt
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
@@ -181,7 +182,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     fun resetWallet(view: View) {
         if (walletBalance.isGreaterThan(Coin.ZERO)){
             if (configuration.remindBackupSeed){
-                val resetWalletDialog = createAdaptiveDialog(
+                val resetWalletDialog = AdaptiveDialogExt.create(
                     R.drawable.ic_exclamation_mark_triangle,
                     getString(R.string.launch_reset_wallet_title),
                     getString(R.string.launch_reset_wallet_message),
@@ -193,7 +194,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
                     onResult = {
                         if (it == true){
                             val fiatValue = currentExchangeRate?.coinToFiat(walletBalance)
-                            val startResetWalletDialog = AdaptiveDialog.create(
+                            val startResetWalletDialog = createAdaptiveDialog(
                                 R.drawable.ic_exclamation_mark_triangle,
                                 getString(R.string.start_reset_wallet_title, securityViewModel.getBalanceInLocalFormat(fiatValue)),
                                 getString(R.string.launch_reset_wallet_message),
@@ -274,11 +275,9 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         title: String,
         message: String,
         negativeButtonText: String,
-        positiveButtonText: String? = null,
-        extraMessageButtonText: String? = null
-    ): AdaptiveDialog =
-        AdaptiveDialog.create(
-           icon, title, message, negativeButtonText, positiveButtonText, extraMessageButtonText
+        positiveButtonText: String? = null
+    ): AdaptiveDialog = AdaptiveDialog.create(
+           icon, title, message, negativeButtonText, positiveButtonText
         )
 }
 

@@ -37,14 +37,13 @@ import org.dash.wallet.common.UserInteractionAwareCallback
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
+open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
     companion object {
         private const val ICON_RES_ARG = "icon_res"
         private const val TITLE_ARG = "title"
         private const val MESSAGE_ARG = "message"
         private const val POS_BUTTON_ARG = "positive_text"
         private const val NEG_BUTTON_ARG = "negative_text"
-        private const val EXTRA_MESSAGE_BUTTON_ARG = "extra_message_text"
 
         @JvmStatic
         fun simple(
@@ -68,8 +67,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
             title: String,
             message: String,
             negativeButtonText: String,
-            positiveButtonText: String? = null,
-            extraMessage: String? = null
+            positiveButtonText: String? = null
         ): AdaptiveDialog {
             return custom(
                 R.layout.dialog_adaptive,
@@ -77,8 +75,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
                 title,
                 message,
                 negativeButtonText,
-                positiveButtonText,
-                extraMessage
+                positiveButtonText
             )
         }
 
@@ -89,8 +86,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
             title: String?,
             message: String,
             negativeButtonText: String,
-            positiveButtonText: String? = null,
-            extraMessage: String? = null
+            positiveButtonText: String? = null
         ): AdaptiveDialog {
             val args = Bundle().apply {
                 icon?.let { putInt(ICON_RES_ARG, icon) }
@@ -98,7 +94,6 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
                 putString(MESSAGE_ARG, message)
                 putString(NEG_BUTTON_ARG, negativeButtonText)
                 putString(POS_BUTTON_ARG, positiveButtonText)
-                putString(EXTRA_MESSAGE_BUTTON_ARG, extraMessage)
             }
             return AdaptiveDialog(layout).apply {
                 arguments = args
@@ -106,9 +101,8 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         }
     }
 
-    private var onResultListener: ((Boolean?) -> Unit)? = null
+    protected var onResultListener: ((Boolean?) -> Unit)? = null
     var isMessageSelectable = false
-    private var onExtraMessageListener: (() -> Unit)? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -137,14 +131,13 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         val positiveButton: TextView = view.findViewById(R.id.dialog_positive_button)
         val negativeButton: TextView = view.findViewById(R.id.dialog_negative_button)
         val negativeButtonSecondary: TextView? = view.findViewById(R.id.dialog_negative_button_secondary)
-        val extraMessageView: TextView = view.findViewById(R.id.dialog_extra_message)
 
         showIfNotEmpty(iconView, ICON_RES_ARG)
         showIfNotEmpty(titleView, TITLE_ARG)
         val isMessageShown = showIfNotEmpty(messageView, MESSAGE_ARG)
         showIfNotEmpty(negativeButton, NEG_BUTTON_ARG)
         val isPositiveButtonShown = showIfNotEmpty(positiveButton, POS_BUTTON_ARG)
-        val isExtraMessageShown = showIfNotEmpty(extraMessageView, EXTRA_MESSAGE_BUTTON_ARG)
+
         if (isMessageShown) {
             messageView.post {
                 messageView.setTextIsSelectable(isMessageSelectable)
@@ -178,25 +171,10 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         negativeButton.setOnClickListener {
             onNegativeAction()
         }
-        if (isExtraMessageShown){
-            messageView.updateLayoutParams<LinearLayout.LayoutParams> {
-                bottomMargin = 0
-            }
-        }
-
-        extraMessageView.setOnClickListener {
-            onExtraMessageAction()
-        }
     }
 
     fun show(activity: FragmentActivity, onResult: (Boolean?) -> Unit) {
         onResultListener = onResult
-        show(activity.supportFragmentManager, "adaptive_dialog")
-    }
-
-    fun show(activity: FragmentActivity, onResult: (Boolean?) -> Unit, onExtraMessageAction: () -> Unit) {
-        onResultListener = onResult
-        onExtraMessageListener = onExtraMessageAction
         show(activity.supportFragmentManager, "adaptive_dialog")
     }
 
@@ -228,21 +206,15 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         }
     }
 
-    private fun onPositiveAction() {
+    protected fun onPositiveAction() {
         onResultListener?.invoke(true)
         onResultListener = null
         dismiss()
     }
 
-    private fun onNegativeAction() {
+    protected fun onNegativeAction() {
         onResultListener?.invoke(false)
         onResultListener = null
-        dismiss()
-    }
-
-    private fun onExtraMessageAction(){
-        onExtraMessageListener?.invoke()
-        onExtraMessageListener = null
         dismiss()
     }
 
@@ -252,7 +224,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         onResultListener = null
     }
 
-    private fun showIfNotEmpty(view: TextView?, argKey: String): Boolean {
+    protected fun showIfNotEmpty(view: TextView?, argKey: String): Boolean {
         if (view == null) {
             return false
         }
@@ -270,7 +242,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         return view.isVisible
     }
 
-    private fun showIfNotEmpty(view: ImageView?, argKey: String): Boolean {
+    protected fun showIfNotEmpty(view: ImageView?, argKey: String): Boolean {
         if (view == null) {
             return false
         }
