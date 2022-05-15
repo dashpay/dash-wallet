@@ -105,8 +105,9 @@ class CrowdNodeViewModel @Inject constructor(
     val networkParameters: NetworkParameters
         get() = walletDataProvider.networkParameters
 
-    val isFirstDeposit: Boolean
-        get() = !crowdNodeApi.hasAnyDeposits()
+    val shouldShowFirstDepositBanner: Boolean
+        get() = !crowdNodeApi.hasAnyDeposits() &&
+                (crowdNodeBalance.value?.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT) ?: true)
 
     init {
         walletDataProvider.observeBalance()

@@ -233,12 +233,12 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             binding.minimumDashRequirement.isVisible = true
 
             if (balance < NEGLIGIBLE_AMOUNT) {
-                binding.minimumDashRequirement.text = getString(
+                binding.minimumDashRequirementTxt.text = getString(
                     R.string.crowdnode_minimum_deposit,
                     CrowdNodeConstants.DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
                 )
             } else {
-                binding.minimumDashRequirement.text = getString(
+                binding.minimumDashRequirementTxt.text = getString(
                     R.string.crowdnode_minimum_deposit_difference,
                     CrowdNodeConstants.DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT - balance)
                 )

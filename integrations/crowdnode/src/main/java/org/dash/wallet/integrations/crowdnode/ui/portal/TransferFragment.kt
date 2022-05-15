@@ -186,7 +186,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         binding.sourceIcon.setImageResource(R.drawable.ic_dash_pay)
         binding.sourceLabel.text = getString(R.string.from_wallet)
 
-        if (viewModel.isFirstDeposit) {
+        if (viewModel.shouldShowFirstDepositBanner) {
             binding.messageBanner.isVisible = true
             binding.bannerMessageText.text = getString(
                 R.string.crowdnode_first_deposit,
@@ -204,7 +204,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
     private suspend fun continueTransfer(value: Coin, isWithdraw: Boolean) {
         if (!isWithdraw) {
-            if (viewModel.isFirstDeposit &&
+            if (viewModel.shouldShowFirstDepositBanner &&
                 value.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
             ) {
                 showBannerError()
