@@ -19,7 +19,6 @@ package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -317,7 +316,6 @@ class CrowdNodeApiAggregator @Inject constructor(
     private suspend fun startTrackingConfirmed(accountAddress: Address, initialDelay: Duration) {
         // First check or wait for the confirmation tx.
         // No need to make web requests if it isn't found.
-        Log.i("CROWDNODE", "startTrackingConfirmed")
         val confirmationTx = blockchainApi.waitForApiAddressConfirmation(accountAddress)
         log.info("Confirmation tx found: ${confirmationTx.txId}")
 
@@ -472,13 +470,11 @@ class CrowdNodeApiAggregator @Inject constructor(
 
     private suspend fun checkIfAddressIsInUse(address: Address) {
         val isInUse = resolveIsAddressInUse(address)
-        Log.i("CROWDNODE", "isInUse: ${isInUse}")
 
         if (isInUse && onlineAccountStatus.value.ordinal <= OnlineAccountStatus.Linking.ordinal) {
             accountAddress = address
             globalConfig.crowdNodeAccountAddress = address.toBase58()
             primaryAddress?.toBase58()?.let {
-                Log.i("CROWDNODE", "Address in use, saving primary address: ${primaryAddress?.toBase58() ?: "null"}")
                 globalConfig.crowdNodePrimaryAddress = it
             }
             changeOnlineStatus(OnlineAccountStatus.Validating)
@@ -487,7 +483,6 @@ class CrowdNodeApiAggregator @Inject constructor(
 
     private suspend fun checkIsAddressValidated(address: Address) {
         val status = resolveAddressStatus(address)
-        Log.i("CROWDNODE", "is validated, address status: ${status}")
 
         if (status?.lowercase() == VALID_STATUS) {
             changeOnlineStatus(OnlineAccountStatus.Confirming)
@@ -497,7 +492,6 @@ class CrowdNodeApiAggregator @Inject constructor(
 
     private suspend fun checkIsAddressConfirmed(address: Address) {
         val status = resolveAddressStatus(address)
-        Log.i("CROWDNODE", "is confirmed, address status: ${status}")
 
         if (status?.lowercase() == CONFIRMED_STATUS) {
             changeOnlineStatus(OnlineAccountStatus.Done)
@@ -532,7 +526,6 @@ class CrowdNodeApiAggregator @Inject constructor(
     private suspend fun resolveAddressStatus(address: Address): String? {
         return try {
             val result = webApi.addressStatus(address.toString())
-            Log.i("CROWDNODE", "status: ${result.body()?.status ?: "null"}")
             result.body()?.status
         } catch (ex: Exception) {
             log.error("Error in resolveAddressStatus: $ex")
@@ -546,7 +539,6 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     private fun cancelTrackingJob() {
-        Log.i("CROWDNODE", "cancelTrackingJob")
         tickerJob?.cancel()
         tickerJob = null
     }

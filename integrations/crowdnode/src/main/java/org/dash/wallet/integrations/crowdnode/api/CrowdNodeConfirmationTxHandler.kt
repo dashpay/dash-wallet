@@ -62,7 +62,6 @@ class CrowdNodeAPIConfirmationHandler(
     )
 
     fun handle(tx: Transaction) {
-        Log.i("CROWDNODE", "CrowdNodeConfirmationReceivedHandler handle, fromAddresses: ${fromAddresses.joinToString("; ") { it.toBase58() }}")
         log.info("Handling confirmation tx: ${tx.txId}")
 
         handlerScope.launch {

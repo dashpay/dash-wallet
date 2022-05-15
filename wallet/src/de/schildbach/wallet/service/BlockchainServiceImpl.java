@@ -1164,9 +1164,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     getResources(),
                     new Intent(this, StakingActivity.class)
             );
-            Log.i("CROWDNODE", "Registered addressConfirmationReceived: " + apiAddressStr);
         } else {
-            Log.i("CROWDNODE", "Unregistered addressConfirmationReceived");
             apiConfirmationHandler = null;
         }
     }

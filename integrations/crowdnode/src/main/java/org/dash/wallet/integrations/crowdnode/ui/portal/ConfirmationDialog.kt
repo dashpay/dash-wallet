@@ -97,6 +97,7 @@ class ConfirmationDialog: OffsetDialogFragment() {
                 dismiss()
             }
         }
+
         viewModel.observeCrowdNodeError().observe(viewLifecycleOwner) { error ->
             if (error != null) {
                 qrDialog?.dismiss()
