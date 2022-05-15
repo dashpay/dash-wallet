@@ -33,6 +33,10 @@ class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
     private val firebaseAnalytics = Firebase.analytics
     private val crashlytics = Firebase.crashlytics
 
+    init {
+        crashlytics.setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
+    }
+
     override fun logEvent(event: String, params: Bundle) {
         if (BuildConfig.DEBUG) {
             return
