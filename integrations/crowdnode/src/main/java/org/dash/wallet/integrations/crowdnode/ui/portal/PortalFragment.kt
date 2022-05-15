@@ -142,17 +142,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
 
         binding.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.menu_info) {
-                AdaptiveDialog.create(
-                    R.drawable.ic_info_blue_encircled,
-                    getString(R.string.crowdnode_your_address_title),
-                    viewModel.accountAddress.value?.toBase58() ?: "",
-                    getString(R.string.button_close),
-                    getString(R.string.button_copy_address)
-                ).show(requireActivity()) { toCopy ->
-                    if (toCopy == true) {
-                        viewModel.accountAddress.value?.toBase58()?.copy(requireActivity(), "dash address")
-                    }
-                }
+                showInfoDialog()
             }
 
             true
@@ -297,6 +287,24 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             CrowdNodeException.CONFIRMATION_ERROR -> R.string.crowdnode_bad_confirmation
             else -> R.string.crowdnode_transfer_error
         })
+    }
+
+    private fun showInfoDialog() {
+        if (viewModel.signUpStatus == SignUpStatus.LinkedOnline) {
+            OnlineAccountDetailsDialog().show(parentFragmentManager, "online_account_details")
+        } else {
+            AdaptiveDialog.create(
+                R.drawable.ic_info_blue_encircled,
+                getString(R.string.crowdnode_your_address_title),
+                viewModel.accountAddress.value?.toBase58() ?: "",
+                getString(R.string.button_close),
+                getString(R.string.button_copy_address)
+            ).show(requireActivity()) { toCopy ->
+                if (toCopy == true) {
+                    viewModel.accountAddress.value?.toBase58()?.copy(requireActivity(), "dash address")
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
