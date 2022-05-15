@@ -303,6 +303,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Připojit dump peněženky</string>
     <string name="report_issue_dialog_mail_intent_chooser">Odeslat hlášení pomocí…</string>
     <string name="report_issue_dialog_mail_intent_failed">Odeslání hlášení selhalo.</string>
+    <string name="report_transaction_history_export">Exportovat</string>
+    <string name="report_transaction_history_title">Expertovat jako CSV</string>
+    <string name="report_transaction_history_not_synced_title">Expertovat jako CSV</string>
+    <string name="report_transaction_history_not_synced_message">Pro exportování historie vyčkejte, než bude peněženka plně synchronizována.</string>
+    <string name="report_transaction_history_message">Bude exportována celá transakční historie.\n\nVšechny platby budou považovány za výdaj a všechny přijaté transakce za příjem. Držitel této peněženky je zodpovědný za jakékoliv nutné úpravy daňového základu během plnění daňových povinností.</string>
+    <string name="report_transaction_history_mail_intent_chooser">Poslat transakční historii pomocí...</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">Odeslání transakční historie selhalo.</string>
+
     <string name="about_title">O aplikaci</string>
     <string name="about_version_title">Verze</string>
     <string name="about_copyright_title">Copyright</string>
@@ -384,4 +392,6 @@
     <string name="select_a_service">Vybrat službu</string>
     <string name="activity_buy_and_sell_dash_filter">Filtr</string>
     <string name="clear_filter">Zrušit filtr</string>
-    </resources>
+    <string name="select_currency">Vybrat měnu</string>
+
+</resources>

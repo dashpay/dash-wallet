@@ -62,7 +62,6 @@
     <string name="scan_to_pay_error_dialog_title">スキャンして送金する</string>
     <string name="scan_to_pay_error_dialog_message">クリップボードのDashアドレスやURLリクエストは無効です:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">クリップボードのDashアドレスやURLリクエストは無効です</string>
-
     <string name="receive_title">入金</string>
     <string name="receive_enter_amount_message">受け取る金額を指定してください</string>
     <string name="receive_enter_amount_button">金額を指定する</string>
@@ -146,7 +145,6 @@
     <string name="wallet_lock_try_again">もう一度 %1$d %2$sにてお試しください。</string>
     <string name="wallet_lock_reset">リセット</string>
     <string name="wallet_lock_wrong_pin">PINコードが間違っています! %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="other">あと%d 回試みることができます。</item>
     </plurals>

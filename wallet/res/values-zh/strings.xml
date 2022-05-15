@@ -303,6 +303,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">附加钱包 dump 信息</string>
     <string name="report_issue_dialog_mail_intent_chooser">发送报告使用…</string>
     <string name="report_issue_dialog_mail_intent_failed">发送报告失败.</string>
+    <string name="report_transaction_history_export">导出</string>
+    <string name="report_transaction_history_title">导出CSV文件</string>
+    <string name="report_transaction_history_not_synced_title">导出CSV文件</string>
+    <string name="report_transaction_history_not_synced_message">请等钱包完全同步后再导出您的交易记录.</string>
+    <string name="report_transaction_history_message">完整交易记录将被导出.\n\n所有付款将被视为支出, 所有汇入交易都将标为收入. 此钱包的所有者对其在所选报税系统做出的任何成本基础调整负责.</string>
+    <string name="report_transaction_history_mail_intent_chooser">发送交易记录使用...</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">发送交易记录失败.</string>
+
     <string name="about_title">关于</string>
     <string name="about_version_title">版本</string>
     <string name="about_copyright_title">Copyright</string>
@@ -384,4 +392,6 @@
     <string name="select_a_service">选择服务</string>
     <string name="activity_buy_and_sell_dash_filter">过滤</string>
     <string name="clear_filter">清除过滤</string>
-    </resources>
+    <string name="select_currency">选择货币</string>
+
+</resources>

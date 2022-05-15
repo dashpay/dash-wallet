@@ -1,4 +1,4 @@
-﻿MAIN DESCRIPTION
+﻿HLAVNÍ POPIS
 
 Dash Wallet je referenční peněženka pro Android, kterou udržuje Dash Core Group pro Dash - Digital Cash - inovativní alternativa k bitcoinům, která je výslovně určena pro platby.
 
