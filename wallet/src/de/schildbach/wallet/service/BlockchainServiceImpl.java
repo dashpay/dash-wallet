@@ -39,7 +39,6 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.text.format.DateUtils;
-import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
@@ -590,14 +589,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                 log.info("DMN List peer discovery failed: "+ x.getMessage());
                             }
 
-//                            if(peers.size() < MINIMUM_PEER_COUNT) {
-//                                if (Constants.NETWORK_PARAMETERS.getAddrSeeds() != null) {
-//                                    log.info("DNM peer discovery returned less than 16 nodes.  Adding seed peers to the list to increase connections");
-//                                    peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
-//                                } else {
-//                                    log.info("DNS peer discovery returned less than 16 nodes.  Unable to add seed peers (it is not specified for this network).");
-//                                }
-//                            }
+                            if(peers.size() < MINIMUM_PEER_COUNT) {
+                                if (Constants.NETWORK_PARAMETERS.getAddrSeeds() != null) {
+                                    log.info("DNM peer discovery returned less than 16 nodes.  Adding seed peers to the list to increase connections");
+                                    peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                } else {
+                                    log.info("DNS peer discovery returned less than 16 nodes.  Unable to add seed peers (it is not specified for this network).");
+                                }
+                            }
 
                             if(peers.size() < MINIMUM_PEER_COUNT) {
                                 log.info("Masternode peer discovery returned less than 16 nodes.  Adding DMN peers to the list to increase connections");

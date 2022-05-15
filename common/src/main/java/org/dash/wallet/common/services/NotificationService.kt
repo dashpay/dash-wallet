@@ -19,7 +19,6 @@ package org.dash.wallet.common.services
 
 import android.app.Notification
 import android.content.Intent
-import androidx.annotation.StringRes
 
 interface NotificationService {
     fun showNotification(

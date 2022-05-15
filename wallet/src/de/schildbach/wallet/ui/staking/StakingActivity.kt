@@ -88,7 +88,6 @@ class StakingActivity : LockScreenActivity() {
                 if (navController.currentDestination?.id == R.id.crowdNodeWebViewFragment) {
                     navController.navigate(WebViewFragmentDirections.webViewToPortal())
                 }
-//                viewModel.cancelLinkingOnlineAccount()
                 super.turnOnAutoLogout()
             }
         }
