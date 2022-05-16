@@ -28,6 +28,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.SendPaymentService
@@ -66,12 +67,11 @@ class SendCoinsTaskRunner @Inject constructor(
             this.ensureMinRequiredFee = true
             this.emptyWallet = emptyWallet
 
-            coinSelector?.let {
-                this.coinSelector = it
+            val selector = coinSelector ?: ZeroConfCoinSelector.get()
+            this.coinSelector = selector
 
-                if (coinSelector is ByAddressCoinSelector) {
-                    changeAddress = coinSelector.address
-                }
+            if (selector is ByAddressCoinSelector) {
+                changeAddress = selector.address
             }
         }
     }
