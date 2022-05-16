@@ -53,14 +53,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:gravity="center"
+            android:gravity="start"
             android:textAlignment="gravity"
             android:text="@string/crowdnode_new_account_warning_1" />
 
         <TextView
             android:id="@+id/description_2"
             style="@style/Body2"
-            android:gravity="center"
             android:textAlignment="gravity"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -83,8 +82,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/register_panel"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:layout_height="wrap_content">
 
                 <TextView
                     android:id="@+id/dash_address_title"
@@ -151,7 +149,7 @@
 
     <Button
         android:id="@+id/create_account_btn"
-        style="@style/Button.Primary.Large.Blue"
+        style="@style/Button.Primary.Large.LightGrey"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="20dp"
