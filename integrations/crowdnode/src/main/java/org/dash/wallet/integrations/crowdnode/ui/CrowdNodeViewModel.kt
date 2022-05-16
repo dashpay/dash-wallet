@@ -73,7 +73,7 @@ class CrowdNodeViewModel @Inject constructor(
 
     var signUpStatus: LiveData<SignUpStatus> = MediatorLiveData<SignUpStatus>().apply {
         addSource(crowdNodeApi.signUpStatus.asLiveData(), this::setValue)
-        value = crowdNodeApi.signUpStatus.value
+        value = SignUpStatus.NotStarted//crowdNodeApi.signUpStatus.value
     }
 
     var onlineAccountStatus: LiveData<OnlineAccountStatus> = MediatorLiveData<OnlineAccountStatus>().apply {

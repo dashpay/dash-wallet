@@ -72,7 +72,7 @@
     <string name="crowdnode_balance">Balance on CrowdNode</string>
     <string name="crowdnode_your_address_title">Here is the Dash address you used in integration with CrowdNode</string>
     <string name="chain_syncing">The chain is syncing…</string>
-    <string name="crowdnode_wait_for_sync">Please wait until the chain is fully synced so we can review your transaction history.\n\nYou can visit CrowdNode website and log in/sign up there.</string>
+    <string name="crowdnode_wait_for_sync">Wait until the chain is fully synced, so we can review your transaction history. Visit CrowdNode website to log in or sign up.</string>
     <string name="crowdnode_open_website">Go to CrowdNode website</string>
     <string name="crowdnode_info_title">Become part of a Dash Masternode with CrowdNode</string>
     <string name="introducing_staking">Introducing Staking</string>

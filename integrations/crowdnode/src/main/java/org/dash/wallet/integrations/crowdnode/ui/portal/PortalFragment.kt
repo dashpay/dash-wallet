@@ -23,6 +23,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -209,11 +210,11 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         binding.depositBtn.isEnabled = isEnabled
 
         if (isEnabled) {
-            binding.depositIcon.setColorFilter(resources.getColor(R.color.green_300, null))
+            binding.depositIcon.setImageDrawable(ResourcesCompat.getDrawable(requireActivity().resources,R.drawable.ic_deposit_enabled,null))
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_primary, null))
             binding.depositSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
         } else {
-            binding.depositIcon.clearColorFilter()
+            binding.depositIcon.setImageDrawable(ResourcesCompat.getDrawable(requireActivity().resources,R.drawable.ic_deposit_disabled,null))
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
             binding.depositSubtitle.setTextColor(resources.getColor(R.color.content_disabled, null))
         }
