@@ -25,7 +25,7 @@ import androidx.annotation.LayoutRes
 import androidx.fragment.app.FragmentActivity
 import org.dash.wallet.common.R
 
-class AdaptiveDialogExt(@LayoutRes private val layout: Int) : AdaptiveDialog(layout) {
+class AdaptiveDialogExt(@LayoutRes private val layout: Int = R.layout.dialog_adaptive_ext) : AdaptiveDialog(layout) {
     companion object {
         private const val ICON_RES_ARG = "icon_res"
         private const val TITLE_ARG = "title"
