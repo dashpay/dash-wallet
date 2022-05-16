@@ -37,7 +37,7 @@ class SendCoinsTaskRunnerTest {
     @Test
     fun sendCoins_coinSelectorSet_correctCoinSelector() {
         val wallet = mockk<Wallet>()
-        every { wallet.context } returns Context.getOrCreate(MainNetParams.get())
+        every { wallet.context } returns Context(MainNetParams.get())
         val application = mockk<WalletApplication>()
 
         val sendCoinsTaskRunner = SendCoinsTaskRunner(application)
@@ -54,7 +54,7 @@ class SendCoinsTaskRunnerTest {
     @Test
     fun sendCoins_nullCoinSelector_zeroConfSelectorByDefault() {
         val wallet = mockk<Wallet>()
-        every { wallet.context } returns Context.getOrCreate(MainNetParams.get())
+        every { wallet.context } returns Context(MainNetParams.get())
         val application = mockk<WalletApplication>()
 
         val sendCoinsTaskRunner = SendCoinsTaskRunner(application)
