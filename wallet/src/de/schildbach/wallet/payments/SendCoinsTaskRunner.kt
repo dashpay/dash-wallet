@@ -16,6 +16,7 @@
  */
 package de.schildbach.wallet.payments
 
+import androidx.annotation.VisibleForTesting
 import com.google.common.base.Preconditions
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.security.SecurityGuard
@@ -56,7 +57,8 @@ class SendCoinsTaskRunner @Inject constructor(
         return sendCoins(wallet, sendRequest, scryptIterationsTarget)
     }
 
-    private fun createSendRequest(
+    @VisibleForTesting
+    fun createSendRequest(
         address: Address,
         amount: Coin,
         coinSelector: CoinSelector? = null,

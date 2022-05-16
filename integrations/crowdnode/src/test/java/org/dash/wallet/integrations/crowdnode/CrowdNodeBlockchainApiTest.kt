@@ -47,7 +47,7 @@ class CrowdNodeBlockchainApiTest {
 
     private val globalConfig = mock<Configuration> {
         on { crowdNodeAccountAddress } doReturn "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"
-        on { crowdNodePrimaryAddress } doReturn "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"
+        on { crowdNodePrimaryAddress } doReturn "XdYM3BWPrTEXGSFtRcR8QJSfXfefmcNaTr"
     }
 
     private val walletData = mock<WalletDataProvider> {
