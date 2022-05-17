@@ -58,7 +58,9 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
     <string name="online_account">Online Account</string>
     <string name="online_account_create">Create Online Account</string>
-    <string name="secure_online_account">Protect your earnings</string>
+    <string name="secure_online_account">Protect your savings</string>
+    <string name="online_account_create_full">Create an online CrowdNode account</string>
+    <string name="online_account_email_privacy">Please note that the email is not saved by the Dash Wallet and is only sent to Crowdnode</string>
     <string name="crowdnode_support">CrowdNode Support</string>
     <string name="unlink_account">Unlink Account</string>
     <string name="online_account_title">What is online account and why do you need it?</string>

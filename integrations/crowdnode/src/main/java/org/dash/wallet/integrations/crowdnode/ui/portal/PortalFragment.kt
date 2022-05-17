@@ -31,7 +31,6 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -124,12 +123,14 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
 
         binding.onlineAccountBtn.setOnClickListener {
-            val url = if (viewModel.networkParameters == MainNetParams.get()) {
-                getString(R.string.crowdnode_login_page, viewModel.accountAddress.value)
-            } else {
-                getString(R.string.crowdnode_login_test_page, viewModel.accountAddress.value)
+            lifecycleScope.launch {
+                if (viewModel.getShouldShowOnlineInfo()) {
+                    safeNavigate(PortalFragmentDirections.portalToOnlineAccountInfo())
+                    viewModel.setOnlineInfoShown(true)
+                } else {
+                    safeNavigate(PortalFragmentDirections.portalToOnlineAccountEmail())
+                }
             }
-            safeNavigate(PortalFragmentDirections.portalToOnlineAccountInfo(url))
         }
 
         binding.supportBtn.setOnClickListener {

@@ -32,6 +32,7 @@ import javax.inject.Singleton
 open class CrowdNodeConfig @Inject constructor(private val context: Context) {
     companion object {
         val INFO_SHOWN = booleanPreferencesKey("info_shown")
+        val ONLINE_INFO_SHOWN = booleanPreferencesKey("online_info_shown")
         val CONFIRMATION_DIALOG_SHOWN = booleanPreferencesKey("confirmation_dialog_shown")
         val BACKGROUND_ERROR = stringPreferencesKey("error")
         val ONLINE_ACCOUNT_STATUS = intPreferencesKey("online_account_status")

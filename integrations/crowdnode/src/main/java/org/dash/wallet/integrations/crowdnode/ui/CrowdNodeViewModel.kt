@@ -222,6 +222,17 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
+    suspend fun getShouldShowOnlineInfo(): Boolean {
+        return signUpStatus != SignUpStatus.LinkedOnline &&
+                !(config.getPreference(CrowdNodeConfig.ONLINE_INFO_SHOWN) ?: false)
+    }
+
+    fun setOnlineInfoShown(isShown: Boolean) {
+        viewModelScope.launch {
+            config.setPreference(CrowdNodeConfig.ONLINE_INFO_SHOWN, isShown)
+        }
+    }
+
     suspend fun deposit(value: Coin): Boolean {
         return crowdNodeApi.deposit(value, emptyWallet = value >= dashBalance.value)
     }

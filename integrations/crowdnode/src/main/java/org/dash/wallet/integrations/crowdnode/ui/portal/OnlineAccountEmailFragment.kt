@@ -23,23 +23,18 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
-import org.dash.wallet.integrations.crowdnode.databinding.FragmentOnlineAccountInfoBinding
+import org.dash.wallet.integrations.crowdnode.databinding.FragmentOnlineAccountEmailBinding
 
 @AndroidEntryPoint
-class OnlineAccountInfoFragment : Fragment(R.layout.fragment_online_account_info) {
-    private val binding by viewBinding(FragmentOnlineAccountInfoBinding::bind)
+class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_email) {
+    private val binding by viewBinding(FragmentOnlineAccountEmailBinding::bind)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
-        }
-
-        binding.createAccountBtn.setOnClickListener {
-            safeNavigate(OnlineAccountInfoFragmentDirections.onlineAccountInfoToEmail())
         }
     }
 }
