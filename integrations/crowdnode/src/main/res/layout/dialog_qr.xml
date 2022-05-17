@@ -22,7 +22,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:paddingHorizontal="20dp"
-    tools:context=".ui.portal.QRDialog">
+    tools:context=".ui.dialogs.QRDialog">
 
     <View
         android:id="@+id/drag_indicator"

@@ -44,6 +44,8 @@ import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
+import org.dash.wallet.integrations.crowdnode.ui.dialogs.ConfirmationDialog
+import org.dash.wallet.integrations.crowdnode.ui.dialogs.OnlineAccountDetailsDialog
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 @AndroidEntryPoint

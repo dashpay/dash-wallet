@@ -21,7 +21,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:paddingHorizontal="20dp"
-    tools:context=".ui.portal.OnlineAccountDetailsDialog">
+    tools:context=".ui.dialogs.OnlineAccountDetailsDialog">
 
     <ImageButton
         android:id="@+id/collapse_button"
