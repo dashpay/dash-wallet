@@ -539,10 +539,13 @@ open class LockScreenActivity : SecureActivity() {
         fragmentManager.fragments
             .takeIf { it.isNotEmpty() }
             ?.forEach { fragment ->
-                if (fragment is DialogFragment) {
-                    fragment.dismissAllowingStateLoss()
-                } else if (fragment is NavHostFragment) {
-                    dismissDialogFragments(fragment.childFragmentManager)
+                // check to see if the activity is valid and fragment is added to its activity
+                if (fragment.activity != null && fragment.isAdded) {
+                    if (fragment is DialogFragment) {
+                        fragment.dismissAllowingStateLoss()
+                    } else if (fragment is NavHostFragment) {
+                        dismissDialogFragments(fragment.childFragmentManager)
+                    }
                 }
             }
     }
