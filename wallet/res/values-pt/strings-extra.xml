@@ -145,7 +145,6 @@
     <string name="wallet_lock_try_again">Tente novamente em %1$d %2$s</string>
     <string name="wallet_lock_reset">Resetar</string>
     <string name="wallet_lock_wrong_pin">PIN incorreto! %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d tentativa restante</item>
         <item quantity="other">%d tentativas restantes</item>
@@ -179,7 +178,7 @@
     <string name="notification_transactions_channel_description">Receba alerta sobre transações entrantes</string>
     <string name="notification_synchronization_channel_name">Sincronização</string>
     <string name="notification_synchronization_channel_description">Mostra uma notificação enquanto o app está sincronizando com a rede.</string>
-
+    <string name="notification_settings_title">Notificações</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Use sua digital para desbloquear.</string>
@@ -260,6 +259,7 @@
     <string name="tools_address_book">Livro de endereços</string>
     <string name="tools_import_private_key">Importar Chave Privada</string>
     <string name="tools_network_monitor">Monitor de rede</string>
+    <string name="tools_show_xpub">Chave Pública Estendida</string>
 
     <string name="about_help_us_improve">Ajude-nos a melhorar a sua experiência</string>
     <string name="about_review_and_rate">Comente ou classifique o aplicativo</string>

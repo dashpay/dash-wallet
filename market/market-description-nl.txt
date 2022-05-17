@@ -1,4 +1,4 @@
-ALGEMENE BESCHRIJVING
+﻿MAIN DESCRIPTION
 
 Dash Wallet is de referentie Android portemonnee die wordt onderhouden door Dash Core Group voor Dash - Digital Cash -, een innovatief alternatief voor Bitcoin dat expliciet is ontworpen voor betalingen.
 

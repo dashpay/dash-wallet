@@ -30,7 +30,13 @@
     <string name="button_dismiss">Отклонить</string>
     <string name="network_unavailable_return">Вернуться в кошелёк</string>
     <string name="button_continue">Продолжить</string>
+    <string name="button_understand">Я понимаю</string>
+    <string name="button_okay">Да</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Поиск</string>
+    <string name="permission_allow">Разрешить</string>
+    <string name="permission_deny">Отказаться</string>
     <string name="max">Макс</string>
     <string name="select_currency">Выберите валюту</string>
 </resources>

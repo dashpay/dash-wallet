@@ -155,6 +155,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         application = getWalletApplication();
         config = application.getConfiguration();
         wallet = application.getWallet();
+        viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
         setContentViewFooter(R.layout.home_activity);
         setSupportActionBar(findViewById(R.id.toolbar));
@@ -191,7 +192,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         });
 
-        initViewModel();
+        viewModel.getOnTransactionsUpdated().observe(this, aVoid -> refreshShortcutBar());
+        viewModel.isBlockchainSynced().observe(this, isSynced -> updateSyncState());
+        viewModel.isBlockchainSyncFailed().observe(this, isSynced -> updateSyncState());
     }
 
     @Override
@@ -205,13 +208,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void initView() {
         initShortcutActions();
-    }
-
-    private void initViewModel() {
-        viewModel = new ViewModelProvider(this).get(MainViewModel.class);
-        viewModel.getOnTransactionsUpdated().observe(this, aVoid -> refreshShortcutBar());
-        viewModel.isBlockchainSynced().observe(this, isSynced -> updateSyncState());
-        viewModel.isBlockchainSyncFailed().observe(this, isSynced -> updateSyncState());
     }
 
     private void initShortcutActions() {

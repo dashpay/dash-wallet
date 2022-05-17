@@ -185,7 +185,7 @@
     <string name="notification_transactions_channel_description">Dostávať upozornenia o prichádzajúcich transakciách.</string>
     <string name="notification_synchronization_channel_name">Synchronizácia</string>
     <string name="notification_synchronization_channel_description">Zobrazí sa upozornenie, keď sa aplikácia synchronizuje so sieťou.</string>
-
+    <string name="notification_settings_title">Oznámenia</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Pre odomknutie použite otlačok prsta.</string>
@@ -266,6 +266,7 @@
     <string name="tools_address_book">Adresár</string>
     <string name="tools_import_private_key">Importovať privátny Kľúč</string>
     <string name="tools_network_monitor">Stav siete</string>
+    <string name="tools_show_xpub">Rozšírený verejný kľúč</string>
 
     <string name="about_help_us_improve">Pomôžte nám vylepšiť váš zážitok</string>
     <string name="about_review_and_rate">Ohodnotiť aplikáciu</string>

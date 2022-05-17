@@ -30,6 +30,7 @@
     <string name="button_dismiss">Annuleren</string>
     <string name="network_unavailable_return">Keer terug naar portemonnee</string>
     <string name="button_continue">Doorgaan</string>
+    <string name="button_okay">Oké</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Zoek</string>

@@ -15,7 +15,6 @@
     <string name="set_pin_decrypting">正在解密钱包</string>
     <string name="set_pin_verifying_pin">验证PIN</string>
     <string name="set_pin_message">每次使用时都需要输入PIN以解锁您的app.</string>
-
     <string name="home_available_balance">可用余额</string>
     <string name="home_balance_hidden">余额已隐藏</string>
     <string name="home_balance_show_hint">点击显示余额</string>
@@ -176,7 +175,7 @@
     <string name="notification_transactions_channel_description">接收关于新转入交易的提醒.</string>
     <string name="notification_synchronization_channel_name">同步</string>
     <string name="notification_synchronization_channel_description">当app正在同步网络时显示通知.</string>
-
+    <string name="notification_settings_title">通知</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">使用您的指纹解锁.</string>
@@ -257,6 +256,7 @@
     <string name="tools_address_book">地址簿</string>
     <string name="tools_import_private_key">导入私钥</string>
     <string name="tools_network_monitor">网络监视器</string>
+    <string name="tools_show_xpub">扩展的公钥</string>
 
     <string name="about_help_us_improve">帮助我们改善您的体验</string>
     <string name="about_review_and_rate">对app进行评论 &amp; 评分</string>
