@@ -443,16 +443,15 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
 
             if (percentage == 0) {
                 syncing += "…";
+                syncingText.setText(syncing);
             } else {
                 SpannableStringBuilder str = new SpannableStringBuilder(syncing + " " + percentage + "%");
                 int start = syncing.length() + 1;
                 int end = str.length();
                 str.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end,
                         Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                syncing = str.toString();
+                syncingText.setText(str);
             }
-
-            syncingText.setText(syncing);
         }
     }
 
