@@ -34,6 +34,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
+        android:layout_marginTop="20dp"
         android:paddingHorizontal="20dp"
         android:paddingBottom="62dp"
         app:layout_constraintBottom_toBottomOf="@+id/accept_terms_ll"
@@ -74,8 +75,8 @@
             android:animateLayoutChanges="true"
             android:backgroundTint="@color/gray_40"
             app:contentPaddingBottom="9dp"
-            app:contentPaddingLeft="15dp"
-            app:contentPaddingRight="15dp"
+            app:contentPaddingLeft="20dp"
+            app:contentPaddingRight="20dp"
             app:contentPaddingTop="9dp"
             app:layout_constraintTop_toBottomOf="@id/header">
 
@@ -104,7 +105,9 @@
                     android:maxLines="1"
                     app:layout_constraintTop_toBottomOf="@+id/dash_address_title"
                     app:layout_constraintStart_toStartOf="parent"
-                    tools:text="XjfK5ivsGw7Ynxj99CEAJpcB5qNjsJpMH2" />
+                    app:layout_constraintEnd_toStartOf="@+id/copy_address_btn"
+
+                    tools:text="XjfK5ivsGw7Ynxj99CEAJpcB5qNjsJpMH2sssssddddddddddddddss" />
 
                 <ImageButton
                     android:id="@+id/copy_address_btn"
@@ -114,6 +117,7 @@
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toEndOf="@+id/dash_address_txt"
                     android:layout_gravity="center_vertical"
                     android:src="@drawable/ic_copy" />
             </androidx.constraintlayout.widget.ConstraintLayout>
@@ -128,6 +132,7 @@
         android:layout_height="60dp"
         android:layout_marginBottom="9dp"
         android:orientation="horizontal"
+        android:layout_marginHorizontal="5dp"
         app:layout_constraintBottom_toTopOf="@+id/create_account_btn"
         app:layout_constraintEnd_toEndOf="@+id/create_account_btn"
         app:layout_constraintStart_toStartOf="@+id/create_account_btn">

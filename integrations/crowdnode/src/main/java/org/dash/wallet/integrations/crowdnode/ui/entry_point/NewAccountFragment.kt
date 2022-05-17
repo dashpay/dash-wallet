@@ -62,6 +62,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
             binding.createAccountBtn.setText(R.string.crowdnode_login)
             binding.description1.setText(R.string.crowdnode_link_account_description)
             binding.description2.isVisible = false
+            binding.title.gravity = Gravity.CENTER
             binding.description1.gravity = Gravity.CENTER
         }
 
