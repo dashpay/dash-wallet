@@ -141,6 +141,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         application = getWalletApplication();
         config = application.getConfiguration();
         wallet = application.getWallet();
+        viewModel = new ViewModelProvider(this).get(MainActivityViewModel.class);
 
         setContentViewFooter(R.layout.home_activity);
         setSupportActionBar(findViewById(R.id.toolbar));
@@ -185,7 +186,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         });
 
-        initViewModel();
+        viewModel.getOnTransactionsUpdated().observe(this, aVoid -> {
+            refreshShortcutBar();
+        });
     }
 
     @Override
@@ -199,13 +202,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void initView() {
         initShortcutActions();
-    }
-
-    private void initViewModel() {
-        viewModel = new ViewModelProvider(this).get(MainActivityViewModel.class);
-        viewModel.getOnTransactionsUpdated().observe(this, aVoid -> {
-            refreshShortcutBar();
-        });
     }
 
     private void initShortcutActions() {
