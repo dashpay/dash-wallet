@@ -21,6 +21,7 @@ import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.runBlocking
+import org.bitcoinj.core.Address
 import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -31,6 +32,7 @@ import org.dash.wallet.integrations.crowdnode.model.CrowdNodeBalance
 import org.dash.wallet.integrations.crowdnode.model.IsAddressInUse
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
+import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.junit.Test
 import org.mockito.kotlin.*
@@ -87,6 +89,28 @@ class CrowdNodeBlockchainApiTest {
 
         assertEquals(OnlineAccountStatus.Confirming, api.onlineAccountStatus.value)
         assertEquals(SignUpStatus.LinkedOnline, api.signUpStatus.value)
+    }
+
+    @Test
+    fun stopTrackingLinked_doesNotDemoteApiSignUpStatus() {
+        localConfig.stub {
+            onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+        }
+        val mockFullSet = mock<FullCrowdNodeSignUpTxSet> {
+            on { hasWelcomeToApiResponse } doReturn true
+            on { accountAddress } doReturn Address.fromBase58(MainNetParams.get(), "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U")
+        }
+        blockchainApi.stub {
+            on { getFullSignUpTxSet() } doReturn mockFullSet
+        }
+        val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock())
+        assertEquals(SignUpStatus.Finished, api.signUpStatus.value)
+        assertEquals(OnlineAccountStatus.None, api.onlineAccountStatus.value)
+
+        api.stopTrackingLinked()
+
+        assertEquals(SignUpStatus.Finished, api.signUpStatus.value)
+        assertEquals(OnlineAccountStatus.None, api.onlineAccountStatus.value)
     }
 
     @Test

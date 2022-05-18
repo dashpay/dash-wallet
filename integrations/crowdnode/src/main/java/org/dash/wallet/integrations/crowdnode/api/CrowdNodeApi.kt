@@ -335,7 +335,9 @@ class CrowdNodeApiAggregator @Inject constructor(
     override fun stopTrackingLinked() {
         val address = linkingApiAddress
 
-        if (onlineAccountStatus.value.ordinal <= OnlineAccountStatus.Linking.ordinal) {
+        if (signUpStatus.value == SignUpStatus.NotStarted &&
+            onlineAccountStatus.value.ordinal <= OnlineAccountStatus.Linking.ordinal
+        ) {
             changeOnlineStatus(OnlineAccountStatus.None)
 
             address?.let {
