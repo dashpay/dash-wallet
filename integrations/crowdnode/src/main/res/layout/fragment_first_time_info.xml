@@ -48,6 +48,7 @@
 
             <ImageView
                 android:id="@+id/crowdnode_logo"
+                style="@style/ViewRaised"
                 android:layout_width="100dp"
                 android:layout_height="100dp"
                 android:layout_gravity="center_horizontal"
@@ -65,7 +66,7 @@
                 style="@style/Headline5.Bold"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
+                android:layout_marginTop="30dp"
                 android:layout_marginHorizontal="10dp"
                 android:text="@string/crowdnode_info_title"
                 android:textAlignment="center"

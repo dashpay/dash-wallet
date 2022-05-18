@@ -21,7 +21,7 @@
     <string name="account_create">Create Account</string>
     <string name="account_link">Link Existing Account</string>
     <string name="crowdnode_login">Log in to CrowdNode</string>
-    <string name="crowdnode_link">Link a CrowdNode account</string>
+    <string name="crowdnode_link">Link Existing CrowdNode Account</string>
     <string name="required_passphrase_backup">You have to backup your passphrase in Dash Wallet</string>
     <string name="backup_passphrase">Backup Passphrase</string>
     <string name="required_dash_amount">You need at least %s Dash on your Dash Wallet</string>
@@ -60,7 +60,7 @@
     <string name="secure_online_account">Protect your earnings</string>
     <string name="crowdnode_support">CrowdNode Support</string>
     <string name="unlink_account">Unlink Account</string>
-    <string name="online_account_title">What is online account and why do you need it?</string>
+    <string name="online_account_title">Why do you need an online account?</string>
     <string name="crowdnode_online_synced">Synced with current Dash Wallet</string>
     <string name="crowdnode_online_unconfirmed">In process…</string>
     <string name="account_recovery">Account Recovery</string>

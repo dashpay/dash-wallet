@@ -30,7 +30,7 @@
         app:navigationIcon="@drawable/ic_arrow_back" />
 
     <LinearLayout
-        android:id="@+id/header"
+        android:id="@+id/register_panel"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
@@ -46,7 +46,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="?attr/actionBarSize"
-            android:text="@string/new_account" />
+            android:text="@string/new_account"
+            android:textAlignment="gravity" />
 
         <TextView
             android:id="@+id/description_1"
@@ -65,65 +66,54 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
+            android:layout_marginBottom="10dp"
             android:text="@string/crowdnode_new_account_warning_2" />
 
-        <androidx.cardview.widget.CardView
-            style="@style/CardViewRaised"
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="30dp"
-            android:animateLayoutChanges="true"
-            android:backgroundTint="@color/gray_40"
-            app:contentPaddingBottom="9dp"
-            app:contentPaddingLeft="20dp"
-            app:contentPaddingRight="20dp"
-            app:contentPaddingTop="9dp"
-            app:layout_constraintTop_toBottomOf="@id/header">
+            android:layout_marginTop="20dp"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/DashAddressBackground"
+            android:orientation="vertical"
+            android:paddingStart="15dp"
+            android:paddingEnd="5dp"
+            android:paddingVertical="10dp">
 
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/register_panel"
+            <TextView
+                style="@style/Caption.SteelGray"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:text="@string/dash_address"
+                app:layout_constraintTop_toTopOf="parent" />
 
-                <TextView
-                    android:id="@+id/dash_address_title"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    style="@style/Caption.SteelGray"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:text="@string/dash_address" />
+            <TextView
+                android:id="@+id/dash_address_txt"
+                style="@style/Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:layout_weight="1"
+                android:ellipsize="middle"
+                android:gravity="center_vertical"
+                android:maxLines="1"
+                app:layout_constraintEnd_toStartOf="@id/copy_address_btn"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="Xkvwp3vkTdUbUuEupDB3Sfa2wCvKYevzcc" />
 
-                <TextView
-                    android:id="@+id/dash_address_txt"
-                    style="@style/Body2"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:ellipsize="middle"
-                    android:gravity="center_vertical"
-                    android:maxLines="1"
-                    app:layout_constraintTop_toBottomOf="@+id/dash_address_title"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toStartOf="@+id/copy_address_btn"
-
-                    tools:text="XjfK5ivsGw7Ynxj99CEAJpcB5qNjsJpMH2sssssddddddddddddddss" />
-
-                <ImageButton
-                    android:id="@+id/copy_address_btn"
-                    style="@style/Button.Tertiary.Square"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toEndOf="@+id/dash_address_txt"
-                    android:layout_gravity="center_vertical"
-                    android:src="@drawable/ic_copy" />
-            </androidx.constraintlayout.widget.ConstraintLayout>
-
-
-        </androidx.cardview.widget.CardView>
+            <ImageButton
+                android:id="@+id/copy_address_btn"
+                style="@style/Button.Tertiary.Square"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_copy"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="@color/content_primary"
+                tools:tint="@color/content_primary" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </LinearLayout>
 
     <LinearLayout
@@ -154,7 +144,7 @@
 
     <Button
         android:id="@+id/create_account_btn"
-        style="@style/Button.Primary.Large.LightGrey"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="20dp"
@@ -208,11 +198,11 @@
 
         <Button
             android:id="@+id/notify_when_done"
-            style="@style/Button.Primary.Large.Blue"
+            style="@style/Button.Primary.Large.LightGrey"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="20dp"
-            android:drawableStart="@drawable/ic_notfiy"
+            android:drawableStart="@drawable/ic_notify"
             android:paddingLeft="75dp"
             android:paddingRight="60dp"
             android:text="@string/notify_when_done"
