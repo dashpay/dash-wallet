@@ -197,7 +197,8 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun setWithdrawalEnabled(balance: Coin, onlineStatus: OnlineAccountStatus) {
-        val isEnabled = balance.isPositive && onlineStatus == OnlineAccountStatus.Done
+        val isOnlineInProgress = onlineStatus != OnlineAccountStatus.None && onlineStatus != OnlineAccountStatus.Done
+        val isEnabled = balance.isPositive && !isOnlineInProgress
         binding.withdrawBtn.isEnabled = isEnabled
 
         if (isEnabled) {
@@ -212,7 +213,8 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun setDepositsEnabled(balance: Coin, onlineStatus: OnlineAccountStatus) {
-        val isEnabled = balance.isPositive && onlineStatus == OnlineAccountStatus.Done
+        val isOnlineInProgress = onlineStatus != OnlineAccountStatus.None && onlineStatus != OnlineAccountStatus.Done
+        val isEnabled = balance.isPositive && !isOnlineInProgress
         binding.depositBtn.isEnabled = isEnabled
 
         if (isEnabled) {
