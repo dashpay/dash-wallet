@@ -65,6 +65,7 @@
     <color name="content_disabled">#92929C</color>
     <color name="divider_color">@color/gray_50</color>
     <color name="light_gray">#DEDEE3</color>
+    <color name="ultra_light_gray">#f5f6f7</color>
 
     <!-- Background -->
     <color name="background_primary">#eff0f4</color>

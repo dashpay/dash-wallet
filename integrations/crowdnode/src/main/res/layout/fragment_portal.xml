@@ -126,7 +126,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="1dp"
                     android:layout_marginTop="2dp"
-                    android:src="@drawable/ic_deposit"
+                    android:src="@drawable/ic_deposit_disabled"
                     app:layout_constraintEnd_toStartOf="@id/deposit_title"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -301,6 +301,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:layout_marginStart="63dp"
+                android:visibility="gone"
                 android:background="@color/divider_color" />
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -312,7 +313,7 @@
                 android:focusable="true"
                 android:paddingTop="12dp"
                 android:paddingEnd="15dp"
-                android:paddingBottom="22dp">
+                android:paddingBottom="12dp"> <!-- TODO: change back to 22dp when online button is visible -->
 
                 <ImageView
                     android:id="@+id/support_icon"

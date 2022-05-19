@@ -153,7 +153,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:src="@drawable/ic_cash"
+                        android:src="@drawable/ic_atm"
                         app:layout_constraintEnd_toStartOf="@id/atms_title"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
@@ -202,7 +202,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:src="@drawable/ic_staking"
+                        android:src="@drawable/ic_deposit"
                         app:layout_constraintEnd_toStartOf="@id/staking_title"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />

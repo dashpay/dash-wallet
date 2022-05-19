@@ -34,4 +34,10 @@
         <item name="android:src">@drawable/ic_arrow_back</item>
         <item name="android:tint">@color/light_gray</item>
     </style>
+
+    <style name="DashAddressBackground">
+        <item name="backgroundColor">@color/ultra_light_gray</item>
+        <item name="strokeColor">@color/ultra_light_gray</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
 </resources>
