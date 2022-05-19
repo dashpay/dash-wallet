@@ -30,8 +30,13 @@
     <string name="button_dismiss">متوجه شدم!</string>
     <string name="network_unavailable_return">بازگشت به کیف‌ پول</string>
     <string name="button_continue">ادامه</string>
+    <string name="button_understand">متوجه شدم</string>
     <string name="button_okay">باشه</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">جستجو</string>
+    <string name="permission_allow">اجازه می‌دهم</string>
+    <string name="permission_deny">اجازه نمی‌دهم</string>
     <string name="max">حداکثر</string>
     <string name="select_currency">واحد پول‌تان را انتخاب کنید</string>
 </resources>

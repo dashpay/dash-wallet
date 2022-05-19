@@ -1,4 +1,4 @@
-﻿MAIN DESCRIPTION
+﻿HLAVNÝ POPIS
 
 Dash Wallet je referenčná peňaženka pre Android, ktorú spravuje Dash Core Group pre Dash - Digitálna hotovosť - inovatívna alternatíva k Bitcoinu, ktorá je špecificky určená na platby.
 

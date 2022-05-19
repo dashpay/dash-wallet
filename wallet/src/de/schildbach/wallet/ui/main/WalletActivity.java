@@ -431,7 +431,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void startVerifySeedActivity(String pin) {
-        Intent intent = VerifySeedActivity.createIntent(this, pin);
+        Intent intent = VerifySeedActivity.createIntent(this, pin, false);
         startActivity(intent);
     }
 

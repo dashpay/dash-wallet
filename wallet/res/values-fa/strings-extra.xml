@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">امکان بارگذاری کیف پول وجود ندارد!</string>
 
     <string name="set_pin_create_new_wallet">ایجاد یک کیف پول جدید</string>
+    <string name="set_pin_upgrade_wallet">ارتقای کیف پول</string>
     <string name="set_pin_restore_wallet">بازگردانی کیف پول</string>
     <string name="set_pin_enter_pin">پین کد قبلی را وارد کنید</string>
     <string name="set_pin_set_pin">پین کد را تعیین کنید</string>
@@ -15,6 +16,7 @@
     <string name="set_pin_decrypting">در حال رمزگشایی کیف پول</string>
     <string name="set_pin_verifying_pin">در حال تائید پین کد</string>
     <string name="set_pin_message">برای هر بار باز کردن قفل اپلیکیشن در مواقع استفاده، به این پین کد نیاز خواهید داشت.</string>
+    <string name="set_pin_confirm_pin_incorrect">رمز نادرست بود</string>
 
     <string name="home_available_balance">موجودی در دسترس</string>
     <string name="home_balance_hidden">موجودی مخفی</string>
@@ -63,6 +65,7 @@
 درخواست در کلیپ‌برد: \n\n %s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">نشانی دش یا نشانی اینترنتی نامعتبر
 درخواست در کلیپ‌برد</string>
+    <string name="pay_to_confirm_address">مطمئن هستید این همان آدرسی است که می‌خواهید دش برایش ارسال کنید؟ </string>
 
     <string name="receive_title">دریافت</string>
     <string name="receive_enter_amount_message">مبلغ مورد نظر برای دریافت را مشخص کنید</string>
@@ -147,6 +150,8 @@
     <string name="wallet_lock_try_again">در %1$d %2$s دیگر دوباره تلاش کنید.</string>
     <string name="wallet_lock_reset">بازنشانی</string>
     <string name="wallet_lock_wrong_pin">رمز نادرست است! %s</string>
+    <string name="wallet_last_attempt">آخرین امکان وارد کردن رمز</string>
+    <string name="wallet_last_attempt_message">اگر یک بار دیگر، رمز به صورت اشتباه وارد شود، باید از عبارت‌ورودی برای بازگرداندن کیف پول استفاده کنید</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d بار دیگر می‌توانید تلاش کنید</item>
@@ -181,6 +186,11 @@
     <string name="notification_transactions_channel_description">دریافت پیعام درباره تراکنش‌های دریافتی</string>
     <string name="notification_synchronization_channel_name">همزمان‌سازی</string>
     <string name="notification_synchronization_channel_description">وقتی اولیکیشن در حال همزمان‌سازی خود با شبکه است، پیغامی را نشان بده.</string>
+    <string name="notification_push_channel_name">نوتیفیکیشن</string>
+    <string name="notification_push_channel_description">نوتیفیکشن‌های دش را نشان بده</string>
+    <string name="notification_settings_title">نوتیفیکیشن‌ها</string>
+    <string name="notification_explainer_title">دش والت می‌خواهد برایتان نوتیفیکیشن بفرستد</string>
+    <string name="notification_explainer_message">نوتیفیکیشن شامل هشدار، صدا و آیکون هستند. همه اینها را می‌توان در بخش تنظیمات گوشی مشخص کرد. </string>
 
     <string name="net_type_indicator" />
 
@@ -258,6 +268,9 @@
     <string name="menu_rescan_blockchain">اسکن دوباره بلاکچین</string>
     <string name="menu_contact_support_title">تماس با پشتیبانی</string>
     <string name="menu_contact_support_subtitle">گزارش مشکل</string>
+    <string name="menu_explore_title">کاوش</string>
+    <string name="menu_explore_subtitle">از بیش از ۱۵۵،۰۰۰ فروشنده با دش خرید کنید</string>
+
     <string name="tools_address_book">دفترچه نشانی‌ها</string>
     <string name="tools_import_private_key">وارد کردن کلید خصوصی</string>
     <string name="tools_network_monitor">پایش شبکه</string>
@@ -267,8 +280,12 @@
     <string name="about_review_and_rate">نقد و بررسی &amp;؛ نمره‌دهی به اپلیکیشن</string>
     <string name="about_contact_support">تماس با پشتیبانی</string>
     <string name="about_fork_disclaimer">این یک اپلیکیشن متن‌ باز است که از بیت کوین والت انشعاب گرفته است</string>
+    <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">دش والت %s</string>
+    <string name="about_last_explore_dash_sync">کاوش آخرین داده‌های دش ، به‌روزرسانی‌شده در %1$s\n آخرین همزمان‌سازی در %2$s</string>
+    <string name="about_last_explore_dash_update_error">امکان دریافت وجود ندارد</string>
+    <string name="about_last_explore_dash_sync_never">هرگز</string>
 
     <string name="block">بلاک</string>
     <string name="time">زمان</string>
@@ -348,4 +365,10 @@
     <string name="all_transactions">همه</string>
     <string name="received_transactions">دریافتی</string>
     <string name="sent_transactions">ارسالی</string>
+    <string name="set_pin_error_missing_wallet_title">خطای عدم دسترسی به کیف پول</string>
+    <string name="set_pin_error_missing_wallet_message">کیف پول در دسترس نیست. این موضوع را به بخش پشتیبانی اطلاع دهید. </string>
+    <string name="wallet_encryption_error_title">خطای ایجاد کیف پول</string>
+    <string name="wallet_encryption_error_message">مشکلی در ایجاد کیف پول صورت گرفته است. لطفا موضوع را به بخش پشتیبانی اطلاع دهید. </string>
+    <string name="wallet_not_encrypted_error_message">مشکلی در رابطه با کیف پول‌تان روی داده. \n\n اگر مقداری دش در کیف پول‌تان دارید، اپلیکیشن کیف پول را حذف کرده و دوباره آن را نصب کنید. سپس یک کیف پول جدید ایجاد کنید. \n\n اگر عبارت بازیابی یا فایل پشتیبان دارید، اپلیکیشن را حذف کرده و دوباره نصب کنید. \n\n در غیر این صورت، لطفا موضوع را به بخش پشتیابنی اطلاع دهید. </string>
+
     </resources>

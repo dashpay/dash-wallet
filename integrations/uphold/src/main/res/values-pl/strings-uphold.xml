@@ -28,9 +28,17 @@
     <string name="uphold_general_error_title">Błąd</string>
     <string name="uphold_api_error_title">Błąd po stronie Uphold</string>
     <string name="uphold_api_error_identity">Fundusze nie mogą zostać wypłacone ponieważ twoje konto na Uphold nie jest jeszcze zweryfikowane. </string>
+    <string name="uphold_api_error_403_description">Twoje konto Uphold zostało oznaczone do przeglądu.\n\n Uphold tymczasowo ograniczył twoje konto i nie będziesz w stanie wypłacić z niego środków.\n\n%s</string>
+    <string name="uphold_api_error_403_generic">Uphold skontaktuje się z tobą aby rozwiązać ten problem. </string>
+    <string name="uphold_api_error_403_due_diligence">Zaloguj się do twojego konta Uphold oraz odpowiedz na kilka pytań o sobie. </string>
+    <string name="uphold_api_error_403_identity">Przejdź na stronę internetową Uphold aby zweryfikować swoją tożsamość</string>
+    <string name="uphold_api_error_403_proof_of_address">Skontaktuj się z Uphold aby uaktualnić dowód miejsca zamieszkania. </string>
+
     <string name="uphold_api_error_400_description">Fundusze na Uphold są zablokowane na 24 godziny.\n\nBędziesz miał wystarczające środki na ten transfer za %s.</string>
     <string name="uphold_api_error_400_locked">Fundusze na Uphold  (%1$s %2$s) są zablokowane na 65 dni.\n\nBędziesz miał wystarczające środki na ten transfer %3$s</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">Nie posiadasz wystarczających środków aby dokonać tej transakcji</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">Kwota transferu powinna być mniejsza niż %s DASH.</string>
+    <string name="uphold_api_error_400_greater_than_or_equal_to">Kwota transferu powinna być większa niż %s DASH.</string>
     <string name="uphold_api_error_400_tx_validation">Nie można dokonać transferu takiej sumy w tej aplikacji (maksymalna suma to $3000).</string>
     <string name="uphold_api_error_400_password_reset">Fundusze na Uphold są zablokowane z powodu niedawnej zmiany hasła.\n\nMuszisz poczekać %sza nim fundusze będą mogły zostać przelane.</string>
     <string name="uphold_api_error_400_authentication_change">Fundusze na Uphold są zablokowane z powodu niedawnej zmiany metody autentykacji.\n\nBędzisż musiał poczekać %s zanim transfery zostaną odblokowane. </string>
@@ -38,4 +46,5 @@
     <string name="uphold_api_error_400_invalid_beneficiary">Nie można dokonać transferu takiej sumy w tej aplikacji (maksymalna suma to $3000)\n\nZaloguj się do swojego konta Uphold aby dokonać transferu. </string>
     <string name="uphold_api_error_400_required">Nie można dokonać transferu takiej sumy w tej aplikacji (maksymalna suma to $3000)\n\nZaloguj się do swojego konta Uphold aby dokonać transferu. </string>
 
+    <string name="uphold_requirement_not_met_base_message">Nie możesz dokonać tej operacji w tej chwili. %s</string>
 </resources>

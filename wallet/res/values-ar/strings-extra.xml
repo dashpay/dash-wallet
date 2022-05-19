@@ -15,7 +15,6 @@
     <string name="set_pin_decrypting">فك تشفير المحفظة</string>
     <string name="set_pin_verifying_pin">تأكيد الرقم السري</string>
     <string name="set_pin_message">سيكون الرقم  السري هذا مطلوبًا لإلغاء قفل تطبيقك في كل مرة تستخدمه.</string>
-
     <string name="home_available_balance">الرصيد المتاح</string>
     <string name="home_balance_hidden">الرصيد مخفي</string>
     <string name="home_balance_show_hint">اضغط لاظهار الرصيد</string>
@@ -144,7 +143,6 @@
     <string name="wallet_lock_try_again">أعد المحاولة في %1$d%2$s</string>
     <string name="wallet_lock_reset">إعادة تعيين</string>
     <string name="wallet_lock_wrong_pin">رقم سري خاطئ %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="zero">%dالمحاولات المتبقية</item>
         <item quantity="one">%dالمحاولات المتبقية</item>
@@ -190,7 +188,6 @@
     <string name="notification_transactions_channel_description">تلقي تنبيهات حول المعاملات الواردة.</string>
     <string name="notification_synchronization_channel_name">التزامن</string>
     <string name="notification_synchronization_channel_description">يعرض إشعارًا عندما يكون التطبيق متزامنًا مع الشبكة.</string>
-
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">استخدم بصمتك للفتح</string>
@@ -267,7 +264,6 @@
     <string name="menu_rescan_blockchain">اعادة نسخ بلوكشين</string>
     <string name="menu_contact_support_title">اتصل بالدعم</string>
     <string name="menu_contact_support_subtitle">بلغ عن خطأ</string>
-
     <string name="tools_address_book">دليل العناوين</string>
     <string name="tools_import_private_key">استيراد مفتاح خاص</string>
     <string name="tools_network_monitor">مراقب الشبكة</string>
@@ -279,7 +275,6 @@
     <string name="about_fork_disclaimer">هذا هو تطبيق مفتوح المصدر متفرع من محفظة بيتكوين</string>
     <string name="about_license">رخصة GNUالعمومية العامة الإصدار 3.0</string>
     <string name="about_version_name">محفظة داش %s</string>
-
     <string name="block">بلوك</string>
     <string name="time">وقت</string>
     <string name="hash">هاش</string>

@@ -304,6 +304,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">پیوست کردن والت دامپ</string>
     <string name="report_issue_dialog_mail_intent_chooser">در حال ارسال گزارش...</string>
     <string name="report_issue_dialog_mail_intent_failed">ارسال گزارش ناموفق بود</string>
+    <string name="report_transaction_history_export">بیرون دادن</string>
+    <string name="report_transaction_history_title">بیرون دادن فرمت CSV</string>
+    <string name="report_transaction_history_not_synced_title">بیرون دادن فرمت CSV</string>
+    <string name="report_transaction_history_not_synced_message">لطفا پیش از بیرون دادن سابقه تراکنش‌ها، منتظر بمانید تا کیف پول‌تان کاملا همزمان‌سازی شود. </string>
+    <string name="report_transaction_history_message">همه سوابق تراکنش‌ها به بیرون ارسال می‌شود. \n\n همه پرداخت‌ها به عنوان هزینه و همه دریافت‌ها به عنوان درآمد در نظر گرفته می‌شود. صاحب این کیف پول مسئول مشخص‌ کردن جزئیات مربوط به هزینه‌ها در نظام گزارش‌دهی مالیاتی خود خواهد بود. </string>
+    <string name="report_transaction_history_mail_intent_chooser">ارسال سابقه تراکنش‌ها با استفاده از ...</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">ارسال سابقه تراکنش‌ها موفقیت‌آمیز نبود. </string>
+
     <string name="about_title">اطلاعات بیشتر</string>
     <string name="about_version_title">نسخه</string>
     <string name="about_copyright_title">کپی‌رایت</string>
