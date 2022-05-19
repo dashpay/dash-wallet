@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -314,10 +315,14 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     private suspend fun startTrackingConfirmed(accountAddress: Address, initialDelay: Duration) {
-        // First check or wait for the confirmation tx.
-        // No need to make web requests if it isn't found.
-        val confirmationTx = blockchainApi.waitForApiAddressConfirmation(accountAddress)
-        log.info("Confirmation tx found: ${confirmationTx.txId}")
+        if (primaryAddress != accountAddress) {
+            // First check or wait for the confirmation tx.
+            // No need to make web requests if it isn't found.
+            val confirmationTx = blockchainApi.waitForApiAddressConfirmation(accountAddress)
+            log.info("Confirmation tx found: ${confirmationTx.txId}")
+        } else {
+            log.info("primary address is the same as the account address")
+        }
 
         if (blockchainApi.getDepositConfirmations().any()) {
             // If a deposit confirmation was received, the address has been confirmed already
@@ -528,6 +533,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     private suspend fun resolveAddressStatus(address: Address): String? {
         return try {
             val result = webApi.addressStatus(address.toString())
+            Log.i("CROWDNODE", "resolved status: ${result.body()?.status}")
             result.body()?.status
         } catch (ex: Exception) {
             log.error("Error in resolveAddressStatus: $ex")
