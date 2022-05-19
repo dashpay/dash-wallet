@@ -303,6 +303,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Inclure une exportation du portefeuille</string>
     <string name="report_issue_dialog_mail_intent_chooser">Envoyer le rapport avec…</string>
     <string name="report_issue_dialog_mail_intent_failed">Échec lors de l\'envoi du rapport.</string>
+    <string name="report_transaction_history_export">Exportation</string>
+    <string name="report_transaction_history_title">Exportation CSV</string>
+    <string name="report_transaction_history_not_synced_title">Exportation CSV</string>
+    <string name="report_transaction_history_not_synced_message">Veuillez attendre que le portefeuille soit entièrement synchronisé avant d\'exporter votre historique de transactions.</string>
+    <string name="report_transaction_history_message">L\'historique complet de transactions sera exporté.\n\nTous les paiements seront considérés comme une dépense et toutes les transactions entrantes comme un revenu. Le propriétaire de ce portefeuille est responsable pour faire tous les ajustements de coûts dans leur système fiscal déclaratif.</string>
+    <string name="report_transaction_history_mail_intent_chooser">Envoyer l\'historique de transactions avec…</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">L\'envoi de l\'historique de transactions a échoué.</string>
+
     <string name="about_title">À propos du logiciel</string>
     <string name="about_version_title">Version</string>
     <string name="about_copyright_title">Tous droits réservés</string>

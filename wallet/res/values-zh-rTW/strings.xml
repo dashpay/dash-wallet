@@ -303,6 +303,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">附加錢包dump</string>
     <string name="report_issue_dialog_mail_intent_chooser">寄送報告…</string>
     <string name="report_issue_dialog_mail_intent_failed">寄送報告失敗。</string>
+    <string name="report_transaction_history_export">導出</string>
+    <string name="report_transaction_history_title">導出到CSV檔案</string>
+    <string name="report_transaction_history_not_synced_title">導出到CSV檔案</string>
+    <string name="report_transaction_history_not_synced_message">請等到錢包完全同步後再導出您的交易記錄。</string>
+    <string name="report_transaction_history_message">將導出完整的交易歷史記錄。\n\n所有付款都將被視為支出，所有滙入交易都將成為收入。此錢包的所有者負責在他們選擇的稅務報告系統中進行任何成本的基礎調整。</string>
+    <string name="report_transaction_history_mail_intent_chooser">使用…發送交易歷史</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">發送交易記錄失敗。</string>
+
     <string name="about_title">關於</string>
     <string name="about_version_title">版本</string>
     <string name="about_copyright_title">著作權</string>
