@@ -300,7 +300,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     private fun startTrackingLinked(address: Address) {
-        tickerJob = TickerFlow(period = 2.seconds, initialDelay = 10.seconds)
+        tickerJob = TickerFlow(period = 2.seconds, initialDelay = 5.seconds)
             .cancellable()
             .onEach { checkIfAddressIsInUse(address) }
             .launchIn(responseScope)
