@@ -85,11 +85,13 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
 
         if (viewModel.signUpStatus == SignUpStatus.LinkedOnline) {
             viewModel.observeOnlineAccountStatus().observe(viewLifecycleOwner) { status ->
-                val balance = viewModel.crowdNodeBalance.value ?: Coin.ZERO
-                setWithdrawalEnabled(balance, status)
-                setDepositsEnabled(balance, status)
+                val crowdNodeBalance = viewModel.crowdNodeBalance.value ?: Coin.ZERO
+                val walletBalance = viewModel.dashBalance.value ?: Coin.ZERO
+
+                setWithdrawalEnabled(crowdNodeBalance, status)
+                setDepositsEnabled(walletBalance, status)
                 setOnlineAccountStatus(status)
-                setMinimumEarningDepositReminder(balance, isConfirmed)
+                setMinimumEarningDepositReminder(crowdNodeBalance, isConfirmed)
 
                 lifecycleScope.launch {
                     if (viewModel.getShouldShowConfirmationDialog()) {
