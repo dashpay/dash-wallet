@@ -37,7 +37,7 @@ import org.dash.wallet.common.UserInteractionAwareCallback
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class AdaptiveDialog(@LayoutRes private val layout: Int = R.layout.dialog_simple): DialogFragment() {
+open class AdaptiveDialog(@LayoutRes private val layout: Int = R.layout.dialog_simple): DialogFragment() {
     companion object {
         private const val ICON_RES_ARG = "icon_res"
         private const val TITLE_ARG = "title"
@@ -101,7 +101,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int = R.layout.dialog_simple
         }
     }
 
-    private var onResultListener: ((Boolean?) -> Unit)? = null
+    protected var onResultListener: ((Boolean?) -> Unit)? = null
     var isMessageSelectable = false
 
     override fun onCreateView(
@@ -206,13 +206,13 @@ class AdaptiveDialog(@LayoutRes private val layout: Int = R.layout.dialog_simple
         }
     }
 
-    private fun onPositiveAction() {
+    protected fun onPositiveAction() {
         onResultListener?.invoke(true)
         onResultListener = null
         dismiss()
     }
 
-    private fun onNegativeAction() {
+    protected fun onNegativeAction() {
         onResultListener?.invoke(false)
         onResultListener = null
         dismiss()
@@ -224,7 +224,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int = R.layout.dialog_simple
         onResultListener = null
     }
 
-    private fun showIfNotEmpty(view: TextView?, argKey: String): Boolean {
+    protected fun showIfNotEmpty(view: TextView?, argKey: String): Boolean {
         if (view == null) {
             return false
         }
@@ -242,7 +242,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int = R.layout.dialog_simple
         return view.isVisible
     }
 
-    private fun showIfNotEmpty(view: ImageView?, argKey: String): Boolean {
+    protected fun showIfNotEmpty(view: ImageView?, argKey: String): Boolean {
         if (view == null) {
             return false
         }

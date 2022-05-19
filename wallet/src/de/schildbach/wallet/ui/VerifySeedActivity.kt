@@ -37,6 +37,7 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
 
         private const val EXTRA_SEED = "extra_seed"
         private const val EXTRA_PIN = "extra_pin"
+        private const val EXTRA_RESUME_SECURITY = "extra_resume_security"
 
         @JvmStatic
         fun createIntent(context: Context, seed: Array<String>): Intent {
@@ -46,9 +47,10 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
         }
 
         @JvmStatic
-        fun createIntent(context: Context, pin: String): Intent {
+        fun createIntent(context: Context, pin: String, shouldResumeSecurity: Boolean = false): Intent {
             val intent = Intent(context, VerifySeedActivity::class.java)
             intent.putExtra(EXTRA_PIN, pin)
+            intent.putExtra(EXTRA_RESUME_SECURITY, shouldResumeSecurity)
             return intent
         }
     }
@@ -66,6 +68,7 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
     private var seed: Array<String> = arrayOf()
 
     private var goingBack = false
+    private var resumeSecurity = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,6 +80,7 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
             initViewModel()
             val pin = intent.extras!!.getString(EXTRA_PIN)!!
             decryptSeedViewModel.checkPin(pin)
+            resumeSecurity = intent.extras!!.getBoolean(EXTRA_RESUME_SECURITY)
         }
 
         supportFragmentManager.beginTransaction().add(R.id.container,
@@ -117,7 +121,11 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
     }
 
     override fun skipSeedVerification() {
-        goHome()
+        if (resumeSecurity){
+            finish()
+        } else {
+            goHome()
+        }
     }
 
     override fun showRecoveryPhrase() {

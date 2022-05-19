@@ -198,4 +198,12 @@ public class GenericUtils {
             return format.format(fiat) + " " + currencySymbol;
         }
     }
+
+    public static boolean isCurrencyFirst(Fiat fiat) {
+        NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
+        Currency currency = Currency.getInstance(fiat.currencyCode);
+        numberFormat.setCurrency(currency);
+        String currencySymbol = currency.getSymbol(getDeviceLocale());
+       return numberFormat.format(1.0).startsWith(currencySymbol);
+    }
 }
