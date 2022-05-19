@@ -40,6 +40,7 @@ import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -53,6 +54,7 @@ import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
@@ -87,6 +89,8 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Inject;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.android.LogcatAppender;
@@ -96,15 +100,18 @@ import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import dagger.hilt.android.HiltAndroidApp;
 import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
+import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.security.SecurityGuard;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
+import kotlinx.coroutines.flow.Flow;
 
 /**
  * @author Andreas Schildbach
@@ -137,6 +144,9 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     public boolean myPackageReplaced = false;
 
     private AutoLogout autoLogout;
+
+    @Inject
+    BlockchainStateDao blockchainStateDao;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -200,6 +210,8 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
             log.error(ex.getMessage(), ex);
             CrashReporter.saveBackgroundTrace(ex, packageInfo);
         }
+
+        resetBlockchainSyncProgress();
     }
 
     private void syncExploreData() {
@@ -612,11 +624,8 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     }
 
     public void resetBlockchainState() {
-        Executors.newSingleThreadExecutor().execute(new Runnable() {
-            @Override
-            public void run() {
-                AppDatabase.getAppDatabase().blockchainStateDao().save(new BlockchainState(true));
-            }
+        Executors.newSingleThreadExecutor().execute(() -> {
+            blockchainStateDao.save(new BlockchainState(true));
         });
     }
 
@@ -626,6 +635,16 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         Intent blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
                 BlockchainServiceImpl.class);
         startService(blockchainServiceResetBlockchainIntent);
+    }
+
+    private void resetBlockchainSyncProgress() {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            BlockchainState blockchainState = blockchainStateDao.loadSync();
+            if (blockchainState != null) {
+                blockchainState.setPercentageSync(0);
+                blockchainStateDao.save(blockchainState);
+            }
+        });
     }
 
     public void replaceWallet(final Wallet newWallet) {
@@ -853,6 +872,12 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     @Override
     public Address currentReceiveAddress() {
         return wallet.currentReceiveAddress();
+    }
+
+    @NonNull
+    @Override
+    public Flow<Coin> observeBalance() {
+        return new WalletBalanceObserver(wallet).observe();
     }
 
     // wallets from v5.17.5 and earlier do not have a BIP44 path

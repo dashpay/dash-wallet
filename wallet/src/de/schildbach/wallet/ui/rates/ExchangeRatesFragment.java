@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.ui.rates;
 
 import static android.view.View.VISIBLE;
 
@@ -56,15 +56,17 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.adapter.BaseFilterAdapter;
 import de.schildbach.wallet.adapter.ExchangeRatesAdapter;
-import de.schildbach.wallet.rates.ExchangeRatesViewModel;
+import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public final class ExchangeRatesFragment extends DialogFragment implements OnSharedPreferenceChangeListener, TextWatcher, View.OnClickListener, BaseFilterAdapter.ResetViewListener, ExchangeRatesAdapter.onExchangeRateItemSelectedListener {
     private AbstractBindServiceActivity activity;
     private WalletApplication application;
@@ -141,7 +143,7 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
                 loading.setVisibility(Boolean.TRUE.equals(isLoading) ? VISIBLE : View.GONE);
             }
         });
-        exchangeRatesViewModel.hasError().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
+        exchangeRatesViewModel.getHasError().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean hasError) {
                 if (Boolean.TRUE.equals(hasError)) {

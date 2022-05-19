@@ -199,7 +199,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             merchantLocationsAdapter.submitList(merchantLocations)
         }
         viewModel.syncStatus.observe(viewLifecycleOwner) { syncProgress ->
-            Log.i("SYNC", syncProgress.status.name)
             lastSyncProgress = syncProgress
             when (syncProgress.status) {
                 Status.LOADING -> {

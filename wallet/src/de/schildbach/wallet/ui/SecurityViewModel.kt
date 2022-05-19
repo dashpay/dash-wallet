@@ -24,10 +24,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
@@ -47,12 +44,11 @@ class SecurityViewModel @Inject constructor(var exchangeRates: ExchangeRatesProv
     val selectedExchangeRate: LiveData<ExchangeRate>
         get() = _selectedExchangeRate
 
-
-
     init {
-        _selectedCurrencyCode.flatMapLatest { code ->
-            exchangeRates.observeExchangeRate(code)
-        }.onEach(_selectedExchangeRate::postValue)
+        _selectedCurrencyCode
+            .filterNotNull()
+            .flatMapLatest { code -> exchangeRates.observeExchangeRate(code) }
+            .onEach(_selectedExchangeRate::postValue)
             .launchIn(viewModelScope)
     }
 

@@ -308,7 +308,6 @@
     <string name="welcome_screen_subtitle_3">Magkaroon ng kumpletong kontrol at pinasadyang pitaka base sa iyong nais</string>
 
     <string name="sync_status_wait">Pakihintay na mag-sync upang makumpleto</string>
-    <string name="sync_status_syncing_title">Syncing %1$d</string>
     <string name="sync_status_syncing_sub_title">kasama ang Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Hindi maka-konekta</string>
     <string name="sync_status_check_connection">Suriin ang koneksyon</string>

@@ -76,10 +76,11 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.DynamicFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.rates.ExchangeRatesViewModel;
+
 import org.dash.wallet.common.ui.BaseLockScreenFragment;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.TransactionResultActivity;
+import de.schildbach.wallet.ui.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -217,12 +218,12 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
 
         ExchangeRatesViewModel exchangeRatesViewModel = new ViewModelProvider(this)
                 .get(ExchangeRatesViewModel.class);
-        exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(getViewLifecycleOwner(),
-                exchangeRate -> {
-                    if (exchangeRate != null) {
-                        currentExchangeRate = exchangeRate;
-                    }
-                });
+        String code = config.getExchangeCurrencyCode();
+        exchangeRatesViewModel.getRate(code).observe(getViewLifecycleOwner(), exchangeRate -> {
+            if (exchangeRate != null) {
+                currentExchangeRate = exchangeRate;
+            }
+        });
 
         return view;
     }
