@@ -24,6 +24,7 @@ import androidx.activity.viewModels
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
 
@@ -39,18 +40,18 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
         private const val NAVIGATE_TO_HOME = "navigate_to_home"
 
         @JvmStatic
-        fun createIntent(context: Context, seed: Array<String>): Intent {
+        fun createIntent(context: Context, seed: Array<String>, goHomeOnClose: Boolean = true): Intent {
             val intent = Intent(context, VerifySeedActivity::class.java)
             intent.putExtra(EXTRA_SEED, seed)
-            intent.putExtra(NAVIGATE_TO_HOME, true)
+            intent.putExtra(NAVIGATE_TO_HOME, goHomeOnClose)
             return intent
         }
 
         @JvmStatic
-        fun createIntent(context: Context, pin: String): Intent {
+        fun createIntent(context: Context, pin: String, goHomeOnClose: Boolean = true): Intent {
             val intent = Intent(context, VerifySeedActivity::class.java)
             intent.putExtra(EXTRA_PIN, pin)
-            intent.putExtra(NAVIGATE_TO_HOME, false)
+            intent.putExtra(NAVIGATE_TO_HOME, goHomeOnClose)
             return intent
         }
     }

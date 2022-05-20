@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">지갑을 로딩할 수 없습니다!</string>
 
     <string name="set_pin_create_new_wallet">새로운 지갑 생성하기</string>
+    <string name="set_pin_upgrade_wallet">지갑 업그레이드</string>
     <string name="set_pin_restore_wallet">전자 지갑 복구</string>
     <string name="set_pin_enter_pin">구 PIN 입력하기</string>
     <string name="set_pin_set_pin">PIN 설정</string>
@@ -15,6 +16,7 @@
     <string name="set_pin_decrypting">지갑 복호화</string>
     <string name="set_pin_verifying_pin">PIN 인증 중</string>
     <string name="set_pin_message">당신이 어플을 잠금 해제하실 때마다 이 PIN이 필요합니다.</string>
+    <string name="set_pin_confirm_pin_incorrect">유효하지 않은 핀</string>
 
     <string name="home_available_balance">이용 가능한 잔고</string>
     <string name="home_balance_hidden">숨긴 잔고</string>
@@ -61,6 +63,7 @@
     <string name="scan_to_pay_error_dialog_title">전송을 위해 스캔합니다</string>
     <string name="scan_to_pay_error_dialog_message">클립보드의 대시 주소 혹은 URL 전송이 유효하지 않습니다:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">클립보드의 대시 주소 혹은 URL 전송이 유효하지 않습니다.</string>
+    <string name="pay_to_confirm_address">이 대시 주소로 송금하시겠습니까?</string>
 
     <string name="receive_title">받기</string>
     <string name="receive_enter_amount_message">받을 금액 특정하기</string>
@@ -144,6 +147,8 @@
     <string name="wallet_lock_try_again">%1$d %2$s 로 다시 시도하기</string>
     <string name="wallet_lock_reset">리셋</string>
     <string name="wallet_lock_wrong_pin">잘못된 PIN 입니다! %s</string>
+    <string name="wallet_last_attempt">지난 핀 시도 내역</string>
+    <string name="wallet_last_attempt_message">다시 실패하는 경우 암호 문구로 지갑을 복구해야 합니다</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="other">%d 회의 시도가 남았습니다</item>
@@ -175,7 +180,12 @@
     <string name="notification_transactions_channel_description">들어오는 거래에 대한 알람 수신</string>
     <string name="notification_synchronization_channel_name">동기화</string>
     <string name="notification_synchronization_channel_description">어플이 네트워크와 동기화될 때 알람을 보여줍니다.</string>
+    <string name="notification_push_channel_name">알림 설정</string>
+    <string name="notification_push_channel_description">대시가 보낸 푸시 알림을 보여줍니다</string>
     <string name="notification_settings_title">알림</string>
+    <string name="notification_explainer_title">대시 지갑이 알림을 보내고자 합니다</string>
+    <string name="notification_explainer_message">알림에는 경고, 사운드 및 아이콘 배지가 포함될 수 있습니다. 본 내용은 휴대폰의 설정에서 변경할 수 있습니다.</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">잠금 해제를 위해서 지문을 사용합니다</string>
@@ -252,6 +262,9 @@
     <string name="menu_rescan_blockchain">블록체인 재스캔</string>
     <string name="menu_contact_support_title">고객 지원부에 문의하기</string>
     <string name="menu_contact_support_subtitle">오류 보고하기</string>
+    <string name="menu_explore_title">탐색하기</string>
+    <string name="menu_explore_subtitle">155,000개 이상의 상점에서 대시로 쇼핑하세요</string>
+
     <string name="tools_address_book">주소록</string>
     <string name="tools_import_private_key">프라이빗 키 가져오기</string>
     <string name="tools_network_monitor">블럭체인 모니터링</string>
@@ -261,8 +274,12 @@
     <string name="about_review_and_rate">어플 리뷰 &amp; 별점 매기기</string>
     <string name="about_contact_support">고객 지원부에 문의하기</string>
     <string name="about_fork_disclaimer">이 어플은 비트코인 지갑에서 포크한 오픈 소스 어플입니다.</string>
+    <string name="about_copyright">Copyright © 2022 대시 코어</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">대시 지갑 %s</string>
+    <string name="about_last_explore_dash_sync">지난 대시 탐색하기 데이터 업데이트: %1$s\n지난 동기화: %2$s</string>
+    <string name="about_last_explore_dash_update_error">불러올 수 없음</string>
+    <string name="about_last_explore_dash_sync_never">하지 않음</string>
 
     <string name="block">블록</string>
     <string name="time">시간</string>
@@ -341,4 +358,10 @@
     <string name="all_transactions">모두</string>
     <string name="received_transactions">받음</string>
     <string name="sent_transactions">전송 완료</string>
+    <string name="set_pin_error_missing_wallet_title">사라진 지갑 오류</string>
+    <string name="set_pin_error_missing_wallet_message">지갑이 사라졌습니다. 지원 데스크에 보고해주십시오.</string>
+    <string name="wallet_encryption_error_title">지갑 생성 에러</string>
+    <string name="wallet_encryption_error_message">지갑 생성에 오류가 발생했습니다. 지원 데스크에 보고해주십시오.</string>
+    <string name="wallet_not_encrypted_error_message">지갑에 문제가 발생했습니다.\n\n이 지갑에 대시가 없다면 이 어플을 지우고 다시 설치한 후 새로운 지갑을 생성하세요.\n\n복구 문구나 백업 파일이 있다면, 이 어플을 지우고 다시 설치하십시오.\n\n이에 해당되지 않는 경우 지원 데스크에 보고해주십시오.</string>
+
 </resources>

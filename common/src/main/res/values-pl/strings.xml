@@ -36,8 +36,13 @@
     <string name="button_retry">Ponów</string>
     <string name="button_close">Zamknij</string>
     <string name="button_continue">Dalej</string>
+    <string name="button_understand">Rozumiem</string>
     <string name="button_okay">OK</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Szukaj</string>
+    <string name="permission_allow">Pozwól</string>
+    <string name="permission_deny">Odmów</string>
     <string name="max">Max</string>
     <string name="select_currency">Wybierz Walutę</string>
 </resources>

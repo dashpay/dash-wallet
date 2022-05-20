@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <!-- Explore screen -->
+    <string name="explore_dash">대시 탐색하기</string>
+    <string name="explore_title">탐색하기</string>
+    <string name="explore_subtitle">155,000 개 이상의 오프라인 및 온라인 상점에서 대시로 손쉽게 쇼핑하세요</string>
+    <string name="explore_merchants_title">어디에 사용하나요?</string>
+    <string name="explore_merchants_subtitle">대시 지불을 받는 상점을 찾아보세요.</string>
+    <string name="explore_atms_title">ATM</string>
+    <string name="explore_atms_subtitle">어디에서 대시 및 기타 암호화폐를 매수&amp;매도할 수 있는지 찾아보세요.</string>
+
+    <!-- Search -->
+    <string name="explore_search_results">검색 결과</string>
+    <string name="explore_physical_merchant">오프라인 상점</string>
+    <string name="explore_online_merchant">온라인</string>
+    <string name="explore_both_types_merchant">온라인, 오프라인 상점</string>
+    <string name="explore_multiple_locations">+ 다양한 장소</string>
+    <string name="explore_option_all">모두</string>
+    <string name="explore_option_buy">구매</string>
+    <string name="explore_option_sell">매도</string>
+    <string name="explore_option_buy_sell">매수 &amp; 매도</string>
+    <string name="explore_menu_info">정보</string>
+    <string name="explore_where_to_spend">사용 장소</string>
+    <string name="explore_atms">ATM</string>
+    <string name="explore_all_states">모든 주</string>
+    <string name="explore_no_results">결과 없음</string>
+    <string name="explore_all_merchants">모든 상점</string>
+    <string name="explore_in_radius">%2$s의 %1$s</string>
+    <string name="explore_no_merchants">상점 없음</string>
+    <string name="explore_no_atms">ATM 없음</string>
+    <string name="distance_miles">%s 마일</string>
+    <string name="distance_kilometers">%s 킬로미터</string>
+
+    <plurals name="explore_merchant_amount">
+        <item quantity="other">%d 상점</item>
+    </plurals>
+
+    <plurals name="explore_atm_amount">
+        <item quantity="other">%d ATM</item>
+    </plurals>
+
+    <!-- Details -->
+    <string name="explore_back_to_locations">모든 장소로 돌아가기</string>
+    <string name="explore_back_to_nearest">가장 가까운 장소로 돌아가기</string>
+    <string name="explore_select_location">장소 선택</string>
+    <string name="explore_pay_with_dash">대시로 결제</string>
+    <string name="explore_buy_gift_card">기프트 카드 구매</string>
+    <string name="explore_buy_dash">대시 매수</string>
+    <string name="explore_sell_dash">대시 매도</string>
+    <string name="explore_show_all">모든 장소 보기</string>
+    <string name="explore_atm_location_hint">이 ATM은 다음의 장소에 위치합니다</string>
+    <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
+
+    <!-- Filters -->
+    <string name="explore_filter">필터</string>
+    <string name="explore_filters">필터</string>
+    <string name="explore_apply_filter">적용</string>
+    <string name="explore_payment_method">지불 방법</string>
+    <string name="explore_payment_dash">대시</string>
+    <string name="explore_payment_gift_card">기프트 카드</string>
+    <string name="explore_radius">반경</string>
+    <string name="explore_location">위치</string>
+    <string name="explore_current_location">현재 위치</string>
+    <string name="explore_location_settings">현재 위치 설정</string>
+    <string name="explore_reset_filters">필터 초기화</string>
+    <string name="explore_reset_all_filters">모든 필터 초기화</string>
+    <string name="explore_filtered_by">다음으로 필터:</string>
+    <string name="explore_pay_gift_card">기프트 카드로 지불</string>
+    <string name="explore_sort_by">분류</string>
+
+    <string-array name="merchants_filter_options">
+        <item>온라인</item>
+        <item>근처</item>
+        <item>모두</item>
+    </string-array>
+
+    <string-array name="atms_filter_options">
+        <item>모두</item>
+        <item>구매</item>
+        <item>매도</item>
+        <item>매수/매도</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_miles">
+        <item>1마일</item>
+        <item>5마일</item>
+        <item>20마일</item>
+        <item>50마일</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_kilometers">
+        <item>1킬로미터</item>
+        <item>5킬로미터</item>
+        <item>20킬로미터</item>
+        <item>50킬로미터</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>이름</item>
+        <item>거리</item>
+    </string-array>
+
+    <plurals name="radius_miles">
+        <item quantity="other">%d마일</item>
+    </plurals>
+
+    <plurals name="radius_kilometers">
+        <item quantity="other">%d킬로미터</item>
+    </plurals>
+
+    <!-- Location Permission -->
+    <string name="explore_location_allowed">허용됨</string>
+    <string name="explore_location_denied">거절됨</string>
+    <string name="explore_manager_permissions">GPS 설정 관리하기</string>
+    <string name="explore_location_request">GPS를 허락하여 당신 근처의 장소를 확인하세요.</string>
+    <string name="explore_location_explainer">당신의 위치는 지도 상 당신의 위치, 선택된 반경 내 상점의 위치 및 검색 결과를 향상하기 위해 사용됩니다.</string>
+    <string name="explore_merchant_location_explainer_title">상점 검색은 위치 서비스를 켰을 때 보다 잘 작동합니다.</string>
+    <string name="explore_merchant_location_explainer_message">당신의 위치는 지도 상 당신의 위치, 선택된 반경 내 상점의 위치 및 검색 결과를 향상하기 위해 사용됩니다.</string>
+    <string name="explore_atm_location_explainer_title">ATM 검색은 위치 서비스를 켰을 때 보다 잘 작동합니다.</string>
+    <string name="explore_atm_location_explainer_message">당신의 위치는 지도 상 당신의 위치, 선택된 반경 내 ATM의 위치 및 검색 결과를 향상하기 위해 사용됩니다.</string>
+
+    <!-- Info screens -->
+    <string name="explore_info_header_text">두 가지 유형의 상점이 있습니다</string>
+    <string name="accept_dash_text">직접 대시를 수락</string>
+    <string name="pay_with_dash_text">대시 지갑으로 결제</string>
+    <string name="buy_gift_card_text">대시로 기프트 카드 구매</string>
+    <string name="buy_gift_card_desc_text">정확히 당신의 구매 금액만큼 기프트 카드를 구매하세요.</string>
+    <string name="learn_more_text">더 알아보기</string>
+    <string name="continue_text">계속</string>
+    <string name="buy_card_header_text">기프트 카드 사용 방법</string>
+    <string name="buy_card_desc_text">모든 상점에서 직접 대시를 받는 것은 아니지만, 대시를 통해 기프트 카드를 구매할 수 있습니다.</string>
+    <string name="find_merchant_text">상점을 찾습니다.</string>
+    <string name="buy_gift_card_with_dash_text">대시로 기프트 카드를 구매합니다.</string>
+    <string name="redeem_gift_card_text">수초만에 온라인으로, 혹은 카운터에서 기프트 카드를 현금화합니다.</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">동기화 진행중... 결과가 표시되지 않을 수 있습니다.</string>
+    <string name="sync_in_progress_error">동기화 진행중... 에러가 발생했습니다.</string>
+    <string name="sync_in_progress_canceled">동기화 취소됨... 잠시후 다시 시도합니다.</string>
+
+    <string name="sync_in_progress_file_not_found">빌드 에러: 데이터베이스를 찾을 수 없습니다!</string>
+    <string name="sync_in_progress_network_error">동기화 중단... 네트워크가 오프라인이거나 찾을 수 없습니다</string>
+</resources>

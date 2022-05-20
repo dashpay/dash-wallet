@@ -35,8 +35,13 @@
     <string name="button_retry">Riprova</string>
     <string name="button_close">Chiudi</string>
     <string name="button_continue">Continua</string>
+    <string name="button_understand">Ho capito</string>
     <string name="button_okay">Bene</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Cerca</string>
+    <string name="permission_allow">Permetti</string>
+    <string name="permission_deny">Nega</string>
     <string name="max">Massimo</string>
     <string name="select_currency">Seleziona Valuta</string>
 </resources>

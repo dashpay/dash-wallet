@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.ui.main;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -82,6 +82,13 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.ui.AbstractWalletActivity;
+import de.schildbach.wallet.ui.EditAddressBookEntryFragment;
+import de.schildbach.wallet.ui.ReportIssueDialogBuilder;
+import de.schildbach.wallet.ui.TransactionDetailsDialogFragment;
+import de.schildbach.wallet.ui.TransactionsAdapter;
+import de.schildbach.wallet.ui.TransactionsFilterDialog;
+import de.schildbach.wallet.ui.TransactionsFilterSharedViewModel;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Qr;
@@ -115,7 +122,7 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
     private TransactionsAdapter adapter;
     private TextView syncingText;
     private TransactionsFilterSharedViewModel transactionsFilterSharedViewModel;
-    private MainActivityViewModel mainActivityViewModel;
+    private MainViewModel mainViewModel;
 
     @Nullable
     private Direction direction;
@@ -182,7 +189,7 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
             dialogFragment.show(getChildFragmentManager(), null);
         });
 
-        mainActivityViewModel = new ViewModelProvider(requireActivity()).get(MainActivityViewModel.class);
+        mainViewModel = new ViewModelProvider(requireActivity()).get(MainViewModel.class);
 
         recyclerView = view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -433,12 +440,18 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
         } else {
             syncingText.setVisibility(View.VISIBLE);
             String syncing = getString(R.string.syncing);
-            SpannableStringBuilder str = new SpannableStringBuilder(syncing + " " + percentage + "%");
-            int start = syncing.length() + 1;
-            int end = str.length();
-            str.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end,
-                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-            syncingText.setText(str);
+
+            if (percentage == 0) {
+                syncing += "…";
+                syncingText.setText(syncing);
+            } else {
+                SpannableStringBuilder str = new SpannableStringBuilder(syncing + " " + percentage + "%");
+                int start = syncing.length() + 1;
+                int end = str.length();
+                str.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                syncingText.setText(str);
+            }
         }
     }
 
@@ -597,7 +610,7 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
 
     private void updateView() {
         adapter.setFormat(config.getFormat());
-        mainActivityViewModel.getOnTransactionsUpdated().call(Unit.INSTANCE);
+        mainViewModel.getOnTransactionsUpdated().call(Unit.INSTANCE);
     }
 
     public boolean isHistoryEmpty() {

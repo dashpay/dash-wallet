@@ -60,4 +60,6 @@ interface WalletDataProvider {
     fun detachOnWalletWipedListener(listener: () -> Unit)
 
     fun processDirectTransaction(tx: Transaction)
+
+    fun observeBalance(): Flow<Coin>
 }

@@ -48,7 +48,7 @@
 
                         <fragment
                             android:id="@+id/wallet_balance_fragment"
-                            android:name="de.schildbach.wallet.ui.WalletBalanceFragment"
+                            android:name="de.schildbach.wallet.ui.main.WalletBalanceFragment"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
@@ -65,7 +65,7 @@
 
                         <fragment
                             android:id="@+id/wallet_transactions_fragment"
-                            android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
+                            android:name="de.schildbach.wallet.ui.main.WalletTransactionsFragment"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:layout_gravity="bottom|center_horizontal"

@@ -38,4 +38,4 @@
     <string name="uphold_api_error_400_invalid_beneficiary">لا يمكن نقل هذا المبلغ باستخدام هذا التطبيق (بحد أقصى 3000 دولار)\n\nالرجاء استخدام حساب Uphold الخاص بك لإجراء التحويل.</string>
     <string name="uphold_api_error_400_required">لا يمكن نقل هذا المبلغ باستخدام هذا التطبيق (بحد أقصى 3000 دولار)\n\nالرجاء استخدام حساب Uphold الخاص بك لإجراء التحويل.</string>
 
-</resources>
+    </resources>

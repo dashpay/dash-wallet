@@ -303,6 +303,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Tambahkan dump dompet</string>
     <string name="report_issue_dialog_mail_intent_chooser">Kirim laporan dgn…</string>
     <string name="report_issue_dialog_mail_intent_failed">Gagal mengirim laporan.</string>
+    <string name="report_transaction_history_export">Ekspor</string>
+    <string name="report_transaction_history_title">Ekspor CSV</string>
+    <string name="report_transaction_history_not_synced_title">Ekspor CSV</string>
+    <string name="report_transaction_history_not_synced_message">Harap tunggu hingga dompet disinkronkan sepenuhnya sebelum mengekspor riwayat transaksi Anda.</string>
+    <string name="report_transaction_history_message">Riwayat transaksi lengkap akan diekspor.\n\nSemua pembayaran akan dianggap sebagai pengeluaran dan semua transaksi yang masuk akan menjadi pendapatan. Pemilik dompet ini bertanggung jawab untuk membuat penyesuaian dasar biaya dalam sistem pelaporan pajak yang mereka pilih.</string>
+    <string name="report_transaction_history_mail_intent_chooser">Kirim riwayat transaksi menggunakan…</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">Gagal mengirim riwayat transaksi.</string>
+
     <string name="about_title">Mengenai</string>
     <string name="about_version_title">versi</string>
     <string name="about_copyright_title">Hak cipta</string>

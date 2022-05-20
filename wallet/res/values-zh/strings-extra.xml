@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">无法加载钱包!</string>
 
     <string name="set_pin_create_new_wallet">创建一个新钱包</string>
+    <string name="set_pin_upgrade_wallet">升级钱包</string>
     <string name="set_pin_restore_wallet">还原钱包</string>
     <string name="set_pin_enter_pin">输入旧PIN</string>
     <string name="set_pin_set_pin">设置PIN</string>
@@ -15,6 +16,8 @@
     <string name="set_pin_decrypting">正在解密钱包</string>
     <string name="set_pin_verifying_pin">验证PIN</string>
     <string name="set_pin_message">每次使用时都需要输入PIN以解锁您的app.</string>
+    <string name="set_pin_confirm_pin_incorrect">PIN码错误</string>
+
     <string name="home_available_balance">可用余额</string>
     <string name="home_balance_hidden">余额已隐藏</string>
     <string name="home_balance_show_hint">点击显示余额</string>
@@ -60,6 +63,7 @@
     <string name="scan_to_pay_error_dialog_title">扫描发送</string>
     <string name="scan_to_pay_error_dialog_message">剪切板没有包含有效的Dash地址或链接:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">剪切板没有包含有效的Dash地址或链接</string>
+    <string name="pay_to_confirm_address">这是您想要发送付款的Dash地址吗?</string>
 
     <string name="receive_title">接收</string>
     <string name="receive_enter_amount_message">指定收款数额</string>
@@ -143,6 +147,8 @@
     <string name="wallet_lock_try_again">请在 %1$d %2$s 后再试</string>
     <string name="wallet_lock_reset">重置</string>
     <string name="wallet_lock_wrong_pin">PIN码错误! %s</string>
+    <string name="wallet_last_attempt">最后一次PIN尝试</string>
+    <string name="wallet_last_attempt_message">再次失败的话将需要助记词来恢复钱包</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="other">剩余尝试次数 %d </item>
@@ -174,7 +180,12 @@
     <string name="notification_transactions_channel_description">接收关于新转入交易的提醒.</string>
     <string name="notification_synchronization_channel_name">同步</string>
     <string name="notification_synchronization_channel_description">当app正在同步网络时显示通知.</string>
+    <string name="notification_push_channel_name">推送通知</string>
+    <string name="notification_push_channel_description">显示由Dash发送给您的推送通知</string>
     <string name="notification_settings_title">通知</string>
+    <string name="notification_explainer_title">Dash钱包想向您发送通知</string>
+    <string name="notification_explainer_message">通知可能包括警报, 声音和图标标记. 这些可以在手机设置中进行配置.</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">使用您的指纹解锁.</string>
@@ -251,6 +262,8 @@
     <string name="menu_rescan_blockchain">重新扫描区块链</string>
     <string name="menu_contact_support_title">联系支持</string>
     <string name="menu_contact_support_subtitle">报告问题</string>
+    <string name="menu_explore_title">探索</string>
+    <string name="menu_explore_subtitle">在超过155,000家商户使用Dash购物</string>
 
     <string name="tools_address_book">地址簿</string>
     <string name="tools_import_private_key">导入私钥</string>
@@ -261,8 +274,12 @@
     <string name="about_review_and_rate">对app进行评论 &amp; 评分</string>
     <string name="about_contact_support">联系支持</string>
     <string name="about_fork_disclaimer">这是从比特币钱包分叉而来的开源应用程序</string>
+    <string name="about_copyright">版权所有 © 2022 Dash Core</string>
     <string name="about_license">GNU 公共通用许可 v3.0</string>
     <string name="about_version_name">Dash钱包 %s</string>
+    <string name="about_last_explore_dash_sync">探索Dash数据更新于: %1$s\n上次同步: %2$s</string>
+    <string name="about_last_explore_dash_update_error">无法获取</string>
+    <string name="about_last_explore_dash_sync_never">从不</string>
 
     <string name="block">区块</string>
     <string name="time">时间</string>
@@ -341,4 +358,10 @@
     <string name="all_transactions">所有</string>
     <string name="received_transactions">已接收</string>
     <string name="sent_transactions">已发送</string>
+    <string name="set_pin_error_missing_wallet_title">缺少钱包错误</string>
+    <string name="set_pin_error_missing_wallet_message">钱包丢失. 请将此报告提交给服务与支持平台.</string>
+    <string name="wallet_encryption_error_title">钱包创建错误</string>
+    <string name="wallet_encryption_error_message">创建钱包时出现问题. 请将此报告提交给帮助与支持平台.</string>
+    <string name="wallet_not_encrypted_error_message">您的钱包有问题.\n\n如果您钱包中没有Dash, 请卸载并重新安装此应用. 然后创建一个新钱包.\n\n如果您有助记词或备份文件, 那么请卸载此应用后重新安装.\n\n否则, 请向支持与服务平台报告.</string>
+
 </resources>

@@ -35,7 +35,13 @@
     <string name="button_retry">Opakovat</string>
     <string name="button_close">Zavřít</string>
     <string name="button_continue">Pokračovat</string>
+    <string name="button_understand">Rozumím</string>
     <string name="button_okay">Dobře</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Vyhledávání</string>
+    <string name="permission_allow">Povolit</string>
+    <string name="permission_deny">Odmítnout</string>
     <string name="max">Max</string>
-    </resources>
+    <string name="select_currency">Vybrat měnu</string>
+</resources>

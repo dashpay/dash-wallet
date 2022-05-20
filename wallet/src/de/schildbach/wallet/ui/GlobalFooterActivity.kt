@@ -20,11 +20,11 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.widget.GlobalFooterView
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import javax.inject.Inject
 
 
