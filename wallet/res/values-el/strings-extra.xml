@@ -15,7 +15,6 @@
     <string name="set_pin_decrypting">Αποκρυπτογράφηση πορτοφολιού</string>
     <string name="set_pin_verifying_pin">Επαλήθευση PIN</string>
     <string name="set_pin_message">Αυτός ο κωδικός PIN θα χρειαστεί να ξεκλειδώσετε την εφαρμογή σας κάθε φορά που την χρησιμοποιείτε.</string>
-
     <string name="home_available_balance">Διαθέσιμο υπόλοιπο</string>
     <string name="home_balance_hidden">Το υπόλοιπο αποκρύφτηκε</string>
     <string name="home_balance_show_hint">Πατήστε για να αποκαλύψετε το υπόλοιπο</string>
@@ -61,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Σαρώστε για να στείλετε</string>
     <string name="scan_to_pay_error_dialog_message">Δεν είναι μια έγκυρη διεύθυνση Dash ή ένα URL που αιτήθηκε στο πρόχειρο:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Δεν είναι μια έγκυρη διεύθυνση Dash ή ένα URL που αιτήθηκε στο πρόχειρο</string>
-
     <string name="receive_title">Λήψη</string>
     <string name="receive_enter_amount_message">Καθορίστε το ποσό που θα παραληφθεί</string>
     <string name="receive_enter_amount_button">Καθορίστε το ποσό</string>
@@ -144,7 +142,6 @@
     <string name="wallet_lock_try_again">Δοκιμάστε ξανά σε %1$d %2$s</string>
     <string name="wallet_lock_reset">Επαναφορά</string>
     <string name="wallet_lock_wrong_pin">Λάθος PIN! %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d προσπάθεια απομένει</item>
         <item quantity="other">%d προσπάθειες απομένουν </item>
@@ -255,7 +252,7 @@
     <string name="menu_rescan_blockchain">Επανασάρωση του blockchain</string>
     <string name="menu_contact_support_title">Επικοινωνήστε με την υποστήριξη</string>
     <string name="menu_contact_support_subtitle">Αναφέρετε ένα πρόβλημα</string>
-
+    <string name="menu_explore_title">Εξερευνήστε</string>
     <string name="tools_address_book">Βιβλίο Διευθύνσεων</string>
     <string name="tools_import_private_key">Εισάγετε το ιδιωτικό κλειδί</string>
     <string name="tools_network_monitor">Παρακολούθηση Δικτύου</string>
@@ -267,7 +264,6 @@
     <string name="about_fork_disclaimer">Πρόκειται για μια εφαρμογή ανοιχτού κώδικα που διαχωρίστηκε από το Bitcoin πορτοφόλι</string>
     <string name="about_license">Γενική Άδεια Δημόσιας Χρήσης GNU v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-
     <string name="block">Μπλόκ</string>
     <string name="time">Ώρα</string>
     <string name="hash">Hash</string>

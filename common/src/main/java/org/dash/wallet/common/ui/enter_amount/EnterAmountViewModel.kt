@@ -20,10 +20,7 @@ package org.dash.wallet.common.ui.enter_amount
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
@@ -40,7 +37,7 @@ class EnterAmountViewModel @Inject constructor(
 ) : ViewModel() {
     private val _selectedCurrencyCode = MutableStateFlow(configuration.exchangeCurrencyCode)
     var selectedCurrencyCode: String
-        get() = _selectedCurrencyCode.value
+        get() = _selectedCurrencyCode.value!!
         set(value) {
             _selectedCurrencyCode.value = value
         }
@@ -84,9 +81,11 @@ class EnterAmountViewModel @Inject constructor(
         }
 
     init {
-        _selectedCurrencyCode.flatMapLatest { code ->
-            exchangeRates.observeExchangeRate(code)
-        }.onEach(_selectedExchangeRate::postValue)
+        _selectedCurrencyCode
+            .filterNotNull()
+            .flatMapLatest { code ->
+                exchangeRates.observeExchangeRate(code)
+            }.onEach(_selectedExchangeRate::postValue)
             .launchIn(viewModelScope)
     }
 

@@ -17,11 +17,11 @@
 <resources>
     <string name="crowdnode_get_started">Getting started with CrowdNode</string>
     <string name="crowdnode_get_started_hint">To start staking, create an account on CrowdNode or connect to an existing one.</string>
-    <string name="new_account">New Account</string>
-    <string name="account_create">Create New Account</string>
+    <string name="new_account">New CrowdNode Account</string>
+    <string name="account_create">Create Account</string>
     <string name="account_link">Link Existing Account</string>
     <string name="crowdnode_login">Log in to CrowdNode</string>
-    <string name="crowdnode_link">Link a CrowdNode account</string>
+    <string name="crowdnode_link">Link Existing CrowdNode Account</string>
     <string name="required_passphrase_backup">You have to backup your passphrase in Dash Wallet</string>
     <string name="backup_passphrase">Backup Passphrase</string>
     <string name="required_dash_amount">You need at least %s Dash on your Dash Wallet</string>
@@ -38,7 +38,7 @@
     <string name="terms_of_use">Terms of use</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="crowdnode_account_ready">Your CrowdNode account is set up and ready to use!</string>
-    <string name="notify_when_done">Let me know when it’s done</string>
+    <string name="notify_when_done">Close and notify when it’s done</string>
     <string name="crowdnode_creating">Your CrowdNode account is creating…</string>
     <string name="accepting_terms">Accepting terms of use…</string>
     <string name="crowdnode_signup_error">We couldn’t create your CrowdNode account.</string>
@@ -61,7 +61,7 @@
     <string name="secure_online_account">Protect your earnings</string>
     <string name="crowdnode_support">CrowdNode Support</string>
     <string name="unlink_account">Unlink Account</string>
-    <string name="online_account_title">What is online account and why do you need it?</string>
+    <string name="online_account_title">Why do you need an online account?</string>
     <string name="crowdnode_online_synced">Synced with current Dash Wallet</string>
     <string name="crowdnode_online_unconfirmed">In process…</string>
     <string name="account_recovery">Account Recovery</string>
@@ -73,7 +73,7 @@
     <string name="crowdnode_balance">Balance on CrowdNode</string>
     <string name="crowdnode_your_address_title">Here is the Dash address you used in integration with CrowdNode</string>
     <string name="chain_syncing">The chain is syncing…</string>
-    <string name="crowdnode_wait_for_sync">Please wait until the chain is fully synced so we can review your transaction history.\n\nYou can visit CrowdNode website and log in/sign up there.</string>
+    <string name="crowdnode_wait_for_sync">Wait until the chain is fully synced, so we can review your transaction history. Visit CrowdNode website to log in or sign up.</string>
     <string name="crowdnode_open_website">Go to CrowdNode website</string>
     <string name="crowdnode_info_title">Become part of a Dash Masternode with CrowdNode</string>
     <string name="introducing_staking">Introducing Staking</string>

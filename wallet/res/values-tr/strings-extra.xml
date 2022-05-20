@@ -15,7 +15,6 @@
     <string name="set_pin_decrypting">Cüzdan şifresi çözülüyor</string>
     <string name="set_pin_verifying_pin">PİN Doğrulanıyor</string>
     <string name="set_pin_message">Bu PİN uygulamanın açılması için her zaman gerekecektir.</string>
-
     <string name="home_available_balance">Mevcut bakiye</string>
     <string name="home_balance_hidden">Bakiye gizlendi</string>
     <string name="home_balance_show_hint">Bakiyeyi görmek için tıkla</string>
@@ -61,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Göndermek için Tara</string>
     <string name="scan_to_pay_error_dialog_message">Panodaki Dash Adresi veya URL isteği geçerli değil:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Panodaki Dash Adresi veya URL isteği geçerli değil.</string>
-
     <string name="receive_title">Al</string>
     <string name="receive_enter_amount_message">Alınacak tutarı belirtin</string>
     <string name="receive_enter_amount_button">Tutarı Belirleyin</string>
@@ -254,7 +252,6 @@
     <string name="menu_rescan_blockchain">Blok Zincirini Tekrar Tara</string>
     <string name="menu_contact_support_title">Destekle İletişime Geçin</string>
     <string name="menu_contact_support_subtitle">Sorun rapor et</string>
-
     <string name="tools_address_book">Adres Rehberi</string>
     <string name="tools_import_private_key">Özel anahtar içeri al</string>
     <string name="tools_network_monitor">Ağ monitörü</string>
@@ -266,7 +263,6 @@
     <string name="about_fork_disclaimer">Bu uygulama açık kaynak kodlu bir Bitcoin çatallanmasıdır</string>
     <string name="about_license">GNU Genel Kamu Lisansı v3.0</string>
     <string name="about_version_name">Dash Cüzdanı %s</string>
-
     <string name="block">Blok</string>
     <string name="time">Zaman</string>
     <string name="hash">Karma</string>

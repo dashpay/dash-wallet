@@ -170,6 +170,7 @@ public class Configuration {
             return new MonetaryFormat().shift(6).minDecimals(0).optionalDecimals(2);
     }
 
+    @Nullable
     public String getOwnName() {
         return Strings.emptyToNull(prefs.getString(PREFS_KEY_OWN_NAME, "").trim());
     }
@@ -190,6 +191,7 @@ public class Configuration {
         return prefs.getBoolean(PREFS_KEY_CONNECTIVITY_NOTIFICATION, false);
     }
 
+    @Nullable
     public String getTrustedPeerHost() {
         return Strings.emptyToNull(prefs.getString(PREFS_KEY_TRUSTED_PEER, "").trim());
     }
@@ -314,6 +316,7 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_DISCLAIMER, enabled).apply();
     }
 
+    @Nullable
     public String getExchangeCurrencyCode() {
         String currencyCode = prefs.getString(PREFS_KEY_EXCHANGE_CURRENCY, null);
         // previous versions of the app (prior to 7.3.3) may have stored an obsolete
@@ -324,6 +327,7 @@ public class Configuration {
     public void setExchangeCurrencyCode(final String exchangeCurrencyCode) {
         prefs.edit().putString(PREFS_KEY_EXCHANGE_CURRENCY, exchangeCurrencyCode).apply();
     }
+
     public boolean getExchangeCurrencyCodeDetected() {
         return prefs.getBoolean(PREFS_KEY_EXCHANGE_CURRENCY_DETECTED, false);
     }

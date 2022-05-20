@@ -137,11 +137,6 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             startActivity(browserIntent)
         }
 
-        binding.unlinkAccountBtn.setOnClickListener {
-            // TODO: online account
-            requireActivity().finish()
-        }
-
         binding.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.menu_info) {
                 showInfoDialog()
@@ -220,13 +215,13 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         binding.depositBtn.isEnabled = isEnabled
 
         if (isEnabled) {
-            binding.depositIcon.setImageResource(R.drawable.ic_deposit)
+            binding.depositIcon.setImageResource(R.drawable.ic_deposit_enabled)
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_primary, null))
             binding.depositSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
         } else {
             binding.depositIcon.setImageResource(R.drawable.ic_deposit_disabled)
-            binding.depositTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
-            binding.depositSubtitle.setTextColor(resources.getColor(R.color.content_disabled, null))
+            binding.depositTitle.setTextColor(resources.getColor(R.color.content_primary, null))
+            binding.depositSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
         }
     }
 

@@ -15,7 +15,6 @@
     <string name="set_pin_decrypting">Nagde-decrypt ng pitaka</string>
     <string name="set_pin_verifying_pin">Pagpapatunay ng PIN</string>
     <string name="set_pin_message">Ang PIN na ito ay kailangan upang i-unlock ang iyong app kapag nais gamitin.</string>
-
     <string name="home_available_balance">Magagamit na balanse</string>
     <string name="home_balance_hidden">Nakatagong balanse</string>
     <string name="home_balance_show_hint">Pindutin upang ipakita ang balanse</string>
@@ -61,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">I-scan para magpadala</string>
     <string name="scan_to_pay_error_dialog_message">Hindi wastong Dash Address or hiling na URL sa clipboard:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Hindi wastong Dash Address or hiling na URL sa clipboard.</string>
-
     <string name="receive_title">Tumanggap</string>
     <string name="receive_enter_amount_message">Tukuyin ang halaga na matatanggap</string>
     <string name="receive_enter_amount_button">Tukuyin ang halaga</string>
@@ -144,7 +142,6 @@
     <string name="wallet_lock_try_again">Subukan ulit sa loob ng %1$d %2$s</string>
     <string name="wallet_lock_reset">I-reset</string>
     <string name="wallet_lock_wrong_pin">Maling PIN! %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d subok nalang ang nalalabi</item>
         <item quantity="other">%d subok nalang ang nalalabi</item>
@@ -255,7 +252,6 @@
     <string name="menu_rescan_blockchain">Muling i-scan ang blockchain </string>
     <string name="menu_contact_support_title">Contact Support</string>
     <string name="menu_contact_support_subtitle">I-report ang Isyu</string>
-
     <string name="tools_address_book">Adresbuk</string>
     <string name="tools_import_private_key">I-import ang private key</string>
     <string name="tools_network_monitor">Network monitor</string>
@@ -267,7 +263,6 @@
     <string name="about_fork_disclaimer">Ito ay open source app forked mula sa Bitcoin Wallet</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-
     <string name="block">Block</string>
     <string name="time">Oras</string>
     <string name="hash">Hash</string>
@@ -312,7 +307,6 @@
     <string name="welcome_screen_subtitle_3">Magkaroon ng kumpletong kontrol at pinasadyang pitaka base sa iyong nais</string>
 
     <string name="sync_status_wait">Pakihintay na mag-sync upang makumpleto</string>
-    <string name="sync_status_syncing_title">Syncing %1$d</string>
     <string name="sync_status_syncing_sub_title">kasama ang Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Hindi maka-konekta</string>
     <string name="sync_status_check_connection">Suriin ang koneksyon</string>

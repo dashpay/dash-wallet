@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Quét để gửi</string>
     <string name="scan_to_pay_error_dialog_message">Không phải một địa chỉ Dash hoặc URL yêu cầu trong bộ nhớ đệm:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Không phải một địa chỉ Dash hoặc URL yêu cầu trong bộ nhớ đệm.</string>
-
     <string name="receive_title">Nhận</string>
     <string name="receive_enter_amount_message">Hãy xác định rõ số lượng cần nhận</string>
     <string name="receive_enter_amount_button">Hãy cung cấp số lượng</string>
@@ -140,7 +139,6 @@
     <string name="wallet_lock_try_again">Thử lại trong %1$d%2$s</string>
     <string name="wallet_lock_reset">Thiết đặt lại</string>
     <string name="wallet_lock_wrong_pin">Sai mã PIN! %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="other">%dlần còn có thể thử lại</item>
     </plurals>
@@ -241,7 +239,6 @@
     <string name="menu_rescan_blockchain">Quét lại blockchain</string>
     <string name="menu_contact_support_title">Liên hệ hỗ trợ</string>
     <string name="menu_contact_support_subtitle">Báo cáo về lỗi</string>
-
     <string name="tools_address_book">Sổ địa chỉ</string>
     <string name="tools_import_private_key">Nhập khoá riêng</string>
     <string name="tools_network_monitor">Giám sát mạng</string>
@@ -253,7 +250,6 @@
     <string name="about_fork_disclaimer">Đây là một ứng dụng mã nguồn mở được xây dựng dựa trên ví Bitcoin</string>
     <string name="about_license">Giấy phép GNU General Public v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-
     <string name="block">Khối</string>
     <string name="time">Thời gian</string>
     <string name="hash">Băm</string>

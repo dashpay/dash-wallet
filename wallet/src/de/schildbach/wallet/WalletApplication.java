@@ -109,6 +109,7 @@ import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import dagger.hilt.android.HiltAndroidApp;
 import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
@@ -160,6 +161,8 @@ public class WalletApplication extends BaseWalletApplication
 
     @Inject
     HiltWorkerFactory workerFactory;
+    @Inject
+    BlockchainStateDao blockchainStateDao;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -223,6 +226,8 @@ public class WalletApplication extends BaseWalletApplication
             log.error(ex.getMessage(), ex);
             CrashReporter.saveBackgroundTrace(ex, packageInfo);
         }
+
+        resetBlockchainSyncProgress();
     }
 
     private void syncExploreData() {
@@ -662,11 +667,8 @@ public class WalletApplication extends BaseWalletApplication
     }
 
     public void resetBlockchainState() {
-        Executors.newSingleThreadExecutor().execute(new Runnable() {
-            @Override
-            public void run() {
-                AppDatabase.getAppDatabase().blockchainStateDao().save(new BlockchainState(true));
-            }
+        Executors.newSingleThreadExecutor().execute(() -> {
+            blockchainStateDao.save(new BlockchainState(true));
         });
     }
 
@@ -676,6 +678,16 @@ public class WalletApplication extends BaseWalletApplication
         Intent blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
                 BlockchainServiceImpl.class);
         startService(blockchainServiceResetBlockchainIntent);
+    }
+
+    private void resetBlockchainSyncProgress() {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            BlockchainState blockchainState = blockchainStateDao.loadSync();
+            if (blockchainState != null) {
+                blockchainState.setPercentageSync(0);
+                blockchainStateDao.save(blockchainState);
+            }
+        });
     }
 
     public void replaceWallet(final Wallet newWallet) {
@@ -925,7 +937,7 @@ public class WalletApplication extends BaseWalletApplication
 
     @NonNull
     @Override
-    public Flow<Coin> observeBalance(Wallet.BalanceType balanceType) {
+    public Flow<Coin> observeBalance(@NonNull Wallet.BalanceType balanceType) {
         return new WalletBalanceObserver(wallet, balanceType).observe();
     }
 

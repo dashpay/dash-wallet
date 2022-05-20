@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.ui.main;
 
 import javax.annotation.Nullable;
 
@@ -27,11 +27,15 @@ import org.dash.wallet.common.ui.CurrencyTextView;
 
 import org.dash.wallet.common.Configuration;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainState;
-import de.schildbach.wallet.rates.ExchangeRatesViewModel;
+import de.schildbach.wallet.ui.AbstractBindServiceActivity;
+import de.schildbach.wallet.ui.rates.ExchangeRatesActivity;
+import de.schildbach.wallet.ui.WalletBalanceLoader;
+import de.schildbach.wallet.ui.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet_test.R;
 
 import android.app.Activity;
@@ -54,6 +58,7 @@ import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public final class WalletBalanceFragment extends Fragment {
     private WalletApplication application;
     private AbstractBindServiceActivity activity;

@@ -1,40 +1,20 @@
-<!--
-  ~ Copyright 2022 Dash Core Group.
-  ~
-  ~ This program is free software: you can redistribute it and/or modify
-  ~ it under the terms of the GNU General Public License as published by
-  ~ the Free Software Foundation, either version 3 of the License, or
-  ~ (at your option) any later version.
-  ~
-  ~ This program is distributed in the hope that it will be useful,
-  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
-  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  ~ GNU General Public License for more details.
-  ~
-  ~ You should have received a copy of the GNU General Public License
-  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="16dp"
     android:height="16dp"
     android:viewportWidth="16"
     android:viewportHeight="16">
-  <group>
-    <clip-path
-        android:pathData="M0,0h16.0001v16h-16.0001z"/>
-    <path
-        android:pathData="M13.9302,5.8438H7.3152C6.5034,5.8438 5.8452,6.5019 5.8452,7.3137V13.9288C5.8452,14.7406 6.5034,15.3988 7.3152,15.3988H13.9302C14.7421,15.3988 15.4002,14.7406 15.4002,13.9288V7.3137C15.4002,6.5019 14.7421,5.8438 13.9302,5.8438Z"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.25"
-        android:fillColor="#00000000"
-        android:strokeColor="#191C1F"
-        android:strokeLineCap="round"/>
-    <path
-        android:pathData="M2.9052,10.2542H2.1702C1.7803,10.2542 1.4064,10.0993 1.1307,9.8237C0.8551,9.548 0.7002,9.1741 0.7002,8.7842V2.1692C0.7002,1.7794 0.8551,1.4054 1.1307,1.1298C1.4064,0.8541 1.7803,0.6992 2.1702,0.6992H8.7852C9.1751,0.6992 9.549,0.8541 9.8246,1.1298C10.1003,1.4054 10.2552,1.7794 10.2552,2.1692V2.9042"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.25"
-        android:fillColor="#00000000"
-        android:strokeColor="#191C1F"
-        android:strokeLineCap="round"/>
-  </group>
+  <path
+      android:pathData="M13.9302,5.8438H7.3152C6.5034,5.8438 5.8452,6.5019 5.8452,7.3137V13.9288C5.8452,14.7406 6.5034,15.3988 7.3152,15.3988H13.9302C14.7421,15.3988 15.4002,14.7406 15.4002,13.9288V7.3137C15.4002,6.5019 14.7421,5.8438 13.9302,5.8438Z"
+      android:strokeLineJoin="round"
+      android:strokeWidth="1.25"
+      android:fillColor="#00000000"
+      android:strokeColor="#191C1F"
+      android:strokeLineCap="round"/>
+  <path
+      android:pathData="M2.9052,10.2542H2.1702C1.7803,10.2542 1.4064,10.0993 1.1307,9.8237C0.8551,9.548 0.7002,9.1741 0.7002,8.7842V2.1692C0.7002,1.7794 0.8551,1.4054 1.1307,1.1298C1.4064,0.8541 1.7803,0.6992 2.1702,0.6992H8.7852C9.1751,0.6992 9.549,0.8541 9.8246,1.1298C10.1003,1.4054 10.2552,1.7794 10.2552,2.1692V2.9042"
+      android:strokeLineJoin="round"
+      android:strokeWidth="1.25"
+      android:fillColor="#00000000"
+      android:strokeColor="#191C1F"
+      android:strokeLineCap="round"/>
 </vector>

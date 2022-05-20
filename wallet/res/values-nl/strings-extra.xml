@@ -60,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Scan om te verzenden</string>
     <string name="scan_to_pay_error_dialog_message">Geen geldig Dash adres of URL verzoek op klembord:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Geen geldig Dash adres of URL verzoek op klembord.</string>
-
     <string name="receive_title">Ontvangen</string>
     <string name="receive_enter_amount_message">Specificeer het te ontvangen bedrag</string>
     <string name="receive_enter_amount_button">Specificeer bedrag</string>
@@ -143,7 +142,6 @@
     <string name="wallet_lock_try_again">Probeer nogmaals over %1$d %2$s</string>
     <string name="wallet_lock_reset">Reset</string>
     <string name="wallet_lock_wrong_pin">Verkeerde pin! %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d resterende poging</item>
         <item quantity="other">%d resterende pogingen</item>
@@ -268,7 +266,6 @@
     <string name="about_fork_disclaimer">Dit is een open source app afgesplitst van de Bitcoin portemonnee</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash portemonnee%s</string>
-
     <string name="block">Block</string>
     <string name="time">Tijd</string>
     <string name="hash">Hash</string>

@@ -36,8 +36,13 @@
     <string name="button_retry">Znovu</string>
     <string name="button_close">Zatvoriť</string>
     <string name="button_continue">Pokračovať</string>
+    <string name="button_understand">Rozumiem</string>
     <string name="button_okay">Dobre</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Hľadať</string>
+    <string name="permission_allow">Povoliť</string>
+    <string name="permission_deny">Zamietnuť</string>
     <string name="max">Max</string>
     <string name="select_currency">Vyberte menu</string>
 </resources>

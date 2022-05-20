@@ -20,7 +20,7 @@ package de.schildbach.wallet.util.activities
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.send.SweepWalletActivity
 import io.mockk.*
