@@ -42,5 +42,6 @@ class CrowdNodeException(message: String): Exception(message) {
         const val DEPOSIT_ERROR = "deposit_error"
         const val CONFIRMATION_ERROR = "confirmation_error"
         const val WITHDRAWAL_ERROR = "withdrawal_error"
+        const val SAME_API_PRIMARY = "same_api_primary_addresses"
     }
 }

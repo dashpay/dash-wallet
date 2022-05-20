@@ -33,7 +33,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Buttons -->
+    <!-- Generic Titles/Buttons -->
     <string name="button_dismiss">Dismiss</string>
     <string name="network_unavailable_return">Return to Wallet</string>
     <string name="button_continue">Continue</string>
@@ -46,6 +46,7 @@
     <string name="button_okay">Okay</string>
     <string name="button_share">Share</string>
     <string name="verify">Verify</string>
+    <string name="error">Error</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>

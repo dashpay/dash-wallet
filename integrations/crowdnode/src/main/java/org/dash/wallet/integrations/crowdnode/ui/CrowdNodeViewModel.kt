@@ -193,6 +193,12 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
+    fun resetAddress() {
+        viewModelScope.launch {
+            resetAddressAndApi()
+        }
+    }
+
     fun changeNotifyWhenDone(toNotify: Boolean) {
         crowdNodeApi.showNotificationOnResult = toNotify
     }

@@ -315,14 +315,10 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     private suspend fun startTrackingConfirmed(accountAddress: Address, initialDelay: Duration) {
-        if (primaryAddress != accountAddress) {
-            // First check or wait for the confirmation tx.
-            // No need to make web requests if it isn't found.
-            val confirmationTx = blockchainApi.waitForApiAddressConfirmation(accountAddress)
-            log.info("Confirmation tx found: ${confirmationTx.txId}")
-        } else {
-            log.info("primary address is the same as the account address")
-        }
+        // First check or wait for the confirmation tx.
+        // No need to make web requests if it isn't found.
+        val confirmationTx = blockchainApi.waitForApiAddressConfirmation(accountAddress)
+        log.info("Confirmation tx found: ${confirmationTx.txId}")
 
         if (blockchainApi.getDepositConfirmations().any()) {
             // If a deposit confirmation was received, the address has been confirmed already
@@ -358,7 +354,10 @@ class CrowdNodeApiAggregator @Inject constructor(
     override suspend fun reset() {
         log.info("reset is triggered")
         signUpStatus.value = SignUpStatus.NotStarted
+        onlineAccountStatus.value = OnlineAccountStatus.None
         accountAddress = null
+        primaryAddress = null
+        linkingApiAddress = null
         apiError.value = null
         config.clearAll()
     }
@@ -479,12 +478,18 @@ class CrowdNodeApiAggregator @Inject constructor(
         val isInUse = resolveIsAddressInUse(address)
 
         if (isInUse && onlineAccountStatus.value.ordinal <= OnlineAccountStatus.Linking.ordinal) {
-            accountAddress = address
-            globalConfig.crowdNodeAccountAddress = address.toBase58()
-            primaryAddress?.toBase58()?.let {
-                globalConfig.crowdNodePrimaryAddress = it
+            if (primaryAddress == address) {
+                // Linking of the same API address as the primary one is not allowed
+                apiError.value = CrowdNodeException(CrowdNodeException.SAME_API_PRIMARY)
+                changeOnlineStatus(OnlineAccountStatus.None)
+            } else {
+                accountAddress = address
+                globalConfig.crowdNodeAccountAddress = address.toBase58()
+                primaryAddress?.toBase58()?.let {
+                    globalConfig.crowdNodePrimaryAddress = it
+                }
+                changeOnlineStatus(OnlineAccountStatus.Validating)
             }
-            changeOnlineStatus(OnlineAccountStatus.Validating)
         }
     }
 
