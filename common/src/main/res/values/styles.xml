@@ -597,6 +597,12 @@
         <item name="strokeColor">@color/background_secondary</item>
     </style>
 
+    <style name="InputErrorBackground">
+        <item name="backgroundColor">@color/input_error_background</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
     <style name="ScreenshotWarningBackground" parent="SecondaryBackground">
         <item name="cornerRadius">10dp</item>
     </style>
@@ -886,6 +892,10 @@
 
     <style name="Caption.Gray600">
         <item name="android:textColor">@color/gray_600</item>
+    </style>
+
+    <style name="Caption.ExtraDarkGray">
+        <item name="android:textColor">@color/extra_dark_gray</item>
     </style>
 
     <style name="Overline" parent="TextAppearance.MaterialComponents.Overline">

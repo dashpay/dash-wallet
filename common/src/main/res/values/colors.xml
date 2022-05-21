@@ -63,9 +63,9 @@
     <color name="content_tertiary">@color/steel_gray_300</color>
     <color name="content_disabled">#92929C</color>
     <color name="content_warning">@color/red_300</color>
-    <color name="divider_color">@color/gray_50</color>
     <color name="light_gray">#DEDEE3</color>
     <color name="extra_dark_gray">#525C66</color>
+    <color name="input_hint_gray">#c5c6c7</color>
 
     <!-- Background -->
     <color name="background_primary">#eff0f4</color>
@@ -81,6 +81,11 @@
     <color name="text_highlight_blue_bg">#ebf6fd</color>
     <color name="ultra_light_gray">#f5f6f7</color>
     <color name="warning_yellow">#fff9ed</color>
+    <color name="input_error_background">#1AE85C4A</color>
+
+    <!-- Stokes -->
+    <color name="divider_color">@color/gray_50</color>
+    <color name="input_focused_stoke">#cce8fa</color>
 
     <!-- Palette -->
     <color name="blue_50">#F0F8FE</color>
