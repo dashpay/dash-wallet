@@ -34,7 +34,10 @@ class InputWrapper(context: Context, attrs: AttributeSet): TextInputLayout(conte
         isExpandedHintEnabled = false
         defaultHintTextColor = resources.getColorStateList(R.color.extra_dark_gray, null)
         setHintTextAppearance(R.style.Caption_ExtraDarkGray)
-        setPadding(0, resources.getDimensionPixelOffset(R.dimen.input_vertical_padding), 0, 0)
+
+        if (isHintEnabled) {
+            setPadding(0, resources.getDimensionPixelOffset(R.dimen.input_vertical_padding), 0, 0)
+        }
     }
 
     override fun addView(child: View, index: Int, params: ViewGroup.LayoutParams) {
@@ -43,9 +46,15 @@ class InputWrapper(context: Context, attrs: AttributeSet): TextInputLayout(conte
         if (child is EditText) {
             child.background = null
             child.setHintTextColor(resources.getColor(R.color.input_hint_gray, null))
+
+            val topPadding = resources.getDimensionPixelOffset(if (isHintEnabled) {
+                R.dimen.input_label_padding
+            } else {
+                R.dimen.input_vertical_padding
+            })
             child.setPadding(
                 resources.getDimensionPixelOffset(R.dimen.input_horizontal_padding),
-                resources.getDimensionPixelOffset(R.dimen.input_label_padding),
+                topPadding,
                 resources.getDimensionPixelOffset(R.dimen.input_horizontal_padding),
                 resources.getDimensionPixelOffset(R.dimen.input_vertical_padding)
             )
