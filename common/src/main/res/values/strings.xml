@@ -54,7 +54,7 @@
     <string name="permission_deny">Deny</string>
     <string name="max">Max</string>
     <string name="select_currency">Select Currency</string>
-    <string name="exchange_rate_template">%1$s DASH = %2$s</string>
+    <string name="exchange_rate_template" translatable="false">%1$s DASH = %2$s</string>
     <string name="send_coins_error_dusty_send">The amount is too small to send</string>
     <string name="send_coins_error_insufficient_money">Insufficient funds</string>
 </resources>
