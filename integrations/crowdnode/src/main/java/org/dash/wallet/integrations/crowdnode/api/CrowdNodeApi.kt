@@ -310,7 +310,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     private suspend fun startTrackingValidated(accountAddress: Address, initialDelay: Duration) {
         tickerJob = TickerFlow(period = 30.seconds, initialDelay = initialDelay)
             .cancellable()
-            .onEach { checkIsAddressValidated(accountAddress) }
+            .onEach { checkAddressStatus(accountAddress) }
             .launchIn(statusScope)
     }
 
@@ -329,7 +329,7 @@ class CrowdNodeApiAggregator @Inject constructor(
 
         tickerJob = TickerFlow(period = 20.seconds, initialDelay = initialDelay)
             .cancellable()
-            .onEach { checkIsAddressConfirmed(accountAddress) }
+            .onEach { checkAddressStatus(accountAddress) }
             .launchIn(statusScope)
     }
 
@@ -493,19 +493,13 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
     }
 
-    private suspend fun checkIsAddressValidated(address: Address) {
+    private suspend fun checkAddressStatus(address: Address) {
         val status = resolveAddressStatus(address)
 
-        if (status?.lowercase() == VALID_STATUS) {
+        if (status?.lowercase() == VALID_STATUS && onlineAccountStatus.value != OnlineAccountStatus.Confirming) {
             changeOnlineStatus(OnlineAccountStatus.Confirming)
             notifyIfNeeded(appContext.getString(R.string.crowdnode_address_validated), "crowdnode_validated")
-        }
-    }
-
-    private suspend fun checkIsAddressConfirmed(address: Address) {
-        val status = resolveAddressStatus(address)
-
-        if (status?.lowercase() == CONFIRMED_STATUS) {
+        } else if (status?.lowercase() == CONFIRMED_STATUS) {
             changeOnlineStatus(OnlineAccountStatus.Done)
             notifyIfNeeded(appContext.getString(R.string.crowdnode_address_confirmed), "crowdnode_confirmed")
             refreshBalance(3)
