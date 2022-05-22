@@ -21,12 +21,12 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.telephony.TelephonyManager
-import android.util.Log
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
+import android.view.inputmethod.InputMethodManager
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -47,7 +47,6 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
 import kotlinx.android.synthetic.main.activity_lock_screen_root.*
 import org.bitcoinj.wallet.Wallet.BalanceType
-import org.dash.wallet.common.AutoLogoutTimerHandler
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.services.LockScreenBroadcaster
@@ -139,7 +138,7 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private val onLogoutListener = AutoLogout.OnLogoutListener {
-        Log.e(this::class.java.simpleName, "OnLogoutListener")
+        dismissKeyboard()
         setLockState(State.USE_DEFAULT)
         onLockScreenActivated()
     }
@@ -548,5 +547,12 @@ open class LockScreenActivity : SecureActivity() {
                     }
                 }
             }
+    }
+
+    private fun dismissKeyboard() {
+        val inputManager = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        currentFocus?.windowToken?.let { token ->
+            inputManager?.hideSoftInputFromWindow(token, 0)
+        }
     }
 }
