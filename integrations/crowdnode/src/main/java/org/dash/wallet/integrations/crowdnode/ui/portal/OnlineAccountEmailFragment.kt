@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.crowdnode.ui.portal
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
@@ -35,6 +36,11 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
+        }
+
+        binding.input.doOnTextChanged { text, _, _, _ ->
+            binding.continueBtn.isEnabled = !text.isNullOrEmpty() &&
+                    android.util.Patterns.EMAIL_ADDRESS.matcher(text).matches()
         }
     }
 }

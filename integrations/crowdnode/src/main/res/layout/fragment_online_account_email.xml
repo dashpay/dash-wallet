@@ -20,9 +20,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingHorizontal="20dp"
+    android:paddingHorizontal="17dp"
     android:orientation="vertical"
     android:background="@color/background_secondary"
+    android:fitsSystemWindows="true"
     tools:context=".ui.portal.OnlineAccountEmailFragment">
 
     <androidx.appcompat.widget.Toolbar
@@ -30,32 +31,39 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:layout_marginHorizontal="-20dp"
-        app:navigationIcon="@drawable/ic_arrow_back"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:navigationIcon="@drawable/ic_arrow_back" />
 
     <TextView
         style="@style/Headline5.Bold"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        android:layout_marginHorizontal="3dp"
         android:text="@string/online_account_create_full" />
 
     <TextView
         style="@style/Body2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        android:layout_marginTop="6dp"
+        android:layout_marginHorizontal="3dp"
         android:text="@string/online_account_email_privacy" />
 
-    <EditText
-        style="@style/Body1"
+    <org.dash.wallet.common.ui.inputs.InputWrapper
+        android:id="@+id/input_layout"
         android:layout_width="match_parent"
-        android:layout_height="46dp"
-        android:layout_marginTop="25dp"
-        android:hint="@string/terms_of_use"
-        android:paddingLeft="15dp"
-        android:textColorHint="@color/light_gray"
-        android:autofillHints="emailAddress" />
+        android:layout_height="wrap_content"
+        android:layout_marginTop="26dp"
+        android:hint="@string/email">
+
+        <EditText
+            android:id="@+id/input"
+            style="@style/Body2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/email_placeholder"
+            android:inputType="textEmailAddress"
+            android:autofillHints="emailAddress" />
+    </org.dash.wallet.common.ui.inputs.InputWrapper>
 
     <Space
         android:layout_width="match_parent"
@@ -68,8 +76,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="20dp"
-        android:text="@string/button_continue"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:layout_marginHorizontal="3dp"
+        android:enabled="false"
+        android:text="@string/button_continue" />
 </LinearLayout>
