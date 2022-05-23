@@ -57,7 +57,8 @@
     <color name="blue_300">#3CA9EE</color>
     <color name="blue_50">#F0F8FE</color>
     <color name="shadow_color">#33000000</color>
-
+    <color name="light_gray_black">#191C1F</color>
+    <color name="light_dark_gray">#75808A</color>
     <!-- foreground -->
     <color name="fg_significant">#66000000</color>
     <color name="fg_less_significant">#ff666666</color>

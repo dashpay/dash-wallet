@@ -2,7 +2,7 @@
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/address"
-    style="@style/MontserratRegular.MG"
+    style="@style/Caption.Inter.LightGrayBlack"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_marginBottom="4dp"
@@ -10,5 +10,5 @@
     android:includeFontPadding="false"
     android:singleLine="true"
     android:text="@string/transaction_result_sent_to"
-    android:textSize="16sp"
+    android:textSize="15sp"
     tools:text="XkDnBY4…RfzLRJH6Ex" />
