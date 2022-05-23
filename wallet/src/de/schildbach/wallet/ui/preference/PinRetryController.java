@@ -3,6 +3,7 @@ package de.schildbach.wallet.ui.preference;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 
 import com.jakewharton.processphoenix.ProcessPhoenix;
 
@@ -102,7 +103,7 @@ public class PinRetryController {
         }
     }
 
-    public String getWalletTemporaryLockedMessage(Context context) {
+    public String getWalletTemporaryLockedMessage(Resources resources) {
         String unit;
         Long lockTime = getLockTimeMinutes();
         if (lockTime == null) {
@@ -111,13 +112,13 @@ public class PinRetryController {
         lockTime = (lockTime < 2) ? 1 : lockTime;
 
         if (lockTime < 60) {
-            unit = context.getResources().getQuantityString(R.plurals.minute, lockTime.intValue());
+            unit = resources.getQuantityString(R.plurals.minute, lockTime.intValue());
         } else {
             lockTime /= 60;
-            unit = context.getResources().getQuantityString(R.plurals.hour, lockTime.intValue());
+            unit = resources.getQuantityString(R.plurals.hour, lockTime.intValue());
         }
 
-        return context.getString(R.string.wallet_lock_try_again, lockTime, unit);
+        return resources.getString(R.string.wallet_lock_try_again, lockTime, unit);
     }
 
     public int failCount() {
@@ -128,9 +129,9 @@ public class PinRetryController {
         return FAIL_LIMIT - failCount();
     }
 
-    public String getRemainingAttemptsMessage(Context context) {
+    public String getRemainingAttemptsMessage(Resources resources) {
         int attemptsRemaining = FAIL_LIMIT - failCount();
-        return context.getResources().getQuantityString(R.plurals.wallet_lock_attempts_remaining,
+        return resources.getQuantityString(R.plurals.wallet_lock_attempts_remaining,
                 attemptsRemaining, attemptsRemaining);
     }
 

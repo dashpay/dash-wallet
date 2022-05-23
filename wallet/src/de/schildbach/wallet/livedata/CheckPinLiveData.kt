@@ -16,16 +16,17 @@
 
 package de.schildbach.wallet.livedata
 
-import android.app.Application
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 import androidx.lifecycle.MutableLiveData
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.CheckWalletPasswordTask
 import de.schildbach.wallet.ui.security.SecurityGuard
+import org.bitcoinj.wallet.Wallet
 
-class CheckPinLiveData(application: Application) : MutableLiveData<Resource<String>>() {
+class CheckPinLiveData(
+    private val wallet: Wallet
+) : MutableLiveData<Resource<String>>() {
 
     val backgroundHandler: Handler
 
@@ -36,7 +37,6 @@ class CheckPinLiveData(application: Application) : MutableLiveData<Resource<Stri
     }
 
     private var checkPinTask: CheckWalletPasswordTask? = null
-    private var walletApplication = application as WalletApplication
     private val securityGuard = SecurityGuard()
 
     fun checkPin(pin: String) {
@@ -67,7 +67,7 @@ class CheckPinLiveData(application: Application) : MutableLiveData<Resource<Stri
                 }
             }
             value = Resource.loading(null)
-            checkPinTask!!.checkPassword(walletApplication.wallet, pin)
+            checkPinTask!!.checkPassword(wallet, pin)
         }
     }
 }

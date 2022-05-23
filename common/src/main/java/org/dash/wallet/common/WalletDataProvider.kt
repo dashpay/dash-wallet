@@ -30,6 +30,7 @@ import org.dash.wallet.common.transactions.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
 
 interface WalletDataProvider {
+    val wallet: Wallet?
 
     val networkParameters: NetworkParameters
 

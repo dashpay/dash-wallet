@@ -38,6 +38,7 @@ import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
+@AndroidEntryPoint
 class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
 
     private lateinit var fingerprintHelper: FingerprintHelper
@@ -168,7 +169,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
 
     }
 
-    override fun getWallet(): Wallet {
+    override fun getWallet(): Wallet? {
         return WalletApplication.getInstance().wallet
     }
 

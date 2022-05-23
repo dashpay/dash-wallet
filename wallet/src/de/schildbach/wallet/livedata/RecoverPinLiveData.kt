@@ -73,7 +73,7 @@ class RecoverPinLiveData(application: Application) : MutableLiveData<Resource<St
                                 decryptSeedTask = null
                             }
                         }
-                        decryptSeedTask!!.decryptSeed(walletApplication.wallet.keyChainSeed, walletApplication.wallet.keyCrypter, encryptionKey)
+                        decryptSeedTask!!.decryptSeed(walletApplication.wallet!!.keyChainSeed, walletApplication.wallet!!.keyCrypter, encryptionKey)
                     }
                 }
             }

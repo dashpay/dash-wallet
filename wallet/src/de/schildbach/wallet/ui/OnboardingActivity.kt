@@ -94,7 +94,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         viewModel = ViewModelProvider(this)[OnboardingViewModel::class.java]
 
         if (walletApplication.walletFileExists()) {
-            if (!walletApplication.wallet.isEncrypted) {
+            if (!walletApplication.wallet!!.isEncrypted) {
                 unencryptedFlow()
             } else {
                 if (walletApplication.isWalletUpgradedToBIP44) {
@@ -107,7 +107,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
             if (walletApplication.wallet == null) {
                 onboarding()
             } else {
-                if (walletApplication.wallet.isEncrypted) {
+                if (walletApplication.wallet!!.isEncrypted) {
                     walletApplication.fullInitialization()
                     regularFlow()
                 } else {

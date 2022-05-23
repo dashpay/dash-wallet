@@ -200,7 +200,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int = R.layout.dialog_simple
         }
     }
 
-    fun show(activity: FragmentActivity, onResult: (Boolean?) -> Unit) {
+    fun show(activity: FragmentActivity, onResult: ((Boolean?) -> Unit)? = null) {
         onResultListener = onResult
         show(activity.supportFragmentManager, "adaptive_dialog")
     }

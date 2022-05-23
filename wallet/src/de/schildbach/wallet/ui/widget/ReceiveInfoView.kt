@@ -119,7 +119,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
 
     private fun refreshData() {
         val walletApplication = context.applicationContext as WalletApplication
-        address = walletApplication.wallet.freshReceiveAddress()
+        address = walletApplication.wallet!!.freshReceiveAddress()
         val ownName = config!!.ownName
         paymentRequestUri = BitcoinURI.convertToBitcoinURI(address, amount, ownName, null)
     }

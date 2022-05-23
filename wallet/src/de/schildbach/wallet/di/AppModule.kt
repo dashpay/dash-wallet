@@ -70,9 +70,4 @@ abstract class AppModule {
     abstract fun bindNotificationService(
         notificationService: NotificationManagerWrapper
     ): NotificationService
-
-    @Binds
-    abstract fun bindSecurityModel(
-        pinCodeRequestLauncher: PinCodeRequestLauncher
-    ): SecurityModel
 }

@@ -474,6 +474,7 @@ public class WalletApplication extends BaseWalletApplication
         return config;
     }
 
+    @Override
     public Wallet getWallet() {
         return wallet;
     }

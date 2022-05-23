@@ -16,7 +16,6 @@
 
 package de.schildbach.wallet.livedata
 
-import android.app.Application
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
@@ -32,7 +31,9 @@ import org.bouncycastle.crypto.params.KeyParameter
  * @author:  Eric Britten
  */
 
-class DecryptSeedLiveData(application: Application) : MutableLiveData<Resource<Pair<DeterministicSeed?, String?>>>() {
+class DecryptSeedLiveData(
+    private val walletApplication: WalletApplication
+) : MutableLiveData<Resource<Pair<DeterministicSeed?, String?>>>() {
 
     val backgroundHandler: Handler
 
@@ -45,15 +46,13 @@ class DecryptSeedLiveData(application: Application) : MutableLiveData<Resource<P
     private var decryptSeedTask: DecryptSeedTask? = null
     private var deriveKeyTask: DeriveKeyTask? = null
 
-    private var walletApplication = application as WalletApplication
-
     private val securityGuard = SecurityGuard()
 
     fun checkPin(pin: String) {
         if (securityGuard.checkPin(pin)) {
             decryptSeed(pin, securityGuard.retrievePassword())
         } else {
-            value = Resource.error("wrong pin", Pair(walletApplication.wallet.keyChainSeed, pin))
+            value = Resource.error("wrong pin", Pair(walletApplication.wallet!!.keyChainSeed, pin))
         }
     }
 
@@ -67,7 +66,7 @@ class DecryptSeedLiveData(application: Application) : MutableLiveData<Resource<P
                         decryptSeedTask = object : DecryptSeedTask(backgroundHandler) {
 
                             override fun onBadPassphrase() {
-                                value = Resource.error("wrong password", Pair(walletApplication.wallet.keyChainSeed, pin))
+                                value = Resource.error("wrong password", Pair(walletApplication.wallet!!.keyChainSeed, pin))
                                 decryptSeedTask = null
                             }
 
@@ -77,7 +76,7 @@ class DecryptSeedLiveData(application: Application) : MutableLiveData<Resource<P
                             }
                         }
                         value = Resource.loading(null)
-                        decryptSeedTask!!.decryptSeed(walletApplication.wallet.keyChainSeed, walletApplication.wallet.keyCrypter, encryptionKey)
+                        decryptSeedTask!!.decryptSeed(walletApplication.wallet!!.keyChainSeed, walletApplication.wallet!!.keyCrypter, encryptionKey)
                     }
                 }
             }
