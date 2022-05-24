@@ -32,6 +32,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.ui.CurrencyTextView
 
@@ -158,10 +159,11 @@ class TransactionResultViewBinder(private val containerView: View) {
 
         dashAmount.setFormat(noCodeFormat)
         //For displaying purposes only
+        val amountSent = tx.value!!.minus(tx.fee)
         if (tx.value!!.isNegative) {
-            dashAmount.setAmount(tx.value!!.negate())
+            dashAmount.setAmount(amountSent.negate())
         } else {
-            dashAmount.setAmount(tx.value)
+            dashAmount.setAmount(amountSent)
         }
 
         transactionFee.setFormat(noCodeFormat)
