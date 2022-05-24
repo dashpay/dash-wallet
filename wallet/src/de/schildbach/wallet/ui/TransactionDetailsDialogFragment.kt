@@ -64,13 +64,11 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
         if (tx != null) {
             tx?.let {
-                if (!it.isOutgoing()){
-                    transaction_details_dialog_content_container.background = ContextCompat.getDrawable(requireContext(), R.drawable.rounded_corners_bgd_light_gray)
-                    transaction_details_dialog_content_container.updateLayoutParams<RelativeLayout.LayoutParams> {
-                        topMargin = 30
-                    }
-                    transaction_close_btn.isVisible = false
+                transaction_details_dialog_content_container.background = ContextCompat.getDrawable(requireContext(), R.drawable.rounded_corners_bgd_light_gray)
+                transaction_details_dialog_content_container.updateLayoutParams<RelativeLayout.LayoutParams> {
+                    topMargin = 30
                 }
+                transaction_close_btn.isVisible = false
                 transactionResultViewBinder.bind(it)
             }
 

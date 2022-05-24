@@ -32,7 +32,6 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.ui.CurrencyTextView
 
@@ -73,7 +72,7 @@ class TransactionResultViewBinder(private val containerView: View) {
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
     private val explorerContainer by lazy { containerView.findViewById<View>(R.id.open_explorer_card) }
 
-    fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
+    fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null, isTransactionHistory: Boolean = true) {
         val noCodeFormat = WalletApplication.getInstance().configuration.format.noCode()
         val wallet = WalletApplication.getInstance().wallet
         val primaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet)
@@ -183,10 +182,14 @@ class TransactionResultViewBinder(private val containerView: View) {
         }
 
 
-        setTransactionDirection(tx, errorStatusStr)
+        setTransactionDirection(tx, errorStatusStr, isTransactionHistory)
     }
 
-    private fun setTransactionDirection(tx: Transaction, errorStatusStr: String) {
+    private fun setTransactionDirection(
+        tx: Transaction,
+        errorStatusStr: String,
+        isTransactionHistory: Boolean = true
+    ) {
         if (errorStatusStr.isNotEmpty()){
             errorContainer.isVisible = true
             reportIssueContainer.isVisible = true
@@ -206,6 +209,12 @@ class TransactionResultViewBinder(private val containerView: View) {
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
                 transactionAmountSignal.text = "-"
+                if (isTransactionHistory){
+                    closeIcon.isVisible = true
+                    transactionTitle.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                        topMargin = 10
+                    }
+                }
 
             } else {
                 checkIcon.setImageResource(R.drawable.ic_transaction_received)

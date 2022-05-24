@@ -85,7 +85,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
         if (tx != null) {
             val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
             val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
-            transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
+            transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy, false)
             open_explorer_card.setOnClickListener { viewOnExplorer(tx) }
             transaction_close_btn.setOnClickListener {
                 onTransactionDetailsDismiss()
