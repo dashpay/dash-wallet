@@ -220,8 +220,8 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             binding.depositSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
         } else {
             binding.depositIcon.setImageResource(R.drawable.ic_deposit_disabled)
-            binding.depositTitle.setTextColor(resources.getColor(R.color.content_primary, null))
-            binding.depositSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
+            binding.depositTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
+            binding.depositSubtitle.setTextColor(resources.getColor(R.color.content_disabled, null))
         }
     }
 
