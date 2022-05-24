@@ -32,6 +32,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.ui.CurrencyTextView
 
@@ -158,14 +159,21 @@ class TransactionResultViewBinder(private val containerView: View) {
 
         dashAmount.setFormat(noCodeFormat)
         //For displaying purposes only
-        val amountSent = if (isFeeAvailable(tx)) tx.value!!.plus(tx.fee) else tx.value!!
-        if (amountSent.isNegative) {
-            dashAmount.setAmount(amountSent.negate())
-        } else {
-            dashAmount.setAmount(amountSent)
+        val amountSentOrReceived : Coin? = tx.value?.let {
+            if (isFeeAvailable(tx.fee)) {
+                it.plus(tx.fee)
+            } else it
         }
 
-        if (isFeeAvailable(tx)) {
+        amountSentOrReceived?.let {
+            if (it.isNegative) {
+                dashAmount.setAmount(it.negate())
+            } else {
+                dashAmount.setAmount(it)
+            }
+        }
+
+        if (isFeeAvailable(tx.fee)) {
             transactionFee.setFormat(noCodeFormat)
             transactionFee.setAmount(tx.fee)
         }
@@ -236,12 +244,12 @@ class TransactionResultViewBinder(private val containerView: View) {
             }
         }
 
-        feeRow.visibility = if (isFeeAvailable(tx)) View.VISIBLE else View.GONE
+        feeRow.visibility = if (isFeeAvailable(tx.fee)) View.VISIBLE else View.GONE
 
     }
 
-    private fun isFeeAvailable(transaction: Transaction): Boolean {
-        return transaction.fee != null && transaction.fee.isPositive
+    private fun isFeeAvailable(transactionFee: Coin?): Boolean {
+        return transactionFee != null && transactionFee.isPositive
     }
 
 }
