@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.view.animation.Animation
+import android.view.animation.AnimationSet
 import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
 import android.widget.RelativeLayout
@@ -107,11 +108,16 @@ class TransactionDetailsDialogFragment : DialogFragment() {
 
     private fun showAnimation() {
         val containerAnimation = AnimationUtils.loadAnimation(activity, R.anim.fade_in)
-        transaction_details_dialog_container.startAnimation(containerAnimation)
         val contentAnimation = AnimationUtils.loadAnimation(activity, R.anim.slide_in_bottom)
-        transaction_details_dialog_content_container.postDelayed({
+        val animSet = AnimationSet(false)
+        animSet.apply {
+            addAnimation(containerAnimation)
+            addAnimation(contentAnimation)
+        }
+
+        transaction_details_dialog_container.postDelayed({
             transaction_details_dialog_content_container.visibility = View.VISIBLE
-            transaction_details_dialog_content_container.startAnimation(contentAnimation)
+            transaction_details_dialog_content_container.startAnimation(animSet)
         }, 150)
     }
 
