@@ -104,7 +104,7 @@
     <string name="crowdnode_online_account_details_title">Information about your online account</string>
     <string name="crowdnode_online_account_details_primary">Your primary Dash address that you currently use for your CrowdNode account</string>
     <string name="crowdnode_online_account_details_api">Dash address designated for your CrowdNode account in the Dash Wallet on this device</string>
-    <string name="crowdnode_same_api_primary_addresses">You cannot link an address that is already specified as a primary address.</string>
+    <string name="crowdnode_primary_missing">The primary Dash address is missing from your account. Please specify it on the CrowdNode website.</string>
     <string name="crowdnode_reset_address">Reset Address</string>
 
     <string name="crowdnode_website" translatable="false">https://crowdnode.io/</string>

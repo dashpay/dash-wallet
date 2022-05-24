@@ -478,16 +478,15 @@ class CrowdNodeApiAggregator @Inject constructor(
         val isInUse = resolveIsAddressInUse(address)
 
         if (isInUse && onlineAccountStatus.value.ordinal <= OnlineAccountStatus.Linking.ordinal) {
-            if (primaryAddress == address) {
-                // Linking of the same API address as the primary one is not allowed
-                apiError.value = CrowdNodeException(CrowdNodeException.SAME_API_PRIMARY)
+            val primary = primaryAddress
+
+            if (primary == null) {
+                apiError.value = CrowdNodeException(CrowdNodeException.MISSING_PRIMARY)
                 changeOnlineStatus(OnlineAccountStatus.None)
             } else {
                 accountAddress = address
                 globalConfig.crowdNodeAccountAddress = address.toBase58()
-                primaryAddress?.toBase58()?.let {
-                    globalConfig.crowdNodePrimaryAddress = it
-                }
+                globalConfig.crowdNodePrimaryAddress = primary.toBase58()
                 changeOnlineStatus(OnlineAccountStatus.Validating)
             }
         }
