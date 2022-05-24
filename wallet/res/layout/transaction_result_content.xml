@@ -287,7 +287,7 @@
 
                 <TextView
                     android:id="@+id/error_label"
-                    style="@style/Caption.Inter.Medium.LightGray"
+                    style="@style/Caption.Medium.LightGray"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginRight="4dp"
@@ -301,12 +301,10 @@
 
                 <TextView
                     android:id="@+id/error_description"
-                    style="@style/Caption.Inter"
+                    style="@style/Caption.LightGrayBlack"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    tools:text="@string/resolve_txt"
-                    android:textSize="13sp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/error_label"
                     />
