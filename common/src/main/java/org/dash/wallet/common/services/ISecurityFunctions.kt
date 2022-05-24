@@ -15,15 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.security
+package org.dash.wallet.common.services
 
 import androidx.fragment.app.FragmentActivity
-import de.schildbach.wallet.ui.CheckPinDialog
-import org.dash.wallet.common.services.SecurityModel
-import javax.inject.Inject
+import org.bitcoinj.core.Address
 
-class PinCodeRequestLauncher @Inject constructor(): SecurityModel {
-    override suspend fun requestPinCode(activity: FragmentActivity): String? {
-        return CheckPinDialog.showAsync(activity)
-    }
+interface ISecurityFunctions {
+    suspend fun requestPinCode(activity: FragmentActivity): String?
+    suspend fun signMessage(address: Address, message: String): String
 }

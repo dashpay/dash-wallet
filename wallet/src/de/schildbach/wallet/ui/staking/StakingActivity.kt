@@ -30,7 +30,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.dash.wallet.common.services.SecurityModel
+import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
@@ -45,7 +45,7 @@ class StakingActivity : LockScreenActivity() {
     private lateinit var navController: NavController
 
     @Inject
-    lateinit var securityModel: SecurityModel
+    lateinit var ISecurityFunctions: ISecurityFunctions
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -95,7 +95,7 @@ class StakingActivity : LockScreenActivity() {
 
     private fun checkPinAndBackupPassphrase() {
         lifecycleScope.launch {
-            val pin = securityModel.requestPinCode(this@StakingActivity)
+            val pin = ISecurityFunctions.requestPinCode(this@StakingActivity)
 
             if (pin != null) {
                 val intent = VerifySeedActivity.createIntent(this@StakingActivity, pin)

@@ -23,8 +23,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.ui.preference.PinRetryController
-import de.schildbach.wallet.ui.security.PinCodeRequestLauncher
-import org.dash.wallet.common.services.SecurityModel
+import de.schildbach.wallet.security.SecurityFunctions
+import org.dash.wallet.common.services.ISecurityFunctions
 import javax.inject.Singleton
 
 @Module
@@ -38,6 +38,6 @@ abstract class SecurityModule {
 
     @Binds
     abstract fun bindSecurityModel(
-        pinCodeRequestLauncher: PinCodeRequestLauncher
-    ): SecurityModel
+        securityFunctions: SecurityFunctions
+    ): ISecurityFunctions
 }

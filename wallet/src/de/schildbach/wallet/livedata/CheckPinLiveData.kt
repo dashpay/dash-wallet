@@ -21,7 +21,7 @@ import android.os.HandlerThread
 import android.os.Process
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.ui.CheckWalletPasswordTask
-import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuard
 import org.bitcoinj.wallet.Wallet
 
 class CheckPinLiveData(

@@ -21,7 +21,7 @@ import android.os.AsyncTask
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.util.FingerprintHelper
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt

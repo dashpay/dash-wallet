@@ -44,4 +44,11 @@ interface CrowdNodeWebApi {
     suspend fun addressStatus(
         @Path("address") address: String
     ): Response<AddressStatus>
+
+    @GET("odata/apimessages/SendMessage(address='{address}',message='{message}',signature='{signature}',messagetype=1)")
+    suspend fun sendSignedMessage(
+        @Path("address") address: String,
+        @Path("message") message: String,
+        @Path("signature") signature: String,
+    )
 }

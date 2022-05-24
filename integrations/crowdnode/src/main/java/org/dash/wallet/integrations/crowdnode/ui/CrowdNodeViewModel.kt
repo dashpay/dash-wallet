@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.crowdnode.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import android.util.Log
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -35,6 +36,7 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
@@ -53,6 +55,7 @@ class CrowdNodeViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val crowdNodeApi: CrowdNodeApi,
     private val clipboardManager: ClipboardManager,
+    private val securityFunctions: ISecurityFunctions,
     exchangeRatesProvider: ExchangeRatesProvider
 ) : ViewModel() {
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
@@ -269,6 +272,14 @@ class CrowdNodeViewModel @Inject constructor(
 
     fun observeCrowdNodeError(): LiveData<Exception?> {
         return crowdNodeApi.apiError.asLiveData()
+    }
+
+    fun signAndSendEmail(email: String) {
+        viewModelScope.launch {
+            val signed = securityFunctions.signMessage(accountAddress.value!!, email)
+            crowdNodeApi.sendSignedEmailMessage(accountAddress.value!!, email, signed)
+            Log.i("CROWDNODE", "signed: $signed")
+        }
     }
 
     private fun getOrCreateAccountAddress(): Address {

@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards
 import org.bitcoinj.wallet.Wallet.DustySendRequested
-import org.dash.wallet.common.services.SecurityModel
+import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentResultBinding
@@ -49,7 +49,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
 
     @Inject
-    lateinit var securityModel: SecurityModel
+    lateinit var ISecurityFunctions: ISecurityFunctions
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -78,7 +78,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
                     if (viewModel.signUpStatus == SignUpStatus.Error) {
                         // For signup error, launching a retry attempt
                         lifecycleScope.launch {
-                            securityModel.requestPinCode(requireActivity())?.let {
+                            ISecurityFunctions.requestPinCode(requireActivity())?.let {
                                 findNavController().popBackStack()
                                 viewModel.retrySignup()
                             }

@@ -19,9 +19,11 @@ package de.schildbach.wallet.ui.send;
 
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.crypto.BIP38PrivateKey;
+import org.dashj.bls.Utils;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 /**
  * @author Andreas Schildbach
@@ -41,6 +43,7 @@ public abstract class DecodePrivateKeyTask {
             public void run() {
                 try {
                     final ECKey decryptedKey = encryptedKey.decrypt(passphrase); // takes time
+                    Log.i("CROWDNODE", "decoded key: " + Utils.HEX.encode(decryptedKey.getPubKey()));
 
                     callbackHandler.post(new Runnable() {
                         @Override

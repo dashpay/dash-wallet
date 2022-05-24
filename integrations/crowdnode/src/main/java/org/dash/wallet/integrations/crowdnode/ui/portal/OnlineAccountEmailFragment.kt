@@ -21,15 +21,18 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentOnlineAccountEmailBinding
+import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 
 @AndroidEntryPoint
 class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_email) {
     private val binding by viewBinding(FragmentOnlineAccountEmailBinding::bind)
+    private val viewModel by activityViewModels<CrowdNodeViewModel>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -39,8 +42,23 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
         }
 
         binding.input.doOnTextChanged { text, _, _, _ ->
-            binding.continueBtn.isEnabled = !text.isNullOrEmpty() &&
-                    android.util.Patterns.EMAIL_ADDRESS.matcher(text).matches()
+            binding.inputWrapper.isErrorEnabled = false
+            binding.continueBtn.isEnabled = isEmail(text)
         }
+
+        binding.continueBtn.setOnClickListener {
+            val input = binding.input.text.toString()
+
+            if (isEmail(input)) {
+                viewModel.signAndSendEmail(input)
+            } else {
+                binding.inputWrapper.isErrorEnabled = true
+            }
+        }
+    }
+
+    private fun isEmail(text: CharSequence?): Boolean {
+        return !text.isNullOrEmpty() &&
+                android.util.Patterns.EMAIL_ADDRESS.matcher(text).matches()
     }
 }

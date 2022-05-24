@@ -70,6 +70,7 @@ interface CrowdNodeApi {
     fun refreshBalance(retries: Int = 0)
     fun trackLinkingAccount(address: Address)
     fun stopTrackingLinked()
+    suspend fun sendSignedEmailMessage(address: Address, email: String, signature: String)
     suspend fun reset()
 }
 
@@ -346,6 +347,10 @@ class CrowdNodeApiAggregator @Inject constructor(
                 }
             }
         }
+    }
+
+    override suspend fun sendSignedEmailMessage(address: Address, email: String, signature: String) {
+        webApi.sendSignedMessage(address.toBase58(), email, signature)
     }
 
     override suspend fun reset() {

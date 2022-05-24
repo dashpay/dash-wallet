@@ -49,7 +49,7 @@
         android:text="@string/online_account_email_privacy" />
 
     <org.dash.wallet.common.ui.inputs.InputWrapper
-        android:id="@+id/input_layout"
+        android:id="@+id/input_wrapper"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="26dp"

@@ -84,13 +84,13 @@ class AppUpgradeActivity : AppCompatActivity() {
         checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (_, pin) ->
             onCorrectPin(pin!!)
         })
-        checkPinSharedModel.onWalletEncryptedCallback.observe(this, Observer<String?> { pin ->
+        checkPinSharedModel.onWalletEncryptedCallback.observe(this) { pin ->
             if (pin == null) {
                 Toast.makeText(this, "Unable to encrypt wallet", Toast.LENGTH_LONG).show()
             } else {
                 onCorrectPin(pin)
             }
-        })
+        }
         checkPinSharedModel.onCancelCallback.observe(this) {
             temporaryLockCheckRunnable.run()
         }

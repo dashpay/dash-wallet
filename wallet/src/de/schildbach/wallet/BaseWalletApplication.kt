@@ -62,16 +62,6 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
         }
     }
 
-    override fun getExchangeRates(): LiveData<List<ExchangeRateData>> {
-        return ExchangeRatesRepository.instance.rates.switchMap {
-            return@switchMap MutableLiveData<List<ExchangeRateData>>().apply {
-                value = it.map { exchangeRate ->
-                    ExchangeRateData(exchangeRate.currencyCode, exchangeRate.rate ?: "0.0", exchangeRate.getCurrencyName(this@BaseWalletApplication), exchangeRate.fiat)
-                }
-            }
-        }
-    }
-
     override fun defaultCurrencyCode(): String {
         return walletApplication.configuration.exchangeCurrencyCode
     }
