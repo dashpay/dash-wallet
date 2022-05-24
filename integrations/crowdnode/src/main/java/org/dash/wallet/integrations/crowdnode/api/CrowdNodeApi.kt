@@ -301,6 +301,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     private fun startTrackingLinked(address: Address) {
+        log.info("startTrackingLinked, account: ${address.toBase58()}")
         tickerJob = TickerFlow(period = 2.seconds, initialDelay = 5.seconds)
             .cancellable()
             .onEach { checkIfAddressIsInUse(address) }
@@ -308,6 +309,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     private suspend fun startTrackingValidated(accountAddress: Address, initialDelay: Duration) {
+        log.info("startTrackingValidated, account: ${accountAddress.toBase58()}")
         tickerJob = TickerFlow(period = 30.seconds, initialDelay = initialDelay)
             .cancellable()
             .onEach { checkAddressStatus(accountAddress) }
@@ -315,6 +317,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     private suspend fun startTrackingConfirmed(accountAddress: Address, initialDelay: Duration) {
+        log.info("startTrackingConfirmed, account: ${accountAddress.toBase58()}")
         // First check or wait for the confirmation tx.
         // No need to make web requests if it isn't found.
         val confirmationTx = blockchainApi.waitForApiAddressConfirmation(accountAddress)
@@ -334,6 +337,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     override fun stopTrackingLinked() {
+        log.info("stopTrackingLinked")
         val address = linkingApiAddress
 
         if (signUpStatus.value == SignUpStatus.NotStarted &&
@@ -405,13 +409,13 @@ class CrowdNodeApiAggregator @Inject constructor(
             configScope.launch { globalConfig.crowdNodeAccountAddress = accountAddress!!.toBase58() }
 
             if (set.hasWelcomeToApiResponse) {
-                log.info("found finished sign up")
+                log.info("found finished sign up, account: ${set.accountAddress?.toBase58() ?: "null"}")
                 signUpStatus.value = SignUpStatus.Finished
                 return true
             }
 
             if (set.hasAcceptTermsResponse) {
-                log.info("found accept terms response")
+                log.info("found accept terms response, account: ${set.accountAddress?.toBase58() ?: "null"}")
                 signUpStatus.value = SignUpStatus.AcceptingTerms
                 persistentSignUp(accountAddress!!)
                 return true
@@ -437,12 +441,12 @@ class CrowdNodeApiAggregator @Inject constructor(
         when (val status = OnlineAccountStatus.values()[statusOrdinal]) {
             OnlineAccountStatus.None -> { }
             OnlineAccountStatus.Linking -> {
-                log.info("found linking online account in progress")
+                log.info("found linking online account in progress, account: ${address.toBase58()}, primary: $primaryAddressStr")
                 responseScope.launch { checkIfAddressIsInUse(address) }
             }
             else -> {
                 changeOnlineStatus(status, save = false)
-                log.info("found online account, status: ${status.name}")
+                log.info("found online account, status: ${status.name}, account: ${address.toBase58()}, primary: $primaryAddressStr")
             }
         }
     }
