@@ -19,7 +19,6 @@ package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -535,7 +534,6 @@ class CrowdNodeApiAggregator @Inject constructor(
     private suspend fun resolveAddressStatus(address: Address): String? {
         return try {
             val result = webApi.addressStatus(address.toString())
-            Log.i("CROWDNODE", "resolved status: ${result.body()?.status}")
             result.body()?.status
         } catch (ex: Exception) {
             log.error("Error in resolveAddressStatus: $ex")
