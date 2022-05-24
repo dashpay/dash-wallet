@@ -16,7 +16,7 @@
 
     <TextView
         android:id="@+id/transaction_title"
-        style="@style/Body2.Inter"
+        style="@style/Body2.Medium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="15dp"
@@ -39,7 +39,7 @@
 
         <TextView
             android:id="@+id/transaction_amount_signal"
-            style="@style/Headline3.Inter"
+            style="@style/Headline3.Regular"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="2dp"
@@ -55,7 +55,7 @@
 
         <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/dash_amount"
-            style="@style/Headline3.Inter"
+            style="@style/Headline3.Regular"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
             tools:text="-3.14"
@@ -83,7 +83,7 @@
 
     <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/fiat_value"
-        style="@style/Caption.Inter"
+        style="@style/Caption.LightDarkGray"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="34dp"
@@ -155,7 +155,7 @@
 
                 <TextView
                     android:id="@+id/input_addresses_label"
-                    style="@style/Caption.Inter.Medium.LightGray"
+                    style="@style/Caption.Medium.LightGray"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="4dp"
@@ -188,7 +188,7 @@
 
                 <TextView
                     android:id="@+id/output_addresses_label"
-                    style="@style/Caption.Inter.Medium.LightGray"
+                    style="@style/Caption.Medium.LightGray"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginRight="4dp"
@@ -211,7 +211,7 @@
 
                 <TextView
                     android:id="@+id/network_fee_label"
-                    style="@style/Caption.Inter.Medium.LightGray"
+                    style="@style/Caption.Medium.LightGray"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginRight="4dp"
@@ -222,7 +222,7 @@
 
                 <org.dash.wallet.common.ui.CurrencyTextView
                     android:id="@+id/transaction_fee"
-                    style="@style/Caption.Inter.LightGrayBlack"
+                    style="@style/Caption.LightGrayBlack"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/transaction_result_sent_to"
@@ -253,7 +253,7 @@
 
                 <TextView
                     android:id="@+id/transaction_date_and_time_label"
-                    style="@style/Caption.Inter.Medium.LightGray"
+                    style="@style/Caption.Medium.LightGray"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/transaction_date_and_time"
@@ -265,7 +265,7 @@
                 <TextView
                     android:id="@+id/transaction_date_and_time"
                     app:layout_constraintTop_toTopOf="parent"
-                    style="@style/Caption.Inter.LightGrayBlack"
+                    style="@style/Caption.LightGrayBlack"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:paddingVertical="12dp"
@@ -425,7 +425,7 @@
 
     <Button
         android:id="@+id/transaction_close_btn"
-        style="@style/DashButton.Blue.InterRegular"
+        style="@style/DashButton.Blue"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="@string/transaction_close"

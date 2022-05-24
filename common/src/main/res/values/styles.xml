@@ -700,8 +700,8 @@
         <item name="android:textColor">@color/gray_900</item>
     </style>
 
-    <style name="Headline3.Inter" parent="TextAppearance.MaterialComponents.Headline3">
-        <item name="fontFamily">@font/inter_medium</item>
+    <style name="Headline3.Regular">
+        <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/light_gray_black</item>
     </style>
 
@@ -794,30 +794,12 @@
         <item name="android:lineSpacingExtra">3sp</item>
     </style>
 
-    <style name="Caption.Inter">
-        <item name="fontFamily">@font/inter_regular</item>
+    <style name="Caption.LightDarkGray">
         <item name="android:textColor">@color/light_dark_gray</item>
     </style>
 
-    <style name="Caption.Inter.Medium">
-        <item name="fontFamily">@font/inter_medium</item>
-    </style>
-
-    <style name="Caption.Inter.Medium.LightGray">
-        <item name="android:textColor">@color/light_dark_gray</item>
+    <style name="Caption.LightGrayBlack">
         <item name="android:textSize">15sp</item>
-    </style>
-
-    <style name="Caption.Inter.Regular">
-        <item name="android:textColor">@color/light_dark_gray</item>
-    </style>
-
-    <style name="Caption.Inter.DashBlue">
-        <item name="android:textColor">@color/dash_blue</item>
-    </style>
-
-    <style name="Caption.Inter.LightGrayBlack">
-        <item name="fontFamily">@font/inter_regular</item>
         <item name="android:textColor">@color/light_gray_black</item>
     </style>
 
@@ -830,6 +812,7 @@
     </style>
 
     <style name="Caption.Medium.LightGray">
+        <item name="android:textSize">15sp</item>
         <item name="android:textColor">@color/light_dark_gray</item>
     </style>
 
