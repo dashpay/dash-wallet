@@ -158,8 +158,8 @@ class TransactionResultViewBinder(private val containerView: View) {
 
         dashAmount.setFormat(noCodeFormat)
         //For displaying purposes only
-        val amountSent = if (isFeeAvailable(tx)) tx.value!!.minus(tx.fee) else tx.value!!
-        if (tx.value!!.isNegative) {
+        val amountSent = if (isFeeAvailable(tx)) tx.value!!.plus(tx.fee) else tx.value!!
+        if (amountSent.isNegative) {
             dashAmount.setAmount(amountSent.negate())
         } else {
             dashAmount.setAmount(amountSent)
