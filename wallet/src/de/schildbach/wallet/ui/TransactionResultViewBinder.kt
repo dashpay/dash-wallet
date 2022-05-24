@@ -188,7 +188,7 @@ class TransactionResultViewBinder(private val containerView: View) {
     private fun setTransactionDirection(
         tx: Transaction,
         errorStatusStr: String,
-        isTransactionHistory: Boolean = true
+        isTransactionHistory: Boolean
     ) {
         if (errorStatusStr.isNotEmpty()){
             errorContainer.isVisible = true
