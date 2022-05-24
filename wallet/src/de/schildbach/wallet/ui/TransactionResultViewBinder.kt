@@ -159,15 +159,17 @@ class TransactionResultViewBinder(private val containerView: View) {
 
         dashAmount.setFormat(noCodeFormat)
         //For displaying purposes only
-        val amountSent = tx.value!!.minus(tx.fee)
+        val amountSent = if (isFeeAvailable(tx)) tx.value!!.minus(tx.fee) else tx.value!!
         if (tx.value!!.isNegative) {
             dashAmount.setAmount(amountSent.negate())
         } else {
             dashAmount.setAmount(amountSent)
         }
 
-        transactionFee.setFormat(noCodeFormat)
-        transactionFee.setAmount(tx.fee)
+        if (isFeeAvailable(tx)) {
+            transactionFee.setFormat(noCodeFormat)
+            transactionFee.setAmount(tx.fee)
+        }
 
         date.text = DateUtils.formatDateTime(containerView.context, tx.updateTime.time,
                 DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME)
@@ -225,8 +227,12 @@ class TransactionResultViewBinder(private val containerView: View) {
             }
         }
 
-        feeRow.visibility = if (tx.fee != null && tx.fee.isPositive) View.VISIBLE else View.GONE
+        feeRow.visibility = if (isFeeAvailable(tx)) View.VISIBLE else View.GONE
 
+    }
+
+    private fun isFeeAvailable(transaction: Transaction): Boolean {
+        return transaction.fee != null && transaction.fee.isPositive
     }
 
 }
