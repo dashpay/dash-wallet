@@ -15,7 +15,6 @@
     <string name="set_pin_decrypting">Wallet entschlüsseln</string>
     <string name="set_pin_verifying_pin">Verifiziere PIN</string>
     <string name="set_pin_message">Die PIN muss bei jedem Verwenden der App zum Entsperren eingegeben werden.</string>
-
     <string name="home_available_balance">Verfügbares Guthaben</string>
     <string name="home_balance_hidden">Guthaben nicht angezeigt</string>
     <string name="home_balance_show_hint">Zum Anzeigen des Guthabens tippen</string>
@@ -61,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Zum Senden scannen</string>
     <string name="scan_to_pay_error_dialog_message">Keine gültige Dash-Adresse oder URL-Anfrage im Zwischenspeicher:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Keine gültige Dash-Adresse oder URL-Anfrage im Zwischenspeicher.</string>
-
     <string name="receive_title">Empfangen</string>
     <string name="receive_enter_amount_message">Zu empfangenen Betrag festsetzen</string>
     <string name="receive_enter_amount_button">Betrag festsetzen</string>
@@ -144,7 +142,6 @@
     <string name="wallet_lock_try_again">Versuches es wieder in %1$d %2$s</string>
     <string name="wallet_lock_reset">Zurücksetzen</string>
     <string name="wallet_lock_wrong_pin">Falscher PIN! %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d Versuch verbleibend</item>
         <item quantity="other">%d Versuche verbleiben</item>
@@ -255,7 +252,6 @@
     <string name="menu_rescan_blockchain">Blockchain erneut scannen</string>
     <string name="menu_contact_support_title">Support kontaktieren</string>
     <string name="menu_contact_support_subtitle">Ein Problem melden</string>
-
     <string name="tools_address_book">Adressbuch</string>
     <string name="tools_import_private_key">Privaten Schlüssel importieren</string>
     <string name="tools_network_monitor">Netzwerk-Monitor</string>
@@ -267,7 +263,6 @@
     <string name="about_fork_disclaimer">Dies ist eine Open Source App, die von der Bitcoin Wallet geforked wurde</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-
     <string name="block">Block</string>
     <string name="time">Zeit</string>
     <string name="hash">Hash</string>

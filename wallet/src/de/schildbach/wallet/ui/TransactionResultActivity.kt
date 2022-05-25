@@ -24,6 +24,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity.ACTION_SEND_FROM_WALLET_URI
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R

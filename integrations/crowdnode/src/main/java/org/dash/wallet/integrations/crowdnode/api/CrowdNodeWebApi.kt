@@ -35,7 +35,7 @@ interface CrowdNodeWebApi {
         @Path("address") address: String
     ): Response<CrowdNodeBalance>
 
-    @GET("odata/apiaddresses/IsAddressInUse(address='{address}')")
+    @GET("odata/apiaddresses/IsApiAddressInUse(address='{address}')")
     suspend fun isAddressInUse(
         @Path("address") address: String
     ): Response<IsAddressInUse>

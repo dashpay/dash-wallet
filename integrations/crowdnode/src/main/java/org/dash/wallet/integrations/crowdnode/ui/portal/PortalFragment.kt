@@ -86,11 +86,13 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
 
         if (viewModel.signUpStatus == SignUpStatus.LinkedOnline) {
             viewModel.observeOnlineAccountStatus().observe(viewLifecycleOwner) { status ->
-                val balance = viewModel.crowdNodeBalance.value ?: Coin.ZERO
-                setWithdrawalEnabled(balance, status)
-                setDepositsEnabled(balance, status)
+                val crowdNodeBalance = viewModel.crowdNodeBalance.value ?: Coin.ZERO
+                val walletBalance = viewModel.dashBalance.value ?: Coin.ZERO
+
+                setWithdrawalEnabled(crowdNodeBalance, status)
+                setDepositsEnabled(walletBalance, status)
                 setOnlineAccountStatus(status)
-                setMinimumEarningDepositReminder(balance, isConfirmed)
+                setMinimumEarningDepositReminder(crowdNodeBalance, isConfirmed)
 
                 lifecycleScope.launch {
                     if (viewModel.getShouldShowConfirmationDialog()) {
@@ -136,11 +138,6 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         binding.supportBtn.setOnClickListener {
             val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.crowdnode_support_url)))
             startActivity(browserIntent)
-        }
-
-        binding.unlinkAccountBtn.setOnClickListener {
-            // TODO: online account
-            requireActivity().finish()
         }
 
         binding.toolbar.setOnMenuItemClickListener {
@@ -200,7 +197,8 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun setWithdrawalEnabled(balance: Coin, onlineStatus: OnlineAccountStatus) {
-        val isEnabled = balance.isPositive && onlineStatus == OnlineAccountStatus.Done
+        val isOnlineInProgress = onlineStatus != OnlineAccountStatus.None && onlineStatus != OnlineAccountStatus.Done
+        val isEnabled = balance.isPositive && !isOnlineInProgress
         binding.withdrawBtn.isEnabled = isEnabled
 
         if (isEnabled) {
@@ -215,11 +213,12 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun setDepositsEnabled(balance: Coin, onlineStatus: OnlineAccountStatus) {
-        val isEnabled = balance.isPositive && onlineStatus == OnlineAccountStatus.Done
+        val isOnlineInProgress = onlineStatus != OnlineAccountStatus.None && onlineStatus != OnlineAccountStatus.Done
+        val isEnabled = balance.isPositive && !isOnlineInProgress
         binding.depositBtn.isEnabled = isEnabled
 
         if (isEnabled) {
-            binding.depositIcon.setImageResource(R.drawable.ic_deposit)
+            binding.depositIcon.setImageResource(R.drawable.ic_deposit_enabled)
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_primary, null))
             binding.depositSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
         } else {

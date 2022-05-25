@@ -15,7 +15,6 @@
     <string name="set_pin_decrypting">ถอดรหัสกระเป๋าสตางค์</string>
     <string name="set_pin_verifying_pin">กำลังตรวจสอบเลขรหัสส่วนตัว</string>
     <string name="set_pin_message">ต้องใช้ PIN นี้เพื่อปลดล็อคแอพของคุณทุกครั้งที่ใช้</string>
-
     <string name="home_available_balance">ยอดเงินคงเหลือ</string>
     <string name="home_balance_hidden">ยอดคงเหลือถูกซ่อน</string>
     <string name="home_balance_show_hint">กดเพื่อเลิกซ่อนยอดคงเหลือ</string>
@@ -61,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">สแกนเพื่อส่ง</string>
     <string name="scan_to_pay_error_dialog_message">ที่อยู่ของ Dash ไม่ถูกต้อง หรือคำขอ URL ในคลิปบอร์ด:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">ที่อยู่ของ Dash ไม่ถูกต้อง หรือคำขอ URL ในคลิปบอร์ด</string>
-
     <string name="receive_title">ได้รับ</string>
     <string name="receive_enter_amount_message">ระบุจำนวนที่ได้รับ</string>
     <string name="receive_enter_amount_button">ระบุจำนวน</string>
@@ -144,7 +142,6 @@
     <string name="wallet_lock_try_again">ลองอีกครั้ง ใน %1$d%2$s</string>
     <string name="wallet_lock_reset">ตั้งค่า</string>
     <string name="wallet_lock_wrong_pin">รหัสผิด %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="other">พยายามได้อีก %d</item>
     </plurals>
@@ -252,7 +249,6 @@
     <string name="menu_rescan_blockchain">สแกน blockchain อีกครั้ง</string>
     <string name="menu_contact_support_title">ติดต่อฝ่ายสนับสนุน</string>
     <string name="menu_contact_support_subtitle">รายงานปัญหา</string>
-
     <string name="tools_address_book">สมุดที่อยู่</string>
     <string name="tools_import_private_key">นำเข้าคีย์ส่วนตัว</string>
     <string name="tools_network_monitor">จอภาพเครือข่าย</string>
@@ -264,7 +260,6 @@
     <string name="about_fork_disclaimer">นี่คือซอฟต์แวร์โอเพนซอร์ซแอพพลิเคชั่นที่แยกสาขาออกมาจากกระเป๋าสตางค์บิทคอยน์</string>
     <string name="about_license">สัญญาอนุญาตให้ใช้ซอฟต์แวร์ หรือไลเซนส์ แบบหนึ่ง ซึ่งสงวนลิขสิทธิ์ของซอฟต์แวร์นั้น แต่อนุญาตให้บุคคลใดๆทำซ้ำ เผยแพร่ และ/หรือดัดแปลงซอฟต์แวร์นั้นได้อย่างถูกต้องตามกฎหมาย และโดยเสรี เวอร์ชั่น3.0</string>
     <string name="about_version_name">กระเป๋าสตางค์ Dash%s</string>
-
     <string name="block">บล็อก</string>
     <string name="time">เวลา</string>
     <string name="hash">การแบ่งย่อยข้อมูลและการผสมข้อมูลย่อยทั้งหมดเข้าด้วยกัน</string>

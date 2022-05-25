@@ -303,6 +303,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Anexar "wallet dump"</string>
     <string name="report_issue_dialog_mail_intent_chooser">Enviar relatório usando…</string>
     <string name="report_issue_dialog_mail_intent_failed">Envio de relatório falhou.</string>
+    <string name="report_transaction_history_export">Exportar</string>
+    <string name="report_transaction_history_title">Exportar CSV</string>
+    <string name="report_transaction_history_not_synced_title">Exportar CSV</string>
+    <string name="report_transaction_history_not_synced_message">Por favor, aguarde até que a carteira esteja totalmente sincronizada antes de exportar seu histórico de transações.</string>
+    <string name="report_transaction_history_message">O histórico completo de transações será exportado.\n\nTodos os pagamentos serão considerados como despesa e todas as transações recebidas serão receitas. O proprietário desta carteira é responsável por fazer quaisquer ajustes de base de custo no sistema de relatórios fiscais escolhido.</string>
+    <string name="report_transaction_history_mail_intent_chooser">Enviar histórico de transações usando…</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">Falha no envio do histórico de transações.</string>
+
     <string name="about_title">Sobre</string>
     <string name="about_version_title">Versão</string>
     <string name="about_copyright_title">Copyright</string>

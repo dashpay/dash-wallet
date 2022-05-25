@@ -1,4 +1,4 @@
-﻿MAIN DESCRIPTION
+﻿DESCRIZIONE PRINCIPALE
 
 Dash Wallet è il portafoglio Android di riferimento gestito da Dash Core Group per Dash - Digital Cash - un'alternativa innovativa a Bitcoin,  esplicitamente progettata per i pagamenti.
 

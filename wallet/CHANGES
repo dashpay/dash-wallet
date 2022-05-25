@@ -1,4 +1,9 @@
 Dash Wallet
+v7.4.9
+* Use dashj 0.17.12 to improve network connectivity
+* Fix unencrypted wallet crash on Home Screen
+* Fix two crashes on lock screen
+
 v7.4.8
 * Use dashj 0.17.11 (support version 3 transactions)
 * Show version 2 transactions when they are received

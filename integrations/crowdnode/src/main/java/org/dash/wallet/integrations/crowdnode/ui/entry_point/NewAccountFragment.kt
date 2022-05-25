@@ -22,6 +22,7 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
+import android.view.Gravity
 import android.view.View
 import android.widget.TextView
 import androidx.core.view.isVisible
@@ -60,6 +61,8 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
             binding.createAccountBtn.setText(R.string.crowdnode_login)
             binding.description1.setText(R.string.crowdnode_link_account_description)
             binding.description2.isVisible = false
+            binding.title.gravity = Gravity.CENTER
+            binding.description1.gravity = Gravity.CENTER
         }
 
         binding.titleBar.setNavigationOnClickListener {

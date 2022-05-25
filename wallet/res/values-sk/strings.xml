@@ -303,6 +303,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Pripojiť dáta peňaženky</string>
     <string name="report_issue_dialog_mail_intent_chooser">Odoslať správu použitím…</string>
     <string name="report_issue_dialog_mail_intent_failed">Odosielanie hlásenia zlyhalo.</string>
+    <string name="report_transaction_history_export">Exportovať</string>
+    <string name="report_transaction_history_title">Export CSV</string>
+    <string name="report_transaction_history_not_synced_title">Export CSV</string>
+    <string name="report_transaction_history_not_synced_message">Pred exportovaním histórie transakcií počkajte, kým sa peňaženka úplne zosynchronizuje.</string>
+    <string name="report_transaction_history_message">Exportuje sa úplná história transakcií.\n\nVšetky platby sa budú považovať za výdavok a všetky prichádzajúce transakcie budú príjmom. Vlastník tejto peňaženky je zodpovedný za vykonanie akýchkoľvek úprav základu nákladov vo zvolenom systéme daňového výkazníctva.</string>
+    <string name="report_transaction_history_mail_intent_chooser">Odoslať históriu transakcií pomocou…</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">Odoslanie histórie transakcií zlyhalo.</string>
+
     <string name="about_title">O aplikácií</string>
     <string name="about_version_title">Verzia</string>
     <string name="about_copyright_title">Autorské práva</string>

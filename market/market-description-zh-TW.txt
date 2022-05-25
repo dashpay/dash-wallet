@@ -1,4 +1,4 @@
-﻿MAIN DESCRIPTION
+﻿主要說明
 
 達世幣錢包是Dash Core Group為達世幣-數字現金所提供，並參考Android錢包設計而成的。 達世幣是數字貨幣的一種創新替代方案，專門為支付而設計。
 

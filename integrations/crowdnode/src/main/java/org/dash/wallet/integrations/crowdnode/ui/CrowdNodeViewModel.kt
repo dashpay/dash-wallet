@@ -121,7 +121,8 @@ class CrowdNodeViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        exchangeRatesProvider.observeExchangeRate(globalConfig.exchangeCurrencyCode)
+        exchangeRatesProvider
+            .observeExchangeRate(globalConfig.exchangeCurrencyCode!!)
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
 
@@ -196,6 +197,12 @@ class CrowdNodeViewModel @Inject constructor(
         viewModelScope.launch {
             resetAddressAndApi()
             signUp()
+        }
+    }
+
+    fun resetAddress() {
+        viewModelScope.launch {
+            resetAddressAndApi()
         }
     }
 

@@ -1,25 +1,25 @@
 /*
- * Copyright 2020 Dash Core Group
+ * Copyright 2020 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.ui.main;
 
 import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -69,12 +69,27 @@ import java.util.Locale;
 import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
-import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.ui.AbstractBindServiceActivity;
+import de.schildbach.wallet.ui.AddressBookActivity;
+import de.schildbach.wallet.ui.BuyAndSellLiquidUpholdActivity;
+import de.schildbach.wallet.ui.CheckPinDialog;
+import de.schildbach.wallet.ui.CheckPinSharedModel;
+import de.schildbach.wallet.ui.EncryptKeysDialogFragment;
+import de.schildbach.wallet.ui.EncryptNewKeyChainDialogFragment;
+import de.schildbach.wallet.ui.rates.ExchangeRatesActivity;
+import de.schildbach.wallet.ui.InputParser;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
+import de.schildbach.wallet.ui.NetworkMonitorActivity;
+import de.schildbach.wallet.ui.PaymentsActivity;
+import de.schildbach.wallet.ui.ReportIssueDialogBuilder;
+import de.schildbach.wallet.ui.RestoreWalletFromSeedDialogFragment;
+import de.schildbach.wallet.ui.SetPinActivity;
+import de.schildbach.wallet.ui.UnlockWalletDialogFragment;
+import de.schildbach.wallet.ui.VerifySeedActivity;
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment;
 import de.schildbach.wallet.ui.backup.RestoreFromFileHelper;
 import de.schildbach.wallet.ui.explore.ExploreActivity;
@@ -128,9 +143,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private boolean isRestoringBackup;
 
     private boolean showBackupWalletDialog = false;
-    private de.schildbach.wallet.data.BlockchainState blockchainState;
 
-    private MainActivityViewModel viewModel;
+    private MainViewModel viewModel;
     @Inject
     public WalletDataProvider walletDataProvider;
 
@@ -141,7 +155,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         application = getWalletApplication();
         config = application.getConfiguration();
         wallet = application.getWallet();
-        viewModel = new ViewModelProvider(this).get(MainActivityViewModel.class);
+        viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
         setContentViewFooter(R.layout.home_activity);
         setSupportActionBar(findViewById(R.id.toolbar));
@@ -178,17 +192,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         });
 
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, new Observer<de.schildbach.wallet.data.BlockchainState>() {
-            @Override
-            public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
-                WalletActivity.this.blockchainState = blockchainState;
-                updateSyncState();
-            }
-        });
-
-        viewModel.getOnTransactionsUpdated().observe(this, aVoid -> {
-            refreshShortcutBar();
-        });
+        viewModel.getOnTransactionsUpdated().observe(this, aVoid -> refreshShortcutBar());
+        viewModel.isBlockchainSynced().observe(this, isSynced -> updateSyncState());
+        viewModel.isBlockchainSyncFailed().observe(this, isSynced -> updateSyncState());
     }
 
     @Override
@@ -425,7 +431,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void startVerifySeedActivity(String pin) {
-        Intent intent = VerifySeedActivity.createIntent(this, pin);
+        Intent intent = VerifySeedActivity.createIntent(this, pin, false);
         startActivity(intent);
     }
 
@@ -826,17 +832,17 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void updateSyncState() {
-        if (blockchainState == null) {
-            return;
-        }
+        Boolean isSyncFailed = viewModel.isBlockchainSyncFailed().getValue();
 
-        if (blockchainState != null && blockchainState.syncFailed()) {
+        if (isSyncFailed != null && isSyncFailed) {
             findViewById(R.id.sync_error_pane).setVisibility(View.VISIBLE);
             return;
         }
 
         updateSyncPaneVisibility(R.id.sync_error_pane, false);
-        if(blockchainState.isSynced()) {
+        Boolean isSynced = viewModel.isBlockchainSynced().getValue();
+
+        if(isSynced != null && isSynced) {
             refreshShortcutBar();
         }
     }

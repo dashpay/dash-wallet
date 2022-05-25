@@ -49,7 +49,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
 
     @Inject
-    lateinit var ISecurityFunctions: ISecurityFunctions
+    lateinit var securityFunctions: ISecurityFunctions
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -78,7 +78,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
                     if (viewModel.signUpStatus == SignUpStatus.Error) {
                         // For signup error, launching a retry attempt
                         lifecycleScope.launch {
-                            ISecurityFunctions.requestPinCode(requireActivity())?.let {
+                            securityFunctions.requestPinCode(requireActivity())?.let {
                                 findNavController().popBackStack()
                                 viewModel.retrySignup()
                             }

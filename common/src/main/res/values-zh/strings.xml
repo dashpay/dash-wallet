@@ -36,7 +36,13 @@
     <string name="button_retry">重试</string>
     <string name="button_close">关闭</string>
     <string name="button_continue">继续</string>
+    <string name="button_understand">我明白</string>
     <string name="button_okay">好的</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">搜索</string>
+    <string name="permission_allow">允许</string>
+    <string name="permission_deny">拒绝</string>
     <string name="max">最大</string>
-    </resources>
+    <string name="select_currency">选择货币</string>
+</resources>

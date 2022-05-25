@@ -15,17 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.ui.rates;
 
+import dagger.hilt.android.AndroidEntryPoint;
+import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet_test.R;
 
 import android.os.Bundle;
-import android.view.MenuItem;
-import android.os.Build;
 
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public class ExchangeRatesActivity extends AbstractBindServiceActivity {
 
     @Override

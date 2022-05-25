@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">Nie można załadować portfela!</string>
 
     <string name="set_pin_create_new_wallet">Stwórz Nowy Portfel</string>
+    <string name="set_pin_upgrade_wallet">Uaktualnij Portfel</string>
     <string name="set_pin_restore_wallet">Przywróć Portfel</string>
     <string name="set_pin_enter_pin">Wprowadź Stary PIN</string>
     <string name="set_pin_set_pin">Ustaw PIN</string>
@@ -15,6 +16,7 @@
     <string name="set_pin_decrypting">Odszyfrowywanie portfela</string>
     <string name="set_pin_verifying_pin">Zweryfikuj PIN</string>
     <string name="set_pin_message">Ten kod PIN będzie wymagany do odblokowania Twojej aplikacji za każdym razem, gdy z niej korzystasz.</string>
+    <string name="set_pin_confirm_pin_incorrect">PIN jest niepoprawny</string>
 
     <string name="home_available_balance">Dostępne saldo</string>
     <string name="home_balance_hidden">Saldo ukryte</string>
@@ -61,6 +63,7 @@
     <string name="scan_to_pay_error_dialog_title">Skanuj by Wysłać</string>
     <string name="scan_to_pay_error_dialog_message">Niepoprawny adres Dash lub URL zażądany w schowku:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Niepoprawny adres Dash lub URL zażądany w schowku.</string>
+    <string name="pay_to_confirm_address">Chcesz wysłać płatność na ten adres DASH?</string>
 
     <string name="receive_title">Odbierz</string>
     <string name="receive_enter_amount_message">Podaj kwotę do otrzymania</string>
@@ -144,6 +147,8 @@
     <string name="wallet_lock_try_again">Spróbuj raz jeszcze za %1$d%2$s</string>
     <string name="wallet_lock_reset">Resetuj</string>
     <string name="wallet_lock_wrong_pin">Zły PIN %s</string>
+    <string name="wallet_last_attempt">Ostatnia próba wpisania PIN</string>
+    <string name="wallet_last_attempt_message">Kolejna nieudana próba sprawi, że portfel zostanie zablookowany i będziesz potrzebował/a listę słów aby odzyskać dostęp do portfela. </string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">pozostała %d próba</item>
@@ -184,7 +189,12 @@
     <string name="notification_transactions_channel_description">Otrzymuj powiadomienia o nadchodzących transakcjach.</string>
     <string name="notification_synchronization_channel_name">Synchronizacja</string>
     <string name="notification_synchronization_channel_description">Wyświetla powiadomienie, gdy aplikacja synchronizuje się z siecią.</string>
+    <string name="notification_push_channel_name">Powiadomienia Push</string>
+    <string name="notification_push_channel_description">Pokazuj powiadomienia wysyłane do ciebie przez Dash</string>
     <string name="notification_settings_title">Powiadomienia</string>
+    <string name="notification_explainer_title">Portfel Dash chciałby wysłać Ci powiadomienia</string>
+    <string name="notification_explainer_message">Powiadomienia mogą obejmować alerty, dźwięki i znaki na ikonach. Można je skonfigurować w ustawieniach telefonu.</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Użyj odcisku palca by odblokować.</string>
@@ -261,6 +271,8 @@
     <string name="menu_rescan_blockchain">Przeskanuj Blockchain Ponownie</string>
     <string name="menu_contact_support_title">Skontaktuj się z pomocą techniczną</string>
     <string name="menu_contact_support_subtitle">Zgłoś problem</string>
+    <string name="menu_explore_title">Odkryj</string>
+    <string name="menu_explore_subtitle">Używaj DASH do robienia zakupów w ponad 155,000 sklepach</string>
 
     <string name="tools_address_book">Książka Adresowa</string>
     <string name="tools_import_private_key">Zaimportuj Klucz Prywatny</string>
@@ -271,8 +283,12 @@
     <string name="about_review_and_rate">Wyraź swoją opinię o Aplikacj &amp;i Oceń ją</string>
     <string name="about_contact_support">Skontaktuj się z pomocą techniczną</string>
     <string name="about_fork_disclaimer">Jest to aplikacja typu open source opracowana na podstawie portfela Bitcoin</string>
+    <string name="about_copyright">Prawa autorskie © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Portfel Dash %s</string>
+    <string name="about_last_explore_dash_sync">Informacje w Odkryj Dash zostały ostatnio zaktualizowane w: %1$s\nLast sync: %2$s</string>
+    <string name="about_last_explore_dash_update_error">nie można pobrać</string>
+    <string name="about_last_explore_dash_sync_never">nigdy</string>
 
     <string name="block">Blok</string>
     <string name="time">Czas</string>
@@ -351,4 +367,10 @@
     <string name="all_transactions">Całość</string>
     <string name="received_transactions">Otrzymano</string>
     <string name="sent_transactions">Wysłano</string>
+    <string name="set_pin_error_missing_wallet_title">Błąd Braku Portfela</string>
+    <string name="set_pin_error_missing_wallet_message">Nie można znaleźć portfela. Skontaktuj się z pomocą techniczną Dash</string>
+    <string name="wallet_encryption_error_title">Błąd Tworzenia Portfela</string>
+    <string name="wallet_encryption_error_message">Występił problem z tworzeniem portfela. Skontaktuj się z pomocą techniczną Dash</string>
+    <string name="wallet_not_encrypted_error_message">Wystąpił problem z twoim portfelem.\n\n Jeśli nie masz żadnych DASHy w tym portfelu, odinstaluj i zainstaluj go ponownie. Następnie stwórz nowy portfel.\n\n Jeśli masz listę słów do odzyskiwania porfela, lub plik kopii zapasowej, odinstaluj ten portfel i zainstaluj go ponownie. W przeciwnym wypadku zgłoś się do pomocy technicznej Dash. </string>
+
 </resources>

@@ -63,7 +63,7 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
     }
 
     override fun defaultCurrencyCode(): String {
-        return walletApplication.configuration.exchangeCurrencyCode
+        return walletApplication.configuration.exchangeCurrencyCode!!
     }
 
     override fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?) {
