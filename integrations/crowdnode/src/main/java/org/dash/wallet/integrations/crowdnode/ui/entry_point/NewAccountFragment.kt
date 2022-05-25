@@ -41,7 +41,6 @@ import org.dash.wallet.integrations.crowdnode.databinding.FragmentNewAccountBind
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -51,7 +50,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
     private val args by navArgs<NewAccountFragmentArgs>()
 
     @Inject
-    lateinit var ISecurityFunctions: ISecurityFunctions
+    lateinit var securityFunctions: ISecurityFunctions
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -118,6 +117,15 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
                 safeNavigate(NewAccountFragmentDirections.newAccountToPortal())
             }
         }
+
+        viewModel.linkAccountRequest.observe(viewLifecycleOwner) { linkUrl ->
+            safeNavigate(
+                NewAccountFragmentDirections.newAccountToWebView(
+                    getString(R.string.crowdnode_login),
+                    linkUrl,
+                    true
+                ))
+        }
     }
 
     override fun onResume() {
@@ -130,7 +138,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
 
     private fun continueSignUp() {
         lifecycleScope.launch {
-            ISecurityFunctions.requestPinCode(requireActivity())?.let {
+            securityFunctions.requestPinCode(requireActivity())?.let {
                 viewModel.signUp()
             }
         }
@@ -138,12 +146,6 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
 
     private fun continueLinking() {
         viewModel.linkOnlineAccount()
-        val apiLinkUrl = CrowdNodeConstants.getApiLinkUrl(viewModel.accountAddress.value!!)
-        safeNavigate(NewAccountFragmentDirections.newAccountToWebview(
-            getString(R.string.crowdnode_login),
-            apiLinkUrl,
-            true
-        ))
     }
 
     private fun setTermsTextView(textView: TextView) {
@@ -154,7 +156,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
 
         val clickOnTerms = object : ClickableSpan() {
             override fun onClick(widget: View) {
-                safeNavigate(NewAccountFragmentDirections.newAccountToWebview(
+                safeNavigate(NewAccountFragmentDirections.newAccountToWebView(
                     getString(R.string.terms_of_use),
                     getString(R.string.crowdnode_terms_of_use_url)
                 ))
@@ -163,7 +165,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
 
         val clickOnPrivacy = object : ClickableSpan() {
             override fun onClick(widget: View) {
-                safeNavigate(NewAccountFragmentDirections.newAccountToWebview(
+                safeNavigate(NewAccountFragmentDirections.newAccountToWebView(
                     getString(R.string.privacy_policy),
                     getString(R.string.crowdnode_privacy_policy_url)
                 ))

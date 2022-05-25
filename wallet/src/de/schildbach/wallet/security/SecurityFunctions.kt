@@ -52,11 +52,11 @@ class SecurityFunctions @Inject constructor(
     }
 
     @Throws(KeyCrypterException::class)
-    suspend fun deriveKey(
+    fun deriveKey(
         wallet: Wallet,
         password: String,
         scryptIterationsTarget: Int
-    ): KeyParameter = withContext(Dispatchers.Default) {
+    ): KeyParameter {
         require(wallet.isEncrypted)
         val keyCrypter = wallet.keyCrypter!!
 
@@ -85,6 +85,6 @@ class SecurityFunctions @Inject constructor(
         }
 
         // Hand back the (possibly changed) encryption key.
-        return@withContext key
+        return key
     }
 }

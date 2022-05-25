@@ -29,7 +29,6 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.utils.MonetaryFormat
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
@@ -60,6 +59,7 @@ class CrowdNodeViewModel @Inject constructor(
 ) : ViewModel() {
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
     val networkError = SingleLiveEvent<Unit>()
+    val linkAccountRequest = SingleLiveEvent<String>()
 
     private val _accountAddress = MutableLiveData<Address>()
     val accountAddress: LiveData<Address>
@@ -172,7 +172,10 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     fun linkOnlineAccount() {
-        crowdNodeApi.trackLinkingAccount(_accountAddress.value!!)
+        val address = _accountAddress.value!!
+        val apiLinkUrl = CrowdNodeConstants.getApiLinkUrl(address)
+        crowdNodeApi.trackLinkingAccount(address)
+        linkAccountRequest.postValue(apiLinkUrl)
     }
 
     fun cancelLinkingOnlineAccount() {
@@ -277,8 +280,10 @@ class CrowdNodeViewModel @Inject constructor(
     fun signAndSendEmail(email: String) {
         viewModelScope.launch {
             val signed = securityFunctions.signMessage(accountAddress.value!!, email)
-            crowdNodeApi.sendSignedEmailMessage(accountAddress.value!!, email, signed)
             Log.i("CROWDNODE", "signed: $signed")
+            crowdNodeApi.sendSignedEmailMessage(accountAddress.value!!, email, signed)
+            val apiLinkUrl = CrowdNodeConstants.getProfileUrl(networkParameters)
+            linkAccountRequest.postValue(apiLinkUrl)
         }
     }
 

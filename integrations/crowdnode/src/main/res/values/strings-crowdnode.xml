@@ -21,6 +21,7 @@
     <string name="account_create">Create New Account</string>
     <string name="account_link">Link Existing Account</string>
     <string name="crowdnode_login">Log in to CrowdNode</string>
+    <string name="crowdnode_signup">Sign up to CrowdNode</string>
     <string name="crowdnode_link">Link a CrowdNode account</string>
     <string name="required_passphrase_backup">You have to backup your passphrase in Dash Wallet</string>
     <string name="backup_passphrase">Backup Passphrase</string>

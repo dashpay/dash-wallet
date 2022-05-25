@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory
 import retrofit2.HttpException
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.net.URLEncoder
 import java.util.concurrent.Executors
 import javax.inject.Inject
 import kotlin.math.min
@@ -350,7 +352,8 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     override suspend fun sendSignedEmailMessage(address: Address, email: String, signature: String) {
-        webApi.sendSignedMessage(address.toBase58(), email, signature)
+        webApi.sendSignedMessage(address.toBase58(), email, URLEncoder.encode(signature, "utf-8"))
+//        val result ...
     }
 
     override suspend fun reset() {
@@ -370,6 +373,9 @@ class CrowdNodeApiAggregator @Inject constructor(
             }
 
             if (tryRestoreSignUp()) {
+                responseScope.launch {
+                    checkIfAddressIsInUse(accountAddress!!)
+                }
                 return
             }
 
@@ -502,6 +508,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     private suspend fun resolveIsAddressInUse(address: Address): Boolean {
         return try {
             val result = webApi.isAddressInUse(address.toString())
+            Log.i("CROWDNODE", "result: ${result.body()}")
             val isSuccess = result.isSuccessful && result.body()?.isInUse == true
 
             if (isSuccess) {
