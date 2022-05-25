@@ -186,7 +186,10 @@ class TransactionResultViewBinder(private val containerView: View) {
             fiatValue.setFiatAmount(tx.value, exchangeRate, Constants.LOCAL_FORMAT,
                     exchangeRate.fiat?.currencySymbol)
         } else {
-            fiatValue.setText(R.string.transaction_row_rate_not_available)
+            fiatValue.isVisible = false
+            checkIcon.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                bottomToBottom = R.id.dash_amount_container
+            }
         }
 
 
