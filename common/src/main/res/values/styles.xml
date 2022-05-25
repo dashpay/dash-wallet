@@ -782,6 +782,10 @@
         <item name="android:textColor">@color/steel_gray_400</item>
     </style>
 
+    <style name="Body2.ExtraDarkGray">
+        <item name="android:textColor">@color/extra_dark_gray</item>
+    </style>
+
     <style name="Body2.Medium">
         <item name="fontFamily">@font/montserrat_medium</item>
     </style>
@@ -850,6 +854,10 @@
 
     <style name="Caption.SemiBold">
         <item name="fontFamily">@font/montserrat_semibold</item>
+    </style>
+
+    <style name="Caption.SemiBold.Red">
+        <item name="android:textColor">@color/red_300</item>
     </style>
 
     <style name="Caption.SteelGray">
@@ -965,7 +973,14 @@
 
     <style name="PrimaryButtonTheme.Small">
         <item name="titleTextColor">@color/gray_900</item>
-        <item name="cornerRadius">16dp</item>
+        <item name="cornerRadius">6dp</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.Small.UltraLightGray">
+        <item name="titleTextColor">@color/dash_blue</item>
+        <item name="backgroundColor">@color/ultra_light_gray</item>
+        <item name="strokeColor">@color/ultra_light_gray</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
     <style name="PrimaryButtonTheme.Small.Round">
@@ -984,6 +999,12 @@
         <item name="backgroundColor">@color/blue_50</item>
         <item name="strokeColor">@color/blue_50</item>
         <item name="titleTextColor">@color/dash_blue</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.ExtraSmall.White">
+        <item name="backgroundColor">@color/white</item>
+        <item name="strokeColor">@color/white</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
@@ -1029,6 +1050,10 @@
         <item name="android:theme">@style/PrimaryButtonTheme.ExtraSmall.Blue</item>
     </style>
 
+    <style name="Button.Primary.Small.UltraLightGray">
+        <item name="android:theme">@style/PrimaryButtonTheme.Small.UltraLightGray</item>
+    </style>
+
     <style name="Button.Primary.Small.Round">
         <item name="android:paddingStart">0dp</item>
         <item name="android:paddingEnd">0dp</item>
@@ -1042,12 +1067,17 @@
         <item name="android:theme">@style/PrimaryButtonTheme.ExtraSmall</item>
         <item name="android:textSize">11sp</item>
         <item name="android:minHeight">24dp</item>
+        <item name="android:minWidth">48dp</item>
         <item name="android:paddingStart">8dp</item>
         <item name="android:paddingEnd">8dp</item>
     </style>
 
     <style name="Button.Primary.ExtraSmall.Blue">
         <item name="android:theme">@style/PrimaryButtonTheme.ExtraSmall.Blue</item>
+    </style>
+
+    <style name="Button.Primary.ExtraSmall.WhiteRaised">
+        <item name="android:theme">@style/PrimaryButtonTheme.ExtraSmall.White</item>
     </style>
 
 

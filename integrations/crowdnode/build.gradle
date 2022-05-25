@@ -50,6 +50,7 @@ dependencies {
 
     // Core
     implementation "androidx.core:core-ktx:$jetpackVersion"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation "androidx.appcompat:appcompat:$appCompatVersion"
     implementation "org.dashj:dashj-core:$dashjVersion"
 

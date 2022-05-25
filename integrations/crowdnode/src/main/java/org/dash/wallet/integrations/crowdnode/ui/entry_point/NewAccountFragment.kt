@@ -104,7 +104,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
             binding.dashAddressTxt.text = it.toBase58()
         }
 
-        viewModel.signUpStatus.observe(viewLifecycleOwner) {
+        viewModel.observeSignUpStatus().observe(viewLifecycleOwner) {
             binding.registerPanel.isVisible = it == SignUpStatus.NotStarted || it == SignUpStatus.Error
             binding.inProgressPanel.isVisible = it != SignUpStatus.NotStarted && it != SignUpStatus.Error
 
@@ -116,8 +116,8 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
             }
         }
 
-        viewModel.onlineAccountStatus.observe(viewLifecycleOwner) { onlineStatus ->
-            if (onlineStatus != null && onlineStatus.ordinal >= OnlineAccountStatus.Confirming.ordinal) {
+        viewModel.observeOnlineAccountStatus().observe(viewLifecycleOwner) { onlineStatus ->
+            if (onlineStatus != null && onlineStatus.ordinal >= OnlineAccountStatus.Validating.ordinal) {
                 safeNavigate(NewAccountFragmentDirections.newAccountToPortal())
             }
         }
@@ -126,7 +126,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
     override fun onResume() {
         super.onResume()
 
-        if (viewModel.onlineAccountStatus.value == OnlineAccountStatus.Linking) {
+        if (viewModel.onlineAccountStatus == OnlineAccountStatus.Linking) {
             viewModel.cancelLinkingOnlineAccount()
         }
     }

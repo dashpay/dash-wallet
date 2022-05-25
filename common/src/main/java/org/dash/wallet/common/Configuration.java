@@ -100,6 +100,10 @@ public class Configuration {
     public static final String PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN = "has_location_dialog_been_shown";
     public static final String PREFS_KEY_EXPLORE_DATABASE_NAME = "explore_database_name";
 
+    // CrowdNode
+    public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
+    public static final String PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS = "crowdnode_primary_address";
+
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
     public Configuration(final SharedPreferences prefs, final Resources res) {
@@ -503,8 +507,6 @@ public class Configuration {
 
     // Explore Dash
 
-    // Explore dash
-
     public boolean hasExploreDashInfoScreenBeenShown() {
         return prefs.getBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, false);
     }
@@ -530,5 +532,25 @@ public class Configuration {
     @NonNull
     public String getExploreDatabaseName() {
         return prefs.getString(PREFS_KEY_EXPLORE_DATABASE_NAME, "explore-database");
+    }
+
+    // CrowdNode
+
+    @NonNull
+    public String getCrowdNodeAccountAddress() {
+        return prefs.getString(PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS, "");
+    }
+
+    public void setCrowdNodeAccountAddress(@NonNull String address) {
+        prefs.edit().putString(PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS, address).apply();
+    }
+
+    @NonNull
+    public String getCrowdNodePrimaryAddress() {
+        return prefs.getString(PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS, "");
+    }
+
+    public void setCrowdNodePrimaryAddress(@NonNull String address) {
+        prefs.edit().putString(PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS, address).apply();
     }
 }

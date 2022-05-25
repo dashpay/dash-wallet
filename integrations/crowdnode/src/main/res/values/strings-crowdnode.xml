@@ -29,6 +29,7 @@
     <string name="crowdnode_new_account_warning_2">Very small amounts of Dash will be sent to and from CrowdNode to verify that you are the owner of this wallet address.</string>
     <string name="crowdnode_link_account_description">All transfers to and from CrowdNode from this device will be performed with the below Dash address from this device.</string>
     <string name="dash_address">Dash Address</string>
+    <string name="primary_dash_address">Primary Dash Address</string>
     <string name="crowdnode_secure_wallet">Backup your passphrase to create a CrowdNode account</string>
     <string name="crowdnode_secure_wallet_explainer">If you lose your passphrase for this wallet and lose this device or uninstall Dash Wallet, you will lose access to your funds on CrowdNode and the funds within this wallet.</string>
     <string name="insufficient_funds">You have insufficient funds to proceed.</string>
@@ -87,6 +88,24 @@
     <string name="crowdnode_first_deposit">First deposit should be more than %s</string>
     <string name="crowdnode_staking_info_title">How staking works</string>
     <string name="crowdnode_staking_info_message">You start earning if your CrowdNode account has more than %s</string>
+    <string name="crowdnode_verify_api_address">Verify your API Dash address</string>
+    <string name="crowdnode_how_to_verify">How to confirm your API Dash address</string>
+    <string name="crowdnode_how_to_verify_description1">Send %s Dash from your primary Dash address that you currently use for your CrowdNode account</string>
+    <string name="crowdnode_how_to_verify_description2">to the Dash address designated for your CrowdNode account in the Dash Wallet on this device</string>
+    <string name="crowdnode_how_to_verify_description3">We will automatically detect this transaction and transfer the same amount to your CrowdNode account. After that you will be able to make deposits and withdrawals in Dash Wallet on this device.</string>
+    <string name="button_show_qr">Show QR</string>
+    <string name="scan_qr">Scan QR</string>
+    <string name="qr_contains_request">This QR already contains the payment request for %s Dash</string>
+    <string name="verification_required">Verification Required</string>
+    <string name="validating_address">Validating address…</string>
+    <string name="crowdnode_address_validated">Your CrowdNode address has been validated, but verification is required.</string>
+    <string name="crowdnode_address_confirmed">Your CrowdNode address has been confirmed.</string>
+    <string name="crowdnode_bad_confirmation">Confirmation sent from a wrong primary address</string>
+    <string name="crowdnode_online_account_details_title">Information about your online account</string>
+    <string name="crowdnode_online_account_details_primary">Your primary Dash address that you currently use for your CrowdNode account</string>
+    <string name="crowdnode_online_account_details_api">Dash address designated for your CrowdNode account in the Dash Wallet on this device</string>
+    <string name="crowdnode_primary_missing">The primary Dash address is missing from your account. Please specify it on the CrowdNode website.</string>
+    <string name="crowdnode_reset_address">Reset Address</string>
 
     <string name="crowdnode_website" translatable="false">https://crowdnode.io/</string>
     <string name="crowdnode_terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>
@@ -94,4 +113,5 @@
     <string name="crowdnode_login_page" translatable="false">https://app.crowdnode.io/FundsOpen/%s</string>
     <string name="crowdnode_login_test_page" translatable="false">https://test.crowdnode.io/FundsOpen/%s</string>
     <string name="crowdnode_support_url" translatable="false">https://knowledge.crowdnode.io/</string>
+    <string name="crowdnode_how_to_verify_url" translatable="false">https://knowledge.crowdnode.io/en/articles/6114502-how-to-confirm-your-api-dash-address</string>
 </resources>

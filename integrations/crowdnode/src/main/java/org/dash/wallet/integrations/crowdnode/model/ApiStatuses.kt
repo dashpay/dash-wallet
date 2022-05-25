@@ -32,8 +32,16 @@ enum class SignUpStatus {
 enum class OnlineAccountStatus {
     None,
     Linking,
+    Validating,
     Confirming,
     Done
 }
 
-class CrowdNodeException(message: String): Exception(message)
+class CrowdNodeException(message: String): Exception(message) {
+    companion object {
+        const val DEPOSIT_ERROR = "deposit_error"
+        const val CONFIRMATION_ERROR = "confirmation_error"
+        const val WITHDRAWAL_ERROR = "withdrawal_error"
+        const val MISSING_PRIMARY = "primary_not_specified"
+    }
+}

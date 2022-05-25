@@ -24,6 +24,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.transactions.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
@@ -47,7 +48,7 @@ interface WalletDataProvider {
 
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
 
-    fun observeBalance(): Flow<Coin>
+    fun observeBalance(balanceType: Wallet.BalanceType = Wallet.BalanceType.ESTIMATED): Flow<Coin>
 
     fun observeTransactions(vararg filters: TransactionFilter): Flow<Transaction>
 
@@ -60,6 +61,4 @@ interface WalletDataProvider {
     fun detachOnWalletWipedListener(listener: () -> Unit)
 
     fun processDirectTransaction(tx: Transaction)
-
-    fun observeBalance(): Flow<Coin>
 }

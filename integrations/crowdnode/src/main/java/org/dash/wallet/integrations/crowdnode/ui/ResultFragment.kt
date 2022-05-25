@@ -34,6 +34,7 @@ import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentResultBinding
+import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import javax.inject.Inject
 
@@ -59,9 +60,8 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
             binding.title.setTextAppearance(R.style.Headline5_Bold_Red)
             binding.sendReportBtn.isVisible = true
             binding.negativeBtn.isVisible = true
-            binding.positiveBtn.text = getString(R.string.button_retry)
 
-            viewModel.crowdNodeError.value?.let { ex ->
+            viewModel.crowdNodeError?.let { ex ->
                 setErrorMessage(ex)
             }
 
@@ -69,23 +69,29 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
                 viewModel.sendReport()
             }
 
-            binding.positiveBtn.setOnClickListener {
-                if (viewModel.signUpStatus.value == SignUpStatus.Error) {
-                    // For signup error, launching a retry attempt
-                    lifecycleScope.launch {
-                        securityModel.requestPinCode(requireActivity())?.let {
-                            findNavController().popBackStack()
-                            viewModel.retrySignup()
+            if (viewModel.crowdNodeError?.message == CrowdNodeException.CONFIRMATION_ERROR) {
+                binding.positiveBtn.isVisible = false
+            } else {
+                binding.positiveBtn.isVisible = true
+                binding.positiveBtn.text = getString(R.string.button_retry)
+                binding.positiveBtn.setOnClickListener {
+                    if (viewModel.signUpStatus == SignUpStatus.Error) {
+                        // For signup error, launching a retry attempt
+                        lifecycleScope.launch {
+                            securityModel.requestPinCode(requireActivity())?.let {
+                                findNavController().popBackStack()
+                                viewModel.retrySignup()
+                            }
                         }
+                    } else {
+                        // for transfer errors, going back to the transfer screen
+                        findNavController().popBackStack()
                     }
-                } else {
-                    // for transfer errors, going back to the transfer screen
-                    findNavController().popBackStack()
                 }
             }
 
             binding.negativeBtn.setOnClickListener {
-                if (viewModel.signUpStatus.value == SignUpStatus.Error) {
+                if (viewModel.signUpStatus == SignUpStatus.Error) {
                     viewModel.resetSignUp()
                     findNavController().popBackStack()
                 } else {

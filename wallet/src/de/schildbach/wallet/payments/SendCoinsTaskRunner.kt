@@ -16,6 +16,7 @@
  */
 package de.schildbach.wallet.payments
 
+import androidx.annotation.VisibleForTesting
 import com.google.common.base.Preconditions
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.security.SecurityGuard
@@ -25,6 +26,7 @@ import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.ZeroConfCoinSelector
@@ -44,30 +46,35 @@ class SendCoinsTaskRunner @Inject constructor(
     override suspend fun sendCoins(
         address: Address,
         amount: Coin,
-        constrainInputsTo: Address?,
+        coinSelector: CoinSelector?,
         emptyWallet: Boolean
     ): Transaction {
         val wallet = walletApplication.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
         Context.propagate(wallet.context)
-        val sendRequest = createSendRequest(address, amount, constrainInputsTo, emptyWallet)
+        val sendRequest = createSendRequest(address, amount, coinSelector, emptyWallet)
         val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
 
         return sendCoins(wallet, sendRequest, scryptIterationsTarget)
     }
 
-    private fun createSendRequest(
+    @VisibleForTesting
+    fun createSendRequest(
         address: Address,
         amount: Coin,
-        constrainInputsTo: Address? = null,
+        coinSelector: CoinSelector? = null,
         emptyWallet: Boolean = false
     ): SendRequest {
         return SendRequest.to(address, amount).apply {
-            coinSelector = ZeroConfCoinSelector.get()
-            coinSelector = if (constrainInputsTo == null) ZeroConfCoinSelector.get() else ByAddressCoinSelector(constrainInputsTo)
-            feePerKb = Constants.ECONOMIC_FEE
-            ensureMinRequiredFee = true
-            changeAddress = constrainInputsTo
+            this.feePerKb = Constants.ECONOMIC_FEE
+            this.ensureMinRequiredFee = true
             this.emptyWallet = emptyWallet
+
+            val selector = coinSelector ?: ZeroConfCoinSelector.get()
+            this.coinSelector = selector
+
+            if (selector is ByAddressCoinSelector) {
+                changeAddress = selector.address
+            }
         }
     }
 

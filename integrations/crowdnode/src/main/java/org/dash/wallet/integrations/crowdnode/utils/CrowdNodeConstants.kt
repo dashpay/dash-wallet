@@ -34,8 +34,9 @@ object CrowdNodeConstants {
     val REQUIRED_FOR_SIGNUP: Coin = MINIMUM_REQUIRED_DASH - Coin.valueOf(100000)
     val API_OFFSET: Coin = Coin.valueOf(20000)
     val MINIMUM_DASH_DEPOSIT: Coin = Coin.COIN.div(2)
-    val DASH_FORMAT = MonetaryFormat.BTC.minDecimals(1)
+    val DASH_FORMAT: MonetaryFormat = MonetaryFormat.BTC.minDecimals(1)
         .repeatOptionalDecimals(1, 3).postfixCode()
+    val API_CONFIRMATION_DASH_AMOUNT: Coin = Coin.valueOf(54321)
 
     fun getCrowdNodeAddress(params: NetworkParameters): Address {
         return Address.fromBase58(params, if (params == MainNetParams.get()) {

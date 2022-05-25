@@ -51,7 +51,6 @@
     <color name="black">#000000</color>
     <color name="black_liquid">#171717</color>
     <color name="grey_liquid">#9B9B9B</color>
-    <color name="warning_yellow">#FFFAF0</color>
 
 
     <!-- Design System colors -->
@@ -63,9 +62,10 @@
     <color name="content_secondary">@color/steel_gray_500</color>
     <color name="content_tertiary">@color/steel_gray_300</color>
     <color name="content_disabled">#92929C</color>
+    <color name="content_warning">@color/red_300</color>
     <color name="divider_color">@color/gray_50</color>
     <color name="light_gray">#DEDEE3</color>
-    <color name="ultra_light_gray">#f5f6f7</color>
+    <color name="extra_dark_gray">#525C66</color>
 
     <!-- Background -->
     <color name="background_primary">#eff0f4</color>
@@ -79,6 +79,8 @@
     <color name="disabled_button_bg">#eeeeee</color>
     <color name="max_button_bg">#ebebeb</color>
     <color name="text_highlight_blue_bg">#ebf6fd</color>
+    <color name="ultra_light_gray">#f5f6f7</color>
+    <color name="warning_yellow">#fff9ed</color>
 
     <!-- Palette -->
     <color name="blue_50">#F0F8FE</color>

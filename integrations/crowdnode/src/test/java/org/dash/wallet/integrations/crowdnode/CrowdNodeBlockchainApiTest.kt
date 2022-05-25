@@ -21,14 +21,18 @@ import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.runBlocking
+import org.bitcoinj.core.Address
 import org.bitcoinj.params.MainNetParams
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApiAggregator
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeWebApi
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeBalance
-import org.dash.wallet.integrations.crowdnode.model.CrowdNodeIsAddressInUse
+import org.dash.wallet.integrations.crowdnode.model.IsAddressInUse
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
+import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.junit.Test
 import org.mockito.kotlin.*
@@ -40,8 +44,12 @@ import kotlin.time.ExperimentalTime
 @ExperimentalCoroutinesApi
 class CrowdNodeBlockchainApiTest {
     private val localConfig = mock<CrowdNodeConfig> {
-        onBlocking { getPreference(CrowdNodeConfig.ACCOUNT_ADDRESS) } doReturn "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"
-        onBlocking { getPreference(CrowdNodeConfig.ERROR) } doReturn ""
+        onBlocking { getPreference(CrowdNodeConfig.BACKGROUND_ERROR) } doReturn ""
+    }
+
+    private val globalConfig = mock<Configuration> {
+        on { crowdNodeAccountAddress } doReturn "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"
+        on { crowdNodePrimaryAddress } doReturn "XdYM3BWPrTEXGSFtRcR8QJSfXfefmcNaTr"
     }
 
     private val walletData = mock<WalletDataProvider> {
@@ -51,8 +59,12 @@ class CrowdNodeBlockchainApiTest {
     }
 
     private val webApi = mock<CrowdNodeWebApi> {
-        onBlocking { isAddressInUse(any()) } doReturn Response.success(CrowdNodeIsAddressInUse(false, null))
+        onBlocking { isAddressInUse(any()) } doReturn Response.success(IsAddressInUse(false, null))
         onBlocking { getBalance(any()) } doReturn Response.success(CrowdNodeBalance("XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U", 0.7, 0.7, 0.1))
+    }
+
+    private val blockchainApi = mock<CrowdNodeBlockchainApi> {
+        on { getFullSignUpTxSet() } doReturn null
     }
 
     @Test
@@ -60,7 +72,7 @@ class CrowdNodeBlockchainApiTest {
         localConfig.stub {
             onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.Linking.ordinal
         }
-        val api = CrowdNodeBlockchainApi(webApi, mock(), walletData, mock(), mock(), localConfig, mock())
+        val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock())
         api.stopTrackingLinked()
 
         assertEquals(OnlineAccountStatus.None, api.onlineAccountStatus.value)
@@ -72,11 +84,33 @@ class CrowdNodeBlockchainApiTest {
         localConfig.stub {
             onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.Confirming.ordinal
         }
-        val api = CrowdNodeBlockchainApi(mock(), mock(), walletData, mock(), mock(), localConfig, mock())
+        val api = CrowdNodeApiAggregator(mock(), blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock())
         api.stopTrackingLinked()
 
         assertEquals(OnlineAccountStatus.Confirming, api.onlineAccountStatus.value)
         assertEquals(SignUpStatus.LinkedOnline, api.signUpStatus.value)
+    }
+
+    @Test
+    fun stopTrackingLinked_doesNotDemoteApiSignUpStatus() {
+        localConfig.stub {
+            onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+        }
+        val mockFullSet = mock<FullCrowdNodeSignUpTxSet> {
+            on { hasWelcomeToApiResponse } doReturn true
+            on { accountAddress } doReturn Address.fromBase58(MainNetParams.get(), "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U")
+        }
+        blockchainApi.stub {
+            on { getFullSignUpTxSet() } doReturn mockFullSet
+        }
+        val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock())
+        assertEquals(SignUpStatus.Finished, api.signUpStatus.value)
+        assertEquals(OnlineAccountStatus.None, api.onlineAccountStatus.value)
+
+        api.stopTrackingLinked()
+
+        assertEquals(SignUpStatus.Finished, api.signUpStatus.value)
+        assertEquals(OnlineAccountStatus.None, api.onlineAccountStatus.value)
     }
 
     @Test
@@ -85,7 +119,7 @@ class CrowdNodeBlockchainApiTest {
             localConfig.stub {
                 onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
             }
-            val api = CrowdNodeBlockchainApi(webApi, mock(), walletData, mock(), mock(), localConfig, mock())
+            val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock())
             api.refreshBalance()
 
             assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)

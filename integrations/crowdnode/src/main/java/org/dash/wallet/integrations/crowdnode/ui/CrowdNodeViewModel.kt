@@ -17,6 +17,8 @@
 
 package org.dash.wallet.integrations.crowdnode.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,6 +51,7 @@ class CrowdNodeViewModel @Inject constructor(
     private val config: CrowdNodeConfig,
     private val walletDataProvider: WalletDataProvider,
     private val crowdNodeApi: CrowdNodeApi,
+    private val clipboardManager: ClipboardManager,
     exchangeRatesProvider: ExchangeRatesProvider
 ) : ViewModel() {
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
@@ -57,6 +60,9 @@ class CrowdNodeViewModel @Inject constructor(
     private val _accountAddress = MutableLiveData<Address>()
     val accountAddress: LiveData<Address>
         get() = _accountAddress
+
+    val primaryDashAddress
+        get() = crowdNodeApi.primaryAddress
 
     val needPassphraseBackUp
         get() = globalConfig.remindBackupSeed
@@ -71,20 +77,14 @@ class CrowdNodeViewModel @Inject constructor(
     val dashBalance: LiveData<Coin>
         get() = _dashBalance
 
-    var signUpStatus: LiveData<SignUpStatus> = MediatorLiveData<SignUpStatus>().apply {
-        addSource(crowdNodeApi.signUpStatus.asLiveData(), this::setValue)
-        value = crowdNodeApi.signUpStatus.value
-    }
+    val signUpStatus: SignUpStatus
+        get() = crowdNodeApi.signUpStatus.value
 
-    var onlineAccountStatus: LiveData<OnlineAccountStatus> = MediatorLiveData<OnlineAccountStatus>().apply {
-        addSource(crowdNodeApi.onlineAccountStatus.asLiveData(), this::setValue)
-        value = crowdNodeApi.onlineAccountStatus.value
-    }
+    val onlineAccountStatus: OnlineAccountStatus
+        get() = crowdNodeApi.onlineAccountStatus.value
 
-    var crowdNodeError: LiveData<Exception?> = MediatorLiveData<Exception?>().apply {
-        addSource(crowdNodeApi.apiError.asLiveData(), this::setValue)
-        value = crowdNodeApi.apiError.value
-    }
+    val crowdNodeError: Exception?
+        get() = crowdNodeApi.apiError.value
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
     val exchangeRate: LiveData<ExchangeRate>
@@ -104,8 +104,9 @@ class CrowdNodeViewModel @Inject constructor(
     val networkParameters: NetworkParameters
         get() = walletDataProvider.networkParameters
 
-    val isFirstDeposit: Boolean
-        get() = !crowdNodeApi.hasAnyDeposits()
+    val shouldShowFirstDepositBanner: Boolean
+        get() = !crowdNodeApi.hasAnyDeposits() &&
+                (crowdNodeBalance.value?.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT) ?: true)
 
     init {
         walletDataProvider.observeBalance()
@@ -116,7 +117,8 @@ class CrowdNodeViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        exchangeRatesProvider.observeExchangeRate(globalConfig.exchangeCurrencyCode)
+        exchangeRatesProvider
+            .observeExchangeRate(globalConfig.exchangeCurrencyCode!!)
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
 
@@ -167,7 +169,7 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     fun linkOnlineAccount() {
-        crowdNodeApi.startTrackingLinked(_accountAddress.value!!)
+        crowdNodeApi.trackLinkingAccount(_accountAddress.value!!)
     }
 
     fun cancelLinkingOnlineAccount() {
@@ -191,6 +193,12 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
+    fun resetAddress() {
+        viewModelScope.launch {
+            resetAddressAndApi()
+        }
+    }
+
     fun changeNotifyWhenDone(toNotify: Boolean) {
         crowdNodeApi.showNotificationOnResult = toNotify
     }
@@ -209,6 +217,17 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
+    suspend fun getShouldShowConfirmationDialog(): Boolean {
+        return crowdNodeApi.onlineAccountStatus.value == OnlineAccountStatus.Confirming &&
+               !(config.getPreference(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN) ?: false)
+    }
+
+    fun setConfirmationDialogShown(isShown: Boolean) {
+        viewModelScope.launch {
+            config.setPreference(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN, isShown)
+        }
+    }
+
     suspend fun deposit(value: Coin): Boolean {
         return crowdNodeApi.deposit(value, emptyWallet = value >= dashBalance.value)
     }
@@ -217,13 +236,43 @@ class CrowdNodeViewModel @Inject constructor(
         return crowdNodeApi.withdraw(value)
     }
 
-    private suspend fun getOrCreateAccountAddress(): Address {
+    fun copyPrimaryAddress() {
+        clipboardManager.setPrimaryClip(
+            ClipData.newPlainText(
+                "primary dash address",
+                primaryDashAddress.toString()
+            )
+        )
+    }
+
+    fun copyAccountAddress() {
+        clipboardManager.setPrimaryClip(
+            ClipData.newPlainText(
+                "dash address",
+                accountAddress.value.toString()
+            )
+        )
+    }
+
+    fun observeSignUpStatus(): LiveData<SignUpStatus> {
+        return crowdNodeApi.signUpStatus.asLiveData()
+    }
+
+    fun observeOnlineAccountStatus(): LiveData<OnlineAccountStatus> {
+        return crowdNodeApi.onlineAccountStatus.asLiveData()
+    }
+
+    fun observeCrowdNodeError(): LiveData<Exception?> {
+        return crowdNodeApi.apiError.asLiveData()
+    }
+
+    private fun getOrCreateAccountAddress(): Address {
         return crowdNodeApi.accountAddress ?: createNewAccountAddress()
     }
 
-    private suspend fun createNewAccountAddress(): Address {
+    private fun createNewAccountAddress(): Address {
         val address = walletDataProvider.freshReceiveAddress()
-        config.setPreference(CrowdNodeConfig.ACCOUNT_ADDRESS, address.toBase58())
+        globalConfig.crowdNodeAccountAddress = address.toBase58()
 
         return address
     }

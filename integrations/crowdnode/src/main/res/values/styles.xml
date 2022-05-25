@@ -35,9 +35,25 @@
         <item name="android:tint">@color/light_gray</item>
     </style>
 
+    <style name="YellowTextHighlight">
+        <item name="backgroundColor">@color/warning_yellow</item>
+        <item name="strokeColor">@color/light_core_yellow</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
     <style name="DashAddressBackground">
         <item name="backgroundColor">@color/ultra_light_gray</item>
         <item name="strokeColor">@color/ultra_light_gray</item>
         <item name="cornerRadius">12dp</item>
+    </style>
+
+    <style name="QuaternaryBackgroundTheme">
+        <item name="backgroundColor">@color/quaternary_background</item>
+        <item name="strokeColor">@color/quaternary_background</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="DashQRLogo" parent="SecondaryBackground">
+        <item name="cornerRadius">35dp</item>
     </style>
 </resources>

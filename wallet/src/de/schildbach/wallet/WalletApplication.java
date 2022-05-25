@@ -937,8 +937,8 @@ public class WalletApplication extends BaseWalletApplication
 
     @NonNull
     @Override
-    public Flow<Coin> observeBalance() {
-        return new WalletBalanceObserver(wallet).observe();
+    public Flow<Coin> observeBalance(@NonNull Wallet.BalanceType balanceType) {
+        return new WalletBalanceObserver(wallet, balanceType).observe();
     }
 
     @NonNull

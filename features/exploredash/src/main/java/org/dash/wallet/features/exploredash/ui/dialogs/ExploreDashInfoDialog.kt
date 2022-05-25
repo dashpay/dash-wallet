@@ -21,7 +21,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -32,12 +31,14 @@ import org.dash.wallet.common.util.dialogSafeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.ExploreDashMainInfoBinding
 import javax.inject.Inject
+
 @AndroidEntryPoint
-class ExploreDashInfoDialog : OffsetDialogFragment<ConstraintLayout>(){
+class ExploreDashInfoDialog : OffsetDialogFragment() {
 
     private val binding by viewBinding(ExploreDashMainInfoBinding::bind)
     @Inject
     lateinit var analyticsService: AnalyticsService
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,

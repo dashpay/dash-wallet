@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import android.graphics.drawable.BitmapDrawable
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.widget.ImageView
@@ -28,7 +27,7 @@ import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.send.SweepWalletActivity
-import de.schildbach.wallet.util.Qr
+import org.dash.wallet.common.util.Qr
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_tools.*

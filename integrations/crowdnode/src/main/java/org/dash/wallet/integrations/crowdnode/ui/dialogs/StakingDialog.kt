@@ -21,14 +21,13 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.constraintlayout.widget.ConstraintLayout
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.DialogStakingBinding
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-class StakingDialog: OffsetDialogFragment<ConstraintLayout>() {
+class StakingDialog: OffsetDialogFragment() {
     private val binding by viewBinding(DialogStakingBinding::bind)
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {

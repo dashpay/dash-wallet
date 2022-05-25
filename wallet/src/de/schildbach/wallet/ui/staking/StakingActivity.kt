@@ -31,6 +31,8 @@ import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.services.SecurityModel
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
@@ -54,19 +56,8 @@ class StakingActivity : LockScreenActivity() {
         navController = setNavigationGraph()
 
         viewModel.navigationCallback.observe(this, ::handleNavigationRequest)
-        viewModel.onlineAccountStatus.observe(this) { status ->
-            when (status) {
-                OnlineAccountStatus.Linking -> super.turnOffAutoLogout()
-                OnlineAccountStatus.Confirming, OnlineAccountStatus.Done -> {
-                    if (navController.currentDestination?.id == R.id.crowdNodeWebViewFragment) {
-                        navController.navigate(WebViewFragmentDirections.webViewToPortal())
-                    }
-                    viewModel.cancelLinkingOnlineAccount()
-                    super.turnOnAutoLogout()
-                }
-                else -> { }
-            }
-        }
+        viewModel.observeOnlineAccountStatus().observe(this, ::handleOnlineAccountStatus)
+        viewModel.observeCrowdNodeError().observe(this, ::handleCrowdNodeError)
 
         val intent = Intent(this, StakingActivity::class.java)
         viewModel.setNotificationIntent(intent)
@@ -92,6 +83,37 @@ class StakingActivity : LockScreenActivity() {
         }
     }
 
+    private fun handleOnlineAccountStatus(status: OnlineAccountStatus) {
+        val isWebView = navController.currentDestination?.id == R.id.crowdNodeWebViewFragment
+
+        when (status) {
+            OnlineAccountStatus.None -> {
+                if (viewModel.crowdNodeError != null && isWebView) {
+                    navController.popBackStack()
+                }
+            }
+            OnlineAccountStatus.Linking -> super.turnOffAutoLogout()
+            else -> {
+                if (isWebView) {
+                    navController.navigate(WebViewFragmentDirections.webViewToPortal())
+                }
+                super.turnOnAutoLogout()
+            }
+        }
+    }
+
+    private fun handleCrowdNodeError(error: Exception?) {
+        if (error is CrowdNodeException && error.message == CrowdNodeException.MISSING_PRIMARY) {
+            AdaptiveDialog.create(
+                R.drawable.ic_error_red,
+                getString(org.dash.wallet.common.R.string.error),
+                getString(R.string.crowdnode_primary_missing),
+                getString(R.string.button_close)
+            ).show(this)
+            viewModel.clearError()
+        }
+    }
+
     private fun checkPinAndBackupPassphrase() {
         lifecycleScope.launch {
             val pin = securityModel.requestPinCode(this@StakingActivity)
@@ -107,10 +129,9 @@ class StakingActivity : LockScreenActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.nav_crowdnode)
-        val status = viewModel.signUpStatus.value ?: SignUpStatus.NotStarted
 
         navGraph.startDestination =
-            when (status) {
+            when (viewModel.signUpStatus) {
                 SignUpStatus.LinkedOnline, SignUpStatus.Finished -> R.id.crowdNodePortalFragment
                 SignUpStatus.NotStarted -> {
                     val isInfoShown = runBlocking { viewModel.getIsInfoShown() }
