@@ -306,7 +306,7 @@
         <activity
             android:name="de.schildbach.wallet.ui.TransactionResultActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.Fullscreen" />
+            android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
             android:name="de.schildbach.wallet.ui.ForgotPinActivity"
