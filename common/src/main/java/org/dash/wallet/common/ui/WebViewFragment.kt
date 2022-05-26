@@ -15,64 +15,75 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.ui
+package org.dash.wallet.common.ui
 
 import android.graphics.Bitmap
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.fragment.navArgs
-import dagger.hilt.android.AndroidEntryPoint
-import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.integrations.crowdnode.R
-import org.dash.wallet.integrations.crowdnode.databinding.FragmentWebviewBinding
+import org.dash.wallet.common.R
+import org.dash.wallet.common.databinding.FragmentWebviewBinding
 
-@AndroidEntryPoint
-class WebViewFragment : Fragment(R.layout.fragment_webview) {
+open class WebViewFragment : Fragment(R.layout.fragment_webview) {
     private val binding by viewBinding(FragmentWebviewBinding::bind)
-    private val args by navArgs<WebViewFragmentArgs>()
+    private var webView: WebView? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.toolbarTitle.text = args.title
+
+        val url = arguments?.getString("url")
+        val title = arguments?.getString("title")
+        val enableJavaScript = arguments?.getBoolean("enableJavaScript") ?: false
+
+        binding.toolbarTitle.text = title
 
         val binding = binding // Avoids IllegalStateException in onPageFinished callback
-        binding.webView.settings.javaScriptEnabled = args.enableJavaScript
+        webView = binding.webView
+        binding.webView.settings.javaScriptEnabled = enableJavaScript
         binding.webView.webViewClient = object: WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
-                Log.i("CROWDNODE", "onPageStarted, url: ${url}")
-                val loginPrefix = "https://logintest.crowdnode.io/login"
-                val signUpSuffix = "&view=signup-only"
-
-                url?.let {
-                    if (url.startsWith(loginPrefix) && !url.endsWith(signUpSuffix)) {
-                        view?.loadUrl("$url$signUpSuffix")
-                    }
-                }
-            }
-
-            override fun onLoadResource(view: WebView?, url: String?) {
-                super.onLoadResource(view, url)
-                Log.i("CROWDNODE", "onLoadResource, url: ${url}")
+                doOnPageStarted(view, url)
             }
 
             override fun onPageFinished(view: WebView, url: String?) {
-                Log.i("CROWDNODE", "onPageFinished, url: ${url}")
                 binding.progressBar.isVisible = false
+                doOnPageFinished(view, url)
             }
         }
 
         binding.progressBar.isVisible = true
-        binding.webView.loadUrl(args.url)
+
+        if (!url.isNullOrEmpty()) {
+            binding.webView.loadUrl(url)
+        }
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
+    }
+
+    open fun doOnPageStarted(webView: WebView?, url: String?) { }
+    open fun doOnPageFinished(webView: WebView?, url: String?) { }
+
+    override fun onPause() {
+        webView?.onPause()
+        webView?.pauseTimers()
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        webView?.resumeTimers()
+        webView?.onResume()
+    }
+
+    override fun onDestroy() {
+        webView?.destroy()
+        super.onDestroy()
     }
 }

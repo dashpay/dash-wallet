@@ -31,13 +31,13 @@ import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.services.ISecurityFunctions
+import org.dash.wallet.common.ui.WebViewFragmentDirections
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.NavigationRequest
-import org.dash.wallet.integrations.crowdnode.ui.WebViewFragmentDirections
 import javax.inject.Inject
 
 @AndroidEntryPoint

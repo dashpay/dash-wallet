@@ -71,7 +71,7 @@ interface CrowdNodeApi {
     fun refreshBalance(retries: Int = 0)
     fun trackLinkingAccount(address: Address)
     fun stopTrackingLinked()
-    suspend fun sendSignedEmailMessage(address: Address, email: String, signature: String)
+    suspend fun sendSignedEmailMessage(address: Address, email: String, signature: String): Boolean
     suspend fun reset()
 }
 
@@ -92,6 +92,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         private val log = LoggerFactory.getLogger(CrowdNodeApiAggregator::class.java)
         private const val CONFIRMED_STATUS = "confirmed"
         private const val VALID_STATUS = "valid"
+        private const val MESSAGE_RECEIVED_STATUS = "received"
     }
 
     private val params = walletDataProvider.networkParameters
@@ -338,12 +339,12 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     override fun stopTrackingLinked() {
-        log.info("stopTrackingLinked")
         val address = linkingApiAddress
 
         if (signUpStatus.value == SignUpStatus.NotStarted &&
             onlineAccountStatus.value.ordinal <= OnlineAccountStatus.Linking.ordinal
         ) {
+            log.info("stopTrackingLinked")
             changeOnlineStatus(OnlineAccountStatus.None)
 
             address?.let {
@@ -356,9 +357,30 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
     }
 
-    override suspend fun sendSignedEmailMessage(address: Address, email: String, signature: String) {
-        webApi.sendSignedMessage(address.toBase58(), email, URLEncoder.encode(signature, "utf-8"))
-//        val result ...
+    @Suppress("BlockingMethodInNonBlockingContext")
+    override suspend fun sendSignedEmailMessage(
+        address: Address,
+        email: String,
+        signature: String
+    ): Boolean {
+        log.info("Sending signed email message")
+        val encodedSignature = URLEncoder.encode(signature, "utf-8")
+        val result = webApi.sendSignedMessage(address.toBase58(), email, encodedSignature)
+
+        if (result.isSuccessful && result.body()?.messageStatus?.lowercase() == MESSAGE_RECEIVED_STATUS) {
+            log.info("Signed email sent successfully")
+            return true
+        }
+
+        if (result.isSuccessful) {
+            log.info("SendMessage result successful, but wrong status: ${result.body()?.messageStatus ?: "null"}")
+            apiError.value = CrowdNodeException(result.body()?.messageStatus ?: "")
+            return false
+        }
+
+        log.info("SendMessage error, code: ${result.code()}, error: ${result.errorBody()?.string()}")
+        apiError.value = CrowdNodeException("${result.code()}: ${result.errorBody()?.string()}")
+        return false
     }
 
     override suspend fun reset() {

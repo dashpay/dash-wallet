@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.ui.portal
+package org.dash.wallet.integrations.crowdnode.ui.online
 
 import android.content.Context
 import android.os.Bundle
@@ -24,14 +24,16 @@ import android.view.inputmethod.InputMethodManager
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentOnlineAccountEmailBinding
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
-import org.dash.wallet.integrations.crowdnode.ui.entry_point.NewAccountFragmentDirections
 
 @AndroidEntryPoint
 class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_email) {
@@ -54,20 +56,30 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
             val input = binding.input.text.toString()
 
             if (isEmail(input)) {
-                viewModel.signAndSendEmail(input)
+                continueCreating(input)
             } else {
                 binding.inputWrapper.isErrorEnabled = true
             }
         }
 
-        viewModel.linkAccountRequest.observe(viewLifecycleOwner) { linkUrl ->
-            dismissKeyboard()
-            safeNavigate(
-                OnlineAccountEmailFragmentDirections.onlineAccountEmailToWebView(
-                    getString(R.string.crowdnode_signup),
-                    linkUrl,
-                    true
-                ))
+        viewModel.onlineAccountRequest.observe(viewLifecycleOwner) { args ->
+            safeNavigate(OnlineAccountEmailFragmentDirections.onlineAccountEmailToSignUp(
+                args[CrowdNodeViewModel.URL_ARG]!!,
+                args[CrowdNodeViewModel.EMAIL_ARG] ?: ""
+            ))
+        }
+    }
+
+    private fun continueCreating(email: String) {
+        dismissKeyboard()
+
+        lifecycleScope.launch {
+            AdaptiveDialog.withProgress(
+                getString(R.string.please_wait_title),
+                requireActivity()
+            ) {
+                viewModel.signAndSendEmail(email)
+            }
         }
     }
 

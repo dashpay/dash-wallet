@@ -17,6 +17,26 @@
 
 package org.dash.wallet.integrations.crowdnode.model
 
-class SendMessageResult {
+import com.google.gson.annotations.SerializedName
+
+class SendMessageResult(
+    @SerializedName("Id")
+    val id : Int,
+    @SerializedName("Address")
+    val address : String,
+    @SerializedName("Message")
+    val message : String,
+    @SerializedName("Signature")
+    val signature : String,
+    @SerializedName("MessageStatus")
+    val messageStatus : String,
+    @SerializedName("MessageType")
+    val messageType : String,
+    @SerializedName("ReceivedTime")
+    val receivedTime : String,
+    @SerializedName("UpdatedOn")
+    val updatedOn : String,
+    @SerializedName("Comment")
+    val comment : String?,
 //    {"Id":16,"Address":"yMYfym6MuwtCTWupChn3zXPCLnna5wWgUk","Message":"synmcj@gmail.com","Signature":"IP8tiWzom6PQvXB7qgWxBJIEMx+yAIkb3JyyZzz+DetOKqdKMcCVNsxYQ3vUg6z2FPIQ/C8yYGqt0J5e8TcY3YE=","MessageStatus":"Received","MessageType":"RegisterEmail","ReceivedTime":"2022-05-24T15:46:15.6711435Z","UpdatedOn":"2022-05-24T15:46:15.6711437Z","Comment":null}
-}
+)

@@ -20,7 +20,6 @@ package org.dash.wallet.integrations.crowdnode.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
-import android.util.Log
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -57,9 +56,14 @@ class CrowdNodeViewModel @Inject constructor(
     private val securityFunctions: ISecurityFunctions,
     exchangeRatesProvider: ExchangeRatesProvider
 ) : ViewModel() {
+    companion object {
+        const val URL_ARG = "url"
+        const val EMAIL_ARG = "email"
+    }
+
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
     val networkError = SingleLiveEvent<Unit>()
-    val linkAccountRequest = SingleLiveEvent<String>()
+    val onlineAccountRequest = SingleLiveEvent<Map<String, String>>()
 
     private val _accountAddress = MutableLiveData<Address>()
     val accountAddress: LiveData<Address>
@@ -176,7 +180,9 @@ class CrowdNodeViewModel @Inject constructor(
         val address = _accountAddress.value!!
         val apiLinkUrl = CrowdNodeConstants.getApiLinkUrl(address)
         crowdNodeApi.trackLinkingAccount(address)
-        linkAccountRequest.postValue(apiLinkUrl)
+        onlineAccountRequest.postValue(mapOf(
+            URL_ARG to apiLinkUrl
+        ))
     }
 
     fun cancelLinkingOnlineAccount() {
@@ -284,14 +290,14 @@ class CrowdNodeViewModel @Inject constructor(
         return crowdNodeApi.apiError.asLiveData()
     }
 
-    fun signAndSendEmail(email: String) {
-        viewModelScope.launch {
-            val signed = securityFunctions.signMessage(accountAddress.value!!, email)
-            Log.i("CROWDNODE", "signed: $signed")
-            crowdNodeApi.sendSignedEmailMessage(accountAddress.value!!, email, signed)
-            val apiLinkUrl = CrowdNodeConstants.getProfileUrl(networkParameters)
-            linkAccountRequest.postValue(apiLinkUrl)
-        }
+    suspend fun signAndSendEmail(email: String) {
+        val signed = securityFunctions.signMessage(accountAddress.value!!, email)
+        crowdNodeApi.sendSignedEmailMessage(accountAddress.value!!, email, signed)
+        val signupUrl = CrowdNodeConstants.getProfileUrl(networkParameters)
+        onlineAccountRequest.postValue(mapOf(
+            URL_ARG to signupUrl,
+            EMAIL_ARG to email
+        ))
     }
 
     private fun getOrCreateAccountAddress(): Address {

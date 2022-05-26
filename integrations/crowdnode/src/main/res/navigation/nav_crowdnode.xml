@@ -67,7 +67,7 @@
 
     <fragment
         android:id="@+id/crowdNodeWebViewFragment"
-        android:name="org.dash.wallet.integrations.crowdnode.ui.WebViewFragment"
+        android:name="org.dash.wallet.common.ui.WebViewFragment"
         android:label="WebViewFragment">
 
         <argument android:name="title" app:argType="string" />
@@ -76,6 +76,24 @@
 
         <action
             android:id="@+id/webView_to_portal"
+            app:destination="@id/crowdNodePortalFragment"
+            app:popUpTo="@id/nav_crowdnode"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/onlineSignUpFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.online.OnlineSignUpFragment"
+        android:label="OnlineSignUpFragment">
+
+        <argument android:name="url" app:argType="string" />
+        <argument android:name="email" app:argType="string" />
+
+        <action
+            android:id="@+id/onlineSignUp_to_portal"
             app:destination="@id/crowdNodePortalFragment"
             app:popUpTo="@id/nav_crowdnode"
             app:popUpToInclusive="true"
@@ -130,7 +148,7 @@
 
     <fragment
         android:id="@+id/onlineAccountInfo"
-        android:name="org.dash.wallet.integrations.crowdnode.ui.portal.OnlineAccountInfoFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.online.OnlineAccountInfoFragment"
         android:label="OnlineAccountInfoFragment">
 
         <action
@@ -156,12 +174,12 @@
 
     <fragment
         android:id="@+id/onlineAccountEmail"
-        android:name="org.dash.wallet.integrations.crowdnode.ui.portal.OnlineAccountEmailFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.online.OnlineAccountEmailFragment"
         android:label="OnlineAccountEmailFragment">
 
         <action
-            android:id="@+id/onlineAccountEmail_to_webView"
-            app:destination="@id/crowdNodeWebViewFragment"
+            android:id="@+id/onlineAccountEmail_to_signUp"
+            app:destination="@id/onlineSignUpFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />

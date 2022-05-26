@@ -121,11 +121,11 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
             }
         }
 
-        viewModel.linkAccountRequest.observe(viewLifecycleOwner) { linkUrl ->
+        viewModel.onlineAccountRequest.observe(viewLifecycleOwner) { args ->
             safeNavigate(
                 NewAccountFragmentDirections.newAccountToWebView(
                     getString(R.string.crowdnode_login),
-                    linkUrl,
+                    args[CrowdNodeViewModel.URL_ARG]!!,
                     true
                 ))
         }
