@@ -21,24 +21,19 @@ import android.os.Bundle
 import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
-import androidx.lifecycle.Observer
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
+import de.schildbach.wallet.ui.explore.ExploreActivity
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import org.dash.wallet.common.Constants.REQUEST_CODE_BUY_SELL
 import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
-import org.dash.wallet.common.UserInteractionAwareCallback
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
 
 class MoreActivity : GlobalFooterActivity() {
-
-    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,10 +69,12 @@ class MoreActivity : GlobalFooterActivity() {
             startActivity(Intent(this, ToolsActivity::class.java))
         }
         contact_support.setOnClickListener {
-            val dialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
-                    WalletApplication.getInstance()).show()
-            dialog.window!!.callback = UserInteractionAwareCallback(dialog.window!!.callback, this)
-
+            alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
+                    WalletApplication.getInstance()).buildAlertDialog()
+            alertDialog.show()
+        }
+        explore.setOnClickListener {
+            startActivity(Intent(this, ExploreActivity::class.java))
         }
     }
 

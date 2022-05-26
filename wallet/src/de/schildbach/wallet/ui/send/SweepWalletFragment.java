@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui.send;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -31,8 +30,6 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
@@ -61,8 +58,8 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.common.ui.CurrencyTextView;
-import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.common.ui.FancyAlertDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,25 +76,27 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.DynamicFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.rates.ExchangeRate;
-import de.schildbach.wallet.rates.ExchangeRatesViewModel;
+
+import org.dash.wallet.common.ui.BaseLockScreenFragment;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.TransactionResultActivity;
+import de.schildbach.wallet.ui.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 import static com.google.common.base.Preconditions.checkState;
+import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
 
 /**
  * @author Andreas Schildbach
  */
-public class SweepWalletFragment extends Fragment {
+public class SweepWalletFragment extends BaseLockScreenFragment {
     private SweepWalletActivity activity;
     private WalletApplication application;
     private Configuration config;
     private LoaderManager loaderManager;
-    private FragmentManager fragmentManager;
 
     private final Handler handler = new Handler();
     private HandlerThread backgroundThread;
@@ -159,14 +158,12 @@ public class SweepWalletFragment extends Fragment {
         this.application = (WalletApplication) activity.getApplication();
         this.config = application.getConfiguration();
         this.loaderManager = getLoaderManager();
-        this.fragmentManager = getFragmentManager();
     }
 
     @Override
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setRetainInstance(true);
         setHasOptionsMenu(true);
 
         backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
@@ -221,12 +218,12 @@ public class SweepWalletFragment extends Fragment {
 
         ExchangeRatesViewModel exchangeRatesViewModel = new ViewModelProvider(this)
                 .get(ExchangeRatesViewModel.class);
-        exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(getViewLifecycleOwner(),
-                exchangeRate -> {
-                    if (exchangeRate != null) {
-                        currentExchangeRate = exchangeRate;
-                    }
-                });
+        String code = config.getExchangeCurrencyCode();
+        exchangeRatesViewModel.getRate(code).observe(getViewLifecycleOwner(), exchangeRate -> {
+            if (exchangeRate != null) {
+                currentExchangeRate = exchangeRate;
+            }
+        });
 
         return view;
     }
@@ -304,7 +301,11 @@ public class SweepWalletFragment extends Fragment {
 
                     @Override
                     protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                        dialog(activity, null, R.string.button_scan, messageResId, messageArgs);
+                        baseAlertDialogBuilder.setTitle(getString(R.string.button_scan));
+                        baseAlertDialogBuilder.setMessage(formatString(requireActivity(), messageResId, messageArgs));
+                        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+                        alertDialog.show();
                     }
                 }.parse();
             }
@@ -455,17 +456,19 @@ public class SweepWalletFragment extends Fragment {
             public void onFail(final int messageResId, final Object... messageArgs) {
                 dismissProgress();
 
-                final DialogBuilder dialog = DialogBuilder.warn(activity,
-                        R.string.sweep_wallet_fragment_request_wallet_balance_failed_title);
-                dialog.setMessage(activity.getString(messageResId, messageArgs));
-                dialog.setPositiveButton(R.string.button_retry, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(final DialogInterface dialog, final int which) {
-                        requestWalletBalance();
-                    }
-                });
-                dialog.setNegativeButton(R.string.button_dismiss, null);
-                dialog.show();
+                baseAlertDialogBuilder.setTitle(getString(R.string.sweep_wallet_fragment_request_wallet_balance_failed_title));
+                baseAlertDialogBuilder.setMessage(getString(messageResId, messageArgs));
+                baseAlertDialogBuilder.setPositiveText(getString(R.string.button_retry));
+                baseAlertDialogBuilder.setPositiveAction(
+                        () -> {
+                            requestWalletBalance();
+                            return Unit.INSTANCE;
+                        }
+                );
+                baseAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
+                baseAlertDialogBuilder.setShowIcon(true);
+                alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+                alertDialog.show();
             }
         };
 
@@ -532,33 +535,31 @@ public class SweepWalletFragment extends Fragment {
         if (!isAdded()) {
             return;
         }
-
-        DialogBuilder dialogBuilder = new DialogBuilder(getActivity());
-        dialogBuilder.setTitle(R.string.sweep_wallet_fragment_encrypted);
-
         View contentView = LayoutInflater.from(getActivity())
                 .inflate(R.layout.sweep_wallet_decrypt_dialog, null);
         final TextView passwordText = contentView.findViewById(R.id.sweep_wallet_fragment_password);
         View badPasswordView = contentView.findViewById(R.id.sweep_wallet_fragment_bad_password);
-
         badPasswordView.setVisibility(badPassword ? View.VISIBLE : View.GONE);
 
-        dialogBuilder.setView(contentView);
-        dialogBuilder.setPositiveButton(R.string.sweep_wallet_fragment_button_decrypt, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                password = passwordText.getText().toString();
-                handleDecrypt();
-            }
-        });
-        dialogBuilder.setCancelable(false);
+        baseAlertDialogBuilder.setTitle(getString(R.string.sweep_wallet_fragment_encrypted));
+        baseAlertDialogBuilder.setView(contentView);
+        baseAlertDialogBuilder.setPositiveText(getString(R.string.sweep_wallet_fragment_button_decrypt));
+        baseAlertDialogBuilder.setPositiveAction(
+                () -> {
+                    password = passwordText.getText().toString();
+                    handleDecrypt();
+                    return Unit.INSTANCE;
+                }
+        );
+        baseAlertDialogBuilder.setCancelable(false);
 
         if (decryptDialog != null) {
             decryptDialog.cancel();
             decryptDialog = null;
         }
-
-        decryptDialog = dialogBuilder.show();
+        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+        alertDialog.show();
+        decryptDialog = alertDialog;
     }
 
     private void handleDecrypt() {
@@ -606,11 +607,12 @@ public class SweepWalletFragment extends Fragment {
             @Override
             protected void onFailure(final Exception exception) {
                 setState(State.FAILED);
-
-                final DialogBuilder dialog = DialogBuilder.warn(activity, R.string.send_coins_error_msg);
-                dialog.setMessage(exception.toString());
-                dialog.setNeutralButton(R.string.button_dismiss, null);
-                dialog.show();
+                baseAlertDialogBuilder.setTitle(getString(R.string.send_coins_error_msg));
+                baseAlertDialogBuilder.setMessage(exception.toString());
+                baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                baseAlertDialogBuilder.setShowIcon(true);
+                alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+                alertDialog.show();
             }
 
             @Override
@@ -619,11 +621,12 @@ public class SweepWalletFragment extends Fragment {
             }
 
             private void showInsufficientMoneyDialog() {
-                final DialogBuilder dialog = DialogBuilder.warn(activity,
-                        R.string.sweep_wallet_fragment_insufficient_money_title);
-                dialog.setMessage(R.string.sweep_wallet_fragment_insufficient_money_msg);
-                dialog.setNeutralButton(R.string.button_dismiss, null);
-                dialog.show();
+                baseAlertDialogBuilder.setTitle(getString(R.string.sweep_wallet_fragment_insufficient_money_title));
+                baseAlertDialogBuilder.setMessage(getString(R.string.sweep_wallet_fragment_insufficient_money_msg));
+                baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                baseAlertDialogBuilder.setShowIcon(true);
+                alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+                alertDialog.show();
             }
         }.sendCoinsOffline(sendRequest); // send asynchronously
     }

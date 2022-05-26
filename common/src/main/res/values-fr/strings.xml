@@ -29,5 +29,14 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Ignorer</string>
     <string name="network_unavailable_return">Retourner au portefeuille</string>
+    <string name="button_continue">Continuer</string>
+    <string name="button_understand">Je comprends</string>
+    <string name="button_okay">OK</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Chercher</string>
+    <string name="permission_allow">Autoriser</string>
+    <string name="permission_deny">Refuser</string>
+    <string name="max">Maximum</string>
+    <string name="select_currency">Choisir la monnaie</string>
 </resources>

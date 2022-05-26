@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold</string>
+    <string name="uphold_buy_dash_activity_title">Bumili/Magbenta sa Uphold</string>
+    <string name="uphold_buy_dash_with_uphold">Bumili ng Dash sa Uphold na account</string>
+    <string name="uphold_buy_dash_button">Bumili ng Dash</string>
+    <string name="uphold_transfer_to_this_wallet_button">Ilipat mula sa Uphold</string>
+    <string name="uphold_link_account">I-liink ang Uphold Account</string>
+    <string name="uphold_account_dash_balance">Ang balanse ng iyong Uphold account Dash ay</string>
+    <string name="uphold_transfer_to_this_wallet">Ilipat ang Dash mula sa iyong Uphold account patungong pitaka</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">Ang bayad ay ibabawas mula sa hiniling na halaga.</string>
+    <string name="uphold_withdrawal_instructions">Ilagay ang halaga na ipamamahagi</string>
+    <string name="uphold_withdrawal_success_title">Tagumpay</string>
+    <string name="uphold_withdrawal_success_message">Ang iyong transaksyon ay naipadala na at ang halaga ay dapat lumabas na sa iyong pitaka sa loob ng ilang minuto\n\nTransaksyon id: %s</string>
+    <string name="uphold_otp_dialog_title">Ilagay ang iyong 2FA code sa ibaba</string>
+    <string name="uphold_transfer">Ipadala</string>
+    <string name="uphold_see_on_uphold">Tingnan sa Uphold</string>
+    <string name="uphold_logout_title">Mag-log out mula sa Uphold</string>
+    <string name="uphold_logout">Mag-log out</string>
+    <string name="uphold_logout_explanation_text">Kailangan mo ring mag-log out mula sa Uphold website gamit ang iyong browser.</string>
+    <string name="uphold_go_to_website">Pumunta sa Website</string>
+    <string name="uphold_error">Uphold Error</string>
+    <string name="uphold_error_not_logged_in">Ang iyong dash wallet ay hindi na konektado sa iyong Uphold account.  Sa susunod na screen pindutin ang Link Uphold account</string>
+    <string name="uphold_error_not_available">Ang serbisyo ng uphold ay hindi maaring gamitin. Subukan ulit mamaya.</string>
+    <string name="uphold_error_report_issue">Paki-report ang isyu ng Dash Wallet support team gamit ang "Isumbong Isyu" mula sa pangunahing menu. </string>
+
+    <string name="uphold_general_error_title">Mali</string>
+    <string name="uphold_api_error_title">Uphold Error</string>
+    <string name="uphold_api_error_identity">Ang iyong Uphold account ay hinda pa napapatunayan. Ang mga pondo ay hindi maaaring bawiin</string>
+    <string name="uphold_api_error_400_description">Ang mga pondo sa Uphold ay naka-lock sa loob ng 24 na oras.\n\nMagkakaroon ka ng sapat na mga pondo para sa paglipat na ito ng %s.</string>
+    <string name="uphold_api_error_400_locked">Ang mga pondo sa uphold (%1$s %2$s) ay naka-lock sa loob ng 65 na araw.\n\nMagkakaroon ka ng sapat na pondo para sa paglipat na ito ng %3$s.</string>
+    <string name="uphold_api_error_400_tx_insufficentfunds">Wala kang sapat na pondo para sa paglipat na ito</string>
+    <string name="uphold_api_error_400_tx_validation">Hindi mailipat ang ganyang halaga sa app na ito (max $ 3000)</string>
+    <string name="uphold_api_error_400_password_reset">Ang mga pondo sa Uphold ay naka-lock dahil sa kamakailang pagbabago ng password.\n\nDapat kang maghintay hanggang sa %s bago ka makapaglipat ng mga pondo.</string>
+    <string name="uphold_api_error_400_authentication_change">Ang mga pondo sa Uphold ay naka-lock dahil sa kamakailang pagbabago ng pamamaraan ng pagpapatotoo.\n\nDapat kang maghintay hanggang sa %s bago ka makapaglipat ng mga pondo.</string>
+
+    <string name="uphold_api_error_400_invalid_beneficiary">Hindi mailipat ang ganyang halaga sa app na ito (max $3000)\n\nMangyaring gamitin ang iyong Uphold account upang magawa ang paglipat.</string>
+    <string name="uphold_api_error_400_required">Hindi mailipat ang ganyang halaga sa app na ito (max $3000)\n\nMangyaring gamitin ang iyong Uphold account upang magawa ang paglipat.</string>
+
+    </resources>

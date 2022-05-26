@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold</string>
+    <string name="uphold_buy_dash_activity_title">Acheter/vendre Dash avec Uphold</string>
+    <string name="uphold_buy_dash_with_uphold">Acheter Dash avec un compte Uphold</string>
+    <string name="uphold_buy_dash_button">Acheter Dash</string>
+    <string name="uphold_transfer_to_this_wallet_button">Transférer depuis Uphold</string>
+    <string name="uphold_link_account">Lier un compte Uphold</string>
+    <string name="uphold_account_dash_balance">Le solde Dash de votre compte Uphold est</string>
+    <string name="uphold_transfer_to_this_wallet">Transférer Dash depuis votre compte Uphold vers ce portefeuille</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">Les frais seront déduits du montant demandé.</string>
+    <string name="uphold_withdrawal_instructions">Saisissez le montant à transférer</string>
+    <string name="uphold_withdrawal_success_title">Succès</string>
+    <string name="uphold_withdrawal_success_message">Votre transaction a été envoyée et le montant devrait apparaître dans votre portefeuille sous quelques minutes.\n\nIdentifiant de transaction : %s</string>
+    <string name="uphold_otp_dialog_title">Tapez ci-dessous votre code 2FA</string>
+    <string name="uphold_transfer">Transférer</string>
+    <string name="uphold_see_on_uphold">Voir sur Uphold</string>
+    <string name="uphold_logout_title">Se déconnecter d\'Uphold</string>
+    <string name="uphold_logout">Se déconnecter</string>
+    <string name="uphold_logout_explanation_text">Vous devrez également vous déconnecter du site Uphold dans votre navigateur web.</string>
+    <string name="uphold_go_to_website">Aller sur le site web</string>
+    <string name="uphold_error">Erreur Uphold</string>
+    <string name="uphold_error_not_logged_in">Dash Wallet n\'est plus lié à votre compte Uphold. Sur l\'écran suivant, touchez "Lier un compte Uphold".</string>
+    <string name="uphold_error_not_available">Le service Uphold n\'est pas disponible. Veuillez réessayer plus tard.</string>
+    <string name="uphold_error_report_issue">Veuillez signaler ce problème à l\'équipe Dash Wallet en choisissant "Signaler un problème" dans le menu principal.</string>
+
+    <string name="uphold_general_error_title">Erreur</string>
+    <string name="uphold_api_error_title">Erreur Uphold</string>
+    <string name="uphold_api_error_identity">Votre compte Uphold n\'est pas encore vérifié. Les fonds ne peuvent pas être retirés.</string>
+    <string name="uphold_api_error_403_description">Votre compte Uphold a été marqué pour inspection.\n\nUphold a limité temporairement votre compte et vous ne pourrez pas retirer des fonds.\n\n%s</string>
+    <string name="uphold_api_error_403_generic">Uphold va vous contacter pour vous aider à résoudre rapidement ce problème.</string>
+    <string name="uphold_api_error_403_due_diligence">Veuillez vous rendre sur votre compte Uphold pour répondre à quelques questions.</string>
+    <string name="uphold_api_error_403_identity">Veuillez vous rendre sur votre compte Uphold pour vérifier votre identité.</string>
+    <string name="uphold_api_error_403_proof_of_address">Veuillez contacter Uphold pour mettre à jour votre preuve d\'adresse.</string>
+
+    <string name="uphold_api_error_400_description">Vos fonds Uphold sont bloqués pendant 24 heures.\n\nVous aurez des fonds suffisants pour ce transfert d\'ici %s.</string>
+    <string name="uphold_api_error_400_locked">Les fonds Uphold (%1$s %2$s) sont verrouillés jusqu\'à 65 jours.\n\nVous aurez des fonds suffisants pour ce transfert par %3$s.</string>
+    <string name="uphold_api_error_400_tx_insufficentfunds">Vous n\'avez pas assez de fonds pour ce transfert</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">Le montant à transférer doit être inférieur %s dashs.</string>
+    <string name="uphold_api_error_400_greater_than_or_equal_to">Le montant à transférer doit être supérieur à %s dashs.</string>
+    <string name="uphold_api_error_400_tx_validation">Impossible de transférer autant avec cette application (max. 3000 $)</string>
+    <string name="uphold_api_error_400_password_reset">Les fonds Uphold sont verrouillés suite à un changement récent de mot de passe.\n\nVous devez attendre jusqu\'à %s avant de pouvoir transférer vos fonds.</string>
+    <string name="uphold_api_error_400_authentication_change">Les fonds Uphold sont verrouillés suite à un changement récent de méthode d\'authentification.\n\nVous devez attendre jusqu\'à %s avant de pouvoir transférer vos fonds.</string>
+
+    <string name="uphold_api_error_400_invalid_beneficiary">Impossible de transférer autant avec cette application (max. 3000 $)\n\nVeuillez utiliser votre compte Uphold pour faire ce transfert.</string>
+    <string name="uphold_api_error_400_required">Impossible de transférer autant avec cette application (max. 3000 $)\n\nVeuillez utiliser votre compte Uphold pour faire ce transfert.</string>
+
+    <string name="uphold_requirement_not_met_base_message">Impossible d\'accomplir cette opération actuellement. %s</string>
+</resources>

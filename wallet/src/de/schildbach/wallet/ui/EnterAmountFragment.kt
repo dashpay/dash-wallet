@@ -24,9 +24,8 @@ import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
-import de.schildbach.wallet.ui.widget.NumericKeyboardView
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.enter_amount_fragment.*
 import org.bitcoinj.core.Coin
@@ -36,15 +35,15 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.util.GenericUtils
-import de.schildbach.wallet.ui.ExchangeRatesFragment.ARG_SHOW_AS_DIALOG
-import de.schildbach.wallet.rates.ExchangeRate
 import java.util.*
 import android.content.Intent
 import android.app.Activity
-import android.content.Context
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.ExchangeRatesFragment.BUNDLE_EXCHANGE_RATE
+import de.schildbach.wallet.ui.rates.ExchangeRatesActivity
+import de.schildbach.wallet.ui.rates.ExchangeRatesFragment.*
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.Constants
+import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.util.FiatAmountFormat
 
 
@@ -106,7 +105,7 @@ class EnterAmountFragment : Fragment() {
             analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX, bundleOf())
             sharedViewModel.maxButtonClickEvent.call(true)
         }
-        numeric_keyboard.enableDecSeparator(true);
+        numeric_keyboard.isDecSeparatorEnabled = true
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             var value = StringBuilder()
@@ -178,12 +177,16 @@ class EnterAmountFragment : Fragment() {
         input_select_currency_toggle.setOnClickListener {
             val intent = Intent(activity, ExchangeRatesActivity::class.java)
             intent.putExtra(ARG_SHOW_AS_DIALOG, true)
+            val currencyCode = sharedViewModel.exchangeRate?.fiat?.currencyCode ?: configuration.exchangeCurrencyCode
+            intent.putExtra(ARG_CURRENCY_CODE, currencyCode)
             startActivityForResult(intent, RC_FIAT_CURRENCY_SELECTED)
         }
 
         calc_select_currency_toggle.setOnClickListener {
             val intent = Intent(activity, ExchangeRatesActivity::class.java)
             intent.putExtra(ARG_SHOW_AS_DIALOG, true)
+            val currencyCode = sharedViewModel.exchangeRate?.fiat?.currencyCode ?: configuration.exchangeCurrencyCode
+            intent.putExtra(ARG_CURRENCY_CODE, currencyCode)
             startActivityForResult(intent, RC_FIAT_CURRENCY_SELECTED)
         }
     }

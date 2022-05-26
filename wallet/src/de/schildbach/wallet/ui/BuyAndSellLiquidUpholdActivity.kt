@@ -28,12 +28,13 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.dialog.CurrencyDialog
-import de.schildbach.wallet.rates.ExchangeRatesViewModel
+import de.schildbach.wallet.ui.rates.ExchangeRatesViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_buy_and_sell_liquid_uphold.*
 import org.bitcoinj.core.Coin
@@ -59,23 +60,23 @@ import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
 import org.dash.wallet.integration.liquid.ui.LiquidSplashActivity
 import org.dash.wallet.integration.liquid.ui.LiquidViewModel
 import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
-import org.dash.wallet.integration.uphold.data.UpholdClient
+import org.dash.wallet.integration.uphold.api.UpholdClient
 import org.dash.wallet.integration.uphold.data.UpholdConstants
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.json.JSONObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.math.BigDecimal
 
 class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     private var liquidClient: LiquidClient? = null
     private var loadingDialog: ProgressDialog? = null
+    private var bottomSheetDialog: BottomSheetDialog? = null
     private lateinit var application: WalletApplication
     private lateinit var config: Configuration
     private var upholdCurrencyArrayList = ArrayList<UpholdCurrencyResponse>()
     private val liquidCurrencyArrayList = ArrayList<PayloadItem>()
-    private var currentExchangeRate: de.schildbach.wallet.rates.ExchangeRate? = null
+    private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
 
     private var selectedFilterCurrencyItems: PayloadItem? = null
 
@@ -127,7 +128,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         updateBalances()
 
         liquid_container.setOnClickListener {
-            analytics.logEvent(if (UpholdClient.getInstance().isAuthenticated) {
+            analytics.logEvent(if (LiquidClient.getInstance()?.isAuthenticated == true) {
                 AnalyticsConstants.Liquid.ENTER_CONNECTED
             } else {
                 AnalyticsConstants.Liquid.ENTER_DISCONNECTED
@@ -140,6 +141,12 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         }
 
         uphold_container.setOnClickListener {
+            analytics.logEvent(if (UpholdClient.getInstance().isAuthenticated) {
+                AnalyticsConstants.Uphold.ENTER_CONNECTED
+            } else {
+                AnalyticsConstants.Uphold.ENTER_DISCONNECTED
+            }, bundleOf())
+
             startActivity(UpholdAccountActivity.createIntent(this))
         }
 
@@ -525,7 +532,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
      */
 
     private fun showCurrenciesDialog() {
-        CurrencyDialog(
+        bottomSheetDialog = CurrencyDialog(
             this,
             liquidCurrencyArrayList,
             upholdCurrencyArrayList,
@@ -542,6 +549,13 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                     setSelectedCurrency()
                 }
             })
+        bottomSheetDialog?.show()
+    }
+
+    override fun onLockScreenActivated() {
+        super.onLockScreenActivated()
+        // TODO: replace with BottomSheetDialogFragment to dismiss automatically
+        bottomSheetDialog?.dismiss()
     }
 
     /**

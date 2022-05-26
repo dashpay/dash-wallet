@@ -15,7 +15,6 @@
     <string name="set_pin_decrypting">Giải mã ví</string>
     <string name="set_pin_verifying_pin">Đang kiểm tra mã PIN</string>
     <string name="set_pin_message">Mã PIN này sẽ được hỏi để mở ứng dụng của bạn mỗi khi bạn sử dụng nó.</string>
-
     <string name="home_available_balance">Số dư hiện có</string>
     <string name="home_balance_hidden">Số dư ẩn</string>
     <string name="home_balance_show_hint">Bấm để hiện số dư</string>
@@ -61,7 +60,6 @@
     <string name="scan_to_pay_error_dialog_title">Quét để gửi</string>
     <string name="scan_to_pay_error_dialog_message">Không phải một địa chỉ Dash hoặc URL yêu cầu trong bộ nhớ đệm:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Không phải một địa chỉ Dash hoặc URL yêu cầu trong bộ nhớ đệm.</string>
-
     <string name="receive_title">Nhận</string>
     <string name="receive_enter_amount_message">Hãy xác định rõ số lượng cần nhận</string>
     <string name="receive_enter_amount_button">Hãy cung cấp số lượng</string>
@@ -142,7 +140,6 @@
     <string name="wallet_lock_try_again">Thử lại trong %1$d%2$s</string>
     <string name="wallet_lock_reset">Thiết đặt lại</string>
     <string name="wallet_lock_wrong_pin">Sai mã PIN! %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="other">%dlần còn có thể thử lại</item>
     </plurals>
@@ -173,7 +170,7 @@
     <string name="notification_transactions_channel_description">Nhận thông báo khi nhận được giao dịch.</string>
     <string name="notification_synchronization_channel_name">Đồng bộ</string>
     <string name="notification_synchronization_channel_description">Hiển thị thông báo khi app đang đồng bộ với mạng lưới.</string>
-
+    <string name="notification_settings_title">Các thông báo</string>
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Sử dụng vân tay để mở khoá.</string>
@@ -243,19 +240,17 @@
     <string name="menu_rescan_blockchain">Quét lại blockchain</string>
     <string name="menu_contact_support_title">Liên hệ hỗ trợ</string>
     <string name="menu_contact_support_subtitle">Báo cáo về lỗi</string>
-
     <string name="tools_address_book">Sổ địa chỉ</string>
     <string name="tools_import_private_key">Nhập khoá riêng</string>
     <string name="tools_network_monitor">Giám sát mạng</string>
+    <string name="tools_show_xpub">Mã công khai mở rộng</string>
 
     <string name="about_help_us_improve">Hãy giúp chúng tôi cải thiện trải nghiệm cho bạn</string>
     <string name="about_review_and_rate">Viết nhận xét &amp; đánh giá cho ứng dụng</string>
     <string name="about_contact_support">Liên hệ hỗ trợ</string>
     <string name="about_fork_disclaimer">Đây là một ứng dụng mã nguồn mở được xây dựng dựa trên ví Bitcoin</string>
-    <string name="about_copyright">Bản quyền © 2020 Dash Core</string>
     <string name="about_license">Giấy phép GNU General Public v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-
     <string name="block">Khối</string>
     <string name="time">Thời gian</string>
     <string name="hash">Băm</string>

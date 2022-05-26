@@ -21,43 +21,56 @@ import java.io.IOException;
 import java.util.Locale;
 
 import org.bitcoinj.crypto.DeterministicKey;
+import org.dash.wallet.common.services.LockScreenBroadcaster;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import org.dash.wallet.common.ui.DialogBuilder;
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 import android.app.Activity;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 
-import android.preference.Preference;
-import android.preference.PreferenceFragment;
-import android.preference.PreferenceScreen;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceFragmentCompat;
+
+import javax.inject.Inject;
+
+
 /**
  * @author Andreas Schildbach
+ * Extending from PreferenceFragment doesn't allow us to get the lifecycleowner
  */
-public final class DiagnosticsFragment extends PreferenceFragment {
+@AndroidEntryPoint
+public final class DiagnosticsFragment extends PreferenceFragmentCompat {
 	private Activity activity;
 	private WalletApplication application;
-
+	private AlertDialog alertDialog;
 	private static final String PREFS_KEY_REPORT_ISSUE = "report_issue";
 	private static final String PREFS_KEY_INITIATE_RESET = "initiate_reset";
 	private static final String PREFS_KEY_EXTENDED_PUBLIC_KEY = "extended_public_key";
 
 	private static final Logger log = LoggerFactory.getLogger(DiagnosticsFragment.class);
+
+	@Inject
+	LockScreenBroadcaster lockScreenBroadcaster;
 
 	@Override
     public void onAttach(final Activity activity) {
@@ -68,14 +81,22 @@ public final class DiagnosticsFragment extends PreferenceFragment {
 	}
 
 	@Override
-	public void onCreate(final Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-
-		addPreferencesFromResource(R.xml.preference_diagnostics);
+	public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+		setPreferencesFromResource(R.xml.preference_diagnostics, rootKey);
 	}
 
 	@Override
-	public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
+	public void onViewCreated(@NonNull @NotNull View view, @Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
+		super.onViewCreated(view, savedInstanceState);
+		lockScreenBroadcaster.getActivatingLockScreen().observe(getViewLifecycleOwner(), unused -> {
+			if (alertDialog != null) {
+				alertDialog.dismiss();
+			}
+		});
+	}
+
+	@Override
+	public boolean onPreferenceTreeClick(Preference preference) {
 		final String key = preference.getKey();
 
 		if (PREFS_KEY_REPORT_ISSUE.equals(key)) {
@@ -131,23 +152,25 @@ public final class DiagnosticsFragment extends PreferenceFragment {
 				return application.getWallet().toString(false, true, true, null);
 			}
 		};
-		dialog.show();
+		alertDialog = dialog.buildAlertDialog();
+		alertDialog.show();
 	}
     private void handleInitiateReset() {
-		final DialogBuilder dialog = new DialogBuilder(activity);
-		dialog.setTitle(R.string.preferences_initiate_reset_title);
-		dialog.setMessage(R.string.preferences_initiate_reset_dialog_message);
-        dialog.setPositiveButton(R.string.preferences_initiate_reset_dialog_positive, new OnClickListener() {
-			@Override
-            public void onClick(final DialogInterface dialog, final int which) {
-				log.info("manually initiated blockchain reset");
-
-				application.resetBlockchain();
-				activity.finish(); // TODO doesn't fully finish prefs on single pane layouts
-			}
-		});
-		dialog.setNegativeButton(R.string.button_dismiss, null);
-		dialog.show();
+		BaseAlertDialogBuilder baseAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
+		baseAlertDialogBuilder.setTitle(getString(R.string.preferences_initiate_reset_title));
+		baseAlertDialogBuilder.setMessage(getString(R.string.preferences_initiate_reset_dialog_message));
+		baseAlertDialogBuilder.setPositiveText(getString(R.string.preferences_initiate_reset_dialog_positive));
+		baseAlertDialogBuilder.setPositiveAction(
+				() -> {
+					log.info("manually initiated blockchain reset");
+					application.resetBlockchain();
+					activity.finish(); // TODO doesn't fully finish prefs on single pane layouts
+					return Unit.INSTANCE;
+				}
+		);
+		baseAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
+		alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+		alertDialog.show();
 	}
 
     private void handleExtendedPublicKey() {
@@ -164,22 +187,26 @@ public final class DiagnosticsFragment extends PreferenceFragment {
 		bitmap.setFilterBitmap(false);
 		final ImageView imageView = (ImageView) view.findViewById(R.id.extended_public_key_dialog_image);
 		imageView.setImageDrawable(bitmap);
+		BaseAlertDialogBuilder baseAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
+		baseAlertDialogBuilder.setView(view);
+		baseAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
+		baseAlertDialogBuilder.setPositiveText(getString(R.string.button_share));
+		baseAlertDialogBuilder.setPositiveAction(
+				() -> {
+					createAndLaunchShareIntent(xpub);
+					return Unit.INSTANCE;
+				}
+		);
+		alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+		alertDialog.show();
+	}
 
-		final DialogBuilder dialog = new DialogBuilder(activity);
-		dialog.setView(view);
-		dialog.setNegativeButton(R.string.button_dismiss, null);
-		dialog.setPositiveButton(R.string.button_share, new OnClickListener() {
-			@Override
-			public void onClick(final DialogInterface dialog, final int which) {
-				final Intent intent = new Intent(Intent.ACTION_SEND);
-				intent.setType("text/plain");
-				intent.putExtra(Intent.EXTRA_TEXT, xpub);
-				intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.extended_public_key_fragment_title));
-				startActivity(Intent.createChooser(intent, getString(R.string.extended_public_key_fragment_share)));
-				log.info("xpub shared via intent: {}", xpub);
-			}
-		});
-
-		dialog.show();
+	private void createAndLaunchShareIntent(String xpub) {
+		final Intent intent = new Intent(Intent.ACTION_SEND);
+		intent.setType("text/plain");
+		intent.putExtra(Intent.EXTRA_TEXT, xpub);
+		intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.extended_public_key_fragment_title));
+		startActivity(Intent.createChooser(intent, getString(R.string.extended_public_key_fragment_share)));
+		log.info("xpub shared via intent: {}", xpub);
 	}
 }

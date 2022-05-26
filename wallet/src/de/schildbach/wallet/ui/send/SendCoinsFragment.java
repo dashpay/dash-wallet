@@ -35,8 +35,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.Fragment;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
@@ -53,7 +53,6 @@ import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
 import org.bitcoinj.wallet.Wallet.DustySendRequested;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.common.util.GenericUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -68,14 +67,15 @@ import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.livedata.Resource;
+import org.dash.wallet.common.ui.BaseLockScreenFragment;
 import de.schildbach.wallet.ui.CheckPinDialog;
 import de.schildbach.wallet.ui.CheckPinSharedModel;
-import de.schildbach.wallet.ui.InputParser;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
-public class SendCoinsFragment extends Fragment {
+public class SendCoinsFragment extends BaseLockScreenFragment {
 
     protected SendCoinsActivity activity;
     private Configuration config;
@@ -119,9 +119,8 @@ public class SendCoinsFragment extends Fragment {
     }
 
     @Override
-    public void onActivityCreated(@androidx.annotation.Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-
+    public void onViewCreated(@NonNull @NotNull View view, @Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
         viewModel = ViewModelProviders.of(this).get(SendCoinsViewModel.class);
         viewModel.getBasePaymentIntent().observe(getViewLifecycleOwner(), new Observer<Resource<PaymentIntent>>() {
             @Override
@@ -142,14 +141,23 @@ public class SendCoinsFragment extends Fragment {
                     }
                     case ERROR: {
                         String errorMessage = paymentIntentResource.getMessage();
-                        InputParser.dialog(activity, activityDismissListener, 0, errorMessage);
+                        baseAlertDialogBuilder.setMessage(errorMessage);
+                        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                        baseAlertDialogBuilder.setNeutralAction(
+                                () -> {
+                                    requireActivity().finish();
+                                    return Unit.INSTANCE;
+                                }
+                        );
+                        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+                        alertDialog.show();
                         break;
                     }
                 }
             }
         });
 
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, new Observer<BlockchainState>() {
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(), new Observer<BlockchainState>() {
             @Override
             public void onChanged(BlockchainState blockchainState) {
                 SendCoinsFragment.this.blockchainState = blockchainState;
@@ -374,9 +382,6 @@ public class SendCoinsFragment extends Fragment {
         final Coin pending = estimated.subtract(available);
 
         final MonetaryFormat dashFormat = config.getFormat();
-
-        final DialogBuilder dialog = DialogBuilder.warn(activity,
-                R.string.send_coins_fragment_insufficient_money_title);
         final StringBuilder msg = new StringBuilder();
         msg.append(getString(R.string.send_coins_fragment_insufficient_money_msg1, dashFormat.format(missing)));
 
@@ -385,34 +390,42 @@ public class SendCoinsFragment extends Fragment {
                     .append(getString(R.string.send_coins_fragment_pending, dashFormat.format(pending)));
         if (viewModel.getBasePaymentIntentValue().mayEditAmount())
             msg.append("\n\n").append(getString(R.string.send_coins_fragment_insufficient_money_msg2));
-        dialog.setMessage(msg);
-        if (viewModel.getBasePaymentIntentValue().mayEditAmount()) {
-            dialog.setPositiveButton(R.string.send_coins_options_empty, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(final DialogInterface dialog, final int which) {
-                    handleEmpty();
-                }
-            });
-            dialog.setNegativeButton(R.string.button_cancel, null);
+
+        baseAlertDialogBuilder.setTitle(getString(R.string.send_coins_fragment_insufficient_money_title));
+        baseAlertDialogBuilder.setMessage(msg);
+        if (viewModel.getBasePaymentIntentValue().mayEditAmount()){
+            baseAlertDialogBuilder.setPositiveText(getString(R.string.send_coins_options_empty));
+            baseAlertDialogBuilder.setPositiveAction(
+                    () -> {
+                        handleEmpty();
+                        return Unit.INSTANCE;
+                    }
+            );
+            baseAlertDialogBuilder.setNegativeText(getString(R.string.button_cancel));
         } else {
-            dialog.setNeutralButton(R.string.button_dismiss, null);
+            baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
         }
-        dialog.show();
+        baseAlertDialogBuilder.setShowIcon(true);
+        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+        alertDialog.show();
     }
 
     private void showEmptyWalletFailedDialog() {
-        final DialogBuilder dialog = DialogBuilder.warn(activity,
-                R.string.send_coins_fragment_empty_wallet_failed_title);
-        dialog.setMessage(R.string.send_coins_fragment_hint_empty_wallet_failed);
-        dialog.setNeutralButton(R.string.button_dismiss, null);
-        dialog.show();
+        baseAlertDialogBuilder.setTitle(getString(R.string.send_coins_fragment_empty_wallet_failed_title));
+        baseAlertDialogBuilder.setMessage(getString(R.string.send_coins_fragment_hint_empty_wallet_failed));
+        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+        baseAlertDialogBuilder.setShowIcon(true);
+        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+        alertDialog.show();
     }
 
     private void showFailureDialog(Exception exception) {
-        final DialogBuilder dialog = DialogBuilder.warn(activity, R.string.send_coins_error_msg);
-        dialog.setMessage(exception.toString());
-        dialog.setNeutralButton(R.string.button_dismiss, null);
-        dialog.show();
+        baseAlertDialogBuilder.setTitle(getString(R.string.send_coins_error_msg));
+        baseAlertDialogBuilder.setMessage(exception.toString());
+        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+        baseAlertDialogBuilder.setShowIcon(true);
+        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+        alertDialog.show();
     }
 
     private void showTransactionResult(Transaction transaction, Wallet wallet) {
@@ -579,9 +592,10 @@ public class SendCoinsFragment extends Fragment {
         String fiatSymbol = fiatAmount != null ? GenericUtils.currencySymbol(fiatAmount.currencyCode) : "";
         String fee = txFee.toPlainString();
 
-        DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
+        dialogFragment = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
                 fiatSymbol, fee, total, null, null, null);
-        dialog.show(Objects.requireNonNull(getFragmentManager()), "ConfirmTransactionDialog");
+
+        dialogFragment.show(getParentFragmentManager(), "ConfirmTransactionDialog");
     }
 
 

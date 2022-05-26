@@ -22,15 +22,20 @@ import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
 import org.dash.wallet.common.BuildConfig
+import javax.inject.Inject
 
 interface AnalyticsService {
     fun logEvent(event: String, params: Bundle)
     fun logError(error: Throwable, details: String? = null)
 }
 
-class FirebaseAnalyticsServiceImpl: AnalyticsService {
+class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
     private val firebaseAnalytics = Firebase.analytics
     private val crashlytics = Firebase.crashlytics
+
+    init {
+        crashlytics.setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
+    }
 
     override fun logEvent(event: String, params: Bundle) {
         if (BuildConfig.DEBUG) {

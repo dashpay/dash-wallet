@@ -3,6 +3,9 @@ package de.schildbach.wallet.rates
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.AppDatabase
+import kotlinx.coroutines.flow.Flow
+import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.Executor
@@ -12,7 +15,7 @@ import java.util.concurrent.TimeUnit
 /**
  * @author Samuel Barbosa
  */
-class ExchangeRatesRepository private constructor() {
+class ExchangeRatesRepository private constructor(): ExchangeRatesProvider {
     private val appDatabase: AppDatabase = AppDatabase.getAppDatabase()
     private val executor: Executor
     private val exchangeRatesClients: Deque<ExchangeRatesClient> = ArrayDeque()
@@ -111,6 +114,20 @@ class ExchangeRatesRepository private constructor() {
     // This will return null if not found
     fun getExchangeRate(currencyCode: String): ExchangeRate? {
         return exchangeRatesDao.getExchangeRateForCurrency(currencyCode)
+    }
+
+    override fun observeExchangeRates(): Flow<List<ExchangeRate>> {
+        if (shouldRefresh()) {
+            refreshRates()
+        }
+        return exchangeRatesDao.observeAll()
+    }
+
+    override fun observeExchangeRate(currencyCode: String): Flow<ExchangeRate> {
+        if (shouldRefresh()) {
+            refreshRates()
+        }
+        return exchangeRatesDao.observeRate(currencyCode)
     }
 
     companion object {

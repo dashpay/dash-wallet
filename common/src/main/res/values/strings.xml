@@ -32,7 +32,14 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Dismiss</string>
     <string name="network_unavailable_return">Return to Wallet</string>
+    <string name="button_continue">Continue</string>
+    <string name="button_understand">I understand</string>
+    <string name="button_okay">Okay</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>
+    <string name="permission_allow">Allow</string>
+    <string name="permission_deny">Deny</string>
+    <string name="max">Max</string>
+    <string name="select_currency">Select Currency</string>
 </resources>

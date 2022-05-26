@@ -22,13 +22,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.rates.ExchangeRate
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.ui.SingleLiveEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.data.ExchangeRate
 
 class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -82,8 +82,10 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
         val currencyCode = (application as WalletApplication).configuration.exchangeCurrencyCode
         repo = ExchangeRatesRepository.instance
         viewModelScope.launch(Dispatchers.Main) {
-            val result = withContext(Dispatchers.IO) { repo.getExchangeRate(currencyCode) }
-            result.let { _nameLiveData.value = it } // do nothing if null
+            currencyCode?.let {
+                val result = withContext(Dispatchers.IO) { repo.getExchangeRate(currencyCode) }
+                result.let { _nameLiveData.value = it } // do nothing if null
+            }
         }
     }
 

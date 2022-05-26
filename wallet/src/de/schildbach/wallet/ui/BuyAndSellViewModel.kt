@@ -21,11 +21,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.liveData
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.data.BlockchainState
-import kotlinx.coroutines.Dispatchers
 import org.dash.wallet.common.data.Resource
-import org.dash.wallet.integration.uphold.data.UpholdClient
+import org.dash.wallet.integration.uphold.api.UpholdClient
 import java.math.BigDecimal
 import kotlin.coroutines.suspendCoroutine
 

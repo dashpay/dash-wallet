@@ -43,7 +43,6 @@ import android.text.format.DateUtils;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleService;
-import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.common.base.Stopwatch;
@@ -79,6 +78,7 @@ import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.slf4j.Logger;
@@ -103,15 +103,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
-import de.schildbach.wallet.AppDatabase;
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
+import de.schildbach.wallet.rates.ExchangeRatesDao;
 import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
@@ -123,6 +126,7 @@ import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public class BlockchainServiceImpl extends LifecycleService implements BlockchainService {
 
     private WalletApplication application;
@@ -175,6 +179,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private Executor executor = Executors.newSingleThreadExecutor();
     private int syncPercentage = 0; // 0 to 100%
 
+    // Risk Analyser for Transactions that is PeerGroup Aware
+    AllowLockTimeRiskAnalysis.Analyzer riskAnalyzer;
+    DefaultRiskAnalysis.Analyzer defaultRiskAnalyzer = DefaultRiskAnalysis.FACTORY;
+
+    @Inject BlockchainStateDao blockchainStateDao;
+    @Inject ExchangeRatesDao exchangeRatesDao;
+
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
         @Override
@@ -195,8 +206,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
             if (tx.getExchangeRate() == null && ((!replaying || insideTxExchangeRateTimeThreshold) || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
                 try {
-                    final de.schildbach.wallet.rates.ExchangeRate exchangeRate = AppDatabase.getAppDatabase()
-                            .exchangeRatesDao().getRateSync(config.getExchangeCurrencyCode());
+                    final org.dash.wallet.common.data.ExchangeRate exchangeRate =
+                            exchangeRatesDao.getRateSync(config.getExchangeCurrencyCode());
                     if (exchangeRate != null) {
                         log.info("Setting exchange rate on received transaction.  Rate:  " + exchangeRate.toString() + " tx: " + tx.getHashAsString());
                         tx.setExchangeRate(new ExchangeRate(Coin.COIN, exchangeRate.getFiat()));
@@ -214,15 +225,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
             final boolean isRestoringBackup = application.getConfiguration().isRestoringBackup();
 
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    final boolean isReceived = amount.signum() > 0;
-                    final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
+            handler.post(() -> {
+                final boolean isReceived = amount.signum() > 0;
+                final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
 
-                    if (isReceived && !isReplayedTx)
-                        notifyCoinsReceived(address, amount, tx.getExchangeRate());
-                }
+                if (isReceived && !isReplayedTx)
+                    notifyCoinsReceived(address, amount, tx.getExchangeRate());
             });
             updateAppWidget();
         }
@@ -274,7 +282,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         final NotificationCompat.Builder notification = new NotificationCompat.Builder(this,
                 Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS);
-        notification.setSmallIcon(R.drawable.ic_dash_d_white_bottom);
+        notification.setSmallIcon(R.drawable.ic_dash_d_white);
         notification.setTicker(tickerMsg);
         notification.setContentTitle(msg);
         if (text.length() > 0)
@@ -325,28 +333,25 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             if (stopped.get())
                 return;
 
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    final boolean connectivityNotificationEnabled = config.getConnectivityNotificationEnabled();
+            handler.post(() -> {
+                final boolean connectivityNotificationEnabled = config.getConnectivityNotificationEnabled();
 
-                    if (!connectivityNotificationEnabled || numPeers == 0) {
-                        nm.cancel(Constants.NOTIFICATION_ID_CONNECTED);
-                    } else {
-                        final Notification.Builder notification = new Notification.Builder(BlockchainServiceImpl.this);
-                        notification.setSmallIcon(R.drawable.stat_sys_peers, numPeers > 4 ? 4 : numPeers);
-                        notification.setContentTitle(getString(R.string.app_name));
-                        notification.setContentText(getString(R.string.notification_peers_connected_msg, numPeers));
-                        notification.setContentIntent(PendingIntent.getActivity(BlockchainServiceImpl.this, 0,
-                                OnboardingActivity.createIntent(BlockchainServiceImpl.this), 0));
-                        notification.setWhen(System.currentTimeMillis());
-                        notification.setOngoing(true);
-                        nm.notify(Constants.NOTIFICATION_ID_CONNECTED, notification.getNotification());
-                    }
-
-                    // send broadcast
-                    broadcastPeerState(numPeers);
+                if (!connectivityNotificationEnabled || numPeers == 0) {
+                    nm.cancel(Constants.NOTIFICATION_ID_CONNECTED);
+                } else {
+                    final Notification.Builder notification = new Notification.Builder(BlockchainServiceImpl.this);
+                    notification.setSmallIcon(R.drawable.stat_sys_peers, numPeers > 4 ? 4 : numPeers);
+                    notification.setContentTitle(getString(R.string.app_name));
+                    notification.setContentText(getString(R.string.notification_peers_connected_msg, numPeers));
+                    notification.setContentIntent(PendingIntent.getActivity(BlockchainServiceImpl.this, 0,
+                            OnboardingActivity.createIntent(BlockchainServiceImpl.this), 0));
+                    notification.setWhen(System.currentTimeMillis());
+                    notification.setOngoing(true);
+                    nm.notify(Constants.NOTIFICATION_ID_CONNECTED, notification.getNotification());
                 }
+
+                // send broadcast
+                broadcastPeerState(numPeers);
             });
         }
     }
@@ -415,6 +420,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             super.doneDownload();
             updateBlockchainState();
             syncPercentage = 100;
+            setBlockchainDownloaded();
         }
 
         @Override
@@ -643,6 +649,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     }
                 });
 
+                // Use our custom risk analysis that allows v2 tx with absolute LockTime
+                riskAnalyzer = new AllowLockTimeRiskAnalysis.Analyzer(peerGroup);
+                wallet.setRiskAnalyzer(riskAnalyzer);
+
                 // start peergroup
                 peerGroup.startAsync();
                 peerGroup.startBlockChainDownload(blockchainDownloadListener);
@@ -652,6 +662,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup.removeConnectedEventListener(peerConnectivityListener);
                 peerGroup.removeWallet(wallet);
                 peerGroup.stopAsync();
+                wallet.setRiskAnalyzer(defaultRiskAnalyzer);
+                riskAnalyzer.shutdown();
                 peerGroup = null;
 
                 log.debug("releasing wakelock");
@@ -868,17 +880,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         peerDiscoveryList.add(dnsDiscovery);
         updateAppWidget();
-
-        initViewModel();
-    }
-
-    void initViewModel() {
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, new Observer<BlockchainState>() {
-            @Override
-            public void onChanged(BlockchainState blockchainState) {
-                handleBlockchainStateNotification(blockchainState);
-            }
-        });
+        blockchainStateDao.load().observe(this, this::handleBlockchainStateNotification);
     }
 
     @Override
@@ -966,6 +968,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             peerGroup.removeConnectedEventListener(peerConnectivityListener);
             peerGroup.removeWallet(application.getWallet());
             peerGroup.stop();
+            application.getWallet().setRiskAnalyzer(defaultRiskAnalyzer);
+            riskAnalyzer.shutdown();
 
             log.info("peergroup stopped");
         }
@@ -1043,50 +1047,52 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         return new NotificationCompat.Builder(this,
                 Constants.NOTIFICATION_CHANNEL_ID_ONGOING)
-                .setSmallIcon(R.drawable.ic_dash_d_white_bottom)
+                .setSmallIcon(R.drawable.ic_dash_d_white)
                 .setContentTitle(getString(R.string.app_name))
                 .setContentText(message)
                 .setContentIntent(pendingIntent).build();
     }
 
     private void updateBlockchainStateImpediments() {
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                BlockchainStateDao dao = AppDatabase.getAppDatabase().blockchainStateDao();
-                BlockchainState blockchainState = dao.loadSync();
-                if (blockchainState != null) {
-                    blockchainState.getImpediments().clear();
-                    blockchainState.getImpediments().addAll(impediments);
-                    dao.save(blockchainState);
-                }
+        executor.execute(() -> {
+            BlockchainState blockchainState = blockchainStateDao.loadSync();
+            if (blockchainState != null) {
+                blockchainState.getImpediments().clear();
+                blockchainState.getImpediments().addAll(impediments);
+                blockchainStateDao.save(blockchainState);
             }
         });
     }
 
     private void updateBlockchainState() {
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                BlockchainStateDao blockchainStateDao = AppDatabase.getAppDatabase().blockchainStateDao();
-                BlockchainState blockchainState = blockchainStateDao.loadSync();
-                if (blockchainState == null) {
-                    blockchainState = new BlockchainState();
-                }
+        executor.execute(() -> {
+            BlockchainState blockchainState = blockchainStateDao.loadSync();
+            if (blockchainState == null) {
+                blockchainState = new BlockchainState();
+            }
 
-                StoredBlock chainHead = blockChain.getChainHead();
-                StoredBlock block = application.getWallet().getContext().chainLockHandler.getBestChainLockBlock();
-                int chainLockHeight = block != null ? block.getHeight() : 0;
-                int mnListHeight = (int) application.getWallet().getContext().masternodeListManager.getListAtChainTip().getHeight();
+            StoredBlock chainHead = blockChain.getChainHead();
+            StoredBlock block = application.getWallet().getContext().chainLockHandler.getBestChainLockBlock();
+            int chainLockHeight = block != null ? block.getHeight() : 0;
+            int mnListHeight = (int) application.getWallet().getContext().masternodeListManager.getListAtChainTip().getHeight();
 
-                blockchainState.setBestChainDate(chainHead.getHeader().getTime());
-                blockchainState.setBestChainHeight(chainHead.getHeight());
-                blockchainState.setImpediments(EnumSet.copyOf(impediments));
-                blockchainState.setChainlockHeight(chainLockHeight);
-                blockchainState.setMnlistHeight(mnListHeight);
-                blockchainState.setPercentageSync(percentageSync());
+            blockchainState.setBestChainDate(chainHead.getHeader().getTime());
+            blockchainState.setBestChainHeight(chainHead.getHeight());
+            blockchainState.setImpediments(EnumSet.copyOf(impediments));
+            blockchainState.setChainlockHeight(chainLockHeight);
+            blockchainState.setMnlistHeight(mnListHeight);
+            blockchainState.setPercentageSync(percentageSync());
 
-                AppDatabase.getAppDatabase().blockchainStateDao().save(blockchainState);
+            blockchainStateDao.save(blockchainState);
+        });
+    }
+
+    public void setBlockchainDownloaded() {
+        executor.execute(() -> {
+            BlockchainState blockchainState = blockchainStateDao.loadSync();
+            if (blockchainState != null && blockchainState.getPercentageSync() != 100) {
+                blockchainState.setPercentageSync(100);
+                blockchainStateDao.save(blockchainState);
             }
         });
     }

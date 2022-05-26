@@ -24,6 +24,10 @@ import android.os.LocaleList;
 import android.text.TextUtils;
 import android.widget.Toast;
 
+import org.bitcoinj.utils.Fiat;
+import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.Constants;
+
 import java.text.NumberFormat;
 import java.util.Currency;
 import java.util.Locale;
@@ -178,5 +182,28 @@ public class GenericUtils {
     public static String formatFiatWithoutComma(String fiatValue){
         boolean fiatValueContainsCommaWithDecimal = fiatValue.contains(",") && fiatValue.contains(".");
         return fiatValueContainsCommaWithDecimal ? fiatValue.replaceAll(",", "") :  fiatValue.replaceAll(",", ".");
+    }
+
+    public static String fiatToString(Fiat fiat) {
+        MonetaryFormat format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode();
+        NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
+        Currency currency = Currency.getInstance(fiat.currencyCode);
+        numberFormat.setCurrency(currency);
+        String currencySymbol = currency.getSymbol(getDeviceLocale());
+        boolean isCurrencyFirst = numberFormat.format(1.0).startsWith(currencySymbol);
+
+        if (isCurrencyFirst) {
+            return currencySymbol + " " + format.format(fiat);
+        } else {
+            return format.format(fiat) + " " + currencySymbol;
+        }
+    }
+
+    public static boolean isCurrencyFirst(Fiat fiat) {
+        NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
+        Currency currency = Currency.getInstance(fiat.currencyCode);
+        numberFormat.setCurrency(currency);
+        String currencySymbol = currency.getSymbol(getDeviceLocale());
+       return numberFormat.format(1.0).startsWith(currencySymbol);
     }
 }

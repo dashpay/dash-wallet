@@ -1,12 +1,12 @@
-ALGEMENE BESCHRIJVING
+﻿MAIN DESCRIPTION
 
 Dash Wallet is de referentie Android portemonnee die wordt onderhouden door Dash Core Group voor Dash - Digital Cash -, een innovatief alternatief voor Bitcoin dat expliciet is ontworpen voor betalingen.
 
-Dash is een cryptomunt die probeert de fouten op te lossen waar andere cryptomunten aan lijden. Het vertrouwt op een netwerk van Masternodes voor zaken zoals optionele privacy en directe transacties, maar ook voor een financieringsmechanisme om de groei van het netwerk te bevorderen.
+Dash is een cryptomunt die probeert de fouten op te lossen waar andere cryptomunten aan lijden. Het vertrouwt op een netwerk van masternodes voor zaken zoals optionele privacy en directe transacties, maar ook voor een financieringsmechanisme om de groei van het netwerk te bevorderen.
 
 Dash Wallet geeft je intuïtief en veilig volledige controle over je digitale cash. Verstuur en ontvang Dash-betalingen direct met de veiligste mobiele portemonnee die er is.
 
-Dash Portemonnee maakt rechtstreeks verbinding met het Dash netwerk. Dit betekent dat er geen servers zijn om gehackt of offline te gaan - uw saldo is altijd veilig. Zelfs als u uw telefoon verloren bent , beschadigd of gestolen is, kunt u uw saldo gemakkelijk herstellen met uw persoonlijke herstelzin.
+Dash Portemonnee maakt rechtstreeks verbinding met het Dashnetwerk. Dit betekent dat er geen servers zijn om gehackt of offline te gaan - uw saldo is altijd veilig. Zelfs als u uw telefoon verloren bent , beschadigd of gestolen is, kunt u uw saldo gemakkelijk herstellen met uw persoonlijke herstelzin.
 
 Features:
 
@@ -17,7 +17,7 @@ Features:
 * Integraties van derden zodat gebruikers Dash kunnen kopen en verkopen
 * Met de herstelzin kunt u uw saldo herstellen wanneer u uw apparaat verloren bent of gewijzigd is
 * Flexibele instellingen om te voldoen aan een reeks aangepaste beveiligingsvoorkeuren
-* Directe Dash netwerkclient - geen centrale server om gehackt te worden of om offline te gaan
+* Directe Dash netwerkcliënt - geen centrale server om gehackt te worden of om offline te gaan
 
 Dash Wallet is open source en gratis. Transactiekosten zijn lager dan de meeste cryptomunten en er zijn geen extra gecentraliseerde kosten. Stuur binnen een paar seconden een willekeurig bedrag naar wie dan ook ter wereld. Accepteer betalingen direct en betrouwbaar voor uw bedrijf. Dit is hoe geld zou moeten zijn.
 

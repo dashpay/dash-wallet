@@ -26,6 +26,7 @@ import android.net.Uri;
 import android.text.format.DateUtils;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.common.base.Strings;
 
@@ -78,7 +79,6 @@ public class Configuration {
     private static final String PREFS_KEY_LAST_RESTORE = "last_restore";
     private static final String PREFS_KEY_LAST_ENCRYPT_KEYS = "last_encrypt_keys";
     private static final String PREFS_KEY_LAST_BLOCKCHAIN_RESET = "last_blockchain_reset";
-    private static final String PREFS_KEY_LAST_BLUETOOTH_ADDRESS = "last_bluetooth_address";
 
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     private static final String PREFS_ENABLE_FINGERPRINT = "enable_fingerprint";
@@ -92,9 +92,13 @@ public class Configuration {
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
     public static final String PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION = "is_dash_to_fiat_direction";
-    public static final String PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY = "send_payment_exchange_currency";
-    public static final String PREFS_KEY_DEFAULT_FIAT_CURRENCY_CHANGED = "fiat_currency_changed";
-    public static final String PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED = "current_fiat_currency_changed";
+    public static final String PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER = "show_notifications_explainer";
+
+    // Explore Dash
+    public static final String PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY = "has_info_screen_been_shown";
+    public static final String PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN = "has_location_dialog_been_shown";
+    public static final String PREFS_KEY_EXPLORE_DATABASE_NAME = "explore_database_name";
+
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
     public Configuration(final SharedPreferences prefs, final Resources res) {
@@ -161,6 +165,7 @@ public class Configuration {
             return new MonetaryFormat().shift(6).minDecimals(0).optionalDecimals(2);
     }
 
+    @Nullable
     public String getOwnName() {
         return Strings.emptyToNull(prefs.getString(PREFS_KEY_OWN_NAME, "").trim());
     }
@@ -181,6 +186,7 @@ public class Configuration {
         return prefs.getBoolean(PREFS_KEY_CONNECTIVITY_NOTIFICATION, false);
     }
 
+    @Nullable
     public String getTrustedPeerHost() {
         return Strings.emptyToNull(prefs.getString(PREFS_KEY_TRUSTED_PEER, "").trim());
     }
@@ -305,6 +311,7 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_DISCLAIMER, enabled).apply();
     }
 
+    @Nullable
     public String getExchangeCurrencyCode() {
         String currencyCode = prefs.getString(PREFS_KEY_EXCHANGE_CURRENCY, null);
         // previous versions of the app (prior to 7.3.3) may have stored an obsolete
@@ -315,6 +322,7 @@ public class Configuration {
     public void setExchangeCurrencyCode(final String exchangeCurrencyCode) {
         prefs.edit().putString(PREFS_KEY_EXCHANGE_CURRENCY, exchangeCurrencyCode).apply();
     }
+
     public boolean getExchangeCurrencyCodeDetected() {
         return prefs.getBoolean(PREFS_KEY_EXCHANGE_CURRENCY_DETECTED, false);
     }
@@ -483,30 +491,41 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION, isDashToFiatDirection).apply();
     }
 
-    /*
-     * If no sendPayment currency code is found, set the local currency as the default
-     */
-    public String getSendPaymentExchangeCurrencyCode() {
-        return prefs.getString(PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY, getExchangeCurrencyCode());
+    public boolean getShowNotificationsExplainer() {
+        return prefs.getBoolean(PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER, false);
     }
 
-    public void setSendPaymentExchangeCurrencyCode(final String exchangeCurrencyCode) {
-        prefs.edit().putString(PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY, exchangeCurrencyCode).apply();
+    public void setShowNotificationsExplainer(boolean needToShow) {
+        prefs.edit().putBoolean(PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER, needToShow).apply();
     }
 
-    public boolean isDefaultFiatCurrencyChanged() {
-        return prefs.getBoolean(PREFS_KEY_DEFAULT_FIAT_CURRENCY_CHANGED, false);
+
+    // Explore Dash
+
+    public boolean hasExploreDashInfoScreenBeenShown() {
+        return prefs.getBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, false);
     }
 
-    public void setDefaultFiatCurrencyChanged(boolean isChanged) {
-        prefs.edit().putBoolean(PREFS_KEY_DEFAULT_FIAT_CURRENCY_CHANGED, isChanged).apply();
+    public void setHasExploreDashInfoScreenBeenShown(boolean isShown){
+        prefs.edit().putBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, isShown).apply();
     }
 
-    public boolean isCurrentFiatCurrencyChanged() {
-        return prefs.getBoolean(PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED, false);
+    public boolean hasExploreDashLocationDialogBeenShown() {
+        return prefs.getBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, false);
     }
 
-    public void setCurrentFiatCurrencyChanged(boolean isChanged) {
-        prefs.edit().putBoolean(PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED, isChanged).apply();
+    public void setHasExploreDashLocationDialogBeenShown(boolean isShown) {
+        prefs.edit().putBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, isShown).apply();
+    }
+
+    public String setExploreDatabaseName(Long timestamp) {
+        String dbName = "explore-database-" + timestamp;
+        prefs.edit().putString(PREFS_KEY_EXPLORE_DATABASE_NAME, dbName).apply();
+        return dbName;
+    }
+
+    @NonNull
+    public String getExploreDatabaseName() {
+        return prefs.getString(PREFS_KEY_EXPLORE_DATABASE_NAME, "explore-database");
     }
 }

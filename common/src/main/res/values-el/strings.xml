@@ -29,5 +29,9 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Ματαίωση</string>
     <string name="network_unavailable_return">Επιστροφή στο Πορτοφόλι</string>
+    <string name="button_continue">Συνέχεια</string>
+    <string name="button_okay">Εντάξει</string>
 
+    <string name="max">Μέγιστο</string>
+    <string name="select_currency">Επιλέξτε Νόμισμα</string>
 </resources>

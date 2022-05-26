@@ -303,6 +303,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Dołącz zrzut portfela</string>
     <string name="report_issue_dialog_mail_intent_chooser">Wyślij zgłoszenie używając…</string>
     <string name="report_issue_dialog_mail_intent_failed">Wysyłanie raportu nie powiodło się.</string>
+    <string name="report_transaction_history_export">Eksportuj</string>
+    <string name="report_transaction_history_title">Eksportuj CSV</string>
+    <string name="report_transaction_history_not_synced_title">Eksportuj CSV</string>
+    <string name="report_transaction_history_not_synced_message">Poczekaj, aż portfel będzie w pełni zsynchronizowany przed eksportem historii transakcji.</string>
+    <string name="report_transaction_history_message">Pełna historia transakcji zostanie wyeksportowana. Płatności będą uważane za koszt, a wszystkie nadchodzące transakcje będą dochodami. Właściciel tego portfela jest odpowiedzialny za dokonywanie wszelkich korekt w wybranym systemie raportowania podatków.</string>
+    <string name="report_transaction_history_mail_intent_chooser">Wyślij historię transakcji za pomocą…</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">Wysyłanie historii transakcji nie powiodło się.</string>
+
     <string name="about_title">O programie</string>
     <string name="about_version_title">Wersja</string>
     <string name="about_copyright_title">Prawa autorskie</string>
@@ -384,4 +392,6 @@
     <string name="select_a_service">Wybierz usługę</string>
     <string name="activity_buy_and_sell_dash_filter">Filtrowanie</string>
     <string name="clear_filter">Zresetuj Filtrowanie</string>
-    </resources>
+    <string name="select_currency">Wybierz Walutę</string>
+
+</resources>

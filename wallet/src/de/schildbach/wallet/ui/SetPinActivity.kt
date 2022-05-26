@@ -28,14 +28,22 @@ import android.widget.ViewSwitcher
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.preference.PinRetryController
-import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
+import java.lang.Exception
+import java.lang.NullPointerException
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class SetPinActivity : InteractionAwareActivity() {
 
     private lateinit var walletApplication: WalletApplication
@@ -52,6 +60,9 @@ class SetPinActivity : InteractionAwareActivity() {
     private lateinit var pinRetryController: PinRetryController
     private var pinLength = WalletApplication.getInstance().configuration.pinLength
 
+    @Inject
+    lateinit var analytics: AnalyticsService
+
     val pin = arrayListOf<Int>()
     var seed = listOf<String>()
 
@@ -61,6 +72,10 @@ class SetPinActivity : InteractionAwareActivity() {
 
     private val changePin by lazy {
         intent.getBooleanExtra(CHANGE_PIN, false)
+    }
+
+    private val upgradingWallet by lazy {
+        intent.getBooleanExtra(UPGRADING_WALLET, false)
     }
 
     private enum class State {
@@ -81,15 +96,20 @@ class SetPinActivity : InteractionAwareActivity() {
         private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
         private const val EXTRA_PASSWORD = "extra_password"
         private const val CHANGE_PIN = "change_pin"
+        private const val UPGRADING_WALLET = "upgrading_wallet"
 
         @JvmOverloads
         @JvmStatic
-        fun createIntent(context: Context, titleResId: Int,
-                         changePin: Boolean = false, pin: String? = null): Intent {
+        fun createIntent(
+            context: Context, titleResId: Int,
+            changePin: Boolean = false, pin: String? = null,
+            upgradingWallet: Boolean = false
+        ): Intent {
             val intent = Intent(context, SetPinActivity::class.java)
             intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
             intent.putExtra(CHANGE_PIN, changePin)
             intent.putExtra(EXTRA_PASSWORD, pin)
+            intent.putExtra(UPGRADING_WALLET, upgradingWallet)
             return intent
         }
 
@@ -115,27 +135,32 @@ class SetPinActivity : InteractionAwareActivity() {
         pinRetryController = PinRetryController.getInstance()
 
         walletApplication = application as WalletApplication
-        if (walletApplication.wallet.isEncrypted) {
-            if (initialPin != null) {
-                if (changePin) {
-                    viewModel.oldPinCache = initialPin
-                    setState(State.SET_PIN)
-                } else {
-                    viewModel.decryptKeys(initialPin)
-                }
-            } else {
-                if (changePin) {
-                    if (pinRetryController.isLocked) {
-                        setState(State.LOCKED)
+
+        if (walletApplication.wallet == null) {
+            showErrorDialog(false, NullPointerException("wallet is null in SetPinActivity"))
+        } else {
+            if (walletApplication.wallet.isEncrypted) {
+                if (initialPin != null) {
+                    if (changePin) {
+                        viewModel.oldPinCache = initialPin
+                        setState(State.SET_PIN)
                     } else {
-                        setState(State.CHANGE_PIN)
+                        viewModel.decryptKeys(initialPin)
                     }
                 } else {
-                    setState(State.DECRYPT)
+                    if (changePin) {
+                        if (pinRetryController.isLocked) {
+                            setState(State.LOCKED)
+                        } else {
+                            setState(State.CHANGE_PIN)
+                        }
+                    } else {
+                        setState(State.DECRYPT)
+                    }
                 }
+            } else {
+                seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
             }
-        } else {
-            seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
         }
     }
 
@@ -150,7 +175,7 @@ class SetPinActivity : InteractionAwareActivity() {
         pinPreviewView.setTextColor(R.color.dash_light_gray)
         pinPreviewView.hideForgotPinAction()
 
-        numericKeyboardView.setFunctionEnabled(false)
+        numericKeyboardView.isFunctionEnabled = false
         numericKeyboardView.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {
@@ -201,7 +226,7 @@ class SetPinActivity : InteractionAwareActivity() {
                     if (changePin) {
                         viewModel.changePin()
                     } else {
-                        viewModel.savePinAndEncrypt()
+                        viewModel.savePinAndEncrypt(!upgradingWallet)
                     }
                 }, 200)
             } else {
@@ -339,10 +364,11 @@ class SetPinActivity : InteractionAwareActivity() {
                         if (state == State.DECRYPTING) {
                             setState(if (changePin) State.INVALID_PIN else State.DECRYPT)
                             if (!changePin) {
-                                android.widget.Toast.makeText(this, "Incorrect PIN", android.widget.Toast.LENGTH_LONG).show()
+                                android.widget.Toast.makeText(this, R.string.set_pin_confirm_pin_incorrect,
+                                    android.widget.Toast.LENGTH_LONG).show()
                             }
                         } else {
-                            android.widget.Toast.makeText(this, "Encrypting error", android.widget.Toast.LENGTH_LONG).show()
+                            showErrorDialog(true, it.exception)
                             setState(State.CONFIRM_PIN)
                         }
                     }
@@ -415,6 +441,38 @@ class SetPinActivity : InteractionAwareActivity() {
                 finish()
             }
         })
+    }
+
+    private fun showErrorDialog(isEncryptingError: Boolean, exception: Throwable?) {
+        if (exception != null) {
+            analytics.logError(exception, "SetPinActivity Error")
+        } else {
+            analytics.logError(Exception("SetPinActivity Error: unknown"))
+        }
+        var title = 0;
+        var message = 0;
+        if (isEncryptingError) {
+            title = R.string.wallet_encryption_error_title
+            message = R.string.wallet_encryption_error_message
+        } else {
+            title = R.string.set_pin_error_missing_wallet_title
+            message = R.string.set_pin_error_missing_wallet_message
+        }
+        val dialog = AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(title),
+            getString(message),
+            getString(R.string.button_cancel),
+            getString(R.string.button_ok)
+        )
+        dialog.isCancelable = false
+        dialog.show(this) {
+            if (it == true) {
+                alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
+                    WalletApplication.getInstance()).buildAlertDialog()
+                alertDialog.show()
+            }
+        }
     }
 
     override fun finish() {

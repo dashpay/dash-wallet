@@ -20,24 +20,29 @@ package de.schildbach.wallet.util;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileFilter;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Writer;
 import java.text.DateFormat;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.TimeZone;
 
 import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -47,6 +52,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChainGroup;
@@ -60,6 +66,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet_test.R;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -425,5 +432,90 @@ public class WalletUtils {
         if ("com.android.providers.downloads.documents".equals(host))
             return "internal storage";
         return null;
+    }
+
+    public static Date getTransactionDate(Transaction tx) {
+        Date date = tx.getUpdateTime();
+        if (tx.getConfidence() != null) {
+            Date sentAtTime = tx.getConfidence().getSentAt();
+            if (sentAtTime != null && sentAtTime.compareTo(date) < 0)
+                date = sentAtTime;
+        }
+        return date;
+    }
+
+    // This creates the TaxBit CSV format
+    public static String getTransactionHistory(Wallet wallet) {
+        Set<Transaction> txSet = wallet.getTransactions(false);
+        List<Transaction> txList = Arrays.asList(txSet.toArray(new Transaction[0]));
+
+        Collections.sort(txList, (o1, o2) -> {
+            Date tx1 = getTransactionDate(o1);
+            Date tx2 = getTransactionDate(o2);
+            return tx1.compareTo(tx2);
+        });
+
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("Date and Time,Transaction Type,Sent Quantity,Sent Currency,Sending Source,Received Quantity,Received Currency,Receiving Destination,Fee,Fee Currency,Exchange Transaction ID,Blockchain Transaction Hash").append("\n");
+        @SuppressLint("SimpleDateFormat")
+        TimeZone tz = TimeZone.getTimeZone("UTC");
+        DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        format.setTimeZone(tz);
+        for (Transaction tx : txList) {
+            if (isEntirelySelf(tx, wallet))
+                continue;
+            Coin value = tx.getValue(wallet);
+
+            // Date and Time
+            Date time = getTransactionDate(tx);
+            stringBuilder.append(format.format(time)).append(",");
+            // Transaction Type
+            stringBuilder.append(value.isNegative() ? "Expense" : "Income").append(",");
+            // Sent Quantity / Blank for incoming transactions
+            if (value.isNegative()) {
+                stringBuilder.append(MonetaryFormat.BTC.noCode().format(value.negate()));
+            }
+            stringBuilder.append(",");
+            // Sent Currency / Blank for incoming transactions
+            if (value.isNegative()) {
+                stringBuilder.append(MonetaryFormat.BTC.code());
+            }
+            stringBuilder.append(",");
+            // Sending Source / Blank for incoming transactions
+            if (value.isNegative()) {
+                stringBuilder.append("DASH Wallet");
+            }
+            stringBuilder.append(",");
+            // Received Quantity / Blank for outgoing transactions
+            if (value.isPositive()) {
+                stringBuilder.append(MonetaryFormat.BTC.noCode().format(value));
+            }
+            stringBuilder.append(",");
+            // Received Currency / Blank for outgoing transactions
+            if (value.isPositive()) {
+                stringBuilder.append(MonetaryFormat.BTC.code());
+            }
+            stringBuilder.append(",");
+            // Receiving Destination / Blank for outgoing transactions
+            if (value.isPositive()) {
+                stringBuilder.append("DASH Wallet");
+            }
+            stringBuilder.append(",");
+
+            // Fee: always blank
+            stringBuilder.append(",");
+
+            // Fee Currency: always blank
+            stringBuilder.append(",");
+
+            // Exchange Transaction ID: Always blank
+            stringBuilder.append(",");
+
+            // Blockchain Transaction Hash
+            stringBuilder.append(tx.getTxId());
+
+            stringBuilder.append("\n");
+        }
+        return stringBuilder.toString();
     }
 }

@@ -303,6 +303,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">지갑 덤프 파일 첨부</string>
     <string name="report_issue_dialog_mail_intent_chooser">오류 보고서 전송 방식을 선택하세요...</string>
     <string name="report_issue_dialog_mail_intent_failed">오류 보고서 전송에 실패했습니다.</string>
+    <string name="report_transaction_history_export">내보내기</string>
+    <string name="report_transaction_history_title">CSV 내보내기</string>
+    <string name="report_transaction_history_not_synced_title">CSV 내보내기</string>
+    <string name="report_transaction_history_not_synced_message">귀하의 거래 내역을 내보내기 전 지갑이 완전히 동기화 될 때까지 기다려주십시오.</string>
+    <string name="report_transaction_history_message">전체 거래 내역을 내보냅니다.\n\n모든 지불 내역이 비용으로, 모든 들어온 거래가 수입으로 간주됩니다. 필요한 세금 보고 시스템에서의 비용 계산에 대한 모든 책임은 지갑의 소유주에 있습니다.</string>
+    <string name="report_transaction_history_mail_intent_chooser">거래 내역을 다음을 사용해 보냅니다...</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">거래 내역 전송 실패.</string>
+
     <string name="about_title">우리에 관하여</string>
     <string name="about_version_title">버전</string>
     <string name="about_copyright_title">저작권</string>
@@ -384,4 +392,6 @@
     <string name="select_a_service">서비스를 선택하십시오</string>
     <string name="activity_buy_and_sell_dash_filter">필터</string>
     <string name="clear_filter">필터 초기화</string>
-    </resources>
+    <string name="select_currency">통화 선택</string>
+
+</resources>

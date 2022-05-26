@@ -17,4 +17,16 @@
     <declare-styleable name="FingerprintView">
         <attr name="custom_layout" format="reference" />
     </declare-styleable>
+
+    <declare-styleable name="VectorColors">
+        <attr name="primaryColor" format="color" />
+        <attr name="secondaryColor" format="color" />
+    </declare-styleable>
+
+    <declare-styleable name="NumericKeyboardView">
+        <attr format="boolean" name="nk_functionEnabled" />
+        <attr format="boolean" name="nk_decSeparatorEnabled" />
+    </declare-styleable>
+
+    <attr format="color" name="disabledBackgroundColor"/>
 </resources>

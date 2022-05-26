@@ -29,5 +29,14 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Dispensar</string>
     <string name="network_unavailable_return">Voltar para a carteira</string>
+    <string name="button_continue">Continuar</string>
+    <string name="button_understand">Eu entendo</string>
+    <string name="button_okay">Okay</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Buscar</string>
+    <string name="permission_allow">Permitir</string>
+    <string name="permission_deny">Negar</string>
+    <string name="max">Máximo</string>
+    <string name="select_currency">Selecione a moeda</string>
 </resources>

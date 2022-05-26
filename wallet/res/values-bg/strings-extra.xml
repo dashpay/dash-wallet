@@ -15,7 +15,6 @@
     <string name="set_pin_decrypting">Декриптиране на портфейла</string>
     <string name="set_pin_verifying_pin">Потвърждаване на ПИН</string>
     <string name="set_pin_message">Този ПИН ще бъде необходим за отключване на приложението ви всеки път, когато го използвате.</string>
-
     <string name="home_available_balance">Наличен баланс</string>
     <string name="home_balance_hidden">Скрит баланс</string>
     <string name="home_balance_show_hint">Докоснете, за да покажете баланса</string>
@@ -60,7 +59,6 @@
     <string name="scan_to_pay_error_dialog_title">Сканиране за изпращане</string>
     <string name="scan_to_pay_error_dialog_message">Не валиден Dash адреса или URL заявка в клипборда:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Не валиден Dash адреса или URL заявка в клипборда.</string>
-
     <string name="receive_title">Получаване</string>
     <string name="receive_enter_amount_message">Посочете  сумата за получаване</string>
     <string name="receive_enter_amount_button">Сума за получаване</string>
@@ -141,7 +139,6 @@
     <string name="wallet_lock_try_again">Опитай отново след %1$d %2$s</string>
     <string name="wallet_lock_reset">Нулиране</string>
     <string name="wallet_lock_wrong_pin">Грешен ПИН! %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d оставащи опита</item>
         <item quantity="other">%d оставащи опита</item>
@@ -175,7 +172,6 @@
     <string name="notification_transactions_channel_description">Получаване на известия при входящи транзакции.</string>
     <string name="notification_synchronization_channel_name">Синхронизация</string>
     <string name="notification_synchronization_channel_description">Показване на известие, когато приложението е синхронизирано с мрежата.</string>
-
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Използвайте пръстов отпечатък за отключване.</string>
@@ -245,15 +241,14 @@
     <string name="tools_address_book">Адресна книга</string>
     <string name="tools_import_private_key">Импортиране на частен ключ.</string>
     <string name="tools_network_monitor">Наблюдение на мрежата</string>
+    <string name="tools_show_xpub">Разширен публичен ключ</string>
 
     <string name="about_help_us_improve">Помогнете ни да подобрим вашето преживяване</string>
     <string name="about_review_and_rate">Ревю &amp; Оценка на приложението</string>
     <string name="about_contact_support">Връзка с поддръжката</string>
     <string name="about_fork_disclaimer">Това е приложение с отворен код, разклонено от Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2020 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-
     <string name="block">Блок</string>
     <string name="time">Време</string>
     <string name="hash">Хеш</string>

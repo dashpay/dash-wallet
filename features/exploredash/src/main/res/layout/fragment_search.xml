@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
+    tools:context="org.dash.wallet.features.exploredash.ui.SearchFragment">
+
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.google.android.material.appbar.AppBarLayout
+            android:id="@+id/appbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:theme="@style/Explore.AppBarOverlay"
+            android:translationZ="1dp"
+            app:elevation="1dp">
+
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                app:menu="@menu/info_menu"
+                app:navigationIcon="@drawable/ic_back_arrow">
+
+                <TextView
+                    android:id="@+id/toolbar_title"
+                    style="@style/Subtitle1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center" />
+            </androidx.appcompat.widget.Toolbar>
+        </com.google.android.material.appbar.AppBarLayout>
+
+
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/explore_map"
+            android:name="org.dash.wallet.features.exploredash.ui.ExploreMapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="?attr/actionBarSize"
+            app:layout_behavior="org.dash.wallet.features.exploredash.ui.bottomsheetbehavior.ExploreMapBottomSheetBehavior" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:id="@+id/recenter_map_btn_spacer"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp" />
+            <ImageButton
+                android:id="@+id/recenter_map_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/round_corners_white_bg"
+                android:src="@drawable/ic_current_location"
+                app:tint="@color/dash_blue"
+                tools:tint="@color/dash_blue"
+                android:layout_gravity="top|right"
+                android:layout_marginTop="64dp"
+                android:layout_marginRight="8dp"
+                android:padding="8dp"
+                tools:visibility="visible"
+                android:visibility="visible" />
+        </LinearLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/content_panel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/rounded_background"
+            android:paddingBottom="40dp"
+            android:theme="@style/ExploreSearchResultsBackground"
+            app:behavior_expandedOffset="@dimen/default_expanded_offset"
+            app:behavior_fitToContents="false"
+            app:behavior_halfExpandedRatio="@dimen/merchant_half_expanded_ratio"
+            app:behavior_peekHeight="@dimen/search_content_peek_height"
+            app:layout_behavior="@string/bottom_sheet_behavior"
+            tools:behavior_peekHeight="500dp">
+
+            <View
+                android:id="@+id/drag_indicator"
+                android:layout_width="40dp"
+                android:layout_height="4dp"
+                android:layout_gravity="center"
+                android:layout_marginVertical="10dp"
+                android:background="@drawable/rounded_background"
+                android:theme="@style/DragIndicatorBackground"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:background="@color/gray_100" />
+
+            <Button
+                android:id="@+id/back_to_nearest_btn"
+                style="@style/Button.Tertiary.ExtraSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
+                android:layout_marginTop="20dp"
+                android:paddingStart="12dp"
+                android:visibility="gone"
+                android:text="@string/explore_back_to_nearest"
+                android:drawablePadding="8dp"
+                android:drawableStart="@drawable/ic_small_back_arrow"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:visibility="visible"
+                tools:background="@color/extra_small_btn_bg" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/search_results"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="@dimen/search_results_margin_top"
+                android:clipToPadding="false"
+                android:paddingBottom="44dp"
+                app:layout_constraintTop_toBottomOf="@id/back_to_nearest_btn"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                tools:itemCount="5"
+                tools:listitem="@layout/merchant_row" />
+
+            <include
+                android:id="@+id/manage_gps_view"
+                layout="@layout/manage_gps_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <LinearLayout
+                android:id="@+id/no_results_panel"
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="140dp"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                tools:visibility="visible">
+
+                <TextView
+                    style="@style/Subtitle1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/explore_no_results" />
+
+                <Button
+                    android:id="@+id/reset_filters_btn"
+                    style="@style/Button.Tertiary.Small.Red"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="@string/explore_reset_all_filters" />
+            </LinearLayout>
+
+            <org.dash.wallet.features.exploredash.ui.ItemDetails
+                android:id="@+id/item_details"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:visibility="gone"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintHeight_percent="@dimen/merchant_details_height_ratio" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+    <LinearLayout
+        android:id="@+id/sync_status"
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:layout_marginTop="?attr/actionBarSize"
+        android:alpha="0.9"
+        android:background="@color/dash_blue"
+        android:gravity="center_horizontal"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <ProgressBar
+            android:id="@+id/progress"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginStart="26dp"
+            android:layout_marginTop="7dp"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/dash_white"
+            android:indeterminateTintMode="src_atop" />
+
+        <TextView
+            android:id="@+id/syncMessage"
+            style="@style/Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="8dp"
+            android:ellipsize="end"
+            android:text="@string/sync_in_progress_not_complete"
+            android:textColor="@color/white" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:animateLayoutChanges="true"
+        android:layout_gravity="bottom">
+
+        <ImageButton
+            android:id="@+id/up_button"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_margin="15dp"
+            android:background="@drawable/rounded_background"
+            android:src="@drawable/ic_up"
+            android:theme="@style/UpButtonBackground"
+            android:layout_gravity="end"
+            android:visibility="gone"
+            tools:background="@color/gray_900_0.7"
+            tools:visibility="visible" />
+
+        <FrameLayout
+            android:id="@+id/filter_panel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/white"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:layout_gravity="start">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider_color" />
+
+            <ImageView
+                android:id="@+id/icon"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:layout_marginStart="15dp"
+                android:layout_marginVertical="12dp"
+                android:paddingHorizontal="2dp"
+                android:paddingTop="3dp"
+                android:layout_gravity="start"
+                android:background="@drawable/rounded_background"
+                android:theme="@style/FilterIconBackground"
+                android:src="@drawable/ic_filter"
+                app:tint="@color/white"
+                tools:background="@color/dash_blue"
+                tools:tint="@color/white" />
+
+            <TextView
+                style="@style/Overline.SemiBold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_gravity="center_horizontal|top"
+                android:text="@string/explore_filtered_by" />
+
+            <TextView
+                android:id="@+id/filtered_by_txt"
+                style="@style/Overline.SemiBold.Blue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal|bottom"
+                android:layout_marginBottom="10dp"
+                tools:text="California, 5 miles" />
+        </FrameLayout>
+    </LinearLayout>
+</FrameLayout>

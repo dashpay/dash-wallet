@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">Nelze načíst peněženku!</string>
 
     <string name="set_pin_create_new_wallet">Vytvořit novou peněženku</string>
+    <string name="set_pin_upgrade_wallet">Aktualizovat peněženku</string>
     <string name="set_pin_restore_wallet">Obnovit peněženku</string>
     <string name="set_pin_enter_pin">Zadejte původní PIN</string>
     <string name="set_pin_set_pin">Nastavit PIN</string>
@@ -15,6 +16,7 @@
     <string name="set_pin_decrypting">Dešifrování peněženky</string>
     <string name="set_pin_verifying_pin">Ověřování PIN kódu</string>
     <string name="set_pin_message">Tento PIN bude požadován pro odemčení aplikace pokaždé, když ji budete chtít použít.</string>
+    <string name="set_pin_confirm_pin_incorrect">Nesprávný PIN</string>
 
     <string name="home_available_balance">Dostupný zůstatek</string>
     <string name="home_balance_hidden">Skrytý zůstatek</string>
@@ -61,6 +63,7 @@
     <string name="scan_to_pay_error_dialog_title">Poslat skenováním</string>
     <string name="scan_to_pay_error_dialog_message">Ve schránce pro kopírování není platná Dash adresa nebo URL požadavek:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Ve schránce pro kopírování není platná Dash adresa nebo URL požadavek.</string>
+    <string name="pay_to_confirm_address">Je to Dash adresa, na kterou chcete platbu poslat?</string>
 
     <string name="receive_title">Přijmout</string>
     <string name="receive_enter_amount_message">Určte částku, kterou chcete obdržet</string>
@@ -145,6 +148,8 @@
     <string name="wallet_lock_try_again">Zkuste to znovu za %1$d %2$s</string>
     <string name="wallet_lock_reset">Resetovat</string>
     <string name="wallet_lock_wrong_pin">Špatný PIN! %s</string>
+    <string name="wallet_last_attempt">Poslední pokus o PIN</string>
+    <string name="wallet_last_attempt_message">Po dalším neúspěšném pokusu bude vyžadována fráze pro obnovení peněženky.</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">Zbývá %d pokus.</item>
@@ -185,6 +190,11 @@
     <string name="notification_transactions_channel_description">Dostávat upozornění o příchozích transakcích.</string>
     <string name="notification_synchronization_channel_name">Synchronizace</string>
     <string name="notification_synchronization_channel_description">Ukazuje notifikaci, když se aplikace synchronizuje se sítí.</string>
+    <string name="notification_push_channel_name">Push Notifikace</string>
+    <string name="notification_push_channel_description">Zobrazuje push notifikace, která vám posílá Dash</string>
+    <string name="notification_settings_title">Notifikace</string>
+    <string name="notification_explainer_title">Dash Wallet vám chce zasílat notifikace</string>
+    <string name="notification_explainer_message">Notifikace mohou obsahovat upozornění, zvuky a odznaky. Ty lze konfigurovat v Nastavení telefonu.</string>
 
     <string name="net_type_indicator" />
 
@@ -262,18 +272,24 @@
     <string name="menu_rescan_blockchain">Znovu Skenovat Blockchain</string>
     <string name="menu_contact_support_title">Podpora</string>
     <string name="menu_contact_support_subtitle">Nahlásit problém</string>
+    <string name="menu_explore_title">Prozkoumat</string>
+    <string name="menu_explore_subtitle">Nakupujte s DASH u více než 155 000 obchodníků</string>
 
     <string name="tools_address_book">Adresář</string>
     <string name="tools_import_private_key">Importovat Privátní Klíč</string>
     <string name="tools_network_monitor">Monitor Sítě</string>
+    <string name="tools_show_xpub">Rozšířený veřejný klíč</string>
 
     <string name="about_help_us_improve">Pomoztne nám aplikaci vylepšit</string>
     <string name="about_review_and_rate">Ohodnotit aplikaci</string>
     <string name="about_contact_support">Podpora</string>
     <string name="about_fork_disclaimer">Toto je aplikace s otevřeným zdrojovým kódem vycházející z bitcoinové peněženky.</string>
-    <string name="about_copyright">Copyright © 2020 Dash Core</string>
+    <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_dash_sync">Data aktualizovaná v: %1$s\n Poslední synchornizace: %2$s</string>
+    <string name="about_last_explore_dash_update_error">nelze načíst</string>
+    <string name="about_last_explore_dash_sync_never">nikdy</string>
 
     <string name="block">Blok</string>
     <string name="time">Čas</string>
@@ -353,4 +369,10 @@
     <string name="all_transactions">Vše</string>
     <string name="received_transactions">Přijato</string>
     <string name="sent_transactions">Odesláno</string>
+    <string name="set_pin_error_missing_wallet_title">Chybějící peněženka</string>
+    <string name="set_pin_error_missing_wallet_message">Chybí peněženka. Nahlaste to prosím oddělení podpory.</string>
+    <string name="wallet_encryption_error_title">Chyba při vytváření peněženky</string>
+    <string name="wallet_encryption_error_message">Při vytváření peněženky došlo k problému. Nahlaste to prosím oddělení podpory.</string>
+    <string name="wallet_not_encrypted_error_message">Vyskytl se problém s vaší peněženkou.\n\nPokud v této peněžence nemáte Dash, odinstalujte a znovu nainstalujte tuto aplikaci. Poté vytvořte novou peněženku.\n\nPokud máte frázi pro obnovení nebo záložní soubor, odinstalujte tuto aplikaci a znovu ji nainstalujte.\n\nV opačném případě to nahlaste oddělení podpory.</string>
+
 </resources>

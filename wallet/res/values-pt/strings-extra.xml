@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">Não foi possível carregar a carteira!</string>
 
     <string name="set_pin_create_new_wallet">Criar uma Nova Carteira</string>
+    <string name="set_pin_upgrade_wallet">Atualizar Carteira</string>
     <string name="set_pin_restore_wallet">Restaurar carteira</string>
     <string name="set_pin_enter_pin">Inserir PIN antigo</string>
     <string name="set_pin_set_pin">Definir PIN</string>
@@ -15,6 +16,7 @@
     <string name="set_pin_decrypting">Desencriptando carteira</string>
     <string name="set_pin_verifying_pin">Verificando PIN</string>
     <string name="set_pin_message">Este PIN será requerido para desbloquear o seu app toda vez que o utilize</string>
+    <string name="set_pin_confirm_pin_incorrect">PIN Incorreto</string>
 
     <string name="home_available_balance">Saldo disponível</string>
     <string name="home_balance_hidden">Saldo escondido</string>
@@ -61,6 +63,7 @@
     <string name="scan_to_pay_error_dialog_title">Scanear para Enviar</string>
     <string name="scan_to_pay_error_dialog_message">Não contém um endereço ou link de de Dash válido na área de transferência:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Não contém um endereço ou link de de Dash válido na área de transferência.</string>
+    <string name="pay_to_confirm_address">Este é o endereço Dash para o qual você deseja enviar o pagamento?</string>
 
     <string name="receive_title">Receber</string>
     <string name="receive_enter_amount_message">Especifique o valor a ser recebido</string>
@@ -145,6 +148,8 @@
     <string name="wallet_lock_try_again">Tente novamente em %1$d %2$s</string>
     <string name="wallet_lock_reset">Resetar</string>
     <string name="wallet_lock_wrong_pin">PIN incorreto! %s</string>
+    <string name="wallet_last_attempt">Última tentativa de PIN</string>
+    <string name="wallet_last_attempt_message">Outra tentativa fracassada exigirá minha frase de recuperação para recuperar minha carteira</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d tentativa restante</item>
@@ -179,6 +184,11 @@
     <string name="notification_transactions_channel_description">Receba alerta sobre transações entrantes</string>
     <string name="notification_synchronization_channel_name">Sincronização</string>
     <string name="notification_synchronization_channel_description">Mostra uma notificação enquanto o app está sincronizando com a rede.</string>
+    <string name="notification_push_channel_name">Notificações via push</string>
+    <string name="notification_push_channel_description">Mostra as notificações push enviadas a você pelo Dash</string>
+    <string name="notification_settings_title">Notificações</string>
+    <string name="notification_explainer_title">A Carteira Dash gostaria de lhe enviar notificações</string>
+    <string name="notification_explainer_message">As notificações podem incluir alertas, sons e ícones. Elas podem ser definidas nas configurações do telefone.</string>
 
     <string name="net_type_indicator" />
 
@@ -256,18 +266,24 @@
     <string name="menu_rescan_blockchain">Reexaminar blockchain</string>
     <string name="menu_contact_support_title">Contato com o Suporte</string>
     <string name="menu_contact_support_subtitle">Reportar um problema</string>
+    <string name="menu_explore_title">Explorar</string>
+    <string name="menu_explore_subtitle">Compre com DASH em mais de 155.000 comércios</string>
 
     <string name="tools_address_book">Livro de endereços</string>
     <string name="tools_import_private_key">Importar Chave Privada</string>
     <string name="tools_network_monitor">Monitor de rede</string>
+    <string name="tools_show_xpub">Chave Pública Estendida</string>
 
     <string name="about_help_us_improve">Ajude-nos a melhorar a sua experiência</string>
     <string name="about_review_and_rate">Comente ou classifique o aplicativo</string>
     <string name="about_contact_support">Contato com o Suporte</string>
     <string name="about_fork_disclaimer">Este é um aplicativo de código aberto bifurcado da Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2020 Dash Core</string>
+    <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_dash_sync">Explore os dados atualizados do Dash em:%1$s\nÚltima sincronização:%2$s</string>
+    <string name="about_last_explore_dash_update_error">não foi possível buscar</string>
+    <string name="about_last_explore_dash_sync_never">nunca</string>
 
     <string name="block">Bloquear</string>
     <string name="time">Tempo</string>
@@ -347,4 +363,8 @@
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recebido</string>
     <string name="sent_transactions">Enviado</string>
+    <string name="wallet_encryption_error_title">Erro de criação de carteira</string>
+    <string name="wallet_encryption_error_message">Houve um problema ao criar a carteira. Por favor, informe isso ao Suporte Técnico.</string>
+    <string name="wallet_not_encrypted_error_message">Há um problema com sua carteira.\n\nSe você não tiver Dash nesta carteira, desinstale e reinstale este aplicativo. Em seguida, crie uma nova carteira.\n\nSe você tiver uma frase de recuperação ou um arquivo de backup, desinstale este aplicativo e reinstale-o.\n\nCaso contrário, informe ao Suporte.</string>
+
 </resources>

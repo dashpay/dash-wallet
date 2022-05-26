@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <!-- Explore screen -->
+    <string name="explore_dash">Dashを探求する</string>
+    <string name="explore_title">探求する</string>
+    <string name="explore_subtitle">155,000以上の店舗やオンライン加盟店で、DASHを使って簡単にお買い物ができます。</string>
+    <string name="explore_merchants_title">どこで使えますか。</string>
+    <string name="explore_merchants_subtitle">Dashでの支払いが可能な加盟店を探します。</string>
+    <string name="explore_atms_title">ATM</string>
+    <string name="explore_atms_subtitle">DASHやその他の仮想通貨を現金で売買できる場所を探します。</string>
+
+    <!-- Search -->
+    <string name="explore_search_results">検索結果</string>
+    <string name="explore_physical_merchant">フィジカル加盟店</string>
+    <string name="explore_online_merchant">オンライン</string>
+    <string name="explore_both_types_merchant">オンラインフィジカル加盟店</string>
+    <string name="explore_multiple_locations">+ 複数拠点</string>
+    <string name="explore_option_all">全て</string>
+    <string name="explore_option_buy">購入</string>
+    <string name="explore_option_sell">売却</string>
+    <string name="explore_option_buy_sell">購入・売却</string>
+    <string name="explore_menu_info">情報</string>
+    <string name="explore_where_to_spend">使用できる場所</string>
+    <string name="explore_atms">ATM</string>
+    <string name="explore_all_states">全州</string>
+    <string name="explore_no_results">検索結果が見つかりませんでした</string>
+    <string name="explore_all_merchants">全ての加盟店</string>
+    <string name="explore_in_radius">%2$s内の%1$s</string>
+    <string name="explore_no_merchants">加盟店がありません</string>
+    <string name="explore_no_atms">ATMがありません</string>
+    <string name="distance_miles">%sマイル</string>
+    <string name="distance_kilometers">%skm</string>
+
+    <plurals name="explore_merchant_amount">
+        <item quantity="other">%d店舗</item>
+    </plurals>
+
+    <plurals name="explore_atm_amount">
+        <item quantity="other">%dカ所</item>
+    </plurals>
+
+    <!-- Details -->
+    <string name="explore_back_to_locations">全ての店舗に戻る</string>
+    <string name="explore_back_to_nearest">最寄りの店舗に戻る</string>
+    <string name="explore_select_location">店舗を選択する</string>
+    <string name="explore_pay_with_dash">Dashで支払う</string>
+    <string name="explore_buy_gift_card">ギフトカードを購入する</string>
+    <string name="explore_buy_dash">Dashを購入する</string>
+    <string name="explore_sell_dash">Dashを売る</string>
+    <string name="explore_show_all">全ての店舗を表示する</string>
+    <string name="explore_atm_location_hint">このATMは</string>
+    <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$fに位置しています。</string>
+
+    <!-- Filters -->
+    <string name="explore_filter">絞り込み</string>
+    <string name="explore_filters">フィルター</string>
+    <string name="explore_apply_filter">申し込み</string>
+    <string name="explore_payment_method">支払い方法</string>
+    <string name="explore_payment_dash">Dash</string>
+    <string name="explore_payment_gift_card">ギフトカード</string>
+    <string name="explore_radius">Radius</string>
+    <string name="explore_location">位置</string>
+    <string name="explore_current_location">現在地</string>
+    <string name="explore_location_settings">現在地の設定</string>
+    <string name="explore_reset_filters">フィルターをリセット</string>
+    <string name="explore_reset_all_filters">全てのフィルターをリセット</string>
+    <string name="explore_filtered_by">でフィルターをかける</string>
+    <string name="explore_pay_gift_card">ギフトカード支払い</string>
+    <string name="explore_sort_by">で並び替え</string>
+
+    <string-array name="merchants_filter_options">
+        <item>オンライン</item>
+        <item>周辺環境</item>
+        <item>全て</item>
+    </string-array>
+
+    <string-array name="atms_filter_options">
+        <item>全て</item>
+        <item>購入</item>
+        <item>売却</item>
+        <item>購入/売却</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_miles">
+        <item>1マイル</item>
+        <item>5マイル</item>
+        <item>20マイル</item>
+        <item>50マイル</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_kilometers">
+        <item>1km</item>
+        <item>5km</item>
+        <item>20km</item>
+        <item>50km</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>名前</item>
+        <item>距離</item>
+    </string-array>
+
+    <plurals name="radius_miles">
+        <item quantity="other">%dマイル</item>
+    </plurals>
+
+    <plurals name="radius_kilometers">
+        <item quantity="other">%dkm</item>
+    </plurals>
+
+    <!-- Location Permission -->
+    <string name="explore_location_allowed">許可されました</string>
+    <string name="explore_location_denied">拒否されました</string>
+    <string name="explore_manager_permissions">GPS許可を管理する</string>
+    <string name="explore_location_request">GPSの許可を得ると、近くにある店舗を表示できます。</string>
+    <string name="explore_location_explainer">ご利用者の位置情報は、地図上のご利用者の位置や選択した距離内にある加盟店の表示、検索結果の改善に使用されます。</string>
+    <string name="explore_merchant_location_explainer_title">位置情報サービスをオンにすると、加盟店検索がより機能します。</string>
+    <string name="explore_merchant_location_explainer_message">ご利用者の位置情報は、地図上のご利用者の位置や選択した距離内にある加盟店の表示、検索結果の改善に使用されます。</string>
+    <string name="explore_atm_location_explainer_title">位置情報サービスをオンにすると、ATM検索がより機能します。</string>
+    <string name="explore_atm_location_explainer_message">ご利用者の位置情報は、地図上のご利用者の位置や選択した距離内にあるATMの表示、検索結果の改善に使用されます。</string>
+
+    <!-- Info screens -->
+    <string name="explore_info_header_text">2種類の加盟店があります。</string>
+    <string name="accept_dash_text">DASHを直接承認します</string>
+    <string name="pay_with_dash_text">DASHウォレットで支払い</string>
+    <string name="buy_gift_card_text">Dashでギフトカードを購入</string>
+    <string name="buy_gift_card_desc_text">Dashでギフトカードを購入し、購入金額と同額を支払います。</string>
+    <string name="learn_more_text">詳細はこちら</string>
+    <string name="continue_text">続ける</string>
+    <string name="buy_card_header_text">ギフトカードの使用方法</string>
+    <string name="buy_card_desc_text">全ての店舗でDASHが直接使えるとは限りませんが、Dashでギフトカードが購入できます。</string>
+    <string name="find_merchant_text">加盟店を探す。</string>
+    <string name="buy_gift_card_with_dash_text">Dashでギフトカードを購入</string>
+    <string name="redeem_gift_card_text">ギフトカードは、オンラインで数秒以内またはレジでご利用いただけます。</string>
+
+    </resources>

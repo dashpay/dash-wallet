@@ -2,6 +2,8 @@ package de.schildbach.wallet.rates;
 
 import androidx.annotation.Nullable;
 
+import org.dash.wallet.common.data.ExchangeRate;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;

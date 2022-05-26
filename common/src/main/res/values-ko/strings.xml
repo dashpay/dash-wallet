@@ -29,5 +29,14 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">닫기</string>
     <string name="network_unavailable_return">지갑으로 돌아가기</string>
+    <string name="button_continue">계속</string>
+    <string name="button_understand">이해합니다</string>
+    <string name="button_okay">알겠습니다</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">검색</string>
+    <string name="permission_allow">허용</string>
+    <string name="permission_deny">거부</string>
+    <string name="max">최대</string>
+    <string name="select_currency">통화 선택</string>
 </resources>

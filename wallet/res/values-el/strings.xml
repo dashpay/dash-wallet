@@ -303,6 +303,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Επισύναψη αρχείου ένδειξης σφαλμάτων πορτοφολιού</string>
     <string name="report_issue_dialog_mail_intent_chooser">Αποστολή αναφοράς χρησιμοποιώντας…</string>
     <string name="report_issue_dialog_mail_intent_failed">Αποτυχία αποστολής της αναφοράς.</string>
+    <string name="report_transaction_history_export">Εξαγωγή</string>
+    <string name="report_transaction_history_title">Εξαγωγή CSV</string>
+    <string name="report_transaction_history_not_synced_title">Εξαγωγή CSV</string>
+    <string name="report_transaction_history_not_synced_message">Περιμένετε μέχρι να συγχρονιστεί πλήρως το πορτοφόλι πριν εξάγετε το ιστορικό των συναλλαγών σας.</string>
+    <string name="report_transaction_history_message">Το πλήρες ιστορικό των συναλλαγών θα εξαχθεί.\n\nΌλες οι πληρωμές θα θεωρηθούν ως έξοδα και όλες οι εισερχόμενες συναλλαγές θα είναι έσοδα. Ο κάτοχος αυτού του πορτοφολιού είναι υπεύθυνος για την πραγματοποίηση τυχόν προσαρμογών της βάσης κόστους στο σύστημα φορολογικής αναφοράς που έχει επιλέξει.</string>
+    <string name="report_transaction_history_mail_intent_chooser">Αποστολή ιστορικού συναλλαγών χρησιμοποιώντας...</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">Η αποστολή του ιστορικού συναλλαγών απέτυχε.</string>
+
     <string name="about_title">Πληροφορίες</string>
     <string name="about_version_title">Έκδοση</string>
     <string name="about_copyright_title">Πνευματικά δικαιώματα</string>

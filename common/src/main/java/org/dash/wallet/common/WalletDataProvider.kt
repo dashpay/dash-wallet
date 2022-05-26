@@ -19,26 +19,33 @@ package org.dash.wallet.common
 
 import android.app.Activity
 import androidx.lifecycle.LiveData
+import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.data.Resource
 
 interface WalletDataProvider {
 
+    fun currentReceiveAddress(): Address
+
     fun freshReceiveAddress(): Address
 
-    fun getExchangeRate(currencyCode: String): LiveData<ExchangeRate>
+    @Deprecated("Inject ExchangeRatesProvider instead")
+    fun getExchangeRate(currencyCode: String): LiveData<ExchangeRateData>
 
-    fun getExchangeRates(): LiveData<List<ExchangeRate>>
+    @Deprecated("Inject ExchangeRatesProvider instead")
+    fun getExchangeRates(): LiveData<List<ExchangeRateData>>
 
-    fun currencyCodes(): LiveData<List<String>>
-
+    @Deprecated("Inject Configuration instead")
     fun defaultCurrencyCode(): String
 
     fun sendCoins(address: Address, amount: Coin): LiveData<Resource<Transaction>>
 
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
 
+    fun processDirectTransaction(tx: Transaction)
+
+    fun observeBalance(): Flow<Coin>
 }

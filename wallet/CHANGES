@@ -1,4 +1,60 @@
 Dash Wallet
+v7.4.9
+* Use dashj 0.17.12 to improve network connectivity
+* Fix unencrypted wallet crash on Home Screen
+* Fix two crashes on lock screen
+
+v7.4.8
+* Use dashj 0.17.11 (support version 3 transactions)
+* Show version 2 transactions when they are received
+* optimize Explore Dash database sync and show status
+* Show warning on Lock Screen if 1 PIN attempt remains
+* Handle upgrades v6.x or earlier that have no PIN
+* Add push messaging support
+* Add export transaction history and show XPUB
+* Improve scanning clipboard for Dash Addresses
+* Fixes related to errors with clipboard data
+
+v7.4.7
+* Fix Explore Dash sync system (prevent downloads if explore.db in access its same as cloud)
+* Remove old Explore Dash data from database
+
+v7.4.6
+* Fix Scan QR Code crash on Android 6
+* Fix crash related to Unencrypted Wallets
+* Improve Autoloading of Updated Explore Dash Database System
+* Fix Reset Wallet Crash
+* Fix startup crash
+* Fix About screen copy text
+
+v7.4.5
+* Fix crash
+
+v7.4.4
+* Fix crash when starting app
+
+v7.4.4
+* support interruptions when processing explore-dash data from a protobuf file (not json)
+
+v7.4.3
+* disable explore-dash sync
+* allow for local database for explore dash
+* Fix crashes on Lock Screen
+* Ask user to send a report if the wallet is missing
+
+v7.4.2
+* Fix crash when syncing Explore Dash database
+
+v7.4.1
+* add Explore Dash
+* Better error support for Uphold
+* Close all dialogs on autologout
+* Minimum Android version is 6.0
+* Improvements on Enter Amount Screen
+
+v7.4.0
+* Beta Program for Explore Dash
+
 v7.3.5
 * The 7.3.4 build on Google Play left out several fixes
 
