@@ -107,17 +107,12 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     }
 
     private fun showAnimation() {
-        val containerAnimation = AnimationUtils.loadAnimation(activity, R.anim.fade_in)
         val contentAnimation = AnimationUtils.loadAnimation(activity, R.anim.slide_in_bottom)
-        val animSet = AnimationSet(false)
-        animSet.apply {
-            addAnimation(containerAnimation)
-            addAnimation(contentAnimation)
-        }
-
         transaction_details_dialog_container.postDelayed({
-            transaction_details_dialog_content_container.visibility = View.VISIBLE
-            transaction_details_dialog_content_container.startAnimation(animSet)
+            val container = transaction_details_dialog_content_container
+            container.translationY = container.measuredHeight.toFloat()
+            container.visibility = View.VISIBLE
+            container.startAnimation(contentAnimation)
         }, 150)
     }
 
