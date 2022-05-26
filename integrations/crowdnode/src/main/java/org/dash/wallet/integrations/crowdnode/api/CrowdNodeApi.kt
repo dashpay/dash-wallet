@@ -403,9 +403,6 @@ class CrowdNodeApiAggregator @Inject constructor(
             }
 
             if (tryRestoreSignUp()) {
-                responseScope.launch {
-                    checkIfAddressIsInUse(accountAddress!!)
-                }
                 return
             }
 

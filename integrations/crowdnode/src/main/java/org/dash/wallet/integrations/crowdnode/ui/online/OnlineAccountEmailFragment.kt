@@ -21,6 +21,7 @@ import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -34,6 +35,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentOnlineAccountEmailBinding
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
+
 
 @AndroidEntryPoint
 class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_email) {
@@ -68,10 +70,12 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
                 args[CrowdNodeViewModel.EMAIL_ARG] ?: ""
             ))
         }
+
+        showKeyboard()
     }
 
     private fun continueCreating(email: String) {
-        dismissKeyboard()
+        hideKeyboard()
 
         lifecycleScope.launch {
             AdaptiveDialog.withProgress(
@@ -88,7 +92,13 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
                 android.util.Patterns.EMAIL_ADDRESS.matcher(text).matches()
     }
 
-    private fun dismissKeyboard() {
+    private fun showKeyboard() {
+        binding.input.requestFocus()
+        val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        inputManager?.showSoftInput(binding.input, InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun hideKeyboard() {
         val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         inputManager?.hideSoftInputFromWindow(binding.input.windowToken, 0)
     }
