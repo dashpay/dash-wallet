@@ -3,10 +3,14 @@
 
     <string name="loading">กำลังโหลด...</string>
     <string name="loading_error">เกิดข้อผิดพลาด  กรุณาลองใหม่อีกครั้งในภายหลัง.</string>
+    <string name="please_wait_title">กรุณารอสักครู่</string>
     <string name="dash_available">%1$s  นำไปใช้ได้</string>
     <string name="network_unavailable_title">เครือข่ายไม่พร้อมใช้งาน</string>
     <string name="network_unavailable_check_connection">โปรดตรวจสอบการเชื่อมต่อเครือข่ายของคุณ</string>
     <string name="network_unavailable_balance_not_accurate">ยอดเงินคงเหลืออาจไม่ถูกต้องเนื่องจากการเชื่อมต่อหายไป</string>
+    <string name="buy_dash">ซื้อ Dash</string>
+    <string name="copied">คัดลอก</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -29,6 +33,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">ยกเลิก</string>
     <string name="network_unavailable_return">รีเซ็ตกระเป๋าสตางค์</string>
+    <string name="button_retry">ลองอีกครั้ง</string>
+    <string name="button_close">ปิด</string>
     <string name="button_continue">ดำเนินการต่อ</string>
     <string name="button_okay">ตกลง</string>
 

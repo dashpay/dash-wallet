@@ -502,7 +502,7 @@ class SetPinActivity : InteractionAwareActivity() {
     }
 
     private fun startVerifySeedActivity() {
-        startActivity(VerifySeedActivity.createIntent(this, seed.toTypedArray()))
+        startActivity(VerifySeedActivity.createIntent(this, seed.toTypedArray(), true))
         finish()
     }
 

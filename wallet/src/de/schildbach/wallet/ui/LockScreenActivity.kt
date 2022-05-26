@@ -41,19 +41,20 @@ import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
-import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
 import kotlinx.android.synthetic.main.activity_lock_screen_root.*
 import org.bitcoinj.wallet.Wallet.BalanceType
+import org.dash.wallet.common.AutoLogoutTimerHandler
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.services.LockScreenBroadcaster
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -148,6 +149,16 @@ open class LockScreenActivity : SecureActivity() {
 
         if (!lockScreenDisplayed) {
             resetAutoLogoutTimer()
+        }
+    }
+
+    protected open fun turnOffAutoLogout() {
+        autoLogout.stopTimer()
+    }
+
+    protected open fun turnOnAutoLogout() {
+        if (!autoLogout.isTimerActive) {
+            autoLogout.startTimer()
         }
     }
 
@@ -514,11 +525,10 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     open fun onLockScreenActivated() {
-        Log.e(this::class.java.simpleName, "Closing dialog")
         if (this::alertDialog.isInitialized){
-            Log.e(this::class.java.simpleName, "Dialog is initialized")
             alertDialog.dismissDialog()
         }
+
         lockScreenBroadcaster.activatingLockScreen.call()
         dismissDialogFragments(supportFragmentManager)
     }

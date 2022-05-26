@@ -3,10 +3,14 @@
 
     <string name="loading">載入中...</string>
     <string name="loading_error">發生錯誤。 請稍後再試。</string>
+    <string name="please_wait_title">請稍等</string>
     <string name="dash_available">%1$s 可用</string>
     <string name="network_unavailable_title">網絡不可用</string>
     <string name="network_unavailable_check_connection">請檢查您的網絡連接</string>
     <string name="network_unavailable_balance_not_accurate">由於連接中斷，餘額可能不准確</string>
+    <string name="buy_dash">購買達世幣</string>
+    <string name="copied">已複製</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -29,6 +33,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">取消</string>
     <string name="network_unavailable_return">返回錢包</string>
+    <string name="button_retry">重試</string>
+    <string name="button_close">關閉</string>
     <string name="button_continue">繼續</string>
     <string name="button_understand">我明白</string>
     <string name="button_okay">好的</string>

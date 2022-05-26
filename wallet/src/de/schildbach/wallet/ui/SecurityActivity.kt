@@ -110,7 +110,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
                     startActivity(Intent(this, AdvancedSecurityActivity::class.java))
                 }
                 AUTH_RECOVERY_PHASE -> {
-                    pin?.let { VerifySeedActivity.createIntent(this, it, true) }
+                    pin?.let { VerifySeedActivity.createIntent(this, it, false) }
                         ?.let { startActivity(it) }
                 }
             }

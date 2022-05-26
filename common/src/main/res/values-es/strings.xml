@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">Cargando…</string>
     <string name="loading_error">Ocurrió un error. Por favor, intenta nuevamente más tarde.</string>
+    <string name="please_wait_title">Por favor espera</string>
     <string name="dash_available">%1$s disponible</string>
     <string name="network_unavailable_title">Red no disponible</string>
     <string name="network_unavailable_check_connection">Comprueba tu conexión de red</string>
     <string name="network_unavailable_balance_not_accurate">Es posible que el saldo no sea exacto debido a la pérdida de conexión</string>
+    <string name="buy_dash">Comprar Dash</string>
+    <string name="copied">Copiado</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Libra de Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -37,6 +40,8 @@
     <string name="search_hint">Buscar</string>
     <string name="permission_allow">Permitir</string>
     <string name="permission_deny">Denigar</string>
+    <string name="button_retry">Reintentar</string>
+    <string name="button_close">Cerrar</string>
     <string name="max">Máximo</string>
     <string name="select_currency">Selecciona el tipo de moneda</string>
 </resources>

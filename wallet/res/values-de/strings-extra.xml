@@ -64,7 +64,6 @@
     <string name="receive_enter_amount_message">Zu empfangenen Betrag festsetzen</string>
     <string name="receive_enter_amount_button">Betrag festsetzen</string>
     <string name="receive_share_button">Teilen</string>
-    <string name="receive_copied">Kopiert</string>
 
     <string name="pay_title">Senden</string>
     <string name="history_title">Verlauf</string>
@@ -317,7 +316,6 @@
 
     <string name="appwidget_wallet_not_ready">Bitte Wallet einrichten</string>
 
-    <string name="payment_request_please_wait_title">Bitte warten</string>
     <string name="payment_request_please_wait_message">Mit dem Zahlungs-Server verbinden</string>
     <string name="payment_request_unable_to_connect">Verbindung fehlgeschlagen</string>
     <string name="payment_request_unable_to_send">Senden nicht möglich</string>

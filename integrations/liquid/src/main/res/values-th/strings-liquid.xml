@@ -12,7 +12,6 @@
     <string name="credit_card">บัตรเครดิต</string>
 
     <string name="buy">ซื้อ</string>
-    <string name="buy_dash">ซื้อ Dash </string>
     <string name="sell_dash">ขาย Dash</string>
     <string name="buy_sell_dash_">ซื้อ &amp; ขาย Dash</string>
     <string name="button_cancel">ยกเลิก</string>
@@ -20,7 +19,6 @@
     <string name="crypto_support">สนับสนุนคริปโต</string>
     <string name="credit_card_support">การรองรับบัตรเครดิต</string>
     <string name="okay">ตกลง</string>
-    <string name="close">ปิด</string>
     <string name="list_of_countries">ดูรายชื่อประเทศที่ไม่ได้รับการสนับสนุน</string>
     <string name="buying_dash_not_supported_credit_cards">การซื้อ Dash ด้วยบัตรเครดิตไม่ได้รับการสนับสนุนในบางประเทศ</string>
     <string name="buying_dash_not_supported_crypto">การซื้อ Dash ด้วยคริปโตเคอเรนซีในบางประเทศยังไม่ยอมรับ</string>

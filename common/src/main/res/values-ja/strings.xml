@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">読み込み中…</string>
     <string name="loading_error">エラーが発生しました。後でもう一度お試しください。</string>
+    <string name="please_wait_title">お待ちください</string>
     <string name="dash_available">%1$s 利用可能</string>
     <string name="network_unavailable_title">ネットワークが利用できません</string>
     <string name="network_unavailable_check_connection">ネットワーク接続を確認してください</string>
@@ -38,4 +38,6 @@
     <string name="permission_deny">拒否する</string>
     <string name="max">最大</string>
     <string name="select_currency">通貨を選択する</string>
+    <string name="copied">コピーされた</string>
+    <string name="button_retry">リトライ</string>
 </resources>

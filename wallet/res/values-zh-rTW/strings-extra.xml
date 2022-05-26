@@ -69,7 +69,6 @@
     <string name="receive_enter_amount_message">指定收款金額</string>
     <string name="receive_enter_amount_button">指定金額</string>
     <string name="receive_share_button">分享</string>
-    <string name="receive_copied">已複製</string>
 
     <string name="pay_title">付款</string>
     <string name="history_title">歷史</string>
@@ -335,7 +334,6 @@
 
     <string name="appwidget_wallet_not_ready">請設置您的錢包</string>
 
-    <string name="payment_request_please_wait_title">請稍等</string>
     <string name="payment_request_please_wait_message">連接到支付服務器</string>
     <string name="payment_request_unable_to_connect">無法連接</string>
     <string name="payment_request_unable_to_send">無法發送</string>

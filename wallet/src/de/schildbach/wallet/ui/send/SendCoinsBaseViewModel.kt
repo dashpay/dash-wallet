@@ -34,12 +34,12 @@ import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.Constants
 import org.slf4j.LoggerFactory
 
 open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
-        val ECONOMIC_FEE: Coin = Coin.valueOf(1000)
         private val log = LoggerFactory.getLogger(SendCoinsBaseViewModel::class.java)
     }
 
@@ -83,7 +83,7 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
         val sendRequest = paymentIntent.toSendRequest()
         sendRequest.coinSelector = ZeroConfCoinSelector.get()
         sendRequest.useInstantSend = false
-        sendRequest.feePerKb = ECONOMIC_FEE
+        sendRequest.feePerKb = Constants.ECONOMIC_FEE
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
         sendRequest.signInputs = signInputs
 

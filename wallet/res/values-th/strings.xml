@@ -65,8 +65,8 @@
     <string name="send_coins_fragment_pin_label">ใส่รหัส PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">ค่าธรรมเนียมระบบเครือข่ายของ %s จะถูกจ่าย</string>
     <string name="send_coins_fragment_hint_fee_priority">ค่าธรรมเนียมพิเศษของ %s จะถูกจ่าย หากคุณสนใจค่าธรรมเนียมพิเศษนี้ โปรดใช้ \'priority\' เมื่อต้องการการยืนยันอย่างรวดเร็ว</string>
-    <string name="send_coins_fragment_hint_dusty_send">จำนวนเงินน้อยเกินไปที่จะส่ง</string>
-    <string name="send_coins_fragment_hint_insufficient_money">ยอดเงินไม่เพียงพอ</string>
+    <string name="send_coins_error_dusty_send">จำนวนเงินน้อยเกินไปที่จะส่ง</string>
+    <string name="send_coins_error_insufficient_money">ยอดเงินไม่เพียงพอ</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">จำนวนเงินในการชำระเงิน wallet ของคุณ ไม่เพิ่มขึ้นที่จะสามารถส่งได้</string>
     <string name="send_coins_fragment_hint_replaying">ขณะนี้ยังไม่สามารถทำการชำระเงินได้เนื่องกระเป๋าสตางค์ยังไม่เชื่อมต่อกับเครือข่าย</string>
     <string name="send_coins_fragment_direct_payment_enable">ส่งการชำระเงินโดยตรงไปยังผู้รับเงิน</string>
@@ -331,7 +331,6 @@
     <string name="button_ok">โอเค</string>
     <string name="button_dismiss">ยกเลิก</string>
     <string name="button_cancel">ยกเลิก</string>
-    <string name="button_retry">ลองอีกครั้ง</string>
     <string name="button_help">ช่วยเหลือ</string>
     <string name="button_add">เพิ่ม</string>
     <string name="button_delete">ลบ</string>

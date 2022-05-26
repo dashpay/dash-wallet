@@ -64,7 +64,6 @@
     <string name="receive_enter_amount_message">Hãy xác định rõ số lượng cần nhận</string>
     <string name="receive_enter_amount_button">Hãy cung cấp số lượng</string>
     <string name="receive_share_button">Chia sẻ</string>
-    <string name="receive_copied">Đã copy</string>
 
     <string name="pay_title">Gửi</string>
     <string name="history_title">Lịch sử</string>
@@ -303,7 +302,6 @@
 
     <string name="appwidget_wallet_not_ready">Hãy vui lòng thiết lập ví của bạn</string>
 
-    <string name="payment_request_please_wait_title">Vui lòng đợi</string>
     <string name="payment_request_please_wait_message">Đang kết nối với Máy Chủ Thanh Toán</string>
     <string name="payment_request_unable_to_connect">Không thể kết nối</string>
     <string name="payment_request_unable_to_send">Không thể gửi</string>

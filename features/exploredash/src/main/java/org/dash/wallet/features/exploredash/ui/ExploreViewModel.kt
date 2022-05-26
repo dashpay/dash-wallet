@@ -52,7 +52,7 @@ enum class ExploreTopic {
 }
 
 enum class NavigationRequest {
-    SendDash, ReceiveDash, None
+    SendDash, ReceiveDash, Staking
 }
 
 enum class FilterMode {
@@ -452,6 +452,10 @@ class ExploreViewModel @Inject constructor(
 
     fun receiveDash() {
         navigationCallback.postValue(NavigationRequest.ReceiveDash)
+    }
+
+    fun openStaking() {
+        navigationCallback.postValue(NavigationRequest.Staking)
     }
 
     fun backFromMerchantLocation() {

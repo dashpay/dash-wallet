@@ -69,7 +69,6 @@
     <string name="receive_enter_amount_message">Введите сумму для получения</string>
     <string name="receive_enter_amount_button">Введите сумму</string>
     <string name="receive_share_button">Поделиться</string>
-    <string name="receive_copied">Скопировано</string>
 
     <string name="pay_title">Отправить</string>
     <string name="history_title">История</string>
@@ -344,7 +343,6 @@
 
     <string name="appwidget_wallet_not_ready">Пожалуйста, настройте свой кошелек</string>
 
-    <string name="payment_request_please_wait_title">Пожалуйста, подождите</string>
     <string name="payment_request_please_wait_message">Подключение к платёжному серверу</string>
     <string name="payment_request_unable_to_connect">Невозможно подключиться</string>
     <string name="payment_request_unable_to_send">Невозможно отправить</string>

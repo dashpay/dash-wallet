@@ -65,8 +65,8 @@
     <string name="send_coins_fragment_pin_label">PIN 입력하기</string>
     <string name="send_coins_fragment_hint_fee_economic">네트워크 승인을 위해 %s가 지불됩니다.</string>
     <string name="send_coins_fragment_hint_fee_priority">%s의 선행 수수료가 지불됩니다. 네트워크에서 최대한 빠른 확인이 필요하시다면 \'선행\'을 사용하세요.</string>
-    <string name="send_coins_fragment_hint_dusty_send">송금액이 너무 적어 전송할 수 없습니다</string>
-    <string name="send_coins_fragment_hint_insufficient_money">잔액 부족</string>
+    <string name="send_coins_error_dusty_send">송금액이 너무 적어 전송할 수 없습니다</string>
+    <string name="send_coins_error_insufficient_money">잔액 부족</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">극소량의 금액은 송금 가능액에 포함되지 않습니다.</string>
     <string name="send_coins_fragment_hint_replaying">지갑이 네트워크와 완전히 동기화되지 않아 현재 지불 할 수 없습니다</string>
     <string name="send_coins_fragment_direct_payment_enable">대시가 수신인에게 바로 송금됩니다.</string>
@@ -339,7 +339,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">닫기</string>
     <string name="button_cancel">취소</string>
-    <string name="button_retry">재시도</string>
     <string name="button_help">도움말</string>
     <string name="button_add">추가</string>
     <string name="button_delete">삭제</string>

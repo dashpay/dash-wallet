@@ -18,14 +18,13 @@ package de.schildbach.wallet
 
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.common.base.Stopwatch
 import com.google.firebase.FirebaseNetworkException
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -34,35 +33,16 @@ import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.slf4j.LoggerFactory
 import java.util.*
 
-class ExploreSyncWorker constructor(val appContext: Context, workerParams: WorkerParameters) :
-    CoroutineWorker(appContext, workerParams) {
-
+@HiltWorker
+class ExploreSyncWorker @AssistedInject constructor(
+    @Assisted appContext: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val analytics: AnalyticsService,
+    private val exploreRepository: ExploreRepository,
+    private val syncStatus: DataSyncStatusService
+): CoroutineWorker(appContext, workerParams) {
     companion object {
         private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
-    }
-
-    private val exploreRepository by lazy {
-        entryPoint.exploreRepository()
-    }
-
-    private val analytics by lazy {
-        entryPoint.analytics()
-    }
-
-    private val syncStatus by lazy {
-        entryPoint.syncStatus()
-    }
-
-    @EntryPoint
-    @InstallIn(SingletonComponent::class)
-    interface ExploreSyncWorkerEntryPoint {
-        fun exploreRepository(): ExploreRepository
-        fun analytics(): AnalyticsService
-        fun syncStatus(): DataSyncStatusService
-    }
-
-    private val entryPoint by lazy {
-        EntryPointAccessors.fromApplication(appContext, ExploreSyncWorkerEntryPoint::class.java)
     }
 
     @SuppressLint("CommitPrefEdits")

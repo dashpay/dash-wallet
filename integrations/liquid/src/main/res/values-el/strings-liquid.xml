@@ -12,7 +12,6 @@
     <string name="credit_card">Πιστωτική Κάρτα</string>
 
     <string name="buy">Αγορά</string>
-    <string name="buy_dash">Αγορά Dash</string>
     <string name="sell_dash">Πώληση Dash</string>
     <string name="buy_sell_dash_">Αγορά και Πώληση Dash</string>
     <string name="button_cancel">Ακύρωση</string>
@@ -20,7 +19,6 @@
     <string name="crypto_support">Υποστήριξη Κρυπτονομισμάτων</string>
     <string name="credit_card_support">Υποστήριξη πιστωτικής κάρτας</string>
     <string name="okay">Εντάξει</string>
-    <string name="close">κλείσιμο</string>
     <string name="list_of_countries">Δείτε μια λίστα με τις χώρες που δεν υποστηρίζονται.</string>
     <string name="buying_dash_not_supported_credit_cards">Η αγορά Dash με πιστωτική κάρτα δεν υποστηρίζεται σε ορισμένες χώρες.</string>
     <string name="buying_dash_not_supported_crypto">Η αγορά Dash με κρυπτονομίσματα δεν υποστηρίζεται σε ορισμένες χώρες.</string>

@@ -276,6 +276,13 @@
         <activity
             android:name="de.schildbach.wallet.ui.explore.ExploreActivity"
             android:screenOrientation="portrait"
+            android:parentActivityName="de.schildbach.wallet.ui.OnboardingActivity"
+            android:theme="@style/LockScreenActivity.Child.Theme" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.staking.StakingActivity"
+            android:parentActivityName="de.schildbach.wallet.ui.explore.ExploreActivity"
+            android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
@@ -419,6 +426,12 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_provider" />
+        </provider>
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            tools:node="remove">
         </provider>
 
         <receiver

@@ -20,6 +20,7 @@ package de.schildbach.wallet.util;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
+import org.dash.wallet.common.util.Base43;
 import org.junit.Test;
 
 /**

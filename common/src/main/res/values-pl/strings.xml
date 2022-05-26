@@ -3,10 +3,14 @@
 
     <string name="loading">Ładowanie...</string>
     <string name="loading_error">Wystąpił błąd. Spróbuj ponownie później.</string>
+    <string name="please_wait_title">Jedna chwila </string>
     <string name="dash_available">%1$sdostępne</string>
     <string name="network_unavailable_title">Sieć jest niedostępna</string>
     <string name="network_unavailable_check_connection">Sprawdź połączenie z siecią</string>
     <string name="network_unavailable_balance_not_accurate">Saldo może być niedostępne z powodu utraty połączenia z siecią</string>
+    <string name="buy_dash">Kup Dash</string>
+    <string name="copied">Skopiowano</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Funt Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -29,6 +33,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Odrzuć</string>
     <string name="network_unavailable_return">Wróć do portfela</string>
+    <string name="button_retry">Ponów</string>
+    <string name="button_close">Zamknij</string>
     <string name="button_continue">Dalej</string>
     <string name="button_understand">Rozumiem</string>
     <string name="button_okay">OK</string>

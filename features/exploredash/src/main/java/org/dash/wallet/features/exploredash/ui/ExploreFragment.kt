@@ -21,7 +21,10 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.viewBinding
@@ -31,15 +34,19 @@ import org.dash.wallet.features.exploredash.databinding.FragmentExploreBinding
 import javax.inject.Inject
 
 @AndroidEntryPoint
+@FlowPreview
+@ExperimentalCoroutinesApi
 class ExploreFragment : Fragment(R.layout.fragment_explore) {
     private val binding by viewBinding(FragmentExploreBinding::bind)
+    private val viewModel: ExploreViewModel by activityViewModels()
+
     @Inject
     lateinit var analyticsService: AnalyticsService
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.titleBar.toolbar.title = getString(R.string.explore_title)
-        binding.titleBar.toolbar.setNavigationOnClickListener {
+        binding.titleBar.setNavigationOnClickListener {
             requireActivity().finish()
         }
 
@@ -51,6 +58,10 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
         binding.atmsBtn.setOnClickListener {
             analyticsService.logEvent(AnalyticsConstants.ExploreDash.PORTAL_ATM, bundleOf())
             safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.ATMs))
+        }
+
+        binding.stakingBtn.setOnClickListener {
+            viewModel.openStaking()
         }
     }
 }

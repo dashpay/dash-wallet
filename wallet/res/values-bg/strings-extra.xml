@@ -63,7 +63,6 @@
     <string name="receive_enter_amount_message">Посочете  сумата за получаване</string>
     <string name="receive_enter_amount_button">Сума за получаване</string>
     <string name="receive_share_button">Сподели</string>
-    <string name="receive_copied">Копирано</string>
 
     <string name="pay_title">Изпрати</string>
     <string name="history_title">История</string>
@@ -300,8 +299,7 @@
     <string name="sync_status_sync_completed">Завършен</string>
 
     <string name="appwidget_wallet_not_ready">Моля, настройте вашият портфейл</string>
-
-    <string name="payment_request_please_wait_title">Моля изчакайте</string>
+    
     <string name="payment_request_please_wait_message">Свързване към сървъра за разплащане</string>
     <string name="payment_request_unable_to_connect">Не може да се свърже</string>
     <string name="payment_request_unable_to_send">Не може да се изпрати</string>

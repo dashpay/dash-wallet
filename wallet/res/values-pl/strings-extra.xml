@@ -69,7 +69,6 @@
     <string name="receive_enter_amount_message">Podaj kwotę do otrzymania</string>
     <string name="receive_enter_amount_button">Określ Kwotę</string>
     <string name="receive_share_button">Udostępnij</string>
-    <string name="receive_copied">Skopiowano</string>
 
     <string name="pay_title">Wyślij</string>
     <string name="history_title">Historia</string>
@@ -344,7 +343,6 @@
 
     <string name="appwidget_wallet_not_ready">Stwórz swój potfel</string>
 
-    <string name="payment_request_please_wait_title">Jedna chwila </string>
     <string name="payment_request_please_wait_message">Trwa łączenie z serwerem płatności</string>
     <string name="payment_request_unable_to_connect">Połączenie jest niemożliwe</string>
     <string name="payment_request_unable_to_send">Wysłąnie funduszy jest niemożliwe</string>

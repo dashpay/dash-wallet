@@ -34,7 +34,7 @@
     <string name="explore_option_buy">Koop</string>
     <string name="explore_option_sell">Verkoop</string>
     <string name="explore_option_buy_sell">Koop &amp; verkoop</string>
-    <string name="explore_menu_info">info</string>
+    <string name="button_info">info</string>
     <string name="explore_where_to_spend">Waar uit te geven</string>
     <string name="explore_atms">Geldautomaten</string>
     <string name="explore_all_states">Alle toestanden</string>

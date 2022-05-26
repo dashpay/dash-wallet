@@ -39,7 +39,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
                 app:menu="@menu/info_menu"
-                app:navigationIcon="@drawable/ic_back_arrow">
+                app:navigationIcon="@drawable/ic_arrow_back">
 
                 <TextView
                     android:id="@+id/toolbar_title"
@@ -49,7 +49,6 @@
                     android:layout_gravity="center" />
             </androidx.appcompat.widget.Toolbar>
         </com.google.android.material.appbar.AppBarLayout>
-
 
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/explore_map"
@@ -126,7 +125,7 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 tools:visibility="visible"
-                tools:background="@color/extra_small_btn_bg" />
+                tools:background="@color/blue_50" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/search_results"
@@ -170,6 +169,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
+                    android:textAlignment="gravity"
                     android:text="@string/explore_no_results" />
 
                 <Button
@@ -194,7 +194,7 @@
     <LinearLayout
         android:id="@+id/sync_status"
         android:layout_width="match_parent"
-        android:layout_height="32dp"
+        android:layout_height="@dimen/banner_message_height"
         android:layout_marginTop="?attr/actionBarSize"
         android:alpha="0.9"
         android:background="@color/dash_blue"
@@ -250,7 +250,7 @@
             android:id="@+id/filter_panel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/white"
+            android:background="@color/background_secondary"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"

@@ -98,7 +98,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
             if (!walletApplication.wallet.isEncrypted) {
                 unencryptedFlow()
             } else {
-                if (walletApplication.isWalletUpgradedtoBIP44) {
+                if (walletApplication.isWalletUpgradedToBIP44) {
                     regularFlow()
                 } else {
                     upgradeToBIP44Flow()

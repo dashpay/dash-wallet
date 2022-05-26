@@ -65,8 +65,8 @@
     <string name="send_coins_fragment_pin_label">Voer pin in</string>
     <string name="send_coins_fragment_hint_fee_economic">Netwerkkosten %s worden betaald.</string>
     <string name="send_coins_fragment_hint_fee_priority">Een prioriteitstoeslag van %s wordt betaald. Als je een lage toeslag belangrijk vindt, gebruik \'prioriteit\' alleen als je zo spoedig mogelijk bevestiging nodig hebt.</string>
-    <string name="send_coins_fragment_hint_dusty_send">bedrag is te klein om te versturen</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Ontoereikende fondsen</string>
+    <string name="send_coins_error_dusty_send">bedrag is te klein om te versturen</string>
+    <string name="send_coins_error_insufficient_money">Ontoereikende fondsen</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Het saldo van kleine betalingen in je Dashportemonnee is bij elkaar niet hoog genoeg om te kunnen versturen.</string>
     <string name="send_coins_fragment_hint_replaying">Momenteel zijn betalingen niet mogelijk omdat de portemonnee niet volledig is gesynchroniseerd met het netwerk</string>
     <string name="send_coins_fragment_direct_payment_enable">Betaling direct versturen aan de begunstigde.</string>
@@ -331,7 +331,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">Annuleren</string>
     <string name="button_cancel">Annuleer</string>
-    <string name="button_retry">Opnieuw</string>
     <string name="button_help">Help</string>
     <string name="button_add">Toevoegen</string>
     <string name="button_delete">Verwijderen</string>

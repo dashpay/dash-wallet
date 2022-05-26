@@ -65,8 +65,8 @@
     <string name="send_coins_fragment_pin_label">Εισάγετε PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Θα πληρώσετε %s για το δίκτυο.</string>
     <string name="send_coins_fragment_hint_fee_priority">Θα πληρώσετε τέλη προτεραιότητας %s. Αν σας ενδιαφέρουν χαμηλά τέλη, χρησιμοποιήστε την επιλογή "προτεραιότητα" μόνο αν χρειάζεστε επιβεβαίωση το συντομότερο δυνατόν.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Το ποσό είναι πολύ μικρό για να σταλθεί</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Ανεπαρκή χρήματα</string>
+    <string name="send_coins_error_dusty_send">Το ποσό είναι πολύ μικρό για να σταλθεί</string>
+    <string name="send_coins_error_insufficient_money">Ανεπαρκή χρήματα</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Το ποσό των μικρών πληρωμών στο πορτοφόλι σας δεν επαρκεί για το ποσό που είναι προς αποστολή.</string>
     <string name="send_coins_fragment_hint_replaying">Αυτή την στιγμή δεν διεκπεραιώνονται πληρωμές γιατί το πορτοφόλι δεν έχει συγχρονιστεί πλήρως με το δίκτυο</string>
     <string name="send_coins_fragment_direct_payment_enable">Στείλτε πληρωμή απευθείας στον δικαιούχο διακομιστή.</string>
@@ -339,7 +339,6 @@
     <string name="button_ok">Εντάξει</string>
     <string name="button_dismiss">Ματαίωση</string>
     <string name="button_cancel">Ακύρωση</string>
-    <string name="button_retry">Επανάληψη</string>
     <string name="button_help">Βοήθεια</string>
     <string name="button_add">Προσθήκη</string>
     <string name="button_delete">Διαγραφή</string>

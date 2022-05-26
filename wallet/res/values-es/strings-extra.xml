@@ -69,7 +69,6 @@
     <string name="receive_enter_amount_message">Especificar la cantidad a recibir</string>
     <string name="receive_enter_amount_button">Especificar Monto</string>
     <string name="receive_share_button">Compartir</string>
-    <string name="receive_copied">Copiado</string>
 
     <string name="pay_title">Enviar</string>
     <string name="history_title">Historial</string>
@@ -338,7 +337,6 @@
 
     <string name="appwidget_wallet_not_ready">Configura tu billetera por favor</string>
 
-    <string name="payment_request_please_wait_title">Por favor espera</string>
     <string name="payment_request_please_wait_message">Conectando al servidor de pago</string>
     <string name="payment_request_unable_to_connect">No se puede conectar</string>
     <string name="payment_request_unable_to_send">No se puede enviar</string>

@@ -3,10 +3,14 @@
 
     <string name="loading">Načítava sa...</string>
     <string name="loading_error">Nastala chyba. Skúste neskôr prosím.</string>
+    <string name="please_wait_title">Prosím čakajte</string>
     <string name="dash_available">Dostupných %1$s</string>
     <string name="network_unavailable_title">Sieť nedostupná</string>
     <string name="network_unavailable_check_connection">Skontrolujte svoje sieťové pripojenie</string>
     <string name="network_unavailable_balance_not_accurate">Zostatok nemusí byť presný kvôli stratenému spojeniu</string>
+    <string name="buy_dash">Kúpiť Dash</string>
+    <string name="copied">Skopírované</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernseyova libra</string>
     <!-- Local Currency List: JEP -->
@@ -29,6 +33,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Zrušiť</string>
     <string name="network_unavailable_return">Návrat do Peňaženky</string>
+    <string name="button_retry">Znovu</string>
+    <string name="button_close">Zatvoriť</string>
     <string name="button_continue">Pokračovať</string>
     <string name="button_understand">Rozumiem</string>
     <string name="button_okay">Dobre</string>

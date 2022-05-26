@@ -65,8 +65,6 @@
     <string name="send_coins_fragment_pin_label">Enter PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">A network fee of %s will be paid.</string>
     <string name="send_coins_fragment_hint_fee_priority">A priority fee of %s will be paid. If you care about low fees, use \'priority\' only if you need confirmation as soon as possible.</string>
-    <string name="send_coins_fragment_hint_dusty_send">The amount is too small to send</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Insufficient funds</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">The amount of tiny payments in your wallet doesn\'t add up to a sendable value.</string>
     <string name="send_coins_fragment_hint_replaying">Currently payments are not possible because the wallet is not fully synced with the network</string>
     <string name="send_coins_fragment_direct_payment_enable">Send payment directly to the payee.</string>
@@ -339,7 +337,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">Dismiss</string>
     <string name="button_cancel">Cancel</string>
-    <string name="button_retry">Retry</string>
     <string name="button_help">Help</string>
     <string name="button_add">Add</string>
     <string name="button_delete">Delete</string>
@@ -349,7 +346,6 @@
     <string name="button_copy">Copy</string>
     <string name="button_copy_request">Copy request</string>
     <string name="button_paste">Paste</string>
-    <string name="button_share">Share</string>
     <string name="button_set_as_default">Set as default</string>
     <string name="button_request_coins">Request Dash</string>
     <string name="button_send_coins">Send Dash</string>

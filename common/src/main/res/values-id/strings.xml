@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">Memuat...</string>
     <string name="loading_error">Terjadi kesalahan. Silakan coba lagi nanti.</string>
+    <string name="please_wait_title">Silahkan tunggu</string>
     <string name="dash_available">%1$stersedia </string>
     <string name="network_unavailable_title">Jaringan tak tersedia</string>
     <string name="network_unavailable_check_connection">Silakan periksa koneksi jaringan Anda</string>
     <string name="network_unavailable_balance_not_accurate">Saldo mungkin tidak akurat karena koneksi terputus</string>
+    <string name="buy_dash">Beli Dash</string>
+    <string name="copied">Disalin</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Pound Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -29,6 +32,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Tolak</string>
     <string name="network_unavailable_return">Kembali ke dompet</string>
+    <string name="button_retry">Coba lagi</string>
+    <string name="button_close">Tutup</string>
     <string name="button_continue">Teruskan</string>
     <string name="button_understand">Saya Mengerti</string>
     <string name="button_okay">Oke</string>

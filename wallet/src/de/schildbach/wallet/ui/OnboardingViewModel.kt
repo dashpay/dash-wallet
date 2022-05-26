@@ -51,7 +51,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         log.info("upgrading previously created wallet from version 6 or before")
         viewModelScope.launch {
             // Does this wallet use BIP44
-            if (!walletApplication.isWalletUpgradedtoBIP44) {
+            if (!walletApplication.isWalletUpgradedToBIP44) {
                 walletApplication.wallet.addKeyChain(Constants.BIP44_PATH)
             }
             walletApplication.configuration.armBackupSeedReminder()

@@ -17,14 +17,15 @@
 package de.schildbach.wallet.ui
 
 import androidx.lifecycle.ViewModel
+import org.dash.wallet.common.data.SingleLiveEvent
 
 class TransactionsFilterSharedViewModel : ViewModel() {
 
-    val onAllTransactionsSelected = SingleLiveEventExt<Void>()
+    val onAllTransactionsSelected = SingleLiveEvent<Void>()
 
-    val onReceivedTransactionsSelected = SingleLiveEventExt<Void>()
+    val onReceivedTransactionsSelected = SingleLiveEvent<Void>()
 
-    val onSentTransactionsSelected = SingleLiveEventExt<Void>()
+    val onSentTransactionsSelected = SingleLiveEvent<Void>()
 
 
 }
