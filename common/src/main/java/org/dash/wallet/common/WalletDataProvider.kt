@@ -54,7 +54,7 @@ interface WalletDataProvider {
 
     fun getTransactions(vararg filters: TransactionFilter): Collection<Transaction>
 
-    fun wrapAllTransactions(vararg wrappers: TransactionWrapper): Iterable<TransactionWrapper>
+    fun wrapAllTransactions(vararg wrappers: TransactionWrapper): Collection<TransactionWrapper>
 
     fun attachOnWalletWipedListener(listener: () -> Unit)
 

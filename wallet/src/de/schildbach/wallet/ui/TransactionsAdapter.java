@@ -37,6 +37,7 @@ import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.ZeroConfCoinSelector;
+import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.Formats;
 import org.dash.wallet.common.util.GenericUtils;
@@ -57,6 +58,7 @@ import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.text.format.DateUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -68,66 +70,41 @@ import android.widget.TextView;
  */
 public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private final Context context;
     private final LayoutInflater inflater;
 
     private final Wallet wallet;
-    private final int maxConnectedPeers;
     @Nullable
     private final OnClickListener onClickListener;
 
-    private final List<Transaction> transactions = new ArrayList<Transaction>();
+    private final List<Transaction> transactions = new ArrayList<>();
     private MonetaryFormat format;
 
-    private long selectedItemId = RecyclerView.NO_ID;
-
     private final int colorBackground, colorBackgroundSelected;
-    private final int colorPrimaryStatus, colorSecondaryStatus, colorInsignificant;
+    private final int colorPrimaryStatus, colorSecondaryStatus;
     private final int colorValuePositve, colorValueNegative;
     private final int colorError;
-    private final String textCoinBase;
-    private final String textInternal;
-    private final float textSizeNormal;
-    private boolean showTransactionRowMenu;
-
-    private static final String CONFIDENCE_SYMBOL_IN_CONFLICT = "\u26A0"; // warning sign
-    private static final String CONFIDENCE_SYMBOL_DEAD = "\u271D"; // latin cross
-    private static final String CONFIDENCE_SYMBOL_UNKNOWN = "?";
 
     private static final int VIEW_TYPE_TRANSACTION = 0;
 
-    private Map<Sha256Hash, TransactionCacheEntry> transactionCache = new HashMap<Sha256Hash, TransactionCacheEntry>();
+    private final Map<Sha256Hash, TransactionCacheEntry> transactionCache = new HashMap<Sha256Hash, TransactionCacheEntry>();
 
     private static class TransactionCacheEntry {
         private final Coin value;
         private final boolean sent;
-        private final boolean self;
         private final boolean showFee;
-        @Nullable
-        private final Address address;
-        @Nullable
-        private final String addressLabel;
-        private final Transaction.Type type;
 
-        private TransactionCacheEntry(final Coin value, final boolean sent, final boolean self, final boolean showFee, final @Nullable Address address,
-                                      final @Nullable String addressLabel, final Transaction.Type type) {
+        private TransactionCacheEntry(final Coin value, final boolean sent, final boolean showFee) {
             this.value = value;
             this.sent = sent;
-            this.self = self;
             this.showFee = showFee;
-            this.address = address;
-            this.addressLabel = addressLabel;
-            this.type = type;
         }
     }
 
     public TransactionsAdapter(final Context context, final Wallet wallet,
-                               final int maxConnectedPeers, final @Nullable OnClickListener onClickListener) {
-        this.context = context;
+                               final @Nullable OnClickListener onClickListener) {
         inflater = LayoutInflater.from(context);
 
         this.wallet = wallet;
-        this.maxConnectedPeers = maxConnectedPeers;
         this.onClickListener = onClickListener;
 
         final Resources res = context.getResources();
@@ -135,14 +112,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         colorBackgroundSelected = res.getColor(R.color.bg_panel);
         colorPrimaryStatus = res.getColor(R.color.primary_status);
         colorSecondaryStatus = res.getColor(R.color.secondary_status);
-        colorInsignificant = res.getColor(R.color.fg_insignificant);
         colorValuePositve = res.getColor(R.color.colorPrimary);
         colorValueNegative = res.getColor(android.R.color.black);
         colorError = res.getColor(R.color.fg_error);
-        textCoinBase = context.getString(R.string.wallet_transactions_fragment_coinbase);
-        textInternal = context.getString(R.string.symbol_internal) + " "
-                + context.getString(R.string.wallet_transactions_fragment_internal);
-        textSizeNormal = res.getDimension(R.dimen.font_size_normal);
 
         setHasStableIds(true);
     }
@@ -159,22 +131,16 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         notifyDataSetChanged();
     }
 
-    public void replace(final Transaction tx) {
-        transactions.clear();
-        transactions.add(tx);
+    public void replace(final Collection<TransactionWrapper> wrappedTransactions) {
+        Log.i("CROWDNODE", "replacing");
+        ArrayList<Transaction> unwrappedTransactions = new ArrayList<>();
 
-        notifyDataSetChanged();
-    }
+        for (TransactionWrapper wrapper: wrappedTransactions) {
+            unwrappedTransactions.addAll(wrapper.getTransactions());
+        }
 
-    public void replace(final Collection<Transaction> transactions) {
         this.transactions.clear();
-        this.transactions.addAll(transactions);
-
-        notifyDataSetChanged();
-    }
-
-    public void setSelectedItemId(final long itemId) {
-        selectedItemId = itemId;
+        this.transactions.addAll(unwrappedTransactions);
 
         notifyDataSetChanged();
     }
@@ -187,12 +153,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     @Override
     public int getItemCount() {
-        int count = transactions.size();
-
-        return count;
-    }
-
-    public int getTransactionsCount() {
         return transactions.size();
     }
 
@@ -207,10 +167,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     @Override
     public int getItemViewType(final int position) {
         return VIEW_TYPE_TRANSACTION;
-    }
-
-    public RecyclerView.ViewHolder createTransactionViewHolder(final ViewGroup parent) {
-        return createViewHolder(parent, VIEW_TYPE_TRANSACTION);
     }
 
     @Override
@@ -228,29 +184,22 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             final TransactionViewHolder transactionHolder = (TransactionViewHolder) holder;
 
             final long itemId = getItemId(position);
+            long selectedItemId = RecyclerView.NO_ID;
             transactionHolder.itemView.setActivated(itemId == selectedItemId);
 
             final Transaction tx = transactions.get(position);
             transactionHolder.bind(tx);
 
-            transactionHolder.itemView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(final View v) {
-                    Transaction tx = transactions.get(transactionHolder.getAdapterPosition());
-                    if (onClickListener != null) {
-                        onClickListener.onTransactionRowClicked(tx);
-                    }
+            transactionHolder.itemView.setOnClickListener(v -> {
+                Transaction tx1 = transactions.get(transactionHolder.getAdapterPosition());
+                if (onClickListener != null) {
+                    onClickListener.onTransactionRowClicked(tx1);
                 }
             });
         }
     }
 
-    public void setShowTransactionRowMenu(boolean showTransactionRowMenu) {
-        this.showTransactionRowMenu = showTransactionRowMenu;
-    }
-
     public interface OnClickListener {
-        void onTransactionMenuClick(View view, Transaction tx);
         void onTransactionRowClicked(Transaction tx);
     }
 
@@ -266,17 +215,17 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
         private TransactionViewHolder(final View itemView) {
             super(itemView);
-            primaryStatusView = (TextView) itemView.findViewById(R.id.transaction_row_primary_status);
-            secondaryStatusView = (TextView) itemView.findViewById(R.id.transaction_row_secondary_status);
+            primaryStatusView = itemView.findViewById(R.id.transaction_row_primary_status);
+            secondaryStatusView = itemView.findViewById(R.id.transaction_row_secondary_status);
 
-            timeView = (TextView) itemView.findViewById(R.id.transaction_row_time);
-            dashSymbolView = (ImageView) itemView.findViewById(R.id.dash_amount_symbol);
-            valueView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_value);
-            signalView = (TextView) itemView.findViewById(R.id.transaction_amount_signal);
+            timeView = itemView.findViewById(R.id.transaction_row_time);
+            dashSymbolView = itemView.findViewById(R.id.dash_amount_symbol);
+            valueView = itemView.findViewById(R.id.transaction_row_value);
+            signalView = itemView.findViewById(R.id.transaction_amount_signal);
 
-            fiatView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fiat);
+            fiatView = itemView.findViewById(R.id.transaction_row_fiat);
             fiatView.setApplyMarkup(false);
-            rateNotAvailableView = (TextView) itemView.findViewById(R.id.transaction_row_rate_not_available);
+            rateNotAvailableView = itemView.findViewById(R.id.transaction_row_rate_not_available);
         }
 
         private void bind(final Transaction tx) {
@@ -287,27 +236,13 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             final TransactionConfidence confidence = tx.getConfidence();
             final Coin fee = tx.getFee();
 
-            final TransactionConfidence.IXType ixStatus = confidence.getIXType();
-
             TransactionCacheEntry txCache = transactionCache.get(tx.getTxId());
             if (txCache == null) {
                 final Coin value = tx.getValue(wallet);
                 final boolean sent = value.signum() < 0;
-                final boolean self = WalletUtils.isEntirelySelf(tx, wallet);
                 final boolean showFee = sent && fee != null && !fee.isZero();
-                final Address address;
-                if (sent) {
-                    List<Address> addresses = WalletUtils.getToAddressOfSent(tx, wallet);
-                    address = addresses.isEmpty() ? null : addresses.get(0);
-                } else {
-                    address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
-                }
-                final String addressLabel = address != null
-                        ? AddressBookProvider.resolveLabel(context, address.toBase58()) : null;
 
-                final Transaction.Type txType = tx.getType();
-
-                txCache = new TransactionCacheEntry(value, sent, self, showFee, address, addressLabel, txType);
+                txCache = new TransactionCacheEntry(value, sent, showFee);
                 transactionCache.put(tx.getTxId(), txCache);
             }
 

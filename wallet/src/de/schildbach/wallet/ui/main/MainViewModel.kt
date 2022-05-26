@@ -20,12 +20,17 @@ package de.schildbach.wallet.ui.main
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.core.os.bundleOf
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.ui.SingleLiveEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
@@ -35,9 +40,15 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
+import kotlin.time.ExperimentalTime
+import kotlin.time.Duration.Companion.seconds
 
 @HiltViewModel
+@FlowPreview
+@ExperimentalTime
 @ExperimentalCoroutinesApi
 class MainViewModel @Inject constructor(
     private val analytics: AnalyticsService,
@@ -47,11 +58,19 @@ class MainViewModel @Inject constructor(
     exchangeRatesProvider: ExchangeRatesProvider,
     walletDataProvider: WalletDataProvider
 ) : ViewModel() {
+    companion object {
+        private val THROTTLE_DURATION = 1.seconds
+    }
+
     private val listener: SharedPreferences.OnSharedPreferenceChangeListener
     private val currencyCode = MutableStateFlow(config.exchangeCurrencyCode)
 
     val balanceDashFormat: MonetaryFormat = config.format.noCode()
     val onTransactionsUpdated = SingleLiveEvent<Unit>()
+
+    private val _transactions = MutableLiveData<Collection<TransactionWrapper>>()
+    val transactions: MutableLiveData<Collection<TransactionWrapper>>
+        get() = _transactions
 
     private val _isBlockchainSynced = MutableLiveData<Boolean>()
     val isBlockchainSynced: LiveData<Boolean>
@@ -75,6 +94,19 @@ class MainViewModel @Inject constructor(
 
     init {
         _hideBalance.value = config.hideBalance
+        _transactions.value = walletDataProvider.wrapAllTransactions(
+            FullCrowdNodeSignUpTxSet(walletDataProvider.networkParameters)
+        )
+        walletDataProvider.observeTransactions()
+            .debounce(THROTTLE_DURATION)
+            .filterNotNull()
+            .onEach {
+                Log.i("CROWDNODE", "observeTransactions")
+                _transactions.postValue(walletDataProvider.wrapAllTransactions(
+                    FullCrowdNodeSignUpTxSet(walletDataProvider.networkParameters)
+                ))
+            }
+            .launchIn(viewModelScope)
 
         blockchainStateDao.observeState()
             .filterNotNull()

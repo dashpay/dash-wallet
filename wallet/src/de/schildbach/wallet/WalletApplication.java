@@ -123,12 +123,14 @@ import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
+import kotlinx.coroutines.ExperimentalCoroutinesApi;
 import kotlinx.coroutines.flow.Flow;
 
 /**
  * @author Andreas Schildbach
  */
 @HiltAndroidApp
+@ExperimentalCoroutinesApi
 public class WalletApplication extends BaseWalletApplication
         implements androidx.work.Configuration.Provider, AutoLogoutTimerHandler, WalletDataProvider {
     private static WalletApplication instance;
@@ -972,11 +974,15 @@ public class WalletApplication extends BaseWalletApplication
 
     @NonNull
     @Override
-    public Iterable<TransactionWrapper> wrapAllTransactions(@NonNull TransactionWrapper... wrappers) {
+    public Collection<TransactionWrapper> wrapAllTransactions(@NonNull TransactionWrapper... wrappers) {
         Set<Transaction> transactions = wallet.getTransactions(true);
         ArrayList<TransactionWrapper> wrappedTransactions = new ArrayList<>();
 
         for (Transaction transaction : transactions) {
+            if (transaction == null) {
+                continue;
+            }
+
             TransactionWrapper anonWrapper = new TransactionWrapper() {
                 @Override
                 public boolean tryInclude(@NonNull Transaction tx) {
