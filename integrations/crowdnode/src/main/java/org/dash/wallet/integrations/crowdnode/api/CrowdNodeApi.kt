@@ -43,6 +43,7 @@ import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
 import retrofit2.HttpException
+import retrofit2.Response
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.net.URLEncoder
@@ -405,12 +406,12 @@ class CrowdNodeApiAggregator @Inject constructor(
 
         if (result.isSuccessful) {
             log.info("SendMessage result successful, but wrong status: ${result.body()?.messageStatus ?: "null"}")
-            apiError.value = CrowdNodeException(result.body()?.messageStatus ?: "")
+            apiError.value = CrowdNodeException(CrowdNodeException.SEND_MESSAGE_ERROR)
             return false
         }
 
         log.info("SendMessage error, code: ${result.code()}, error: ${result.errorBody()?.string()}")
-        apiError.value = CrowdNodeException("${result.code()}: ${result.errorBody()?.string()}")
+        apiError.value = CrowdNodeException(CrowdNodeException.SEND_MESSAGE_ERROR)
         return false
     }
 
@@ -631,7 +632,6 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
     }
 
-    // TODO: Returning false even if you didn't sign up ?????
     private suspend fun resolveIsDefaultEmail(address: Address): Boolean {
         return try {
             val result = webApi.hasDefaultEmail(address.toBase58())

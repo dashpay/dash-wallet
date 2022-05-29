@@ -87,24 +87,6 @@
     </fragment>
 
     <fragment
-        android:id="@+id/onlineSignUpFragment"
-        android:name="org.dash.wallet.integrations.crowdnode.ui.online.OnlineSignUpFragment"
-        android:label="OnlineSignUpFragment">
-
-        <argument android:name="url" app:argType="string" />
-        <argument android:name="email" app:argType="string" />
-
-        <action
-            android:id="@+id/onlineSignUp_to_portal"
-            app:destination="@id/crowdNodePortalFragment"
-            app:popUpTo="@id/nav_crowdnode"
-            app:popUpToInclusive="true"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left" />
-    </fragment>
-
-    <fragment
         android:id="@+id/resultFragment"
         android:name="org.dash.wallet.integrations.crowdnode.ui.ResultFragment"
         android:label="ResultFragment">
@@ -112,6 +94,15 @@
         <argument android:name="isError" app:argType="boolean" />
         <argument android:name="title" app:argType="string" />
         <argument android:name="subtitle" app:argType="string" />
+
+        <action
+            android:id="@+id/result_to_onlineAccountEmail"
+            app:destination="@id/onlineAccountEmail"
+            app:popUpTo="@id/crowdNodePortalFragment"
+            app:popUpToInclusive="false"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -184,6 +175,24 @@
             app:destination="@id/onlineSignUpFragment"
             app:popUpTo="@id/crowdNodePortalFragment"
             app:popUpToInclusive="false"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/onlineSignUpFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.online.OnlineSignUpFragment"
+        android:label="OnlineSignUpFragment">
+
+        <argument android:name="url" app:argType="string" />
+        <argument android:name="email" app:argType="string" />
+
+        <action
+            android:id="@+id/onlineSignUp_to_portal"
+            app:destination="@id/crowdNodePortalFragment"
+            app:popUpTo="@id/nav_crowdnode"
+            app:popUpToInclusive="true"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />

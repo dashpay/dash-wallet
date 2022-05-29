@@ -56,6 +56,12 @@ class OnlineSignUpFragment : WebViewFragment() {
                 safeNavigate(OnlineSignUpFragmentDirections.onlineSignUpToPortal())
             }
         }
+
+        viewModel.observeCrowdNodeError().observe(viewLifecycleOwner) {
+            if (it != null) {
+                findNavController().popBackStack(R.id.crowdNodePortalFragment, false)
+            }
+        }
     }
 
     override fun doOnPageStarted(webView: WebView?, url: String?) {

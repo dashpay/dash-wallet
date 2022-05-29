@@ -77,13 +77,8 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
         hideKeyboard()
 
         lifecycleScope.launch {
-            AdaptiveDialog.withProgress(
-                getString(R.string.please_wait_title),
-                requireActivity()
-            ) {
-                viewModel.trackIsOnlineAccountCreated()
-                viewModel.signUpWithEmail(email)
-            }
+            viewModel.trackIsOnlineAccountCreated()
+            viewModel.signUpWithEmail(email)
         }
     }
 
