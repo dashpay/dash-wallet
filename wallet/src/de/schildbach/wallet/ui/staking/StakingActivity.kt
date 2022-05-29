@@ -33,15 +33,21 @@ import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.ui.WebViewFragmentDirections
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApiAggregator
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.NavigationRequest
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class StakingActivity : LockScreenActivity() {
+    companion object {
+        private val log = LoggerFactory.getLogger(StakingActivity::class.java)
+    }
+
     private val viewModel: CrowdNodeViewModel by viewModels()
     private lateinit var binding: ActivityStakingBinding
     private lateinit var navController: NavController
@@ -75,6 +81,7 @@ class StakingActivity : LockScreenActivity() {
                 startActivity(BuyAndSellLiquidUpholdActivity.createIntent(this))
             }
             NavigationRequest.SendReport -> {
+                log.info("CrowdNode initiated report")
                 alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
                     WalletApplication.getInstance()).buildAlertDialog()
                 alertDialog.show()
@@ -92,7 +99,7 @@ class StakingActivity : LockScreenActivity() {
                     navController.popBackStack()
                 }
             }
-            OnlineAccountStatus.Linking -> super.turnOffAutoLogout()
+            OnlineAccountStatus.Linking, OnlineAccountStatus.Creating -> super.turnOffAutoLogout()
             else -> {
                 if (isWebView) {
                     navController.navigate(WebViewFragmentDirections.webViewToPortal())

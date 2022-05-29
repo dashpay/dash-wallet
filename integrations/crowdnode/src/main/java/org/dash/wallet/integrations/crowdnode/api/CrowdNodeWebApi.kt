@@ -48,4 +48,9 @@ interface CrowdNodeWebApi {
         @Path("message") message: String,
         @Path("signature") signature: String,
     ): Response<SendMessageResult>
+
+    @GET("odata/apiaddresses/UsingDefaultApiEmail(address='{address}')")
+    suspend fun hasDefaultEmail(
+        @Path("address") address: String
+    ): Response<IsDefaultEmail>
 }

@@ -21,7 +21,6 @@ import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -82,7 +81,8 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
                 getString(R.string.please_wait_title),
                 requireActivity()
             ) {
-                viewModel.signAndSendEmail(email)
+                viewModel.trackIsOnlineAccountCreated()
+                viewModel.signUpWithEmail(email)
             }
         }
     }

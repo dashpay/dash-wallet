@@ -61,4 +61,8 @@ object CrowdNodeConstants {
     fun getProfileUrl(params: NetworkParameters): String {
         return getCrowdNodeBaseUrl(params) + "Profile"
     }
+
+    fun getFundsOpenUrl(address: Address): String {
+        return getCrowdNodeBaseUrl(address.parameters) + "FundsOpen/${address.toBase58()}"
+    }
 }

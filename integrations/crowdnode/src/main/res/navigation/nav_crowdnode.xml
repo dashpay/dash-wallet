@@ -16,7 +16,9 @@
   -->
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/nav_crowdnode">
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_crowdnode"
+    tools:ignore="InvalidNavigation">
 
     <fragment
         android:id="@+id/entryPointFragment"
@@ -180,6 +182,8 @@
         <action
             android:id="@+id/onlineAccountEmail_to_signUp"
             app:destination="@id/onlineSignUpFragment"
+            app:popUpTo="@id/crowdNodePortalFragment"
+            app:popUpToInclusive="false"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />

@@ -112,8 +112,6 @@
     <string name="crowdnode_website" translatable="false">https://crowdnode.io/</string>
     <string name="crowdnode_terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>
     <string name="crowdnode_privacy_policy_url" translatable="false">https://crowdnode.io/privacy/</string>
-    <string name="crowdnode_login_page" translatable="false">https://app.crowdnode.io/FundsOpen/%s</string>
-    <string name="crowdnode_login_test_page" translatable="false">https://test.crowdnode.io/FundsOpen/%s</string>
     <string name="crowdnode_support_url" translatable="false">https://knowledge.crowdnode.io/</string>
     <string name="crowdnode_how_to_verify_url" translatable="false">https://knowledge.crowdnode.io/en/articles/6114502-how-to-confirm-your-api-dash-address</string>
 </resources>

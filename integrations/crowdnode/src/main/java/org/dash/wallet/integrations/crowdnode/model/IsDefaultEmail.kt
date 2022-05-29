@@ -17,32 +17,9 @@
 
 package org.dash.wallet.integrations.crowdnode.model
 
-// Order matters
-enum class SignUpStatus {
-    NotStarted,
-    FundingWallet,
-    SigningUp,
-    AcceptingTerms,
-    Finished,
-    Error,
-    LinkedOnline
-}
+import com.google.gson.annotations.SerializedName
 
-// Order matters
-enum class OnlineAccountStatus {
-    None,
-    Linking,
-    Validating,
-    Confirming,
-    Creating,
-    Done
-}
-
-class CrowdNodeException(message: String): Exception(message) {
-    companion object {
-        const val DEPOSIT_ERROR = "deposit_error"
-        const val CONFIRMATION_ERROR = "confirmation_error"
-        const val WITHDRAWAL_ERROR = "withdrawal_error"
-        const val MISSING_PRIMARY = "primary_not_specified"
-    }
-}
+class IsDefaultEmail(
+    @SerializedName("value")
+    val isDefault : Boolean
+)

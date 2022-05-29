@@ -36,10 +36,12 @@ import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApiAggregator
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 enum class NavigationRequest {
@@ -290,14 +292,26 @@ class CrowdNodeViewModel @Inject constructor(
         return crowdNodeApi.apiError.asLiveData()
     }
 
-    suspend fun signAndSendEmail(email: String) {
-        val signed = securityFunctions.signMessage(accountAddress.value!!, email)
-        crowdNodeApi.sendSignedEmailMessage(accountAddress.value!!, email, signed)
+    suspend fun signUpWithEmail(email: String) {
         val signupUrl = CrowdNodeConstants.getProfileUrl(networkParameters)
         onlineAccountRequest.postValue(mapOf(
             URL_ARG to signupUrl,
             EMAIL_ARG to email
         ))
+        val signed = securityFunctions.signMessage(accountAddress.value!!, email)
+        crowdNodeApi.sendSignedEmailMessage(accountAddress.value!!, email, signed)
+    }
+
+    fun trackIsOnlineAccountCreated() {
+        crowdNodeApi.trackEmailStatus()
+    }
+
+    fun cancelTrackingIsOnlineAccountCreated() {
+        crowdNodeApi.stopTrackingEmailStatus()
+    }
+
+    fun getAccountUrl(): String {
+        return CrowdNodeConstants.getFundsOpenUrl(_accountAddress.value!!)
     }
 
     private fun getOrCreateAccountAddress(): Address {

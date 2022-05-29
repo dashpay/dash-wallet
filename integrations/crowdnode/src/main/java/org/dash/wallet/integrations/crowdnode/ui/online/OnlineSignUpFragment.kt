@@ -22,10 +22,15 @@ import android.util.Log
 import android.view.View
 import android.webkit.WebView
 import androidx.core.os.bundleOf
+import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.WebViewFragment
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
+import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
+import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 
 @AndroidEntryPoint
 class OnlineSignUpFragment : WebViewFragment() {
@@ -35,6 +40,7 @@ class OnlineSignUpFragment : WebViewFragment() {
     }
 
     private val args by navArgs<OnlineSignUpFragmentArgs>()
+    private val viewModel by activityViewModels<CrowdNodeViewModel>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         arguments = bundleOf(
@@ -44,6 +50,12 @@ class OnlineSignUpFragment : WebViewFragment() {
         )
 
         super.onViewCreated(view, savedInstanceState)
+
+        viewModel.observeOnlineAccountStatus().observe(viewLifecycleOwner) { status ->
+            if (status == OnlineAccountStatus.Done) {
+                safeNavigate(OnlineSignUpFragmentDirections.onlineSignUpToPortal())
+            }
+        }
     }
 
     override fun doOnPageStarted(webView: WebView?, url: String?) {
@@ -57,7 +69,17 @@ class OnlineSignUpFragment : WebViewFragment() {
         }
     }
 
-    override fun doOnPageFinished(webView: WebView?, url: String?) {
-        Log.i("CROWDNODE", "doOnPageFinished: ${url}")
+    override fun onBackButtonPressed() {
+        findNavController().popBackStack()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        viewModel.cancelTrackingIsOnlineAccountCreated()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.trackIsOnlineAccountCreated()
     }
 }
