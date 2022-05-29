@@ -504,7 +504,7 @@ public final class ScanActivity extends AbstractWalletActivity
         @Override
         public Dialog onCreateDialog(final Bundle savedInstanceState) {
             final Bundle args = getArguments();
-            baseAlertDialogBuilder.setTitle(String.valueOf(args.getInt("title")));
+            baseAlertDialogBuilder.setTitle(getString(args.getInt("title")));
             baseAlertDialogBuilder.setMessage((args.getString("message")));
             baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
             baseAlertDialogBuilder.setNeutralAction(

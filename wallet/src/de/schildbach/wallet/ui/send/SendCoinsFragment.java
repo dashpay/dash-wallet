@@ -37,6 +37,7 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.fragment.app.DialogFragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
@@ -592,7 +593,7 @@ public class SendCoinsFragment extends BaseLockScreenFragment {
         String fiatSymbol = fiatAmount != null ? GenericUtils.currencySymbol(fiatAmount.currencyCode) : "";
         String fee = txFee.toPlainString();
 
-        dialogFragment = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
+        DialogFragment dialogFragment = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
                 fiatSymbol, fee, total, null, null, null);
 
         dialogFragment.show(getParentFragmentManager(), "ConfirmTransactionDialog");
