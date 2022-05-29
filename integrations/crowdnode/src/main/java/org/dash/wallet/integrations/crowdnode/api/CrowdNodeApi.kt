@@ -587,7 +587,6 @@ class CrowdNodeApiAggregator @Inject constructor(
 
     private suspend fun checkIfOnlineAccountCreated(address: Address) {
         val isDefaultEmail = resolveIsDefaultEmail(address)
-        Log.i("CROWDNODE", "isDefaultEmail: ${isDefaultEmail}")
 
         if (!isDefaultEmail) {
             changeOnlineStatus(OnlineAccountStatus.Done)
@@ -635,7 +634,6 @@ class CrowdNodeApiAggregator @Inject constructor(
     private suspend fun resolveIsDefaultEmail(address: Address): Boolean {
         return try {
             val result = webApi.hasDefaultEmail(address.toBase58())
-            Log.i("CROWDNODE", "result: ${result}")
             result.isSuccessful && result.body()?.isDefault != false
         } catch (ex: Exception) {
             log.error("Error in resolveIsDefaultEmail: $ex")
@@ -661,7 +659,6 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     private fun changeOnlineStatus(status: OnlineAccountStatus, save: Boolean = true) {
-        Log.i("CROWDNODE", "setting online status: ${status}")
         if (signUpStatus.value != SignUpStatus.Finished) {
             signUpStatus.value = if (status.ordinal < OnlineAccountStatus.Validating.ordinal) {
                 SignUpStatus.NotStarted

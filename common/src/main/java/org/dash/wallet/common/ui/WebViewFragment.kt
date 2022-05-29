@@ -24,6 +24,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.FragmentWebviewBinding
 
@@ -62,13 +63,12 @@ open class WebViewFragment : Fragment(R.layout.fragment_webview) {
         }
 
         binding.toolbar.setNavigationOnClickListener {
-            onBackButtonPressed()
+            findNavController().popBackStack()
         }
     }
 
     open fun doOnPageStarted(webView: WebView?, url: String?) { }
     open fun doOnPageFinished(webView: WebView?, url: String?) { }
-    open fun onBackButtonPressed() { }
 
     override fun onPause() {
         webView?.onPause()

@@ -47,9 +47,6 @@ import org.dash.wallet.integrations.crowdnode.ui.dialogs.ConfirmationDialog
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.OnlineAccountDetailsDialog
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-// TODO:
-// - Recheck linking
-// - Try to break
 @AndroidEntryPoint
 class PortalFragment : Fragment(R.layout.fragment_portal) {
     companion object {
@@ -260,11 +257,13 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
              else -> R.string.secure_online_account
         })
 
-        binding.onlineAccountTitle.text = getText(if (status == OnlineAccountStatus.Done) {
-            R.string.online_account
-        } else {
+        binding.onlineAccountTitle.text = getText(if (status == OnlineAccountStatus.None) {
             R.string.online_account_create
+        } else {
+            R.string.online_account
         })
+
+        binding.onlineNavIcon.isVisible = !isLinkingInProgress
 
         binding.addressStatusWarning.isVisible =
             status == OnlineAccountStatus.Validating ||

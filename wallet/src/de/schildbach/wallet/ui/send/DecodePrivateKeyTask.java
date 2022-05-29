@@ -43,7 +43,6 @@ public abstract class DecodePrivateKeyTask {
             public void run() {
                 try {
                     final ECKey decryptedKey = encryptedKey.decrypt(passphrase); // takes time
-                    Log.i("CROWDNODE", "decoded key: " + Utils.HEX.encode(decryptedKey.getPubKey()));
 
                     callbackHandler.post(new Runnable() {
                         @Override

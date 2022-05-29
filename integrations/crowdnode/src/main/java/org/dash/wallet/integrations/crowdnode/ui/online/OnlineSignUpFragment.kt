@@ -65,7 +65,6 @@ class OnlineSignUpFragment : WebViewFragment() {
     }
 
     override fun doOnPageStarted(webView: WebView?, url: String?) {
-        Log.i("CROWDNODE", "doOnPageStarted: ${url}")
         val fullSuffix = SIGNUP_SUFFIX + "&loginHint=${args.email}"
 
         url?.let {
@@ -73,10 +72,6 @@ class OnlineSignUpFragment : WebViewFragment() {
                 webView?.loadUrl("$url$fullSuffix")
             }
         }
-    }
-
-    override fun onBackButtonPressed() {
-        findNavController().popBackStack()
     }
 
     override fun onPause() {

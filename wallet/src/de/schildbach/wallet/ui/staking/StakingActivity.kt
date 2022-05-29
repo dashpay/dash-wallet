@@ -91,21 +91,10 @@ class StakingActivity : LockScreenActivity() {
     }
 
     private fun handleOnlineAccountStatus(status: OnlineAccountStatus) {
-        val isWebView = navController.currentDestination?.id == R.id.crowdNodeWebViewFragment
-
         when (status) {
-            OnlineAccountStatus.None -> {
-                if (viewModel.crowdNodeError != null && isWebView) {
-                    navController.popBackStack()
-                }
-            }
+            OnlineAccountStatus.None -> { }
             OnlineAccountStatus.Linking, OnlineAccountStatus.Creating -> super.turnOffAutoLogout()
-            else -> {
-                if (isWebView) {
-                    navController.navigate(WebViewFragmentDirections.webViewToPortal())
-                }
-                super.turnOnAutoLogout()
-            }
+            else -> super.turnOnAutoLogout()
         }
     }
 
