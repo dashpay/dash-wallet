@@ -86,7 +86,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     private static final int VIEW_TYPE_TRANSACTION = 0;
 
-    private final Map<Sha256Hash, TransactionCacheEntry> transactionCache = new HashMap<Sha256Hash, TransactionCacheEntry>();
+    private final Map<Sha256Hash, TransactionCacheEntry> transactionCache = new HashMap<>();
 
     private static class TransactionCacheEntry {
         private final Coin value;

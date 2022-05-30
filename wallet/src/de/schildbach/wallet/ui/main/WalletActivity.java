@@ -105,12 +105,16 @@ import de.schildbach.wallet_test.R;
 import kotlin.Pair;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
+import kotlinx.coroutines.ExperimentalCoroutinesApi;
+import kotlinx.coroutines.FlowPreview;
 
 
 /**
  * @author Andreas Schildbach
  */
+@FlowPreview
 @AndroidEntryPoint
+@ExperimentalCoroutinesApi
 public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         NavigationView.OnNavigationItemSelectedListener,
@@ -134,7 +138,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private ShortcutsPane shortcutsPane;
 
-    private Handler handler = new Handler();
+    private final Handler handler = new Handler();
 
     private static final int REQUEST_CODE_SCAN = 0;
     private static final int REQUEST_CODE_BACKUP_WALLET = 1;
@@ -192,7 +196,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             }
         });
 
-        viewModel.getOnTransactionsUpdated().observe(this, aVoid -> refreshShortcutBar());
+        viewModel.getTransactions().observe(this, txs -> refreshShortcutBar());
         viewModel.isBlockchainSynced().observe(this, isSynced -> updateSyncState());
         viewModel.isBlockchainSyncFailed().observe(this, isSynced -> updateSyncState());
     }

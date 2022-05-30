@@ -20,15 +20,13 @@ package de.schildbach.wallet.ui.main
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.core.os.bundleOf
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.ui.SingleLiveEvent
+import de.schildbach.wallet.transactions.TxDirection
+import de.schildbach.wallet.transactions.TxDirectionFilter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
@@ -40,15 +38,14 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.transactions.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
-import kotlin.time.ExperimentalTime
-import kotlin.time.Duration.Companion.seconds
 
 @HiltViewModel
 @FlowPreview
-@ExperimentalTime
 @ExperimentalCoroutinesApi
 class MainViewModel @Inject constructor(
     private val analytics: AnalyticsService,
@@ -56,21 +53,31 @@ class MainViewModel @Inject constructor(
     private val config: Configuration,
     blockchainStateDao: BlockchainStateDao,
     exchangeRatesProvider: ExchangeRatesProvider,
-    walletDataProvider: WalletDataProvider
+    private val walletData: WalletDataProvider,
+    walletApplication: WalletApplication,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     companion object {
-        private val THROTTLE_DURATION = 1.seconds
+        private const val THROTTLE_DURATION = 1000L
+        private const val DIRECTION_KEY = "tx_direction"
     }
 
     private val listener: SharedPreferences.OnSharedPreferenceChangeListener
     private val currencyCode = MutableStateFlow(config.exchangeCurrencyCode)
 
     val balanceDashFormat: MonetaryFormat = config.format.noCode()
-    val onTransactionsUpdated = SingleLiveEvent<Unit>()
 
-    private val _transactions = MutableLiveData<Collection<TransactionWrapper>>()
-    val transactions: MutableLiveData<Collection<TransactionWrapper>>
+    private val _transactions = MutableLiveData<Set<TransactionWrapper>>()
+    val transactions: LiveData<Set<TransactionWrapper>>
         get() = _transactions
+
+    private val _transactionsDirection = MutableStateFlow(TxDirection.ALL)
+    var transactionsDirection: TxDirection
+        get() = _transactionsDirection.value
+        set(value) {
+            _transactionsDirection.value = value
+            savedStateHandle.set(DIRECTION_KEY, value)
+        }
 
     private val _isBlockchainSynced = MutableLiveData<Boolean>()
     val isBlockchainSynced: LiveData<Boolean>
@@ -79,6 +86,10 @@ class MainViewModel @Inject constructor(
     private val _isBlockchainSyncFailed = MutableLiveData<Boolean>()
     val isBlockchainSyncFailed: LiveData<Boolean>
         get() = _isBlockchainSyncFailed
+
+    private val _blockchainSyncPercentage = MutableLiveData<Int>()
+    val blockchainSyncPercentage: LiveData<Int>
+        get() = _blockchainSyncPercentage
 
     private val _exchangeRate = MutableLiveData<ExchangeRate>()
     val exchangeRate: LiveData<ExchangeRate>
@@ -94,29 +105,34 @@ class MainViewModel @Inject constructor(
 
     init {
         _hideBalance.value = config.hideBalance
-        _transactions.value = walletDataProvider.wrapAllTransactions(
-            FullCrowdNodeSignUpTxSet(walletDataProvider.networkParameters)
-        )
-        walletDataProvider.observeTransactions()
-            .debounce(THROTTLE_DURATION)
-            .filterNotNull()
-            .onEach {
-                Log.i("CROWDNODE", "observeTransactions")
-                _transactions.postValue(walletDataProvider.wrapAllTransactions(
-                    FullCrowdNodeSignUpTxSet(walletDataProvider.networkParameters)
-                ))
+        transactionsDirection = savedStateHandle.get(DIRECTION_KEY) ?: TxDirection.ALL
+        _transactionsDirection
+            .flatMapLatest { direction ->
+                val filter = TxDirectionFilter(direction, walletApplication.wallet)
+                refreshTransactions(filter)
+                walletData.observeTransactions(filter)
+                    .debounce(THROTTLE_DURATION)
+                    .onEach { refreshTransactions(filter) }
             }
             .launchIn(viewModelScope)
 
         blockchainStateDao.observeState()
             .filterNotNull()
-            .onEach {
-                _isBlockchainSynced.postValue(it.isSynced())
-                _isBlockchainSyncFailed.postValue(it.syncFailed())
+            .onEach { state ->
+                _isBlockchainSynced.postValue(state.isSynced())
+                _isBlockchainSyncFailed.postValue(state.syncFailed())
+
+                var percentage = state.percentageSync
+                if (state.replaying && state.percentageSync == 100) {
+                    //This is to prevent showing 100% when using the Rescan blockchain function.
+                    //The first few broadcasted blockchainStates are with percentage sync at 100%
+                    percentage = 0
+                }
+                _blockchainSyncPercentage.postValue(percentage)
             }
             .launchIn(viewModelScope)
 
-        walletDataProvider.observeBalance()
+        walletData.observeBalance()
             .onEach(_balance::postValue)
             .launchIn(viewModelScope)
 
@@ -174,8 +190,26 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun logDirectionChangedEvent(direction: TxDirection) {
+        val directionParameter = when (direction) {
+            TxDirection.ALL -> "all_transactions"
+            TxDirection.SENT -> "sent_transactions"
+            TxDirection.RECEIVED -> "received_transactions"
+        }
+        analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
+            "filter_value" to directionParameter
+        ))
+    }
+
     override fun onCleared() {
         super.onCleared()
         config.unregisterOnSharedPreferenceChangeListener(listener)
+    }
+
+    private fun refreshTransactions(filter: TransactionFilter) {
+        val wrappedTransactions = walletData.wrapAllTransactions(
+            FullCrowdNodeSignUpTxSet(walletData.networkParameters)
+        ).filter { it.transactions.any { tx -> filter.matches(tx) } }
+        _transactions.postValue(wrappedTransactions.toSortedSet(TransactionWrapperComparator()))
     }
 }

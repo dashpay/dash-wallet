@@ -28,6 +28,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.services.SecurityModel
@@ -41,6 +42,7 @@ import org.dash.wallet.integrations.crowdnode.ui.WebViewFragmentDirections
 import javax.inject.Inject
 
 @AndroidEntryPoint
+@ExperimentalCoroutinesApi
 class StakingActivity : LockScreenActivity() {
     private val viewModel: CrowdNodeViewModel by viewModels()
     private lateinit var binding: ActivityStakingBinding

@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.crowdnode.transactions
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.transactions.TransactionComparator
 import org.dash.wallet.common.transactions.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
 
@@ -32,7 +33,7 @@ open class FullCrowdNodeSignUpTxSet(networkParams: NetworkParameters): Transacti
     )
 
     private val matchedFilters = mutableListOf<TransactionFilter>()
-    override val transactions = mutableSetOf<Transaction>()
+    override val transactions = sortedSetOf(TransactionComparator())
 
     open val hasAcceptTermsResponse: Boolean
         get() = matchedFilters.any { it is CrowdNodeAcceptTermsResponse }

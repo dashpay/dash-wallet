@@ -20,18 +20,15 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.os.bundleOf
-import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.DialogFragment
+import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet_test.databinding.DialogTransactionsFilterBinding
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
-import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 
-class TransactionsFilterDialog : BaseBottomSheetDialogFragment() {
-
-    private val sharedViewModel: TransactionsFilterSharedViewModel by activityViewModels()
+class TransactionsFilterDialog(
+    private val clickListener: (TxDirection, DialogFragment) -> Unit
+) : OffsetDialogFragment() {
     private lateinit var binding: DialogTransactionsFilterBinding
-    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         super.onCreate(savedInstanceState)
@@ -43,28 +40,17 @@ class TransactionsFilterDialog : BaseBottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         // take care of actions here
-        view.apply {
-            binding.allTransactions.setOnClickListener {
-                sharedViewModel.onAllTransactionsSelected.call()
-                analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
-                    "filter_value" to "all_transactions"
-                ))
-                dismiss()
-            }
-            binding.receivedTransactions.setOnClickListener {
-                sharedViewModel.onReceivedTransactionsSelected.call()
-                analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
-                    "filter_value" to "received_transactions"
-                ))
-                dismiss()
-            }
-            binding.sentTransactions.setOnClickListener {
-                sharedViewModel.onSentTransactionsSelected.call()
-                analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
-                    "filter_value" to "sent_transactions"
-                ))
-                dismiss()
-            }
+        binding.allTransactions.setOnClickListener {
+            clickListener.invoke(TxDirection.ALL, this@TransactionsFilterDialog)
+            dismiss()
+        }
+        binding.receivedTransactions.setOnClickListener {
+            clickListener.invoke(TxDirection.RECEIVED, this@TransactionsFilterDialog)
+            dismiss()
+        }
+        binding.sentTransactions.setOnClickListener {
+            clickListener.invoke(TxDirection.SENT, this@TransactionsFilterDialog)
+            dismiss()
         }
     }
 }
