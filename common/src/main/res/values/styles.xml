@@ -800,6 +800,10 @@
         <item name="fontFamily">@font/montserrat_medium</item>
     </style>
 
+    <style name="Body2.LightGrayBlack">
+        <item name="android:textColor">@color/light_gray_black</item>
+    </style>
+
     <style name="Subtitle1" parent="TextAppearance.MaterialComponents.Subtitle1">
         <item name="android:textColor">@color/content_primary</item>
         <item name="fontFamily">@font/montserrat_semibold</item>
@@ -850,9 +854,8 @@
         <item name="android:textColor">@color/light_dark_gray</item>
     </style>
 
-    <style name="Caption.LightGrayBlack">
-        <item name="android:textSize">15sp</item>
-        <item name="android:textColor">@color/light_gray_black</item>
+    <style name="Caption.OrangeStatus">
+        <item name="android:textColor">@color/secondary_status</item>
     </style>
 
     <style name="Caption.Medium">

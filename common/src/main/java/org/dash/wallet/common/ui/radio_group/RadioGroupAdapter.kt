@@ -28,7 +28,7 @@ import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.RadiobuttonRowBinding
 import org.dash.wallet.common.ui.getRoundedBackground
-import org.dash.wallet.common.ui.ListDividerDecorator
+import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 
 class RadioGroupAdapter(
     defaultSelectedIndex: Int = 0,

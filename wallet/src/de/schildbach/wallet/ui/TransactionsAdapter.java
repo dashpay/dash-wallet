@@ -172,7 +172,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(final ViewGroup parent, final int viewType) {
         if (viewType == VIEW_TYPE_TRANSACTION) {
-            return new TransactionViewHolder(inflater.inflate(R.layout.transaction_row, parent, false));
+            return new TransactionViewHolder(inflater.inflate(R.layout.transaction_row_ext, parent, false));
         } else {
             throw new IllegalStateException("unknown type: " + viewType);
         }

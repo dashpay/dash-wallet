@@ -222,7 +222,7 @@
 
                 <org.dash.wallet.common.ui.CurrencyTextView
                     android:id="@+id/transaction_fee"
-                    style="@style/Caption.LightGrayBlack"
+                    style="@style/Body2.LightGrayBlack"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/transaction_result_sent_to"
@@ -265,7 +265,7 @@
                 <TextView
                     android:id="@+id/transaction_date_and_time"
                     app:layout_constraintTop_toTopOf="parent"
-                    style="@style/Caption.LightGrayBlack"
+                    style="@style/Body2.LightGrayBlack"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:paddingVertical="12dp"
@@ -301,10 +301,11 @@
 
                 <TextView
                     android:id="@+id/error_description"
-                    style="@style/Caption.LightGrayBlack"
+                    style="@style/Body2.LightGrayBlack"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
+                    android:textSize="15sp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/error_label"
                     />

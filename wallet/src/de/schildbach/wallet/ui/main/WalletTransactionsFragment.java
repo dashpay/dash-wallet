@@ -129,18 +129,18 @@ public class WalletTransactionsFragment extends Fragment implements
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
         recyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
-            private final int PADDING = 2 * getResources().getDimensionPixelOffset(R.dimen.card_padding_vertical);
+            private final int VERTICAL = 3 * getResources().getDimensionPixelOffset(R.dimen.card_padding_vertical);
+            private final int HORIZONTAL = getResources().getDimensionPixelOffset(R.dimen.default_horizontal_padding);
 
             @Override
             public void getItemOffsets(@NonNull final Rect outRect, @NonNull final View view, @NonNull final RecyclerView parent,
                                        @NonNull final RecyclerView.State state) {
                 super.getItemOffsets(outRect, view, parent, state);
-
-                final int position = parent.getChildAdapterPosition(view);
-                if (position == 0)
-                    outRect.top += PADDING;
-                else if (parent.getAdapter() != null && position == parent.getAdapter().getItemCount() - 1)
-                    outRect.bottom += PADDING;
+R
+                outRect.left = HORIZONTAL;
+                outRect.right = HORIZONTAL;
+                outRect.top = VERTICAL;
+                outRect.bottom = VERTICAL;
             }
         });
 
