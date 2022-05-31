@@ -2,22 +2,18 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white">
+    android:fillViewport="true"
+    android:background="@color/gray_40">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:clipToPadding="false"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:paddingLeft="16dp"
-        android:paddingTop="@dimen/transaction_detail_dialog_content_vertical_padding"
-        android:paddingRight="16dp"
-        android:paddingBottom="@dimen/transaction_detail_dialog_content_vertical_padding">
+        android:orientation="vertical">
 
         <include layout="@layout/transaction_result_content" />
 
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </ScrollView>

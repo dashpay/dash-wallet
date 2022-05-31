@@ -85,22 +85,15 @@ class TransactionResultActivity : AbstractWalletActivity() {
         if (tx != null) {
             val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
             val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
-            transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
-            view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
+            transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy, false)
+            open_explorer_card.setOnClickListener { viewOnExplorer(tx) }
             transaction_close_btn.setOnClickListener {
-                when {
-                    intent.action == Intent.ACTION_VIEW ||
-                            intent.action == ACTION_SEND_FROM_WALLET_URI -> {
-                        finish()
-                    }
-                    intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
-                        startActivity(WalletActivity.createIntent(this))
-                    }
-                    else -> {
-                        startActivity(WalletActivity.createIntent(this))
-                    }
-                }
+                onTransactionDetailsDismiss()
             }
+            report_issue_card.setOnClickListener {
+                showReportIssue()
+            }
+            close_btn.setOnClickListener { onTransactionDetailsDismiss() }
         } else {
             log.error("Transaction not found. TxId:", txId)
             finish()
@@ -119,4 +112,23 @@ class TransactionResultActivity : AbstractWalletActivity() {
         WalletUtils.viewOnBlockExplorer(this, tx.purpose, tx.txId.toString())
     }
 
+    private fun showReportIssue() {
+        ReportIssueDialogBuilder.createReportIssueDialog(this, WalletApplication.getInstance())
+            .buildAlertDialog().show()
+    }
+
+    private fun onTransactionDetailsDismiss(){
+        when {
+            intent.action == Intent.ACTION_VIEW ||
+                    intent.action == ACTION_SEND_FROM_WALLET_URI -> {
+                finish()
+            }
+            intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
+                startActivity(WalletActivity.createIntent(this))
+            }
+            else -> {
+                startActivity(WalletActivity.createIntent(this))
+            }
+        }
+    }
 }

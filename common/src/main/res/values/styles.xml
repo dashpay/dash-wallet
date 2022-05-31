@@ -675,6 +675,16 @@
 
     <!-- Typography -->
 
+    <style name="Headline3" parent="TextAppearance.MaterialComponents.Headline3">
+        <item name="fontFamily">@font/montserrat_medium</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="Headline3.Regular">
+        <item name="fontFamily">@font/montserrat_regular</item>
+        <item name="android:textColor">@color/light_gray_black</item>
+    </style>
+
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>
@@ -759,12 +769,30 @@
         <item name="android:lineSpacingExtra">3sp</item>
     </style>
 
+    <style name="Caption.LightDarkGray">
+        <item name="android:textColor">@color/light_dark_gray</item>
+    </style>
+
+    <style name="Caption.LightGrayBlack">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/light_gray_black</item>
+    </style>
+
     <style name="Caption.Medium">
         <item name="fontFamily">@font/montserrat_medium</item>
     </style>
 
     <style name="Caption.Medium.Blue">
         <item name="android:textColor">@color/dash_blue</item>
+    </style>
+
+    <style name="Caption.Medium.LightGray">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/light_dark_gray</item>
+    </style>
+
+    <style name="Caption.Medium.LightGrayBlack">
+        <item name="android:textColor">@color/light_gray_black</item>
     </style>
 
     <style name="Caption.Medium.SteelGray">
@@ -1082,5 +1110,14 @@
 
     <style name="bottomSheetStyleWrapper" parent="Widget.Design.BottomSheet.Modal">
         <item name="android:background">@android:color/transparent</item>
+    </style>
+
+    <style name="FullScreenDialog" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:padding">0dp</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowCloseOnTouchOutside">false</item>
     </style>
 </resources>
