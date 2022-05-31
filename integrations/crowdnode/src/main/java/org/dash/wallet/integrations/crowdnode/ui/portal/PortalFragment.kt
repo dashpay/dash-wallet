@@ -45,6 +45,7 @@ import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.ConfirmationDialog
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.OnlineAccountDetailsDialog
+import org.dash.wallet.integrations.crowdnode.ui.online.OnlineAccountEmailFragmentDirections
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 @AndroidEntryPoint
@@ -64,6 +65,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     private val isLinkingInProgress: Boolean
         get() = viewModel.onlineAccountStatus != OnlineAccountStatus.None &&
                 viewModel.onlineAccountStatus != OnlineAccountStatus.Creating &&
+                viewModel.onlineAccountStatus != OnlineAccountStatus.SigningUp &&
                 viewModel.onlineAccountStatus != OnlineAccountStatus.Done
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -108,8 +110,12 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             }
         }
 
-        binding.verifyBtn.setOnClickListener {
-            showConfirmationDialog()
+        viewModel.onlineAccountRequest.observe(viewLifecycleOwner) { args ->
+            safeNavigate(
+                PortalFragmentDirections.portalToSignUp(
+                args[CrowdNodeViewModel.URL_ARG]!!,
+                args[CrowdNodeViewModel.EMAIL_ARG] ?: ""
+            ))
         }
     }
 
@@ -145,6 +151,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             }
 
             true
+        }
+
+        binding.verifyBtn.setOnClickListener {
+            showConfirmationDialog()
         }
 
         handleBalance(binding)
@@ -248,13 +258,14 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun setOnlineAccountStatus(status: OnlineAccountStatus) {
-        binding.onlineAccountBtn.isClickable = status == OnlineAccountStatus.None ||
-                                               status == OnlineAccountStatus.Done
+        binding.onlineAccountBtn.isClickable = !isLinkingInProgress
+        binding.onlineNavIcon.isVisible = !isLinkingInProgress
 
         binding.onlineAccountStatus.text = getText(when (status) {
-             OnlineAccountStatus.Confirming, OnlineAccountStatus.Validating -> R.string.crowdnode_online_unconfirmed
-             OnlineAccountStatus.Done -> R.string.crowdnode_online_synced
-             else -> R.string.secure_online_account
+            OnlineAccountStatus.Done -> R.string.crowdnode_online_synced
+            OnlineAccountStatus.None -> R.string.secure_online_account
+            OnlineAccountStatus.SigningUp -> R.string.crowdnode_signup_to_finish
+            else -> R.string.crowdnode_in_process
         })
 
         binding.onlineAccountTitle.text = getText(if (status == OnlineAccountStatus.None) {
@@ -262,8 +273,6 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         } else {
             R.string.online_account
         })
-
-        binding.onlineNavIcon.isVisible = !isLinkingInProgress
 
         binding.addressStatusWarning.isVisible =
             status == OnlineAccountStatus.Validating ||
@@ -287,11 +296,14 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun handleOnlineAccountNavigation() {
-        if (viewModel.onlineAccountStatus == OnlineAccountStatus.Done) {
-            val accountUrl = viewModel.getAccountUrl()
-            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(accountUrl))
-            startActivity(browserIntent)
-        } else if (viewModel.onlineAccountStatus == OnlineAccountStatus.None) {
+        when (viewModel.onlineAccountStatus) {
+            OnlineAccountStatus.None, OnlineAccountStatus.Creating -> showOnlineInfoOrEnterEmail()
+            OnlineAccountStatus.SigningUp -> viewModel.initiateOnlineSignUp()
+            OnlineAccountStatus.Done -> openCrowdNodeProfile()
+            else -> { }
+        }
+
+        if (viewModel.onlineAccountStatus == OnlineAccountStatus.None) {
             lifecycleScope.launch {
                 if (viewModel.getShouldShowOnlineInfo()) {
                     safeNavigate(PortalFragmentDirections.portalToOnlineAccountInfo())
@@ -331,6 +343,23 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
                 if (toCopy == true) {
                     viewModel.accountAddress.value?.toBase58()?.copy(requireActivity(), "dash address")
                 }
+            }
+        }
+    }
+
+    private fun openCrowdNodeProfile() {
+        val accountUrl = viewModel.getAccountUrl()
+        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(accountUrl))
+        startActivity(browserIntent)
+    }
+
+    private fun showOnlineInfoOrEnterEmail() {
+        lifecycleScope.launch {
+            if (viewModel.getShouldShowOnlineInfo()) {
+                safeNavigate(PortalFragmentDirections.portalToOnlineAccountInfo())
+                viewModel.setOnlineInfoShown(true)
+            } else {
+                safeNavigate(PortalFragmentDirections.portalToOnlineAccountEmail())
             }
         }
     }

@@ -18,7 +18,6 @@
 package org.dash.wallet.integrations.crowdnode.ui.online
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.webkit.WebView
 import androidx.core.os.bundleOf
@@ -72,15 +71,5 @@ class OnlineSignUpFragment : WebViewFragment() {
                 webView?.loadUrl("$url$fullSuffix")
             }
         }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        viewModel.cancelTrackingIsOnlineAccountCreated()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        viewModel.trackIsOnlineAccountCreated()
     }
 }

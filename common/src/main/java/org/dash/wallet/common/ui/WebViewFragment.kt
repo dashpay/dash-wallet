@@ -51,6 +51,7 @@ open class WebViewFragment : Fragment(R.layout.fragment_webview) {
             }
 
             override fun onPageFinished(view: WebView, url: String?) {
+                super.onPageFinished(view, url)
                 binding.progressBar.isVisible = false
                 doOnPageFinished(view, url)
             }

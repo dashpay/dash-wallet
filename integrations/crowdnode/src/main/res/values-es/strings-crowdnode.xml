@@ -63,7 +63,7 @@
     <string name="unlink_account">Desvincular cuenta</string>
     <string name="online_account_title">¿Por qué necesitas una cuenta en línea?</string>
     <string name="crowdnode_online_synced">Sincronizado con la billetera de Dash actual</string>
-    <string name="crowdnode_online_unconfirmed">En proceso…</string>
+    <string name="crowdnode_in_process">En proceso…</string>
     <string name="account_recovery">Recuperación de cuenta</string>
     <string name="crowdnode_recovery_info">Si alguna vez pierdes tu contraseña, puedes verificarte por otros medios para recuperar el acceso a tus fondos de CrowdNode.</string>
     <string name="transaction_history">Historial de transacciones</string>

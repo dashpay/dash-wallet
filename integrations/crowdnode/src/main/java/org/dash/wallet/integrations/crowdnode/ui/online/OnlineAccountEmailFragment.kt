@@ -19,22 +19,22 @@ package org.dash.wallet.integrations.crowdnode.ui.online
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentOnlineAccountEmailBinding
+import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
-
 
 @AndroidEntryPoint
 class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_email) {
@@ -48,18 +48,48 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
             findNavController().popBackStack()
         }
 
-        binding.input.doOnTextChanged { text, _, _, _ ->
+        binding.emailInput.doOnTextChanged { text, _, _, _ ->
             binding.inputWrapper.isErrorEnabled = false
             binding.continueBtn.isEnabled = isEmail(text)
         }
 
-        binding.continueBtn.setOnClickListener {
-            val input = binding.input.text.toString()
+        val continueAction = {
+            val input = binding.emailInput.text.toString()
 
             if (isEmail(input)) {
                 continueCreating(input)
             } else {
                 binding.inputWrapper.isErrorEnabled = true
+            }
+        }
+
+        binding.emailInput.setOnEditorActionListener { _, actionId, _ ->
+            when (actionId) {
+                EditorInfo.IME_ACTION_NEXT -> {
+                    continueAction()
+                    true
+                }
+                else -> false
+            }
+        }
+
+
+        binding.continueBtn.setOnClickListener {
+            continueAction()
+        }
+
+        viewModel.observeOnlineAccountStatus().observe(viewLifecycleOwner) { status ->
+            Log.i("CROWDNODE", "OnlineAccountEmailFragment observe status: ${status}")
+            when (status) {
+                OnlineAccountStatus.Creating -> {
+                    binding.mainContent.isVisible = false
+                    binding.progressView.isVisible = true
+                }
+                OnlineAccountStatus.SigningUp -> viewModel.initiateOnlineSignUp()
+                else -> {
+                    binding.mainContent.isVisible = true
+                    binding.progressView.isVisible = false
+                }
             }
         }
 
@@ -70,16 +100,14 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
             ))
         }
 
-        showKeyboard()
+        if (viewModel.onlineAccountStatus != OnlineAccountStatus.Creating) {
+            showKeyboard()
+        }
     }
 
     private fun continueCreating(email: String) {
         hideKeyboard()
-
-        lifecycleScope.launch {
-            viewModel.trackIsOnlineAccountCreated()
-            viewModel.signUpWithEmail(email)
-        }
+        viewModel.signAndSendEmail(email)
     }
 
     private fun isEmail(text: CharSequence?): Boolean {
@@ -88,13 +116,13 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
     }
 
     private fun showKeyboard() {
-        binding.input.requestFocus()
+        binding.emailInput.requestFocus()
         val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        inputManager?.showSoftInput(binding.input, InputMethodManager.SHOW_IMPLICIT)
+        inputManager?.showSoftInput(binding.emailInput, InputMethodManager.SHOW_IMPLICIT)
     }
 
     private fun hideKeyboard() {
         val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        inputManager?.hideSoftInputFromWindow(binding.input.windowToken, 0)
+        inputManager?.hideSoftInputFromWindow(binding.emailInput.windowToken, 0)
     }
 }

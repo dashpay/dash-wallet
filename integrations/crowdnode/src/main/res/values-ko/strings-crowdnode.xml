@@ -63,7 +63,7 @@
     <string name="unlink_account">계정 연결 해제</string>
     <string name="online_account_title">왜 온라인 계정이 필요한가요?</string>
     <string name="crowdnode_online_synced">현재 대시 지갑과 동기화됨</string>
-    <string name="crowdnode_online_unconfirmed">처리중…</string>
+    <string name="crowdnode_in_process">처리중…</string>
     <string name="account_recovery">계정 복구</string>
     <string name="crowdnode_recovery_info">암호 문구를 잃어버리게 되면 크라우드노드 자금에 다시 액세스하기 위해 다른 방법으로 본인 인증을 해야 합니다.</string>
     <string name="transaction_history">거래 내역</string>

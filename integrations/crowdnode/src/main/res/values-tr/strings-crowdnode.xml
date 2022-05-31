@@ -63,7 +63,7 @@
     <string name="unlink_account">Hesabın Bağlantısını Kaldır</string>
     <string name="online_account_title">Neden çevrimiçi bir hesaba ihtiyacınız var?</string>
     <string name="crowdnode_online_synced">Mevcut Dash Cüzdanı ile senkronize edildi</string>
-    <string name="crowdnode_online_unconfirmed">İşlemde…</string>
+    <string name="crowdnode_in_process">İşlemde…</string>
     <string name="account_recovery">Hesap Kurtarma</string>
     <string name="crowdnode_recovery_info">Parolanızı kaybederseniz, CrowdNode fonlarınıza yeniden erişim kazanmak için kimliğinizi çeşitli yollarla doğrulayabilirsiniz.</string>
     <string name="transaction_history">İşlem Geçmişi</string>

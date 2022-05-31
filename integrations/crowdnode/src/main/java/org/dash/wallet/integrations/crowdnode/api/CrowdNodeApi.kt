@@ -34,6 +34,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.TickerFlow
@@ -43,7 +44,6 @@ import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
 import retrofit2.HttpException
-import retrofit2.Response
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.net.URLEncoder
@@ -73,9 +73,7 @@ interface CrowdNodeApi {
     fun refreshBalance(retries: Int = 0)
     fun trackLinkingAccount(address: Address)
     fun stopTrackingLinked()
-    fun trackEmailStatus()
-    fun stopTrackingEmailStatus()
-    suspend fun sendSignedEmailMessage(address: Address, email: String, signature: String): Boolean
+    suspend fun registerEmailForAccount(email: String)
     suspend fun reset()
 }
 
@@ -90,6 +88,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     private val analyticsService: AnalyticsService,
     private val config: CrowdNodeConfig,
     private val globalConfig: Configuration,
+    private val securityFunctions: ISecurityFunctions,
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {
     companion object {
@@ -130,6 +129,7 @@ class CrowdNodeApiAggregator @Inject constructor(
 
         onlineAccountStatus
             .onEach { status ->
+                Log.i("CROWDNODE", "CrowdNodeApi observe status: ${status}")
                 cancelTrackingJob()
                 val initialDelay = if (isOnlineStatusRestored) 0.seconds else 10.seconds
                 when(status) {
@@ -326,22 +326,13 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
     }
 
-    override fun trackEmailStatus() {
-        onlineAccountStatus.value = OnlineAccountStatus.Creating
-    }
+    override suspend fun registerEmailForAccount(email: String) {
+        val address = accountAddress
+        requireNotNull(address) { "Account address is null, make sure to sign up" }
+        val signature = securityFunctions.signMessage(address, email)
 
-    override fun stopTrackingEmailStatus() {
-        if (signUpStatus.value == SignUpStatus.Finished &&
-            onlineAccountStatus.value == OnlineAccountStatus.Creating
-        ) {
-            log.info("stopTrackingEmailStatus")
-            changeOnlineStatus(OnlineAccountStatus.None)
-
-            responseScope.launch {
-                // One last check just in case
-                delay(10.seconds)
-                checkIfOnlineAccountCreated(accountAddress!!)
-            }
+        if (sendSignedEmailMessage(address, email, signature)) {
+            changeOnlineStatus(OnlineAccountStatus.Creating)
         }
     }
 
@@ -383,14 +374,14 @@ class CrowdNodeApiAggregator @Inject constructor(
 
     private suspend fun startTrackingCreating(accountAddress: Address, initialDelay: Duration) {
         log.info("startTrackingEmailStatus, account: ${accountAddress.toBase58()}")
-        tickerJob = TickerFlow(period = 2.seconds, initialDelay = initialDelay)
+        tickerJob = TickerFlow(period = 20.seconds, initialDelay = initialDelay)
             .cancellable()
-            .onEach { checkIfOnlineAccountCreated(accountAddress) }
+            .onEach { checkIfEmailRegistered(accountAddress) }
             .launchIn(statusScope)
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    override suspend fun sendSignedEmailMessage(
+    suspend fun sendSignedEmailMessage(
         address: Address,
         email: String,
         signature: String
@@ -401,6 +392,7 @@ class CrowdNodeApiAggregator @Inject constructor(
 
         if (result.isSuccessful && result.body()?.messageStatus?.lowercase() == MESSAGE_RECEIVED_STATUS) {
             log.info("Signed email sent successfully")
+            config.setPreference(CrowdNodeConfig.SIGNED_EMAIL_SENT, true)
             return true
         }
 
@@ -435,7 +427,7 @@ class CrowdNodeApiAggregator @Inject constructor(
             }
 
             if (tryRestoreSignUp()) {
-                responseScope.launch { restoreCreatedOnlineAccount(accountAddress!!) }
+                restoreCreatedOnlineAccount(accountAddress!!)
                 return
             }
 
@@ -505,7 +497,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 log.info("found linking online account in progress, account: ${address.toBase58()}, primary: $primaryAddressStr")
                 responseScope.launch { checkIfAddressIsInUse(address) }
             }
-            OnlineAccountStatus.Creating -> {
+            OnlineAccountStatus.Creating, OnlineAccountStatus.SigningUp -> {
                 // This should not happen - this method is reachable only for a linked account case
                 throw IllegalStateException("Creating state found in tryRestoreOnlineAccount")
             }
@@ -574,22 +566,26 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
     }
 
-    private suspend fun restoreCreatedOnlineAccount(address: Address) {
-        val onlineAccountStatus = config.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
-                ?: OnlineAccountStatus.None.ordinal
+    private fun restoreCreatedOnlineAccount(address: Address) {
+        val statusOrdinal = runBlocking { config.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
+                ?: OnlineAccountStatus.None.ordinal }
 
-        if (onlineAccountStatus == OnlineAccountStatus.Done.ordinal) {
-            changeOnlineStatus(OnlineAccountStatus.Done, false)
-        } else if (onlineAccountStatus == OnlineAccountStatus.None.ordinal) {
-            checkIfOnlineAccountCreated(address)
+        Log.i("CROWDNODE", "restored status: ${OnlineAccountStatus.values()[statusOrdinal]}")
+
+        when (val status = OnlineAccountStatus.values()[statusOrdinal]) {
+            OnlineAccountStatus.None -> statusScope.launch { checkIfEmailRegistered(address) }
+            OnlineAccountStatus.Creating, OnlineAccountStatus.SigningUp, OnlineAccountStatus.Done -> {
+                changeOnlineStatus(status, false)
+            }
+            else -> {}
         }
     }
 
-    private suspend fun checkIfOnlineAccountCreated(address: Address) {
+    private suspend fun checkIfEmailRegistered(address: Address) {
         val isDefaultEmail = resolveIsDefaultEmail(address)
 
         if (!isDefaultEmail) {
-            changeOnlineStatus(OnlineAccountStatus.Done)
+            changeOnlineStatus(OnlineAccountStatus.SigningUp)
         }
     }
 

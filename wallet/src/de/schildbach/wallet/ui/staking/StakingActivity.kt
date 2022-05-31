@@ -31,9 +31,7 @@ import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.services.ISecurityFunctions
-import org.dash.wallet.common.ui.WebViewFragmentDirections
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApiAggregator
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
@@ -93,7 +91,7 @@ class StakingActivity : LockScreenActivity() {
     private fun handleOnlineAccountStatus(status: OnlineAccountStatus) {
         when (status) {
             OnlineAccountStatus.None -> { }
-            OnlineAccountStatus.Linking, OnlineAccountStatus.Creating -> super.turnOffAutoLogout()
+            OnlineAccountStatus.Linking, OnlineAccountStatus.SigningUp -> super.turnOffAutoLogout()
             else -> super.turnOnAutoLogout()
         }
     }

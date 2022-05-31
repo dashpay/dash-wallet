@@ -60,13 +60,14 @@
     <string name="online_account">Online Account</string>
     <string name="online_account_create">Create Online Account</string>
     <string name="secure_online_account">Protect your savings</string>
+    <string name="crowdnode_signup_to_finish">Sign up to finish setting up account</string>
     <string name="online_account_create_full">Create an online CrowdNode account</string>
     <string name="online_account_email_privacy">Please note that the email is not saved by the Dash Wallet and is only sent to Crowdnode</string>
     <string name="crowdnode_support">CrowdNode Support</string>
     <string name="unlink_account">Unlink Account</string>
     <string name="online_account_title">Why do you need an online account?</string>
     <string name="crowdnode_online_synced">Synced with current Dash Wallet</string>
-    <string name="crowdnode_online_unconfirmed">In process…</string>
+    <string name="crowdnode_in_process">In process…</string>
     <string name="account_recovery">Account Recovery</string>
     <string name="crowdnode_recovery_info">If you ever lose your passphrase, you can verify yourself by other means to regain access to your CrowdNode funds.</string>
     <string name="transaction_history">Transaction History</string>
@@ -108,6 +109,7 @@
     <string name="crowdnode_online_account_details_primary">Your primary Dash address that you currently use for your CrowdNode account</string>
     <string name="crowdnode_online_account_details_api">Dash address designated for your CrowdNode account in the Dash Wallet on this device</string>
     <string name="crowdnode_primary_missing">The primary Dash address is missing from your account. Please specify it on the CrowdNode website.</string>
+    <string name="crowdnode_wait_signed_email">Please wait until your email is processed…</string>
 
     <string name="crowdnode_website" translatable="false">https://crowdnode.io/</string>
     <string name="crowdnode_terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>
