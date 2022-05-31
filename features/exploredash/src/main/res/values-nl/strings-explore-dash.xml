@@ -23,6 +23,7 @@
     <string name="explore_merchants_subtitle">Vind acceptanten die Dash als aannemen.</string>
     <string name="explore_atms_title">Geldautomaten</string>
     <string name="explore_atms_subtitle">Vind waar je DASH en andere cryptovaluta\'s kan kopen of verkopen voor cash.</string>
+    <string name="explore_staking_subtitle">Stake makkelijk Dash en verdien passief inkomen met een paar eenvoudige kliks.</string>
 
     <!-- Search -->
     <string name="explore_search_results">Zoekresultaten</string>
@@ -34,7 +35,6 @@
     <string name="explore_option_buy">Koop</string>
     <string name="explore_option_sell">Verkoop</string>
     <string name="explore_option_buy_sell">Koop &amp; verkoop</string>
-    <string name="button_info">info</string>
     <string name="explore_where_to_spend">Waar uit te geven</string>
     <string name="explore_atms">Geldautomaten</string>
     <string name="explore_all_states">Alle toestanden</string>
@@ -119,7 +119,7 @@
 
     <plurals name="radius_miles">
         <item quantity="one">%d mile</item>
-        <item quantity="other">%d miles</item>
+        <item quantity="other">%d milen</item>
     </plurals>
 
     <plurals name="radius_kilometers">
@@ -151,4 +151,12 @@
     <string name="find_merchant_text">Vind een acceptant</string>
     <string name="buy_gift_card_with_dash_text">Koop een geschenkbon met Dash.</string>
     <string name="redeem_gift_card_text">Wissel je geschenkbon online in binnen een paar seconden of bij de kassa. </string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Synchronisatie bezig... Resultaten zijn mogelijk niet compleet.</string>
+    <string name="sync_in_progress_error">Synchronisatie bezig... Er heeft zich een probleem voorgedaan.</string>
+    <string name="sync_in_progress_canceled">Synchronisatie geannuleerd... Er wordt later nog een poging gedaan.</string>
+
+    <string name="sync_in_progress_file_not_found">Build Error: Database niet gevonden!</string>
+    <string name="sync_in_progress_network_error">Synchronisatie onderbroken... Netwerk is offline of onbereikbaar</string>
 </resources>

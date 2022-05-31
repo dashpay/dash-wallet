@@ -64,8 +64,6 @@
     <string name="send_coins_fragment_pin_label">Nhập mã PIN!</string>
     <string name="send_coins_fragment_hint_fee_economic">Một phần phí giao dịch của %s sẽ được trả.</string>
     <string name="send_coins_fragment_hint_fee_priority">Một mức phí ưu tiên %s sẽ được trả. Nếu bạn quan tâm đến mức phí thấp, hãy sử dụng \'ưu tiên\' chỉ khi bạn cần xác thực càng nhanh càng tốt.</string>
-    <string name="send_coins_error_dusty_send">Khoản này quá nhỏ để có thể gửi</string>
-    <string name="send_coins_error_insufficient_money">Không đủ tiền</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Một khoản thanh toán nhỏ xíu trong ví của bạn không làm tăng thêm giá trị có thể tiêu được.</string>
     <string name="send_coins_fragment_hint_replaying">Giao dịch hiện chưa thực hiện được vì ví chưa hoàn thành được việc đồng bộ với mạng lưới</string>
     <string name="send_coins_fragment_direct_payment_enable">Gửi thanh toán trực tiếp cho người trả.</string>
@@ -160,7 +158,7 @@
     <string name="transaction_row_status_sending">Đang gửi</string>
     <string name="transaction_row_status_sent_internally">Nội bộ</string>
     <string name="transaction_row_status_processing">Đang xử lý</string>
-    <string name="transaction_row_status_confirming">Xác nhận</string>
+    <string name="transaction_row_status_confirming">Đang xác nhận</string>
     <string name="transaction_row_status_locked">Đã khoá</string>
     <string name="transaction_row_status_error_sending">Lỗi khi gửi</string>
     <string name="transaction_row_status_error_dead">Tiêu lặp</string>
@@ -192,7 +190,7 @@
     <string name="peer_list_row_ping_time">⇆ %d phần nghìn giây</string>
     <string name="restore_wallet_permission_dialog_title">Thiếu quyền đọc</string>
     <string name="restore_wallet_permission_dialog_message">Để tìm lại ví sao lưu của bạn ở bộ nhớ ngoài, bạn cần phải cấp quyền đọc cho ứng dụng này.</string>
-    <string name="import_keys_dialog_title">Nhập dữ liệu là các khóa cá nhân</string>
+    <string name="import_keys_dialog_title">Nhập dữ liệu từ khóa Dash</string>
     <string name="import_keys_dialog_message">Chọn một khóa cá nhân từ một tập tin trong thẻ nhớ hoặc ở phần lưu trên hệ thống:</string>
     <string name="restore_wallet_dialog_replace_warning">Có vẻ bạn đang định thay ví này. Tất cả số tiền trong ví hiện tại sẽ mất nếu bạn không có bản sao lưu riêng của nó.</string>
     <string name="import_keys_dialog_warning">Chú ý quan trọng: Đừng nạp khoá riêng từ các nguồn không đáng tin cậy! Những người khác có thể nắm quyền kiểm soát tiền của bạn nếu bạn làm vậy.</string>
@@ -247,7 +245,7 @@
     <string name="input_parser_unverifyable_paymentrequest">Không thể kiểm tra yêu cầu thanh toán:\\n%s</string>
     <string name="input_parser_invalid_paymentrequest">Yêu cầu thanh toán không hợp lệ:\\n%s</string>
     <string name="input_parser_invalid_transaction">Giao dịch không hợp lệ:\\n%s</string>
-    <string name="preferences_activity_title">Thiết lập</string>
+    <string name="preferences_activity_title">Các thiết lập</string>
     <string name="preferences_category_diagnostics">Chẩn đoán</string>
     <string name="preferences_category_labs">Thí nghiệm</string>
     <string name="preferences_precision_title">Mệnh giá và độ chính xác</string>
@@ -281,7 +279,7 @@
     <string name="preferences_initiate_reset_title">Thiết đặt lại blockchain</string>
     <string name="preferences_initiate_reset_summary">Khởi tạo lại chuỗi khối, các giao dịch và số dư trong ví. Việc tái tạo này sẽ mất một lúc, cho nên bạn chỉ nên làm điều đó khi bạn biết tại sao nên làm.</string>
     <string name="preferences_initiate_reset_dialog_message">Bạn có muốn tái tạo lại và áp dụng chuỗi khối lại?\n\nĐiều này tạm thời sẽ làm mất số dư và xoá các giao dịch. Cả hai sẽ phục hồi trong quá trình đồng bộ lại chuỗi khối. Hãy chắc chắn rằng bạn có kết nối mạng đáng tin cậy để làm việc đó.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Thiết đặt lại</string>
+    <string name="preferences_initiate_reset_dialog_positive">Thiết lập lại</string>
     <string name="preferences_extended_public_key_title">Hiển thị xpub</string>
     <string name="preferences_extended_public_key_summary">Xem khoá công khai mở rộng trong ví của bạn, nó có thể được nhập vào  qua các ứng dụng và dịch vụ khác. Cẩn thận: thực hiện điều này có thể làm lộ thông tin riêng tư về số tiền của bạn cho các ứng dụng đó.</string>
     <string name="bitmap_fragment_share">Chia sẻ...</string>
@@ -325,7 +323,7 @@
     <string name="appwidget_wallet_balance_title">Số dư Dash</string>
 
     <!-- generic buttons -->
-    <string name="button_ok">Đồng ý</string>
+    <string name="button_ok">OK</string>
     <string name="button_dismiss">Bỏ qua</string>
     <string name="button_cancel">Hủy bỏ</string>
     <string name="button_help">Trợ giúp</string>
@@ -337,13 +335,12 @@
     <string name="button_copy">Sao chép</string>
     <string name="button_copy_request">Chép yêu cầu</string>
     <string name="button_paste">Dán</string>
-    <string name="button_share">Chia sẻ</string>
-    <string name="button_set_as_default">Đặt làm mặc định</string>
+    <string name="button_set_as_default">Đặt làm ngầm định</string>
     <string name="button_request_coins">Yêu cầu Dash</string>
     <string name="button_send_coins">Gửi Dash</string>
     <string name="button_pay">Gửi</string>
     <string name="button_scan">Quét</string>
-    <string name="button_settings">Thiết lập</string>
+    <string name="button_settings">Các thiết lập</string>
     <string name="action_show_qr">Hiển thị mã QR</string>
     <string name="action_browse">Chọn</string>
 
@@ -365,7 +362,7 @@
     <string name="dash_wallet">Ví</string>
 
     <string name="activity_security_backup_wallet">Sao lưu ví về file</string>
-    <string name="activity_security_view_recovery_phrase">Hiển thị câu phục hồi</string>
+    <string name="activity_security_view_recovery_phrase">Xem cụm từ phục hồi</string>
     <string name="activity_security_advanced">Bảo mật nâng cao</string>
     <string name="activity_security_biometric_auth">Xác thực vân tay</string>
     <string name="activity_security_hide_balance">Tự ẩn số dư</string>

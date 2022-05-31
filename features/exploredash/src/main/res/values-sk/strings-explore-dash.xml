@@ -23,6 +23,7 @@
     <string name="explore_merchants_subtitle">Nájsť obchodníkov, ktorí akceptujú Dash ako platbu.</string>
     <string name="explore_atms_title">Bankomaty</string>
     <string name="explore_atms_subtitle">Zistiť, kde za hotovosť kúpiť alebo predať DASH a iné kryptomeny.</string>
+    <string name="explore_staking_subtitle">Jednoducho stávkujte Dash a získajte pasívny príjem niekoľkými jednoduchými kliknutiami.</string>
 
     <!-- Search -->
     <string name="explore_search_results">Výsledky vyhľadávania</string>
@@ -34,7 +35,6 @@
     <string name="explore_option_buy">Kúpiť</string>
     <string name="explore_option_sell">Predať</string>
     <string name="explore_option_buy_sell">Kúpiť a predať</string>
-    <string name="explore_menu_info">Informácie</string>
     <string name="explore_where_to_spend">Kde minúť</string>
     <string name="explore_atms">Bankomaty</string>
     <string name="explore_all_states">Všetky štáty</string>

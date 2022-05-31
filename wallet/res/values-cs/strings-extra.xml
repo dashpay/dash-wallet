@@ -81,7 +81,7 @@
     <string name="payments_title">Platby</string>
     <string name="payments_tab_pay_label">Poslat</string>
     <string name="payments_tab_receive_label">Přijmout</string>
-    <string name="payments_pay_by_qr_title">Odeslat</string>
+    <string name="payments_pay_by_qr_title">Odeslat pomocí</string>
     <string name="payments_pay_by_qr_sub_title">Skenování QR kódu</string>
     <string name="payments_pay_to_clipboard_title">Odeslat na zkopírovanou adresu</string>
     <string name="payments_pay_to_clipboard_sub_title">Žádná zkopírovaná adresa</string>
@@ -95,13 +95,13 @@
     <string name="forgot_pin_recover">Zadejte frázi pro obnovení</string>
     <string name="forgot_pin_passphrase_doesnt_match">Fráze pro obnovení neodpovídá původní, kterou byla peněženka vytvořena.</string>
 
-    <string name="send_coins_auto_lock_feasible">Tato transakce bude vyřízena okamžitě bez poplatku navíc.</string>
+    <string name="send_coins_auto_lock_feasible">Tato transakce bude vyřízena okamžitě a bez poplatku navíc.</string>
     <string name="send_coins_auto_lock_not_feasible">Vyřízení této transakce může trvat několik minut. Výřidit ji okamžitě za %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Výřízení této transakce může trvat několik minut.</string>
 
     <string name="options_paste_from_clipboard_title">Vložit ze schránky</string>
 
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Tato platba ještě nebyla odeslána.</string>
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Tato platba nebyla ještě odeslána.</string>
     <string name="transaction_row_message_sent_to_single_peer">Platba byla odeslána.</string>
 
     <string name="regular_transaction_info_message">Tato transakce nebyla vyřízena okamžitě.</string>
@@ -118,8 +118,7 @@
     <string name="import_export_keys_dialog_password_phrase">Sem vložte frázi pro obnovení.</string>
     <string name="preferences_report_issue_summary">Získat a odeslat informace o problému vývojářům.</string>
     <string name="navigation_configuration">Konfigurace</string>
-    <string name="button_copy_address">Kopírovat adresu</string>
-    <string name="request_coins_clipboard_address_msg">Dash adresa zkopírována do schránky</string>
+    <string name="request_coins_clipboard_address_msg">Adresa zkopírována do schránky</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Zobrazit</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" není slovo z fráze pro obnovení</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Fráze pro obnovení musí mít 12 slov</string>
@@ -140,7 +139,7 @@
     <string name="wallet_lock_unlock_to_see_txs_txt">Klepnutím na ikonu zámku výše odemknete peněženku a zobrazíte historii transakcí.</string>
     <string name="wallet_lock_unlock_dialog_title">Odemknout peněženku</string>
     <string name="wallet_lock_unlock_dialog_message">Peněženka je chráněna PIN kódem. Zadejte váš PIN a stiskněte Odemknout pro pokračování.</string>
-    <string name="wallet_lock_reset_wallet_title">Resetovat Peněženku</string>
+    <string name="wallet_lock_reset_wallet_title">Resetovat peněženku</string>
     <string name="wallet_lock_reset_wallet_message">Jste si jistí? Peněženka bude smazána a veškerý váš Dash se tím ztratí.\n\nJediným způsobem pro obnovení vašeho Dash je soubor se zálohou nebo fráze pro obnovení.</string>
 
     <string name="wallet_lock_wallet_disabled">Peněženka deaktivována</string>
@@ -149,27 +148,6 @@
     <string name="wallet_lock_wrong_pin">Špatný PIN! %s</string>
     <string name="wallet_last_attempt">Poslední pokus o PIN</string>
     <string name="wallet_last_attempt_message">Po dalším neúspěšném pokusu bude vyžadována fráze pro obnovení peněženky.</string>
-
-    <plurals name="wallet_lock_attempts_remaining">
-        <item quantity="one">Zbývá %d pokus.</item>
-        <item quantity="few">Zbývá %d pokusů.</item>
-        <item quantity="many">Zbývá %d pokusů.</item>
-        <item quantity="other">Zbývá %d pokusů.</item>
-    </plurals>
-
-    <plurals name="minute">
-        <item quantity="one">minuta</item>
-        <item quantity="few">minut</item>
-        <item quantity="many">minut</item>
-        <item quantity="other">minut</item>
-    </plurals>
-
-    <plurals name="hour">
-        <item quantity="one">hodina</item>
-        <item quantity="few">hodin</item>
-        <item quantity="many">hodin</item>
-        <item quantity="other">hodin</item>
-    </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">Aktualizace</string>
     <string name="encrypt_new_key_chain_dialog_title">Aktualizovat peněženku</string>
@@ -212,15 +190,14 @@
     <string name="preferences_enable_payment_request_title">BIP70 pro scan-to-pay</string>
 
     <string name="verify_continue">Pokračovat</string>
-    <string name="verify">Ověřit</string>
     <string name="verify_backup_wallet">Zálohovat peněženku</string>
     <string name="verify_show_recovery_phrase">Zobrazit frázi pro obnovení</string>
-    <string name="verify_secure_now">Ihned zabezpečit peněženku</string>
+    <string name="verify_secure_now">Ihned peněženku zabezpečit</string>
     <string name="verify_it_is_important">Je důležité</string>
     <string name="verify_it_is_important_subtitle">Ukážeme vám privátní klíč od vaší peněženky.</string>
     <string name="verify_info_text_1">Tato fráze pro obnovení slouží jako přístup k prostředkům na peněžence.</string>
     <string name="verify_info_text_2">Neuchováváme tuto frázi pro obnovení.</string>
-    <string name="verify_info_text_3">Pokud toto zařízení ztratíte, poškodíte nebo odinstalujete Dash Wallet, budete potřebovat frázi pro obnovení, abyste mohli nakládat s vašimi prostředky.</string>
+    <string name="verify_info_text_3">Pokud toto zařízení ztratíte, poškodíte nebo odinstalujete Dash Wallet, budete potřebovat frázi pro obnovení, abyste znovu mohli nakládat s vašimi prostředky.</string>
     <string name="verify_skip">Přeskočit</string>
     <string name="verify_secure_now_btn">Ihned zabezpečit</string>
     <string name="verify_secure_now_message">Pokud toto zařízení ztratíte, přijdete o všechny prostředky. Získejte vaší frázi pro obnovení, takže budete moci peněženku obnovit na jiném zařízení.</string>
@@ -239,13 +216,13 @@
     <string name="verify_warning_do_not_show">Nenechte nikoho aby uviděl vaši frázi pro obnovení.</string>
     <string name="verify_warning_do_not_type">Nikdy nezadávejte svou frázi pro obnovení do správců hesel a jinam.</string>
     <string name="view_seed_done">Hotovo</string>
-    <string name="view_seed_title">Fráze Pro Obnovení</string>
+    <string name="view_seed_title">Fráze pro obnovení</string>
     <string name="transaction_result_view_on_explorer">Zobrazit ve vyhledávači</string>
-    <string name="transaction_result_paid_successfully">Úspešně odesláno</string>
+    <string name="transaction_result_paid_successfully">Úspěšně odesláno</string>
     <string name="transaction_result_sent_to">Odeslat na</string>
     <string name="transaction_date_and_time">Datum</string>
     <string name="transaction_close">Zavřít</string>
-    <string name="transaction_details_amount_received">Částka</string>
+    <string name="transaction_details_amount_received">Přijatá částka</string>
     <string name="transaction_details_amount_sent">Odeslaná částka</string>
     <string name="transaction_details_sent_from">Odesláno z</string>
     <string name="transaction_details_sent_to">Odeslat na</string>
@@ -262,13 +239,13 @@
     <string name="menu_buy_and_sell_title">Nákup a Prodej Dash</string>
     <string name="menu_buy_and_sell_subtitle">Spojte se s burzami třetích stran</string>
     <string name="menu_security_title">Zabezpečení</string>
-    <string name="menu_security_subtitle">Fráze pro obnovení, záloha peněženky</string>
+    <string name="menu_security_subtitle">Fráze pro obnovení, záloha peněženky...</string>
     <string name="menu_settings_title">Nastavení</string>
     <string name="menu_settings_subtitle">Výchozí měna, zkratky, o aplikaci</string>
     <string name="menu_tools_title">Nástroje</string>
     <string name="menu_tools_subtitle">Importovat privátní klíč…</string>
     <string name="menu_local_currency">Místní Měna</string>
-    <string name="menu_rescan_blockchain">Znovu Skenovat Blockchain</string>
+    <string name="menu_rescan_blockchain">Skenovat blockchain</string>
     <string name="menu_contact_support_title">Podpora</string>
     <string name="menu_contact_support_subtitle">Nahlásit problém</string>
     <string name="menu_explore_title">Prozkoumat</string>
@@ -279,7 +256,7 @@
     <string name="tools_network_monitor">Monitor Sítě</string>
     <string name="tools_show_xpub">Rozšířený veřejný klíč</string>
 
-    <string name="about_help_us_improve">Pomoztne nám aplikaci vylepšit</string>
+    <string name="about_help_us_improve">Pomozte nám aplikaci vylepšit</string>
     <string name="about_review_and_rate">Ohodnotit aplikaci</string>
     <string name="about_contact_support">Podpora</string>
     <string name="about_fork_disclaimer">Toto je aplikace s otevřeným zdrojovým kódem vycházející z bitcoinové peněženky.</string>
@@ -298,7 +275,7 @@
     <string name="scan_private_key">Skenovat privátní klíč</string>
     <string name="scan_private_key_intro_1">Chystáte se přenést prostředky z papírové peněženky Dash.</string>
     <string name="scan_private_key_intro_2">Tímto přesenute všechny prostředky z původní peněženky na toto zařízení.</string>
-    <string name="scan_private_key_intro_3">Po potvrzení transakce bude druhá peněženka bezcenná a z bezpečnostních důvodů by neměla být znovu používána.</string>
+    <string name="scan_private_key_intro_3">Po potvrzení transakce bude druhá peněženka bezcenná, z bezpečnostních důvodů by neměla být znovu používána.</string>
     <string name="confirm">Potvrdit</string>
 
     <string name="advanced_security_security_level">Úroveň zabezpečení</string>
@@ -307,11 +284,11 @@
     <string name="logout_after">Odhlásit po</string>
     <string name="immediately">Okamžitě</string>
     <string name="twenty_four_hours">24 hodin</string>
-    <string name="one_minute">1 minuta</string>
-    <string name="five_minute">5 minutách</string>
+    <string name="one_minute">1 min</string>
+    <string name="five_minute">5 min</string>
     <string name="one_hour">1 hodina</string>
     <string name="biometric_limit">Biometrický limit</string>
-    <string name="spending_confirmation_hint_zero">Pro platby je vždy vyžadován PIN.</string>
+    <string name="spending_confirmation_hint_zero">Pro platby je vždy vyžadován PIN</string>
     <string name="spending_confirmation_hint_above_zero">Níže můžete provést ověření pomocí biometrického autentifikace pro platby</string>
 
     <string name="security_none">Žádná</string>
@@ -328,13 +305,12 @@
     <string name="welcome_screen_title_1_new_install">Vítej</string>
     <string name="welcome_screen_title_1_upgrade">Vylepšovali jsme</string>
     <string name="welcome_screen_subtitle_1">Intuitivní používání napříč všemi tvými zařízeními</string>
-    <string name="welcome_screen_title_2">Plaťte jednoduše</string>
+    <string name="welcome_screen_title_2">Plať snadno</string>
     <string name="welcome_screen_subtitle_2">Plať a přijímej platby zcela okamžitě</string>
-    <string name="welcome_screen_title_3">Více možností</string>
-    <string name="welcome_screen_subtitle_3">Měj naprostou kontrolu a přizpůsob si svojí peněženku</string>
+    <string name="welcome_screen_title_3">Lepší správa</string>
+    <string name="welcome_screen_subtitle_3">Spravuj a přizpůsob si svojí peněženku</string>
 
     <string name="sync_status_wait">Počkejte na dokončení synchronizace</string>
-    <string name="sync_status_syncing_title">Synchronizace %1$d</string>
     <string name="sync_status_syncing_sub_title">s Dash blockchainem</string>
     <string name="sync_status_unable_to_connect">Nelze se připojit</string>
     <string name="sync_status_check_connection">Zkontrolujte vaše připojení</string>
@@ -373,4 +349,6 @@
     <string name="wallet_encryption_error_message">Při vytváření peněženky došlo k problému. Nahlaste to prosím oddělení podpory.</string>
     <string name="wallet_not_encrypted_error_message">Vyskytl se problém s vaší peněženkou.\n\nPokud v této peněžence nemáte Dash, odinstalujte a znovu nainstalujte tuto aplikaci. Poté vytvořte novou peněženku.\n\nPokud máte frázi pro obnovení nebo záložní soubor, odinstalujte tuto aplikaci a znovu ji nainstalujte.\n\nV opačném případě to nahlaste oddělení podpory.</string>
 
+    <string name="continue_reset">Pokračovat</string>
+    <string name="reset_wallet_text">Resetovat peněženku</string>
 </resources>

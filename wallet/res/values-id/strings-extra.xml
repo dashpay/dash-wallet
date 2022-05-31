@@ -10,8 +10,8 @@
     <string name="set_pin_upgrade_wallet">Tingkatkan Dompet</string>
     <string name="set_pin_restore_wallet">Pulihkan dompet</string>
     <string name="set_pin_enter_pin">Masukkan PIN lama</string>
-    <string name="set_pin_set_pin">tetapkan PIN</string>
-    <string name="set_pin_confirm_pin">Konfirmasikan PIN</string>
+    <string name="set_pin_set_pin">Tetapkan PIN</string>
+    <string name="set_pin_confirm_pin">Pastikan PIN</string>
     <string name="set_pin_encrypting">Enkripsi dompet</string>
     <string name="set_pin_decrypting">Mendekripsi dompet</string>
     <string name="set_pin_verifying_pin">Memverifikasi PIN</string>
@@ -118,7 +118,6 @@
     <string name="import_export_keys_dialog_password_phrase">Frasa pemulihan ada di sini.</string>
     <string name="preferences_report_issue_summary">Kumpulkan informasi masalah Anda dan kirimkan laporan Anda ke pengembang.</string>
     <string name="navigation_configuration">Konfigurasi</string>
-    <string name="button_copy_address">Salin alamat</string>
     <string name="request_coins_clipboard_address_msg">Alamat Dash disalin</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Tunjukkan</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" bukan kata frasa pemulihan</string>
@@ -149,18 +148,6 @@
     <string name="wallet_lock_wrong_pin">PIN salah! %s</string>
     <string name="wallet_last_attempt">Upaya PIN terakhir</string>
     <string name="wallet_last_attempt_message">Upaya lain yang gagal akan membutuhkan frasa sandi saya untuk memulihkan dompet</string>
-
-    <plurals name="wallet_lock_attempts_remaining">
-        <item quantity="other">%d upaya tersisa </item>
-    </plurals>
-
-    <plurals name="minute">
-        <item quantity="other">menit</item>
-    </plurals>
-
-    <plurals name="hour">
-        <item quantity="other">jam</item>
-    </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">Tingkatkan</string>
     <string name="encrypt_new_key_chain_dialog_title">Tingkatkan dompet anda</string>
@@ -203,7 +190,6 @@
     <string name="preferences_enable_payment_request_title">BIP70 untuk pindai-untuk-bayar</string>
 
     <string name="verify_continue">Teruskan</string>
-    <string name="verify">Memeriksa</string>
     <string name="verify_backup_wallet">Cadangkan Dompet</string>
     <string name="verify_show_recovery_phrase">Tampilkan Frasa pemulihan</string>
     <string name="verify_secure_now">Amankan Dompet Sekarang</string>
@@ -259,7 +245,7 @@
     <string name="menu_tools_title">Alat</string>
     <string name="menu_tools_subtitle">Impor kunci pribadi…</string>
     <string name="menu_local_currency">Mata uang lokal</string>
-    <string name="menu_rescan_blockchain">Memindai ulang blockchain</string>
+    <string name="menu_rescan_blockchain">Piindai ulang blockchain</string>
     <string name="menu_contact_support_title">Hubungi Dukungan</string>
     <string name="menu_contact_support_subtitle">Laporkan masalah</string>
     <string name="menu_explore_title">Jelajahi</string>
@@ -325,7 +311,6 @@
     <string name="welcome_screen_subtitle_3">Memiliki kendali penuh dan sesuaikan dompet Anda berdasarkan kebutuhan Anda</string>
 
     <string name="sync_status_wait">Harap tunggu sampai sinkronisasi selesai</string>
-    <string name="sync_status_syncing_title">Menyinkronkan %1$d</string>
     <string name="sync_status_syncing_sub_title">dengan Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Tidak dapat terhubung</string>
     <string name="sync_status_check_connection">Periksa koneksi anda</string>
@@ -364,4 +349,6 @@
     <string name="wallet_encryption_error_message">Ada masalah saat membuat dompet. Harap laporkan hal ini ke Bagian Dukungan.</string>
     <string name="wallet_not_encrypted_error_message">Ada masalah dengan dompet Anda.\n\nJika Anda tidak memiliki Dash di dompet ini, copot dan instal ulang aplikasi ini. Kemudian buat dompet baru.\n\nJika Anda memiliki frasa pemulihan atau file cadangan, hapus instalan aplikasi ini dan instal ulang.\n\nJika tidak, laporkan hal ini ke Bagian Dukungan.</string>
 
+    <string name="continue_reset">Teruskan</string>
+    <string name="reset_wallet_text">Atur ulang dompet</string>
 </resources>

@@ -60,7 +60,7 @@
     <string name="perm_lock_wipe_wallet">حذف کیف پول</string>
     <string name="perm_lock_close_app">بستن</string>
 
-    <string name="scan_to_pay_error_dialog_title">اسکن برای ارسال </string>
+    <string name="scan_to_pay_error_dialog_title">اسکن برای ارسال</string>
     <string name="scan_to_pay_error_dialog_message">نشانی دش یا نشانی اینترنتی نامعتبر
 درخواست در کلیپ‌برد: \n\n %s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">نشانی دش یا نشانی اینترنتی نامعتبر
@@ -120,7 +120,6 @@
     <string name="import_export_keys_dialog_password_phrase">عبارت بازیابی اینجا قرار می‌گیرد.</string>
     <string name="preferences_report_issue_summary">جمع‌آوری اطلاعات درباره مشکلی که با آن روبرو بودید و ارسال گزارش مربوط به آن به توسعه‌دهندگان</string>
     <string name="navigation_configuration">تنظیمات</string>
-    <string name="button_copy_address">کپی نشانی</string>
     <string name="request_coins_clipboard_address_msg">نشانی دش کپی شد</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">نمایش</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">«%s» جزو کلمات عبارت بازیابی نیست</string>
@@ -151,21 +150,6 @@
     <string name="wallet_lock_wrong_pin">رمز نادرست است! %s</string>
     <string name="wallet_last_attempt">آخرین امکان وارد کردن رمز</string>
     <string name="wallet_last_attempt_message">اگر یک بار دیگر، رمز به صورت اشتباه وارد شود، باید از عبارت‌ورودی برای بازگرداندن کیف پول استفاده کنید</string>
-
-    <plurals name="wallet_lock_attempts_remaining">
-        <item quantity="one">%d بار دیگر می‌توانید تلاش کنید</item>
-        <item quantity="other">%d بار دیگر می‌توانید تلاش کنید</item>
-    </plurals>
-
-    <plurals name="minute">
-        <item quantity="one">دقیقه</item>
-        <item quantity="other">دقیقه</item>
-    </plurals>
-
-    <plurals name="hour">
-        <item quantity="one">ساعت</item>
-        <item quantity="other">ساعت</item>
-    </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">به‌روزرسانی</string>
     <string name="encrypt_new_key_chain_dialog_title">کیف پول‌تان را به‌روزرسانی کنید</string>
@@ -208,7 +192,6 @@
     <string name="preferences_enable_payment_request_title">بی‌آی‌پی۷۰  برای اسکن به منظور پرداخت</string>
 
     <string name="verify_continue">ادامه</string>
-    <string name="verify">تائید</string>
     <string name="verify_backup_wallet">کیف پول پشتیبان</string>
     <string name="verify_show_recovery_phrase">نشان دادن عبارت بازیابی</string>
     <string name="verify_secure_now">کیف پول اکنون امن است</string>
@@ -330,7 +313,6 @@
     <string name="welcome_screen_subtitle_3">کنترل بیشتری روی کیف پول‌تان داشته باشید و آن را بر اساس نیازهایتان، تغییر دهید. </string>
 
     <string name="sync_status_wait">لطفا منتظر بمانید تا همزمان‌سازی کامل شود</string>
-    <string name="sync_status_syncing_title">در حال همزمان‌سازی%1$d</string>
     <string name="sync_status_syncing_sub_title"> بلاکچین دش</string>
     <string name="sync_status_unable_to_connect">امکان اتصال وجود ندارد</string>
     <string name="sync_status_check_connection">لطفا اتصال‌ به اینترنت را بررسی کنید</string>
@@ -369,4 +351,6 @@
     <string name="wallet_encryption_error_message">مشکلی در ایجاد کیف پول صورت گرفته است. لطفا موضوع را به بخش پشتیبانی اطلاع دهید. </string>
     <string name="wallet_not_encrypted_error_message">مشکلی در رابطه با کیف پول‌تان روی داده. \n\n اگر مقداری دش در کیف پول‌تان دارید، اپلیکیشن کیف پول را حذف کرده و دوباره آن را نصب کنید. سپس یک کیف پول جدید ایجاد کنید. \n\n اگر عبارت بازیابی یا فایل پشتیبان دارید، اپلیکیشن را حذف کرده و دوباره نصب کنید. \n\n در غیر این صورت، لطفا موضوع را به بخش پشتیابنی اطلاع دهید. </string>
 
-    </resources>
+    <string name="continue_reset">ادامه</string>
+    <string name="reset_wallet_text">ریست کیف پول</string>
+</resources>

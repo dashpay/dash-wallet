@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="crowdnode_get_started">开始使用CrowdNode</string>
+    <string name="crowdnode_get_started_hint">开始质押前, 需要创建一个CrowdNode账户或连接到现有账户.</string>
+    <string name="new_account">新的CrowdNode账户</string>
+    <string name="account_create">创建账户</string>
+    <string name="account_link">连接现有账户</string>
+    <string name="crowdnode_login">登录到CrowdNode</string>
+    <string name="crowdnode_link">连接现有的CrowdNode账户</string>
+    <string name="required_passphrase_backup">您必须在Dash钱包重备份您的密码</string>
+    <string name="backup_passphrase">备份密码</string>
+    <string name="required_dash_amount">您的Dash钱包中至少需要有%sDash</string>
+    <string name="crowdnode_new_account_warning_1">CrowdNode使用此地址作为您的账户ID. 若您丢失了与此地址关联的密码, 您将无法访问此钱包和您CrowdNode账户中的资金.</string>
+    <string name="crowdnode_new_account_warning_2">将会向CrowdNode发送非常少的Dash用以验证您是该钱包地址的所有者.</string>
+    <string name="crowdnode_link_account_description">从此设备与CrowdNode之间的所有来往交易都会使用此设备下方的Dash地址.</string>
+    <string name="dash_address">Dash地址</string>
+    <string name="primary_dash_address">主要Dash地址</string>
+    <string name="crowdnode_secure_wallet">备份您的密码以创建CrowdNode账户</string>
+    <string name="crowdnode_secure_wallet_explainer">如果您丢失此钱包的密码并丢失此设备或卸载Dash钱包, 您将无法访问CrowdNode上和此钱包中的资金.</string>
+    <string name="insufficient_funds">您没有足够的资金来继续操作.</string>
+    <string name="crowdnode_minimum_dash">您至少需要有%sDash才能进行CrowdNode验证.</string>
+    <string name="crowdnode_agree_to_terms">我同意CrowdNode%1$s和%2$s</string>
+    <string name="terms_of_use">使用条款</string>
+    <string name="privacy_policy">隐私政策</string>
+    <string name="crowdnode_account_ready">您的CrowdNode账户已设置好并可以使用了!</string>
+    <string name="notify_when_done">完成后关闭并发送通知</string>
+    <string name="crowdnode_creating">正在创建您的CrowdNode账户…</string>
+    <string name="accepting_terms">接受使用条款…</string>
+    <string name="crowdnode_signup_error">我们无法创建您的CrowdNode账户.</string>
+    <string name="crowdnode_deposit_error">我们无法向您的CrowdNode账户存款.</string>
+    <string name="crowdnode_withdraw_error">我们无法从您的CrowdNode提款.</string>
+    <string name="crowdnode_transfer_error">您的CrowdNode转账不成功.</string>
+    <string name="crowdnode_deposit_received">您向CrowdNode的存款已收到.</string>
+    <string name="deposit">存款</string>
+    <string name="deposit_sent">存款已发送</string>
+    <string name="deposit_sent_message">您的余额可能需要一分钟后才能被更新.</string>
+    <string name="crowdnode_deposit_from_wallet">Dash钱包 ➝ CrowdNode</string>
+    <string name="from_wallet">来自Dash钱包</string>
+    <string name="from_crowdnode">来自CrowdNode</string>
+    <string name="withdraw">提款</string>
+    <string name="withdrawal_requested">提款请求</string>
+    <string name="withdrawal_requested_message">您的资金可能需要一分钟后才能到账.</string>
+    <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ Dash钱包</string>
+    <string name="online_account">线上账户</string>
+    <string name="online_account_create">创建线上账户</string>
+    <string name="secure_online_account">保护您的收益</string>
+    <string name="crowdnode_support">CrowdNode帮助</string>
+    <string name="unlink_account">解绑账户</string>
+    <string name="online_account_title">为什么您需要线上账户?</string>
+    <string name="crowdnode_online_synced">已与当前Dash钱包同步</string>
+    <string name="crowdnode_online_unconfirmed">正在进行…</string>
+    <string name="account_recovery">账号恢复</string>
+    <string name="crowdnode_recovery_info">如果您丢失了密码, 您可以通过其他方式验证自己以重新获得对您CrowdNode资金的访问权限.</string>
+    <string name="transaction_history">交易记录</string>
+    <string name="see_staking_details">您可以查看有关您的存款, 提款和奖励收入的详细信息.</string>
+    <string name="payout_options">支付选项</string>
+    <string name="payout_options_details">您可以更改向您支付奖励收入的方式 / 时间.</string>
+    <string name="crowdnode_balance">CrowdNode上的余额</string>
+    <string name="crowdnode_your_address_title">这是您在与CrowdNode关联时使用的Dash地址</string>
+    <string name="chain_syncing">区块链正在同步…</string>
+    <string name="crowdnode_wait_for_sync">等待区块链完全同步后, 我们才能查看您的交易记录. 访问CrowdNode网站登录或注册.</string>
+    <string name="crowdnode_open_website">访问CrowdNode网站</string>
+    <string name="crowdnode_info_title">通过CrowdNode成为Dash主节点的一部分</string>
+    <string name="introducing_staking">介绍质押</string>
+    <string name="crowdnode_staking_info">仅需 0.5 Dash的存款即可从Dash主节点中获得奖励.</string>
+    <string name="instant_rewards">立即获得奖励</string>
+    <string name="daily_rewards_info">每天接收属于您份额的奖励.</string>
+    <string name="crowdnode_sending_to">发送到CrowdNode账户</string>
+    <string name="wallet_sending_to">发送到此设备上的Dash钱包</string>
+    <string name="available_balance">余额: %s</string>
+    <string name="crowdnode_minimum_deposit">至少存入 %s 来开始赚取收益</string>
+    <string name="crowdnode_minimum_deposit_difference">存入 %s 来开始赚取收益</string>
+    <string name="crowdnode_first_deposit">首次存款应该超过 %s</string>
+    <string name="crowdnode_staking_info_title">质押如何运作</string>
+    <string name="crowdnode_staking_info_message">如果您的CrowdNode账户拥有超过%s就会开始赚取收益</string>
+    <string name="crowdnode_verify_api_address">验证您的API Dash地址</string>
+    <string name="crowdnode_how_to_verify">如何确认您的API Dash地址</string>
+    <string name="crowdnode_how_to_verify_description1">从您当前用于CrowdNode账户的主要Dash地址发送%sDash</string>
+    <string name="crowdnode_how_to_verify_description2">在此设备上的Dash钱包上为您CrowdNode账户指定的Dash地址</string>
+    <string name="crowdnode_how_to_verify_description3">我们将自动检测到此交易并将相同的额度转移到您的CrowdNode账户. 之后, 您将能够在此设备上的Dash钱包中进行存款和提款.</string>
+    <string name="button_show_qr">显示二维码</string>
+    <string name="scan_qr">扫描二维码</string>
+    <string name="qr_contains_request">此二维码已包含 %s Dash的付款请求</string>
+    <string name="verification_required">需要验证</string>
+    <string name="validating_address">正在确认地址…</string>
+    <string name="crowdnode_address_validated">您的CrowdNode地址已经被确认, 但需要验证.</string>
+    <string name="crowdnode_address_confirmed">您的CrowdNode地址已确认.</string>
+    <string name="crowdnode_bad_confirmation">从错误的主要地址发送确认</string>
+    <string name="crowdnode_online_account_details_title">有关您线上账户的信息</string>
+    <string name="crowdnode_online_account_details_primary">您当前用于CrowdNode账户的主要Dash地址</string>
+    <string name="crowdnode_online_account_details_api">此设备上Dash钱包中为您的CrowdNode账户指定Dash地址</string>
+    <string name="crowdnode_reset_address">重置地址</string>
+
+    </resources>
