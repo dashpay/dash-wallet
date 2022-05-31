@@ -14,7 +14,7 @@
     <string name="uphold_withdrawal_success_title">Başarılı</string>
     <string name="uphold_withdrawal_success_message">İşleminiz gönderildi ve tutar birkaç dakika içinde cüzdanınızda belirecek.\n\nİşlem kimliği: %s</string>
     <string name="uphold_otp_dialog_title">2FA kodunu aşağıya girin</string>
-    <string name="uphold_transfer">Aktarım</string>
+    <string name="uphold_transfer">Transfer</string>
     <string name="uphold_see_on_uphold">Uphold\'da gör</string>
     <string name="uphold_logout_title">Uphold\'dan çıkış yap</string>
     <string name="uphold_logout">Çıkış Yap</string>
@@ -23,14 +23,22 @@
     <string name="uphold_error">Uphold Hatası</string>
     <string name="uphold_error_not_logged_in">Dash Cüzdan artık Uphold hesabınıza bağlı değil. Bir sonraki ekranda cüzdanınızı Uphold hesabınıza bağlayın.</string>
     <string name="uphold_error_not_available">Uphold hizmeti şuan kullanım dışı. Lütfen daha sonra tekrar deneyin.</string>
-    <string name="uphold_error_report_issue">Lütfen bu sorunu ana menüden "Sorun Bildir" i kullanarak Dash Wallet destek ekibine bildirin.</string>
+    <string name="uphold_error_report_issue">Lütfen bu sorunu ana menüden \"Sorun Bildir\" i kullanarak Dash Wallet destek ekibine bildirin.</string>
 
     <string name="uphold_general_error_title">Hata</string>
     <string name="uphold_api_error_title">Uphold hatası</string>
     <string name="uphold_api_error_identity">Uphold hesabınız henüz onaylanmadı. Fonlarınız çekilemez.</string>
+    <string name="uphold_api_error_403_description">Uphold hesabınız incelenmek üzere işaretlendi.\n\nUphold, hesabınızı geçici olarak kısıtladı bundan dolayı para çekemeyeceksiniz.\n\n%s</string>
+    <string name="uphold_api_error_403_generic">Uphold, bu sorunu hızlı bir şekilde çözmenize yardımcı olmak için sizinle iletişime geçecektir.</string>
+    <string name="uphold_api_error_403_due_diligence">Kendinizle ilgili bazı soruları yanıtlamak için lütfen Uphold hesabınıza gidin.</string>
+    <string name="uphold_api_error_403_identity">Kimliğinizi doğrulamak için lütfen Uphold hesabınıza gidin.</string>
+    <string name="uphold_api_error_403_proof_of_address">Adres kanıtınızı güncellemek için lütfen Uphold ile iletişime geçin.</string>
+
     <string name="uphold_api_error_400_description">Uphold fonlarınız 24 saat süreyle kilitlendi. %s\'e kadar \n\nsizin transfer için yeterli fonunuz olacaktır .</string>
     <string name="uphold_api_error_400_locked">Uphold fonları (%1$s%2$s) 65 güne kadar kitlendi.\n\n%3$s kadar bu transfer için yeterli bakiyeniz olacaktır.</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">Bu transfer için yeterli paranız yok</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">Aktarılacak miktar %s DASH\'den az olmalıdır.</string>
+    <string name="uphold_api_error_400_greater_than_or_equal_to">Aktarılacak miktar %s DASH\'den fazla olmalıdır.</string>
     <string name="uphold_api_error_400_tx_validation">Bu uygulamayla bu miktarı gönderemezsiniz (maksimum 3000$)</string>
     <string name="uphold_api_error_400_password_reset">Yakın zamanda yapılan bir şifre değişikliği nedeniyle, Uphold\'daki fonlarız kilitlendi. \n\nPara transferi yapabilmek için %s kadar beklemeniz gerekmektedir.</string>
     <string name="uphold_api_error_400_authentication_change">Yakın zamanda yapılan bir kimlik doğrulama yöntemi değişikliği nedeniyle Uphold fonlarınız kilitlendi. \n\nPara transferi yapabilmek için %s kadar beklemeniz gerekmektedir.</string>
@@ -38,4 +46,5 @@
     <string name="uphold_api_error_400_invalid_beneficiary">Bu uygulamayla bu miktarı gönderemezsiniz (maksimum 3000$) \n\nBu transferi yapmak için lütfen Uphold hesabınızı</string>
     <string name="uphold_api_error_400_required">Bu uygulamayla bu miktarı gönderemezsiniz (maksimum 3000$) \n\nBu transferi yapmak için lütfen Uphold hesabınızı</string>
 
+    <string name="uphold_requirement_not_met_base_message">Bu işlemi şu anda gerçekleştiremezsiniz. %s</string>
 </resources>

@@ -55,7 +55,7 @@
     <string name="send_coins_fragment_request_payment_request_failed_title">Η παραλαβή της υπογραφής απέτυχε</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Λανθασμένη υπογραφή!</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">άγνωστο</string>
-    <string name="send_coins_fragment_receiving_address_label">Αποστολή στο</string>
+    <string name="send_coins_fragment_receiving_address_label">Εστάλη στο</string>
     <string name="send_coins_fragment_receiving_address_hint">πληκτρολογήστε τη διεύθυνση ή το όνομα</string>
     <string name="send_coins_fragment_receiving_address_error">Μη έγκυρη διεύθυνση Dash!</string>
     <string name="send_coins_fragment_receiving_address_own">Πρόκειται να στείλετε στον εαυτό σας!</string>
@@ -64,9 +64,7 @@
     <string name="send_coins_fragment_amount_label">Ποσό για πληρωμή</string>
     <string name="send_coins_fragment_pin_label">Εισάγετε PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Θα πληρώσετε %s για το δίκτυο.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Θα πληρώσετε τέλη προτεραιότητας %s. Αν σας ενδιαφέρουν χαμηλά τέλη, χρησιμοποιήστε την επιλογή "προτεραιότητα" μόνο αν χρειάζεστε επιβεβαίωση το συντομότερο δυνατόν.</string>
-    <string name="send_coins_error_dusty_send">Το ποσό είναι πολύ μικρό για να σταλθεί</string>
-    <string name="send_coins_error_insufficient_money">Ανεπαρκή χρήματα</string>
+    <string name="send_coins_fragment_hint_fee_priority">Θα πληρώσετε τέλη προτεραιότητας %s. Αν σας ενδιαφέρουν χαμηλά τέλη, χρησιμοποιήστε την επιλογή \"προτεραιότητα\" μόνο αν χρειάζεστε επιβεβαίωση το συντομότερο δυνατόν.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Το ποσό των μικρών πληρωμών στο πορτοφόλι σας δεν επαρκεί για το ποσό που είναι προς αποστολή.</string>
     <string name="send_coins_fragment_hint_replaying">Αυτή την στιγμή δεν διεκπεραιώνονται πληρωμές γιατί το πορτοφόλι δεν έχει συγχρονιστεί πλήρως με το δίκτυο</string>
     <string name="send_coins_fragment_direct_payment_enable">Στείλτε πληρωμή απευθείας στον δικαιούχο διακομιστή.</string>
@@ -348,12 +346,11 @@
     <string name="button_copy">Αντιγραφή</string>
     <string name="button_copy_request">Αίτημα αντιγραφής</string>
     <string name="button_paste">Επικόλληση</string>
-    <string name="button_share">Μοιραστείτε</string>
-    <string name="button_set_as_default">Ορισμός ως προεπιλογή</string>
+    <string name="button_set_as_default">Θέσε ως προεπιλογή</string>
     <string name="button_request_coins">Αίτηση για Dash</string>
     <string name="button_send_coins">Αποστολή Dash</string>
     <string name="button_pay">Αποστολή</string>
-    <string name="button_scan">Ανίχνευση</string>
+    <string name="button_scan">Σάρωση</string>
     <string name="button_settings">Ρυθμίσεις</string>
     <string name="action_show_qr">Εμφάνιση QR κώδικα</string>
     <string name="action_browse">Πλοήγηση</string>
@@ -392,5 +389,4 @@
     <string name="activity_buy_and_sell_dash_filter">Φίλτρο</string>
     <string name="clear_filter">Καθαρισμός Φίλτρου</string>
     <string name="select_currency">Επιλέξτε Νόμισμα</string>
-
 </resources>

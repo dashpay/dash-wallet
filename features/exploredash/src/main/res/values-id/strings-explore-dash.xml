@@ -23,6 +23,7 @@
     <string name="explore_merchants_subtitle">Temukan pedagang yang menerima Dash sebagai pembayaran.</string>
     <string name="explore_atms_title">ATM</string>
     <string name="explore_atms_subtitle">Temukan tempat untuk membeli atau menjual DASH dan mata uang kripto lainnya secara tunai.</string>
+    <string name="explore_staking_subtitle">Stake Dash dengan mudah dan dapatkan penghasilan pasif dengan beberapa klik yang mudah.</string>
 
     <!-- Search -->
     <string name="explore_search_results">Hasil pencarian</string>
@@ -34,7 +35,6 @@
     <string name="explore_option_buy">Beli</string>
     <string name="explore_option_sell">Jual</string>
     <string name="explore_option_buy_sell">Beli &amp; Jual</string>
-    <string name="explore_menu_info">info</string>
     <string name="explore_where_to_spend">Dimana harus Belanja</string>
     <string name="explore_atms">ATM</string>
     <string name="explore_all_states">Semua negara bagian</string>
@@ -47,7 +47,7 @@
     <string name="distance_kilometers">%s kilometer</string>
 
     <plurals name="explore_merchant_amount">
-        <item quantity="other">%dtoko</item>
+        <item quantity="other">%d pedagang</item>
     </plurals>
 
     <plurals name="explore_atm_amount">

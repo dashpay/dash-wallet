@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <!-- Explore screen -->
+    <string name="explore_dash">สำรวจ Dash</string>
+    <string name="explore_title">สำรวจ </string>
+    <string name="explore_subtitle">ซื้อสินค้าด้วย DASH ของคุณได้อย่างง่ายดายที่สถานที่และร้านค้าออนไลน์มากกว่า 155,000 แห่ง</string>
+    <string name="explore_merchants_title">จะใช้จ่ายที่ไหน?</string>
+    <string name="explore_merchants_subtitle">ค้นหาร้าค้าที่ยอมรับการชำระเงินด้วย Dash </string>
+    <string name="explore_atms_title">เอทีเอ็ม</string>
+    <string name="explore_atms_subtitle">ค้นหาสถานที่ซื้อหรือขาย Dash และ คริปโทเคเรนซีอื่น ๆ เป็นเงินสด</string>
+    <!-- Search -->
+    <string name="explore_search_results">ผลการค้นหา</string>
+    <string name="explore_physical_merchant">ร้านค้า</string>
+    <string name="explore_online_merchant">ออนไลน์</string>
+    <string name="explore_both_types_merchant">ออนไลน์, ร้านค้า</string>
+    <string name="explore_multiple_locations">+ หลายสถานที่</string>
+    <string name="explore_option_all">ทั้งหมด</string>
+    <string name="explore_option_buy">ซื้อ</string>
+    <string name="explore_option_sell">ขาย</string>
+    <string name="explore_option_buy_sell">ซื้อ &amp; ขาย</string>
+    <string name="explore_where_to_spend">จะใช้จ่ายที่ไหน</string>
+    <string name="explore_atms">เอทีเอ็ม</string>
+    <string name="explore_all_states">เมืองทั้งหมด</string>
+    <string name="explore_no_results">ไม่พบผลลัพธ์</string>
+    <string name="explore_all_merchants">ร้านค้าทั้งหมด</string>
+    <string name="explore_in_radius">%1$s ใน %2$s</string>
+    <string name="explore_no_merchants">ไม่พบร้านค้า</string>
+    <string name="explore_no_atms">ไม่พบเอทีเอ็ม</string>
+    <string name="distance_miles">%s ไมล์</string>
+    <string name="distance_kilometers">%s กิโลเมตร</string>
+
+    <!-- Details -->
+    <string name="explore_back_to_locations">กลับไปยังสถานที่ทั้งหมด</string>
+    <string name="explore_back_to_nearest">กลับไปยังตำแหน่งที่ใกล้ที่สุด</string>
+    <string name="explore_select_location">เลือกตำแหน่ง</string>
+    <string name="explore_pay_with_dash">จ่ายด้วย Dash</string>
+    <string name="explore_buy_gift_card">ซื้อบัตรของขวัญ</string>
+    <string name="explore_buy_dash">ซื้อ Dash </string>
+    <string name="explore_sell_dash">ขาย Dash</string>
+    <string name="explore_show_all">แสดงสถานที่ทั้งหมด</string>
+    <string name="explore_atm_location_hint">ตู้เอทีเอ็มนี้ตั้งอยู่ใน</string>
+    <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
+
+    <!-- Filters -->
+    <string name="explore_filter">กรอง</string>
+    <string name="explore_filters">ตัวกรอง</string>
+    <string name="explore_apply_filter">นำมาใช้</string>
+    <string name="explore_payment_method">วิธีการชำระเงิน</string>
+    <string name="explore_payment_dash">Dash</string>
+    <string name="explore_payment_gift_card">บัตรของขวัญ</string>
+    <string name="explore_radius">รัศมี</string>
+    <string name="explore_location">ตำแหน่ง</string>
+    <string name="explore_current_location">ตำแหน่งปัจจุบัน</string>
+    <string name="explore_location_settings">การตั้งค่าตำแหน่งปัจจุบัน</string>
+    <string name="explore_reset_filters">รีเซ็ตตัวกรอง</string>
+    <string name="explore_reset_all_filters">รีเซ็ตตัวกรองทั้งหมด</string>
+    <string name="explore_filtered_by">กรองโดย:</string>
+    <string name="explore_pay_gift_card">จ่ายด้วยบัตรของขวัญ</string>
+    <string name="explore_sort_by">เรียงลำดับตาม</string>
+
+    <string-array name="merchants_filter_options">
+        <item>ออนไลน์</item>
+        <item>ใกล้เคียง</item>
+        <item>ทั้งหมด</item>
+    </string-array>
+
+    <string-array name="atms_filter_options">
+        <item>ทั้งหมด</item>
+        <item>ซื้อ</item>
+        <item>ขาย</item>
+        <item>ซื้อ/ขาย</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_miles">
+        <item>1 ไมล์</item>
+        <item>5 ไมล์</item>
+        <item>20 ไมล์</item>
+        <item>50 ไมล์</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_kilometers">
+        <item>1 กิโลเมตร</item>
+        <item>5 กิโลเมตร</item>
+        <item>20 กิโลเมตร</item>
+        <item>50 กิโลเมตร</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>ชื่อ</item>
+        <item>ระยะทาง</item>
+    </string-array>
+
+    <!-- Location Permission -->
+    <string name="explore_location_allowed">อนุญาติแล้ว</string>
+    <string name="explore_location_denied">ปฏิเสธแล้ว</string>
+    <string name="explore_manager_permissions">การอนุญาต GPS</string>
+    <string name="explore_location_request">ให้สิทธิ์ GPS เพื่อให้เราสามารถแสดงสถานที่ใกล้คุณ</string>
+    <string name="explore_location_explainer">ตำแหน่งของคุณใช้เพื่อแสดงตำแหน่งของคุณบนแผนที่ร้านค้าในรัศมีที่เลือกและปรับปรุงผลการค้นหา</string>
+    <string name="explore_merchant_location_explainer_title">การค้นหาร้านค้าทำงานได้ดีขึ้นเมื่อเปิดการใช้งานบริการสถานที่</string>
+    <string name="explore_merchant_location_explainer_message">ตำแหน่งของคุณใช้เพื่อแสดงตำแหน่งของคุณบนแผนที่ร้านค้าในรัศมีที่เลือกและปรับปรุงผลการค้นหา</string>
+    <string name="explore_atm_location_explainer_title">การค้นหาเอทีเอ็มทำงานได้ดีขึ้นเมื่อเปิดใช้บริการสถานที่</string>
+    <string name="explore_atm_location_explainer_message">ตำแหน่งของคุณใช้เพื่อแสดงตำแหน่งของคุณบนแผนที่ตู้เอทีเอ็มในรัศมีที่เลือกและปรับปรุงผลการค้นหา</string>
+
+    <!-- Info screens -->
+    <string name="explore_info_header_text">เรามีร้านค้า 2 ประเภท</string>
+    <string name="accept_dash_text">ยอมรับ Dash โดยตรง</string>
+    <string name="pay_with_dash_text">จ่ายผ่านกระเป๋าเงิน DASH </string>
+    <string name="buy_gift_card_text">ซื้อบัตรของขวัญด้วย Dash ของคุณ</string>
+    <string name="buy_gift_card_desc_text">ซื้อบัตรของขวัญด้วย Dash ของคุณสำหรับจำนวนที่แน่นอนของการซื้อของคุณ</string>
+    <string name="learn_more_text">เรียนรู้เพิ่มเติม</string>
+    <string name="continue_text">ดำเนินการต่อ</string>
+    <string name="buy_card_header_text">การใช้บัตรของขวัญ</string>
+    <string name="buy_card_desc_text">ไม่ใช่ร้านค้าทั้งหมดที่ยอมรับ Dash โดยตรง แต่คุณสามารถซื้อบัตรของขวัญด้วย Dash ของคุณ</string>
+    <string name="find_merchant_text">ค้นหาร้านค้า</string>
+    <string name="buy_gift_card_with_dash_text">ซื้อบัตรของขวัญด้วย Dash</string>
+    <string name="redeem_gift_card_text">แลกบัตรของขวัญของคุณทางออนไลน์ภายในไม่กี่วินาทีหรือที่แคชเชียร์</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">กำลังดำเนินการซิงค์...ผลลัพธ์อาจไม่สมบูรณ์</string>
+    <string name="sync_in_progress_error">กำลังดำเนินการซิงค์...มีข้อผิดพลาด</string>
+    <string name="sync_in_progress_canceled">การยกเลิกการซิงค์ ... จะพยายามอีกครั้งในภายหลัง</string>
+
+    <string name="sync_in_progress_file_not_found">สร้างข้อผิดพลาด: ไม่พบฐานข้อมูล!</string>
+    <string name="sync_in_progress_network_error">การซิงค์ขัดข้อง... เครือข่ายออฟไลน์หรือไม่สามารถเข้าถึงได้</string>
+</resources>

@@ -9,9 +9,9 @@
     <string name="set_pin_create_new_wallet">Stwórz Nowy Portfel</string>
     <string name="set_pin_upgrade_wallet">Uaktualnij Portfel</string>
     <string name="set_pin_restore_wallet">Przywróć Portfel</string>
-    <string name="set_pin_enter_pin">Wprowadź Stary PIN</string>
+    <string name="set_pin_enter_pin">Wpisz stary kod PIN</string>
     <string name="set_pin_set_pin">Ustaw PIN</string>
-    <string name="set_pin_confirm_pin">Potwierdź PIN</string>
+    <string name="set_pin_confirm_pin">Potwierdź kod PIN</string>
     <string name="set_pin_encrypting">Szyfruje portfel</string>
     <string name="set_pin_decrypting">Odszyfrowywanie portfela</string>
     <string name="set_pin_verifying_pin">Zweryfikuj PIN</string>
@@ -84,7 +84,7 @@
     <string name="payments_pay_by_qr_title">Wyślij przez</string>
     <string name="payments_pay_by_qr_sub_title">Zeskanuj QR Kod</string>
     <string name="payments_pay_to_clipboard_title">Wyślij do skopiowanego adresu</string>
-    <string name="payments_pay_to_clipboard_sub_title">Brak skopiowanego adresu</string>
+    <string name="payments_pay_to_clipboard_sub_title">Adres nie skopiowany</string>
 
     <string name="forgot_pin_title">Zapomniałeś kodu PIN?</string>
     <string name="forgot_pin_message">Możesz ustawić nowy kod PIN za pomocą frazy odzyskiwania danych</string>
@@ -95,7 +95,7 @@
     <string name="forgot_pin_recover">Wpisz Frazy Odzyskiwania</string>
     <string name="forgot_pin_passphrase_doesnt_match">Ta fraza nie pasuje do tej wykreowanej kiedy portfel został stworzony. </string>
 
-    <string name="send_coins_auto_lock_feasible">Ta transakcja powinna się usadowić natychmiast bez braku dodatkowych opłat</string>
+    <string name="send_coins_auto_lock_feasible">Ta transakcja powinna się usadowić natychmiast bez konieczności dodatkowych opłat</string>
     <string name="send_coins_auto_lock_not_feasible">Rozliczenie transakcji może potrwać dłuższą chwilę. Wykonać natychmiast za dodatkowe %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Rozliczenie transakcji może potrwać dłuższą chwilę.</string>
 
@@ -118,8 +118,7 @@
     <string name="import_export_keys_dialog_password_phrase">Miejsce na frazę odzyskiwania portfela.</string>
     <string name="preferences_report_issue_summary">Zbierz informacje dotyczące twojego problemu i wyślij je do deweloperów.</string>
     <string name="navigation_configuration">Konfiguracja</string>
-    <string name="button_copy_address">Kopiuj adres</string>
-    <string name="request_coins_clipboard_address_msg">Adres Dash został skopiowany do schowka</string>
+    <string name="request_coins_clipboard_address_msg">Adres Dash został skopiowany do schowka.</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Pokaż</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" nie jest jednym ze słów frazy odzyskiwania danych</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Fraza odzysku danych musi zawierać 12 słów</string>
@@ -149,27 +148,6 @@
     <string name="wallet_lock_wrong_pin">Zły PIN %s</string>
     <string name="wallet_last_attempt">Ostatnia próba wpisania PIN</string>
     <string name="wallet_last_attempt_message">Kolejna nieudana próba sprawi, że portfel zostanie zablookowany i będziesz potrzebował/a listę słów aby odzyskać dostęp do portfela. </string>
-
-    <plurals name="wallet_lock_attempts_remaining">
-        <item quantity="one">pozostała %d próba</item>
-        <item quantity="few">pozostały %d próby</item>
-        <item quantity="many">pozostało %d prób</item>
-        <item quantity="other">pozostało %d prób</item>
-    </plurals>
-
-    <plurals name="minute">
-        <item quantity="one">minuta</item>
-        <item quantity="few">minuty</item>
-        <item quantity="many">minut</item>
-        <item quantity="other">minut</item>
-    </plurals>
-
-    <plurals name="hour">
-        <item quantity="one">godzina</item>
-        <item quantity="few">godziny</item>
-        <item quantity="many">godzin</item>
-        <item quantity="other">godzin</item>
-    </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">Aktualizuj</string>
     <string name="encrypt_new_key_chain_dialog_title">Aktualizuj swój portfel</string>
@@ -211,14 +189,13 @@
     <string name="preferences_enable_payment_request_summary">Użyj protokołu płatności dla płatności inicjowanych kodem QR</string>
     <string name="preferences_enable_payment_request_title">BIP70 dla scan-by-zapłacić</string>
 
-    <string name="verify_continue">Kontynuuj</string>
-    <string name="verify">Zweryfikuj</string>
-    <string name="verify_backup_wallet">Utwórz Kopie Zapasową Portfela</string>
+    <string name="verify_continue">Dalej</string>
+    <string name="verify_backup_wallet">Kopia zapasowa portfela</string>
     <string name="verify_show_recovery_phrase">Pokaż Frazy Odzyskiwania Portfela</string>
     <string name="verify_secure_now">Zabezpiecz Portfel Teraz</string>
     <string name="verify_it_is_important">To ważne!</string>
     <string name="verify_it_is_important_subtitle">Za chwilę pokażemy Ci tajny klucz do twojego portfela.</string>
-    <string name="verify_info_text_1">Ta fraza odzyskiwania jest dostępem do środków w tym portfelu.</string>
+    <string name="verify_info_text_1">Ta fraza odzyskiwania jest Twoim dostępem do środków w tym portfelu.</string>
     <string name="verify_info_text_2">NIE przechowujemy słów wymaganych do odzysku portfela</string>
     <string name="verify_info_text_3">Fraza odzysku danych będzie potrzebna aby mieć dostęp do funduszy w wypadku utraty tego urządzenia lub jeśli Dash Wallet zostanie przypadkowo odinstalowany. </string>
     <string name="verify_skip">Pomiń</string>
@@ -334,7 +311,6 @@
     <string name="welcome_screen_subtitle_3">Miej pełną kontrolę oraz dostosuj swój portfel w zależności od potrzeb</string>
 
     <string name="sync_status_wait">Proszę poczekaj aż synchronizacja się zakończy</string>
-    <string name="sync_status_syncing_title">Synchronizowanie %1$d</string>
     <string name="sync_status_syncing_sub_title">z łańcuchem bloków Dash</string>
     <string name="sync_status_unable_to_connect">Połączenie jest niemożliwe</string>
     <string name="sync_status_check_connection">Sprawdź swoje połączenie</string>
@@ -373,4 +349,6 @@
     <string name="wallet_encryption_error_message">Występił problem z tworzeniem portfela. Skontaktuj się z pomocą techniczną Dash</string>
     <string name="wallet_not_encrypted_error_message">Wystąpił problem z twoim portfelem.\n\n Jeśli nie masz żadnych DASHy w tym portfelu, odinstaluj i zainstaluj go ponownie. Następnie stwórz nowy portfel.\n\n Jeśli masz listę słów do odzyskiwania porfela, lub plik kopii zapasowej, odinstaluj ten portfel i zainstaluj go ponownie. W przeciwnym wypadku zgłoś się do pomocy technicznej Dash. </string>
 
+    <string name="continue_reset">Dalej</string>
+    <string name="reset_wallet_text">Resetuj portfel</string>
 </resources>

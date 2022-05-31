@@ -26,8 +26,8 @@
     <string name="dialog_confirm_confirm">승인</string>
     <string name="dialog_confirm_pay_to">다음으로 전송합니다</string>
     <string name="dialog_confirm_secured_by">다음이 보증합니다</string>
-    <string name="dialog_confirm_fee">네트워크 비용</string>
-    <string name="dialog_confirm_total">총계</string>
+    <string name="dialog_confirm_fee">네트워크 수수료</string>
+    <string name="dialog_confirm_total">총합</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">현재 지갑이 안전합니다</string>
@@ -118,7 +118,6 @@
     <string name="import_export_keys_dialog_password_phrase">지갑 복구 문구입니다.</string>
     <string name="preferences_report_issue_summary">오류에 대한 정보를 수집 후 오류 보고서를 개발자에게 전달합니다.</string>
     <string name="navigation_configuration">설정</string>
-    <string name="button_copy_address">주소 복사하기</string>
     <string name="request_coins_clipboard_address_msg">대시 주소가 클립보드에 복사되었습니다</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">보기</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\"는 복원 문구에 쓰이는 단어가 아닙니다</string>
@@ -149,18 +148,6 @@
     <string name="wallet_lock_wrong_pin">잘못된 PIN 입니다! %s</string>
     <string name="wallet_last_attempt">지난 핀 시도 내역</string>
     <string name="wallet_last_attempt_message">다시 실패하는 경우 암호 문구로 지갑을 복구해야 합니다</string>
-
-    <plurals name="wallet_lock_attempts_remaining">
-        <item quantity="other">%d 회의 시도가 남았습니다</item>
-    </plurals>
-
-    <plurals name="minute">
-        <item quantity="other">분</item>
-    </plurals>
-
-    <plurals name="hour">
-        <item quantity="other">시간</item>
-    </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">업그레이드</string>
     <string name="encrypt_new_key_chain_dialog_title">지갑 업그레이드 하기</string>
@@ -203,7 +190,6 @@
     <string name="preferences_enable_payment_request_title">\'스캔하여 지불하기\'를 위한 BIP70</string>
 
     <string name="verify_continue">계속</string>
-    <string name="verify">인증하기</string>
     <string name="verify_backup_wallet">지갑 백업</string>
     <string name="verify_show_recovery_phrase">복원 문구 확인하기</string>
     <string name="verify_secure_now">현재 지갑이 안전합니다</string>
@@ -257,8 +243,8 @@
     <string name="menu_settings_title">설정</string>
     <string name="menu_settings_subtitle">통화 기본값, 단축키, 관련 정보...</string>
     <string name="menu_tools_title">도구</string>
-    <string name="menu_tools_subtitle">프라이빗 키 가져오기…</string>
-    <string name="menu_local_currency">현지 통화</string>
+    <string name="menu_tools_subtitle">개인 키를 불러옵니다....</string>
+    <string name="menu_local_currency">로컬 통화</string>
     <string name="menu_rescan_blockchain">블록체인 재스캔</string>
     <string name="menu_contact_support_title">고객 지원부에 문의하기</string>
     <string name="menu_contact_support_subtitle">오류 보고하기</string>
@@ -266,7 +252,7 @@
     <string name="menu_explore_subtitle">155,000개 이상의 상점에서 대시로 쇼핑하세요</string>
 
     <string name="tools_address_book">주소록</string>
-    <string name="tools_import_private_key">프라이빗 키 가져오기</string>
+    <string name="tools_import_private_key">프라이빗 키 불러오기</string>
     <string name="tools_network_monitor">블럭체인 모니터링</string>
     <string name="tools_show_xpub">확장된 공개 키</string>
 
@@ -325,7 +311,6 @@
     <string name="welcome_screen_subtitle_3">지갑에 대한 완전한 통제를 행사하고 당신의 필요에 따라 지갑을 커스터마이징 하세요</string>
 
     <string name="sync_status_wait">동기화가 완료될 때까지 기다려주세요</string>
-    <string name="sync_status_syncing_title">%1$d 동기화 중</string>
     <string name="sync_status_syncing_sub_title">대시 블록체인을 통해</string>
     <string name="sync_status_unable_to_connect">연결할 수 없습니다</string>
     <string name="sync_status_check_connection">연결을 확인하세요</string>
@@ -364,4 +349,6 @@
     <string name="wallet_encryption_error_message">지갑 생성에 오류가 발생했습니다. 지원 데스크에 보고해주십시오.</string>
     <string name="wallet_not_encrypted_error_message">지갑에 문제가 발생했습니다.\n\n이 지갑에 대시가 없다면 이 어플을 지우고 다시 설치한 후 새로운 지갑을 생성하세요.\n\n복구 문구나 백업 파일이 있다면, 이 어플을 지우고 다시 설치하십시오.\n\n이에 해당되지 않는 경우 지원 데스크에 보고해주십시오.</string>
 
+    <string name="continue_reset">계속</string>
+    <string name="reset_wallet_text">지갑 리셋하기</string>
 </resources>

@@ -17,7 +17,7 @@
     <string name="wallet_address_dialog_fragment_hint">Для защиты Вашей конфиденциальности Ваш адрес будет меняться каждый раз при получении средств.</string>
     <string name="wallet_balance_fragment_too_much">Сумма монет довольно существенная для карманного бумажника. Пожалуйста, перенесите её часть в более безопасное место.</string>
     <string name="wallet_balance_fragment_replaying">Во время воспроизведения баланс недоступен.</string>
-    <string name="exchange_rates_activity_title">Местная валюта</string>
+    <string name="exchange_rates_activity_title">Валюта</string>
     <string name="exchange_rates_fragment_empty_text">Не удалось загрузить курсы валют.</string>
     <string name="exchange_rates_fragment_empty_search">Не удалось найти обменный курс.</string>
     <string name="exchange_rates_fragment_default">(по умолчанию)</string>
@@ -62,11 +62,9 @@
     <string name="send_coins_fragment_receiving_address_complex">сложный\nадрес</string>
     <string name="send_coins_fragment_pending">(%s ожидание подтверждения)</string>
     <string name="send_coins_fragment_amount_label">Отправляемая сумма</string>
-    <string name="send_coins_fragment_pin_label">Введите PIN-код</string>
+    <string name="send_coins_fragment_pin_label">Введите PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Будет заплачена комиссия %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Приоритетный размер платы составит %s. Если размер комиссии имеет для Вас значение, используйте опцию приоритета, только когда Вам необходимо срочное подтверждение транзакции.</string>
-    <string name="send_coins_error_dusty_send">Сумма слишком мала для отправки</string>
-    <string name="send_coins_error_insufficient_money">Недостаточно средств</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Количества малых платежей в Вашем кошельке недостаточно для отправки средств.</string>
     <string name="send_coins_fragment_hint_replaying">В данный момент платежи невозможны, так как кошелёк не полностью синхронизирован с сетью.</string>
     <string name="send_coins_fragment_direct_payment_enable">Отправить платёж непосредственно получателю.</string>
@@ -90,10 +88,10 @@
     <string name="send_coins_options_fee_category_economic">Экономичная</string>
     <string name="send_coins_options_fee_category_priority">Приоритетная</string>
     <string name="send_coins_options_empty">Опустошить кошелёк</string>
-    <string name="sweep_wallet_activity_title">Импортировать приватный ключ</string>
+    <string name="sweep_wallet_activity_title">Импорт ключа</string>
     <string name="sweep_wallet_fragment_intro">Вы собираетесь перенести бумажный кошелёк или купон. Все средства перейдут на Ваш кошелёк на этом устройстве. Когда эта транзакция пройдет, бумажный носитель будет бесполезен и не должен быть повторно использован в целях безопасности.</string>
     <string name="sweep_wallet_fragment_hint">Бумажные кошельки наиболее часто используются для холодного хранения. Некоторые банкоматы печатают их на бумаге, а не посылают средства на мобильное устройство напрямую. Некоторые люди используют предварительно пополненные бумажные кошельки, чтобы передавать средства (это не рекомендуется).</string>
-    <string name="sweep_wallet_fragment_wallet_unknown">Для начала отсканируйте приватный ключ, напечатанный на бумажном кошельке. Используйте кнопку "Камера".</string>
+    <string name="sweep_wallet_fragment_wallet_unknown">Для начала отсканируйте приватный ключ, напечатанный на бумажном кошельке. Используйте кнопку \"Камера\".</string>
     <string name="sweep_wallet_fragment_encrypted">Этот личный ключ защищён паролем.</string>
     <string name="sweep_wallet_fragment_password">Пароль</string>
     <string name="sweep_wallet_fragment_bad_password">Неверный пароль!</string>
@@ -284,7 +282,7 @@
     <string name="preferences_initiate_reset_title">Перегрузить блокчейн</string>
     <string name="preferences_initiate_reset_summary">Сброс блокчейна, транзакций и баланса. Перезагрузка займёт некоторое время, поэтому прибегайте к этому только тогда, когда точно знаете, что Вы делаете.</string>
     <string name="preferences_initiate_reset_dialog_message">Вы хотите сбросить и обновить блокчейн?\n\nЭто сделает временно недоступными ваши баланс и список транзакций. Они будут восстановлены в процессе синхронизации блокчейна. Убедитесь, что что у Вас надёжное подключение к интернету.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Сброс</string>
+    <string name="preferences_initiate_reset_dialog_positive">Сбросить</string>
     <string name="preferences_extended_public_key_title">Показать xpub</string>
     <string name="preferences_extended_public_key_summary">Просмотр расширенного открытого ключа Вашего кошелька может быть полезен для импортирования в другие приложения и услуги. Будьте осторожны: этим Вы нарушаете свою финансовую конфиденциальность.</string>
     <string name="bitmap_fragment_share">Поделиться…</string>
@@ -336,7 +334,7 @@
     <string name="appwidget_wallet_balance_title">Баланс</string>
 
     <!-- generic buttons -->
-    <string name="button_ok">OK</string>
+    <string name="button_ok">ОК</string>
     <string name="button_dismiss">Отклонить</string>
     <string name="button_cancel">Отмена</string>
     <string name="button_help">Помощь</string>
@@ -348,12 +346,11 @@
     <string name="button_copy">Копировать</string>
     <string name="button_copy_request">Скопировать запрос</string>
     <string name="button_paste">Вставить</string>
-    <string name="button_share">Поделиться</string>
-    <string name="button_set_as_default">Установить по умолчанию</string>
+    <string name="button_set_as_default">Включено по умолчанию</string>
     <string name="button_request_coins">Получить Dash</string>
     <string name="button_send_coins">Отправить Dash</string>
     <string name="button_pay">Отправить</string>
-    <string name="button_scan">Сканировать</string>
+    <string name="button_scan">Скан.</string>
     <string name="button_settings">Настройки</string>
     <string name="action_show_qr">Показать QR код</string>
     <string name="action_browse">Обзор</string>
@@ -392,5 +389,4 @@
     <string name="activity_buy_and_sell_dash_filter">Фильтр</string>
     <string name="clear_filter">Очистить фильтр</string>
     <string name="select_currency">Выберите валюту</string>
-
 </resources>
