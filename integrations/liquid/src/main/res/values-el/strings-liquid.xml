@@ -32,7 +32,7 @@
     <string name="connect">Σύνδεση</string>
     <string name="connected">Συνδέθηκε</string>
     <string name="disconnected">Αποσυνδεδεμένο</string>
-    <string name="buy_sell_dash">Για να αγοράσετε & να πουλήσετε Dash ή να δημιουργήσετε νέο λογαριασμό</string>
+    <string name="buy_sell_dash">Για να αγοράσετε &amp; να πουλήσετε Dash ή να δημιουργήσετε νέο λογαριασμό</string>
 
 
     <string name="transfer_to_liquid">Μεταφορά στο Liquid</string>
