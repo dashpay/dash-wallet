@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="crowdnode_get_started">CrowdNodeではじめる</string>
+    <string name="crowdnode_get_started_hint">ステーキングを開始するには、CrowdNodeにアカウントを作成するか、既存のアカウントに接続します。</string>
+    <string name="new_account">CrowdNodeの新規アカウント</string>
+    <string name="account_create">アカウントの作成</string>
+    <string name="account_link">既存アカウントへのリンク</string>
+    <string name="crowdnode_login">CrowdNodeにログイン</string>
+    <string name="crowdnode_link">既存のCrowdNodeアカウントへのリンク</string>
+    <string name="required_passphrase_backup">Dash Walletにパスフレーズをバックアップしておく必要があります</string>
+    <string name="backup_passphrase">バックアップのパスフレーズ</string>
+    <string name="required_dash_amount">Dash Walletに%sDash以上が必要です。</string>
+    <string name="crowdnode_new_account_warning_1">CrowdNodeは、このアドレスをお客様のアカウントIDとして使用します。このアドレスに割り当てられたパスフレーズを紛失すると、このウォレットとCrowdNodeのアカウントにある資金へのアクセスが出来なくなります。</string>
+    <string name="crowdnode_new_account_warning_2">このウォレットのアドレスの所有者であることを認証するために、極めて少額のDashがCrowdNodeで行き来することになります。</string>
+    <string name="crowdnode_link_account_description">このデバイスからCrowdNodeへの全ての金銭取引は、同デバイスから下記のDashアドレスで行われることになります。</string>
+    <string name="dash_address">Dashアドレス</string>
+    <string name="primary_dash_address">メインのDashアドレス</string>
+    <string name="crowdnode_secure_wallet">CrowdNodeのアカウントを作成するためのパスフレーズをバックアップします</string>
+    <string name="crowdnode_secure_wallet_explainer">このウォレットのパスフレーズを紛失したり、このデバイスをなくしたり、Dash Walletをアンインストールすると、CrowdNode上の資金とこのウォレット内の資金にアクセスできなくなります。</string>
+    <string name="insufficient_funds">手続きするには資金が不足しています。</string>
+    <string name="crowdnode_minimum_dash">CrowdNodeの検証を進めるには、%sDash以上が必要です。</string>
+    <string name="crowdnode_agree_to_terms">私はCrowdNodeの%1$sと%2$sに同意します</string>
+    <string name="terms_of_use">利用規約</string>
+    <string name="privacy_policy">プライバシーポリシー</string>
+    <string name="crowdnode_account_ready">お客様のCrowdNodeアカウントが設定され、ご利用いただけるようになりました。</string>
+    <string name="notify_when_done">完了したら、閉じて通知する</string>
+    <string name="crowdnode_creating">お客様のCrowdNodeアカウントを作成中…</string>
+    <string name="accepting_terms">利用規約に同意しています…</string>
+    <string name="crowdnode_signup_error">お客様のCrowdNodeアカウントを作成できませんでした。</string>
+    <string name="crowdnode_deposit_error">お客様のCrowdNodeアカウントに入金できませんでした。</string>
+    <string name="crowdnode_withdraw_error">お客様のCrowdNodeアカウントから出金できませんでした。</string>
+    <string name="crowdnode_transfer_error">お客様のCrowdNodeでの送金に失敗しました。</string>
+    <string name="crowdnode_deposit_received">お客様のCrowdNodeへの入金が完了しました。</string>
+    <string name="deposit">入金</string>
+    <string name="deposit_sent">入金額が送金されました</string>
+    <string name="deposit_sent_message">お客様の残高が更新されるまで、1分ほどかかる場合があります。</string>
+    <string name="crowdnode_deposit_from_wallet">DashWalletからCrowdNodeへ</string>
+    <string name="from_wallet">Dash Walletから</string>
+    <string name="from_crowdnode">CrowdNodeから</string>
+    <string name="withdraw">送金</string>
+    <string name="withdrawal_requested">送金がリクエストされました</string>
+    <string name="withdrawal_requested_message">お客様の資金が着金するまで、1分ほどかかることがあります。</string>
+    <string name="crowdnode_withdraw_to_wallet">CrowdNodeからDashWalletへ</string>
+    <string name="online_account">オンラインアカウント</string>
+    <string name="online_account_create">オンラインアカウントを作成</string>
+    <string name="secure_online_account">お客様の資産を保護</string>
+    <string name="crowdnode_support">CrowdNodeのサポート</string>
+    <string name="unlink_account">アカウント連携の解除</string>
+    <string name="online_account_title">なぜオンラインアカウントが必要なのですか。</string>
+    <string name="crowdnode_online_synced">現在使用しているDash Walletと同期</string>
+    <string name="crowdnode_online_unconfirmed">処理中…</string>
+    <string name="account_recovery">アカウントの復旧</string>
+    <string name="crowdnode_recovery_info">パスフレーズを紛失した場合、他の方法で本人確認を行うことで、再びCrowdNodeの資金にアクセスできるようになります。</string>
+    <string name="transaction_history">取引履歴</string>
+    <string name="see_staking_details">お客様の入出金や報酬の獲得に関する詳細な情報を確認できます。</string>
+    <string name="payout_options">支払い方法</string>
+    <string name="payout_options_details">お客様は、報酬の支払い方法や支払い時期を変更できます。</string>
+    <string name="crowdnode_balance">CrowdNodeの残高</string>
+    <string name="crowdnode_your_address_title">CrowdNodeとの連携で使用したDashアドレスはこちらです。</string>
+    <string name="chain_syncing">チェーンを同期中…</string>
+    <string name="crowdnode_wait_for_sync">チェーンが完全に同期されるまで待ち、お客様の取引履歴を確認できるようにします。CrowdNodeのウェブサイトにアクセスし、ログインまたはサインアップしてください。</string>
+    <string name="crowdnode_open_website">CrowdNodeのウェブサイトへ移動</string>
+    <string name="crowdnode_info_title">CrowdNodeでDashのMasterNodeに加入します</string>
+    <string name="introducing_staking">ステーキングの導入</string>
+    <string name="crowdnode_staking_info">0.5DashからDashのマスターノードに入金して報酬を得ることができます。</string>
+    <string name="instant_rewards">すぐに報酬を獲得する</string>
+    <string name="daily_rewards_info">毎日、報酬の分配金を受け取れます。</string>
+    <string name="crowdnode_sending_to">CrowdNodeアカウントへの送金</string>
+    <string name="wallet_sending_to">このデバイスでDash Walletに送金する</string>
+    <string name="available_balance">残高：%s</string>
+    <string name="crowdnode_minimum_deposit">収益化するには、%s以上入金する必要があります</string>
+    <string name="crowdnode_minimum_deposit_difference">%s入金して収益化を始める</string>
+    <string name="crowdnode_first_deposit">初回の入金には、%s以上が必要になります</string>
+    <string name="crowdnode_staking_info_title">ステーキングの仕組み</string>
+    <string name="crowdnode_staking_info_message">お客様のCrowdNodeのアカウントに%s以上あれば、収益が発生します。</string>
+    <string name="crowdnode_verify_api_address">APIのDashアドレスの認証</string>
+    <string name="crowdnode_how_to_verify">APIのDashアドレスの確認方法</string>
+    <string name="crowdnode_how_to_verify_description1">%sDashを、CrowdNodeのアカウントで現在使用しているメインのDashアドレスから、</string>
+    <string name="crowdnode_how_to_verify_description2">このデバイスのDashウォレットでCrowdNodeのアカウントに指定したDashアドレスに送金します</string>
+    <string name="crowdnode_how_to_verify_description3">この取引を自動的に検出し、同額をお客様のCrowdNodeアカウントに送金します。その後、このデバイスでDash Walletに入出金することができるようになります。</string>
+    <string name="button_show_qr">QRを表示する</string>
+    <string name="scan_qr">QRをスキャンする</string>
+    <string name="qr_contains_request">このQRには、すでに%sDashの支払いリクエストが含まれています</string>
+    <string name="verification_required">認証が必要です</string>
+    <string name="validating_address">アドレスを有効化中…</string>
+    <string name="crowdnode_address_validated">お客様のCrowdNodeアドレスが有効化されていますが、認証が必要です。</string>
+    <string name="crowdnode_address_confirmed">お客様のCrowdNodeアドレスが確認されました。</string>
+    <string name="crowdnode_bad_confirmation">誤ったメインのアドレスから送信された確認メール</string>
+    <string name="crowdnode_online_account_details_title">オンラインアカウントに関する情報</string>
+    <string name="crowdnode_online_account_details_primary">お客様のCrowdNodeアカウントで使用中のメインのDashアドレス</string>
+    <string name="crowdnode_online_account_details_api">このデバイスのDash WalletでCrowdNodeのアカウントに指定されたDashアドレス</string>
+    <string name="crowdnode_reset_address">アドレスの再設定</string>
+
+    </resources>

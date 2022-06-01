@@ -66,8 +66,6 @@
     <string name="send_coins_fragment_pin_label">PIN eingeben</string>
     <string name="send_coins_fragment_hint_fee_economic">Eine Netzwerk-Gebühr von %szahlen.</string>
     <string name="send_coins_fragment_hint_fee_priority">Eine Vorzugs-Gebühr von %s zahlen. Wenn Dir eine geringe Gebühr wichtig ist, verwende diese Einstellung nur, wenn Du sehr schnell eine Bestätigung brauchst.</string>
-    <string name="send_coins_error_dusty_send">Der Betrag ist zu klein zum Senden</string>
-    <string name="send_coins_error_insufficient_money">Guthaben nicht ausreichend</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Die Summe an winzigen Zahlungen in Deiner Wallet ist zu klein, um verschickt zu werden.</string>
     <string name="send_coins_fragment_hint_replaying">Da die Wallet momentan nicht mit dem Netzwerk synchronisiert ist, kann keine Zahlung durchgeführt werden.</string>
     <string name="send_coins_fragment_direct_payment_enable">Zahlung direkt an den Empfänger senden.</string>
@@ -157,7 +155,7 @@
     <string name="transaction_row_message_received_dust">Dieser kleine Betrag kann vermutlich nie wirtschaftlich ausgegeben werden.</string>
     <string name="transaction_row_message_received_pay_to_many">Diese Zahlung war neben Dir auch an andere gerichtet gewesen, was die App im Laufe der Zeit verlangsamen kann. Versuche wenn möglich Zahlungen zu empfangen, die nur an Dich gerichtet sind.</string>
     <string name="transaction_row_message_received_rbf">Die Zahlung verzögert sich, da der Sender eine unsichere Transaktionsmethode verwendet hat.</string>
-    <string name="transaction_row_status_received">Empfangen</string>
+    <string name="transaction_row_status_received">Erhalten</string>
     <string name="transaction_row_status_sent">Gesendet</string>
     <string name="transaction_row_status_sending">Versenden</string>
     <string name="transaction_row_status_sent_internally">Intern</string>
@@ -304,6 +302,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Dump der Wallet anhängen</string>
     <string name="report_issue_dialog_mail_intent_chooser">Bericht senden mit…</string>
     <string name="report_issue_dialog_mail_intent_failed">Senden des Berichts fehlgeschlagen.</string>
+    <string name="report_transaction_history_export">Export</string>
+    <string name="report_transaction_history_title">CSV Export</string>
+    <string name="report_transaction_history_not_synced_title">CSV Export</string>
+    <string name="report_transaction_history_not_synced_message">Bitte warte, bis die Wallet vollständig synchronisiert ist, bevor du deinen Transaktionsverlauf exportierst.</string>
+    <string name="report_transaction_history_message">Der vollständige Transaktionsverlauf wird exportiert.\n\nAlle ausgehenden Transaktionen werden als Aufwand und alle eingehenden Transaktionen als Ertrag betrachtet. Der Eigentümer dieser Wallet ist dafür verantwortlich, alle Anpassungen der Kostenbasis in dem von ihm gewählten Steuermeldesystem vorzunehmen.</string>
+    <string name="report_transaction_history_mail_intent_chooser">Transaktionsverlauf senden mit...</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">Das Senden der Transaktionshistorie ist fehlgeschlagen.</string>
+
     <string name="about_title">Über</string>
     <string name="about_version_title">Version</string>
     <string name="about_copyright_title">Urheberrecht</string>
@@ -329,7 +335,7 @@
     <string name="appwidget_wallet_balance_title">Dash-Guthaben</string>
 
     <!-- generic buttons -->
-    <string name="button_ok">Ok</string>
+    <string name="button_ok">OK</string>
     <string name="button_dismiss">Schließen</string>
     <string name="button_cancel">Abbrechen</string>
     <string name="button_help">Hilfe</string>
@@ -341,8 +347,7 @@
     <string name="button_copy">Kopieren</string>
     <string name="button_copy_request">Anfrage kopieren</string>
     <string name="button_paste">Einfügen</string>
-    <string name="button_share">Teilen</string>
-    <string name="button_set_as_default">Als Standard setzen</string>
+    <string name="button_set_as_default">Als Standard festsetzen</string>
     <string name="button_request_coins">Dash anfordern</string>
     <string name="button_send_coins">Dash senden</string>
     <string name="button_pay">Senden</string>
@@ -385,5 +390,4 @@
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
     <string name="clear_filter">Filter leeren</string>
     <string name="select_currency">Währung auswählen</string>
-
 </resources>

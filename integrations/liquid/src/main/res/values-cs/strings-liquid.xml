@@ -11,8 +11,8 @@
     <string name="cryptocurrency">Kryptoměna</string>
     <string name="credit_card">Kreditní karta</string>
 
-    <string name="buy">Koupit</string>
-    <string name="sell_dash">Prodat Dash</string>
+    <string name="buy">Nákup</string>
+    <string name="sell_dash">Prodej Dash</string>
     <string name="buy_sell_dash_">Nákup a Prodej Dash</string>
     <string name="button_cancel">Zrušit</string>
     <string name="choose_your_payment_method">Zvolte platební metodu</string>
