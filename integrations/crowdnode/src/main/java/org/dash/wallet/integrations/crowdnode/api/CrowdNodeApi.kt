@@ -19,7 +19,6 @@ package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -74,6 +73,7 @@ interface CrowdNodeApi {
     fun trackLinkingAccount(address: Address)
     fun stopTrackingLinked()
     suspend fun registerEmailForAccount(email: String)
+    fun setOnlineAccountCreated()
     suspend fun reset()
 }
 
@@ -129,7 +129,6 @@ class CrowdNodeApiAggregator @Inject constructor(
 
         onlineAccountStatus
             .onEach { status ->
-                Log.i("CROWDNODE", "CrowdNodeApi observe status: ${status}")
                 cancelTrackingJob()
                 val initialDelay = if (isOnlineStatusRestored) 0.seconds else 10.seconds
                 when(status) {
@@ -334,6 +333,10 @@ class CrowdNodeApiAggregator @Inject constructor(
         if (sendSignedEmailMessage(address, email, signature)) {
             changeOnlineStatus(OnlineAccountStatus.Creating)
         }
+    }
+
+    override fun setOnlineAccountCreated() {
+        changeOnlineStatus(OnlineAccountStatus.Done)
     }
 
     private fun startTrackingLinked(address: Address) {
@@ -569,8 +572,6 @@ class CrowdNodeApiAggregator @Inject constructor(
     private fun restoreCreatedOnlineAccount(address: Address) {
         val statusOrdinal = runBlocking { config.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
                 ?: OnlineAccountStatus.None.ordinal }
-
-        Log.i("CROWDNODE", "restored status: ${OnlineAccountStatus.values()[statusOrdinal]}")
 
         when (val status = OnlineAccountStatus.values()[statusOrdinal]) {
             OnlineAccountStatus.None -> statusScope.launch { checkIfEmailRegistered(address) }

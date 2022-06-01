@@ -29,6 +29,8 @@ object CrowdNodeConstants {
 
     private const val MAINNET_BASE_URL = "https://app.crowdnode.io/"
     private const val TESTNET_BASE_URL = "https://test.crowdnode.io/"
+    private const val MAINNET_LOGIN_URL = "https://login.crowdnode.io"
+    private const val TESTNET_LOGIN_URL = "https://logintest.crowdnode.io"
 
     val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(1000000)
     val REQUIRED_FOR_SIGNUP: Coin = MINIMUM_REQUIRED_DASH - Coin.valueOf(100000)
@@ -64,5 +66,13 @@ object CrowdNodeConstants {
 
     fun getFundsOpenUrl(address: Address): String {
         return getCrowdNodeBaseUrl(address.parameters) + "FundsOpen/${address.toBase58()}"
+    }
+
+    fun getLoginUrl(params: NetworkParameters): String {
+        return if (params == MainNetParams.get()) {
+            MAINNET_LOGIN_URL
+        } else {
+            TESTNET_LOGIN_URL
+        }
     }
 }

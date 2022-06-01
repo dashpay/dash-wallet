@@ -34,7 +34,6 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
@@ -308,6 +307,10 @@ class CrowdNodeViewModel @Inject constructor(
 
     fun getAccountUrl(): String {
         return CrowdNodeConstants.getFundsOpenUrl(_accountAddress.value!!)
+    }
+
+    fun finishSignUpToOnlineAccount() {
+        crowdNodeApi.setOnlineAccountCreated()
     }
 
     private fun getOrCreateAccountAddress(): Address {

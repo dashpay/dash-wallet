@@ -30,16 +30,19 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 @AndroidEntryPoint
 class OnlineSignUpFragment : WebViewFragment() {
     companion object {
-        private const val LOGIN_PREFIX = "https://logintest.crowdnode.io/login"
+        private var LOGIN_PREFIX = ""
+        private var ACCOUNT_PREFIX = ""
         private const val SIGNUP_SUFFIX = "&view=signup-only"
     }
 
     private val args by navArgs<OnlineSignUpFragmentArgs>()
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
+    private var previousUrl = ""
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         arguments = bundleOf(
@@ -49,6 +52,9 @@ class OnlineSignUpFragment : WebViewFragment() {
         )
 
         super.onViewCreated(view, savedInstanceState)
+
+        LOGIN_PREFIX = CrowdNodeConstants.getLoginUrl(viewModel.networkParameters)
+        ACCOUNT_PREFIX = CrowdNodeConstants.getCrowdNodeBaseUrl(viewModel.networkParameters)
 
         viewModel.observeOnlineAccountStatus().observe(viewLifecycleOwner) { status ->
             if (status == OnlineAccountStatus.Done) {
@@ -64,12 +70,19 @@ class OnlineSignUpFragment : WebViewFragment() {
     }
 
     override fun doOnPageStarted(webView: WebView?, url: String?) {
+        if (url == null) {
+            return
+        }
+
         val fullSuffix = SIGNUP_SUFFIX + "&loginHint=${args.email}"
 
-        url?.let {
-            if (url.startsWith(LOGIN_PREFIX) && !url.endsWith(fullSuffix)) {
-                webView?.loadUrl("$url$fullSuffix")
-            }
+        if (url.startsWith(LOGIN_PREFIX) && !url.endsWith(fullSuffix)) {
+            webView?.loadUrl("$url$fullSuffix")
+        } else if (previousUrl.startsWith(LOGIN_PREFIX) && url.startsWith(ACCOUNT_PREFIX)) {
+            // Successful signup
+            viewModel.finishSignUpToOnlineAccount()
         }
+
+        previousUrl = url
     }
 }

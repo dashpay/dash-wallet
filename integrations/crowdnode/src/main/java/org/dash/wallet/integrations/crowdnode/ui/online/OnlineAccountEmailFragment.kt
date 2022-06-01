@@ -19,7 +19,6 @@ package org.dash.wallet.integrations.crowdnode.ui.online
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -79,7 +78,6 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
         }
 
         viewModel.observeOnlineAccountStatus().observe(viewLifecycleOwner) { status ->
-            Log.i("CROWDNODE", "OnlineAccountEmailFragment observe status: ${status}")
             when (status) {
                 OnlineAccountStatus.Creating -> {
                     binding.mainContent.isVisible = false
