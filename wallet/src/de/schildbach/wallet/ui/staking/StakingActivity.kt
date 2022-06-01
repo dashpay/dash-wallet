@@ -31,25 +31,29 @@ import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.dash.wallet.common.services.SecurityModel
+import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.NavigationRequest
-import org.dash.wallet.integrations.crowdnode.ui.WebViewFragmentDirections
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
 class StakingActivity : LockScreenActivity() {
+    companion object {
+        private val log = LoggerFactory.getLogger(StakingActivity::class.java)
+    }
+
     private val viewModel: CrowdNodeViewModel by viewModels()
     private lateinit var binding: ActivityStakingBinding
     private lateinit var navController: NavController
 
     @Inject
-    lateinit var securityModel: SecurityModel
+    lateinit var securityFunctions: ISecurityFunctions
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,6 +81,7 @@ class StakingActivity : LockScreenActivity() {
                 startActivity(BuyAndSellLiquidUpholdActivity.createIntent(this))
             }
             NavigationRequest.SendReport -> {
+                log.info("CrowdNode initiated report")
                 alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
                     WalletApplication.getInstance()).buildAlertDialog()
                 alertDialog.show()
@@ -86,21 +91,10 @@ class StakingActivity : LockScreenActivity() {
     }
 
     private fun handleOnlineAccountStatus(status: OnlineAccountStatus) {
-        val isWebView = navController.currentDestination?.id == R.id.crowdNodeWebViewFragment
-
         when (status) {
-            OnlineAccountStatus.None -> {
-                if (viewModel.crowdNodeError != null && isWebView) {
-                    navController.popBackStack()
-                }
-            }
-            OnlineAccountStatus.Linking -> super.turnOffAutoLogout()
-            else -> {
-                if (isWebView) {
-                    navController.navigate(WebViewFragmentDirections.webViewToPortal())
-                }
-                super.turnOnAutoLogout()
-            }
+            OnlineAccountStatus.None -> { }
+            OnlineAccountStatus.Linking, OnlineAccountStatus.SigningUp -> super.turnOffAutoLogout()
+            else -> super.turnOnAutoLogout()
         }
     }
 
@@ -118,7 +112,7 @@ class StakingActivity : LockScreenActivity() {
 
     private fun checkPinAndBackupPassphrase() {
         lifecycleScope.launch {
-            val pin = securityModel.requestPinCode(this@StakingActivity)
+            val pin = securityFunctions.requestPinCode(this@StakingActivity)
 
             if (pin != null) {
                 val intent = VerifySeedActivity.createIntent(this@StakingActivity, pin)

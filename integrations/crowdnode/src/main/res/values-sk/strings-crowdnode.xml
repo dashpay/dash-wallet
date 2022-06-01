@@ -63,7 +63,7 @@
     <string name="unlink_account">Odpojiť účet</string>
     <string name="online_account_title">Prečo potrebujete online účet?</string>
     <string name="crowdnode_online_synced">Synchronizované s aktuálnou Dash peňaženkou </string>
-    <string name="crowdnode_online_unconfirmed">V procese…</string>
+    <string name="crowdnode_in_process">V procese…</string>
     <string name="account_recovery">Obnovenie účtu</string>
     <string name="crowdnode_recovery_info">Ak niekedy stratíte svoju prístupovú frázu, môžete sa overiť inými spôsobmi, aby ste znova získali prístup k svojim prostriedkom na CrowdNode.</string>
     <string name="transaction_history">História transakcií</string>

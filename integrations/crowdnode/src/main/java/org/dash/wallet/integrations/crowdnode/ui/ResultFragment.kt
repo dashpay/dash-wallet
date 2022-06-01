@@ -30,8 +30,9 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards
 import org.bitcoinj.wallet.Wallet.DustySendRequested
-import org.dash.wallet.common.services.SecurityModel
+import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentResultBinding
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
@@ -49,7 +50,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
 
     @Inject
-    lateinit var securityModel: SecurityModel
+    lateinit var securityFunctions: ISecurityFunctions
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -69,22 +70,20 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
                 viewModel.sendReport()
             }
 
-            if (viewModel.crowdNodeError?.message == CrowdNodeException.CONFIRMATION_ERROR) {
+            val errorMessage = viewModel.crowdNodeError?.message ?: ""
+
+            if (errorMessage == CrowdNodeException.CONFIRMATION_ERROR) {
                 binding.positiveBtn.isVisible = false
             } else {
                 binding.positiveBtn.isVisible = true
                 binding.positiveBtn.text = getString(R.string.button_retry)
                 binding.positiveBtn.setOnClickListener {
-                    if (viewModel.signUpStatus == SignUpStatus.Error) {
-                        // For signup error, launching a retry attempt
-                        lifecycleScope.launch {
-                            securityModel.requestPinCode(requireActivity())?.let {
-                                findNavController().popBackStack()
-                                viewModel.retrySignup()
-                            }
-                        }
+                    if (errorMessage == CrowdNodeException.SEND_MESSAGE_ERROR) {
+                        retryOnlineSignUp()
+                    } else if (viewModel.signUpStatus == SignUpStatus.Error) {
+                        retrySignUp()
                     } else {
-                        // for transfer errors, going back to the transfer screen
+                        // for other errors, going back to the previous screen
                         findNavController().popBackStack()
                     }
                 }
@@ -126,5 +125,19 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
         ) {
             binding.positiveBtn.isVisible = false
         }
+    }
+
+    private fun retrySignUp() {
+        // For signup error, launching a retry attempt
+        lifecycleScope.launch {
+            securityFunctions.requestPinCode(requireActivity())?.let {
+                findNavController().popBackStack()
+                viewModel.retrySignup()
+            }
+        }
+    }
+
+    private fun retryOnlineSignUp() {
+        safeNavigate(ResultFragmentDirections.resultToOnlineAccountEmail())
     }
 }

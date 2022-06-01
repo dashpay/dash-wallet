@@ -25,7 +25,7 @@ import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuard
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.crypto.KeyCrypterException

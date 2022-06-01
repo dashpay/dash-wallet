@@ -63,7 +63,7 @@
     <string name="unlink_account">إلغاء ربط الحساب</string>
     <string name="online_account_title">لماذا تحتاج إلى حساب على الإنترنت؟</string>
     <string name="crowdnode_online_synced">متزامن مع محفظة داش الحالية</string>
-    <string name="crowdnode_online_unconfirmed">تحت المعالجة…</string>
+    <string name="crowdnode_in_process">تحت المعالجة…</string>
     <string name="account_recovery">استرجاع الحساب</string>
     <string name="crowdnode_recovery_info">إذا فقدت عبارة مرورك في أي وقت ، فيمكنك إثبات هويتك بوسائل أخرى لاستعادة الوصول إلى أموال CrowdNode الخاصة بك.</string>
     <string name="transaction_history">تاريخ المعاملات</string>

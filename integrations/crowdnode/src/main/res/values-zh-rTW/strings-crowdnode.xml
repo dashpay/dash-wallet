@@ -63,7 +63,7 @@
     <string name="unlink_account">取消帳戶鏈接</string>
     <string name="online_account_title">為什麼需要在線帳戶?</string>
     <string name="crowdnode_online_synced">與當前達世幣錢包同步</string>
-    <string name="crowdnode_online_unconfirmed">進行中…</string>
+    <string name="crowdnode_in_process">進行中…</string>
     <string name="account_recovery">恢復帳戶</string>
     <string name="crowdnode_recovery_info">如果您丟失了密碼，您可以通過其他方式驗證自己以重新獲得對您的 CrowdNode 資金的訪問權限。</string>
     <string name="transaction_history">交易記錄</string>

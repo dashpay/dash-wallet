@@ -19,7 +19,8 @@ package de.schildbach.wallet.payments
 import androidx.annotation.VisibleForTesting
 import com.google.common.base.Preconditions
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityFunctions
+import de.schildbach.wallet.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.*
@@ -39,7 +40,8 @@ import javax.inject.Inject
 
 
 class SendCoinsTaskRunner @Inject constructor(
-    private val walletApplication: WalletApplication
+    private val walletApplication: WalletApplication,
+    private val securityFunctions: SecurityFunctions
 ) : SendPaymentService {
     private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
 
@@ -90,7 +92,7 @@ class SendCoinsTaskRunner @Inject constructor(
 
         val securityGuard = SecurityGuard()
         val password = securityGuard.retrievePassword()
-        val encryptionKey = deriveKey(wallet, password, scryptIterationsTarget)
+        val encryptionKey = securityFunctions.deriveKey(wallet, password, scryptIterationsTarget)
 
         sendRequest.aesKey = encryptionKey
         sendRequest.exchangeRate = exchangeRate
@@ -120,38 +122,5 @@ class SendCoinsTaskRunner @Inject constructor(
             }
             throw ex
         }
-    }
-
-    @Throws(KeyCrypterException::class)
-    private fun deriveKey(wallet: Wallet, password: String, scryptIterationsTarget: Int): KeyParameter {
-        Preconditions.checkState(wallet.isEncrypted)
-        val keyCrypter = wallet.keyCrypter!!
-
-        // Key derivation takes time.
-        var key = keyCrypter.deriveKey(password)
-
-        // If the key isn't derived using the desired parameters, derive a new key.
-        if (keyCrypter is KeyCrypterScrypt) {
-            val scryptIterations = keyCrypter.scryptParameters.n
-
-            if (scryptIterations != scryptIterationsTarget.toLong()) {
-                log.info("upgrading scrypt iterations from {} to {}; re-encrypting wallet",
-                        scryptIterations, scryptIterationsTarget)
-                val newKeyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
-                val newKey: KeyParameter = newKeyCrypter.deriveKey(password)
-
-                // Re-encrypt wallet with new key.
-                try {
-                    wallet.changeEncryptionKey(newKeyCrypter, key, newKey)
-                    key = newKey
-                    log.info("scrypt upgrade succeeded")
-                } catch (x: KeyCrypterException) {
-                    log.info("scrypt upgrade failed: {}", x.message)
-                }
-            }
-        }
-
-        // Hand back the (possibly changed) encryption key.
-        return key
     }
 }

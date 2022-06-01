@@ -63,7 +63,7 @@
     <string name="unlink_account">I-unlink ang Account</string>
     <string name="online_account_title">Bakit kailangan mo ng online na account?</string>
     <string name="crowdnode_online_synced">Naka-sync sa kasalukuyang Dash Wallet</string>
-    <string name="crowdnode_online_unconfirmed">Pinoproseso…</string>
+    <string name="crowdnode_in_process">Pinoproseso…</string>
     <string name="account_recovery">Pagbawi ng Account</string>
     <string name="crowdnode_recovery_info">Kung sakaling mawala mo ang iyong passphrase, maaari mong i-verify ang iyong sarili sa ibang paraan upang mabawi ang access sa iyong mga pondo ng CrowdNode.</string>
     <string name="transaction_history">Kasaysayan ng Transaksyon</string>

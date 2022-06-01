@@ -54,8 +54,16 @@ class CrowdNodeViewModel @Inject constructor(
     private val clipboardManager: ClipboardManager,
     exchangeRatesProvider: ExchangeRatesProvider
 ) : ViewModel() {
+    companion object {
+        const val URL_ARG = "url"
+        const val EMAIL_ARG = "email"
+    }
+
+    private var emailForAccount = ""
+
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
     val networkError = SingleLiveEvent<Unit>()
+    val onlineAccountRequest = SingleLiveEvent<Map<String, String>>()
 
     private val _accountAddress = MutableLiveData<Address>()
     val accountAddress: LiveData<Address>
@@ -169,7 +177,12 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     fun linkOnlineAccount() {
-        crowdNodeApi.trackLinkingAccount(_accountAddress.value!!)
+        val address = _accountAddress.value!!
+        val apiLinkUrl = CrowdNodeConstants.getApiLinkUrl(address)
+        crowdNodeApi.trackLinkingAccount(address)
+        onlineAccountRequest.postValue(mapOf(
+            URL_ARG to apiLinkUrl
+        ))
     }
 
     fun cancelLinkingOnlineAccount() {
@@ -228,6 +241,17 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
+    suspend fun getShouldShowOnlineInfo(): Boolean {
+        return signUpStatus != SignUpStatus.LinkedOnline &&
+                !(config.getPreference(CrowdNodeConfig.ONLINE_INFO_SHOWN) ?: false)
+    }
+
+    fun setOnlineInfoShown(isShown: Boolean) {
+        viewModelScope.launch {
+            config.setPreference(CrowdNodeConfig.ONLINE_INFO_SHOWN, isShown)
+        }
+    }
+
     suspend fun deposit(value: Coin): Boolean {
         return crowdNodeApi.deposit(value, emptyWallet = value >= dashBalance.value)
     }
@@ -264,6 +288,29 @@ class CrowdNodeViewModel @Inject constructor(
 
     fun observeCrowdNodeError(): LiveData<Exception?> {
         return crowdNodeApi.apiError.asLiveData()
+    }
+
+    fun signAndSendEmail(email: String) {
+        viewModelScope.launch {
+            emailForAccount = email
+            crowdNodeApi.registerEmailForAccount(email)
+        }
+    }
+
+    fun initiateOnlineSignUp() {
+        val signupUrl = CrowdNodeConstants.getProfileUrl(networkParameters)
+        onlineAccountRequest.postValue(mapOf(
+            URL_ARG to signupUrl,
+            EMAIL_ARG to emailForAccount
+        ))
+    }
+
+    fun getAccountUrl(): String {
+        return CrowdNodeConstants.getFundsOpenUrl(_accountAddress.value!!)
+    }
+
+    fun finishSignUpToOnlineAccount() {
+        crowdNodeApi.setOnlineAccountCreated()
     }
 
     private fun getOrCreateAccountAddress(): Address {

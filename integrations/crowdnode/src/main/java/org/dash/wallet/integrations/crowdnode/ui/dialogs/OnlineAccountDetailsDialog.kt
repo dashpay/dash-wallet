@@ -15,50 +15,45 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.ui.portal
+package org.dash.wallet.integrations.crowdnode.ui.dialogs
 
-import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.params.MainNetParams
-import org.bitcoinj.params.TestNet3Params
-import org.bitcoinj.uri.BitcoinURI
+import android.widget.Toast
+import androidx.fragment.app.activityViewModels
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.Qr
 import org.dash.wallet.integrations.crowdnode.R
-import org.dash.wallet.integrations.crowdnode.databinding.DialogQrBinding
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
+import org.dash.wallet.integrations.crowdnode.databinding.FragmentOnlineAccountDetailsBinding
+import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 
-class QRDialog(
-    private val address: Address,
-    private val amount: Coin
-): OffsetDialogFragment() {
-    private val binding by viewBinding(DialogQrBinding::bind)
+class OnlineAccountDetailsDialog: OffsetDialogFragment() {
+    private val binding by viewBinding(FragmentOnlineAccountDetailsBinding::bind)
+    private val viewModel by activityViewModels<CrowdNodeViewModel>()
+    override val forceExpand: Boolean = true
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.dialog_qr, container, false)
+        return inflater.inflate(R.layout.fragment_online_account_details, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.subtitle.text = getString(
-            R.string.qr_contains_request,
-            amount.toFriendlyString()
-        )
-
-        val paymentRequestUri = BitcoinURI.convertToBitcoinURI(address, amount, "", "")
-        val qrCodeBitmap = BitmapDrawable(resources, Qr.bitmap(paymentRequestUri))
-        qrCodeBitmap.isFilterBitmap = false
-        binding.qrPreview.setImageDrawable(qrCodeBitmap)
+        binding.primaryDashAddress.text = viewModel.primaryDashAddress.toString()
+        binding.copyPrimaryAddressBtn.setOnClickListener {
+            viewModel.copyPrimaryAddress()
+            Toast.makeText(requireContext(), getString(R.string.copied), Toast.LENGTH_SHORT).show()
+        }
+        binding.dashAddress.text = viewModel.accountAddress.value.toString()
+        binding.copyAddressBtn.setOnClickListener {
+            viewModel.copyAccountAddress()
+            Toast.makeText(requireContext(), getString(R.string.copied), Toast.LENGTH_SHORT).show()
+        }
     }
 }

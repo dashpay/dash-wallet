@@ -3,38 +3,31 @@ package de.schildbach.wallet.ui
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.util.DisplayMetrics
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.view.animation.Animation
-import android.view.animation.AnimationSet
 import android.view.animation.AnimationUtils
-import android.widget.FrameLayout
 import android.widget.RelativeLayout
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.DialogFragment
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.util.WalletUtils
-import de.schildbach.wallet.util.isOutgoing
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_settings.*
-import kotlinx.android.synthetic.main.exchange_rates_fragment.*
 import kotlinx.android.synthetic.main.transaction_details_dialog.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
 
 /**
  * @author Samuel Barbosa
  */
+@ExperimentalCoroutinesApi
 class TransactionDetailsDialogFragment : DialogFragment() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
@@ -58,10 +51,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val dm = DisplayMetrics()
-        requireActivity().windowManager.defaultDisplay.getMetrics(dm)
-        //val height = dm.heightPixels
-        tx = wallet.getTransaction(txId)
+        tx = wallet!!.getTransaction(txId)
         val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
         if (tx != null) {
             tx?.let {

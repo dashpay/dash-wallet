@@ -298,7 +298,6 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/online_account_btn"
                 android:layout_width="match_parent"
-                android:visibility="gone"
                 android:layout_height="wrap_content"
                 android:background="?attr/selectableItemBackground"
                 android:clickable="true"
@@ -338,12 +337,19 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="@+id/online_account_title"
                     app:layout_constraintTop_toBottomOf="@+id/online_account_title" />
+
+                <ImageView
+                    android:id="@+id/online_nav_icon"
+                    style="@style/CrowdNodeNavigationIconStyle"
+                    android:layout_marginEnd="1dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/online_account_icon"
+                    app:layout_constraintBottom_toBottomOf="@id/online_account_icon" />
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:visibility="gone"
                 android:layout_marginStart="63dp"
                 android:background="@color/divider_color" />
 
@@ -356,7 +362,7 @@
                 android:focusable="true"
                 android:paddingTop="12dp"
                 android:paddingEnd="15dp"
-                android:paddingBottom="12dp"> <!-- TODO: change back to 22dp when online button is visible -->
+                android:paddingBottom="22dp">
 
                 <ImageView
                     android:id="@+id/support_icon"

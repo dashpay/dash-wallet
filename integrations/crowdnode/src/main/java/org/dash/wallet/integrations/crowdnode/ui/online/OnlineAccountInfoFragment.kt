@@ -15,43 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.ui
+package org.dash.wallet.integrations.crowdnode.ui.online
 
 import android.os.Bundle
 import android.view.View
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
-import org.dash.wallet.integrations.crowdnode.databinding.FragmentWebviewBinding
+import org.dash.wallet.integrations.crowdnode.databinding.FragmentOnlineAccountInfoBinding
 
 @AndroidEntryPoint
-class WebViewFragment : Fragment(R.layout.fragment_webview) {
-    private val binding by viewBinding(FragmentWebviewBinding::bind)
-    private val args by navArgs<WebViewFragmentArgs>()
+class OnlineAccountInfoFragment : Fragment(R.layout.fragment_online_account_info) {
+    private val binding by viewBinding(FragmentOnlineAccountInfoBinding::bind)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.toolbarTitle.text = args.title
-
-        val binding = binding // Avoids IllegalStateException in onPageFinished callback
-        binding.webView.settings.javaScriptEnabled = args.enableJavaScript
-        binding.webView.webViewClient = object: WebViewClient() {
-            override fun onPageFinished(view: WebView, url: String?) {
-                binding.progressBar.isVisible = false
-            }
-        }
-
-        binding.progressBar.isVisible = true
-        binding.webView.loadUrl(args.url)
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
+        }
+
+        binding.createAccountBtn.setOnClickListener {
+            safeNavigate(OnlineAccountInfoFragmentDirections.onlineAccountInfoToEmail())
         }
     }
 }

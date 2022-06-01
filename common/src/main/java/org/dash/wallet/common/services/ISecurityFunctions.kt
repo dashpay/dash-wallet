@@ -18,7 +18,9 @@
 package org.dash.wallet.common.services
 
 import androidx.fragment.app.FragmentActivity
+import org.bitcoinj.core.Address
 
-interface SecurityModel {
+interface ISecurityFunctions {
     suspend fun requestPinCode(activity: FragmentActivity): String?
+    suspend fun signMessage(address: Address, message: String): String
 }

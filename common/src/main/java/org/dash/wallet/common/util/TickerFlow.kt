@@ -21,5 +21,4 @@ class TickerFlow(private val period: Duration, private val initialDelay: Duratio
             delay(period)
         }
     }
-
 }
