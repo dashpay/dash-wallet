@@ -3,6 +3,7 @@ package de.schildbach.wallet.util;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.RejectedTransactionException;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.wallet.Wallet;
 
@@ -17,7 +18,7 @@ public class TransactionUtil {
      * @param wallet the wallet that contains the transaction
      * @return resource id of the string that holds the name of the transaction type
      */
-    public static int getTransactionTypeName(Transaction tx, Wallet wallet) {
+    public static int getTransactionTypeName(Transaction tx, TransactionBag wallet) {
         int typeId;
         if(tx.getValue(wallet).signum() <= 0) {
             switch(tx.getType()) {

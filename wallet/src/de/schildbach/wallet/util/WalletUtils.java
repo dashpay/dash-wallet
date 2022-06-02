@@ -47,6 +47,7 @@ import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
@@ -123,7 +124,7 @@ public class WalletUtils {
     }
 
     @Nullable
-    public static Address getWalletAddressOfReceived(final Transaction tx, final Wallet wallet) {
+    public static Address getWalletAddressOfReceived(final Transaction tx, final TransactionBag wallet) {
         for (final TransactionOutput output : tx.getOutputs()) {
             try {
                 if (output.isMine(wallet)) {
@@ -138,7 +139,7 @@ public class WalletUtils {
         return null;
     }
 
-    public static List<Address> getFromAddressOfSent(final Transaction tx, final Wallet wallet) {
+    public static List<Address> getFromAddressOfSent(final Transaction tx) {
         List<Address> result = new ArrayList<>();
 
         for (final TransactionInput input : tx.getInputs()) {
@@ -157,7 +158,7 @@ public class WalletUtils {
         return result;
     }
 
-    public static List<Address> getToAddressOfReceived(final Transaction tx, final  Wallet wallet) {
+    public static List<Address> getToAddressOfReceived(final Transaction tx, final TransactionBag wallet) {
         List<Address> result = new ArrayList<>();
 
         for (TransactionOutput output : tx.getOutputs()) {
@@ -174,7 +175,7 @@ public class WalletUtils {
         return result;
     }
 
-    public static List<Address> getToAddressOfSent(final Transaction tx, final Wallet wallet) {
+    public static List<Address> getToAddressOfSent(final Transaction tx, final TransactionBag wallet) {
         List<Address> result = new ArrayList<>();
 
         for (TransactionOutput output : tx.getOutputs()) {
@@ -192,7 +193,7 @@ public class WalletUtils {
     }
 
 
-    public static boolean isEntirelySelf(final Transaction tx, final Wallet wallet) {
+    public static boolean isEntirelySelf(final Transaction tx, final TransactionBag wallet) {
         for (final TransactionInput input : tx.getInputs()) {
             final TransactionOutput connectedOutput = input.getConnectedOutput();
             if (connectedOutput == null || !connectedOutput.isMine(wallet))

@@ -27,6 +27,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,11 +43,14 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
+import org.dash.wallet.common.transactions.TransactionWrapper;
+
+import java.util.ArrayList;
+import java.util.Set;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.ui.TransactionDetailsDialogFragment;
-import de.schildbach.wallet.ui.TransactionsAdapter;
 import de.schildbach.wallet.ui.TransactionsFilterDialog;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
@@ -58,8 +62,7 @@ import kotlinx.coroutines.FlowPreview;
  */
 @FlowPreview
 @ExperimentalCoroutinesApi
-public class WalletTransactionsFragment extends Fragment implements
-        TransactionsAdapter.OnClickListener, OnSharedPreferenceChangeListener {
+public class WalletTransactionsFragment extends Fragment implements OnSharedPreferenceChangeListener {
 
     private Configuration config;
     private Wallet wallet;
@@ -77,7 +80,11 @@ public class WalletTransactionsFragment extends Fragment implements
     private final ContentObserver addressBookObserver = new ContentObserver(handler) {
         @Override
         public void onChange(final boolean selfChange) {
-            adapter.clearCacheAndNotifyDataSetChanged();
+            ////    public void clearCacheAndNotifyDataSetChanged() { // TODO
+////        transactionCache.clear();
+////
+////        notifyDataSetChanged();
+////    }
         }
     };
 
@@ -95,7 +102,22 @@ public class WalletTransactionsFragment extends Fragment implements
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        adapter = new TransactionsAdapter(requireContext(), wallet, this);
+        adapter = new TransactionsAdapter(wallet, getResources(), (wrapper, position) -> {
+            TransactionDetailsDialogFragment transactionDetailsDialogFragment =
+                    TransactionDetailsDialogFragment.newInstance(wrapper.getTransactions().iterator().next().getTxId());
+            transactionDetailsDialogFragment.show(getParentFragmentManager(), null);
+            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS);
+            return Unit.INSTANCE;
+        });
+
+        adapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
+            @Override
+            public void onItemRangeInserted(int positionStart, int itemCount) {
+                if (positionStart == 0) {
+                    recyclerView.scrollToPosition(0);
+                }
+            }
+        });
     }
 
     @Override
@@ -136,7 +158,7 @@ public class WalletTransactionsFragment extends Fragment implements
             public void getItemOffsets(@NonNull final Rect outRect, @NonNull final View view, @NonNull final RecyclerView parent,
                                        @NonNull final RecyclerView.State state) {
                 super.getItemOffsets(outRect, view, parent, state);
-R
+
                 outRect.left = HORIZONTAL;
                 outRect.right = HORIZONTAL;
                 outRect.top = VERTICAL;
@@ -149,7 +171,7 @@ R
         viewModel.getBlockchainSyncPercentage().observe(getViewLifecycleOwner(), percentage -> updateSyncState());
         viewModel.getTransactions().observe(getViewLifecycleOwner(), wrappedTransactions -> {
             loading.setVisibility(View.GONE);
-            adapter.replace(wrappedTransactions);
+            adapter.submitList(new ArrayList<>(wrappedTransactions));
             updateView();
 
             if (wrappedTransactions.isEmpty()) {
@@ -179,14 +201,6 @@ R
         config.unregisterOnSharedPreferenceChangeListener(this);
         resolver.unregisterContentObserver(addressBookObserver);
         super.onPause();
-    }
-
-    @Override
-    public void onTransactionRowClicked(Transaction tx) {
-        TransactionDetailsDialogFragment transactionDetailsDialogFragment =
-                TransactionDetailsDialogFragment.newInstance(tx.getTxId());
-        transactionDetailsDialogFragment.show(getParentFragmentManager(), null);
-        viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS);
     }
 
     private void updateSyncState() {
@@ -231,7 +245,7 @@ R
     }
 
     private void updateView() {
-        adapter.setFormat(config.getFormat());
+//        adapter.setFormat(config.getFormat()); TODO
     }
 
     public boolean isHistoryEmpty() {

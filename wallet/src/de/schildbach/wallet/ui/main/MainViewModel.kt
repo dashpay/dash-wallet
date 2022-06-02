@@ -108,7 +108,7 @@ class MainViewModel @Inject constructor(
         transactionsDirection = savedStateHandle.get(DIRECTION_KEY) ?: TxDirection.ALL
         _transactionsDirection
             .flatMapLatest { direction ->
-                val filter = TxDirectionFilter(direction, walletApplication.wallet)
+                val filter = TxDirectionFilter(direction, walletApplication.wallet!!)
                 refreshTransactions(filter)
                 walletData.observeTransactions(filter)
                     .debounce(THROTTLE_DURATION)

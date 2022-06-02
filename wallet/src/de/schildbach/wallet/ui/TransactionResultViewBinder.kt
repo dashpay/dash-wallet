@@ -119,7 +119,7 @@ class TransactionResultViewBinder(private val containerView: View) {
         val outputAddresses: List<Address>
 
         if (tx.isOutgoing()) {
-            inputAddresses = WalletUtils.getFromAddressOfSent(tx, wallet)
+            inputAddresses = WalletUtils.getFromAddressOfSent(tx)
             outputAddresses = if (tx.isEntirelySelf) {
                 inputsLabel.setText(R.string.transaction_details_moved_from)
                 outputsLabel.setText(R.string.transaction_details_moved_internally_to)
