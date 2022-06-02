@@ -26,7 +26,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.data.TransactionsMetadataDao
+import de.schildbach.wallet.data.TransactionMetadataDao
 import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.transactions.TransactionExporter
 import kotlinx.coroutines.launch
@@ -38,7 +38,7 @@ import javax.inject.Inject
 class ToolsViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val clipboardManager: ClipboardManager,
-    private val transactionMetadataDao: TransactionsMetadataDao,
+    private val transactionMetadataDao: TransactionMetadataDao,
     val blockchainStateDao: BlockchainStateDao
 ) : ViewModel() {
 

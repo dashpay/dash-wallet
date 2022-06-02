@@ -17,7 +17,7 @@
 package de.schildbach.wallet.service
 
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.TransactionsMetadataDao
+import de.schildbach.wallet.data.TransactionMetadataDao
 import de.schildbach.wallet.util.value
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 class WalletTransactionMetadataService @Inject constructor(
-    private val transactionMetadataDao: TransactionsMetadataDao,
+    private val transactionMetadataDao: TransactionMetadataDao,
     private val walletApplication: WalletApplication
 ) : TransactionMetadataService {
 
@@ -88,19 +88,19 @@ class WalletTransactionMetadataService @Inject constructor(
         }
     }
 
-    override fun setTransactionType(txid: Sha256Hash, type: Int) {
+    override suspend fun setTransactionType(txid: Sha256Hash, type: Int) {
         TODO("Not yet implemented")
     }
 
-    override fun setTransactionExchangeRate(txid: Sha256Hash, exchangeRate: ExchangeRate) {
+    override suspend fun setTransactionExchangeRate(txid: Sha256Hash, exchangeRate: ExchangeRate) {
         TODO("Not yet implemented")
     }
 
-    override fun setTransactionMemo(txid: Sha256Hash, memo: String) {
+    override suspend fun setTransactionMemo(txid: Sha256Hash, memo: String) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getTransactionMetaData(txid: Sha256Hash): TransactionMetadata? {
+    override suspend fun getTransactionMetadata(txid: Sha256Hash): TransactionMetadata? {
         val transactionMetadata = transactionMetadataDao.loadSync(txid)
         if (transactionMetadata == null) {
             insertTransactionMetadata(txid)

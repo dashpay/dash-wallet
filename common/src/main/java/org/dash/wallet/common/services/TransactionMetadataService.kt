@@ -25,10 +25,10 @@ import org.dash.wallet.common.transactions.TransactionMetadata
 interface TransactionMetadataService {
     fun setTransactionMetadata(transactionMetadata: TransactionMetadata)
     suspend fun setTransactionTaxCategory(txid: Sha256Hash, taxCategory: TaxCategory)
-    fun setTransactionType(txid: Sha256Hash, type: Int)
-    fun setTransactionExchangeRate(txid: Sha256Hash, exchangeRate: ExchangeRate)
-    fun setTransactionMemo(txid: Sha256Hash, memo: String)
+    suspend fun setTransactionType(txid: Sha256Hash, type: Int)
+    suspend fun setTransactionExchangeRate(txid: Sha256Hash, exchangeRate: ExchangeRate)
+    suspend fun setTransactionMemo(txid: Sha256Hash, memo: String)
 
-    suspend fun getTransactionMetaData(txid: Sha256Hash): TransactionMetadata?
+    suspend fun getTransactionMetadata(txid: Sha256Hash): TransactionMetadata?
     suspend fun observeTransactionMetadata(txid: Sha256Hash): Flow<TransactionMetadata?>
 }

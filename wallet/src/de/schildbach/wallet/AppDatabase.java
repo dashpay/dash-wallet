@@ -12,7 +12,7 @@ import de.schildbach.wallet.data.AppDatabaseMigrations;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.data.RoomConverters;
-import de.schildbach.wallet.data.TransactionsMetadataDao;
+import de.schildbach.wallet.data.TransactionMetadataDao;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 
 /**
@@ -30,7 +30,7 @@ public abstract class AppDatabase extends RoomDatabase {
 
     public abstract ExchangeRatesDao exchangeRatesDao();
     public abstract BlockchainStateDao blockchainStateDao();
-    public abstract TransactionsMetadataDao transactionMetadataDao();
+    public abstract TransactionMetadataDao transactionMetadataDao();
 
     public static AppDatabase getAppDatabase() {
         if (instance == null) {

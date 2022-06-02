@@ -31,6 +31,7 @@ import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
+import kotlinx.coroutines.FlowPreview
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.slf4j.LoggerFactory
@@ -73,6 +74,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
     private val viewModel: TransactionResultViewModel by viewModels()
 
+    @OptIn(FlowPreview::class)
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

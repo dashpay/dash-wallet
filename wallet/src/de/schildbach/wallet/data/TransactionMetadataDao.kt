@@ -27,7 +27,7 @@ import org.dash.wallet.common.transactions.TransactionMetadata
  * @author Eric Britten
  */
 @Dao
-interface TransactionsMetadataDao {
+interface TransactionMetadataDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(transactionMetadata: TransactionMetadata)
 
