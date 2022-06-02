@@ -199,13 +199,14 @@ class TransactionResultViewBinder(private val containerView: View) {
         }
 
 
-        setTransactionDirection(tx, errorStatusStr, isTransactionHistory)
+        setTransactionDirection(tx, errorStatusStr, isTransactionHistory, WalletUtils.isEntirelySelf(tx, wallet))
     }
 
     private fun setTransactionDirection(
         tx: Transaction,
         errorStatusStr: String,
-        isTransactionHistory: Boolean
+        isTransactionHistory: Boolean,
+        isInternal: Boolean
     ) {
         if (errorStatusStr.isNotEmpty()){
             errorContainer.isVisible = true
@@ -225,14 +226,15 @@ class TransactionResultViewBinder(private val containerView: View) {
                 checkIcon.setImageResource(R.drawable.ic_transaction_sent)
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
-                transactionAmountSignal.text = "-"
+                if (!isInternal) {
+                    transactionAmountSignal.text = "-"
+                }
                 if (isTransactionHistory){
                     closeIcon.isVisible = true
                     transactionTitle.updateLayoutParams<ConstraintLayout.LayoutParams> {
                         topMargin = 10
                     }
                 }
-
             } else {
                 checkIcon.setImageResource(R.drawable.ic_transaction_received)
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.green_300))
