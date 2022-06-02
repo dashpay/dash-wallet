@@ -19,11 +19,17 @@ package de.schildbach.wallet.ui
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.data.TransactionsMetadataDao
+import de.schildbach.wallet.transactions.TaxBitExporter
+import de.schildbach.wallet.transactions.TransactionExporter
+import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.DeterministicKey
 import java.util.*
 import javax.inject.Inject
@@ -31,10 +37,12 @@ import javax.inject.Inject
 @HiltViewModel
 class ToolsViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
-    private val clipboardManager: ClipboardManager
+    private val clipboardManager: ClipboardManager,
+    private val transactionMetadataDao: TransactionsMetadataDao,
+    val blockchainStateDao: BlockchainStateDao
 ) : ViewModel() {
 
-    val blockchainState = AppDatabase.getAppDatabase().blockchainStateDao().load()
+    val blockchainState = blockchainStateDao.load()
 
     val xpub: String
     val xpubWithCreationDate: String
@@ -57,5 +65,22 @@ class ToolsViewModel @Inject constructor(
                 xpub
             )
         )
+    }
+
+    val transactionExporter = MutableLiveData<TransactionExporter>()
+    fun getTransactionExporter() {
+        viewModelScope.launch {
+            val list = transactionMetadataDao.loadSync()
+
+            val map = if (list.isNotEmpty()) {
+                list.associateBy({ it.txid }, { it })
+            } else {
+                mapOf()
+            }
+            transactionExporter.value = TaxBitExporter(
+                walletApplication.getWalletData()!!,
+                map
+            )
+        }
     }
 }

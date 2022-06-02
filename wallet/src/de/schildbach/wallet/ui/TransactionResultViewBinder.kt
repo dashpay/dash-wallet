@@ -22,6 +22,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
@@ -34,6 +35,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.transactions.TransactionMetadata
 import org.dash.wallet.common.ui.CurrencyTextView
 
 /**
@@ -68,6 +70,10 @@ class TransactionResultViewBinder(private val containerView: View) {
     private val closeIcon by lazy { containerView.findViewById<ImageButton>(R.id.close_btn) }
     private val errorContainer by lazy { containerView.findViewById<View>(R.id.error_container) }
     private val errorDescription by lazy { containerView.findViewById<TextView>(R.id.error_description) }
+
+    private val taxCategoryLayout by lazy { containerView.findViewById<LinearLayout>(R.id.tax_category_layout) }
+    private val taxCategory by lazy { containerView.findViewById<TextView>(R.id.tax_category) }
+    private val taxCategoryToggle by lazy {containerView.findViewById<ImageView>(R.id.tax_category_icon)}
 
     private val reportIssueContainer by lazy { containerView.findViewById<View>(R.id.report_issue_card) }
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
@@ -255,4 +261,13 @@ class TransactionResultViewBinder(private val containerView: View) {
         return transactionFee != null && transactionFee.isPositive
     }
 
+    fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
+        val categories = containerView.resources.getStringArray(R.array.transaction_result_tax_categories)
+
+        if (transactionMetadata.taxCategory != null) {
+            taxCategory.text = categories[transactionMetadata.taxCategory!!.value]
+        } else {
+            taxCategory.text = categories[transactionMetadata.defaultTaxCategory.value]
+        }
+    }
 }

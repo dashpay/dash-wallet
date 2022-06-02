@@ -18,18 +18,15 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.activityViewModels
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.util.WalletUtils
-import de.schildbach.wallet.util.isOutgoing
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_settings.*
-import kotlinx.android.synthetic.main.exchange_rates_fragment.*
 import kotlinx.android.synthetic.main.transaction_details_dialog.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
+import kotlinx.coroutines.FlowPreview
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
 
 /**
@@ -41,6 +38,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }
     private var tx: Transaction? = null
     private val wallet by lazy { WalletApplication.getInstance().wallet }
+    private val viewModel: TransactionResultViewModel by activityViewModels()
 
     companion object {
 
@@ -56,6 +54,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         }
     }
 
+    @OptIn(FlowPreview::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val dm = DisplayMetrics()
@@ -71,6 +70,12 @@ class TransactionDetailsDialogFragment : DialogFragment() {
                 }
                 transaction_close_btn.isVisible = false
                 transactionResultViewBinder.bind(it)
+                viewModel.setTransaction(it)
+                viewModel.transactionMetadata.observe(this) { metadata ->
+                    if(metadata != null && tx?.txId == metadata.txid) {
+                        transactionResultViewBinder.setTransactionMetadata(metadata)
+                    }
+                }
             }
 
         } else {
@@ -83,6 +88,9 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         close_btn.setOnClickListener { dismissAnimation() }
         report_issue_card.setOnClickListener {
             showReportIssue()
+        }
+        tax_category_layout.setOnClickListener {
+            viewOnTaxCategory()
         }
 
         showAnimation()
@@ -138,6 +146,11 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         if (tx != null) {
             WalletUtils.viewOnBlockExplorer(activity, tx!!.purpose, tx!!.txId.toString())
         }
+    }
+
+    private fun viewOnTaxCategory() {
+        // this should eventually trigger the observer to update the view
+        viewModel.toggleTaxCategory()
     }
 
 }

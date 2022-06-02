@@ -22,6 +22,7 @@ import android.content.Intent
 import android.graphics.drawable.Animatable
 import android.os.Bundle
 import android.view.View
+import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.main.WalletActivity
@@ -70,6 +71,8 @@ class TransactionResultActivity : AbstractWalletActivity() {
         }
     }
 
+    private val viewModel: TransactionResultViewModel by viewModels()
+
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,6 +90,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
             val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
             transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy, false)
             open_explorer_card.setOnClickListener { viewOnExplorer(tx) }
+            tax_category_layout.setOnClickListener { viewOnTaxCategory()}
             transaction_close_btn.setOnClickListener {
                 onTransactionDetailsDismiss()
             }
@@ -94,6 +98,13 @@ class TransactionResultActivity : AbstractWalletActivity() {
                 showReportIssue()
             }
             close_btn.setOnClickListener { onTransactionDetailsDismiss() }
+
+            viewModel.setTransaction(tx)
+            viewModel.transactionMetadata.observe(this) {
+                if(it != null) {
+                    transactionResultViewBinder.setTransactionMetadata(it)
+                }
+            }
         } else {
             log.error("Transaction not found. TxId:", txId)
             finish()
@@ -110,6 +121,11 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
     private fun viewOnExplorer(tx: Transaction) {
         WalletUtils.viewOnBlockExplorer(this, tx.purpose, tx.txId.toString())
+    }
+
+    private fun viewOnTaxCategory() {
+        // this should eventually trigger the observer to update the view
+        viewModel.toggleTaxCategory()
     }
 
     private fun showReportIssue() {
