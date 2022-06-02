@@ -18,6 +18,8 @@
 package de.schildbach.wallet.data
 
 import androidx.room.TypeConverter
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Sha256Hash
 import java.util.*
 
 class RoomConverters {
@@ -57,4 +59,19 @@ class RoomConverters {
         return sb.toString()
     }
 
+    @TypeConverter
+    fun fromSha256Hash(hash: Sha256Hash) : ByteArray {
+        return hash.bytes
+    }
+
+    @TypeConverter
+    fun toSha256Hash(bytes: ByteArray): Sha256Hash {
+        return Sha256Hash.wrap(bytes)
+    }
+
+    @TypeConverter
+    fun toCoin(value: Long) = Coin.valueOf(value)
+
+    @TypeConverter
+    fun fromCoin(coin: Coin) = coin.value
 }
