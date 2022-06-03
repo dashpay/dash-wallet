@@ -18,6 +18,7 @@
 package de.schildbach.wallet.di
 
 import android.content.Context
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -36,23 +37,26 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DataProviderModule {
-    @Singleton
-    @Provides
-    fun provideWalletData(
-        @ApplicationContext context: Context
-    ): WalletDataProvider = context as WalletApplication
+abstract class DataProviderModule {
+    companion object {
+        @Singleton
+        @Provides
+        fun provideWalletData(
+            @ApplicationContext context: Context
+        ): WalletDataProvider = context as WalletApplication
 
-    @Singleton
-    @Provides
-    fun provideExchangeRateRepository(): ExchangeRatesProvider = ExchangeRatesRepository.instance
+        @Singleton
+        @Provides
+        fun provideExchangeRateRepository(): ExchangeRatesProvider =
+            ExchangeRatesRepository.instance
 
-    @Singleton
-    @Provides
-    fun provideDataSyncStatus(): DataSyncStatusService = ExploreDataSyncStatus()
+        @Singleton
+        @Provides
+        fun provideDataSyncStatus(): DataSyncStatusService = ExploreDataSyncStatus()
+    }
 
-    @Singleton
-    @Provides
-    fun provideTransactionMetadata(transactionMetadataDao: TransactionMetadataDao,
-                                   @ApplicationContext context: Context): TransactionMetadataService = WalletTransactionMetadataService(transactionMetadataDao, context as WalletApplication)
+    @Binds
+    abstract fun bindTransactionMetadata(
+        transactionMetadataService: WalletTransactionMetadataService
+    ): TransactionMetadataService
 }
