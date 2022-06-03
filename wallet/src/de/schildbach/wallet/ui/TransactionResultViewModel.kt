@@ -49,6 +49,7 @@ class TransactionResultViewModel @Inject constructor(var transactionMetadataServ
 
     private fun monitorTransactionMetadata() {
         viewModelScope.launch(Dispatchers.IO) {
+            transactionMetadataService.importTransactionMetadata(transaction.txId)
             transactionMetadataService.observeTransactionMetadata(transaction.txId).collect {
                 _transactionMetadata.value = it
             }

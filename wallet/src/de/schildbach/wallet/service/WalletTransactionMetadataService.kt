@@ -19,7 +19,6 @@ package de.schildbach.wallet.service
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.TransactionMetadataDao
 import de.schildbach.wallet.util.value
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -42,7 +41,7 @@ class WalletTransactionMetadataService @Inject constructor(
         val log = LoggerFactory.getLogger(WalletTransactionMetadataService::class.java)
     }
 
-    private fun insertTransactionMetadata(txId: Sha256Hash) {
+    private suspend fun insertTransactionMetadata(txId: Sha256Hash) {
         val walletTx = walletApplication.wallet.getTransaction(txId)
         Context.propagate(walletApplication.wallet.context)
         walletTx?.run {
@@ -78,7 +77,11 @@ class WalletTransactionMetadataService @Inject constructor(
         }
     }
 
-    override fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
+    override suspend fun importTransactionMetadata(txId: Sha256Hash) {
+        updateAndInsertIfNotExist(txId) { }
+    }
+
+    override suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
         transactionMetadataDao.insert(transactionMetadata)
     }
 
@@ -101,24 +104,19 @@ class WalletTransactionMetadataService @Inject constructor(
     }
 
     override suspend fun getTransactionMetadata(txid: Sha256Hash): TransactionMetadata? {
-        val transactionMetadata = transactionMetadataDao.loadSync(txid)
+        val transactionMetadata = transactionMetadataDao.load(txid)
         if (transactionMetadata == null) {
             insertTransactionMetadata(txid)
         }
-        return transactionMetadataDao.loadSync(txid)
+        return transactionMetadataDao.load(txid)
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    override suspend fun observeTransactionMetadata(txid: Sha256Hash): Flow<TransactionMetadata?> {
-        val transactionMetadata = transactionMetadataDao.loadSync(txid)
-        if (transactionMetadata == null) {
-            insertTransactionMetadata(txid)
-        }
+    override suspend fun getAllTransactionMetadata(): List<TransactionMetadata> {
+        return transactionMetadataDao.load()
+    }
 
-        return transactionMetadataDao.observeState(txid).flatMapLatest {
-            flow {
-                emit(it)
-            }
-        }
+
+    override fun observeTransactionMetadata(txid: Sha256Hash): Flow<TransactionMetadata?> {
+        return transactionMetadataDao.observe(txid)
     }
 }

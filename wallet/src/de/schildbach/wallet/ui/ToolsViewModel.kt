@@ -26,11 +26,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.data.TransactionMetadataDao
 import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.transactions.TransactionExporter
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.DeterministicKey
+import org.dash.wallet.common.services.TransactionMetadataService
 import java.util.*
 import javax.inject.Inject
 
@@ -38,7 +38,7 @@ import javax.inject.Inject
 class ToolsViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val clipboardManager: ClipboardManager,
-    private val transactionMetadataDao: TransactionMetadataDao,
+    private val transactionMetadataService: TransactionMetadataService,
     val blockchainStateDao: BlockchainStateDao
 ) : ViewModel() {
 
@@ -70,7 +70,7 @@ class ToolsViewModel @Inject constructor(
     val transactionExporter = MutableLiveData<TransactionExporter>()
     fun getTransactionExporter() {
         viewModelScope.launch {
-            val list = transactionMetadataDao.loadSync()
+            val list = transactionMetadataService.getAllTransactionMetadata()
 
             val map = if (list.isNotEmpty()) {
                 list.associateBy({ it.txid }, { it })
