@@ -29,32 +29,26 @@ import org.dash.wallet.common.transactions.TransactionMetadata
 @Dao
 interface TransactionMetadataDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(transactionMetadata: TransactionMetadata)
+    suspend fun insert(transactionMetadata: TransactionMetadata)
 
     @Query("SELECT * FROM transaction_metadata")
-    fun load(): LiveData<List<TransactionMetadata>>
-
-    @Query("SELECT * FROM transaction_metadata")
-    suspend fun loadSync(): List<TransactionMetadata>
+    suspend fun load(): List<TransactionMetadata>
 
     @Query("SELECT COUNT(1) FROM transaction_metadata WHERE txid = :txid;")
-    fun exists(txid: Sha256Hash): Boolean
+    suspend fun exists(txid: Sha256Hash): Boolean
 
     @Query("SELECT * FROM transaction_metadata WHERE txid = :txid")
-    fun load(txid: Sha256Hash): LiveData<TransactionMetadata?>
+    suspend fun load(txid: Sha256Hash): TransactionMetadata?
 
     @Query("SELECT * FROM transaction_metadata WHERE txid = :txid")
-    suspend fun loadSync(txid: Sha256Hash): TransactionMetadata?
-
-    @Query("SELECT * FROM transaction_metadata WHERE txid = :txid")
-    fun observeState(txid: Sha256Hash): Flow<TransactionMetadata?>
+    fun observe(txid: Sha256Hash): Flow<TransactionMetadata?>
 
     @Query("SELECT * FROM transaction_metadata WHERE timestamp <= :end and timestamp >= :start")
-    fun observeStateByRange(start: Long, end: Long): Flow<List<TransactionMetadata>>
+    fun observeByTimestampRange(start: Long, end: Long): Flow<List<TransactionMetadata>>
 
     @Query("UPDATE transaction_metadata SET taxCategory = :taxCategory WHERE txid = :txid")
     suspend fun updateTaxCategory(txid: Sha256Hash, taxCategory: TaxCategory)
 
     @Query("DELETE FROM transaction_metadata")
-    fun clear()
+    suspend fun clear()
 }
