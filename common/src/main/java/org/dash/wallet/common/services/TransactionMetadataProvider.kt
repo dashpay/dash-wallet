@@ -22,7 +22,7 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.transactions.TaxCategory
 import org.dash.wallet.common.transactions.TransactionMetadata
 
-interface TransactionMetadataService {
+interface TransactionMetadataProvider {
     suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata)
     suspend fun importTransactionMetadata(txid: Sha256Hash)
     suspend fun setTransactionTaxCategory(txid: Sha256Hash, taxCategory: TaxCategory)

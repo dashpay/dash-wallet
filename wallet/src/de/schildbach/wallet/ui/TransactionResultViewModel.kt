@@ -24,13 +24,13 @@ import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.transactions.TaxCategory
 import org.dash.wallet.common.transactions.TransactionMetadata
-import org.dash.wallet.common.services.TransactionMetadataService
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @FlowPreview
 @HiltViewModel
-class TransactionResultViewModel @Inject constructor(var transactionMetadataService: TransactionMetadataService) : ViewModel() {
+class TransactionResultViewModel @Inject constructor(var transactionMetadataProvider: TransactionMetadataProvider) : ViewModel() {
 
     companion object {
         val log = LoggerFactory.getLogger(TransactionResultViewModel::class.java)
@@ -49,8 +49,8 @@ class TransactionResultViewModel @Inject constructor(var transactionMetadataServ
 
     private fun monitorTransactionMetadata() {
         viewModelScope.launch(Dispatchers.IO) {
-            transactionMetadataService.importTransactionMetadata(transaction.txId)
-            transactionMetadataService.observeTransactionMetadata(transaction.txId).collect {
+            transactionMetadataProvider.importTransactionMetadata(transaction.txId)
+            transactionMetadataProvider.observeTransactionMetadata(transaction.txId).collect {
                 _transactionMetadata.value = it
             }
         }
@@ -71,7 +71,7 @@ class TransactionResultViewModel @Inject constructor(var transactionMetadataServ
         // toggle the tax category and save
         val newTaxCategory = currentTaxCategory.toggle()
         viewModelScope.launch(Dispatchers.IO) {
-            transactionMetadataService.setTransactionTaxCategory(
+            transactionMetadataProvider.setTransactionTaxCategory(
                 transaction.txId,
                 newTaxCategory
             )

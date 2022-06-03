@@ -25,20 +25,20 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.data.*
-import org.dash.wallet.common.services.TransactionMetadataService
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TaxCategory
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.transactions.TransactionMetadata
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
-class WalletTransactionMetadataService @Inject constructor(
+class WalletTransactionMetadataProvider @Inject constructor(
     private val transactionMetadataDao: TransactionMetadataDao,
     private val walletApplication: WalletApplication
-) : TransactionMetadataService {
+) : TransactionMetadataProvider {
 
     companion object {
-        val log = LoggerFactory.getLogger(WalletTransactionMetadataService::class.java)
+        val log = LoggerFactory.getLogger(WalletTransactionMetadataProvider::class.java)
     }
 
     private suspend fun insertTransactionMetadata(txId: Sha256Hash) {

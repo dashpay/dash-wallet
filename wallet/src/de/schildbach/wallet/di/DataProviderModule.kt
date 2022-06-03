@@ -26,12 +26,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.ExploreDataSyncStatus
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.TransactionMetadataDao
 import de.schildbach.wallet.rates.ExchangeRatesRepository
-import de.schildbach.wallet.service.WalletTransactionMetadataService
+import de.schildbach.wallet.service.WalletTransactionMetadataProvider
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.common.services.TransactionMetadataService
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import javax.inject.Singleton
 
@@ -57,6 +56,6 @@ abstract class DataProviderModule {
 
     @Binds
     abstract fun bindTransactionMetadata(
-        transactionMetadataService: WalletTransactionMetadataService
-    ): TransactionMetadataService
+        transactionMetadataService: WalletTransactionMetadataProvider
+    ): TransactionMetadataProvider
 }

@@ -30,7 +30,7 @@ import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.transactions.TransactionExporter
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.DeterministicKey
-import org.dash.wallet.common.services.TransactionMetadataService
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import java.util.*
 import javax.inject.Inject
 
@@ -38,7 +38,7 @@ import javax.inject.Inject
 class ToolsViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val clipboardManager: ClipboardManager,
-    private val transactionMetadataService: TransactionMetadataService,
+    private val transactionMetadataProvider: TransactionMetadataProvider,
     val blockchainStateDao: BlockchainStateDao
 ) : ViewModel() {
 
@@ -70,7 +70,7 @@ class ToolsViewModel @Inject constructor(
     val transactionExporter = MutableLiveData<TransactionExporter>()
     fun getTransactionExporter() {
         viewModelScope.launch {
-            val list = transactionMetadataService.getAllTransactionMetadata()
+            val list = transactionMetadataProvider.getAllTransactionMetadata()
 
             val map = if (list.isNotEmpty()) {
                 list.associateBy({ it.txid }, { it })
