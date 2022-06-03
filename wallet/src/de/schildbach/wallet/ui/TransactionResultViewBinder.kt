@@ -71,9 +71,7 @@ class TransactionResultViewBinder(private val containerView: View) {
     private val errorContainer by lazy { containerView.findViewById<View>(R.id.error_container) }
     private val errorDescription by lazy { containerView.findViewById<TextView>(R.id.error_description) }
 
-    private val taxCategoryLayout by lazy { containerView.findViewById<LinearLayout>(R.id.tax_category_layout) }
     private val taxCategory by lazy { containerView.findViewById<TextView>(R.id.tax_category) }
-    private val taxCategoryToggle by lazy {containerView.findViewById<ImageView>(R.id.tax_category_icon)}
 
     private val reportIssueContainer by lazy { containerView.findViewById<View>(R.id.report_issue_card) }
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
@@ -156,13 +154,6 @@ class TransactionResultViewBinder(private val containerView: View) {
             outputsAddressesContainer.addView(addressView)
         }
 
-        if (!inputsContainer.isVisible){
-            outputsContainer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                topMargin = 0
-                bottomToBottom = 0
-            }
-        }
-
         dashAmount.setFormat(noCodeFormat)
         //For displaying purposes only
         val amountSentOrReceived : Coin? = tx.value?.let {
@@ -180,6 +171,7 @@ class TransactionResultViewBinder(private val containerView: View) {
         }
 
         if (isFeeAvailable(tx.fee)) {
+            transactionFee.setInsignificantRelativeSize(1.0f)
             transactionFee.setFormat(noCodeFormat)
             transactionFee.setAmount(tx.fee)
         }
@@ -197,7 +189,6 @@ class TransactionResultViewBinder(private val containerView: View) {
                 bottomToBottom = R.id.dash_amount_container
             }
         }
-
 
         setTransactionDirection(tx, errorStatusStr, isTransactionHistory, WalletUtils.isEntirelySelf(tx, wallet))
     }
@@ -247,12 +238,6 @@ class TransactionResultViewBinder(private val containerView: View) {
             }
             checkIcon.visibility = View.VISIBLE
             transactionAmountSignal.visibility = View.VISIBLE
-
-            if (!inputsContainer.isVisible){
-                outputsContainer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                    topMargin = -40
-                }
-            }
         }
 
         feeRow.visibility = if (isFeeAvailable(tx.fee)) View.VISIBLE else View.GONE
