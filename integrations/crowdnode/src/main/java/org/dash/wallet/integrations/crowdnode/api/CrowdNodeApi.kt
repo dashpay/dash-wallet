@@ -42,7 +42,7 @@ import org.dash.wallet.integrations.crowdnode.model.*
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
-import retrofit2.HttpException
+import java.io.IOException
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.net.URLEncoder
@@ -96,6 +96,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         private const val CONFIRMED_STATUS = "confirmed"
         private const val VALID_STATUS = "valid"
         private const val MESSAGE_RECEIVED_STATUS = "received"
+        private const val MESSAGE_FAILED_STATUS = "failed"
     }
 
     private val params = walletDataProvider.networkParameters
@@ -393,20 +394,20 @@ class CrowdNodeApiAggregator @Inject constructor(
         val encodedSignature = URLEncoder.encode(signature, "utf-8")
         val result = webApi.sendSignedMessage(address.toBase58(), email, encodedSignature)
 
-        if (result.isSuccessful && result.body()?.messageStatus?.lowercase() == MESSAGE_RECEIVED_STATUS) {
+        if (result.isSuccessful && result.body()!!.messageStatus.lowercase() == MESSAGE_RECEIVED_STATUS) {
             log.info("Signed email sent successfully")
-            config.setPreference(CrowdNodeConfig.SIGNED_EMAIL_SENT, true)
+            config.setPreference(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID, result.body()!!.id)
             return true
         }
 
         if (result.isSuccessful) {
-            log.info("SendMessage result successful, but wrong status: ${result.body()?.messageStatus ?: "null"}")
-            apiError.value = CrowdNodeException(CrowdNodeException.SEND_MESSAGE_ERROR)
+            log.info("SendMessage not received, status: ${result.body()?.messageStatus ?: "null"}. Comment: ${result.body()?.comment}")
+            apiError.value = MessageStatusException(result.body()?.comment ?: "")
             return false
         }
 
         log.info("SendMessage error, code: ${result.code()}, error: ${result.errorBody()?.string()}")
-        apiError.value = CrowdNodeException(CrowdNodeException.SEND_MESSAGE_ERROR)
+        apiError.value = MessageStatusException(result.errorBody()?.string() ?: "")
         return false
     }
 
@@ -519,7 +520,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 val balance = Coin.parseCoin(fetchBalance(address.toBase58()))
                 config.setPreference(CrowdNodeConfig.LAST_BALANCE, balance.value)
                 Resource.success(balance)
-            } catch (ex: HttpException) {
+            } catch (ex: IOException) {
                 Resource.error(ex)
             } catch (ex: Exception) {
                 log.error("Error while resolving balance: $ex")
@@ -585,7 +586,19 @@ class CrowdNodeApiAggregator @Inject constructor(
     private suspend fun checkIfEmailRegistered(address: Address) {
         val isDefaultEmail = resolveIsDefaultEmail(address)
 
-        if (!isDefaultEmail) {
+        if (isDefaultEmail) {
+            // Check the message status in case there is an error
+            config.getPreference(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID)?.let { messageId ->
+                val message = checkMessageStatus(messageId, address)
+
+                if (message?.messageStatus?.lowercase() == MESSAGE_FAILED_STATUS) {
+                    apiError.value = MessageStatusException(message.comment)
+                }
+
+                changeOnlineStatus(OnlineAccountStatus.None)
+            }
+        } else {
+            // Good to go
             changeOnlineStatus(OnlineAccountStatus.SigningUp)
         }
     }
@@ -605,7 +618,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         } catch (ex: Exception) {
             log.error("Error in resolveIsAddressInUse: $ex")
 
-            if (ex !is HttpException) {
+            if (ex !is IOException) {
                 analyticsService.logError(ex)
             }
 
@@ -620,7 +633,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         } catch (ex: Exception) {
             log.error("Error in resolveAddressStatus: $ex")
 
-            if (ex !is HttpException) {
+            if (ex !is IOException) {
                 analyticsService.logError(ex)
             }
 
@@ -635,12 +648,33 @@ class CrowdNodeApiAggregator @Inject constructor(
         } catch (ex: Exception) {
             log.error("Error in resolveIsDefaultEmail: $ex")
 
-            if (ex !is HttpException) {
+            if (ex !is IOException) {
                 analyticsService.logError(ex)
             }
 
             true
         }
+    }
+
+    @Suppress("BlockingMethodInNonBlockingContext")
+    private suspend fun checkMessageStatus(messageId: Int, address: Address): MessageStatus? {
+        log.info("Checking message status, address: ${address.toBase58()}")
+        val result = webApi.getMessages(address.toBase58())
+
+        if (result.isSuccessful) {
+            val message = result.body()!!.firstOrNull { it.id == messageId }
+
+            return if (message == null) {
+                log.info("Got ${result.body()!!.size} messages, none with id $messageId")
+                null
+            } else {
+                message
+            }
+        }
+
+        log.info("GetMessages error, code: ${result.code()}, error: ${result.errorBody()?.string()}")
+        apiError.value = MessageStatusException(result.errorBody()?.string() ?: "")
+        return null
     }
 
     private fun cancelTrackingJob() {

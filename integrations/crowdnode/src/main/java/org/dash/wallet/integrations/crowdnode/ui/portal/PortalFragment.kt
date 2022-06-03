@@ -40,6 +40,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentPortalBinding
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
+import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
@@ -320,11 +321,14 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun getErrorMessage(exception: Exception): String {
+        if (exception is MessageStatusException) {
+            return getString(R.string.crowdnode_signup_error)
+        }
+
         return getString(when(exception.message) {
             CrowdNodeException.WITHDRAWAL_ERROR -> R.string.crowdnode_withdraw_error
             CrowdNodeException.DEPOSIT_ERROR -> R.string.crowdnode_deposit_error
             CrowdNodeException.CONFIRMATION_ERROR -> R.string.crowdnode_bad_confirmation
-            CrowdNodeException.SEND_MESSAGE_ERROR -> R.string.crowdnode_signup_error
             else -> R.string.crowdnode_transfer_error
         })
     }

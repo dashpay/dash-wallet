@@ -36,6 +36,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentResultBinding
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
+import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import javax.inject.Inject
 
@@ -59,26 +60,28 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
             binding.icon.setImageResource(R.drawable.ic_error_red)
             binding.title.text = args.title
             binding.title.setTextAppearance(R.style.Headline5_Bold_Red)
+            binding.subtitle.text = args.subtitle
             binding.sendReportBtn.isVisible = true
             binding.negativeBtn.isVisible = true
-
-            viewModel.crowdNodeError?.let { ex ->
-                setErrorMessage(ex)
-            }
 
             binding.sendReportBtn.setOnClickListener {
                 viewModel.sendReport()
             }
 
-            val errorMessage = viewModel.crowdNodeError?.message ?: ""
+            viewModel.crowdNodeError?.let {
+                setErrorMessage(it)
+            }
 
-            if (errorMessage == CrowdNodeException.CONFIRMATION_ERROR) {
+            if (viewModel.crowdNodeError is InsufficientMoneyException ||
+                viewModel.crowdNodeError?.message?.startsWith(INSUFFICIENT_MONEY_PREFIX) == true ||
+                viewModel.crowdNodeError?.message == CrowdNodeException.CONFIRMATION_ERROR
+            ) {
                 binding.positiveBtn.isVisible = false
             } else {
                 binding.positiveBtn.isVisible = true
                 binding.positiveBtn.text = getString(R.string.button_retry)
                 binding.positiveBtn.setOnClickListener {
-                    if (errorMessage == CrowdNodeException.SEND_MESSAGE_ERROR) {
+                    if (viewModel.crowdNodeError is MessageStatusException) {
                         retryOnlineSignUp()
                     } else if (viewModel.signUpStatus == SignUpStatus.Error) {
                         retrySignUp()
@@ -118,12 +121,6 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
             is DustySendRequested, is CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
             is InsufficientMoneyException -> getString(R.string.send_coins_error_insufficient_money)
             else -> ex.message ?: ""
-        }
-
-        if (ex is InsufficientMoneyException ||
-            ex.message?.startsWith(INSUFFICIENT_MONEY_PREFIX) == true
-        ) {
-            binding.positiveBtn.isVisible = false
         }
     }
 

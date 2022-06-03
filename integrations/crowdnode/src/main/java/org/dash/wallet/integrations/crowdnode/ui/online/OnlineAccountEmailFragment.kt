@@ -22,6 +22,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
@@ -96,6 +97,24 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
                 args[CrowdNodeViewModel.URL_ARG]!!,
                 args[CrowdNodeViewModel.EMAIL_ARG] ?: ""
             ))
+        }
+
+        viewModel.networkError.observe(viewLifecycleOwner) {
+            Toast.makeText(
+                requireContext(),
+                "${getString(R.string.cannot_send)} ${getString(R.string.network_unavailable_check_connection)}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+
+        viewModel.observeCrowdNodeError().observe(viewLifecycleOwner) {
+            if (it != null) {
+                safeNavigate(OnlineAccountEmailFragmentDirections.onlineAccountEmailToResult(
+                    true,
+                    getString(R.string.crowdnode_signup_error),
+                    ""
+                ))
+            }
         }
 
         if (viewModel.onlineAccountStatus != OnlineAccountStatus.Creating) {
