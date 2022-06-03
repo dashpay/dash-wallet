@@ -588,14 +588,16 @@ class CrowdNodeApiAggregator @Inject constructor(
 
         if (isDefaultEmail) {
             // Check the message status in case there is an error
-            config.getPreference(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID)?.let { messageId ->
+            val messageId = config.getPreference(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID) ?: -1
+
+            if (messageId != -1) {
                 val message = checkMessageStatus(messageId, address)
+                log.info("Message status: ${message?.messageStatus ?: "null"}")
 
                 if (message?.messageStatus?.lowercase() == MESSAGE_FAILED_STATUS) {
                     apiError.value = MessageStatusException(message.comment)
+                    changeOnlineStatus(OnlineAccountStatus.None)
                 }
-
-                changeOnlineStatus(OnlineAccountStatus.None)
             }
         } else {
             // Good to go

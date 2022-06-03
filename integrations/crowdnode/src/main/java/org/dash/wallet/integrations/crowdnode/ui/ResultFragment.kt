@@ -57,62 +57,10 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
         super.onViewCreated(view, savedInstanceState)
 
         if (args.isError) {
-            binding.icon.setImageResource(R.drawable.ic_error_red)
-            binding.title.text = args.title
-            binding.title.setTextAppearance(R.style.Headline5_Bold_Red)
-            binding.subtitle.text = args.subtitle
-            binding.sendReportBtn.isVisible = true
-            binding.negativeBtn.isVisible = true
-
-            binding.sendReportBtn.setOnClickListener {
-                viewModel.sendReport()
-            }
-
-            viewModel.crowdNodeError?.let {
-                setErrorMessage(it)
-            }
-
-            if (viewModel.crowdNodeError is InsufficientMoneyException ||
-                viewModel.crowdNodeError?.message?.startsWith(INSUFFICIENT_MONEY_PREFIX) == true ||
-                viewModel.crowdNodeError?.message == CrowdNodeException.CONFIRMATION_ERROR
-            ) {
-                binding.positiveBtn.isVisible = false
-            } else {
-                binding.positiveBtn.isVisible = true
-                binding.positiveBtn.text = getString(R.string.button_retry)
-                binding.positiveBtn.setOnClickListener {
-                    if (viewModel.crowdNodeError is MessageStatusException) {
-                        retryOnlineSignUp()
-                    } else if (viewModel.signUpStatus == SignUpStatus.Error) {
-                        retrySignUp()
-                    } else {
-                        // for other errors, going back to the previous screen
-                        findNavController().popBackStack()
-                    }
-                }
-            }
-
-            binding.negativeBtn.setOnClickListener {
-                if (viewModel.signUpStatus == SignUpStatus.Error) {
-                    viewModel.resetSignUp()
-                    findNavController().popBackStack()
-                } else {
-                    findNavController().popBackStack(R.id.crowdNodePortalFragment, false)
-                }
-            }
+            setError()
             viewModel.clearError()
         } else {
-            binding.icon.setImageResource(R.drawable.ic_success_green)
-            binding.title.text = args.title
-            binding.title.setTextAppearance(R.style.Headline5_Bold_Green)
-            binding.subtitle.text = args.subtitle
-            binding.sendReportBtn.isVisible = false
-            binding.negativeBtn.isVisible = false
-            binding.positiveBtn.text = getString(R.string.button_close)
-
-            binding.positiveBtn.setOnClickListener {
-                findNavController().popBackStack(R.id.crowdNodePortalFragment, false)
-            }
+            setSuccess()
         }
     }
 
@@ -121,6 +69,52 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
             is DustySendRequested, is CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
             is InsufficientMoneyException -> getString(R.string.send_coins_error_insufficient_money)
             else -> ex.message ?: ""
+        }
+    }
+
+    private fun setError() {
+        binding.icon.setImageResource(R.drawable.ic_error_red)
+        binding.title.text = args.title
+        binding.title.setTextAppearance(R.style.Headline5_Bold_Red)
+        binding.subtitle.text = args.subtitle
+        binding.sendReportBtn.isVisible = true
+        binding.negativeBtn.isVisible = true
+
+        binding.sendReportBtn.setOnClickListener {
+            viewModel.sendReport()
+        }
+
+        viewModel.crowdNodeError?.let {
+            setErrorMessage(it)
+        }
+
+        if (viewModel.crowdNodeError is InsufficientMoneyException ||
+            viewModel.crowdNodeError?.message?.startsWith(INSUFFICIENT_MONEY_PREFIX) == true ||
+            viewModel.crowdNodeError?.message == CrowdNodeException.CONFIRMATION_ERROR
+        ) {
+            binding.positiveBtn.isVisible = false
+        } else {
+            binding.positiveBtn.isVisible = true
+            binding.positiveBtn.text = getString(R.string.button_retry)
+            binding.positiveBtn.setOnClickListener {
+                if (viewModel.crowdNodeError is MessageStatusException) {
+                    retryOnlineSignUp()
+                } else if (viewModel.signUpStatus == SignUpStatus.Error) {
+                    retrySignUp()
+                } else {
+                    // for other errors, going back to the previous screen
+                    findNavController().popBackStack()
+                }
+            }
+        }
+
+        binding.negativeBtn.setOnClickListener {
+            if (viewModel.signUpStatus == SignUpStatus.Error) {
+                viewModel.resetSignUp()
+                findNavController().popBackStack()
+            } else {
+                findNavController().popBackStack(R.id.crowdNodePortalFragment, false)
+            }
         }
     }
 
@@ -136,5 +130,19 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
 
     private fun retryOnlineSignUp() {
         safeNavigate(ResultFragmentDirections.resultToOnlineAccountEmail())
+    }
+
+    private fun setSuccess() {
+        binding.icon.setImageResource(R.drawable.ic_success_green)
+        binding.title.text = args.title
+        binding.title.setTextAppearance(R.style.Headline5_Bold_Green)
+        binding.subtitle.text = args.subtitle
+        binding.sendReportBtn.isVisible = false
+        binding.negativeBtn.isVisible = false
+        binding.positiveBtn.text = getString(R.string.button_close)
+
+        binding.positiveBtn.setOnClickListener {
+            findNavController().popBackStack(R.id.crowdNodePortalFragment, false)
+        }
     }
 }
