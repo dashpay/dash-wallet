@@ -9,16 +9,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.view.animation.Animation
-import android.view.animation.AnimationSet
 import android.view.animation.AnimationUtils
-import android.widget.FrameLayout
 import android.widget.RelativeLayout
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
@@ -41,6 +37,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }
     private var tx: Transaction? = null
     private val wallet by lazy { WalletApplication.getInstance().wallet }
+    @OptIn(FlowPreview::class)
     private val viewModel: TransactionResultViewModel by viewModels()
 
     companion object {
@@ -151,6 +148,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         }
     }
 
+    @OptIn(FlowPreview::class)
     private fun viewOnTaxCategory() {
         // this should eventually trigger the observer to update the view
         viewModel.toggleTaxCategory()
