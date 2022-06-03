@@ -42,31 +42,17 @@ class TransactionResultViewModel @Inject constructor(var transactionMetadataServ
     val transactionMetadata
         get() = _transactionMetadata.asLiveData()
 
-    lateinit var currentJob: Job
-
     fun setTransaction(transaction: Transaction) {
         this.transaction = transaction
         monitorTransactionMetadata()
     }
 
-    /**
-     * This method uses a Job to keep track of an observer.  If [currentJob] exists, it will
-     * be canceled and then a new Job is created.
-     *
-     * This is necessary when this ViewModel is own by an activity that is creating dialogs
-     * that will be using the same ViewModel instance.  Otherwise, many observers will exist
-     * for the previous instances of the dialog.
-     */
     private fun monitorTransactionMetadata() {
-        if (this::currentJob.isInitialized) {
-            currentJob.cancel()
-        }
-        currentJob = viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO) {
             transactionMetadataService.observeTransactionMetadata(transaction.txId).collect {
                 _transactionMetadata.value = it
             }
         }
-        currentJob.start()
     }
 
     fun toggleTaxCategory() {

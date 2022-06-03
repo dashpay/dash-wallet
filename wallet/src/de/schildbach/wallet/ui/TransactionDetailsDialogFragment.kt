@@ -19,6 +19,8 @@ import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -32,13 +34,14 @@ import org.slf4j.LoggerFactory
 /**
  * @author Samuel Barbosa
  */
+@AndroidEntryPoint
 class TransactionDetailsDialogFragment : DialogFragment() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
     private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }
     private var tx: Transaction? = null
     private val wallet by lazy { WalletApplication.getInstance().wallet }
-    private val viewModel: TransactionResultViewModel by activityViewModels()
+    private val viewModel: TransactionResultViewModel by viewModels()
 
     companion object {
 
