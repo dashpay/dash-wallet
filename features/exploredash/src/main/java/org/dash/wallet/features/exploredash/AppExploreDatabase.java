@@ -1,4 +1,23 @@
-package de.schildbach.wallet;
+/*
+ * Copyright 2022 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.dash.wallet.features.exploredash;
+
+import android.content.Context;
 
 import androidx.annotation.NonNull;
 import androidx.room.Database;
@@ -8,6 +27,7 @@ import androidx.room.TypeConverters;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.data.RoomConverters;
 import org.dash.wallet.features.exploredash.data.AtmDao;
 import org.dash.wallet.features.exploredash.data.MerchantDao;
 import org.dash.wallet.features.exploredash.data.model.Atm;
@@ -19,12 +39,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-
-import dagger.hilt.EntryPoint;
-import dagger.hilt.InstallIn;
-import dagger.hilt.android.EntryPointAccessors;
-import dagger.hilt.components.SingletonComponent;
-import de.schildbach.wallet.data.RoomConverters;
 
 @Database(entities = {
         Merchant.class,
@@ -43,53 +57,50 @@ public abstract class AppExploreDatabase extends RoomDatabase {
 
     public abstract AtmDao atmDao();
 
-    @EntryPoint
-    @InstallIn(SingletonComponent.class)
-    interface AppExploreDatabaseEntryPoint {
-        ExploreRepository getExploreRepository();
-    }
-
-    public static AppExploreDatabase getAppDatabase() {
+    public static AppExploreDatabase getAppDatabase(
+        Context context,
+        Configuration config,
+        ExploreRepository repository
+    ) {
         if (instance == null) {
-            instance = create();
+            instance = create(context, config, repository);
         }
         return instance;
     }
 
-    private static AppExploreDatabase create() {
-        WalletApplication walletApp = WalletApplication.getInstance();
-        Configuration appConfiguration = walletApp.getConfiguration();
-        String exploreDatabaseName = appConfiguration.getExploreDatabaseName();
+    private static AppExploreDatabase create(
+        Context context,
+        Configuration config,
+        ExploreRepository repository
+    ) {
+        String exploreDatabaseName = config.getExploreDatabaseName();
 
-        AppExploreDatabaseEntryPoint entryPoint = EntryPointAccessors.fromApplication(walletApp, AppExploreDatabaseEntryPoint.class);
-        ExploreRepository exploreRepository = entryPoint.getExploreRepository();
-
-        File dbFile = walletApp.getDatabasePath(exploreDatabaseName);
-        File dbUpdateFile = exploreRepository.getUpdateFile();
+        File dbFile = context.getDatabasePath(exploreDatabaseName);
+        File dbUpdateFile = repository.getUpdateFile();
         if (!dbFile.exists() && !dbUpdateFile.exists()) {
-            exploreRepository.preloadFromAssets(dbUpdateFile);
+            repository.preloadFromAssets(dbUpdateFile);
         }
 
         Builder<AppExploreDatabase> dbBuilder;
         if (dbUpdateFile.exists()) {
             log.info("found explore db update package {}", dbUpdateFile.getAbsolutePath());
 
-            exploreRepository.deleteOldDB(dbFile);
+            repository.deleteOldDB(dbFile);
 
-            long dbTimestamp = exploreRepository.getTimestamp(dbUpdateFile);
-            exploreDatabaseName = appConfiguration.setExploreDatabaseName(dbTimestamp);
+            long dbTimestamp = repository.getTimestamp(dbUpdateFile);
+            exploreDatabaseName = config.setExploreDatabaseName(dbTimestamp);
         }
 
-        dbBuilder = Room.databaseBuilder(walletApp, AppExploreDatabase.class, exploreDatabaseName);
+        dbBuilder = Room.databaseBuilder(context, AppExploreDatabase.class, exploreDatabaseName);
 
         if (dbUpdateFile.exists()) {
             log.info("create explore db from InputStream {}", exploreDatabaseName);
             dbBuilder.createFromInputStream(
-                    () -> exploreRepository.getDatabaseInputStream(dbUpdateFile),
+                    () -> repository.getDatabaseInputStream(dbUpdateFile),
                     new PrepackagedDatabaseCallback() {
                         @Override
                         public void onOpenPrepackagedDatabase(@NonNull SupportSQLiteDatabase db) {
-                            exploreRepository.finalizeUpdate(dbUpdateFile);
+                            repository.finalizeUpdate(dbUpdateFile);
                         }
                     });
         } else {
@@ -104,11 +115,15 @@ public abstract class AppExploreDatabase extends RoomDatabase {
         return database;
     }
 
-    public static void forceUpdate() {
+    public static void forceUpdate(
+        Context context,
+        Configuration config,
+        ExploreRepository repository
+    ) {
         log.info("force update explore db");
         if (instance != null) {
             instance.close();
         }
-        instance = create();
+        instance = create(context, config, repository);
     }
 }

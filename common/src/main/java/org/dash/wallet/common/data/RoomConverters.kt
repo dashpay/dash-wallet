@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,13 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.data
+package org.dash.wallet.common.data
 
 import androidx.room.TypeConverter
 import java.util.*
 
 class RoomConverters {
-
     @TypeConverter
     fun fromTimestamp(value: Long?): Date? {
         return value?.let { Date(it) }
@@ -31,30 +30,4 @@ class RoomConverters {
     fun dateToTimestamp(date: Date?): Long? {
         return date?.time
     }
-
-    @TypeConverter
-    fun fromImpedimentsEnumSet(value: String?): Set<BlockchainState.Impediment> {
-        val impedimentSet = EnumSet.noneOf(BlockchainState.Impediment::class.java)
-        if (value == null || value.isEmpty()) {
-            return impedimentSet
-        }
-
-        for (v in value.split(",")) {
-            impedimentSet.add(BlockchainState.Impediment.values()[v.toInt()])
-        }
-        return impedimentSet
-    }
-
-    @TypeConverter
-    fun toImpedimentsString(impediments: Set<BlockchainState.Impediment>): String {
-        val sb = StringBuilder()
-        impediments.forEach {
-            if (sb.isNotEmpty()) {
-                sb.append(",")
-            }
-            sb.append(it.ordinal)
-        }
-        return sb.toString()
-    }
-
 }

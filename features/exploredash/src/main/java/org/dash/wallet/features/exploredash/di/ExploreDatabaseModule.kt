@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,25 +15,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.di
+package org.dash.wallet.features.exploredash.di
 
+import android.content.Context
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import de.schildbach.wallet.AppExploreDatabase
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.features.exploredash.AppExploreDatabase
 import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
+import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object ExploreDatabaseModule {
-
     @Singleton
     @Provides
-    fun provideDatabase(): AppExploreDatabase {
-        return AppExploreDatabase.getAppDatabase()
+    fun provideDatabase(
+        @ApplicationContext context: Context,
+        config: Configuration,
+        repository: ExploreRepository
+    ): AppExploreDatabase {
+        return AppExploreDatabase.getAppDatabase(
+            context, config, repository
+        )
     }
 
     @Provides
