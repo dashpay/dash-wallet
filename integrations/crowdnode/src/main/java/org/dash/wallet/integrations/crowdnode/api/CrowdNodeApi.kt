@@ -412,8 +412,8 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
 
         if (result.isSuccessful) {
-            log.info("SendMessage not received, status: ${result.body()?.messageStatus ?: "null"}. Comment: ${result.body()?.comment}")
-            apiError.value = MessageStatusException(result.body()?.comment ?: "")
+            log.info("SendMessage not received, status: ${result.body()?.messageStatus ?: "null"}. Result: ${result.body()?.result}")
+            apiError.value = MessageStatusException(result.body()?.result ?: "")
             return false
         }
 
@@ -606,7 +606,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 log.info("Message status: ${message?.messageStatus ?: "null"}")
 
                 if (message?.messageStatus?.lowercase() == MESSAGE_FAILED_STATUS) {
-                    apiError.value = MessageStatusException(message.comment)
+                    apiError.value = MessageStatusException(message.result ?: "")
                     changeOnlineStatus(OnlineAccountStatus.None)
                 }
             }

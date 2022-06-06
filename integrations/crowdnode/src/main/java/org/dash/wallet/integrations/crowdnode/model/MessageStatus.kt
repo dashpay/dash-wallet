@@ -32,6 +32,6 @@ class MessageStatus(
     val updatedOn: String,
     @SerializedName("ExecutedTime")
     val executedTime: String,
-    @SerializedName("Comment")
-    val comment: String
+    @SerializedName("Result")
+    val result: String?
 )
