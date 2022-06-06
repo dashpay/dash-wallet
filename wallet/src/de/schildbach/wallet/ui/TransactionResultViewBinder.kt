@@ -22,6 +22,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
@@ -34,6 +35,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.transactions.TransactionMetadata
 import org.dash.wallet.common.ui.CurrencyTextView
 
 /**
@@ -68,6 +70,8 @@ class TransactionResultViewBinder(private val containerView: View) {
     private val closeIcon by lazy { containerView.findViewById<ImageButton>(R.id.close_btn) }
     private val errorContainer by lazy { containerView.findViewById<View>(R.id.error_container) }
     private val errorDescription by lazy { containerView.findViewById<TextView>(R.id.error_description) }
+
+    private val taxCategory by lazy { containerView.findViewById<TextView>(R.id.tax_category) }
 
     private val reportIssueContainer by lazy { containerView.findViewById<View>(R.id.report_issue_card) }
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
@@ -150,13 +154,6 @@ class TransactionResultViewBinder(private val containerView: View) {
             outputsAddressesContainer.addView(addressView)
         }
 
-        if (!inputsContainer.isVisible){
-            outputsContainer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                topMargin = 0
-                bottomToBottom = 0
-            }
-        }
-
         dashAmount.setFormat(noCodeFormat)
         //For displaying purposes only
         val amountSentOrReceived : Coin? = tx.value?.let {
@@ -174,6 +171,7 @@ class TransactionResultViewBinder(private val containerView: View) {
         }
 
         if (isFeeAvailable(tx.fee)) {
+            transactionFee.setInsignificantRelativeSize(1.0f)
             transactionFee.setFormat(noCodeFormat)
             transactionFee.setAmount(tx.fee)
         }
@@ -192,14 +190,14 @@ class TransactionResultViewBinder(private val containerView: View) {
             }
         }
 
-
-        setTransactionDirection(tx, errorStatusStr, isTransactionHistory)
+        setTransactionDirection(tx, errorStatusStr, isTransactionHistory, WalletUtils.isEntirelySelf(tx, wallet))
     }
 
     private fun setTransactionDirection(
         tx: Transaction,
         errorStatusStr: String,
-        isTransactionHistory: Boolean
+        isTransactionHistory: Boolean,
+        isInternal: Boolean
     ) {
         if (errorStatusStr.isNotEmpty()){
             errorContainer.isVisible = true
@@ -219,14 +217,15 @@ class TransactionResultViewBinder(private val containerView: View) {
                 checkIcon.setImageResource(R.drawable.ic_transaction_sent)
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
-                transactionAmountSignal.text = "-"
+                if (!isInternal) {
+                    transactionAmountSignal.text = "-"
+                }
                 if (isTransactionHistory){
                     closeIcon.isVisible = true
                     transactionTitle.updateLayoutParams<ConstraintLayout.LayoutParams> {
                         topMargin = 10
                     }
                 }
-
             } else {
                 checkIcon.setImageResource(R.drawable.ic_transaction_received)
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.green_300))
@@ -239,12 +238,6 @@ class TransactionResultViewBinder(private val containerView: View) {
             }
             checkIcon.visibility = View.VISIBLE
             transactionAmountSignal.visibility = View.VISIBLE
-
-            if (!inputsContainer.isVisible){
-                outputsContainer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                    topMargin = -40
-                }
-            }
         }
 
         feeRow.visibility = if (isFeeAvailable(tx.fee)) View.VISIBLE else View.GONE
@@ -255,4 +248,13 @@ class TransactionResultViewBinder(private val containerView: View) {
         return transactionFee != null && transactionFee.isPositive
     }
 
+    fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
+        val categories = containerView.resources.getStringArray(R.array.transaction_result_tax_categories)
+
+        if (transactionMetadata.taxCategory != null) {
+            taxCategory.text = categories[transactionMetadata.taxCategory!!.value]
+        } else {
+            taxCategory.text = categories[transactionMetadata.defaultTaxCategory.value]
+        }
+    }
 }

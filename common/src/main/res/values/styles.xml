@@ -1115,7 +1115,6 @@
     <style name="FullScreenDialog" parent="Theme.AppCompat.Light.Dialog">
         <item name="android:backgroundDimEnabled">false</item>
         <item name="android:windowNoTitle">true</item>
-        <item name="android:padding">0dp</item>
         <item name="android:windowIsFloating">false</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowCloseOnTouchOutside">false</item>

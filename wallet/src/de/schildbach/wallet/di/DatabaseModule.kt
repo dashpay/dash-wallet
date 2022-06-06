@@ -23,6 +23,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.data.TransactionMetadataDao
 import de.schildbach.wallet.rates.ExchangeRatesDao
 import javax.inject.Singleton
 
@@ -43,5 +44,10 @@ object DatabaseModule {
     @Provides
     fun provideExchangeRatesDao(appDatabase: AppDatabase): ExchangeRatesDao {
         return appDatabase.exchangeRatesDao()
+    }
+
+    @Provides
+    fun provideTransactionMetadata(appDatabase: AppDatabase): TransactionMetadataDao {
+        return appDatabase.transactionMetadataDao()
     }
 }

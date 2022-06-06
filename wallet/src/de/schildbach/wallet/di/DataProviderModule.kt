@@ -18,6 +18,7 @@
 package de.schildbach.wallet.di
 
 import android.content.Context
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,25 +27,35 @@ import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.ExploreDataSyncStatus
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.rates.ExchangeRatesRepository
+import de.schildbach.wallet.service.WalletTransactionMetadataProvider
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DataProviderModule {
-    @Singleton
-    @Provides
-    fun provideWalletData(
-        @ApplicationContext context: Context
-    ): WalletDataProvider = context as WalletApplication
+abstract class DataProviderModule {
+    companion object {
+        @Singleton
+        @Provides
+        fun provideWalletData(
+            @ApplicationContext context: Context
+        ): WalletDataProvider = context as WalletApplication
 
-    @Singleton
-    @Provides
-    fun provideExchangeRateRepository(): ExchangeRatesProvider = ExchangeRatesRepository.instance
+        @Singleton
+        @Provides
+        fun provideExchangeRateRepository(): ExchangeRatesProvider =
+            ExchangeRatesRepository.instance
 
-    @Singleton
-    @Provides
-    fun provideDataSyncStatus(): DataSyncStatusService = ExploreDataSyncStatus()
+        @Singleton
+        @Provides
+        fun provideDataSyncStatus(): DataSyncStatusService = ExploreDataSyncStatus()
+    }
+
+    @Binds
+    abstract fun bindTransactionMetadata(
+        transactionMetadataService: WalletTransactionMetadataProvider
+    ): TransactionMetadataProvider
 }
