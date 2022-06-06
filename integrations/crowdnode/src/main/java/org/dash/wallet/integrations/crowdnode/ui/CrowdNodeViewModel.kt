@@ -40,8 +40,7 @@ import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
-import retrofit2.HttpException
-import java.net.UnknownHostException
+import java.io.IOException
 import javax.inject.Inject
 
 enum class NavigationRequest {
@@ -305,7 +304,7 @@ class CrowdNodeViewModel @Inject constructor(
 
             try {
                 crowdNodeApi.registerEmailForAccount(email)
-            } catch (ex: UnknownHostException) {
+            } catch (ex: IOException) {
                 networkError.postCall()
             }
         }

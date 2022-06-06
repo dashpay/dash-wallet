@@ -329,10 +329,21 @@ class CrowdNodeApiAggregator @Inject constructor(
     override suspend fun registerEmailForAccount(email: String) {
         val address = accountAddress
         requireNotNull(address) { "Account address is null, make sure to sign up" }
-        val signature = securityFunctions.signMessage(address, email)
 
-        if (sendSignedEmailMessage(address, email, signature)) {
-            changeOnlineStatus(OnlineAccountStatus.Creating)
+        try {
+            val signature = securityFunctions.signMessage(address, email)
+
+            if (sendSignedEmailMessage(address, email, signature)) {
+                changeOnlineStatus(OnlineAccountStatus.Creating)
+            }
+        } catch (ex: Exception) {
+            if (ex is IOException) {
+                // Let the caller handle network errors
+                throw ex
+            }
+
+            log.error("Error in registerEmailForAccount: ${ex.message}")
+            apiError.value = ex
         }
     }
 
@@ -661,7 +672,17 @@ class CrowdNodeApiAggregator @Inject constructor(
     @Suppress("BlockingMethodInNonBlockingContext")
     private suspend fun checkMessageStatus(messageId: Int, address: Address): MessageStatus? {
         log.info("Checking message status, address: ${address.toBase58()}")
-        val result = webApi.getMessages(address.toBase58())
+        val result = try {
+            webApi.getMessages(address.toBase58())
+        } catch (ex: Exception) {
+            log.error("Error in checkMessageStatus: $ex")
+
+            if (ex !is IOException) {
+                analyticsService.logError(ex)
+            }
+
+            return null
+        }
 
         if (result.isSuccessful) {
             val message = result.body()!!.firstOrNull { it.id == messageId }
