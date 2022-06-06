@@ -18,8 +18,10 @@
 package org.dash.wallet.features.exploredash;
 
 import android.content.Context;
+import android.database.Cursor;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
@@ -81,7 +83,6 @@ public abstract class AppExploreDatabase extends RoomDatabase {
             repository.preloadFromAssets(dbUpdateFile);
         }
 
-        Builder<AppExploreDatabase> dbBuilder;
         if (dbUpdateFile.exists()) {
             log.info("found explore db update package {}", dbUpdateFile.getAbsolutePath());
 
@@ -91,28 +92,73 @@ public abstract class AppExploreDatabase extends RoomDatabase {
             exploreDatabaseName = config.setExploreDatabaseName(dbTimestamp);
         }
 
-        dbBuilder = Room.databaseBuilder(context, AppExploreDatabase.class, exploreDatabaseName);
+        Builder<AppExploreDatabase> dbBuilder = Room.databaseBuilder(
+                context,
+                AppExploreDatabase.class,
+                exploreDatabaseName
+        );
 
-        if (dbUpdateFile.exists()) {
-            log.info("create explore db from InputStream {}", exploreDatabaseName);
-            dbBuilder.createFromInputStream(
-                    () -> repository.getDatabaseInputStream(dbUpdateFile),
-                    new PrepackagedDatabaseCallback() {
-                        @Override
-                        public void onOpenPrepackagedDatabase(@NonNull SupportSQLiteDatabase db) {
-                            repository.finalizeUpdate(dbUpdateFile);
-                        }
-                    });
-        } else {
-            log.info("create empty explore db");
-        }
+        log.info("Build database {}", exploreDatabaseName);
+        AppExploreDatabase database = buildDatabase(dbBuilder, repository, dbUpdateFile);
 
-        AppExploreDatabase database = dbBuilder.fallbackToDestructiveMigration().build();
         if (!dbFile.exists()) {
             // execute simple query to trigger database opening (onOpenPrepackagedDatabase)
             database.query("SELECT * FROM sqlite_master", null);
         }
+
         return database;
+    }
+
+    @VisibleForTesting
+    public static AppExploreDatabase buildDatabase(
+        Builder<AppExploreDatabase> dbBuilder,
+        ExploreRepository repository,
+        File dbUpdateFile
+    ) {
+        if (dbUpdateFile.exists()) {
+            log.info("create explore db from InputStream");
+            dbBuilder.createFromInputStream(
+                    () -> repository.getDatabaseInputStream(dbUpdateFile),
+                    new PrepackagedDatabaseCallback() { });
+        } else {
+            log.info("create empty explore db");
+        }
+
+        RoomDatabase.Callback onOpenCallback = new RoomDatabase.Callback() {
+            @Override
+            public void onOpen(@NonNull SupportSQLiteDatabase db) {
+                Cursor cursor = null;
+
+                try {
+                    cursor = db.query("SELECT id FROM merchant;");
+                    int merchantCount = cursor.getCount();
+                    cursor = db.query("SELECT id FROM atm;");
+                    int atmCount = cursor.getCount();
+
+                    if (merchantCount > 0 && atmCount > 0) {
+                        repository.finalizeUpdate();
+                        log.info("successfully loaded new version of explore db");
+                    } else {
+                        log.info("database update file was empty");
+                    }
+                } catch (Exception ex) {
+                    log.error("error reading merchant & atm count", ex);
+                } finally {
+                    if (cursor != null) {
+                        cursor.close();
+                    }
+
+                    if (!dbUpdateFile.delete()) {
+                        log.error("unable to delete " + dbUpdateFile.getAbsolutePath());
+                    }
+                }
+            }
+        };
+
+        return dbBuilder
+                .fallbackToDestructiveMigration()
+                .addCallback(onOpenCallback)
+                .build();
     }
 
     public static void forceUpdate(

@@ -36,6 +36,10 @@ android {
     }
     testOptions {
         unitTests.returnDefaultValues = true
+        unitTests.includeAndroidResources = true
+    }
+    sourceSets {
+        test.resources.srcDirs += 'test/resources'
     }
 }
 
@@ -63,6 +67,7 @@ dependencies {
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
+    implementation 'androidx.test:core-ktx:1.4.0'
     kapt "com.google.dagger:hilt-compiler:$hiltVersion"
     kapt 'androidx.hilt:hilt-compiler:1.0.0'
     implementation "androidx.hilt:hilt-work:$hiltWorkVersion"
@@ -91,10 +96,18 @@ dependencies {
     // Tools
     implementation 'net.lingala.zip4j:zip4j:2.9.1'
 
+
     // Tests
     testImplementation "junit:junit:$junitVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
     testImplementation "androidx.arch.core:core-testing:$coreTestingVersion"
+    testImplementation "org.robolectric:robolectric:4.5.1"
+    testImplementation "androidx.room:room-testing:$roomVersion"
+    kapt "androidx.room:room-compiler:$roomVersion"
+    testImplementation 'org.awaitility:awaitility:4.2.0'
+
+    androidTestImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
+    androidTestImplementation "org.mockito:mockito-android:4.6.1"
     androidTestImplementation "androidx.test.ext:junit:$junitExtVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$espressoVersion"
 }
