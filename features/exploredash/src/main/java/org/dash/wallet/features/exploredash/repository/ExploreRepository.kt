@@ -38,11 +38,12 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 interface ExploreRepository {
+    val localTimestamp: Long
+    val lastSyncTimestamp: Long
     suspend fun getRemoteTimestamp(): Long
     fun getDatabaseInputStream(file: File): InputStream?
     fun getTimestamp(file: File): Long
     fun getUpdateFile(): File
-    val localTimestamp: Long
     suspend fun download()
     fun deleteOldDB(dbFile: File)
     fun preloadFromAssetsInto(dbUpdateFile: File)
@@ -62,6 +63,7 @@ class GCExploreDatabase @Inject constructor(
         const val DATA_TMP_FILE_NAME = "explore.tmp"
         private const val DB_ASSET_FILE_NAME = "explore/$DATA_FILE_NAME"
         private const val PREFS_LOCAL_DB_TIMESTAMP_KEY = "local_db_timestamp"
+        private const val LAST_SYNC_TIMESTAMP_KEY = "last_sync_timestamp"
 
         private val log = LoggerFactory.getLogger(GCExploreDatabase::class.java)
     }
@@ -77,6 +79,14 @@ class GCExploreDatabase @Inject constructor(
         private set(value) {
             preferences.edit().apply {
                 putLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, value)
+            }.apply()
+        }
+
+    override var lastSyncTimestamp: Long
+        get() = preferences.getLong(LAST_SYNC_TIMESTAMP_KEY, 0)
+        private set(value) {
+            preferences.edit().apply {
+                putLong(LAST_SYNC_TIMESTAMP_KEY, value)
             }.apply()
         }
 
@@ -107,6 +117,7 @@ class GCExploreDatabase @Inject constructor(
         val result = remoteDataRef!!.getFile(tmpFile).await()
         val totalTime = (currentTimeMillis() - startTime).toFloat() / 1000
         log.info("downloaded $remoteDataRef (${result.bytesTransferred} as $tmpFile [$totalTime s]")
+        lastSyncTimestamp = currentTimeMillis()
 
         val updateFile = File(cacheDir, DATA_FILE_NAME)
         val updateFileDelete = updateFile.delete()

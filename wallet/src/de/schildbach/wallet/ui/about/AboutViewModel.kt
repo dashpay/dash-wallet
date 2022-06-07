@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import javax.inject.Inject
+import kotlin.math.exp
 
 @HiltViewModel
 class AboutViewModel @Inject constructor(
@@ -41,7 +42,15 @@ class AboutViewModel @Inject constructor(
         get() = _exploreRemoteTimestamp
 
     val exploreLastSync: Long
-        get() = exploreRepository.localTimestamp
+        get() {
+            val lastSync = exploreRepository.lastSyncTimestamp
+            return if (lastSync > 0) {
+                lastSync
+            } else {
+                // If no sync run yet, show the timestamp of the preloaded db
+                exploreRepository.localTimestamp
+            }
+        }
 
     private val _firebaseInstallationId = MutableLiveData<String>()
     val firebaseInstallationId: LiveData<String>
