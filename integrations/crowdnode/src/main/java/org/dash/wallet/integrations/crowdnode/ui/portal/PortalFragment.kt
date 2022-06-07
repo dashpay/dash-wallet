@@ -31,7 +31,6 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -41,9 +40,13 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentPortalBinding
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
+import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
+import org.dash.wallet.integrations.crowdnode.ui.dialogs.ConfirmationDialog
+import org.dash.wallet.integrations.crowdnode.ui.dialogs.OnlineAccountDetailsDialog
+import org.dash.wallet.integrations.crowdnode.ui.online.OnlineAccountEmailFragmentDirections
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 @AndroidEntryPoint
@@ -59,6 +62,12 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     private val isConfirmed: Boolean
         get() = viewModel.signUpStatus === SignUpStatus.Finished ||
                 viewModel.onlineAccountStatus == OnlineAccountStatus.Done
+
+    private val isLinkingInProgress: Boolean
+        get() = viewModel.onlineAccountStatus != OnlineAccountStatus.None &&
+                viewModel.onlineAccountStatus != OnlineAccountStatus.Creating &&
+                viewModel.onlineAccountStatus != OnlineAccountStatus.SigningUp &&
+                viewModel.onlineAccountStatus != OnlineAccountStatus.Done
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -83,14 +92,15 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             ).show()
         }
 
-        if (viewModel.signUpStatus == SignUpStatus.LinkedOnline) {
-            viewModel.observeOnlineAccountStatus().observe(viewLifecycleOwner) { status ->
+        viewModel.observeOnlineAccountStatus().observe(viewLifecycleOwner) { status ->
+            setOnlineAccountStatus(status)
+
+            if (viewModel.signUpStatus == SignUpStatus.LinkedOnline) {
                 val crowdNodeBalance = viewModel.crowdNodeBalance.value ?: Coin.ZERO
                 val walletBalance = viewModel.dashBalance.value ?: Coin.ZERO
 
-                setWithdrawalEnabled(crowdNodeBalance, status)
-                setDepositsEnabled(walletBalance, status)
-                setOnlineAccountStatus(status)
+                setWithdrawalEnabled(crowdNodeBalance)
+                setDepositsEnabled(walletBalance)
                 setMinimumEarningDepositReminder(crowdNodeBalance, isConfirmed)
 
                 lifecycleScope.launch {
@@ -101,8 +111,12 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             }
         }
 
-        binding.verifyBtn.setOnClickListener {
-            showConfirmationDialog()
+        viewModel.onlineAccountRequest.observe(viewLifecycleOwner) { args ->
+            safeNavigate(
+                PortalFragmentDirections.portalToSignUp(
+                args[CrowdNodeViewModel.URL_ARG]!!,
+                args[CrowdNodeViewModel.EMAIL_ARG] ?: ""
+            ))
         }
     }
 
@@ -124,12 +138,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
 
         binding.onlineAccountBtn.setOnClickListener {
-            val url = if (viewModel.networkParameters == MainNetParams.get()) {
-                getString(R.string.crowdnode_login_page, viewModel.accountAddress.value)
-            } else {
-                getString(R.string.crowdnode_login_test_page, viewModel.accountAddress.value)
-            }
-            safeNavigate(PortalFragmentDirections.portalToOnlineAccountInfo(url))
+            handleOnlineAccountNavigation()
         }
 
         binding.supportBtn.setOnClickListener {
@@ -143,6 +152,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             }
 
             true
+        }
+
+        binding.verifyBtn.setOnClickListener {
+            showConfirmationDialog()
         }
 
         handleBalance(binding)
@@ -180,12 +193,12 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         viewModel.crowdNodeBalance.observe(viewLifecycleOwner) { balance ->
             binding.walletBalanceDash.setAmount(balance)
             updateFiatAmount(balance, viewModel.exchangeRate.value)
-            setWithdrawalEnabled(balance, viewModel.onlineAccountStatus)
+            setWithdrawalEnabled(balance)
             setMinimumEarningDepositReminder(balance, isConfirmed)
         }
 
         viewModel.dashBalance.observe(viewLifecycleOwner) { balance ->
-            setDepositsEnabled(balance, viewModel.onlineAccountStatus)
+            setDepositsEnabled(balance)
         }
 
         viewModel.exchangeRate.observe(viewLifecycleOwner) { rate ->
@@ -193,9 +206,8 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
     }
 
-    private fun setWithdrawalEnabled(balance: Coin, onlineStatus: OnlineAccountStatus) {
-        val isOnlineInProgress = onlineStatus != OnlineAccountStatus.None && onlineStatus != OnlineAccountStatus.Done
-        val isEnabled = balance.isPositive && !isOnlineInProgress
+    private fun setWithdrawalEnabled(balance: Coin) {
+        val isEnabled = balance.isPositive && !isLinkingInProgress
         binding.withdrawBtn.isEnabled = isEnabled
 
         if (isEnabled) {
@@ -209,9 +221,8 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
     }
 
-    private fun setDepositsEnabled(balance: Coin, onlineStatus: OnlineAccountStatus) {
-        val isOnlineInProgress = onlineStatus != OnlineAccountStatus.None && onlineStatus != OnlineAccountStatus.Done
-        val isEnabled = balance.isPositive && !isOnlineInProgress
+    private fun setDepositsEnabled(balance: Coin) {
+        val isEnabled = balance.isPositive && !isLinkingInProgress
         binding.depositBtn.isEnabled = isEnabled
 
         if (isEnabled) {
@@ -248,10 +259,20 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun setOnlineAccountStatus(status: OnlineAccountStatus) {
-         binding.onlineAccountStatus.text = getText(when (status) {
-             OnlineAccountStatus.Confirming -> R.string.crowdnode_online_unconfirmed
-             OnlineAccountStatus.Done -> R.string.crowdnode_online_synced
-             else -> R.string.secure_online_account
+        binding.onlineAccountBtn.isClickable = !isLinkingInProgress
+        binding.onlineNavIcon.isVisible = !isLinkingInProgress
+
+        binding.onlineAccountStatus.text = getText(when (status) {
+            OnlineAccountStatus.Done -> R.string.crowdnode_online_synced
+            OnlineAccountStatus.None -> R.string.secure_online_account
+            OnlineAccountStatus.SigningUp -> R.string.crowdnode_signup_to_finish
+            else -> R.string.crowdnode_in_process
+        })
+
+        binding.onlineAccountTitle.text = getText(if (status == OnlineAccountStatus.None) {
+            R.string.online_account_create
+        } else {
+            R.string.online_account
         })
 
         binding.addressStatusWarning.isVisible =
@@ -275,11 +296,35 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             }
     }
 
+    private fun handleOnlineAccountNavigation() {
+        when (viewModel.onlineAccountStatus) {
+            OnlineAccountStatus.None, OnlineAccountStatus.Creating -> showOnlineInfoOrEnterEmail()
+            OnlineAccountStatus.SigningUp -> viewModel.initiateOnlineSignUp()
+            OnlineAccountStatus.Done -> openCrowdNodeProfile()
+            else -> { }
+        }
+
+        if (viewModel.onlineAccountStatus == OnlineAccountStatus.None) {
+            lifecycleScope.launch {
+                if (viewModel.getShouldShowOnlineInfo()) {
+                    safeNavigate(PortalFragmentDirections.portalToOnlineAccountInfo())
+                    viewModel.setOnlineInfoShown(true)
+                } else {
+                    safeNavigate(PortalFragmentDirections.portalToOnlineAccountEmail())
+                }
+            }
+        }
+    }
+
     private fun showConfirmationDialog() {
         ConfirmationDialog().show(parentFragmentManager, "confirmation_dialog")
     }
 
     private fun getErrorMessage(exception: Exception): String {
+        if (exception is MessageStatusException) {
+            return getString(R.string.crowdnode_signup_error)
+        }
+
         return getString(when(exception.message) {
             CrowdNodeException.WITHDRAWAL_ERROR -> R.string.crowdnode_withdraw_error
             CrowdNodeException.DEPOSIT_ERROR -> R.string.crowdnode_deposit_error
@@ -302,6 +347,23 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
                 if (toCopy == true) {
                     viewModel.accountAddress.value?.toBase58()?.copy(requireActivity(), "dash address")
                 }
+            }
+        }
+    }
+
+    private fun openCrowdNodeProfile() {
+        val accountUrl = viewModel.getAccountUrl()
+        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(accountUrl))
+        startActivity(browserIntent)
+    }
+
+    private fun showOnlineInfoOrEnterEmail() {
+        lifecycleScope.launch {
+            if (viewModel.getShouldShowOnlineInfo()) {
+                safeNavigate(PortalFragmentDirections.portalToOnlineAccountInfo())
+                viewModel.setOnlineInfoShown(true)
+            } else {
+                safeNavigate(PortalFragmentDirections.portalToOnlineAccountEmail())
             }
         }
     }

@@ -139,7 +139,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         if (BuildConfig.DEBUG) {
             backup_wallet.visibility = VISIBLE
         }
-        walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED)
+        walletBalance = wallet!!.getBalance(Wallet.BalanceType.ESTIMATED)
         securityViewModel.selectedExchangeRate.observe(this){
             currentExchangeRate = ExchangeRate(Coin.COIN, it.fiat)
         }
@@ -258,7 +258,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
 
     }
 
-    override fun getWallet(): Wallet {
+    override fun getWallet(): Wallet? {
         return WalletApplication.getInstance().wallet
     }
 

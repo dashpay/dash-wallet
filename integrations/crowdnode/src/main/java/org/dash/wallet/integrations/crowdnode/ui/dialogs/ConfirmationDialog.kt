@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.ui.portal
+package org.dash.wallet.integrations.crowdnode.ui.dialogs
 
 import android.content.Intent
 import android.net.Uri

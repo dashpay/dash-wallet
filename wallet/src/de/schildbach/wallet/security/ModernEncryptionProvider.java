@@ -1,4 +1,4 @@
-package de.schildbach.wallet.ui.security;
+package de.schildbach.wallet.security;
 
 import android.content.SharedPreferences;
 import android.os.Build;

@@ -17,10 +17,7 @@
 
 package org.dash.wallet.integrations.crowdnode.api
 
-import org.dash.wallet.integrations.crowdnode.model.AddressStatus
-import org.dash.wallet.integrations.crowdnode.model.CrowdNodeBalance
-import org.dash.wallet.integrations.crowdnode.model.IsAddressInUse
-import org.dash.wallet.integrations.crowdnode.model.CrowdNodeTx
+import org.dash.wallet.integrations.crowdnode.model.*
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -44,4 +41,21 @@ interface CrowdNodeWebApi {
     suspend fun addressStatus(
         @Path("address") address: String
     ): Response<AddressStatus>
+
+    @GET("odata/apimessages/SendMessage(address='{address}',message='{message}',signature='{signature}',messagetype=1)")
+    suspend fun sendSignedMessage(
+        @Path("address") address: String,
+        @Path("message") message: String,
+        @Path("signature") signature: String,
+    ): Response<MessageStatus>
+
+    @GET("odata/apiaddresses/UsingDefaultApiEmail(address='{address}')")
+    suspend fun hasDefaultEmail(
+        @Path("address") address: String
+    ): Response<IsDefaultEmail>
+
+    @GET("odata/apimessages/GetMessages(address='{address}')")
+    suspend fun getMessages(
+        @Path("address") address: String
+    ): Response<List<MessageStatus>>
 }

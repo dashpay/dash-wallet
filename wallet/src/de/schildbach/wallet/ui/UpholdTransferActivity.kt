@@ -136,7 +136,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
     private fun showPaymentConfirmation(amount: Coin) {
 
         val application = application as WalletApplication
-        val receiveAddress = application.wallet.freshReceiveAddress()
+        val receiveAddress = application.wallet!!.freshReceiveAddress()
 
         withdrawalDialog = UpholdWithdrawalHelper(BigDecimal(balance.toPlainString()), object : OnTransferListener {
             override fun onConfirm(transaction: UpholdTransaction) {

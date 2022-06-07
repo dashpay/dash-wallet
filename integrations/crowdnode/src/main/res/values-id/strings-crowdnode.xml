@@ -63,7 +63,7 @@
     <string name="unlink_account">Putuskan Tautan Akun</string>
     <string name="online_account_title">Mengapa Anda membutuhkan akun online?</string>
     <string name="crowdnode_online_synced">Disinkronkan dengan Dompet Dash saat ini</string>
-    <string name="crowdnode_online_unconfirmed">Dalam proses…</string>
+    <string name="crowdnode_in_process">Dalam proses…</string>
     <string name="account_recovery">Pemulihan Akun</string>
     <string name="crowdnode_recovery_info">Jika Anda kehilangan frasa sandi, Anda dapat memverifikasi diri dengan cara lain untuk mendapatkan kembali akses ke dana CrowdNode Anda.</string>
     <string name="transaction_history">Riwayat Transaksi</string>

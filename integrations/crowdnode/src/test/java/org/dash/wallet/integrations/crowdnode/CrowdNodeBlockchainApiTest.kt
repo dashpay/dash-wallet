@@ -72,7 +72,7 @@ class CrowdNodeBlockchainApiTest {
         localConfig.stub {
             onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.Linking.ordinal
         }
-        val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock())
+        val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock(), mock())
         api.stopTrackingLinked()
 
         assertEquals(OnlineAccountStatus.None, api.onlineAccountStatus.value)
@@ -84,7 +84,7 @@ class CrowdNodeBlockchainApiTest {
         localConfig.stub {
             onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.Confirming.ordinal
         }
-        val api = CrowdNodeApiAggregator(mock(), blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock())
+        val api = CrowdNodeApiAggregator(mock(), blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock(), mock())
         api.stopTrackingLinked()
 
         assertEquals(OnlineAccountStatus.Confirming, api.onlineAccountStatus.value)
@@ -103,7 +103,7 @@ class CrowdNodeBlockchainApiTest {
         blockchainApi.stub {
             on { getFullSignUpTxSet() } doReturn mockFullSet
         }
-        val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock())
+        val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock(), mock())
         assertEquals(SignUpStatus.Finished, api.signUpStatus.value)
         assertEquals(OnlineAccountStatus.None, api.onlineAccountStatus.value)
 
@@ -119,7 +119,7 @@ class CrowdNodeBlockchainApiTest {
             localConfig.stub {
                 onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
             }
-            val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock())
+            val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock(), mock())
             api.refreshBalance()
 
             assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)

@@ -116,7 +116,7 @@ import de.schildbach.wallet.service.BlockchainSyncJobService;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.transactions.WalletTransactionObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
-import de.schildbach.wallet.ui.security.SecurityGuard;
+import de.schildbach.wallet.security.SecurityGuard;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
@@ -479,6 +479,7 @@ public class WalletApplication extends BaseWalletApplication
         return config;
     }
 
+    @Override
     public Wallet getWallet() {
         return wallet;
     }

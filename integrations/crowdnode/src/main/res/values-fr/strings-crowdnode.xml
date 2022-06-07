@@ -63,7 +63,7 @@
     <string name="unlink_account">Désassocier le compte</string>
     <string name="online_account_title">Pourquoi avez-vous besoin d\'un compte en ligne ?</string>
     <string name="crowdnode_online_synced">Synchronisé avec le Dash Wallet actuel</string>
-    <string name="crowdnode_online_unconfirmed">En cours…</string>
+    <string name="crowdnode_in_process">En cours…</string>
     <string name="account_recovery">Restauration de compte</string>
     <string name="crowdnode_recovery_info">Si vous égarez votre phrase de passe, vous pouvez vous authentifier par d\'autres moyens pour regagner l\'accès à vos fonds CrowdNode.</string>
     <string name="transaction_history">Historique des transactions</string>

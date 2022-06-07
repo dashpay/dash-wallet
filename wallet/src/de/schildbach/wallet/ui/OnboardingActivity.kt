@@ -34,7 +34,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.backup.RestoreFromFileActivity
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.preference.PinRetryController
-import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
@@ -95,7 +95,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         viewModel = ViewModelProvider(this)[OnboardingViewModel::class.java]
 
         if (walletApplication.walletFileExists()) {
-            if (!walletApplication.wallet.isEncrypted) {
+            if (!walletApplication.wallet!!.isEncrypted) {
                 unencryptedFlow()
             } else {
                 if (walletApplication.isWalletUpgradedToBIP44) {
@@ -108,7 +108,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
             if (walletApplication.wallet == null) {
                 onboarding()
             } else {
-                if (walletApplication.wallet.isEncrypted) {
+                if (walletApplication.wallet!!.isEncrypted) {
                     walletApplication.fullInitialization()
                     regularFlow()
                 } else {

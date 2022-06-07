@@ -63,7 +63,7 @@
     <string name="unlink_account">Unlink account</string>
     <string name="online_account_title">Waarom heb je een online account nodig?</string>
     <string name="crowdnode_online_synced">Gesynchroniseerd met huidige Dash portemonnee</string>
-    <string name="crowdnode_online_unconfirmed">Bezig....</string>
+    <string name="crowdnode_in_process">Bezig....</string>
     <string name="account_recovery">Accountherstel</string>
     <string name="crowdnode_recovery_info">Als je ooit de wachtwoordzin kwijtraakt, kan je op andere manieren verifiëren om weer toegang te krijgen tot CrowdNode.</string>
     <string name="transaction_history">Transactiegeschiedenis</string>

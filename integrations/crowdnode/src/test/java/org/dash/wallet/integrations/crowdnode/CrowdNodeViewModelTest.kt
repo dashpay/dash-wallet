@@ -39,7 +39,6 @@ import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
@@ -51,12 +50,12 @@ import org.mockito.kotlin.*
 class MainCoroutineRule(
     private val dispatcher: TestCoroutineDispatcher = TestCoroutineDispatcher()
 ) : TestWatcher(), TestCoroutineScope by TestCoroutineScope(dispatcher) {
-    override fun starting(description: Description?) {
+    override fun starting(description: Description) {
         super.starting(description)
         Dispatchers.setMain(dispatcher)
     }
 
-    override fun finished(description: Description?) {
+    override fun finished(description: Description) {
         super.finished(description)
         cleanupTestCoroutines()
         Dispatchers.resetMain()
