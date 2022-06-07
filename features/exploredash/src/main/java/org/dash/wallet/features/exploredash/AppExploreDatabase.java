@@ -19,6 +19,7 @@ package org.dash.wallet.features.exploredash;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
@@ -80,7 +81,7 @@ public abstract class AppExploreDatabase extends RoomDatabase {
         File dbFile = context.getDatabasePath(exploreDatabaseName);
         File dbUpdateFile = repository.getUpdateFile();
         if (!dbFile.exists() && !dbUpdateFile.exists()) {
-            repository.preloadFromAssets(dbUpdateFile);
+            repository.preloadFromAssetsInto(dbUpdateFile);
         }
 
         if (dbUpdateFile.exists()) {
@@ -120,22 +121,13 @@ public abstract class AppExploreDatabase extends RoomDatabase {
             dbBuilder.createFromInputStream(
                     () -> repository.getDatabaseInputStream(dbUpdateFile),
                     new PrepackagedDatabaseCallback() { });
-        } else {
-            log.info("create empty explore db");
         }
 
         RoomDatabase.Callback onOpenCallback = new RoomDatabase.Callback() {
             @Override
             public void onOpen(@NonNull SupportSQLiteDatabase db) {
-                Cursor cursor = null;
-
                 try {
-                    cursor = db.query("SELECT id FROM merchant;");
-                    int merchantCount = cursor.getCount();
-                    cursor = db.query("SELECT id FROM atm;");
-                    int atmCount = cursor.getCount();
-
-                    if (merchantCount > 0 && atmCount > 0) {
+                    if (hasExpectedData(db)) {
                         repository.finalizeUpdate();
                         log.info("successfully loaded new version of explore db");
                     } else {
@@ -144,10 +136,6 @@ public abstract class AppExploreDatabase extends RoomDatabase {
                 } catch (Exception ex) {
                     log.error("error reading merchant & atm count", ex);
                 } finally {
-                    if (cursor != null) {
-                        cursor.close();
-                    }
-
                     if (!dbUpdateFile.delete()) {
                         log.error("unable to delete " + dbUpdateFile.getAbsolutePath());
                     }
@@ -171,5 +159,17 @@ public abstract class AppExploreDatabase extends RoomDatabase {
             instance.close();
         }
         instance = create(context, config, repository);
+    }
+
+    private static boolean hasExpectedData(SupportSQLiteDatabase db) {
+        Cursor cursor = db.query("SELECT id FROM merchant;");
+        int merchantCount = cursor.getCount();
+        cursor.close();
+
+        cursor = db.query("SELECT id FROM atm;");
+        int atmCount = cursor.getCount();
+        cursor.close();
+
+        return merchantCount > 0 && atmCount > 0;
     }
 }

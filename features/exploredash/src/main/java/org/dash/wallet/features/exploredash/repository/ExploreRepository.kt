@@ -45,7 +45,7 @@ interface ExploreRepository {
     val localTimestamp: Long
     suspend fun download()
     fun deleteOldDB(dbFile: File)
-    fun preloadFromAssets(dbUpdateFile: File)
+    fun preloadFromAssetsInto(dbUpdateFile: File)
     fun finalizeUpdate()
 }
 
@@ -157,8 +157,7 @@ class GCExploreDatabase @Inject constructor(
     override fun getDatabaseInputStream(file: File): InputStream? {
         val zipFile = ZipFile(file)
         val comment = extractComment(zipFile)
-        // use the current time instead of the file time (comment[0].toLong())
-        updateTimestampCache = currentTimeMillis()
+        updateTimestampCache = comment[0].toLong()
         val checksum = comment[1]
         log.info("package timestamp {}, checksum {}", updateTimestampCache, checksum)
         zipFile.setPassword(checksum.toCharArray())
@@ -190,7 +189,7 @@ class GCExploreDatabase @Inject constructor(
     }
 
     @Throws(IOException::class)
-    override fun preloadFromAssets(dbUpdateFile: File) {
+    override fun preloadFromAssetsInto(dbUpdateFile: File) {
         log.info("preloading explore db from assets ${dbUpdateFile.absolutePath}")
         try {
             contextRef.get()!!.assets.open(DB_ASSET_FILE_NAME).use { inputStream ->

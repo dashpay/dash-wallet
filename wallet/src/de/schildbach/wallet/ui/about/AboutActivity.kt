@@ -94,7 +94,7 @@ class AboutActivity : BaseMenuActivity() {
                 getString(R.string.about_last_explore_dash_update_error)
             }
 
-            val formattedSyncTime = if (viewModel.exploreLastSync == 0L) {
+            val formattedSyncTime = if (viewModel.exploreLastSync <= 0L) {
                 getString(R.string.about_last_explore_dash_sync_never)
             } else {
                 DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSync, formatFlags)

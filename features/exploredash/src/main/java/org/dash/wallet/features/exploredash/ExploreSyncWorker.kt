@@ -58,7 +58,7 @@ class ExploreSyncWorker @AssistedInject constructor(
             syncStatus.setSyncProgress(0.0)
 
             val timeInMillis = measureTimeMillis {
-                if (exploreRepository.localTimestamp == 0L) {
+                if (exploreRepository.localTimestamp <= 0L) {
                     // force data preloading for fresh installs
                     AppExploreDatabase.getAppDatabase(
                         appContext,
