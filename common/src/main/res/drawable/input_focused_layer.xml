@@ -19,7 +19,7 @@
     <item>
         <shape android:shape="rectangle">
             <corners android:radius="14dp" />
-            <stroke android:color="@color/input_focused_stoke" android:width="3dp" />
+            <stroke android:color="@color/input_focused_stroke" android:width="3dp" />
         </shape>
     </item>
 
