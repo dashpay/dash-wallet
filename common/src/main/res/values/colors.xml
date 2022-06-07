@@ -83,9 +83,9 @@
     <color name="warning_yellow">#fff9ed</color>
     <color name="input_error_background">#1AE85C4A</color>
 
-    <!-- Stokes -->
+    <!-- Strokes -->
     <color name="divider_color">@color/gray_50</color>
-    <color name="input_focused_stoke">#cce8fa</color>
+    <color name="input_focused_stroke">#cce8fa</color>
 
     <!-- Palette -->
     <color name="blue_50">#F0F8FE</color>

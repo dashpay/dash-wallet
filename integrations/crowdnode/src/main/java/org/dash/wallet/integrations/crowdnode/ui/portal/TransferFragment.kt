@@ -62,7 +62,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
     private var balanceAnimator: ObjectAnimator? = null
 
     @Inject
-    lateinit var ISecurityFunctions: ISecurityFunctions
+    lateinit var securityFunctions: ISecurityFunctions
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
