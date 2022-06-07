@@ -16,21 +16,21 @@
 
 package de.schildbach.wallet.util;
 
+import static android.content.Context.KEYGUARD_SERVICE;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.fingerprint.FingerprintManager;
-import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyPermanentlyInvalidatedException;
 import android.security.keystore.KeyProperties;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.hardware.fingerprint.FingerprintManagerCompat;
 import androidx.core.os.CancellationSignal;
@@ -59,8 +59,6 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 
 import de.schildbach.wallet.WalletApplication;
-
-import static android.content.Context.KEYGUARD_SERVICE;
 
 public class FingerprintHelper {
 
@@ -121,7 +119,6 @@ public class FingerprintHelper {
     }
 
     @Nullable
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private Cipher createCipher(int mode) throws NoSuchPaddingException, NoSuchAlgorithmException,
             UnrecoverableKeyException, KeyStoreException, InvalidKeyException, InvalidAlgorithmParameterException {
         Cipher cipher = Cipher.getInstance(KeyProperties.KEY_ALGORITHM_AES + "/" +
@@ -144,7 +141,6 @@ public class FingerprintHelper {
     }
 
     @NonNull
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private KeyGenParameterSpec createKeyGenParameterSpec() {
         return new KeyGenParameterSpec.Builder(KEYSTORE_ALIAS,
                 KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
@@ -154,7 +150,6 @@ public class FingerprintHelper {
                 .build();
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private boolean initKeyStore() {
         try {
             keyStore = KeyStore.getInstance("AndroidKeyStore");
@@ -172,7 +167,6 @@ public class FingerprintHelper {
         return true;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private void authenticate(CancellationSignal cancellationSignal, FingerprintAuthenticationListener authListener, int mode) {
         try {
             if (hasPermission()) {
@@ -263,23 +257,19 @@ public class FingerprintHelper {
         return context.getSharedPreferences(FINGERPRINT_PREFS_NAME, 0);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private boolean hasPermission() {
         return ActivityCompat.checkSelfPermission(context,
                 Manifest.permission.USE_FINGERPRINT) == PackageManager.PERMISSION_GRANTED;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     public void savePassword(@NonNull String password, CancellationSignal cancellationSignal, Callback callback) {
         authenticate(cancellationSignal, new FingerprintEncryptPasswordListener(callback, password), Cipher.ENCRYPT_MODE);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     public void getPassword(CancellationSignal cancellationSignal, Callback callback) {
         authenticate(cancellationSignal, new FingerprintDecryptPasswordListener(callback), Cipher.DECRYPT_MODE);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     public boolean encryptPassword(Cipher cipher, String password) {
         try {
             // Encrypt the text
@@ -371,7 +361,6 @@ public class FingerprintHelper {
         return retVal;
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
     protected class FingerprintAuthenticationListener extends FingerprintManagerCompat.AuthenticationCallback {
 
         protected final Callback callback;
@@ -419,7 +408,6 @@ public class FingerprintHelper {
 
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private class FingerprintEncryptPasswordListener extends FingerprintAuthenticationListener {
 
         private final String password;
@@ -447,7 +435,6 @@ public class FingerprintHelper {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
     protected class FingerprintDecryptPasswordListener extends FingerprintAuthenticationListener {
 
         public FingerprintDecryptPasswordListener(@NonNull Callback callback) {

@@ -16,25 +16,29 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.CheckPinLiveData
 import de.schildbach.wallet.livedata.EncryptWalletLiveData
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
-class SetPinViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class SetPinViewModel @Inject constructor(
+    private val walletApplication: WalletApplication
+): ViewModel() {
 
     private val log = LoggerFactory.getLogger(SetPinViewModel::class.java)
 
-    private val walletApplication = application as WalletApplication
-
     val pin = arrayListOf<Int>()
     var oldPinCache: String? = null
+    val isWalletEncrypted
+        get() = walletApplication.wallet!!.isEncrypted
 
     internal val startNextActivity = SingleLiveEvent<Boolean>()
-    internal val encryptWalletLiveData = EncryptWalletLiveData(application)
-    internal val checkPinLiveData = CheckPinLiveData(application)
+    internal val encryptWalletLiveData = EncryptWalletLiveData(walletApplication)
+    internal val checkPinLiveData = CheckPinLiveData(walletApplication.wallet!!)
 
     fun setPin(pin: ArrayList<Int>) {
         this.pin.clear()
@@ -56,7 +60,7 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun encryptWallet(initialize: Boolean) {
-        if (!walletApplication.wallet.isEncrypted) {
+        if (!walletApplication.wallet!!.isEncrypted) {
             encryptWalletLiveData.encrypt(walletApplication.scryptIterationsTarget(), initialize)
         } else {
             log.warn("Trying to encrypt already encrypted wallet")
@@ -68,7 +72,7 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun decryptKeys(password: String?) {
-        if (walletApplication.wallet.isEncrypted) {
+        if (walletApplication.wallet!!.isEncrypted) {
             encryptWalletLiveData.decrypt(password)
         } else {
             log.warn("Trying to decrypt unencrypted wallet")

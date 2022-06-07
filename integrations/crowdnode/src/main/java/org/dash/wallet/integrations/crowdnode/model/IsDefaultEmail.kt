@@ -15,15 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.security
+package org.dash.wallet.integrations.crowdnode.model
 
-import androidx.fragment.app.FragmentActivity
-import de.schildbach.wallet.ui.CheckPinDialog
-import org.dash.wallet.common.services.SecurityModel
-import javax.inject.Inject
+import com.google.gson.annotations.SerializedName
 
-class PinCodeRequestLauncher @Inject constructor(): SecurityModel {
-    override suspend fun requestPinCode(activity: FragmentActivity): String? {
-        return CheckPinDialog.showAsync(activity)
-    }
-}
+class IsDefaultEmail(
+    @SerializedName("value")
+    val isDefault : Boolean
+)

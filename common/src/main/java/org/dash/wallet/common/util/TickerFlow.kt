@@ -4,7 +4,6 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.AbstractFlow
 import kotlinx.coroutines.flow.FlowCollector
-import kotlinx.coroutines.flow.flow
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
@@ -22,5 +21,4 @@ class TickerFlow(private val period: Duration, private val initialDelay: Duratio
             delay(period)
         }
     }
-
 }

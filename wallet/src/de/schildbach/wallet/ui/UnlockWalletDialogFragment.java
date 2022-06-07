@@ -100,7 +100,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
                     pinView.setEnabled(true);
                     pinRetryController.failedAttempt(password);
                     badPinView.setText(getString(R.string.wallet_lock_wrong_pin,
-                            pinRetryController.getRemainingAttemptsMessage(getContext())));
+                            pinRetryController.getRemainingAttemptsMessage(getResources())));
                     badPinView.setVisibility(View.VISIBLE);
                 }
             }

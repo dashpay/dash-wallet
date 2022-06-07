@@ -21,9 +21,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import junit.framework.TestCase.assertTrue
-import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -40,7 +38,7 @@ class SendCoinsTaskRunnerTest {
         every { wallet.context } returns Context(MainNetParams.get())
         val application = mockk<WalletApplication>()
 
-        val sendCoinsTaskRunner = SendCoinsTaskRunner(application)
+        val sendCoinsTaskRunner = SendCoinsTaskRunner(application, mockk())
         val request = sendCoinsTaskRunner.createSendRequest(
             Address.fromBase58(MainNetParams.get(), "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"),
             Coin.COIN,
@@ -57,7 +55,7 @@ class SendCoinsTaskRunnerTest {
         every { wallet.context } returns Context(MainNetParams.get())
         val application = mockk<WalletApplication>()
 
-        val sendCoinsTaskRunner = SendCoinsTaskRunner(application)
+        val sendCoinsTaskRunner = SendCoinsTaskRunner(application, mockk())
         val request = sendCoinsTaskRunner.createSendRequest(
             Address.fromBase58(MainNetParams.get(), "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"),
             Coin.COIN,

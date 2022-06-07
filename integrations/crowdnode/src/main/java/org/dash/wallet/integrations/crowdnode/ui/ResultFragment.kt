@@ -30,11 +30,13 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards
 import org.bitcoinj.wallet.Wallet.DustySendRequested
-import org.dash.wallet.common.services.SecurityModel
+import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentResultBinding
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
+import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import javax.inject.Inject
 
@@ -49,68 +51,16 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
 
     @Inject
-    lateinit var securityModel: SecurityModel
+    lateinit var securityFunctions: ISecurityFunctions
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         if (args.isError) {
-            binding.icon.setImageResource(R.drawable.ic_error_red)
-            binding.title.text = args.title
-            binding.title.setTextAppearance(R.style.Headline5_Bold_Red)
-            binding.sendReportBtn.isVisible = true
-            binding.negativeBtn.isVisible = true
-
-            viewModel.crowdNodeError?.let { ex ->
-                setErrorMessage(ex)
-            }
-
-            binding.sendReportBtn.setOnClickListener {
-                viewModel.sendReport()
-            }
-
-            if (viewModel.crowdNodeError?.message == CrowdNodeException.CONFIRMATION_ERROR) {
-                binding.positiveBtn.isVisible = false
-            } else {
-                binding.positiveBtn.isVisible = true
-                binding.positiveBtn.text = getString(R.string.button_retry)
-                binding.positiveBtn.setOnClickListener {
-                    if (viewModel.signUpStatus == SignUpStatus.Error) {
-                        // For signup error, launching a retry attempt
-                        lifecycleScope.launch {
-                            securityModel.requestPinCode(requireActivity())?.let {
-                                findNavController().popBackStack()
-                                viewModel.retrySignup()
-                            }
-                        }
-                    } else {
-                        // for transfer errors, going back to the transfer screen
-                        findNavController().popBackStack()
-                    }
-                }
-            }
-
-            binding.negativeBtn.setOnClickListener {
-                if (viewModel.signUpStatus == SignUpStatus.Error) {
-                    viewModel.resetSignUp()
-                    findNavController().popBackStack()
-                } else {
-                    findNavController().popBackStack(R.id.crowdNodePortalFragment, false)
-                }
-            }
+            setError()
             viewModel.clearError()
         } else {
-            binding.icon.setImageResource(R.drawable.ic_success_green)
-            binding.title.text = args.title
-            binding.title.setTextAppearance(R.style.Headline5_Bold_Green)
-            binding.subtitle.text = args.subtitle
-            binding.sendReportBtn.isVisible = false
-            binding.negativeBtn.isVisible = false
-            binding.positiveBtn.text = getString(R.string.button_close)
-
-            binding.positiveBtn.setOnClickListener {
-                findNavController().popBackStack(R.id.crowdNodePortalFragment, false)
-            }
+            setSuccess()
         }
     }
 
@@ -120,11 +70,79 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
             is InsufficientMoneyException -> getString(R.string.send_coins_error_insufficient_money)
             else -> ex.message ?: ""
         }
+    }
 
-        if (ex is InsufficientMoneyException ||
-            ex.message?.startsWith(INSUFFICIENT_MONEY_PREFIX) == true
+    private fun setError() {
+        binding.icon.setImageResource(R.drawable.ic_error_red)
+        binding.title.text = args.title
+        binding.title.setTextAppearance(R.style.Headline5_Bold_Red)
+        binding.subtitle.text = args.subtitle
+        binding.sendReportBtn.isVisible = true
+        binding.negativeBtn.isVisible = true
+
+        binding.sendReportBtn.setOnClickListener {
+            viewModel.sendReport()
+        }
+
+        viewModel.crowdNodeError?.let {
+            setErrorMessage(it)
+        }
+
+        if (viewModel.crowdNodeError is InsufficientMoneyException ||
+            viewModel.crowdNodeError?.message?.startsWith(INSUFFICIENT_MONEY_PREFIX) == true ||
+            viewModel.crowdNodeError?.message == CrowdNodeException.CONFIRMATION_ERROR
         ) {
             binding.positiveBtn.isVisible = false
+        } else {
+            binding.positiveBtn.isVisible = true
+            binding.positiveBtn.text = getString(R.string.button_retry)
+            binding.positiveBtn.setOnClickListener {
+                if (viewModel.crowdNodeError is MessageStatusException) {
+                    retryOnlineSignUp()
+                } else if (viewModel.signUpStatus == SignUpStatus.Error) {
+                    retrySignUp()
+                } else {
+                    // for other errors, going back to the previous screen
+                    findNavController().popBackStack()
+                }
+            }
+        }
+
+        binding.negativeBtn.setOnClickListener {
+            if (viewModel.signUpStatus == SignUpStatus.Error) {
+                viewModel.resetSignUp()
+                findNavController().popBackStack()
+            } else {
+                findNavController().popBackStack(R.id.crowdNodePortalFragment, false)
+            }
+        }
+    }
+
+    private fun retrySignUp() {
+        // For signup error, launching a retry attempt
+        lifecycleScope.launch {
+            securityFunctions.requestPinCode(requireActivity())?.let {
+                findNavController().popBackStack()
+                viewModel.retrySignup()
+            }
+        }
+    }
+
+    private fun retryOnlineSignUp() {
+        safeNavigate(ResultFragmentDirections.resultToOnlineAccountEmail())
+    }
+
+    private fun setSuccess() {
+        binding.icon.setImageResource(R.drawable.ic_success_green)
+        binding.title.text = args.title
+        binding.title.setTextAppearance(R.style.Headline5_Bold_Green)
+        binding.subtitle.text = args.subtitle
+        binding.sendReportBtn.isVisible = false
+        binding.negativeBtn.isVisible = false
+        binding.positiveBtn.text = getString(R.string.button_close)
+
+        binding.positiveBtn.setOnClickListener {
+            findNavController().popBackStack(R.id.crowdNodePortalFragment, false)
         }
     }
 }

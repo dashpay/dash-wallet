@@ -63,7 +63,7 @@
     <string name="unlink_account">Odłącz Konto</string>
     <string name="online_account_title">Dlaczego potrzebujesz konto online?</string>
     <string name="crowdnode_online_synced">Zsynchronizowane z obecnym portfelem Dash</string>
-    <string name="crowdnode_online_unconfirmed">W trakcie…</string>
+    <string name="crowdnode_in_process">W trakcie…</string>
     <string name="account_recovery">Odzyskiwanie Konta</string>
     <string name="crowdnode_recovery_info">W przypadku utraty hasła, możesz zweryfikować się za pomocą innych metod aby odzyskać dostęp do funduszy na CrowdNode.</string>
     <string name="transaction_history">Historia Transakcji</string>

@@ -22,7 +22,7 @@ import android.os.HandlerThread
 import android.os.Process
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DecryptSeedTask
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import org.bitcoinj.wallet.DeterministicSeed
@@ -73,7 +73,7 @@ class RecoverPinLiveData(application: Application) : MutableLiveData<Resource<St
                                 decryptSeedTask = null
                             }
                         }
-                        decryptSeedTask!!.decryptSeed(walletApplication.wallet.keyChainSeed, walletApplication.wallet.keyCrypter, encryptionKey)
+                        decryptSeedTask!!.decryptSeed(walletApplication.wallet!!.keyChainSeed, walletApplication.wallet!!.keyCrypter, encryptionKey)
                     }
                 }
             }

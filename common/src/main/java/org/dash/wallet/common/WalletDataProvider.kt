@@ -30,6 +30,8 @@ import org.dash.wallet.common.transactions.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
 
 interface WalletDataProvider {
+    // The wallet is in here temporary. Do not use from the feature modules.
+    val wallet: Wallet?
 
     val networkParameters: NetworkParameters
 
@@ -39,9 +41,6 @@ interface WalletDataProvider {
 
     @Deprecated("Inject ExchangeRatesProvider instead")
     fun getExchangeRate(currencyCode: String): LiveData<ExchangeRateData>
-
-    @Deprecated("Inject ExchangeRatesProvider instead")
-    fun getExchangeRates(): LiveData<List<ExchangeRateData>>
 
     @Deprecated("Inject Configuration instead")
     fun defaultCurrencyCode(): String

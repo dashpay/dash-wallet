@@ -63,7 +63,7 @@
     <string name="unlink_account">قطع اتصال حساب</string>
     <string name="online_account_title">چرا نیاز به یک حساب آنلاین دارید؟ </string>
     <string name="crowdnode_online_synced">همزمان‌سازی با دش والت کنونی</string>
-    <string name="crowdnode_online_unconfirmed">اجرای فرآیند…</string>
+    <string name="crowdnode_in_process">اجرای فرآیند…</string>
     <string name="account_recovery">بازیابی حساب</string>
     <string name="crowdnode_recovery_info">اگر عبارت ورودی‌تان را گم کنید، می‌توانید با استفاده از روش‌های دیگر احراز هویت شوید تا بتوانید به موجودی کراودنود دسترسی یابید. </string>
     <string name="transaction_history">سابقه تراکنش‌ها</string>

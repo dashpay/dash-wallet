@@ -63,7 +63,7 @@
     <string name="unlink_account">Отвязать аккаунт</string>
     <string name="online_account_title">Зачем нужен онлайн аккаунт?</string>
     <string name="crowdnode_online_synced">Синхронизирован с активным Dash Wallet</string>
-    <string name="crowdnode_online_unconfirmed">В процессе…</string>
+    <string name="crowdnode_in_process">В процессе…</string>
     <string name="account_recovery">Восстановление аккаунта</string>
     <string name="crowdnode_recovery_info">В случае, если вы потеряете кодовую фразу, для восстановления доступа к средствам на CrowdNode можно воспользоваться другими методами.</string>
     <string name="transaction_history">История транзакций</string>
