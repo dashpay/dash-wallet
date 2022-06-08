@@ -27,7 +27,6 @@ import junit.framework.TestCase.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import net.lingala.zip4j.ZipFile
-import org.awaitility.Awaitility.await
 import org.dash.wallet.features.exploredash.repository.GCExploreDatabase
 import org.junit.Before
 import org.junit.Rule
