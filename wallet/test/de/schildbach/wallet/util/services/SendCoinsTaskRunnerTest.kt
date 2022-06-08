@@ -22,6 +22,7 @@ import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import io.mockk.every
 import io.mockk.mockk
 import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -31,6 +32,7 @@ import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.junit.Test
 
+@ExperimentalCoroutinesApi
 class SendCoinsTaskRunnerTest {
     @Test
     fun sendCoins_coinSelectorSet_correctCoinSelector() {

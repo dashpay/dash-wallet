@@ -22,12 +22,12 @@ import android.content.ClipboardManager
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.rates.ExchangeRatesDao
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.TestCoroutineDispatcher
@@ -63,6 +63,7 @@ class MainCoroutineRule(
     }
 }
 
+@FlowPreview
 @ExperimentalCoroutinesApi
 class MainViewModelTest {
     private val configMock = mockk<Configuration>()
@@ -93,7 +94,10 @@ class MainViewModelTest {
         val clipboardManagerMock = mockk<ClipboardManager>()
         every { clipboardManagerMock.hasPrimaryClip() } returns false
 
-        val viewModel = spyk(MainViewModel(mockk(), clipboardManagerMock, configMock, blockChainStateMock, exchangeRatesMock, walletDataMock))
+        val viewModel = spyk(MainViewModel(
+            mockk(), clipboardManagerMock, configMock, blockChainStateMock,
+            exchangeRatesMock, walletDataMock, mockk(), mockk()
+        ))
 
         val clipboardInput = viewModel.getClipboardInput()
         assertEquals("", clipboardInput)
@@ -109,7 +113,10 @@ class MainViewModelTest {
         every { clipboardManagerMock.hasPrimaryClip() } returns true
         every { clipboardManagerMock.primaryClip?.description } returns clipDescription
 
-        val viewModel = spyk(MainViewModel(mockk(), clipboardManagerMock, configMock, blockChainStateMock, exchangeRatesMock, walletDataMock))
+        val viewModel = spyk(MainViewModel(
+            mockk(), clipboardManagerMock, configMock, blockChainStateMock,
+            exchangeRatesMock, walletDataMock, mockk(), mockk()
+        ))
 
         every { clipboardManagerMock.primaryClip?.getItemAt(0)?.uri?.toString() } returns mockUri
         every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST) } returns true
@@ -138,7 +145,10 @@ class MainViewModelTest {
     @Test
     fun observeBlockchainState_replaying_notSynced() {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
-        val viewModel = spyk(MainViewModel(mockk(), mockk(), configMock, blockChainStateMock, exchangeRatesMock, walletDataMock))
+        val viewModel = spyk(MainViewModel(
+            mockk(), mockk(), configMock, blockChainStateMock,
+            exchangeRatesMock, walletDataMock, mockk(), mockk()
+        ))
 
         assertEquals(false, viewModel.isBlockchainSynced.value)
         assertEquals(false, viewModel.isBlockchainSyncFailed.value)
@@ -148,7 +158,10 @@ class MainViewModelTest {
     fun observeBlockchainState_progress100percent_synced() {
         val state = BlockchainState().apply { replaying = false; percentageSync = 100 }
         every { blockChainStateMock.observeState() } returns MutableStateFlow(state)
-        val viewModel = spyk(MainViewModel(mockk(), mockk(), configMock, blockChainStateMock, exchangeRatesMock, walletDataMock))
+        val viewModel = spyk(MainViewModel(
+            mockk(), mockk(), configMock, blockChainStateMock,
+            exchangeRatesMock, walletDataMock, mockk(), mockk()
+        ))
 
         assertEquals(true, viewModel.isBlockchainSynced.value)
         assertEquals(false, viewModel.isBlockchainSyncFailed.value)

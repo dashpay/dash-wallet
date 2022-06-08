@@ -113,6 +113,7 @@ import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
+import de.schildbach.wallet.transactions.TransactionWrapperHelper;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.transactions.WalletTransactionObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
@@ -976,42 +977,10 @@ public class WalletApplication extends BaseWalletApplication
     @NonNull
     @Override
     public Collection<TransactionWrapper> wrapAllTransactions(@NonNull TransactionWrapper... wrappers) {
-        Set<Transaction> transactions = wallet.getTransactions(true);
-        ArrayList<TransactionWrapper> wrappedTransactions = new ArrayList<>();
-
-        for (Transaction transaction : transactions) {
-            if (transaction == null) {
-                continue;
-            }
-
-            TransactionWrapper anonWrapper = new TransactionWrapper() {
-                @Override
-                public boolean tryInclude(@NonNull Transaction tx) {
-                    return true;
-                }
-
-                @NonNull
-                @Override
-                public Set<Transaction> getTransactions() {
-                    return java.util.Collections.singleton(transaction);
-                }
-            };
-
-            if (wrappers.length > 0) {
-                for (TransactionWrapper wrapper : wrappers) {
-                    if (wrapper.tryInclude(transaction)) {
-                        wrappedTransactions.add(wrapper);
-                        break;
-                    }
-
-                    wrappedTransactions.add(anonWrapper);
-                }
-            } else {
-                wrappedTransactions.add(anonWrapper);
-            }
-        }
-
-        return wrappedTransactions;
+        return TransactionWrapperHelper.INSTANCE.wrapTransactions(
+                wallet.getTransactions(true),
+                wrappers
+        );
     }
 
     // wallets from v5.17.5 and earlier do not have a BIP44 path
