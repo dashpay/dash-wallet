@@ -39,7 +39,7 @@ enum class OnlineAccountStatus {
     Done
 }
 
-class CrowdNodeException(message: String): Exception(message) {
+open class CrowdNodeException(message: String): Exception(message) {
     companion object {
         const val DEPOSIT_ERROR = "deposit_error"
         const val CONFIRMATION_ERROR = "confirmation_error"
@@ -48,3 +48,5 @@ class CrowdNodeException(message: String): Exception(message) {
         const val SEND_MESSAGE_ERROR = "send_message_error"
     }
 }
+
+class MessageStatusException(details: String) : CrowdNodeException(details)

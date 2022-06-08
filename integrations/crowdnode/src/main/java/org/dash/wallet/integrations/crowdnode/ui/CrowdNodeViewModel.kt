@@ -35,10 +35,12 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
+import java.io.IOException
 import javax.inject.Inject
 
 enum class NavigationRequest {
@@ -196,6 +198,12 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     fun clearError() {
+        if (crowdNodeApi.apiError.value is MessageStatusException) {
+            viewModelScope.launch {
+                config.setPreference(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID, -1)
+            }
+        }
+
         crowdNodeApi.apiError.value = null
     }
 
@@ -293,7 +301,12 @@ class CrowdNodeViewModel @Inject constructor(
     fun signAndSendEmail(email: String) {
         viewModelScope.launch {
             emailForAccount = email
-            crowdNodeApi.registerEmailForAccount(email)
+
+            try {
+                crowdNodeApi.registerEmailForAccount(email)
+            } catch (ex: IOException) {
+                networkError.postCall()
+            }
         }
     }
 

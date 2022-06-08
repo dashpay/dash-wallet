@@ -53,6 +53,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
         tx = wallet!!.getTransaction(txId)
         val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
+
         if (tx != null) {
             tx?.let {
                 transaction_details_dialog_content_container.background = ContextCompat.getDrawable(requireContext(), R.drawable.rounded_corners_bgd_light_gray)

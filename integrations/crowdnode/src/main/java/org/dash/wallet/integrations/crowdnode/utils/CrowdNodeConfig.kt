@@ -37,7 +37,7 @@ open class CrowdNodeConfig @Inject constructor(private val context: Context) {
         val BACKGROUND_ERROR = stringPreferencesKey("error")
         val ONLINE_ACCOUNT_STATUS = intPreferencesKey("online_account_status")
         val LAST_BALANCE = longPreferencesKey("last_balance")
-        val SIGNED_EMAIL_SENT = booleanPreferencesKey("signed_email_sent")
+        val SIGNED_EMAIL_MESSAGE_ID = intPreferencesKey("signed_email_message_id")
     }
 
     private val Context.dataStore by preferencesDataStore("crowdnode")

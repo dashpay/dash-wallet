@@ -62,7 +62,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
     private var balanceAnimator: ObjectAnimator? = null
 
     @Inject
-    lateinit var ISecurityFunctions: ISecurityFunctions
+    lateinit var securityFunctions: ISecurityFunctions
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -211,7 +211,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 return
             }
 
-            ISecurityFunctions.requestPinCode(requireActivity()) ?: return
+            securityFunctions.requestPinCode(requireActivity()) ?: return
         }
 
         val isSuccess = AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {

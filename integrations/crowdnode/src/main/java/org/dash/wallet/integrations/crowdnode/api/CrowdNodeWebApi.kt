@@ -47,10 +47,15 @@ interface CrowdNodeWebApi {
         @Path("address") address: String,
         @Path("message") message: String,
         @Path("signature") signature: String,
-    ): Response<SendMessageResult>
+    ): Response<MessageStatus>
 
     @GET("odata/apiaddresses/UsingDefaultApiEmail(address='{address}')")
     suspend fun hasDefaultEmail(
         @Path("address") address: String
     ): Response<IsDefaultEmail>
+
+    @GET("odata/apimessages/GetMessages(address='{address}')")
+    suspend fun getMessages(
+        @Path("address") address: String
+    ): Response<List<MessageStatus>>
 }
