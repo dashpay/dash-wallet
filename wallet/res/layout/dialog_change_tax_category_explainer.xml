@@ -21,6 +21,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     tools:orientation="vertical"
+    tools:context="de.schildbach.wallet.ui.transactions.ChangeTaxCategoryExplainerDialogFragment"
     tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
 
     <ImageButton
@@ -49,7 +50,7 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"
         android:layout_marginTop="10dp"
-        android:text="Choose any transaction from the homepage and change the category on the transaction details page."
+        android:text="@string/reclassify_transactions_change_explanation"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/title" />

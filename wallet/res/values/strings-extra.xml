@@ -400,4 +400,5 @@
     <string name="reclassify_transactions_change_it_message">You can change it to</string>
     <string name="reclassify_transactions_linked_accounts_title">Linked accounts</string>
     <string name="reclassify_transactions_linked_accounts_message">by default all transactions to or from your linked accounts (exchanges, staking, etc) will be marked as transfers.</string>
+    <string name="reclassify_transactions_change_explanation">Choose any transaction from the homepage and change the category on the transaction details page.</string>
 </resources>
