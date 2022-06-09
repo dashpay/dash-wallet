@@ -82,7 +82,7 @@ class TaxCategoryExplainerDialogFragment : OffsetDialogFragment<ConstraintLayout
                 dismissAllowingStateLoss()
             }
             whereButton.setOnClickListener {
-                val dialog = ChangeTaxCategoryDialogFragment.newInstance(exampleTxId)
+                val dialog = ChangeTaxCategoryExplainerDialogFragment.newInstance(exampleTxId)
                 dialog.show(
                     activity?.supportFragmentManager!!,
                     "changeclassificationdialog"

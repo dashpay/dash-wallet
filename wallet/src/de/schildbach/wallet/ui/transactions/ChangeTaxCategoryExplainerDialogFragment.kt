@@ -23,7 +23,6 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
-import androidx.core.view.updateLayoutParams
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.TransactionResultViewBinder
@@ -39,7 +38,7 @@ import org.dash.wallet.common.ui.viewBinding
  * @author Samuel Barbosa
  */
 @AndroidEntryPoint
-class ChangeTaxCategoryDialogFragment : OffsetDialogFragment<ConstraintLayout>() {
+class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment<ConstraintLayout>() {
 
     private val binding by viewBinding(DialogChangeTaxCategoryExplainerBinding::bind)
     private val wallet by lazy { WalletApplication.getInstance().wallet }
@@ -51,8 +50,8 @@ class ChangeTaxCategoryDialogFragment : OffsetDialogFragment<ConstraintLayout>()
         const val TX_ID = "tx_id"
 
         @JvmStatic
-        fun newInstance(exampleTxId: Sha256Hash): ChangeTaxCategoryDialogFragment {
-            val fragment = ChangeTaxCategoryDialogFragment()
+        fun newInstance(exampleTxId: Sha256Hash): ChangeTaxCategoryExplainerDialogFragment {
+            val fragment = ChangeTaxCategoryExplainerDialogFragment()
             val args = Bundle()
             args.putSerializable(TX_ID, exampleTxId)
             fragment.arguments = args
@@ -81,9 +80,6 @@ class ChangeTaxCategoryDialogFragment : OffsetDialogFragment<ConstraintLayout>()
             val tx = wallet.getTransaction(exampleTxId)
             val transactionResultViewBinder = TransactionResultViewBinder(transactionDetails)
             tx?.apply {
-                /*transactionDetails.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                    topMargin = 10
-                }*/
                 transactionDetails.findViewById<ImageView>(R.id.transaction_close_btn).isVisible =
                     false
                 transactionDetails.findViewById<ImageView>(R.id.close_btn).isVisible = false
