@@ -93,6 +93,7 @@ public class Configuration {
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
     public static final String PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION = "is_dash_to_fiat_direction";
     public static final String PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER = "show_notifications_explainer";
+    public static final String PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER = "show_tax_catagory_explainer";
 
     // Explore Dash
     public static final String PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY = "has_info_screen_been_shown";
@@ -499,6 +500,15 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER, needToShow).apply();
     }
 
+    // Tax Categories
+
+    public boolean getHasDisplayedTaxCategoryExplainer() {
+        return prefs.getBoolean(PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER, false);
+    }
+
+    public void setHasDisplayedTaxCategoryExplainer() {
+        prefs.edit().putBoolean(PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER, true).apply();
+    }
 
     // Explore Dash
 

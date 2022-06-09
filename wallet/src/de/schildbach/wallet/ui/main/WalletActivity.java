@@ -80,6 +80,7 @@ import de.schildbach.wallet.ui.CheckPinDialog;
 import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.EncryptKeysDialogFragment;
 import de.schildbach.wallet.ui.EncryptNewKeyChainDialogFragment;
+import de.schildbach.wallet.ui.TransactionDetailsDialogFragment;
 import de.schildbach.wallet.ui.rates.ExchangeRatesActivity;
 import de.schildbach.wallet.ui.InputParser;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
@@ -97,6 +98,7 @@ import de.schildbach.wallet.ui.preference.PreferenceActivity;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
+import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment;
 import de.schildbach.wallet.ui.widget.ShortcutsPane;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
@@ -195,6 +197,19 @@ public final class WalletActivity extends AbstractBindServiceActivity
         viewModel.getOnTransactionsUpdated().observe(this, aVoid -> refreshShortcutBar());
         viewModel.isBlockchainSynced().observe(this, isSynced -> updateSyncState());
         viewModel.isBlockchainSyncFailed().observe(this, isSynced -> updateSyncState());
+        viewModel.getMostRecentTransaction().observe(this, mostRecentTransaction -> {
+            log.info("most recent transaction: {}", mostRecentTransaction.getTxId());
+            if (!getLockScreenDisplayed() /*&& !configuration.getHasDisplayedTaxCategoryExplainer()*/) {
+                TaxCategoryExplainerDialogFragment dialogFragment = TaxCategoryExplainerDialogFragment.newInstance(mostRecentTransaction.getTxId());
+                dialogFragment.show(getSupportFragmentManager(),"taxcategorydialog", () -> {
+                            TransactionDetailsDialogFragment transactionDetailsDialogFragment =
+                                    TransactionDetailsDialogFragment.newInstance(mostRecentTransaction.getTxId());
+                            transactionDetailsDialogFragment.show(getSupportFragmentManager(), null);
+                            return null;
+                        });
+                configuration.setHasDisplayedTaxCategoryExplainer();
+            }
+        });
     }
 
     @Override
