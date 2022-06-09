@@ -199,7 +199,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         viewModel.isBlockchainSyncFailed().observe(this, isSynced -> updateSyncState());
         viewModel.getMostRecentTransaction().observe(this, mostRecentTransaction -> {
             log.info("most recent transaction: {}", mostRecentTransaction.getTxId());
-            if (!getLockScreenDisplayed() /*&& !configuration.getHasDisplayedTaxCategoryExplainer()*/) {
+            if (!getLockScreenDisplayed() && !configuration.getHasDisplayedTaxCategoryExplainer()) {
                 TaxCategoryExplainerDialogFragment dialogFragment = TaxCategoryExplainerDialogFragment.newInstance(mostRecentTransaction.getTxId());
                 dialogFragment.show(getSupportFragmentManager(),"taxcategorydialog", () -> {
                             TransactionDetailsDialogFragment transactionDetailsDialogFragment =
