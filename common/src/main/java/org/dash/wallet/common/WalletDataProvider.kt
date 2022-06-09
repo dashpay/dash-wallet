@@ -48,4 +48,6 @@ interface WalletDataProvider {
     fun processDirectTransaction(tx: Transaction)
 
     fun observeBalance(): Flow<Coin>
+
+    fun observeMostRecentTransaction(): Flow<Transaction>
 }
