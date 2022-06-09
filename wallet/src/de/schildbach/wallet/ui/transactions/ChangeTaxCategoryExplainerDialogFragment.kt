@@ -34,9 +34,6 @@ import org.dash.wallet.common.transactions.TransactionMetadata
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 
-/**
- * @author Samuel Barbosa
- */
 @AndroidEntryPoint
 class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment<ConstraintLayout>() {
 
