@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.repository
 
+import android.accounts.NetworkErrorException
 import android.content.Context
 import android.content.SharedPreferences
 import com.google.firebase.auth.FirebaseAuth
@@ -91,8 +92,8 @@ class GCExploreDatabase @Inject constructor(
         }
 
     override suspend fun getRemoteTimestamp(): Long {
-        ensureAuthenticated()
         val remoteDataInfo = try {
+            ensureAuthenticated()
             remoteDataRef = storage.reference.child(Constants.EXPLORE_GC_FILE_PATH)
             remoteDataRef!!.metadata.await()
         } catch (ex: Exception) {

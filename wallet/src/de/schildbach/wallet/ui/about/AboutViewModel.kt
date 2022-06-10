@@ -29,7 +29,6 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import javax.inject.Inject
-import kotlin.math.exp
 
 @HiltViewModel
 class AboutViewModel @Inject constructor(
