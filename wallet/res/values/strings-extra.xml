@@ -360,7 +360,7 @@
 
     <string name="syncing">Syncing</string>
     <string name="syncing_balance">Syncing Balance</string>
-
+    <string name="transaction_count">%d transactions</string>
     <string name="all_transactions">All</string>
     <string name="received_transactions">Received</string>
     <string name="sent_transactions">Sent</string>

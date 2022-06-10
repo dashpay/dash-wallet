@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <style name="My.Theme" parent="Theme.AppCompat.Light.DarkActionBar">
+    <style name="My.Theme" parent="Theme.AppCompat.DayNight">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
@@ -28,10 +28,6 @@
         <item name="colorAccent">@color/colorPrimary</item>
         <item name="android:textSize">12sp</item>
         <item name="android:textColor">@color/darkest_blue</item>
-    </style>
-
-    <style name="My.Theme.NoStatusBar" parent="My.Theme.NoActionBar">
-
     </style>
 
     <style name="My.Theme.Transparent" parent="Theme.AppCompat.Light">
@@ -159,7 +155,7 @@
     </style>
 
     <style name="MontserratRegular.G">
-        <item name="android:textColor">@color/gray</item>
+        <item name="android:textColor">@color/old_gray</item>
     </style>
 
     <style name="MontserratRegular.MG">
@@ -302,21 +298,8 @@
         <item name="android:textSize">14sp</item>
     </style>
 
-    <style name="MontserratSemiBold.G900">
-        <item name="android:textColor">@color/gray_900</item>
-    </style>
-
-    <style name="MontserratSemiBold.G900.13">
-        <item name="android:textSize">13sp</item>
-    </style>
-
     <style name="MontserratBold">
         <item name="fontFamily">@font/montserrat_bold</item>
-    </style>
-
-    <style name="MontserratBold.Heading">
-        <item name="android:textSize">28sp</item>
-        <item name="android:textColor">@color/gray_900</item>
     </style>
 
     <style name="NavigationTheme" parent="My.Theme">
@@ -380,21 +363,9 @@
 
     <style name="ListSeparator">
         <item name="android:alpha">0.25</item>
-        <item name="android:background">@color/gray</item>
+        <item name="android:background">@color/old_gray</item>
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">1dp</item>
-    </style>
-
-    <style name="ExtendedTransactions">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">wrap_content</item>
-    </style>
-
-    <style name="ExtendedTransactionItem">
-        <item name="android:layout_marginTop">5dp</item>
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:visibility">gone</item>
     </style>
 
     <style name="OldCheckBox">
@@ -568,7 +539,7 @@
     <style name="DescriptionTextView" parent="android:Widget.TextView">
         <item name="android:fontFamily">@font/montserrat_regular</item>
         <item name="android:textSize">13sp</item>
-        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColor">@color/content_primary</item>
         <item name="android:lineSpacingExtra">4dp</item>
     </style>
 
@@ -677,12 +648,15 @@
 
     <style name="Headline3" parent="TextAppearance.MaterialComponents.Headline3">
         <item name="fontFamily">@font/montserrat_medium</item>
-        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColor">@color/content_primary</item>
+        <item name="android:lineSpacingExtra">1sp</item>
+        <item name="android:letterSpacing">0.0</item>
+        <item name="android:textAlignment">viewStart</item>
+        <item name="android:textSize">32sp</item>
     </style>
 
     <style name="Headline3.Regular">
         <item name="fontFamily">@font/montserrat_regular</item>
-        <item name="android:textColor">@color/light_gray_black</item>
     </style>
 
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
@@ -691,6 +665,7 @@
         <item name="android:lineSpacingExtra">1sp</item>
         <item name="android:letterSpacing">0.0</item>
         <item name="android:textAlignment">viewStart</item>
+        <item name="android:textSize">28sp</item>
     </style>
 
     <style name="Headline4.Bold">
@@ -806,10 +781,6 @@
         <item name="fontFamily">@font/montserrat_medium</item>
     </style>
 
-    <style name="Body2.LightGrayBlack">
-        <item name="android:textColor">@color/light_gray_black</item>
-    </style>
-
     <style name="Subtitle1" parent="TextAppearance.MaterialComponents.Subtitle1">
         <item name="android:textColor">@color/content_primary</item>
         <item name="fontFamily">@font/montserrat_semibold</item>
@@ -842,7 +813,7 @@
 
     <style name="Caption" parent="TextAppearance.MaterialComponents.Caption">
         <item name="fontFamily">@font/montserrat_regular</item>
-        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColor">@color/content_primary</item>
         <item name="android:letterSpacing">0.0</item>
         <item name="android:lineSpacingExtra">3sp</item>
         <item name="android:textAlignment">viewStart</item>
@@ -856,8 +827,8 @@
         <item name="android:textColor">@color/dash_blue</item>
     </style>
 
-    <style name="Caption.LightDarkGray">
-        <item name="android:textColor">@color/light_dark_gray</item>
+    <style name="Caption.ContentTertiary">
+        <item name="android:textColor">@color/content_tertiary</item>
     </style>
 
     <style name="Caption.OrangeStatus">
@@ -872,13 +843,13 @@
         <item name="android:textColor">@color/dash_blue</item>
     </style>
 
-    <style name="Caption.Medium.LightGray">
-        <item name="android:textSize">15sp</item>
-        <item name="android:textColor">@color/light_dark_gray</item>
+    <style name="Caption.Medium.Red">
+        <item name="android:textColor">@color/red_300</item>
     </style>
 
-    <style name="Caption.Medium.LightGrayBlack">
-        <item name="android:textColor">@color/light_gray_black</item>
+    <style name="Caption.Medium.LightGray">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/dark_gray</item>
     </style>
 
     <style name="Caption.Medium.SteelGray">
@@ -931,7 +902,7 @@
 
     <style name="Overline" parent="TextAppearance.MaterialComponents.Overline">
         <item name="fontFamily">@font/montserrat_regular</item>
-        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColor">@color/content_primary</item>
         <item name="android:lineSpacingExtra">4sp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0.0</item>
@@ -940,6 +911,14 @@
 
     <style name="Overline.White">
         <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="Overline.Medium">
+        <item name="fontFamily">@font/montserrat_medium</item>
+    </style>
+
+    <style name="Overline.Medium.Blue">
+        <item name="android:textColor">@color/dash_blue</item>
     </style>
 
     <style name="Overline.SemiBold">
@@ -977,8 +956,8 @@
     <style name="PrimaryButtonTheme">
         <item name="cornerRadius">8dp</item>
         <item name="titleTextColor">@color/white</item>
-        <item name="backgroundColor">@color/gray_900</item>
-        <item name="strokeColor">@color/gray_900</item>
+        <item name="backgroundColor">@color/content_primary</item>
+        <item name="strokeColor">@color/content_primary</item>
         <item name="rippleColor">@color/ripple_light</item>
         <item name="disabledBackgroundColor">@color/disabled_button_bg</item>
     </style>
@@ -1013,7 +992,7 @@
     </style>
 
     <style name="PrimaryButtonTheme.Small">
-        <item name="titleTextColor">@color/gray_900</item>
+        <item name="titleTextColor">@color/content_primary</item>
         <item name="cornerRadius">6dp</item>
     </style>
 
@@ -1033,7 +1012,7 @@
 
     <style name="PrimaryButtonTheme.ExtraSmall">
         <item name="cornerRadius">6dp</item>
-        <item name="titleTextColor">@color/gray_900</item>
+        <item name="titleTextColor">@color/content_primary</item>
     </style>
 
     <style name="PrimaryButtonTheme.ExtraSmall.Blue">
@@ -1126,7 +1105,7 @@
 
     <style name="SecondaryButtonTheme">
         <item name="cornerRadius">8dp</item>
-        <item name="titleTextColor">@color/gray_900</item>
+        <item name="titleTextColor">@color/content_primary</item>
         <item name="strokeColor">@color/gray_100</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
@@ -1165,7 +1144,7 @@
     </style>
 
     <style name="SecondaryButtonTheme.Small.Round">
-        <item name="titleTextColor">@color/gray_900</item>
+        <item name="titleTextColor">@color/content_primary</item>
         <item name="strokeColor">@color/steel_gray_150</item>
         <item name="cornerRadius">16dp</item>
     </style>
@@ -1184,7 +1163,7 @@
 
     <style name="TertiaryButtonTheme">
         <item name="cornerRadius">8dp</item>
-        <item name="titleTextColor">@color/gray_900</item>
+        <item name="titleTextColor">@color/content_primary</item>
         <item name="strokeColor">@android:color/transparent</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
@@ -1315,7 +1294,7 @@
 
     <style name="Explore.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
         <item name="android:background">@color/white</item>
-        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColor">@color/content_primary</item>
     </style>
 
     <style name="FullScreenDialog" parent="Theme.AppCompat.Light.Dialog">
@@ -1325,5 +1304,22 @@
         <item name="android:windowIsFloating">false</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowCloseOnTouchOutside">false</item>
+    </style>
+
+    <style name="TxSentBackground">
+        <item name="backgroundColor">@color/tx_sent_background</item>
+        <item name="strokeColor">@color/tx_sent_background</item>
+        <item name="cornerRadius">19dp</item>
+    </style>
+
+    <style name="TxReceivedBackground">
+        <item name="backgroundColor">@color/tx_received_background</item>
+        <item name="strokeColor">@color/tx_received_background</item>
+        <item name="cornerRadius">19dp</item>
+    </style>
+
+    <style name="TxNoBackground">
+        <item name="backgroundColor">@android:color/transparent</item>
+        <item name="strokeColor">@android:color/transparent</item>
     </style>
 </resources>

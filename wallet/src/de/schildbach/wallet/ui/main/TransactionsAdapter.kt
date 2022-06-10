@@ -19,31 +19,33 @@ package de.schildbach.wallet.ui.main
 
 import android.content.res.Resources
 import android.text.format.DateUtils
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.TransactionUtil
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.TransactionRowExtBinding
+import de.schildbach.wallet_test.databinding.TransactionRowBinding
 import org.bitcoinj.core.*
+import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 
 
 class TransactionsAdapter(
     private val wallet: Wallet,
+    private val dashFormat: MonetaryFormat,
     private val resources: Resources,
     private val clickListener: (TransactionWrapper, Int) -> Unit
 ) : ListAdapter<TransactionWrapper, TransactionsAdapter.TransactionViewHolder>(DiffCallback()) {
-    private val format = WalletApplication.getInstance().configuration.format // TODO
-    private val colorPrimaryStatus = resources.getColor(R.color.primary_status, null)
     private val colorSecondaryStatus = resources.getColor(R.color.secondary_status, null)
     private val contentColor = resources.getColor(R.color.content_primary, null)
     private val warningColor = resources.getColor(R.color.content_warning, null)
@@ -52,7 +54,7 @@ class TransactionsAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TransactionViewHolder {
         val inflater = LayoutInflater.from(parent.context)
-        val binding = TransactionRowExtBinding.inflate(inflater, parent, false)
+        val binding = TransactionRowBinding.inflate(inflater, parent, false)
 
         return TransactionViewHolder(binding)
     }
@@ -77,7 +79,7 @@ class TransactionsAdapter(
     }
 
     inner class TransactionViewHolder(
-        private val binding: TransactionRowExtBinding
+        private val binding: TransactionRowBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
         init {
@@ -85,115 +87,163 @@ class TransactionsAdapter(
         }
 
         fun bind(wrapper: TransactionWrapper, wallet: Wallet) {
+            val tx = wrapper.transactions.first()
+            Log.i("CROWDNODE", "value: $tx")
+            setDetails(wrapper.transactions.size)
+            setTime(tx)
+
             if (wrapper is FullCrowdNodeSignUpTxSet) {
                 val value = wrapper.getValue(wallet)
+                binding.icon.setImageResource(R.drawable.ic_crowdnode_logo)
+                binding.icon.background = resources.getRoundedBackground(R.style.TxNoBackground)
+                binding.primaryStatus.text = resources.getString(R.string.crowdnode_account)
 
-                // TODO
+                setValue(value, false)
+                setFiatValue(value, tx.exchangeRate)
             } else {
-                val tx = wrapper.transactions.first()
-                val fee = tx.fee
                 val confidence = tx.confidence
+                val txCache = getTxCache(tx)
 
-                var txCache = transactionCache[tx.txId]
+                setIcon(txCache)
+                setPrimaryStatus(tx, confidence)
+                setSecondaryStatus(tx, txCache, confidence)
 
-                if (txCache == null) {
-                    val value: Coin = tx.getValue(wallet)
-                    val isSent = value.signum() < 0
-                    val showFee = isSent && fee != null && !fee.isZero
+                val value = if (txCache.showFee) txCache.value.add(txCache.fee) else txCache.value
+                setValue(value, confidence.hasErrors())
+                setFiatValue(value, tx.exchangeRate)
+            }
+        }
 
-                    txCache = TransactionCacheEntry(
-                        value, isSent, showFee
-                    )
-                    transactionCache[tx.txId] = txCache
-                }
+        private fun getTxCache(tx: Transaction): TransactionCacheEntry {
+            var txCache = transactionCache[tx.txId]
 
-                // Assign the colors of text and values
-                val primaryStatusColor: Int
-                val secondaryStatusColor: Int
-                val valueColor: Int
+            if (txCache == null) {
+                val value = tx.getValue(wallet)
+                val isSent = value.signum() < 0
+                val fee = tx.fee
+                val showFee = isSent && fee != null && !fee.isZero
 
-                if (confidence.hasErrors()) {
-                    primaryStatusColor = warningColor
-                    secondaryStatusColor = warningColor
-                    valueColor = warningColor
-                } else {
-                    primaryStatusColor = colorPrimaryStatus
-                    secondaryStatusColor = colorSecondaryStatus
-                    valueColor = contentColor
-                }
-
-                // Set the time. eg.  "<date> <time>"
-                val time = tx.updateTime
-                binding.time.text = DateUtils.formatDateTime(
-                    itemView.context, time.time,
-                    DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or DateUtils.FORMAT_SHOW_TIME
+                txCache = TransactionCacheEntry(
+                    value, isSent, fee, showFee
                 )
+                transactionCache[tx.txId] = txCache
+            }
 
-                // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal
-                //                      Received:  Received, Mining Rewards, Masternode Rewards
-                val idPrimaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet)
-                binding.primaryStatus.setText(idPrimaryStatus)
-                binding.primaryStatus.setTextColor(primaryStatusColor)
+            return txCache
+        }
 
-                // Set the value.  [signal] D [value]
-                // signal is + or -, or not visible if the value is zero (internal or other special transactions)
-                // D is the Dash Symbol
-                // value has no sign.  It is zero for internal or other special transactions
-                binding.value.setFormat(format)
+        private fun setIcon(txCache: TransactionCacheEntry) {
+            if (txCache.isSent) {
+                binding.icon.setImageResource(R.drawable.ic_transaction_sent)
+                binding.icon.background = resources.getRoundedBackground(R.style.TxSentBackground)
+            } else {
+                binding.icon.setImageResource(R.drawable.ic_transaction_received)
+                binding.icon.background = resources.getRoundedBackground(R.style.TxReceivedBackground)
+            }
+        }
 
-                val value = if (txCache.showFee) txCache.value.add(fee) else txCache.value
+        private fun setPrimaryStatus(tx: Transaction, confidence: TransactionConfidence) {
+            // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal
+            //                      Received:  Received, Mining Rewards, Masternode Rewards
+            val idPrimaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet)
+            binding.primaryStatus.setText(idPrimaryStatus)
+            binding.primaryStatus.setTextColor(if (confidence.hasErrors()) {
+                warningColor
+            } else {
+                contentColor
+            })
+        }
 
-                binding.signal.isVisible = !value.isZero
-                binding.value.setTextColor(valueColor)
-                binding.signal.setTextColor(valueColor)
-                binding.dashAmountSymbol.setColorFilter(valueColor)
+        private fun setDetails(transactionsCount: Int) {
+            if (transactionsCount > 1) {
+                binding.details.isVisible = true
+                binding.details.text = resources.getString(R.string.transaction_count, transactionsCount)
+            } else {
+                binding.details.isVisible = false
+            }
+        }
 
-                if (value.isPositive) {
-                    binding.signal.text = String.format("%c", Constants.CURRENCY_PLUS_SIGN)
-                    binding.value.setAmount(value)
-                } else if (value.isNegative) {
-                    binding.signal.text = String.format("%c", Constants.CURRENCY_MINUS_SIGN)
-                    binding.value.setAmount(value.negate())
-                } else {
-                    binding.value.setAmount(Coin.ZERO)
-                }
+        private fun setTime(tx: Transaction) {
+            // Set the time. eg.  "<date> <time>"
+            binding.time.text = DateUtils.formatDateTime(
+                itemView.context, tx.updateTime.time,
+                DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or DateUtils.FORMAT_SHOW_TIME
+            )
+        }
 
-                // fiat value
-                if (!value.isZero) {
-                    val exchangeRate = tx.exchangeRate
+        private fun setSecondaryStatus(
+            tx: Transaction,
+            txCache: TransactionCacheEntry,
+            confidence: TransactionConfidence
+        ) {
+            var secondaryStatusId: Int = -1
 
-                    if (exchangeRate != null) {
-                        val exchangeCurrencyCode = GenericUtils.currencySymbol(exchangeRate.fiat.currencyCode)
-                        binding.fiatView.setFiatAmount(
-                            value, exchangeRate, de.schildbach.wallet.Constants.LOCAL_FORMAT,
-                            exchangeCurrencyCode
-                        )
-                        binding.fiatView.isVisible = true
-                        binding.rateNotAvailable.isVisible = false
-                    } else {
-                        binding.fiatView.isVisible = false
-                        binding.rateNotAvailable.isVisible = true
-                    }
+            if (confidence.hasErrors()) {
+                secondaryStatusId = TransactionUtil.getErrorName(tx)
+            } else if (!txCache.isSent) {
+                secondaryStatusId = TransactionUtil.getReceivedStatusString(tx, wallet)
+            }
+
+            if (secondaryStatusId != -1) {
+                binding.secondaryStatus.setText(secondaryStatusId)
+            } else {
+                binding.secondaryStatus.text = null
+            }
+
+            binding.secondaryStatus.setTextColor(if (confidence.hasErrors()) {
+                warningColor
+            } else {
+                colorSecondaryStatus
+            })
+        }
+
+        private fun setValue(value: Coin, hasErrors: Boolean) {
+            // Set the value.  [signal] D [value]
+            // signal is + or -, or not visible if the value is zero (internal or other special transactions)
+            // D is the Dash Symbol
+            // value has no sign.  It is zero for internal or other special transactions
+            binding.value.setFormat(dashFormat)
+
+            val valueColor = if (hasErrors) {
+                warningColor
+            } else {
+                contentColor
+            }
+
+            binding.signal.isVisible = !value.isZero
+            binding.value.setTextColor(valueColor)
+            binding.signal.setTextColor(valueColor)
+            binding.dashAmountSymbol.setColorFilter(valueColor)
+
+            if (value.isPositive) {
+                binding.signal.text = String.format("%c", Constants.CURRENCY_PLUS_SIGN)
+                binding.value.setAmount(value)
+            } else if (value.isNegative) {
+                binding.signal.text = String.format("%c", Constants.CURRENCY_MINUS_SIGN)
+                binding.value.setAmount(value.negate())
+            } else {
+                binding.value.setAmount(Coin.ZERO)
+            }
+        }
+
+        private fun setFiatValue(value: Coin, exchangeRate: ExchangeRate?) {
+            // fiat value
+            if (!value.isZero) {
+                if (exchangeRate != null) {
+                    val exchangeCurrencyCode = GenericUtils.currencySymbol(exchangeRate.fiat.currencyCode)
+                    binding.fiatView.setFiatAmount(
+                        value, exchangeRate, de.schildbach.wallet.Constants.LOCAL_FORMAT,
+                        exchangeCurrencyCode
+                    )
+                    binding.fiatView.isVisible = true
+                    binding.rateNotAvailable.isVisible = false
                 } else {
                     binding.fiatView.isVisible = false
-                    binding.rateNotAvailable.isVisible = false
+                    binding.rateNotAvailable.isVisible = true
                 }
-
-                // Show the secondary status:
-                var secondaryStatusId: Int = -1
-
-                if (confidence.hasErrors()) {
-                    secondaryStatusId = TransactionUtil.getErrorName(tx)
-                } else if (!txCache.isSent) {
-                    secondaryStatusId = TransactionUtil.getReceivedStatusString(tx, wallet)
-                }
-
-                if (secondaryStatusId != -1) {
-                    binding.secondaryStatus.setText(secondaryStatusId)
-                } else {
-                    binding.secondaryStatus.text = null
-                }
-                binding.secondaryStatus.setTextColor(secondaryStatusColor)
+            } else {
+                binding.fiatView.isVisible = false
+                binding.rateNotAvailable.isVisible = false
             }
         }
     }
@@ -201,6 +251,7 @@ class TransactionsAdapter(
     internal data class TransactionCacheEntry(
         val value: Coin,
         val isSent: Boolean,
+        val fee: Coin?,
         val showFee: Boolean
     )
 }

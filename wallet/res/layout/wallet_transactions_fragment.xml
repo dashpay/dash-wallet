@@ -86,7 +86,7 @@
             android:clipToPadding="false"
             android:scrollbars="vertical"
             tools:itemCount="5"
-            tools:listitem="@layout/transaction_row_ext"/>
+            tools:listitem="@layout/transaction_row"/>
 
     </LinearLayout>
 

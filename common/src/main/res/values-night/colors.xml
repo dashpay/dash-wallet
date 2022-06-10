@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Content -->
+    <color name="colorPrimary">@color/dash_blue</color>
+    <color name="content_primary">@color/dash_white</color>
+    <color name="content_tertiary">@color/light_gray</color>
+
+    <!-- Background -->
+    <color name="background_primary">@color/dash_black</color>
+    <color name="background_secondary">#202326</color>
+    <color name="background_tertiary">@color/dash_black</color>
+
+    <!-- Palette -->
+    <color name="dash_blue">#0094F0</color>
+    <color name="dash_white">#FAFBFC</color>
+    <color name="extra_light_gray">#A4ABB2</color>
+    <color name="light_gray">#8D9399</color>
+    <color name="gray">#757A80</color>
+    <color name="dash_black">#191C1F</color>
+</resources>

@@ -90,7 +90,7 @@ class RadioButtonViewHolder(
 
         binding.title.text = option.title
         binding.title.setTextColor(resources.getColorStateList(
-            if (option.iconSelectMode == IconSelectMode.Encircle) R.color.gray_900 else R.color.radiobutton_text_color,
+            if (option.iconSelectMode == IconSelectMode.Encircle) R.color.content_primary else R.color.radiobutton_text_color,
             null
         ))
 

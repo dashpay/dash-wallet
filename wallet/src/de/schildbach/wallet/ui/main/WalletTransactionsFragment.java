@@ -40,6 +40,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
@@ -102,7 +103,8 @@ public class WalletTransactionsFragment extends Fragment implements OnSharedPref
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        adapter = new TransactionsAdapter(wallet, getResources(), (wrapper, position) -> {
+        MonetaryFormat dashFormat = config.getFormat().noCode();
+        adapter = new TransactionsAdapter(wallet, dashFormat, getResources(), (wrapper, position) -> {
             TransactionDetailsDialogFragment transactionDetailsDialogFragment =
                     TransactionDetailsDialogFragment.newInstance(wrapper.getTransactions().iterator().next().getTxId());
             transactionDetailsDialogFragment.show(getParentFragmentManager(), null);

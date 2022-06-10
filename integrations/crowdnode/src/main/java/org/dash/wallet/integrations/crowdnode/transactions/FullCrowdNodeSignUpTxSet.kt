@@ -32,7 +32,6 @@ open class FullCrowdNodeSignUpTxSet(networkParams: NetworkParameters): Transacti
 
     private val matchedFilters = mutableListOf<TransactionFilter>()
     override val transactions = sortedSetOf(TransactionComparator())
-    private var value: Coin? = null
 
     open val hasAcceptTermsResponse: Boolean
         get() = matchedFilters.any { it is CrowdNodeAcceptTermsResponse }
@@ -56,6 +55,17 @@ open class FullCrowdNodeSignUpTxSet(networkParams: NetworkParameters): Transacti
     }
 
     fun getValue(bag: TransactionBag): Coin {
-        return Coin.COIN
+        var result = Coin.ZERO
+
+        for (tx in transactions) {
+            val value = tx.getValue(bag)
+            val isSent = value.signum() < 0
+            val fee = tx.fee
+            val addFee = isSent && fee != null && !fee.isZero
+
+            result = result.add(if (addFee) value.minus(fee) else value)
+        }
+
+        return result
     }
 }

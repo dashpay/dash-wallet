@@ -49,8 +49,6 @@
             app:layout_constraintBottom_toBottomOf="@+id/dash_amount"
             android:visibility="gone"
             tools:text="-"
-            android:textSize="32sp"
-            android:textColor="@color/light_gray_black"
             tools:visibility="visible" />
 
         <org.dash.wallet.common.ui.CurrencyTextView
@@ -59,13 +57,11 @@
             android:layout_width="wrap_content"
             android:layout_height="0dp"
             tools:text="-3.14"
-            android:textSize="32sp"
             android:layout_marginEnd="4dp"
             app:layout_constraintStart_toEndOf="@id/transaction_amount_signal"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            android:layout_marginRight="4dp"
-            android:textColor="@color/light_gray_black" />
+            android:layout_marginRight="4dp" />
 
         <ImageView
             android:id="@+id/dash_amount_symbol"
@@ -83,7 +79,7 @@
 
     <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/fiat_value"
-        style="@style/Caption.LightDarkGray"
+        style="@style/Caption.ContentTertiary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="34dp"
@@ -222,7 +218,7 @@
 
                 <org.dash.wallet.common.ui.CurrencyTextView
                     android:id="@+id/transaction_fee"
-                    style="@style/Body2.LightGrayBlack"
+                    style="@style/Body2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/transaction_result_sent_to"
@@ -265,7 +261,7 @@
                 <TextView
                     android:id="@+id/transaction_date_and_time"
                     app:layout_constraintTop_toTopOf="parent"
-                    style="@style/Body2.LightGrayBlack"
+                    style="@style/Body2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:paddingVertical="12dp"
@@ -301,7 +297,7 @@
 
                 <TextView
                     android:id="@+id/error_description"
-                    style="@style/Body2.LightGrayBlack"
+                    style="@style/Body2"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -330,7 +326,7 @@
 
             <TextView
                 android:id="@+id/view_on_explorer"
-                style="@style/Caption.Medium.LightGrayBlack"
+                style="@style/Caption.Medium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentLeft="true"

@@ -63,7 +63,7 @@ public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
 
             pager.setAdapter(pagerAdapter);
             pager.setPageMargin(2);
-            pager.setPageMarginDrawable(R.color.background_primary_light);
+            pager.setPageMarginDrawable(R.color.background_primary);
             pager.addOnPageChangeListener(onPageChangeListener);
 
             peerListFragment = new PeerListFragment();

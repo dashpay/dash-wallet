@@ -37,7 +37,7 @@
     </style>
 
     <style name="UpButtonBackground">
-        <item name="backgroundColor">@color/gray_900_0.7</item>
+        <item name="backgroundColor">@color/dash_black_0.7</item>
         <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">22dp</item>
     </style>
