@@ -17,7 +17,6 @@
 
 package org.dash.wallet.features.exploredash.repository
 
-import android.accounts.NetworkErrorException
 import android.content.Context
 import android.content.SharedPreferences
 import com.google.firebase.auth.FirebaseAuth
