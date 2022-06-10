@@ -40,14 +40,14 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment<Constraint
     private val binding by viewBinding(DialogChangeTaxCategoryExplainerBinding::bind)
     private val wallet by lazy { WalletApplication.getInstance().wallet }
 
-    private val exampleTxId by lazy { arguments?.get(TX_ID) as Sha256Hash }
+    private val exampleTxId by lazy { arguments?.get(TX_ID) as? Sha256Hash }
 
     companion object {
 
         const val TX_ID = "tx_id"
 
         @JvmStatic
-        fun newInstance(exampleTxId: Sha256Hash): ChangeTaxCategoryExplainerDialogFragment {
+        fun newInstance(exampleTxId: Sha256Hash?): ChangeTaxCategoryExplainerDialogFragment {
             val fragment = ChangeTaxCategoryExplainerDialogFragment()
             val args = Bundle()
             args.putSerializable(TX_ID, exampleTxId)
@@ -79,7 +79,6 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment<Constraint
             tx?.apply {
                 transactionDetails.findViewById<ImageView>(R.id.transaction_close_btn).isVisible =
                     false
-                transactionDetails.findViewById<ImageView>(R.id.close_btn).isVisible = false
                 transactionResultViewBinder.bind(this)
                 transactionResultViewBinder.setTransactionMetadata(
                     TransactionMetadata(

@@ -38,7 +38,7 @@ class TaxCategoryExplainerDialogFragment : OffsetDialogFragment<ConstraintLayout
     private val binding by viewBinding(DialogTaxCategoryExplainerBinding::bind)
 
     var onClickListener: (() -> Unit)? = null
-    private val exampleTxId by lazy { arguments?.get(TX_ID) as Sha256Hash }
+    private val exampleTxId by lazy { arguments?.get(TX_ID) as? Sha256Hash }
 
     companion object {
 

@@ -107,12 +107,12 @@
 
         <TextView
             android:id="@+id/outgoing_title"
-            style="@style/Caption.SemiBold"
+            style="@style/Body2.Medium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:text="@string/reclassify_transactions_outgoing_title"
-            android:textSize="14sp"
+            android:textColor="@color/light_gray_black"
             app:layout_constraintBottom_toBottomOf="@+id/up_arrow"
             app:layout_constraintStart_toEndOf="@+id/up_arrow"
             app:layout_constraintTop_toTopOf="@+id/up_arrow" />
@@ -179,12 +179,12 @@
 
         <TextView
             android:id="@+id/incoming_title"
-            style="@style/Caption.SemiBold"
+            style="@style/Body2.Medium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:text="@string/reclassify_transactions_incoming_title"
-            android:textSize="14sp"
+            android:textColor="@color/light_gray_black"
             app:layout_constraintBottom_toBottomOf="@+id/down_arrow"
             app:layout_constraintStart_toEndOf="@+id/down_arrow"
             app:layout_constraintTop_toTopOf="@+id/down_arrow" />
@@ -251,12 +251,12 @@
 
         <TextView
             android:id="@+id/linked_account_title"
-            style="@style/Caption.SemiBold"
+            style="@style/Body2.Medium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:text="@string/reclassify_transactions_linked_accounts_title"
-            android:textSize="14sp"
+            android:textColor="@color/light_gray_black"
             app:layout_constraintBottom_toBottomOf="@+id/left_right_arrow"
             app:layout_constraintStart_toEndOf="@+id/left_right_arrow"
             app:layout_constraintTop_toTopOf="@+id/left_right_arrow" />
@@ -283,7 +283,6 @@
         app:layout_constraintStart_toStartOf="@id/left_guideline"
         app:layout_constraintTop_toBottomOf="@id/linked_account_description"
         android:layout_marginTop="15dp"
-        android:textSize="15sp"
         android:text="@string/button_understand" />
 
     <View

@@ -20,8 +20,8 @@
     android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    tools:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.transactions.ChangeTaxCategoryExplainerDialogFragment"
+    tools:orientation="vertical"
     tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
 
     <ImageButton
@@ -58,29 +58,30 @@
     <FrameLayout
         android:id="@+id/frame"
         android:layout_width="match_parent"
-        android:layout_height="360dp"
-        android:layout_marginHorizontal="20dp"
+        android:layout_height="0dp"
         android:layout_marginTop="30dp"
+        android:layout_marginBottom="54dp"
+        android:layout_marginHorizontal="20dp"
         android:background="@drawable/rounded_corners_bgd_light_gray"
+        android:theme="@style/ExampleBackground"
         app:layout_constraintTop_toBottomOf="@+id/explanation"
+        app:layout_constraintBottom_toBottomOf="parent">
 
-        />
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/transaction_details"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:translationY="50dp"
+            android:layout_marginVertical="-50dp"
+            android:scaleX="0.77"
+            android:scaleY="0.77"
+            android:background="@drawable/white_background_rounded">
 
+            <include
+                layout="@layout/transaction_result_content" />
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/transaction_details"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/white_background_rounded"
-        android:layout_marginBottom="-40dp"
-        android:scaleX="0.667"
-        android:scaleY="0.667"
-        app:layout_constraintTop_toTopOf="@+id/frame">
-
-        <include
-            layout="@layout/transaction_result_content" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </FrameLayout>
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/left_guideline"
