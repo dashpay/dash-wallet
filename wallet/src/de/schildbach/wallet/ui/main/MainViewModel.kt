@@ -31,6 +31,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Context
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -106,6 +107,7 @@ class MainViewModel @Inject constructor(
     init {
         _hideBalance.value = config.hideBalance
         transactionsDirection = savedStateHandle.get(DIRECTION_KEY) ?: TxDirection.ALL
+
         _transactionsDirection
             .flatMapLatest { direction ->
                 val filter = TxDirectionFilter(direction, walletApplication.wallet!!)

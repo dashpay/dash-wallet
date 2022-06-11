@@ -27,13 +27,13 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.util.TransactionUtil
+import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionRowBinding
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.Constants
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.util.GenericUtils
@@ -122,9 +122,10 @@ class TransactionsAdapter(
                 val isSent = value.signum() < 0
                 val fee = tx.fee
                 val showFee = isSent && fee != null && !fee.isZero
+                val isInternal = WalletUtils.isEntirelySelf(tx, wallet)
 
                 txCache = TransactionCacheEntry(
-                    value, isSent, fee, showFee
+                    value, isSent, isInternal, fee, showFee
                 )
                 transactionCache[tx.txId] = txCache
             }
@@ -133,7 +134,10 @@ class TransactionsAdapter(
         }
 
         private fun setIcon(txCache: TransactionCacheEntry) {
-            if (txCache.isSent) {
+            if (txCache.isInternal) {
+                binding.icon.setImageResource(R.drawable.ic_shuffle)
+                binding.icon.background = resources.getRoundedBackground(R.style.TxSentBackground)
+            } else if (txCache.isSent) {
                 binding.icon.setImageResource(R.drawable.ic_transaction_sent)
                 binding.icon.background = resources.getRoundedBackground(R.style.TxSentBackground)
             } else {
@@ -216,10 +220,10 @@ class TransactionsAdapter(
             binding.dashAmountSymbol.setColorFilter(valueColor)
 
             if (value.isPositive) {
-                binding.signal.text = String.format("%c", Constants.CURRENCY_PLUS_SIGN)
+                binding.signal.text = "+"
                 binding.value.setAmount(value)
             } else if (value.isNegative) {
-                binding.signal.text = String.format("%c", Constants.CURRENCY_MINUS_SIGN)
+                binding.signal.text = "−"
                 binding.value.setAmount(value.negate())
             } else {
                 binding.value.setAmount(Coin.ZERO)
@@ -251,6 +255,7 @@ class TransactionsAdapter(
     internal data class TransactionCacheEntry(
         val value: Coin,
         val isSent: Boolean,
+        val isInternal: Boolean,
         val fee: Coin?,
         val showFee: Boolean
     )

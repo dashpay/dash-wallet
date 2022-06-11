@@ -8,7 +8,8 @@
     android:background="@drawable/rounded_background"
     android:theme="@style/TransactionRowBackground"
     android:paddingEnd="15dp"
-    android:gravity="center">
+    android:gravity="center"
+    tools:context="de.schildbach.wallet.ui.main.TransactionsAdapter">
 
     <ImageView
         android:id="@+id/icon"
@@ -62,10 +63,10 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginEnd="4dp"
-        android:layout_marginBottom="5dp"
         android:ellipsize="end"
         android:maxLines="1"
         android:paddingEnd="6dp"
+        android:layout_marginTop="2dp"
         app:layout_constraintTop_toBottomOf="@id/primary_status"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="@id/primary_status"
@@ -79,9 +80,11 @@
         android:layout_height="wrap_content"
         android:paddingStart="4dp"
         android:paddingEnd="4dp"
-        app:layout_constraintBottom_toBottomOf="@id/primary_status"
         app:layout_constraintEnd_toStartOf="@id/dash_amount_container"
         app:layout_constraintStart_toEndOf="@id/primary_status"
+        app:layout_constraintTop_toTopOf="@id/dash_amount_container"
+        app:layout_constraintBottom_toBottomOf="@id/dash_amount_container"
+        app:layout_constraintVertical_chainStyle="packed"
         tools:text="Processing" />
 
     <LinearLayout
@@ -90,7 +93,9 @@
         android:layout_height="wrap_content"
         android:gravity="center|end"
         android:orientation="horizontal"
-        app:layout_constraintTop_toTopOf="@id/primary_status"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/rate_container"
+        app:layout_constraintVertical_chainStyle="packed"
         app:layout_constraintEnd_toEndOf="parent">
 
         <TextView
@@ -100,14 +105,14 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="2dp"
             android:textSize="13sp"
-            tools:text="+"
-            tools:visibility="visible" />
+            android:layout_gravity="center_vertical"
+            android:gravity="center_vertical"
+            tools:text="+" />
 
         <ImageView
             android:id="@+id/dash_amount_symbol"
-            android:layout_width="10.5dp"
-            android:layout_height="10dp"
-            android:layout_marginTop="1dp"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
             android:layout_marginEnd="4dp"
             android:src="@drawable/ic_dash"
             app:tint="@color/content_primary"
@@ -122,12 +127,12 @@
             tools:text="4.3939" />
     </LinearLayout>
 
-
     <FrameLayout
         android:id="@+id/rate_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@id/dash_amount_container"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <org.dash.wallet.common.ui.CurrencyTextView
