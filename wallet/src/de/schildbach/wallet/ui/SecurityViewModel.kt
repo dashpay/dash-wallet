@@ -18,6 +18,7 @@
 
 package de.schildbach.wallet.ui
 
+import androidx.core.os.bundleOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -30,14 +31,17 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.GenericUtils
 import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
 @HiltViewModel
-class SecurityViewModel @Inject constructor(var exchangeRates: ExchangeRatesProvider,
-                                            var configuration: Configuration)
-    : ViewModel() {
+class SecurityViewModel @Inject constructor(
+    private val exchangeRates: ExchangeRatesProvider,
+    configuration: Configuration,
+    private val analytics: AnalyticsService
+): ViewModel() {
 
     private val _selectedCurrencyCode = MutableStateFlow(configuration.exchangeCurrencyCode)
     private val _selectedExchangeRate = MutableLiveData<ExchangeRate>()
@@ -67,5 +71,9 @@ class SecurityViewModel @Inject constructor(var exchangeRates: ExchangeRatesProv
         } else {
             "${fiat.toPlainString()} $localCurrencySymbol"
         }
+    }
+
+    fun logEvent(event: String) {
+        analytics.logEvent(event, bundleOf())
     }
 }
