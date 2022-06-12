@@ -170,16 +170,11 @@ class SecurityActivity : BaseMenuActivity() {
         CheckPinDialog.show(this, AUTH_REQUEST_CODE_ADVANCED_SECURITY, true)
     }
 
-    fun resetWallet(view: View) {
-        lifecycleScope.launch {
-            val balance = viewModel.balance
-            val fiatValueStr = viewModel.getBalanceInLocalFormat()
-            resetWallet(balance, fiatValueStr)
-        }
-    }
-
     // TODO: tests
-    private fun resetWallet(walletBalance: Coin, fiatBalanceStr: String) {
+    fun resetWallet(view: View) {
+        val walletBalance = viewModel.balance
+        val fiatBalanceStr = viewModel.getBalanceInLocalFormat()
+
         if (walletBalance.isGreaterThan(Coin.ZERO) && viewModel.needPassphraseBackUp) {
             val resetWalletDialog = ExtraActionDialog.create(
                 R.drawable.ic_exclamation_mark_triangle,
