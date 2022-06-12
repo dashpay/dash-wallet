@@ -847,9 +847,8 @@ public class WalletApplication extends BaseWalletApplication
     /**
      * Removes all the data and restarts the app showing onboarding screen.
      */
-    public void triggerWipe(final Context context) {
+    public void triggerWipe() {
         log.info("Removing all the data and restarting the app.");
-
         startService(new Intent(BlockchainService.ACTION_WIPE_WALLET, null, this, BlockchainServiceImpl.class));
     }
 

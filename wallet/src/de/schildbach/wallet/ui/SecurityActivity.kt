@@ -24,34 +24,30 @@ import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.widget.CompoundButton
 import androidx.activity.viewModels
-import androidx.annotation.DrawableRes
 import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_security.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.DeterministicSeed
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialogExt
+import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
-class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
+class SecurityActivity : BaseMenuActivity() {
 
     private lateinit var fingerprintHelper: FingerprintHelper
     private val checkPinSharedModel: CheckPinSharedModel by viewModels()
     private val viewModel: SecurityViewModel by viewModels()
-    private lateinit var walletBalance: Coin
-    private var currentExchangeRate: ExchangeRate? = null
 
     companion object {
         private const val AUTH_REQUEST_CODE_BACKUP = 1
@@ -136,10 +132,8 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         if (BuildConfig.DEBUG) {
             backup_wallet.visibility = VISIBLE
         }
-        walletBalance = wallet!!.getBalance(Wallet.BalanceType.ESTIMATED)
-        viewModel.selectedExchangeRate.observe(this){
-            currentExchangeRate = ExchangeRate(Coin.COIN, it.fiat)
-        }
+
+        viewModel.init()
     }
 
     private val fingerprintSwitchListener= CompoundButton.OnCheckedChangeListener { _, isChecked ->
@@ -177,86 +171,68 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun resetWallet(view: View) {
-        if (walletBalance.isGreaterThan(Coin.ZERO)){
-            if (configuration.remindBackupSeed){
-                val resetWalletDialog = AdaptiveDialogExt.create(
-                    R.drawable.ic_exclamation_mark_triangle,
-                    getString(R.string.launch_reset_wallet_title),
-                    getString(R.string.launch_reset_wallet_message),
-                    getString(R.string.button_cancel),
-                    getString(R.string.continue_reset),
-                    getString(R.string.launch_reset_wallet_extra_message)
-                )
-                resetWalletDialog.show(this,
-                    onResult = {
-                        if (it == true){
-                            val fiatValue = currentExchangeRate?.coinToFiat(walletBalance)
-                            val startResetWalletDialog = createAdaptiveDialog(
-                                R.drawable.ic_exclamation_mark_triangle,
-                                getString(R.string.start_reset_wallet_title, viewModel.getBalanceInLocalFormat(fiatValue)),
-                                getString(R.string.launch_reset_wallet_message),
-                                getString(R.string.button_cancel),
-                                getString(R.string.reset_wallet_text)
-                            )
-                            startResetWalletDialog.show(this){ confirmed ->
-                                if (confirmed == true){
-                                    viewModel.logEvent(AnalyticsConstants.Security.RESET_WALLET)
-                                    toAbstractBindService()?.unbindServiceServiceConnection()
-                                    WalletApplication.getInstance().triggerWipe(this)
-                                    startActivity(OnboardingActivity.createIntent(this))
-                                    finishAffinity()
-                                }
+        lifecycleScope.launch {
+            val balance = viewModel.balance
+            val fiatValueStr = viewModel.getBalanceInLocalFormat()
+            resetWallet(balance, fiatValueStr)
+        }
+    }
+
+    // TODO: tests
+    private fun resetWallet(walletBalance: Coin, fiatBalanceStr: String) {
+        if (walletBalance.isGreaterThan(Coin.ZERO) && viewModel.needPassphraseBackUp) {
+            val resetWalletDialog = ExtraActionDialog.create(
+                R.drawable.ic_exclamation_mark_triangle,
+                getString(R.string.launch_reset_wallet_title),
+                getString(R.string.launch_reset_wallet_message),
+                getString(R.string.button_cancel),
+                getString(R.string.continue_reset),
+                getString(R.string.launch_reset_wallet_extra_message)
+            )
+            resetWalletDialog.show(this,
+                onResult = {
+                    if (it == true) {
+                        val startResetWalletDialog = AdaptiveDialog.create(
+                            R.drawable.ic_exclamation_mark_triangle,
+                            getString(R.string.start_reset_wallet_title, fiatBalanceStr.ifEmpty {
+                                walletBalance.toFriendlyString()
+                            }),
+                            getString(R.string.launch_reset_wallet_message),
+                            getString(R.string.button_cancel),
+                            getString(R.string.reset_wallet_text)
+                        )
+                        startResetWalletDialog.show(this) { confirmed ->
+                            if (confirmed == true) {
+                                doReset()
                             }
                         }
+                    }
                 },
                 onExtraMessageAction = {
                     CheckPinDialog.show(this, AUTH_RECOVERY_PHASE)
                 })
-            }  else {
-                val resetWalletDialog = createAdaptiveDialog(
-                    null,
-                    getString(R.string.reset_wallet_title),
-                    getString(R.string.reset_wallet_message),
-                    getString(R.string.button_cancel),
-                    getString(R.string.positive_reset_text)
-                )
-                resetWalletDialog.show(this){
-                    if (it == true){
-                        viewModel.logEvent(AnalyticsConstants.Security.RESET_WALLET)
-                        toAbstractBindService()?.unbindServiceServiceConnection()
-                        WalletApplication.getInstance().triggerWipe(this)
-                        startActivity(OnboardingActivity.createIntent(this))
-                        finishAffinity()
-                    }
-                }
-            }
         } else {
-            val resetWalletDialog = createAdaptiveDialog(
+            val resetWalletDialog = AdaptiveDialog.create(
                 null,
                 getString(R.string.reset_wallet_title),
                 getString(R.string.reset_wallet_message),
                 getString(R.string.button_cancel),
                 getString(R.string.positive_reset_text)
             )
-            resetWalletDialog.show(this){
-                if (it == true){
-                    viewModel.logEvent(AnalyticsConstants.Security.RESET_WALLET)
-                    toAbstractBindService()?.unbindServiceServiceConnection()
-                    WalletApplication.getInstance().triggerWipe(this)
-                    startActivity(OnboardingActivity.createIntent(this))
-                    finishAffinity()
+            resetWalletDialog.show(this) {
+                if (it == true) {
+                    doReset()
                 }
             }
         }
     }
 
-    // required by UnlockWalletDialogFragment
-    override fun onWalletUpgradeComplete(password: String?) {
-
-    }
-
-    override fun getWallet(): Wallet? {
-        return WalletApplication.getInstance().wallet
+    private fun doReset() {
+        viewModel.logEvent(AnalyticsConstants.Security.RESET_WALLET)
+        toAbstractBindService()?.unbindServiceServiceConnection()
+        viewModel.triggerWipe()
+        startActivity(OnboardingActivity.createIntent(this))
+        finishAffinity()
     }
 
     private fun startViewSeedActivity(seed : DeterministicSeed?) {
@@ -266,16 +242,6 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         val intent = ViewSeedActivity.createIntent(this, seedArray)
         startActivity(intent)
     }
-
-    private fun createAdaptiveDialog(
-        @DrawableRes icon: Int?,
-        title: String,
-        message: String,
-        negativeButtonText: String,
-        positiveButtonText: String? = null
-    ): AdaptiveDialog = AdaptiveDialog.create(
-           icon, title, message, negativeButtonText, positiveButtonText
-        )
 }
 
 fun Activity.toAbstractBindService(): AbstractBindServiceActivity? {
