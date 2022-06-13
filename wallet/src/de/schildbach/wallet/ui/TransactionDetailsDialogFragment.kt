@@ -1,39 +1,59 @@
+/*
+ * Copyright 2022 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package de.schildbach.wallet.ui
 
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.Window
-import android.view.animation.Animation
-import android.view.animation.AnimationUtils
-import android.widget.RelativeLayout
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
-import androidx.core.view.updateLayoutParams
-import androidx.fragment.app.DialogFragment
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.transaction_details_dialog.*
-import kotlinx.android.synthetic.main.transaction_result_content.*
+import de.schildbach.wallet_test.databinding.TransactionDetailsDialogBinding
+import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
+import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
  */
+@AndroidEntryPoint
 @ExperimentalCoroutinesApi
-class TransactionDetailsDialogFragment : DialogFragment() {
+class TransactionDetailsDialogFragment : OffsetDialogFragment() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
     private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }
     private var tx: Transaction? = null
-    private val wallet by lazy { WalletApplication.getInstance().wallet }
+    private val binding by viewBinding(TransactionDetailsDialogBinding::bind)
+    private lateinit var contentBinding: TransactionResultContentBinding
+
+    override val backgroundStyle = R.style.PrimaryBackground
+    override val forceExpand = true
+
+    @Inject
+    lateinit var walletData: WalletDataProvider
 
     companion object {
 
@@ -49,78 +69,33 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         }
     }
 
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        return inflater.inflate(R.layout.transaction_details_dialog, container, false)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        tx = wallet!!.getTransaction(txId)
-        val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
+        tx = walletData.wallet!!.getTransaction(txId)
+        contentBinding = TransactionResultContentBinding.bind(binding.transactionResultContainer)
+        val transactionResultViewBinder = TransactionResultViewBinder(binding.transactionResultContainer)
 
         if (tx != null) {
-            tx?.let {
-                transaction_details_dialog_content_container.background = ContextCompat.getDrawable(requireContext(), R.drawable.rounded_corners_bgd_light_gray)
-                transaction_details_dialog_content_container.updateLayoutParams<RelativeLayout.LayoutParams> {
-                    topMargin = 30
-                }
-                transaction_close_btn.isVisible = false
-                transactionResultViewBinder.bind(it)
-            }
-
+            transactionResultViewBinder.bind(tx!!)
         } else {
             log.error("Transaction not found. TxId:", txId)
             dismiss()
             return
         }
-        open_explorer_card.setOnClickListener { viewOnBlockExplorer() }
-        transaction_close_btn.setOnClickListener { dismissAnimation() }
-        close_btn.setOnClickListener { dismissAnimation() }
-        report_issue_card.setOnClickListener {
+
+        contentBinding.openExplorerCard.setOnClickListener { viewOnBlockExplorer() }
+        contentBinding.reportIssueCard.setOnClickListener {
             showReportIssue()
         }
-
-        showAnimation()
     }
 
     private fun showReportIssue() {
         ReportIssueDialogBuilder.createReportIssueDialog(requireActivity(), WalletApplication.getInstance())
             .buildAlertDialog().show()
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setStyle(STYLE_NO_FRAME, org.dash.wallet.common.R.style.FullScreenDialog)
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        dialog?.window?.apply {
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            requestFeature(Window.FEATURE_NO_TITLE)
-        }
-        return inflater.inflate(R.layout.transaction_details_dialog, container, false)
-    }
-
-    private fun showAnimation() {
-        val container = transaction_details_dialog_content_container
-        val contentAnimation = AnimationUtils.loadAnimation(activity, R.anim.slide_in_bottom)
-        container.translationY = container.measuredHeight.toFloat()
-        container.visibility = View.VISIBLE
-        container.startAnimation(contentAnimation)
-    }
-
-    private fun dismissAnimation() {
-        val contentAnimation = AnimationUtils.loadAnimation(activity, R.anim.slide_out_bottom)
-        transaction_details_dialog_content_container.startAnimation(contentAnimation)
-        val containerAnimation = AnimationUtils.loadAnimation(activity, R.anim.fade_out)
-        transaction_details_dialog_content_container.postDelayed({
-            transaction_details_dialog_container.startAnimation(containerAnimation)
-        }, 150)
-        containerAnimation.setAnimationListener(object : Animation.AnimationListener {
-            override fun onAnimationEnd(animation: Animation?) {
-                dismiss()
-            }
-
-            override fun onAnimationRepeat(animation: Animation?) {}
-
-            override fun onAnimationStart(animation: Animation?) {}
-        })
     }
 
     private fun viewOnBlockExplorer() {

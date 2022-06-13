@@ -59,7 +59,7 @@
     <color name="content_secondary">@color/extra_dark_gray</color>
     <color name="content_tertiary">@color/dark_gray</color>
     <color name="content_disabled">#92929C</color>
-    <color name="content_warning">@color/red_300</color>
+    <color name="content_warning">@color/system_red</color>
     <color name="light_gray">#DEDEE3</color>
     <color name="input_hint_gray">#c5c6c7</color>
 
@@ -91,15 +91,14 @@
     <color name="dark_gray">#75808A</color>
     <color name="gray">#B0B6BC</color>
     <color name="extra_light_gray">#EBEDEE</color>
+    <color name="system_red">#E85C4A</color>
+    <color name="system_green">#3CB878</color>
 
     <color name="dash_black_0.7">#B30C0C0D</color>
 
     <color name="blue_50">#F0F8FE</color>
     <color name="blue_300">#3CA9EE</color>
     <color name="blue_700">#003470</color>
-
-    <color name="red_300">#E85C4A</color>
-    <color name="green_300">#3CB878</color>
 
     <color name="gray_40">#F2F3F5</color>
     <color name="gray_50">#EBEDF0</color>

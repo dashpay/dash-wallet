@@ -5,10 +5,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/rounded_background"
+    android:background="@drawable/rounded_ripple_background"
     android:theme="@style/TransactionRowBackground"
     android:paddingEnd="15dp"
     android:gravity="center"
+    android:clickable="true"
+    android:focusable="true"
     tools:context="de.schildbach.wallet.ui.main.TransactionsAdapter">
 
     <ImageView

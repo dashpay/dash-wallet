@@ -4,11 +4,13 @@
     <color name="colorPrimary">@color/dash_blue</color>
     <color name="content_primary">@color/dash_white</color>
     <color name="content_tertiary">@color/light_gray</color>
+    <color name="content_warning">@color/system_red</color>
 
     <!-- Background -->
     <color name="background_primary">@color/dash_black</color>
     <color name="background_secondary">#202326</color>
     <color name="background_tertiary">@color/dash_black</color>
+    <color name="button_ripple_color">#30ffffff</color>
 
     <!-- Palette -->
     <color name="dash_blue">#0094F0</color>
@@ -17,4 +19,6 @@
     <color name="light_gray">#8D9399</color>
     <color name="gray">#757A80</color>
     <color name="dash_black">#191C1F</color>
+    <color name="system_red">#E96453</color>
+    <color name="system_green">#3FC07D</color>
 </resources>

@@ -34,6 +34,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.ui.CurrencyTextView
 
 /**
@@ -65,7 +66,6 @@ class TransactionResultViewBinder(private val containerView: View) {
     private val paymentMemoContainer by lazy { containerView.findViewById<View>(R.id.payment_memo_container) }
     private val payeeSecuredByContainer by lazy { containerView.findViewById<View>(R.id.payee_verified_by_container) }
     private val payeeSecuredBy by lazy { containerView.findViewById<TextView>(R.id.payee_secured_by) }
-    private val closeIcon by lazy { containerView.findViewById<ImageButton>(R.id.close_btn) }
     private val errorContainer by lazy { containerView.findViewById<View>(R.id.error_container) }
     private val errorDescription by lazy { containerView.findViewById<TextView>(R.id.error_description) }
 
@@ -75,7 +75,7 @@ class TransactionResultViewBinder(private val containerView: View) {
 
     fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null, isTransactionHistory: Boolean = true) {
         val noCodeFormat = WalletApplication.getInstance().configuration.format.noCode()
-        val wallet = WalletApplication.getInstance().wallet
+        val wallet = WalletApplication.getInstance().wallet!!
         val primaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet)
         val secondaryStatus = TransactionUtil.getReceivedStatusString(tx, wallet)
         val errorStatus = TransactionUtil.getErrorName(tx)
@@ -150,13 +150,6 @@ class TransactionResultViewBinder(private val containerView: View) {
             outputsAddressesContainer.addView(addressView)
         }
 
-        if (!inputsContainer.isVisible){
-            outputsContainer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                topMargin = 0
-                bottomToBottom = 0
-            }
-        }
-
         dashAmount.setFormat(noCodeFormat)
         //For displaying purposes only
         val amountSentOrReceived : Coin? = tx.value?.let {
@@ -193,13 +186,13 @@ class TransactionResultViewBinder(private val containerView: View) {
         }
 
 
-        setTransactionDirection(tx, errorStatusStr, isTransactionHistory)
+        setTransactionDirection(tx, wallet, errorStatusStr)
     }
 
     private fun setTransactionDirection(
         tx: Transaction,
-        errorStatusStr: String,
-        isTransactionHistory: Boolean
+        wallet: Wallet,
+        errorStatusStr: String
     ) {
         if (errorStatusStr.isNotEmpty()){
             errorContainer.isVisible = true
@@ -210,45 +203,32 @@ class TransactionResultViewBinder(private val containerView: View) {
             dateContainer.isVisible = false
             explorerContainer.isVisible = false
             checkIcon.setImageResource(R.drawable.ic_transaction_failed)
-            transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.red_300))
+            transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.content_warning))
             transactionTitle.text = ctx.getText(R.string.transaction_failed_details)
             errorDescription.text = errorStatusStr
             transactionAmountSignal.text = "-"
         } else {
             if (tx.isOutgoing()) {
-                checkIcon.setImageResource(R.drawable.ic_transaction_sent)
+                checkIcon.setImageResource(if (WalletUtils.isEntirelySelf(tx, wallet)) {
+                    R.drawable.ic_shuffle
+                } else {
+                    R.drawable.ic_transaction_sent
+                })
+
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
                 transactionAmountSignal.text = "-"
-                if (isTransactionHistory){
-                    closeIcon.isVisible = true
-                    transactionTitle.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        topMargin = 10
-                    }
-                }
-
             } else {
                 checkIcon.setImageResource(R.drawable.ic_transaction_received)
-                transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.green_300))
+                transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.system_green))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
                 transactionAmountSignal.text = "+"
-                closeIcon.isVisible = true
-                transactionTitle.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                    topMargin = 10
-                }
             }
             checkIcon.visibility = View.VISIBLE
             transactionAmountSignal.visibility = View.VISIBLE
-
-            if (!inputsContainer.isVisible){
-                outputsContainer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                    topMargin = -40
-                }
-            }
         }
 
         feeRow.visibility = if (isFeeAvailable(tx.fee)) View.VISIBLE else View.GONE
-
     }
 
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {

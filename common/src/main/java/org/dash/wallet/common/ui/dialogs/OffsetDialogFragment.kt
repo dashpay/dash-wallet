@@ -20,8 +20,9 @@ package org.dash.wallet.common.ui.dialogs
 import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
-import androidx.annotation.DrawableRes
+import androidx.annotation.StyleRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -34,7 +35,7 @@ open class OffsetDialogFragment : BottomSheetDialogFragment() {
     }
 
     protected open val forceExpand: Boolean = false
-    @DrawableRes protected open val background: Int = R.drawable.offset_dialog_background
+    @StyleRes protected open val backgroundStyle: Int = R.style.SecondaryBackground
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -43,7 +44,11 @@ open class OffsetDialogFragment : BottomSheetDialogFragment() {
             val d = dialog as BottomSheetDialog
             val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
             bottomSheet?.let {
-                bottomSheet.setBackgroundResource(background)
+                bottomSheet.background = ResourcesCompat.getDrawable(
+                    resources,
+                    R.drawable.offset_dialog_background,
+                    resources.newTheme().apply { applyStyle(backgroundStyle, true) }
+                )
 
                 val displayHeight = requireContext().resources.displayMetrics.heightPixels
                 val height = if (forceExpand) displayHeight - FULLSCREEN_DIFF else bottomSheet.height

@@ -4,9 +4,11 @@
     <style name="SplashActivity.Theme" parent="My.Theme">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:windowBackground">@drawable/splash_activity_background</item>
+        <item name="android:windowBackground">@drawable/splash_background</item>
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
 
     <style name="LockScreenActivity.Theme" parent="SplashActivity.Theme">
@@ -123,6 +125,7 @@
     <style name="TransactionRowBackground">
         <item name="backgroundColor">@color/background_secondary</item>
         <item name="strokeColor">@color/background_secondary</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
         <item name="cornerRadius">10dp</item>
     </style>
 </resources>

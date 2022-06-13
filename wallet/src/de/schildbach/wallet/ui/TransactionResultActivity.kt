@@ -93,7 +93,6 @@ class TransactionResultActivity : AbstractWalletActivity() {
             report_issue_card.setOnClickListener {
                 showReportIssue()
             }
-            close_btn.setOnClickListener { onTransactionDetailsDismiss() }
         } else {
             log.error("Transaction not found. TxId:", txId)
             finish()

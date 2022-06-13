@@ -273,7 +273,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
     }
 
     private fun showBannerError() {
-        binding.messageBanner.setBackgroundColor(resources.getColor(R.color.red_300, null))
+        binding.messageBanner.setBackgroundColor(resources.getColor(R.color.content_warning, null))
         runWiggleAnimation(binding.messageBanner)
     }
 
