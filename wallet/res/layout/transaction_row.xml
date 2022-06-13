@@ -77,7 +77,7 @@
 
     <TextView
         android:id="@+id/secondary_status"
-        style="@style/Caption.OrangeStatus"
+        style="@style/Caption.Tangerine"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:paddingStart="4dp"

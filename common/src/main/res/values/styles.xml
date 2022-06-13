@@ -838,8 +838,8 @@
         <item name="android:textColor">@color/content_tertiary</item>
     </style>
 
-    <style name="Caption.OrangeStatus">
-        <item name="android:textColor">@color/secondary_status</item>
+    <style name="Caption.Tangerine">
+        <item name="android:textColor">@color/tangerine</item>
     </style>
 
     <style name="Caption.Medium">
