@@ -190,6 +190,7 @@ class CrowdNodeApiAggregator @Inject constructor(
 
             signUpStatus.value = SignUpStatus.Finished
             log.info("CrowdNode sign up finished")
+            refreshBalance(3)
 
             notifyIfNeeded(appContext.getString(R.string.crowdnode_account_ready), "crowdnode_ready")
         } catch (ex: Exception) {
@@ -258,6 +259,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 } catch (ex: Exception) {
                     handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
                 }
+                refreshBalance(retries = 3)
             }
 
             return true
@@ -479,6 +481,7 @@ class CrowdNodeApiAggregator @Inject constructor(
             if (set.hasWelcomeToApiResponse) {
                 log.info("found finished sign up, account: ${set.accountAddress?.toBase58() ?: "null"}")
                 signUpStatus.value = SignUpStatus.Finished
+                refreshBalance(3)
                 return true
             }
 
