@@ -25,7 +25,9 @@ import androidx.annotation.LayoutRes
 import androidx.fragment.app.FragmentActivity
 import org.dash.wallet.common.R
 
-class AdaptiveDialogExt(@LayoutRes private val layout: Int = R.layout.dialog_adaptive_ext) : AdaptiveDialog(layout) {
+class ExtraActionDialog(
+    @LayoutRes private val layout: Int = R.layout.dialog_extra_action
+) : AdaptiveDialog(layout) {
     companion object {
         private const val ICON_RES_ARG = "icon_res"
         private const val TITLE_ARG = "title"
@@ -42,9 +44,9 @@ class AdaptiveDialogExt(@LayoutRes private val layout: Int = R.layout.dialog_ada
             negativeButtonText: String,
             positiveButtonText: String? = null,
             extraMessage: String? = null
-        ): AdaptiveDialogExt {
+        ): ExtraActionDialog {
             return custom(
-                R.layout.dialog_adaptive_ext,
+                R.layout.dialog_extra_action,
                 icon, title, message, negativeButtonText, positiveButtonText, extraMessage
             )
         }
@@ -58,7 +60,7 @@ class AdaptiveDialogExt(@LayoutRes private val layout: Int = R.layout.dialog_ada
             negativeButtonText: String,
             positiveButtonText: String? = null,
             extraMessage: String? = null
-        ): AdaptiveDialogExt {
+        ): ExtraActionDialog {
             val args = Bundle().apply {
                 icon?.let { putInt(ICON_RES_ARG, icon) }
                 putString(TITLE_ARG, title)
@@ -67,7 +69,7 @@ class AdaptiveDialogExt(@LayoutRes private val layout: Int = R.layout.dialog_ada
                 putString(POS_BUTTON_ARG, positiveButtonText)
                 putString(EXTRA_MESSAGE_BUTTON_ARG, extraMessage)
             }
-            return AdaptiveDialogExt(layout).apply {
+            return ExtraActionDialog(layout).apply {
                 arguments = args
             }
         }
@@ -87,7 +89,7 @@ class AdaptiveDialogExt(@LayoutRes private val layout: Int = R.layout.dialog_ada
     fun show(activity: FragmentActivity, onResult: (Boolean?) -> Unit, onExtraMessageAction: () -> Unit) {
         onResultListener = onResult
         onExtraMessageListener = onExtraMessageAction
-        show(activity.supportFragmentManager, "adaptive_dialog")
+        show(activity.supportFragmentManager, "extra_action_dialog")
     }
 
     private fun onExtraMessageAction(){

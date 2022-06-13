@@ -88,13 +88,13 @@ class AboutActivity : BaseMenuActivity() {
         explore_dash_last_sync.setCopyable("Explore Dash last sync")
 
         viewModel.exploreRemoteTimestamp.observe(this) { timestamp ->
-            val formattedUpdateTime = try {
-                DateUtils.formatDateTime(applicationContext, timestamp, formatFlags)
-            } catch (ex: Exception) {
+            val formattedUpdateTime = if (timestamp <= 0L) {
                 getString(R.string.about_last_explore_dash_update_error)
+            } else {
+                DateUtils.formatDateTime(applicationContext, timestamp, formatFlags)
             }
 
-            val formattedSyncTime = if (viewModel.exploreLastSync == 0L) {
+            val formattedSyncTime = if (viewModel.exploreLastSync <= 0L) {
                 getString(R.string.about_last_explore_dash_sync_never)
             } else {
                 DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSync, formatFlags)

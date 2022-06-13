@@ -6,10 +6,12 @@ import androidx.room.RoomDatabase;
 import androidx.room.TypeConverters;
 
 import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.RoomConverters;
+
 import de.schildbach.wallet.data.AppDatabaseMigrations;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
-import de.schildbach.wallet.data.RoomConverters;
+import de.schildbach.wallet.data.BlockchainStateRoomConverters;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 
 /**
@@ -19,7 +21,7 @@ import de.schildbach.wallet.rates.ExchangeRatesDao;
         ExchangeRate.class,
         BlockchainState.class
     }, version = 10)
-@TypeConverters({RoomConverters.class})
+@TypeConverters({RoomConverters.class, BlockchainStateRoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
     private static AppDatabase instance;

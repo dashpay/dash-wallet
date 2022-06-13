@@ -18,8 +18,12 @@
 package org.dash.wallet.features.exploredash.di
 
 import android.content.Context
+import android.content.SharedPreferences
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -37,6 +41,29 @@ import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class ExploreDashModule {
+    companion object {
+        @Provides
+        fun provideSharedPrefs(@ApplicationContext context: Context): SharedPreferences {
+            return context.getSharedPreferences("explore", Context.MODE_PRIVATE)
+        }
+
+        @Provides
+        fun provideContext(@ApplicationContext context: Context): Context {
+            return context
+        }
+
+        @Provides
+        fun provideFusedLocationProviderClient(context: Context): FusedLocationProviderClient {
+            return LocationServices.getFusedLocationProviderClient(context)
+        }
+
+        @Provides
+        fun provideFirebaseAuth() = Firebase.auth
+
+        @Provides
+        fun provideFirebaseStorage() = Firebase.storage
+    }
+
     @Binds
     abstract fun bindExploreRepository(
         exploreRepository: GCExploreDatabase
@@ -52,18 +79,4 @@ abstract class ExploreDashModule {
     abstract fun bindExploreDataSource(
         exploreDatabase: MerchantAtmDataSource
     ): ExploreDataSource
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
-object LocationProvider {
-    @Provides
-    fun provideContext(@ApplicationContext context: Context): Context {
-        return context
-    }
-
-    @Provides
-    fun provideFusedLocationProviderClient(context: Context): FusedLocationProviderClient {
-        return LocationServices.getFusedLocationProviderClient(context)
-    }
 }
