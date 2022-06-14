@@ -67,7 +67,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
     private fun setErrorMessage(ex: Exception) {
         binding.subtitle.text = when (ex) {
             is DustySendRequested, is CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
-            is InsufficientMoneyException -> getString(R.string.send_coins_error_insufficient_money)
+            is InsufficientMoneyException -> ex.message ?: getString(R.string.send_coins_error_insufficient_money)
             else -> ex.message ?: ""
         }
     }

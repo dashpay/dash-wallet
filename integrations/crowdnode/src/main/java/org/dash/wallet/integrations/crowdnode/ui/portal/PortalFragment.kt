@@ -46,7 +46,6 @@ import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.ConfirmationDialog
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.OnlineAccountDetailsDialog
-import org.dash.wallet.integrations.crowdnode.ui.online.OnlineAccountEmailFragmentDirections
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 @AndroidEntryPoint
@@ -134,7 +133,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
 
         binding.withdrawBtn.setOnClickListener {
-            safeNavigate(PortalFragmentDirections.portalToTransfer(true))
+            continueWithdraw()
         }
 
         binding.onlineAccountBtn.setOnClickListener {
@@ -364,6 +363,24 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
                 viewModel.setOnlineInfoShown(true)
             } else {
                 safeNavigate(PortalFragmentDirections.portalToOnlineAccountEmail())
+            }
+        }
+    }
+
+    private fun continueWithdraw() {
+        if ((viewModel.dashBalance.value ?: Coin.ZERO) >= CrowdNodeConstants.MINIMUM_LEFTOVER_BALANCE) {
+            safeNavigate(PortalFragmentDirections.portalToTransfer(true))
+        } else {
+            AdaptiveDialog.create(
+                R.drawable.ic_error_red,
+                getString(R.string.positive_balance_required),
+                getString(R.string.withdrawal_required_balance),
+                getString(R.string.button_close),
+                getString(R.string.buy_dash)
+            ).show(requireActivity()) {
+                if (it == true) {
+                    viewModel.buyDash()
+                }
             }
         }
     }

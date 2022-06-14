@@ -23,12 +23,10 @@ import android.os.Process
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.security.SecurityGuard
-import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.crypto.KeyCrypterException
@@ -152,13 +150,11 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
             }
 
             override fun onLeftoverBalanceError(ex: LeftoverBalanceException) {
-                viewModelScope.launch {
-                    // TODO: this viewModel should not handle UI actions like a dialog.
-                    // Move this to a more appropriate place once the sending flow is
-                    // more straightforward to support a clear retry logic.
-                    (walletApplication.currentActivity as? FragmentActivity)?.let {
-                        val result = MinimumBalanceDialog().showAsync(it)
-
+                // TODO: this viewModel should not handle UI actions like a dialog.
+                // Move this to a more appropriate place once the sending flow is
+                // more straightforward to support a clear retry logic.
+                (walletApplication.currentActivity as? FragmentActivity)?.let {
+                    MinimumBalanceDialog().show(it) { result ->
                         if (result == true) {
                             signAndSendPayment(sendRequest, txAlreadyCompleted, false)
                         } else {

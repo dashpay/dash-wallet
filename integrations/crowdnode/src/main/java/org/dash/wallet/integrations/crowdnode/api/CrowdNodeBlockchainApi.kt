@@ -118,7 +118,11 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
         val selector = ByAddressCoinSelector(accountAddress)
 
-        return paymentService.sendCoins(crowdNodeAddress, requestValue, selector)
+        return paymentService.sendCoins(
+            crowdNodeAddress, requestValue, selector,
+            emptyWallet = false,
+            checkBalanceConditions = false
+        )
     }
 
     suspend fun waitForWithdrawalResponse(requestValue: Coin): Transaction {
