@@ -254,8 +254,10 @@ class CrowdNodeApiAggregator @Inject constructor(
 
             responseScope.launch {
                 try {
-                    val tx = blockchainApi.waitForWithdrawalResponse(requestValue)
-                    log.info("got withdrawal queue response: ${tx.txId}")
+                    val txResponse = blockchainApi.waitForWithdrawalResponse(requestValue)
+                    log.info("got withdrawal queue response: ${txResponse.txId}")
+                    val txWithdrawal = blockchainApi.waitForWithdrawalReceived()
+                    log.info("got withdrawal: ${txWithdrawal.txId}")
                 } catch (ex: Exception) {
                     handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
                 }

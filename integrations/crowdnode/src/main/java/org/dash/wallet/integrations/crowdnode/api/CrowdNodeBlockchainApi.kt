@@ -171,4 +171,10 @@ open class CrowdNodeBlockchainApi @Inject constructor(
             throw CrowdNodeException(CrowdNodeException.CONFIRMATION_ERROR)
         }
     }
+
+    suspend fun waitForWithdrawalReceived(): Transaction {
+        val filter = CrowdNodeWithdrawalReceivedTx(params)
+        return walletDataProvider.getTransactions(filter).firstOrNull()
+            ?: walletDataProvider.observeTransactions(filter).first()
+    }
 }
