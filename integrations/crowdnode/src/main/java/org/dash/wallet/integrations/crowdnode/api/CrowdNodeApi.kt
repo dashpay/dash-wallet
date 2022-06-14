@@ -69,7 +69,7 @@ interface CrowdNodeApi {
     suspend fun deposit(amount: Coin, emptyWallet: Boolean): Boolean
     suspend fun withdraw(amount: Coin): Boolean
     fun hasAnyDeposits(): Boolean
-    fun refreshBalance(retries: Int = 0)
+    fun refreshBalance(retries: Int = 0, afterWithdrawal: Boolean = false)
     fun trackLinkingAccount(address: Address)
     fun stopTrackingLinked()
     suspend fun registerEmailForAccount(email: String)
@@ -261,7 +261,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 } catch (ex: Exception) {
                     handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
                 }
-                refreshBalance(retries = 3)
+                refreshBalance(retries = 3, afterWithdrawal = true)
             }
 
             return true
@@ -279,7 +279,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         return deposits.any()
     }
 
-    override fun refreshBalance(retries: Int) {
+    override fun refreshBalance(retries: Int, afterWithdrawal: Boolean) {
         if (signUpStatus.value == SignUpStatus.NotStarted) {
             return
         }
@@ -297,8 +297,14 @@ class CrowdNodeApiAggregator @Inject constructor(
                 currentBalance = resolveBalance()
 
                 if (lastBalance != currentBalance.data?.value) {
-                    // balance changed, no need to retry anymore
-                    break
+                    val minimumWithdrawal = CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.MaxCode.code)
+                    if (!afterWithdrawal) {
+                        // balance changed, no need to retry anymore
+                        break;
+                    } else if (lastBalance - (currentBalance.data?.value?: 0L) >= minimumWithdrawal.value) {
+                        // balance changed, no need to retry anymore
+                        break
+                    }
                 }
             }
 
