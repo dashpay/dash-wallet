@@ -19,8 +19,6 @@ package org.dash.wallet.common.services.analytics
 
 // Event names should be <= 40 chars
 object AnalyticsConstants {
-    const val CALLING_ACTIVITY = "calling_activity"
-
     object Liquid {
         const val BUY_SELL_MORE = "more_buy_sell_dash"
         const val ENTER_CONNECTED = "liquid_enter_connected"
@@ -170,7 +168,10 @@ object AnalyticsConstants {
         const val MERCHANT_DETAILS_BACK_BOTTOM = "explore_merchant_details_back_bottom"
         const val MERCHANT_DETAILS_PAY_WITH_DASH = "explore_merchant_details_pay_with_dash"
         const val MERCHANT_DETAILS_SCROLL_UP = "explore_merchant_details_scroll_up"
+    }
 
-
+    object CrowdNode {
+        const val CROWDNODE_LOW_BALANCE_PROCEED = "crowdnode__dialogue_low_balance_proceed" //staking__crowdnode_info.modal.dialogue_button_low.balance.proceed
+        const val CROWDNODE_LOW_BALANCE_CANCEL = "crowdnode__dialogue_low_balance_cancel" //staking__crowdnode_info.modal.dialogue_button_low.balance.cancel
     }
 }

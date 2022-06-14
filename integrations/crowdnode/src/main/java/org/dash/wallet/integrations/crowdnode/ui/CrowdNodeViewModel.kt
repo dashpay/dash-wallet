@@ -28,18 +28,21 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceImpediment
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import java.io.IOException
 import javax.inject.Inject
 
@@ -54,7 +57,8 @@ class CrowdNodeViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val crowdNodeApi: CrowdNodeApi,
     private val clipboardManager: ClipboardManager,
-    exchangeRatesProvider: ExchangeRatesProvider
+    exchangeRatesProvider: ExchangeRatesProvider,
+    val analytics: AnalyticsService
 ) : ViewModel() {
     companion object {
         const val URL_ARG = "url"
@@ -260,8 +264,9 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
-    suspend fun deposit(value: Coin): Boolean {
-        return crowdNodeApi.deposit(value, emptyWallet = value >= dashBalance.value)
+    suspend fun deposit(value: Coin, checkImpediments: Boolean): Boolean {
+        val emptyWallet = value >= dashBalance.value
+        return crowdNodeApi.deposit(value, emptyWallet, checkImpediments)
     }
 
     suspend fun withdraw(value: Coin): Boolean {

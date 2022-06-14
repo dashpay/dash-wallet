@@ -74,12 +74,15 @@ import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
+import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.transactions.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceImpediment;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -163,6 +166,8 @@ public class WalletApplication extends BaseWalletApplication
     HiltWorkerFactory workerFactory;
     @Inject
     BlockchainStateDao blockchainStateDao;
+    @Inject
+    CrowdNodeConfig crowdNodeConfig;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -1028,5 +1033,18 @@ public class WalletApplication extends BaseWalletApplication
     @Override
     public void detachOnWalletWipedListener(@NonNull Function0<Unit> listener) {
         wipeListeners.remove(listener);
+    }
+
+    @Override
+    public void checkSendingImpediments(
+            @NonNull Address address,
+            @NonNull Coin amount
+    ) throws LeftoverBalanceException {
+        new CrowdNodeBalanceImpediment().check(
+                wallet.getBalance(Wallet.BalanceType.ESTIMATED),
+                address,
+                amount,
+                crowdNodeConfig
+        );
     }
 }

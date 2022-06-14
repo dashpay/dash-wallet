@@ -26,8 +26,10 @@ import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.ExchangeRateData
+import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.transactions.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
+import kotlin.jvm.Throws
 
 interface WalletDataProvider {
     // The wallet is in here temporary. Do not use from the feature modules.
@@ -60,4 +62,7 @@ interface WalletDataProvider {
     fun detachOnWalletWipedListener(listener: () -> Unit)
 
     fun processDirectTransaction(tx: Transaction)
+
+    @Throws(LeftoverBalanceException::class)
+    fun checkSendingImpediments(address: Address, amount: Coin)
 }

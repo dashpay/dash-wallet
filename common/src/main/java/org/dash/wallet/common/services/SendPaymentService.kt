@@ -19,14 +19,20 @@ package org.dash.wallet.common.services
 
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.CoinSelector
+import kotlin.jvm.Throws
+
+class LeftoverBalanceException(missing: Coin, message: String): InsufficientMoneyException(missing, message)
 
 interface SendPaymentService {
+    @Throws(LeftoverBalanceException::class)
     suspend fun sendCoins(
         address: Address,
         amount: Coin,
         coinSelector: CoinSelector? = null,
-        emptyWallet: Boolean = false
+        emptyWallet: Boolean = false,
+        checkImpediments: Boolean = true
     ): Transaction
 }
