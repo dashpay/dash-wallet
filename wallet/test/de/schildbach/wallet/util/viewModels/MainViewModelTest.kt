@@ -22,7 +22,6 @@ import android.content.ClipboardManager
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.rates.ExchangeRatesDao
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
