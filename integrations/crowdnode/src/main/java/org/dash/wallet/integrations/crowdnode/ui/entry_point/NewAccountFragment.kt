@@ -34,6 +34,7 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.ISecurityFunctions
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.copy
 import org.dash.wallet.common.util.safeNavigate
@@ -88,6 +89,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         binding.notifyWhenDone.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.CrowdNode.NOTIFY_WHEN_CREATED)
             requireActivity().finish()
         }
 
@@ -140,6 +142,8 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
     }
 
     private fun continueSignUp() {
+        viewModel.logEvent(AnalyticsConstants.CrowdNode.CREATE_ACCOUNT_BUTTON)
+
         lifecycleScope.launch {
             securityFunctions.requestPinCode(requireActivity())?.let {
                 viewModel.signUp()
@@ -148,6 +152,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
     }
 
     private fun continueLinking() {
+        viewModel.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING_LOGIN_BUTTON)
         viewModel.linkOnlineAccount()
     }
 

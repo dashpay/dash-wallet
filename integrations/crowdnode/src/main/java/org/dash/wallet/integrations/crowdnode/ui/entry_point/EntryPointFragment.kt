@@ -23,6 +23,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
@@ -49,10 +50,12 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         )
 
         binding.newAccountBtn.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.CrowdNode.CREATE_NEW_ACCOUNT)
             safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount(false))
         }
 
         binding.existingAccountBtn.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING)
             safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount(true))
         }
 

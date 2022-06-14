@@ -32,6 +32,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -46,7 +47,6 @@ import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.ConfirmationDialog
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.OnlineAccountDetailsDialog
-import org.dash.wallet.integrations.crowdnode.ui.online.OnlineAccountEmailFragmentDirections
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 @AndroidEntryPoint
@@ -130,11 +130,12 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         binding.walletBalanceDash.setAmount(Coin.ZERO)
 
         binding.depositBtn.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_DEPOSIT)
             safeNavigate(PortalFragmentDirections.portalToTransfer(false))
         }
 
         binding.withdrawBtn.setOnClickListener {
-            safeNavigate(PortalFragmentDirections.portalToTransfer(true))
+            continueWithdraw()
         }
 
         binding.onlineAccountBtn.setOnClickListener {
@@ -317,6 +318,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun showConfirmationDialog() {
+        viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_VERIFY)
         ConfirmationDialog().show(parentFragmentManager, "confirmation_dialog")
     }
 
@@ -335,6 +337,8 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun showInfoDialog() {
+        viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_INFO_BUTTON)
+
         if (viewModel.signUpStatus == SignUpStatus.LinkedOnline) {
             OnlineAccountDetailsDialog().show(parentFragmentManager, "online_account_details")
         } else {
@@ -359,12 +363,34 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun showOnlineInfoOrEnterEmail() {
+        viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_CREATE_ONLINE_ACCOUNT)
+
         lifecycleScope.launch {
             if (viewModel.getShouldShowOnlineInfo()) {
                 safeNavigate(PortalFragmentDirections.portalToOnlineAccountInfo())
                 viewModel.setOnlineInfoShown(true)
             } else {
                 safeNavigate(PortalFragmentDirections.portalToOnlineAccountEmail())
+            }
+        }
+    }
+
+    private fun continueWithdraw() {
+        viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_WITHDRAW)
+
+        if ((viewModel.dashBalance.value ?: Coin.ZERO) >= CrowdNodeConstants.MINIMUM_LEFTOVER_BALANCE) {
+            safeNavigate(PortalFragmentDirections.portalToTransfer(true))
+        } else {
+            AdaptiveDialog.create(
+                R.drawable.ic_error_red,
+                getString(R.string.positive_balance_required),
+                getString(R.string.withdrawal_required_balance),
+                getString(R.string.button_close),
+                getString(R.string.buy_dash)
+            ).show(requireActivity()) {
+                if (it == true) {
+                    viewModel.buyDash()
+                }
             }
         }
     }

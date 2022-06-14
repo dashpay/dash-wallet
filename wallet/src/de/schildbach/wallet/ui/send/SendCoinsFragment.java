@@ -245,7 +245,8 @@ public class SendCoinsFragment extends BaseLockScreenFragment {
                         showInsufficientMoneyDialog(missing);
                         break;
                     }
-                    case INVALID_ENCRYPTION_KEY: {
+                    case INVALID_ENCRYPTION_KEY:
+                    case CANCELED: {
                         viewModel.state.setValue(SendCoinsViewModel.State.INPUT);
                         break;
                     }

@@ -29,6 +29,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
@@ -54,6 +55,7 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
         }
 
         val continueAction = {
+            viewModel.logEvent(AnalyticsConstants.CrowdNode.CREATE_ONLINE_CONTINUE)
             val input = binding.emailInput.text.toString()
 
             if (isEmail(input)) {

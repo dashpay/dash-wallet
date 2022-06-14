@@ -410,7 +410,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.upButton.setOnClickListener {
             binding.searchResults.scrollToPosition(0)
             if (isMerchant()){
-                viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_SCROLL_UP)
+                viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_SCROLL_UP)
             }
         }
 
@@ -455,20 +455,20 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun setupItemDetails() {
         binding.itemDetails.setOnSendDashClicked { isPayingWithDash ->
             if (isPayingWithDash){
-                viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_PAY_WITH_DASH)
+                viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_PAY_WITH_DASH)
             }
             viewModel.sendDash()
         }
         binding.itemDetails.setOnReceiveDashClicked { viewModel.receiveDash() }
         binding.itemDetails.setOnBackButtonClicked {
             viewModel.backFromMerchantLocation()
-            viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_FROM_ALL_LOCATIONS)
+            viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_FROM_ALL_LOCATIONS)
         }
         binding.itemDetails.setOnShowAllLocationsClicked {
             viewModel.selectedItem.value?.let { merchant ->
                 if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
                     viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
-                    viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_SHOW_ALL_LOCATIONS)
+                    viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_SHOW_ALL_LOCATIONS)
                 }
             }
         }
@@ -483,20 +483,20 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
         binding.itemDetails.setOnNavigationButtonClicked {
             if (isMerchant()){
-                viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_NAVIGATION)
+                viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_NAVIGATION)
             }
         }
         binding.itemDetails.setOnDialPhoneButtonClicked {
             if (isMerchant()){
-                viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_DIAL_PHONE_CALL)
+                viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_DIAL_PHONE_CALL)
             }
         }
         binding.itemDetails.setOnOpenWebsiteButtonClicked {
             if (isMerchant()){
-                viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_OPEN_WEBSITE)
+                viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_OPEN_WEBSITE)
             }
         }
-        binding.itemDetails.setOnBuyGiftCardButtonClicked { viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BUY_GIFT_CARD) }
+        binding.itemDetails.setOnBuyGiftCardButtonClicked { viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BUY_GIFT_CARD) }
     }
 
     private fun setupScreenTransitions() {
@@ -563,7 +563,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.toolbar.setNavigationOnClickListener {
             hardBackAction.invoke()
             if (isMerchant()){
-                viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_TOP)
+                viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_TOP)
             }
         }
 
@@ -573,7 +573,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 override fun handleOnBackPressed() {
                     hardBackAction.invoke()
                     if (isMerchant()){
-                        viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_BOTTOM)
+                        viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_BOTTOM)
                     }
                 }
             })

@@ -34,7 +34,9 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ISecurityFunctions
+import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
@@ -218,7 +220,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             if (isWithdraw) {
                 viewModel.withdraw(value)
             } else {
-                viewModel.deposit(value)
+                handleDeposit(value)
             }
         }
 
@@ -238,6 +240,22 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 ))
             }
         }
+    }
+
+    private suspend fun handleDeposit(value: Coin): Boolean {
+        try {
+            viewModel.deposit(value, true)
+            return true
+        } catch (ex: LeftoverBalanceException) {
+            val result = MinimumBalanceDialog().showAsync(requireActivity())
+
+            if (result == true) {
+                viewModel.deposit(value, false)
+                return true
+            }
+        }
+
+        return false
     }
 
     private fun updateAvailableBalance() {

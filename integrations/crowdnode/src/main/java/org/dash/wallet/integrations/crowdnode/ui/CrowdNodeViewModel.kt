@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.crowdnode.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -34,12 +35,13 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import java.io.IOException
 import javax.inject.Inject
 
@@ -54,7 +56,8 @@ class CrowdNodeViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val crowdNodeApi: CrowdNodeApi,
     private val clipboardManager: ClipboardManager,
-    exchangeRatesProvider: ExchangeRatesProvider
+    exchangeRatesProvider: ExchangeRatesProvider,
+    val analytics: AnalyticsService
 ) : ViewModel() {
     companion object {
         const val URL_ARG = "url"
@@ -260,8 +263,9 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
-    suspend fun deposit(value: Coin): Boolean {
-        return crowdNodeApi.deposit(value, emptyWallet = value >= dashBalance.value)
+    suspend fun deposit(value: Coin, checkBalanceConditions: Boolean): Boolean {
+        val emptyWallet = value >= dashBalance.value
+        return crowdNodeApi.deposit(value, emptyWallet, checkBalanceConditions)
     }
 
     suspend fun withdraw(value: Coin): Boolean {
@@ -324,6 +328,10 @@ class CrowdNodeViewModel @Inject constructor(
 
     fun finishSignUpToOnlineAccount() {
         crowdNodeApi.setOnlineAccountCreated()
+    }
+
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, bundleOf())
     }
 
     private fun getOrCreateAccountAddress(): Address {

@@ -22,6 +22,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.transactions.ExactOutputsSelector
@@ -31,6 +32,7 @@ import org.dash.wallet.integrations.crowdnode.transactions.*
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import kotlin.jvm.Throws
 
 open class CrowdNodeBlockchainApi @Inject constructor(
     private val paymentService: SendPaymentService,
@@ -85,11 +87,17 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         return tx
     }
 
-    suspend fun deposit(accountAddress: Address, amount: Coin, emptyWallet: Boolean): Transaction {
+    @Throws(LeftoverBalanceException::class)
+    suspend fun deposit(
+        accountAddress: Address,
+        amount: Coin,
+        emptyWallet: Boolean,
+        checkBalanceConditions: Boolean
+    ): Transaction {
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
         val selector = ByAddressCoinSelector(accountAddress)
 
-        return paymentService.sendCoins(crowdNodeAddress, amount, selector, emptyWallet)
+        return paymentService.sendCoins(crowdNodeAddress, amount, selector, emptyWallet, checkBalanceConditions)
     }
 
     suspend fun waitForDepositResponse(amount: Coin): Transaction {
@@ -110,7 +118,11 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
         val selector = ByAddressCoinSelector(accountAddress)
 
-        return paymentService.sendCoins(crowdNodeAddress, requestValue, selector)
+        return paymentService.sendCoins(
+            crowdNodeAddress, requestValue, selector,
+            emptyWallet = false,
+            checkBalanceConditions = false
+        )
     }
 
     suspend fun waitForWithdrawalResponse(requestValue: Coin): Transaction {

@@ -22,6 +22,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.integrations.crowdnode.model.ApiCode
 
 object CrowdNodeConstants {
     private const val CROWDNODE_TESTNET_ADDRESS = "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"
@@ -39,6 +40,7 @@ object CrowdNodeConstants {
     val DASH_FORMAT: MonetaryFormat = MonetaryFormat.BTC.minDecimals(1)
         .repeatOptionalDecimals(1, 3).postfixCode()
     val API_CONFIRMATION_DASH_AMOUNT: Coin = Coin.valueOf(54321)
+    val MINIMUM_LEFTOVER_BALANCE: Coin = Coin.valueOf(30000)
 
     fun getCrowdNodeAddress(params: NetworkParameters): Address {
         return Address.fromBase58(params, if (params == MainNetParams.get()) {

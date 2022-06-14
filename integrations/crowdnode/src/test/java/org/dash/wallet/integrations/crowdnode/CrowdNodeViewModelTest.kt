@@ -73,7 +73,7 @@ class CrowdNodeViewModelTest {
     private val balance = Coin.COIN.multiply(4)
 
     private val api = mock<CrowdNodeApi> {
-        onBlocking { deposit(any(), any()) } doReturn true
+        onBlocking { deposit(any(), any(), any()) } doReturn true
         on { signUpStatus } doReturn MutableStateFlow(SignUpStatus.Finished)
         on { onlineAccountStatus } doReturn MutableStateFlow(OnlineAccountStatus.None)
         on { apiError } doReturn MutableStateFlow(null)
@@ -97,9 +97,9 @@ class CrowdNodeViewModelTest {
     @Test
     fun deposit_fullBalance_setsEmptyWallet() {
         runBlocking {
-            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock)
-            viewModel.deposit(balance)
-            verify(api).deposit(balance, true)
+            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock, mock())
+            viewModel.deposit(balance, false)
+            verify(api).deposit(balance, emptyWallet = true, checkBalanceConditions = false)
         }
     }
 
@@ -107,9 +107,9 @@ class CrowdNodeViewModelTest {
     fun deposit_lessThanFullBalance_doesNotSetEmptyWallet() {
         runBlocking {
             val partial = balance.div(6)
-            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(),exchangeRatesMock)
-            viewModel.deposit(partial)
-            verify(api).deposit(partial, false)
+            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock, mock())
+            viewModel.deposit(partial, false)
+            verify(api).deposit(partial, emptyWallet = false, checkBalanceConditions = false)
         }
     }
 }
