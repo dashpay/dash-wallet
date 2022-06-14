@@ -32,6 +32,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -129,6 +130,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         binding.walletBalanceDash.setAmount(Coin.ZERO)
 
         binding.depositBtn.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_DEPOSIT)
             safeNavigate(PortalFragmentDirections.portalToTransfer(false))
         }
 
@@ -316,6 +318,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun showConfirmationDialog() {
+        viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_VERIFY)
         ConfirmationDialog().show(parentFragmentManager, "confirmation_dialog")
     }
 
@@ -333,6 +336,8 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun showInfoDialog() {
+        viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_INFO_BUTTON)
+
         if (viewModel.signUpStatus == SignUpStatus.LinkedOnline) {
             OnlineAccountDetailsDialog().show(parentFragmentManager, "online_account_details")
         } else {
@@ -357,6 +362,8 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun showOnlineInfoOrEnterEmail() {
+        viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_CREATE_ONLINE_ACCOUNT)
+
         lifecycleScope.launch {
             if (viewModel.getShouldShowOnlineInfo()) {
                 safeNavigate(PortalFragmentDirections.portalToOnlineAccountInfo())
@@ -368,6 +375,8 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun continueWithdraw() {
+        viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_WITHDRAW)
+
         if ((viewModel.dashBalance.value ?: Coin.ZERO) >= CrowdNodeConstants.MINIMUM_LEFTOVER_BALANCE) {
             safeNavigate(PortalFragmentDirections.portalToTransfer(true))
         } else {

@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.crowdnode.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -327,6 +328,10 @@ class CrowdNodeViewModel @Inject constructor(
 
     fun finishSignUpToOnlineAccount() {
         crowdNodeApi.setOnlineAccountCreated()
+    }
+
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, bundleOf())
     }
 
     private fun getOrCreateAccountAddress(): Address {

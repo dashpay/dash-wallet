@@ -31,6 +31,7 @@ import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards
 import org.bitcoinj.wallet.Wallet.DustySendRequested
 import org.dash.wallet.common.services.ISecurityFunctions
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
@@ -100,6 +101,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
                 if (viewModel.crowdNodeError is MessageStatusException) {
                     retryOnlineSignUp()
                 } else if (viewModel.signUpStatus == SignUpStatus.Error) {
+                    viewModel.logEvent(AnalyticsConstants.CrowdNode.CREATE_ACCOUNT_ERROR_RETRY)
                     retrySignUp()
                 } else {
                     // for other errors, going back to the previous screen
@@ -110,6 +112,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
 
         binding.negativeBtn.setOnClickListener {
             if (viewModel.signUpStatus == SignUpStatus.Error) {
+                viewModel.logEvent(AnalyticsConstants.CrowdNode.CREATE_ACCOUNT_ERROR_CLOSE)
                 viewModel.resetSignUp()
                 findNavController().popBackStack()
             } else {

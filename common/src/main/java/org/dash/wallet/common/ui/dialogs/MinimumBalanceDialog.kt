@@ -44,12 +44,12 @@ class MinimumBalanceDialog : AdaptiveDialog(R.layout.dialog_adaptive) {
     }
 
     override fun onPositiveAction() {
-        analytics.logEvent(AnalyticsConstants.CrowdNode.CROWDNODE_LOW_BALANCE_PROCEED, bundleOf())
+        analytics.logEvent(AnalyticsConstants.CrowdNode.LOW_BALANCE_PROCEED, bundleOf())
         super.onPositiveAction()
     }
 
     override fun onNegativeAction() {
-        analytics.logEvent(AnalyticsConstants.CrowdNode.CROWDNODE_LOW_BALANCE_CANCEL, bundleOf())
+        analytics.logEvent(AnalyticsConstants.CrowdNode.LOW_BALANCE_CANCEL, bundleOf())
         super.onNegativeAction()
     }
 }
