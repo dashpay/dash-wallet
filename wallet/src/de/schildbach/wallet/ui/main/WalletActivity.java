@@ -103,6 +103,7 @@ import de.schildbach.wallet.ui.widget.ShortcutsPane;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Nfc;
+import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 import kotlin.Pair;
 import kotlin.Unit;
@@ -199,7 +200,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         viewModel.isBlockchainSyncFailed().observe(this, isSynced -> updateSyncState());
         viewModel.getMostRecentTransaction().observe(this, mostRecentTransaction -> {
             log.info("most recent transaction: {}", mostRecentTransaction.getTxId());
-            if (!getLockScreenDisplayed() && !configuration.getHasDisplayedTaxCategoryExplainer()) {
+            if (!getLockScreenDisplayed() && !configuration.getHasDisplayedTaxCategoryExplainer()
+                && WalletUtils.getTransactionDate(mostRecentTransaction).getTime() >= configuration.getTaxCategoryInstallTime()) {
                 TaxCategoryExplainerDialogFragment dialogFragment = TaxCategoryExplainerDialogFragment.newInstance(mostRecentTransaction.getTxId());
                 dialogFragment.show(getSupportFragmentManager(),"taxcategorydialog", () -> {
                             TransactionDetailsDialogFragment transactionDetailsDialogFragment =

@@ -297,6 +297,10 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
 
         config.updateLastVersionCode(packageInfo.versionCode);
 
+        if (config.getTaxCategoryInstallTime() == 0) {
+            config.setTaxCategoryInstallTime(System.currentTimeMillis());
+        }
+
         afterLoadWallet();
 
         cleanupFiles();
