@@ -229,9 +229,9 @@ class ExploreMapFragment : SupportMapFragment() {
             markerCollection = MarkerManager(googleMap).newCollection()
             markerCollection?.setOnMarkerClickListener { marker ->
                 if (viewModel.exploreTopic == ExploreTopic.Merchants){
-                    viewModel.trackEvent(AnalyticsConstants.ExploreDash.SELECT_MERCHANT_MARKER)
+                    viewModel.logEvent(AnalyticsConstants.ExploreDash.SELECT_MERCHANT_MARKER)
                 } else {
-                    viewModel.trackEvent(AnalyticsConstants.ExploreDash.SELECT_ATM_MARKER)
+                    viewModel.logEvent(AnalyticsConstants.ExploreDash.SELECT_ATM_MARKER)
                 }
                 viewModel.onMapMarkerSelected(marker.tag as Int)
                 true

@@ -100,8 +100,8 @@ object AnalyticsConstants {
     }
 
     object ExploreDash {
-        const val WHERE_TO_SPEND = "explore_portal_where_to_spend"
-        const val PORTAL_ATM = "explore_portal_atm"
+        const val WHERE_TO_SPEND = "explore__where_to_spend"
+        const val PORTAL_ATM = "explore__atms"
         const val LEARN_MORE = "explore_info_learn_more"
         const val CONTINUE = "explore_info_continue"
         const val ONLINE_MERCHANTS = "explore_online_merchants"
@@ -171,7 +171,29 @@ object AnalyticsConstants {
     }
 
     object CrowdNode {
-        const val CROWDNODE_LOW_BALANCE_PROCEED = "crowdnode__dialogue_low_balance_proceed" //staking__crowdnode_info.modal.dialogue_button_low.balance.proceed
-        const val CROWDNODE_LOW_BALANCE_CANCEL = "crowdnode__dialogue_low_balance_cancel" //staking__crowdnode_info.modal.dialogue_button_low.balance.cancel
+        const val STAKING_ENTRY = "explore__staking"
+        const val WELCOME_DIALOG_CONTINUE = "staking__welcome_modal__b_continue"
+        const val CREATE_NEW_ACCOUNT = "staking__b_create_acc"
+        const val CREATE_ACCOUNT_BUTTON = "staking__new_acc__b_create_acc"
+        const val NOTIFY_WHEN_CREATED = "staking__new_acc__b_close_notify"
+        const val CREATE_ACCOUNT_ERROR_RETRY = "staking__new_acc__dialogue_b_retry"
+        const val CREATE_ACCOUNT_ERROR_CLOSE = "staking__new_acc__dialogue_b_close"
+
+        const val LINK_EXISTING = "staking__b_link_acc"
+        const val LINK_EXISTING_LOGIN_BUTTON = "staking__link_acc__b_login"
+        const val LINK_EXISTING_HOW_TO_CONFIRM = "staking__link_acc__b_how_confirm_api_dash"
+        const val LINK_EXISTING_SHOW_QR = "staking__link_acc__b_show_qr"
+        const val LINK_EXISTING_SHARE_BUTTON = "staking__link_acc__b_share"
+
+        const val PORTAL_DEPOSIT = "staking__crowdnode__b_deposit"
+        const val PORTAL_WITHDRAW = "staking__crowdnode__b_withdraw"
+        const val PORTAL_CREATE_ONLINE_ACCOUNT = "staking__crowdnode__b_create_online_acc"
+        const val PORTAL_INFO_BUTTON = "staking__crowdnode__b_info"
+        const val PORTAL_VERIFY = "staking__crowdnode__b_verify"
+
+        const val CREATE_ONLINE_CONTINUE = "staking__crowdnode__online__b_continue"
+
+        const val LOW_BALANCE_PROCEED = "crowdnode__dialogue_low_balance_proceed"
+        const val LOW_BALANCE_CANCEL = "crowdnode__dialogue_low_balance_cancel"
     }
 }
