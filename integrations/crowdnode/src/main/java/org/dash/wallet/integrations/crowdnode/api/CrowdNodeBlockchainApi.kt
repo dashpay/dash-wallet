@@ -92,12 +92,12 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         accountAddress: Address,
         amount: Coin,
         emptyWallet: Boolean,
-        checkImpediments: Boolean
+        checkBalanceConditions: Boolean
     ): Transaction {
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
         val selector = ByAddressCoinSelector(accountAddress)
 
-        return paymentService.sendCoins(crowdNodeAddress, amount, selector, emptyWallet, checkImpediments)
+        return paymentService.sendCoins(crowdNodeAddress, amount, selector, emptyWallet, checkBalanceConditions)
     }
 
     suspend fun waitForDepositResponse(amount: Coin): Transaction {

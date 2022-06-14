@@ -67,7 +67,7 @@ interface CrowdNodeApi {
 
     fun persistentSignUp(accountAddress: Address)
     suspend fun signUp(accountAddress: Address)
-    suspend fun deposit(amount: Coin, emptyWallet: Boolean, checkImpediments: Boolean): Boolean
+    suspend fun deposit(amount: Coin, emptyWallet: Boolean, checkBalanceConditions: Boolean): Boolean
     suspend fun withdraw(amount: Coin): Boolean
     fun hasAnyDeposits(): Boolean
     fun refreshBalance(retries: Int = 0)
@@ -207,7 +207,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     override suspend fun deposit(
         amount: Coin,
         emptyWallet: Boolean,
-        checkImpediments: Boolean
+        checkBalanceConditions: Boolean
     ): Boolean {
         val accountAddress = this.accountAddress
         requireNotNull(accountAddress) { "Account address is null, make sure to sign up" }
@@ -216,7 +216,7 @@ class CrowdNodeApiAggregator @Inject constructor(
             apiError.value = null
             val topUpTx = blockchainApi.topUpAddress(accountAddress, amount + Constants.ECONOMIC_FEE, emptyWallet)
             log.info("topUpTx id: ${topUpTx.txId}")
-            val depositTx = blockchainApi.deposit(accountAddress, amount, emptyWallet, checkImpediments)
+            val depositTx = blockchainApi.deposit(accountAddress, amount, emptyWallet, checkBalanceConditions)
             log.info("depositTx id: ${depositTx.txId}")
 
             responseScope.launch {

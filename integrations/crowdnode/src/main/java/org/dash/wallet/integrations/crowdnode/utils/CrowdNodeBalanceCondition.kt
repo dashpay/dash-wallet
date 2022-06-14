@@ -22,7 +22,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.services.LeftoverBalanceException
 
-class CrowdNodeBalanceImpediment {
+class CrowdNodeBalanceCondition {
     fun check(
         walletBalance: Coin,
         address: Address,

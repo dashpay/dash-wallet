@@ -33,6 +33,6 @@ interface SendPaymentService {
         amount: Coin,
         coinSelector: CoinSelector? = null,
         emptyWallet: Boolean = false,
-        checkImpediments: Boolean = true
+        checkBalanceConditions: Boolean = true
     ): Transaction
 }

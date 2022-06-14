@@ -35,6 +35,7 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
@@ -45,6 +46,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.fragment.app.FragmentActivity;
 import androidx.hilt.work.HiltWorkerFactory;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.work.BackoffPolicy;
@@ -82,7 +84,7 @@ import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceImpediment;
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -160,6 +162,8 @@ public class WalletApplication extends BaseWalletApplication
 
     public boolean myPackageReplaced = false;
 
+    public Activity currentActivity;
+
     private AutoLogout autoLogout;
 
     @Inject
@@ -189,6 +193,23 @@ public class WalletApplication extends BaseWalletApplication
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
+            @Override
+            public void onActivityCreated(@NonNull Activity activity, Bundle savedInstanceState) {
+                currentActivity = activity;
+                super.onActivityCreated(activity, savedInstanceState);
+            }
+
+            @Override
+            public void onActivityStarted(@NonNull Activity activity) {
+                currentActivity = activity;
+                super.onActivityStarted(activity);
+            }
+
+            @Override
+            public void onActivityResumed(@NonNull Activity activity) {
+                currentActivity = activity;
+                super.onActivityResumed(activity);
+            }
 
             @Override
             protected void onStartedFirst(Activity activity) {
@@ -1036,11 +1057,11 @@ public class WalletApplication extends BaseWalletApplication
     }
 
     @Override
-    public void checkSendingImpediments(
+    public void checkSendingConditions(
             @NonNull Address address,
             @NonNull Coin amount
     ) throws LeftoverBalanceException {
-        new CrowdNodeBalanceImpediment().check(
+        new CrowdNodeBalanceCondition().check(
                 wallet.getBalance(Wallet.BalanceType.ESTIMATED),
                 address,
                 amount,

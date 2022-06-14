@@ -32,7 +32,6 @@ import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.slf4j.LoggerFactory
-import java.util.*
 import javax.inject.Inject
 import kotlin.jvm.Throws
 
@@ -49,14 +48,14 @@ class SendCoinsTaskRunner @Inject constructor(
         amount: Coin,
         coinSelector: CoinSelector?,
         emptyWallet: Boolean,
-        checkImpediments: Boolean
+        checkBalanceConditions: Boolean
     ): Transaction {
         val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
         Context.propagate(wallet.context)
 
-        if (checkImpediments && !wallet.isAddressMine(address)) {
+        if (checkBalanceConditions && !wallet.isAddressMine(address)) {
             // This can throw LeftoverBalanceException
-            walletData.checkSendingImpediments(address, amount)
+            walletData.checkSendingConditions(address, amount)
         }
 
         val sendRequest = createSendRequest(address, amount, coinSelector, emptyWallet)

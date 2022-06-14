@@ -28,7 +28,6 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.utils.MonetaryFormat
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
@@ -40,7 +39,6 @@ import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceImpediment
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import java.io.IOException
@@ -264,9 +262,9 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
-    suspend fun deposit(value: Coin, checkImpediments: Boolean): Boolean {
+    suspend fun deposit(value: Coin, checkBalanceConditions: Boolean): Boolean {
         val emptyWallet = value >= dashBalance.value
-        return crowdNodeApi.deposit(value, emptyWallet, checkImpediments)
+        return crowdNodeApi.deposit(value, emptyWallet, checkBalanceConditions)
     }
 
     suspend fun withdraw(value: Coin): Boolean {
