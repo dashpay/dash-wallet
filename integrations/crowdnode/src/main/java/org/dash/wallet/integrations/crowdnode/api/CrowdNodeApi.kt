@@ -70,7 +70,7 @@ interface CrowdNodeApi {
     suspend fun deposit(amount: Coin, emptyWallet: Boolean, checkBalanceConditions: Boolean): Boolean
     suspend fun withdraw(amount: Coin): Boolean
     fun hasAnyDeposits(): Boolean
-    fun refreshBalance(retries: Int = 0)
+    fun refreshBalance(retries: Int = 0, afterWithdrawal: Boolean = false)
     fun trackLinkingAccount(address: Address)
     fun stopTrackingLinked()
     suspend fun registerEmailForAccount(email: String)
@@ -191,6 +191,7 @@ class CrowdNodeApiAggregator @Inject constructor(
 
             signUpStatus.value = SignUpStatus.Finished
             log.info("CrowdNode sign up finished")
+            refreshBalance(3)
 
             notifyIfNeeded(appContext.getString(R.string.crowdnode_account_ready), "crowdnode_ready")
         } catch (ex: Exception) {
@@ -260,11 +261,14 @@ class CrowdNodeApiAggregator @Inject constructor(
 
             responseScope.launch {
                 try {
-                    val tx = blockchainApi.waitForWithdrawalResponse(requestValue)
-                    log.info("got withdrawal queue response: ${tx.txId}")
+                    val txResponse = blockchainApi.waitForWithdrawalResponse(requestValue)
+                    log.info("got withdrawal queue response: ${txResponse.txId}")
+                    val txWithdrawal = blockchainApi.waitForWithdrawalReceived()
+                    log.info("got withdrawal: ${txWithdrawal.txId}")
                 } catch (ex: Exception) {
                     handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
                 }
+                refreshBalance(retries = 3, afterWithdrawal = true)
             }
 
             return true
@@ -282,7 +286,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         return deposits.any()
     }
 
-    override fun refreshBalance(retries: Int) {
+    override fun refreshBalance(retries: Int, afterWithdrawal: Boolean) {
         if (signUpStatus.value == SignUpStatus.NotStarted) {
             return
         }
@@ -300,8 +304,14 @@ class CrowdNodeApiAggregator @Inject constructor(
                 currentBalance = resolveBalance()
 
                 if (lastBalance != currentBalance.data?.value) {
-                    // balance changed, no need to retry anymore
-                    break
+                    val minimumWithdrawal = CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.MaxCode.code)
+                    if (!afterWithdrawal) {
+                        // balance changed, no need to retry anymore
+                        break;
+                    } else if (lastBalance - (currentBalance.data?.value?: 0L) >= minimumWithdrawal.value) {
+                        // balance changed, no need to retry anymore
+                        break
+                    }
                 }
             }
 
@@ -486,6 +496,7 @@ class CrowdNodeApiAggregator @Inject constructor(
             if (set.hasWelcomeToApiResponse) {
                 log.info("found finished sign up, account: ${set.accountAddress?.toBase58() ?: "null"}")
                 signUpStatus.value = SignUpStatus.Finished
+                refreshBalance(3)
                 return true
             }
 
