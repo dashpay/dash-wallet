@@ -24,10 +24,14 @@ from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 
 
-androidFiles = {"../wallet/res/values/strings.xml",
+androidFiles = {
+                "../wallet/res/values/strings.xml",
                 "../wallet/res/values/strings-extra.xml",
                 "../common/src/main/res/values/strings.xml",
-                "../integrations/uphold/src/main/res/values/strings-uphold.xml"
+                "../integrations/uphold/src/main/res/values/strings-uphold.xml",
+                "../integrations/liquid/src/main/res/values/strings-liquid.xml",
+                "../integrations/crowdnode/src/main/res/values/strings-crowdnode.xml",
+                "../features/exploredash/src/main/res/values/strings-explore-dash.xml"
                 }
 
 iOSFiles = {"iOS/app-localizable-strings.strings", "iOS/dashsync-localizable-strings.strings"}
@@ -45,7 +49,8 @@ def loadAndroidFiles():
     """
     for fileName in androidFiles:
         doc = xml.dom.minidom.parse(fileName)
-        for string in doc.firstChild.childNodes:
+        resourceNode = doc.getElementsByTagName("resources")[0]
+        for string in resourceNode.childNodes:
             try:
                 if string.nodeName == "string":
                     androidStrings[string.firstChild.data] = string.getAttribute("name")
@@ -134,6 +139,9 @@ def main():
     stringsWithWildcardsList = []
     iOSStringsWithEscapeSequences = {}
     androidStringsWithEscapeSequences = {}
+    androidStringsWithBadWords = {}
+    # currently these are case sensitive
+    badWords = [ "passphrase", "Passphrase", "secret key", "Crowdnode", "crowdnode" "CoinBase"]
 
     outputFile = codecs.open("translation-comparison-report.html", "w", "utf-8")
     outputFile.write(u'\ufeff')
@@ -177,7 +185,12 @@ def main():
 
     for a in androidStrings:
         if a.find('\\') != -1:
-            androidStringsWithEscapeSequences[a] = "android - " + androidStrings[a]
+             androidStringsWithEscapeSequences[a] = "android - " + androidStrings[a]
+
+    for a in androidStrings:
+        for badWord in badWords:
+            if a.find(badWord) != -1:
+                androidStringsWithBadWords[a] = "android - " + androidStrings[a] + " word: " + badWord
 
     for f in found:
         if f in androidStrings:
@@ -302,6 +315,7 @@ def main():
     print("<li><a href='#punctuation'>", len(foundPunctuation), "iOS strings differ by punctuation with Android</a></li>", file=outputFile)
     print("<li><a href='#iosescape'>", len(iOSStringsWithEscapeSequences), "iOS strings have Escape Sequences</a></li>", file=outputFile)
     print("<li><a href='#androidescape'>", len(androidStringsWithEscapeSequences), "Android strings have Escape Sequences</a></li>", file=outputFile)
+    print("<li><a href='#bad'>", len(androidStringsWithBadWords), "Android Strings with Invalid Words</a></li>", file=outputFile)
     print("</ul>", file=outputFile)
 
     printHeader("h2", "<a name='case'>iOS Strings that differ by case with Android</a>", outputFile)
@@ -350,6 +364,23 @@ def main():
                 print("<pre class=android>", file=outputFile)
                 print("android: ", end="", file=outputFile)
             print("'", w, "' - ", androidStringsWithEscapeSequences[w], sep="", file=outputFile)
+            print("</pre>", file=outputFile)
+        except UnicodeEncodeError:
+            print("UnicodeDecodeError exception")
+        print("</div>", file=outputFile)
+
+    printHeader("h2", "<a name='bad'>Android Strings with Invalid Words</a>", outputFile)
+    printHorizontalLine(outputFile)
+    for w in androidStringsWithBadWords:
+        print("<div class=string>", file=outputFile)
+        try:
+            if androidStringsWithBadWords[w][0] == 'i':
+                print("<pre class=ios>", file=outputFile)
+                print("iOS:     ", end="", file=outputFile)
+            else:
+                print("<pre class=android>", file=outputFile)
+                print("android: ", end="", file=outputFile)
+            print("'", w, "' - ", androidStringsWithBadWords[w], sep="", file=outputFile)
             print("</pre>", file=outputFile)
         except UnicodeEncodeError:
             print("UnicodeDecodeError exception")
