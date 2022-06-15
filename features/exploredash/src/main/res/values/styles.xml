@@ -20,8 +20,8 @@
     </style>
 
     <style name="ExploreBottomContentBackground">
-        <item name="backgroundColor">@color/gray_40</item>
-        <item name="strokeColor">@color/gray_40</item>
+        <item name="backgroundColor">@color/background_primary</item>
+        <item name="strokeColor">@color/background_primary</item>
         <item name="cornerRadius">8dp</item>
     </style>
 
@@ -30,8 +30,8 @@
     </style>
 
     <style name="MerchantLocationBackground">
-        <item name="backgroundColor">@color/steel_gray_40</item>
-        <item name="strokeColor">@color/steel_gray_40</item>
+        <item name="backgroundColor">@color/background_primary</item>
+        <item name="strokeColor">@color/background_primary</item>
         <item name="cornerRadius">10dp</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>

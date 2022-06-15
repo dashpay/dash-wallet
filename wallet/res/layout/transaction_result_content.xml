@@ -3,14 +3,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:orientation="vertical"
-    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
+    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout"
+    tools:context="de.schildbach.wallet.ui.transactions.TransactionResultViewBinder">
 
     <TextView
         android:id="@+id/transaction_title"
         style="@style/Body2.Medium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="15dp"
         android:text="@string/transaction_result_paid_successfully"
         app:layout_constraintStart_toStartOf="@id/left_guideline"
         app:layout_constraintTop_toTopOf="parent" />
@@ -19,7 +19,6 @@
         android:id="@+id/dash_amount_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="6dp"
         android:gravity="center"
         android:orientation="horizontal"
         app:layout_constraintStart_toStartOf="@id/left_guideline"
@@ -68,10 +67,9 @@
 
     <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/fiat_value"
-        style="@style/Caption.ContentTertiary"
+        style="@style/Caption.Tertiary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="34dp"
         android:textSize="13sp"
         app:layout_constraintStart_toStartOf="@id/left_guideline"
         app:layout_constraintTop_toBottomOf="@id/dash_amount_container"
@@ -86,7 +84,6 @@
         app:layout_constraintTop_toTopOf="@id/transaction_title"
         app:srcCompat="@drawable/check_animated"
         tools:src="@drawable/ic_transaction_sent" />
-
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/transaction_details_card"
@@ -113,7 +110,7 @@
 
             <TextView
                 android:id="@+id/payment_memo"
-                style="@style/Caption.Medium.LightGray"
+                style="@style/Caption.Medium.Tertiary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:maxLines="2"
@@ -140,7 +137,7 @@
 
             <TextView
                 android:id="@+id/input_addresses_label"
-                style="@style/Caption.Medium.LightGray"
+                style="@style/Caption.Medium.Tertiary"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="4dp"
@@ -171,7 +168,7 @@
 
             <TextView
                 android:id="@+id/output_addresses_label"
-                style="@style/Caption.Medium.LightGray"
+                style="@style/Caption.Medium.Tertiary"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginRight="4dp"
@@ -193,7 +190,7 @@
 
             <TextView
                 android:id="@+id/network_fee_label"
-                style="@style/Caption.Medium.LightGray"
+                style="@style/Caption.Medium.Tertiary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginRight="4dp"
@@ -234,7 +231,7 @@
 
             <TextView
                 android:id="@+id/transaction_date_and_time_label"
-                style="@style/Caption.Medium.LightGray"
+                style="@style/Caption.Medium.Tertiary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/transaction_date_and_time"
@@ -267,7 +264,7 @@
 
             <TextView
                 android:id="@+id/error_label"
-                style="@style/Caption.Medium.LightGray"
+                style="@style/Caption.Medium.Tertiary"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginRight="4dp"
@@ -372,7 +369,7 @@
         tools:visibility="visible">
 
         <TextView
-            style="@style/Caption.Medium.LightGray"
+            style="@style/Caption.Medium.Tertiary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="4dp"

@@ -4,129 +4,142 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingHorizontal="20dp"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:context="de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment">
 
     <ImageButton
         android:id="@+id/collapse_button"
-        style="@style/DialogCloseButton" />
+        style="@style/DialogCloseButton"
+        android:layout_marginHorizontal="20dp" />
 
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingTop="10dp"
-            android:clipToPadding="false"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/transaction_title"
-                style="@style/Body2.Medium"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="15dp"
-                android:text="@string/transaction_result_paid_successfully"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/dash_amount_container"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="6dp"
-                android:gravity="center"
-                android:orientation="horizontal"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/transaction_title">
-
-                <TextView
-                    android:id="@+id/transaction_amount_signal"
-                    style="@style/Headline3.Regular"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="2dp"
-                    android:layout_marginRight="2dp"
-                    android:visibility="gone"
-                    app:layout_constraintBottom_toBottomOf="@+id/dash_amount"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="@+id/dash_amount"
-                    tools:text="-"
-                    tools:visibility="visible" />
-
-                <org.dash.wallet.common.ui.CurrencyTextView
-                    android:id="@+id/dash_amount"
-                    style="@style/Headline3.Regular"
-                    android:layout_width="wrap_content"
-                    android:layout_height="0dp"
-                    android:layout_marginEnd="4dp"
-                    android:layout_marginRight="4dp"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toEndOf="@id/transaction_amount_signal"
-                    app:layout_constraintTop_toTopOf="parent"
-                    tools:text="-3.14" />
-
-                <ImageView
-                    android:id="@+id/dash_amount_symbol"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:layout_marginLeft="8dp"
-                    android:scaleType="centerInside"
-                    app:layout_constraintBottom_toBottomOf="@+id/dash_amount"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toEndOf="@id/dash_amount"
-                    app:layout_constraintTop_toTopOf="@+id/dash_amount"
-                    app:srcCompat="@drawable/ic_dash_d_black"
-                    app:tint="@color/content_primary" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-
-            <org.dash.wallet.common.ui.CurrencyTextView
-                android:id="@+id/fiat_value"
-                style="@style/Caption.ContentTertiary"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="34dp"
-                android:textSize="13sp"
-                app:layout_constraintTop_toBottomOf="@id/dash_amount_container"
-                tools:text="-$483.33" />
-
-            <ImageView
-                android:id="@+id/check_icon"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintBottom_toBottomOf="@id/fiat_value"
-                app:layout_constraintTop_toTopOf="@id/transaction_title"
-                app:srcCompat="@drawable/check_animated"
-                tools:src="@drawable/ic_transaction_sent" />
-
-            <LinearLayout
-                android:id="@+id/transaction_details_card"
-                style="@style/ViewRaised"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="15dp"
-                android:layout_marginTop="20dp"
-                android:paddingHorizontal="15dp"
-                android:paddingVertical="5dp"
-                android:background="@drawable/rounded_background"
-                android:theme="@style/SecondaryBackground"
-                app:layout_constraintTop_toBottomOf="@id/fiat_value">
-
-                <TextView
-                    style="@style/Caption.Medium"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:text="A description why the user should be given an explanation why there are multiple Dash transactions."
-                    android:textSize="13sp" />
-            </LinearLayout>
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/transactions"
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        tools:listitem="@layout/transaction_row"
-        tools:itemCount="5" />
+        android:clipToPadding="false"
+        android:orientation="vertical"
+        android:layout_marginHorizontal="20dp"
+        android:paddingTop="10dp">
+
+        <TextView
+            android:id="@+id/group_title"
+            style="@style/Body2.Medium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="CrowdNode Account" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/dash_amount_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/group_title">
+
+            <TextView
+                android:id="@+id/transaction_amount_signal"
+                style="@style/Headline3.Regular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="2dp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="@+id/dash_amount"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/dash_amount"
+                tools:text="-"
+                tools:visibility="visible" />
+
+            <org.dash.wallet.common.ui.CurrencyTextView
+                android:id="@+id/dash_amount"
+                style="@style/Headline3.Regular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@id/transaction_amount_signal"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="-3.14" />
+
+            <ImageView
+                android:id="@+id/dash_amount_symbol"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginLeft="8dp"
+                android:scaleType="centerInside"
+                app:layout_constraintBottom_toBottomOf="@+id/dash_amount"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/dash_amount"
+                app:layout_constraintTop_toTopOf="@+id/dash_amount"
+                app:srcCompat="@drawable/ic_dash_d_black"
+                app:tint="@color/content_primary" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <org.dash.wallet.common.ui.CurrencyTextView
+            android:id="@+id/fiat_value"
+            style="@style/Caption.Tertiary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            app:layout_constraintTop_toBottomOf="@id/dash_amount_container"
+            tools:text="-$483.33" />
+
+        <ImageView
+            android:id="@+id/icon"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            app:layout_constraintBottom_toBottomOf="@id/fiat_value"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/group_title"
+            tools:src="@drawable/ic_crowdnode_logo" />
+
+        <LinearLayout
+            android:id="@+id/transaction_details_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:orientation="vertical"
+            android:paddingHorizontal="15dp"
+            android:paddingTop="11dp"
+            android:paddingBottom="15dp"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/SecondaryBackground"
+            app:layout_constraintTop_toBottomOf="@id/fiat_value">
+
+            <TextView
+                android:id="@+id/transaction_details_title"
+                style="@style/Caption.Medium.Tertiary"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:textSize="13sp"
+                tools:text="@string/crowdnode_tx_set_title" />
+
+            <TextView
+                android:id="@+id/transaction_details_message"
+                style="@style/Caption"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginTop="6dp"
+                android:textSize="13sp"
+                tools:text="@string/crowdnode_tx_set_explainer" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <include layout="@layout/fragment_explore"/>
+
+<!--    <androidx.cardview.widget.CardView-->
+<!--        style="@style/CardViewRaised"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_marginTop="15dp"-->
+<!--        android:layout_marginHorizontal="20dp"-->
+<!--        app:cardCornerRadius="12dp">-->
+
+<!--        <androidx.recyclerview.widget.RecyclerView-->
+<!--            android:id="@+id/transactions"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"-->
+<!--            tools:itemCount="5"-->
+<!--            tools:listitem="@layout/transaction_row" />-->
+<!--    </androidx.cardview.widget.CardView>-->
 </LinearLayout>

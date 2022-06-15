@@ -143,7 +143,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 if (amount > (maxValue.value ?: Coin.ZERO)) {
                     R.style.Caption_Red
                 } else {
-                    R.style.Caption_SteelGray
+                    R.style.Caption_Secondary
                 }
             )
         }

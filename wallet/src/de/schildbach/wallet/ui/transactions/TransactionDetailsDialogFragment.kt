@@ -14,15 +14,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.transactions
 
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.view.isVisible
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionDetailsDialogBinding
@@ -94,7 +94,10 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
     }
 
     private fun showReportIssue() {
-        ReportIssueDialogBuilder.createReportIssueDialog(requireActivity(), WalletApplication.getInstance())
+        ReportIssueDialogBuilder.createReportIssueDialog(
+            requireActivity(),
+            WalletApplication.getInstance()
+        )
             .buildAlertDialog().show()
     }
 

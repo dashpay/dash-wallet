@@ -54,7 +54,7 @@ open class FullCrowdNodeSignUpTxSet(networkParams: NetworkParameters): Transacti
         return false
     }
 
-    fun getValue(bag: TransactionBag): Coin {
+    override fun getValue(bag: TransactionBag): Coin {
         var result = Coin.ZERO
 
         for (tx in transactions) {

@@ -73,7 +73,7 @@ import org.dash.wallet.common.ui.BaseLockScreenFragment;
 import de.schildbach.wallet.ui.CheckPinDialog;
 import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
-import de.schildbach.wallet.ui.TransactionResultActivity;
+import de.schildbach.wallet.ui.transactions.TransactionResultActivity;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 

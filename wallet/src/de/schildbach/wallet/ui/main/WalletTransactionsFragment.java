@@ -27,7 +27,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -39,20 +38,17 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import org.bitcoinj.core.Transaction;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
-import org.dash.wallet.common.transactions.TransactionWrapper;
 
 import java.util.ArrayList;
-import java.util.Set;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.ui.TransactionDetailsDialogFragment;
-import de.schildbach.wallet.ui.TransactionsFilterDialog;
+import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment;
+import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 import kotlinx.coroutines.ExperimentalCoroutinesApi;
@@ -72,7 +68,7 @@ public class WalletTransactionsFragment extends Fragment implements OnSharedPref
     private TextView emptyView;
     private View loading;
     private RecyclerView recyclerView;
-    private TransactionsAdapter adapter;
+    private TransactionWrapperAdapter adapter;
     private TextView syncingText;
     private MainViewModel viewModel;
 
@@ -104,11 +100,18 @@ public class WalletTransactionsFragment extends Fragment implements OnSharedPref
         super.onCreate(savedInstanceState);
 
         MonetaryFormat dashFormat = config.getFormat().noCode();
-        adapter = new TransactionsAdapter(wallet, dashFormat, getResources(), (wrapper, position) -> {
-            TransactionDetailsDialogFragment transactionDetailsDialogFragment =
-                    TransactionDetailsDialogFragment.newInstance(wrapper.getTransactions().iterator().next().getTxId());
-            transactionDetailsDialogFragment.show(getParentFragmentManager(), null);
+        adapter = new TransactionWrapperAdapter(wallet, dashFormat, getResources(), (wrapper, position) -> {
             viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS);
+
+            if (wrapper.getTransactions().size() > 1) {
+                TransactionGroupDetailsFragment fragment = new TransactionGroupDetailsFragment(wrapper);
+                fragment.show(getParentFragmentManager(), "transaction_group");
+            } else {
+                TransactionDetailsDialogFragment transactionDetailsDialogFragment =
+                        TransactionDetailsDialogFragment.newInstance(wrapper.getTransactions().iterator().next().getTxId());
+                transactionDetailsDialogFragment.show(getParentFragmentManager(), null);
+            }
+
             return Unit.INSTANCE;
         });
 

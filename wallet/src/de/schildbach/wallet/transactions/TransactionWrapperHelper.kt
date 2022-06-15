@@ -17,7 +17,9 @@
 
 package de.schildbach.wallet.transactions
 
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.TransactionBag
 import org.dash.wallet.common.transactions.TransactionWrapper
 
 object TransactionWrapperHelper {
@@ -35,6 +37,10 @@ object TransactionWrapperHelper {
             val anonWrapper: TransactionWrapper = object : TransactionWrapper {
                 override fun tryInclude(tx: Transaction): Boolean {
                     return true
+                }
+
+                override fun getValue(bag: TransactionBag): Coin {
+                    return Coin.ZERO // TODO
                 }
 
                 override val transactions = setOf(transaction)

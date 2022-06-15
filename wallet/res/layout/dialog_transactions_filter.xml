@@ -7,7 +7,7 @@
     android:orientation="vertical"
     android:paddingBottom="15dp"
     tools:ignore="ContentDescription"
-    tools:context="de.schildbach.wallet.ui.TransactionsFilterDialog">
+    tools:context="de.schildbach.wallet.ui.main.TransactionsFilterDialog">
 
     <ImageView
         android:id="@+id/collapse_button"

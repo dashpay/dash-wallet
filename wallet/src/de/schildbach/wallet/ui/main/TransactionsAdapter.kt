@@ -36,21 +36,57 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.ui.getRoundedBackground
+import org.dash.wallet.common.ui.getRoundedRippleBackground
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 
+class TransactionWrapperAdapter(
+    wallet: Wallet,
+    dashFormat: MonetaryFormat,
+    resources: Resources,
+    clickListener: (TransactionWrapper, Int) -> Unit
+) : TransactionsHolderAdapter<TransactionWrapper>(
+    wallet, dashFormat, resources, clickListener, DiffCallback()
+) {
+    class DiffCallback : DiffUtil.ItemCallback<TransactionWrapper>() {
+        override fun areItemsTheSame(oldItem: TransactionWrapper, newItem: TransactionWrapper): Boolean {
+            return oldItem == newItem
+        }
 
-class TransactionsAdapter(
+        override fun areContentsTheSame(oldItem: TransactionWrapper, newItem: TransactionWrapper): Boolean {
+            return oldItem.transactions.first().txId == newItem.transactions.first().txId
+        }
+    }
+}
+
+class TransactionAdapter(
+    wallet: Wallet,
+    dashFormat: MonetaryFormat,
+    resources: Resources,
+    clickListener: (Transaction, Int) -> Unit
+) : TransactionsHolderAdapter<Transaction>(wallet, dashFormat, resources, clickListener, DiffCallback()) {
+    class DiffCallback : DiffUtil.ItemCallback<Transaction>() {
+        override fun areItemsTheSame(oldItem: Transaction, newItem: Transaction): Boolean {
+            return oldItem == newItem
+        }
+
+        override fun areContentsTheSame(oldItem: Transaction, newItem: Transaction): Boolean {
+            return oldItem.txId == newItem.txId
+        }
+    }
+}
+
+open class TransactionsHolderAdapter<T>(
     private val wallet: Wallet,
     private val dashFormat: MonetaryFormat,
     private val resources: Resources,
-    private val clickListener: (TransactionWrapper, Int) -> Unit
-) : ListAdapter<TransactionWrapper, TransactionsAdapter.TransactionViewHolder>(DiffCallback()) {
+    private val clickListener: (T, Int) -> Unit,
+    diffCallback: DiffUtil.ItemCallback<T>
+) : ListAdapter<T, TransactionsHolderAdapter<T>.TransactionViewHolder>(diffCallback) {
     private val colorSecondaryStatus = resources.getColor(R.color.secondary_status, null)
     private val contentColor = resources.getColor(R.color.content_primary, null)
     private val warningColor = resources.getColor(R.color.content_warning, null)
     private val transactionCache = hashMapOf<Sha256Hash, TransactionCacheEntry>()
-
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TransactionViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -68,16 +104,6 @@ class TransactionsAdapter(
         }
     }
 
-    class DiffCallback : DiffUtil.ItemCallback<TransactionWrapper>() {
-        override fun areItemsTheSame(oldItem: TransactionWrapper, newItem: TransactionWrapper): Boolean {
-            return oldItem == newItem
-        }
-
-        override fun areContentsTheSame(oldItem: TransactionWrapper, newItem: TransactionWrapper): Boolean {
-            return oldItem.transactions.first().txId == newItem.transactions.first().txId
-        }
-    }
-
     inner class TransactionViewHolder(
         private val binding: TransactionRowBinding
     ) : RecyclerView.ViewHolder(binding.root) {
@@ -86,32 +112,42 @@ class TransactionsAdapter(
             binding.fiatView.setApplyMarkup(false)
         }
 
-        fun bind(wrapper: TransactionWrapper, wallet: Wallet) {
-            val tx = wrapper.transactions.first()
-            Log.i("CROWDNODE", "value: $tx")
-            setDetails(wrapper.transactions.size)
-            setTime(tx)
+        fun bind(txHolder: T, wallet: Wallet) {
+            if (txHolder is TransactionWrapper) {
+                binding.root.background = resources.getRoundedRippleBackground(R.style.TransactionRowBackground)
 
-            if (wrapper is FullCrowdNodeSignUpTxSet) {
-                val value = wrapper.getValue(wallet)
-                binding.icon.setImageResource(R.drawable.ic_crowdnode_logo)
-                binding.icon.background = resources.getRoundedBackground(R.style.TxNoBackground)
-                binding.primaryStatus.text = resources.getString(R.string.crowdnode_account)
+                val tx = txHolder.transactions.first()
+                Log.i("CROWDNODE", "value: $tx")
+                setDetails(txHolder.transactions.size)
+                setTime(tx)
 
-                setValue(value, false)
-                setFiatValue(value, tx.exchangeRate)
+                if (txHolder is FullCrowdNodeSignUpTxSet) {
+                    val value = txHolder.getValue(wallet)
+                    binding.icon.setImageResource(R.drawable.ic_crowdnode_logo)
+                    binding.icon.background = resources.getRoundedBackground(R.style.TxNoBackground)
+                    binding.primaryStatus.text = resources.getString(R.string.crowdnode_account)
+
+                    setValue(value, false)
+                    setFiatValue(value, tx.exchangeRate)
+                } else {
+                    bindTransaction(tx)
+                }
             } else {
-                val confidence = tx.confidence
-                val txCache = getTxCache(tx)
-
-                setIcon(txCache)
-                setPrimaryStatus(tx, confidence)
-                setSecondaryStatus(tx, txCache, confidence)
-
-                val value = if (txCache.showFee) txCache.value.add(txCache.fee) else txCache.value
-                setValue(value, confidence.hasErrors())
-                setFiatValue(value, tx.exchangeRate)
+                bindTransaction(txHolder as Transaction)
             }
+        }
+
+        private fun bindTransaction(tx: Transaction) {
+            val confidence = tx.confidence
+            val txCache = getTxCache(tx)
+
+            setIcon(txCache)
+            setPrimaryStatus(tx, confidence)
+            setSecondaryStatus(tx, txCache, confidence)
+
+            val value = if (txCache.showFee) txCache.value.add(txCache.fee) else txCache.value
+            setValue(value, confidence.hasErrors())
+            setFiatValue(value, tx.exchangeRate)
         }
 
         private fun getTxCache(tx: Transaction): TransactionCacheEntry {

@@ -104,6 +104,5 @@
     <string name="crowdnode_online_account_details_title">Informatie over je online account</string>
     <string name="crowdnode_online_account_details_primary">Het primaire Dash adres dat je momenteel gebruikt voor je CrowdNode account</string>
     <string name="crowdnode_online_account_details_api">Het Dash adres dat is aangewezen voor je CrowdNode account in de portemonnee op dit apparaat</string>
-    <string name="crowdnode_reset_address">Reset adres</string>
 
     </resources>
