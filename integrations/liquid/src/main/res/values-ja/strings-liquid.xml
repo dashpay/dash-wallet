@@ -12,7 +12,6 @@
     <string name="credit_card">クレジットカード</string>
 
     <string name="buy">購入</string>
-    <string name="buy_dash">Dashを購入する</string>
     <string name="sell_dash">Dashを売る</string>
     <string name="buy_sell_dash_">Dashを買う &amp; 売る</string>
     <string name="button_cancel">キャンセル</string>
@@ -20,7 +19,6 @@
     <string name="crypto_support">仮想通貨のサポート</string>
     <string name="credit_card_support">クレジットカードのサポート</string>
     <string name="okay">OK</string>
-    <string name="close">閉じる</string>
     <string name="list_of_countries">非サポート対象国の一覧を見ます</string>
     <string name="buying_dash_not_supported_credit_cards">クレジットカードでのDashの購入は、一部の国ではサポートされていません。</string>
     <string name="buying_dash_not_supported_crypto">仮想通貨でのDashの購入は、一部の国ではサポートされていません。</string>

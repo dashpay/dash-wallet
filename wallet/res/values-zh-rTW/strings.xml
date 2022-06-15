@@ -25,7 +25,7 @@
     <string name="exchange_rates_fragment_balance">餘額</string>
     <string name="exchange_rates_fragment_source">價格由 %s 起</string>
     <string name="exchange_rates_options_search">搜尋匯率</string>
-    <string name="exchange_rates_context_set_as_default_title">設為預設值</string>
+    <string name="exchange_rates_context_set_as_default_title">設為預設</string>
     <string name="wallet_transactions_fragment_empty_text">沒有交易能夠顯示</string>
     <string name="wallet_transactions_row_warning_backup">恭喜你收到第一筆付款! 你是否已經備份好你的錢包來防止意外發生?</string>
     <string name="wallet_transactions_fragment_coinbase">已採礦</string>
@@ -65,8 +65,6 @@
     <string name="send_coins_fragment_pin_label">輸入 PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">將收取%s作為網絡費用。</string>
     <string name="send_coins_fragment_hint_fee_priority">將支付%s優先級的手續費。如果您希望支付較低的費用，則您只有在需要盡快確認時才使用“優先級”。</string>
-    <string name="send_coins_fragment_hint_dusty_send">這個金額太小，無法發送。</string>
-    <string name="send_coins_fragment_hint_insufficient_money">餘額不足</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">在你的錢包微小金額加起來不足以發送。</string>
     <string name="send_coins_fragment_hint_replaying">目前無法付款，因為錢包未與網絡完全同步</string>
     <string name="send_coins_fragment_direct_payment_enable">直接付款給收款人</string>
@@ -80,7 +78,7 @@
     <string name="send_coins_fragment_insufficient_money_msg1">你少了 %s.</string>
     <string name="send_coins_fragment_insufficient_money_msg2">你打算發送所有的餘額嗎?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">清空錢包失敗</string>
-    <string name="send_coins_fragment_state_decrypting">正在解密...</string>
+    <string name="send_coins_fragment_state_decrypting">正在解密…</string>
     <string name="send_coins_preparation_msg">簽署中…</string>
     <string name="send_coins_sending_msg">付款中…</string>
     <string name="send_coins_sent_msg">已付款!</string>
@@ -158,7 +156,7 @@
     <string name="transaction_row_message_received_rbf">由於發件人使用了不安全的交易類型，此款項被延遲。</string>
     <string name="transaction_row_status_received">己收到</string>
     <string name="transaction_row_status_sent">發送</string>
-    <string name="transaction_row_status_sending">付款中</string>
+    <string name="transaction_row_status_sending">發送中</string>
     <string name="transaction_row_status_sent_internally">內部</string>
     <string name="transaction_row_status_processing">正在處理</string>
     <string name="transaction_row_status_confirming">確認中</string>
@@ -339,7 +337,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">取消</string>
     <string name="button_cancel">取消</string>
-    <string name="button_retry">重試</string>
     <string name="button_help">幫助</string>
     <string name="button_add">新增</string>
     <string name="button_delete">刪除</string>
@@ -349,7 +346,6 @@
     <string name="button_copy">複製</string>
     <string name="button_copy_request">複製請求</string>
     <string name="button_paste">貼上</string>
-    <string name="button_share">分享</string>
     <string name="button_set_as_default">設為預設</string>
     <string name="button_request_coins">索取達世幣</string>
     <string name="button_send_coins">達世幣付款</string>
@@ -393,5 +389,4 @@
     <string name="activity_buy_and_sell_dash_filter">篩選</string>
     <string name="clear_filter">清除篩選</string>
     <string name="select_currency">選擇貨幣</string>
-
 </resources>

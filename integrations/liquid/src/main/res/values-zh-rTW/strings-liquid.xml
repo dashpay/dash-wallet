@@ -12,7 +12,6 @@
     <string name="credit_card">信用卡</string>
 
     <string name="buy">購買</string>
-    <string name="buy_dash">購買達世幣</string>
     <string name="sell_dash">出售達世幣</string>
     <string name="buy_sell_dash_">購買 &amp; 出售達世幣</string>
     <string name="button_cancel">取消</string>
@@ -20,7 +19,6 @@
     <string name="crypto_support">支援的加密貨幣</string>
     <string name="credit_card_support">支援的信用卡</string>
     <string name="okay">好的</string>
-    <string name="close">關閉</string>
     <string name="list_of_countries">查看不支援的國家的列表。</string>
     <string name="buying_dash_not_supported_credit_cards">一些國家不支援使用信用卡來購買達世幣。</string>
     <string name="buying_dash_not_supported_crypto">在某些國家不支援使用加密貨幣來購買達世幣。</string>

@@ -1,0 +1,28 @@
+<!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16dp"
+    android:height="16dp"
+    android:viewportWidth="16"
+    android:viewportHeight="16">
+  <path
+      android:pathData="M2.8003,16H13.1998C14.1369,16 14.8378,15.7695 15.3027,15.3086C15.7676,14.8477 16.0001,14.1564 16.0001,13.2346V2.7654C16.0001,1.8436 15.7676,1.1523 15.3027,0.6914C14.8378,0.2305 14.1369,0 13.1998,0H2.8003C1.8705,0 1.1714,0.2305 0.7028,0.6914C0.2343,1.1523 0,1.8436 0,2.7654V13.2346C0,14.1564 0.2343,14.8477 0.7028,15.3086C1.1714,15.7695 1.8705,16 2.8003,16Z"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M7.0281,12.225C6.8598,12.225 6.7042,12.1866 6.5614,12.1098C6.4187,12.033 6.2814,11.9104 6.1496,11.7422L4.1071,9.1853C3.9533,8.9877 3.8765,8.7755 3.8765,8.5487C3.8765,8.3293 3.9515,8.1391 4.1016,7.9781C4.2516,7.8172 4.4402,7.7367 4.6671,7.7367C4.8062,7.7367 4.9343,7.7659 5.0515,7.8245C5.1686,7.883 5.2857,7.9927 5.4029,8.1537L6.9842,10.2716L10.4873,4.5981C10.6704,4.2982 10.9046,4.1482 11.1901,4.1482C11.4025,4.1482 11.5946,4.214 11.7667,4.3457C11.9387,4.4774 12.0247,4.6603 12.0247,4.8944C12.0247,5.0042 11.9973,5.1157 11.9424,5.2291C11.8875,5.3425 11.8307,5.4504 11.7722,5.5529L7.8517,11.7422C7.6541,12.0641 7.3796,12.225 7.0281,12.225Z"
+      android:fillColor="#ffffff"/>
+</vector>

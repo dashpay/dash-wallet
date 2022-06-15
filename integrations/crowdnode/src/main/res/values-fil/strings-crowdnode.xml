@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="crowdnode_get_started">Pagsisimula sa CrowdNode</string>
+    <string name="crowdnode_get_started_hint">Para simulan ang staking, gumawa ng account sa CrowdNode o kumonekta sa mayroon na.</string>
+    <string name="new_account">Bagong CrowdNode Account</string>
+    <string name="account_create">Lumikha ng Account</string>
+    <string name="account_link">I-link ang Umiiral na Account</string>
+    <string name="crowdnode_login">Mag-log in sa CrowdNode</string>
+    <string name="crowdnode_link">I-link ang Umiiral na CrowdNode Account</string>
+    <string name="required_passphrase_backup">Kailangan mong i-backup ang iyong passphrase sa Dash Wallet</string>
+    <string name="backup_passphrase">I-backup ang passphrase</string>
+    <string name="required_dash_amount">Kailangan mo ng kahit man lang %s Dash sa iyong Dash Wallet</string>
+    <string name="crowdnode_new_account_warning_1">Ginagamit ng CrowdNode ang address na ito bilang iyong account ID. Mawawalan ka ng access sa iyong mga pondo sa loob ng wallet na ito at sa iyong CrowdNode account kung mawala mo ang passphrase na nauugnay sa address na ito.</string>
+    <string name="crowdnode_new_account_warning_2">Ang napakaliit na halaga ng Dash ay ipapadala sa at mula sa CrowdNode upang i-verify na ikaw ang may-ari ng address ng wallet na ito.</string>
+    <string name="crowdnode_link_account_description">Ang lahat ng paglilipat papunta at mula sa CrowdNode mula sa device na ito ay isasagawa gamit ang ibaba ng Dash address mula sa device na ito.</string>
+    <string name="dash_address">Address ng Dash</string>
+    <string name="primary_dash_address">Pangunahing Address ng Dash</string>
+    <string name="crowdnode_secure_wallet">I-backup ang iyong passphrase para gumawa ng CrowdNode account</string>
+    <string name="crowdnode_secure_wallet_explainer">Kung mawala mo ang iyong passphrase para sa wallet na ito at mawala ang device na ito o i-uninstall ang Dash Wallet, mawawalan ka ng access sa iyong mga pondo sa CrowdNode at ang mga pondo sa loob ng wallet na ito.</string>
+    <string name="insufficient_funds">Wala kang sapat na pondo para magpatuloy.</string>
+    <string name="crowdnode_minimum_dash">Dapat ay mayroon kang hindi bababa sa%s Dash upang magpatuloy sa pag-verify ng CrowdNode.</string>
+    <string name="crowdnode_agree_to_terms">Sumasang-ayon ako sa CrowdNode %1$s at %2$s</string>
+    <string name="terms_of_use">Mga Tuntunin ng Paggamit</string>
+    <string name="privacy_policy">Patakaran sa Privacy</string>
+    <string name="crowdnode_account_ready">Ang iyong CrowdNode account ay naka-set up at handa nang gamitin!</string>
+    <string name="notify_when_done">Isara at ipaalam kapag tapos na ito</string>
+    <string name="crowdnode_creating">Linilikha na ang iyong CrowdNode account…</string>
+    <string name="accepting_terms">Tumatanggap ng mga tuntunin sa paggamit…</string>
+    <string name="crowdnode_signup_error">Hindi namin magawa ang iyong CrowdNode account.</string>
+    <string name="crowdnode_deposit_error">Hindi kami makapagdeposito sa iyong CrowdNode account</string>
+    <string name="crowdnode_withdraw_error">Hindi kami makapag-withdraw mula sa iyong CrowdNode account.</string>
+    <string name="crowdnode_transfer_error">Hindi matagumpay ang iyong paglipat ng CrowdNode.</string>
+    <string name="crowdnode_deposit_received">Natanggap na ang iyong deposito sa CrowdNode.</string>
+    <string name="deposit">Deposito</string>
+    <string name="deposit_sent">Ipinadala ang deposito</string>
+    <string name="deposit_sent_message">Maaaring tumagal ng isang minuto bago ma-update ang iyong balanse.</string>
+    <string name="crowdnode_deposit_from_wallet">DashWallet ➝ CrowdNode</string>
+    <string name="from_wallet">mula sa Dash Wallet</string>
+    <string name="from_crowdnode">mula sa CrowdNode</string>
+    <string name="withdraw">Withdraw</string>
+    <string name="withdrawal_requested">Hiniling ang withdrawal</string>
+    <string name="withdrawal_requested_message">Maaaring tumagal ng isang minuto bago dumating ang iyong mga pondo.</string>
+    <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
+    <string name="online_account">Online na Account</string>
+    <string name="online_account_create">Lumikha ng Online na Account</string>
+    <string name="secure_online_account">Protektahan ang iyong mga kita</string>
+    <string name="crowdnode_support">Suporta sa CrowdNode</string>
+    <string name="unlink_account">I-unlink ang Account</string>
+    <string name="online_account_title">Bakit kailangan mo ng online na account?</string>
+    <string name="crowdnode_online_synced">Naka-sync sa kasalukuyang Dash Wallet</string>
+    <string name="crowdnode_in_process">Pinoproseso…</string>
+    <string name="account_recovery">Pagbawi ng Account</string>
+    <string name="crowdnode_recovery_info">Kung sakaling mawala mo ang iyong passphrase, maaari mong i-verify ang iyong sarili sa ibang paraan upang mabawi ang access sa iyong mga pondo ng CrowdNode.</string>
+    <string name="transaction_history">Kasaysayan ng Transaksyon</string>
+    <string name="see_staking_details">Maaari mong makita ang detalyadong impormasyon tungkol sa iyong mga deposito, pag-withdraw at mga kita ng reward.</string>
+    <string name="payout_options">Mga Pagpipilian sa Pagbabayad</string>
+    <string name="payout_options_details">Maaari mong baguhin kung paano / kailan binabayaran sa iyo ang iyong mga kita sa reward.</string>
+    <string name="crowdnode_balance">Balanse sa CrowdNode</string>
+    <string name="crowdnode_your_address_title">Narito ang Dash address na ginamit mo sa pagsasama sa CrowdNode</string>
+    <string name="chain_syncing">Nagsi-sync ang chain…</string>
+    <string name="crowdnode_wait_for_sync">Maghintay hanggang sa ganap na ma-sync ang chain, para masuri namin ang iyong history ng transaksyon. Bisitahin ang website ng CrowdNode upang mag-log in o mag-sign up.</string>
+    <string name="crowdnode_open_website">Pumunta sa website ng CrowdNode</string>
+    <string name="crowdnode_info_title">Maging bahagi ng isang Dash Masternode na may CrowdNode</string>
+    <string name="introducing_staking">Ipinapakilala ang Staking</string>
+    <string name="crowdnode_staking_info">Makakuha ng mga reward mula sa mga deposito sa Dash Masternodes na may kasing liit na 0.5 Dash.</string>
+    <string name="instant_rewards">Makakuha kaagad ng Mga Gantimpala</string>
+    <string name="daily_rewards_info">Tanggapin ang iyong bahagi ng mga reward araw-araw.</string>
+    <string name="crowdnode_sending_to">Ipinapadala sa CrowdNode account</string>
+    <string name="wallet_sending_to">Ipinapadala sa Dash Wallet sa device na ito</string>
+    <string name="available_balance">Balanse: %s</string>
+    <string name="crowdnode_minimum_deposit">Magdeposito man lang %s para magsimulang kumita</string>
+    <string name="crowdnode_minimum_deposit_difference">Magdeposito nang %s para magsimulang kumita</string>
+    <string name="crowdnode_first_deposit">Ang unang deposito ay dapat na higit sa %s</string>
+    <string name="crowdnode_staking_info_title">Paano gumagana ang staking</string>
+    <string name="crowdnode_staking_info_message">Magsisimula kang kumita kung ang iyong CrowdNode account ay may higit sa%s</string>
+    <string name="crowdnode_verify_api_address">I-verify ang iyong API Dash address</string>
+    <string name="crowdnode_how_to_verify">Paano kumpirmahin ang iyong API Dash address</string>
+    <string name="crowdnode_how_to_verify_description1">Ipadala ang %s Dash mula sa iyong pangunahing Dash address na kasalukuyan mong ginagamit para sa iyong CrowdNode account</string>
+    <string name="crowdnode_how_to_verify_description2">Para sa Dash address na itinalaga para sa iyong CrowdNode account sa Dash Wallet sa device na ito</string>
+    <string name="crowdnode_how_to_verify_description3">Awtomatiko naming matutukoy ang transaksyong ito at ilipat ang parehong halaga sa iyong CrowdNode account. Pagkatapos nito, makakagawa ka na ng mga deposito at pag-withdraw sa Dash Wallet sa device na ito.</string>
+    <string name="button_show_qr">Ipakita ang QR</string>
+    <string name="scan_qr">I-scan ang QR</string>
+    <string name="qr_contains_request">Ang QR na ito ay naglalaman na ng kahilingan sa pagbabayad para sa %s Dash</string>
+    <string name="verification_required">Kailangan ng beripikasyon</string>
+    <string name="validating_address">Pinapatunayan ang address…</string>
+    <string name="crowdnode_address_validated">Na-validate na ang iyong CrowdNode address, ngunit kailangan ang pag-verify.</string>
+    <string name="crowdnode_address_confirmed">Ang iyong CrowdNode address ay nakumpirma na.</string>
+    <string name="crowdnode_bad_confirmation">Ipinadala ang kumpirmasyon mula sa isang maling pangunahing address</string>
+    <string name="crowdnode_online_account_details_title">Impormasyon tungkol sa iyong online na account</string>
+    <string name="crowdnode_online_account_details_primary">Ang iyong pangunahing Dash address na kasalukuyan mong ginagamit para sa iyong CrowdNode account</string>
+    <string name="crowdnode_online_account_details_api">Dash address na itinalaga para sa iyong CrowdNode account sa Dash Wallet sa device na ito</string>
+    <string name="crowdnode_reset_address">I-reset ang  Address</string>
+
+    </resources>

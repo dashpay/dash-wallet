@@ -61,7 +61,7 @@ import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.AddressUtil;
 import de.schildbach.wallet.util.Io;
-import de.schildbach.wallet.util.Qr;
+import org.dash.wallet.common.util.Qr;
 import de.schildbach.wallet_test.R;
 
 /**

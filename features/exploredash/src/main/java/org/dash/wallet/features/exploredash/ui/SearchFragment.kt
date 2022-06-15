@@ -136,7 +136,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var savedLocationsScrollPosition: Int = -1
 
     private var lastSyncProgress: Resource<Double> = Resource.success(100.0)
-    private var observedLastError: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

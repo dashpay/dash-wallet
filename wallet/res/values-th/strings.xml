@@ -65,8 +65,6 @@
     <string name="send_coins_fragment_pin_label">ใส่รหัส PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">ค่าธรรมเนียมระบบเครือข่ายของ %s จะถูกจ่าย</string>
     <string name="send_coins_fragment_hint_fee_priority">ค่าธรรมเนียมพิเศษของ %s จะถูกจ่าย หากคุณสนใจค่าธรรมเนียมพิเศษนี้ โปรดใช้ \'priority\' เมื่อต้องการการยืนยันอย่างรวดเร็ว</string>
-    <string name="send_coins_fragment_hint_dusty_send">จำนวนเงินน้อยเกินไปที่จะส่ง</string>
-    <string name="send_coins_fragment_hint_insufficient_money">ยอดเงินไม่เพียงพอ</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">จำนวนเงินในการชำระเงิน wallet ของคุณ ไม่เพิ่มขึ้นที่จะสามารถส่งได้</string>
     <string name="send_coins_fragment_hint_replaying">ขณะนี้ยังไม่สามารถทำการชำระเงินได้เนื่องกระเป๋าสตางค์ยังไม่เชื่อมต่อกับเครือข่าย</string>
     <string name="send_coins_fragment_direct_payment_enable">ส่งการชำระเงินโดยตรงไปยังผู้รับเงิน</string>
@@ -90,7 +88,7 @@
     <string name="send_coins_options_fee_category_economic">ประหยัด</string>
     <string name="send_coins_options_fee_category_priority">สิทธิพิเศษ</string>
     <string name="send_coins_options_empty">wallet ว่างเปล่า</string>
-    <string name="sweep_wallet_activity_title">นำเข้าคีย์ส่วนตัว</string>
+    <string name="sweep_wallet_activity_title">นำเข้ากุญแจส่วนตัว</string>
     <string name="sweep_wallet_fragment_intro">คุณกำลังจะปัดกวาด paper wallet  หรือ คูปอง  วิธีนี้จะย้ายเหรียญทั้งหมดจากกระดาษดังกล่าวไปยัง wallet ของคุณบนอุปกรณ์นี้  เมื่อการทำธุรกรรมได้รับการยืนยันแล้ว กระดาษจะไม่มีราคาและไม่ควรนำมาใช้อีกครั้งเพื่อความปลอดภัย</string>
     <string name="sweep_wallet_fragment_hint">paper wallet มักจะถูกใช้สำหรับ cold storage  เครื่องเอทีเอ็มบางเครื่องพิมพ์บนใบเสร็จรับเงินแทนการส่งเหรียญไปยังโทรศัพท์มือถือโดยตรง  บางครั้งผู้คนใช้ pre-charged paper wallets เพื่อส่งหลักทรัพย์ให้กับบุคคลอื่น (ไม่แนะนำ)</string>
     <string name="sweep_wallet_fragment_wallet_unknown">เริ่มต้นสแกน private key ของ paper wallet   ใช้ปุ่มการทำงานกล้องถ่ายรูป</string>
@@ -108,7 +106,7 @@
     <string name="sweep_wallet_options_reload">โหลดยอดคงเหลืออีกครั้ง</string>
     <string name="maintenance_dialog_title">แนะนำให้ทำการบำรุงรักษา</string>
     <string name="maintenance_dialog_message">คุณได้รับ %1$s ไปยังที่อยู่ที่ไม่ปลอดภัย  คุณต้องการย้ายเหรียญเหล่านี้ไปยังที่อยู่ที่ปลอดภัยหรือไม่? ค่าธรรมเนียมเครือข่ายของ %2$s จะต้องจ่าย</string>
-    <string name="maintenance_dialog_state_decrypting">ถอดรหัส...</string>
+    <string name="maintenance_dialog_state_decrypting">กำลังถอดรหัส...</string>
     <string name="maintenance_dialog_state_done">เสร็จแล้ว</string>
     <string name="maintenance_dialog_button_move">ย้าย</string>
     <string name="request_coins_activity_title">Dash ที่ต้องการ</string>
@@ -177,9 +175,9 @@
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">บน %s ที่ %s</string>
     <string name="transaction_row_rate_not_available">ที่ไม่สามารถใช้ประโยชน์ได้</string>
-    <string name="transaction_row_status_masternode_registration">การลงทะเบียน Masternode </string>
-    <string name="transaction_row_status_masternode_update_registrar">อัพเดต Masternode</string>
-    <string name="transaction_row_status_masternode_update_service">อัพเดต Masternode</string>
+    <string name="transaction_row_status_masternode_registration">การลงทะเบียนมาสเตอร์โหนด</string>
+    <string name="transaction_row_status_masternode_update_registrar">อัพเดตมาสเตอร์โหนด</string>
+    <string name="transaction_row_status_masternode_update_service">อัพเดตมาสเตอร์โหนด</string>
     <string name="transaction_row_status_masternode_revoke">การเพิกถอน Masternode</string>
     <string name="transaction_row_status_masternode_reward">ผลตอบแทนจากการลงทุน Masternode</string>
     <string name="transaction_row_status_mining_reward">ผลตอบแทนจากการขุด การขุด หมายถึง การแก้ โจทย์สมการทางคณิตศาสตร์โดยใช้เครื่องคอมพิวเตอร์ ประมวลผลเพื่อยืนยันธุรกรรมบนบล็อกเชน</string>
@@ -237,7 +235,7 @@
     <string name="encrypt_keys_dialog_password_strength_strong">แข็งแรง</string>
     <string name="encrypt_keys_dialog_show">แสดง PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">เข้ารหัส...</string>
-    <string name="encrypt_keys_dialog_state_decrypting">ถอดรหัส...</string>
+    <string name="encrypt_keys_dialog_state_decrypting">กำลังถอดรหัส...</string>
     <string name="encrypt_keys_dialog_state_done">เสร็จแล้ว</string>
     <string name="scan_camera_problem_dialog_title">เสียใจ</string>
     <string name="scan_camera_problem_dialog_message">กล้องถ่ายรูปมีปัญหา คุณอาจจะต้องรีสตาร์ทอุปกรณ์อีกครั้ง</string>
@@ -303,6 +301,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">ผนวกการถ่ายโอนข้อมูล wallet </string>
     <string name="report_issue_dialog_mail_intent_chooser">ส่งรายงานโดยใช้...</string>
     <string name="report_issue_dialog_mail_intent_failed">การส่งรายงานล้มเหลว</string>
+    <string name="report_transaction_history_export">ส่งออก</string>
+    <string name="report_transaction_history_title">ส่งออก CSV </string>
+    <string name="report_transaction_history_not_synced_title">ส่งออก CSV </string>
+    <string name="report_transaction_history_not_synced_message">โปรดรอจนกว่ากระเป๋าเงินจะถูกซิงค์ก่อนที่จะส่งออกประวัติการทำธุรกรรมของคุณ</string>
+    <string name="report_transaction_history_message">ประวัติการทำธุรกรรมเต็มรูปแบบจะถูกส่งออก.\n\n การชำระเงินจะได้รับการพิจารณาว่าเป็นค่าใช้จ่ายและการทำธุรกรรมที่เข้ามาทั้งหมดจะเป็นรายได้ เจ้าของกระเป๋าเงินนี้มีหน้าที่ในการปรับค่าใช้จ่ายพื้นฐานใด ๆ ในระบบการรายงานภาษีที่เลือก</string>
+    <string name="report_transaction_history_mail_intent_chooser">ส่งประวัติการทำธุรกรรมโดยใช้ ...</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">การส่งประวัติธุรกรรมล้มเหลว</string>
+
     <string name="about_title">เกี่ยวกับ</string>
     <string name="about_version_title">เวอร์ชั่น</string>
     <string name="about_copyright_title">ลิขสิทธิ์</string>
@@ -328,10 +334,9 @@
     <string name="appwidget_wallet_balance_title">ยอดคงเหลือ Dash</string>
 
     <!-- generic buttons -->
-    <string name="button_ok">โอเค</string>
+    <string name="button_ok">ตกลง</string>
     <string name="button_dismiss">ยกเลิก</string>
     <string name="button_cancel">ยกเลิก</string>
-    <string name="button_retry">ลองอีกครั้ง</string>
     <string name="button_help">ช่วยเหลือ</string>
     <string name="button_add">เพิ่ม</string>
     <string name="button_delete">ลบ</string>
@@ -341,7 +346,6 @@
     <string name="button_copy">คัดลอก</string>
     <string name="button_copy_request">คัดลอกคำขอ</string>
     <string name="button_paste">วาง</string>
-    <string name="button_share">แบ่งปัน</string>
     <string name="button_set_as_default">ตั้งเป็นค่าเริ่มต้น</string>
     <string name="button_request_coins">Dash ที่ต้องการ</string>
     <string name="button_send_coins">ส่ง Dash </string>
@@ -372,7 +376,7 @@
     <string name="activity_security_view_recovery_phrase">ดูวลีกู้คืน</string>
     <string name="activity_security_advanced">ความปลอดภัยขั้นสูง</string>
     <string name="activity_security_biometric_auth">การยืนยันตัวตนโดยใช้การสแกนลายนิ้วมือ</string>
-    <string name="activity_security_hide_balance">สมดุลอัตโนมัติ</string>
+    <string name="activity_security_hide_balance">ซ่อนยอดคงเหลืออัตโนมัติ</string>
     <string name="reset_to_default">ตั้งค่าเป็นค่าเริ่มต้น</string>
 
     <string name="payment_protocol_default_error_title">การชำระเงินผิดพลาด</string>
@@ -385,5 +389,4 @@
     <string name="activity_buy_and_sell_dash_filter">กรอง</string>
     <string name="clear_filter">ล้างตัวกรอง</string>
     <string name="select_currency">เลือกสกุลเงิน</string>
-
 </resources>
