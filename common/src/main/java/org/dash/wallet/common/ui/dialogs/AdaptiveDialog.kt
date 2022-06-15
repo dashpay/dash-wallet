@@ -37,13 +37,16 @@ import org.dash.wallet.common.UserInteractionAwareCallback
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-open class AdaptiveDialog(@LayoutRes private val layout: Int = R.layout.dialog_simple): DialogFragment() {
+open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
+
+    constructor() : this(R.layout.dialog_adaptive)
+
     companion object {
-        private const val ICON_RES_ARG = "icon_res"
-        private const val TITLE_ARG = "title"
-        private const val MESSAGE_ARG = "message"
-        private const val POS_BUTTON_ARG = "positive_text"
-        private const val NEG_BUTTON_ARG = "negative_text"
+        const val ICON_RES_ARG = "icon_res"
+        const val TITLE_ARG = "title"
+        const val MESSAGE_ARG = "message"
+        const val POS_BUTTON_ARG = "positive_text"
+        const val NEG_BUTTON_ARG = "negative_text"
 
         @JvmStatic
         fun simple(
@@ -233,13 +236,13 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int = R.layout.dialog_s
         }
     }
 
-    protected fun onPositiveAction() {
+    protected open fun onPositiveAction() {
         onResultListener?.invoke(true)
         onResultListener = null
         dismiss()
     }
 
-    protected fun onNegativeAction() {
+    protected open fun onNegativeAction() {
         onResultListener?.invoke(false)
         onResultListener = null
         dismiss()

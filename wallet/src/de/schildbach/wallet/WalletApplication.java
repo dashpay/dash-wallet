@@ -35,6 +35,7 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
@@ -74,6 +75,7 @@ import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
+import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.transactions.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
@@ -81,6 +83,8 @@ import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -158,12 +162,16 @@ public class WalletApplication extends BaseWalletApplication
 
     public boolean myPackageReplaced = false;
 
+    public Activity currentActivity;
+
     private AutoLogout autoLogout;
 
     @Inject
     HiltWorkerFactory workerFactory;
     @Inject
     BlockchainStateDao blockchainStateDao;
+    @Inject
+    CrowdNodeConfig crowdNodeConfig;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -185,6 +193,23 @@ public class WalletApplication extends BaseWalletApplication
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
+            @Override
+            public void onActivityCreated(@NonNull Activity activity, Bundle savedInstanceState) {
+                currentActivity = activity;
+                super.onActivityCreated(activity, savedInstanceState);
+            }
+
+            @Override
+            public void onActivityStarted(@NonNull Activity activity) {
+                currentActivity = activity;
+                super.onActivityStarted(activity);
+            }
+
+            @Override
+            public void onActivityResumed(@NonNull Activity activity) {
+                currentActivity = activity;
+                super.onActivityResumed(activity);
+            }
 
             @Override
             protected void onStartedFirst(Activity activity) {
@@ -862,6 +887,7 @@ public class WalletApplication extends BaseWalletApplication
 
     public void finalizeWipe() {
         cancelScheduledStartBlockchainService();
+        WorkManager.getInstance(this.getApplicationContext()).cancelAllWork();
         shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
@@ -1027,5 +1053,18 @@ public class WalletApplication extends BaseWalletApplication
     @Override
     public void detachOnWalletWipedListener(@NonNull Function0<Unit> listener) {
         wipeListeners.remove(listener);
+    }
+
+    @Override
+    public void checkSendingConditions(
+            @NonNull Address address,
+            @NonNull Coin amount
+    ) throws LeftoverBalanceException {
+        new CrowdNodeBalanceCondition().check(
+                wallet.getBalance(Wallet.BalanceType.ESTIMATED),
+                address,
+                amount,
+                crowdNodeConfig
+        );
     }
 }

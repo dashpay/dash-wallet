@@ -22,6 +22,7 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
@@ -41,6 +42,7 @@ class FirstTimeInfoFragment : Fragment(R.layout.fragment_first_time_info) {
         }
 
         binding.continueBtn.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.CrowdNode.WELCOME_DIALOG_CONTINUE)
             safeNavigate(FirstTimeInfoFragmentDirections.infoToEntryPoint())
         }
 

@@ -19,6 +19,9 @@
     <string name="crowdnode_get_started_hint">To start staking, create an account on CrowdNode or connect to an existing one.</string>
     <string name="new_account">New CrowdNode Account</string>
     <string name="account_create">Create Account</string>
+    <string name="account_create_response">Create Account Response</string>
+    <string name="accept_terms">Accept Terms</string>
+    <string name="accept_terms_response">Accept Terms Response</string>
     <string name="account_link">Link Existing Account</string>
     <string name="crowdnode_login">Log in to CrowdNode</string>
     <string name="crowdnode_signup">Sign up to CrowdNode</string>
@@ -111,6 +114,11 @@
     <string name="crowdnode_primary_missing">The primary Dash address is missing from your account. Please specify it on the CrowdNode website.</string>
     <string name="crowdnode_wait_signed_email">Please wait until your email is processed…</string>
     <string name="cannot_send">Cannot send.</string>
+    <string name="crowdnode_tx_set_title">Why do I see all these transactions?</string>
+    <string name="crowdnode_tx_set_explainer">Your CrowdNode account was created using these transactions.</string>
+    <string name="shuffle_coins">Shuffle Coins</string>
+    <string name="positive_balance_required">You should have a positive balance on Dash Wallet</string>
+    <string name="withdrawal_required_balance">Deposit at least 0.0003 Dash on your Dash Wallet to complete a withdrawal</string>
 
     <string name="crowdnode_website" translatable="false">https://crowdnode.io/</string>
     <string name="crowdnode_terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>

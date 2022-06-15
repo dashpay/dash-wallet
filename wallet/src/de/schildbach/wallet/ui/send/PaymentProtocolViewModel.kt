@@ -127,12 +127,16 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
         signAndSendPayment(finalPaymentIntent!!, baseSendRequest!!.ensureMinRequiredFee)
     }
 
-    override fun signAndSendPayment(sendRequest: SendRequest, txAlreadyCompleted: Boolean) {
+    override fun signAndSendPayment(
+        sendRequest: SendRequest,
+        txAlreadyCompleted: Boolean,
+        checkBalanceConditions: Boolean
+    ) {
         if (finalPaymentIntent!!.hasPaymentUrl()) {
             wallet.completeTx(sendRequest)
             directPay(sendRequest)
         } else {
-            super.signAndSendPayment(sendRequest, txAlreadyCompleted)
+            super.signAndSendPayment(sendRequest, txAlreadyCompleted, checkBalanceConditions)
         }
     }
 
@@ -166,6 +170,9 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
     }
 
     fun commitAndBroadcast(sendRequest: SendRequest) {
-        super.signAndSendPayment(sendRequest, true)
+        super.signAndSendPayment(sendRequest,
+            txAlreadyCompleted = true,
+            checkBalanceConditions = true
+        )
     }
 }

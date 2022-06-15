@@ -17,7 +17,6 @@
 package de.schildbach.wallet.payments
 
 import androidx.annotation.VisibleForTesting
-import com.google.common.base.Preconditions
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
@@ -25,34 +24,40 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
-import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.wallet.CoinSelector
-import org.bitcoinj.wallet.SendRequest
-import org.bitcoinj.wallet.Wallet
-import org.bitcoinj.wallet.ZeroConfCoinSelector
-import org.bouncycastle.crypto.params.KeyParameter
+import org.bitcoinj.wallet.*
 import org.dash.wallet.common.Constants
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
-
+import kotlin.jvm.Throws
 
 class SendCoinsTaskRunner @Inject constructor(
+    private val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
     private val securityFunctions: SecurityFunctions
 ) : SendPaymentService {
     private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
 
+    @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
         address: Address,
         amount: Coin,
         coinSelector: CoinSelector?,
-        emptyWallet: Boolean
+        emptyWallet: Boolean,
+        checkBalanceConditions: Boolean
     ): Transaction {
-        val wallet = walletApplication.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
+        val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
         Context.propagate(wallet.context)
+
+        if (checkBalanceConditions && !wallet.isAddressMine(address)) {
+            // This can throw LeftoverBalanceException
+            walletData.checkSendingConditions(address, amount)
+        }
+
         val sendRequest = createSendRequest(address, amount, coinSelector, emptyWallet)
         val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
 
