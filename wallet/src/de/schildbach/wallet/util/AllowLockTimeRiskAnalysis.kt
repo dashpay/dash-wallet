@@ -165,8 +165,6 @@ class AllowLockTimeRiskAnalysis(
 
         private fun updateHeight() {
             chainHeight = max(chainHeight, peerGroup.mostCommonChainHeight)
-            // this logging should be removed from the final PR
-            log.info("risk analyser: most common chain height {}", chainHeight)
         }
     }
 }

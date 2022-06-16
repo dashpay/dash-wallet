@@ -86,7 +86,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
         setContentView(R.layout.activity_successful_transaction)
 
         val transactionResultViewBinder = TransactionResultViewBinder(container)
-        val tx = WalletApplication.getInstance().wallet.getTransaction(txId)
+        val tx = WalletApplication.getInstance().wallet!!.getTransaction(txId)
         if (tx != null) {
             val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
             val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)

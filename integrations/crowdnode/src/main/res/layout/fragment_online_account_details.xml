@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingHorizontal="20dp"
+    tools:context=".ui.dialogs.OnlineAccountDetailsDialog">
+
+    <ImageButton
+        android:id="@+id/collapse_button"
+        style="@style/DialogCloseButton"
+        android:layout_marginEnd="-10dp" />
+
+    <TextView
+        android:id="@+id/title"
+        style="@style/Headline5.Bold"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/crowdnode_online_account_details_title" />
+
+    <TextView
+        android:id="@+id/description_1"
+        style="@style/Body2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:text="@string/crowdnode_online_account_details_primary" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/DashAddressBackground"
+        android:orientation="vertical"
+        android:paddingStart="15dp"
+        android:paddingEnd="5dp"
+        android:paddingVertical="10dp">
+
+        <TextView
+            style="@style/Caption.SteelGray"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/primary_dash_address"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/primary_dash_address"
+            style="@style/Caption"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:layout_weight="1"
+            android:ellipsize="middle"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            app:layout_constraintEnd_toStartOf="@id/copy_primary_address_btn"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="XjfK5ivsGw7Ynxj99CEAJpcB5qNjsJpMH2" />
+
+        <ImageButton
+            android:id="@+id/copy_primary_address_btn"
+            style="@style/Button.Tertiary.Square"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_copy"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/content_primary"
+            tools:tint="@color/content_primary" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <TextView
+        android:id="@+id/description_2"
+        style="@style/Body2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/crowdnode_online_account_details_api" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/DashAddressBackground"
+        android:orientation="vertical"
+        android:paddingStart="15dp"
+        android:paddingEnd="5dp"
+        android:paddingVertical="10dp">
+
+        <TextView
+            style="@style/Caption.SteelGray"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/dash_address"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/dash_address"
+            style="@style/Caption"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:layout_weight="1"
+            android:ellipsize="middle"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            app:layout_constraintEnd_toStartOf="@id/copy_address_btn"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Xkvwp3vkTdUbUuEupDB3Sfa2wCvKYevzcc" />
+
+        <ImageButton
+            android:id="@+id/copy_address_btn"
+            style="@style/Button.Tertiary.Square"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_copy"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/content_primary"
+            tools:tint="@color/content_primary" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

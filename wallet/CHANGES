@@ -1,4 +1,9 @@
 Dash Wallet
+v7.5
+* Add CrowdNode integration
+* Improve Reset Wallet functionality
+* Fix issues with syncing status
+
 v7.4.9
 * Use dashj 0.17.12 to improve network connectivity
 * Fix unencrypted wallet crash on Home Screen

@@ -42,8 +42,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     private suspend fun insertTransactionMetadata(txId: Sha256Hash) {
-        val walletTx = walletApplication.wallet.getTransaction(txId)
-        Context.propagate(walletApplication.wallet.context)
+        val walletTx = walletApplication.wallet!!.getTransaction(txId)
+        Context.propagate(walletApplication.wallet!!.context)
         walletTx?.run {
             val txValue = value ?: Coin.ZERO
             val sentTime = confidence.sentAt?.time

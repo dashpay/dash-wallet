@@ -69,7 +69,6 @@
     <string name="receive_enter_amount_message">Specify the amount to be received</string>
     <string name="receive_enter_amount_button">Specify Amount</string>
     <string name="receive_share_button">Share</string>
-    <string name="receive_copied">Copied</string>
 
     <string name="pay_title">Send</string>
     <string name="history_title">History</string>
@@ -119,7 +118,6 @@
     <string name="import_export_keys_dialog_password_phrase">Recovery phrase goes here.</string>
     <string name="preferences_report_issue_summary">Collect information about your issue and email your report to the developers.</string>
     <string name="navigation_configuration">Configuration</string>
-    <string name="button_copy_address">Copy address</string>
     <string name="request_coins_clipboard_address_msg">Dash address copied to clipboard</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Show</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" is not a recovery phrase word</string>
@@ -186,6 +184,8 @@
     <string name="notification_transactions_channel_description">Receive alerts about incoming transactions.</string>
     <string name="notification_synchronization_channel_name">Synchronization</string>
     <string name="notification_synchronization_channel_description">Shows a notification when the app is synchronizing with the network.</string>
+    <string name="notification_generic_channel_name">Generic notifications</string>
+    <string name="notification_generic_channel_description">Other Dash Wallet events</string>
     <string name="notification_push_channel_name">Push Notifications</string>
     <string name="notification_push_channel_description">Shows push notifications sent to you by Dash</string>
     <string name="notification_settings_title">Notifications</string>
@@ -209,7 +209,6 @@
     <string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
 
     <string name="verify_continue">Continue</string>
-    <string name="verify">Verify</string>
     <string name="verify_backup_wallet">Backup Wallet</string>
     <string name="verify_show_recovery_phrase">Show Recovery Phrase</string>
     <string name="verify_secure_now">Secure Wallet Now</string>
@@ -349,7 +348,6 @@
 
     <string name="appwidget_wallet_not_ready">Please setup your wallet</string>
 
-    <string name="payment_request_please_wait_title">Please wait</string>
     <string name="payment_request_please_wait_message">Connecting to Payment Server</string>
     <string name="payment_request_unable_to_connect">Unable to Connect</string>
     <string name="payment_request_unable_to_send">Unable to Send</string>

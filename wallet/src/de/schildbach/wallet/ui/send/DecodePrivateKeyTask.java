@@ -19,9 +19,11 @@ package de.schildbach.wallet.ui.send;
 
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.crypto.BIP38PrivateKey;
+import org.dashj.bls.Utils;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 /**
  * @author Andreas Schildbach

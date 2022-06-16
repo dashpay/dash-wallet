@@ -57,10 +57,8 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     @OptIn(FlowPreview::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val dm = DisplayMetrics()
-        requireActivity().windowManager.defaultDisplay.getMetrics(dm)
-        //val height = dm.heightPixels
-        tx = wallet.getTransaction(txId)
+
+        tx = wallet!!.getTransaction(txId)
         val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
         if (tx != null) {
             tx?.let {

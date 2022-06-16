@@ -25,7 +25,6 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ExchangeRate
-import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import javax.inject.Inject
@@ -47,8 +46,39 @@ class EnterAmountViewModel @Inject constructor(
     val selectedExchangeRate: LiveData<ExchangeRate>
         get() = _selectedExchangeRate
 
-    var maxAmount: Coin = Coin.ZERO
     val onContinueEvent = SingleLiveEvent<Pair<Coin, Fiat>>()
+
+    internal val _dashToFiatDirection = MutableLiveData<Boolean>()
+    val dashToFiatDirection: LiveData<Boolean>
+        get() = _dashToFiatDirection
+
+    private val _minAmount = MutableLiveData(Coin.ZERO)
+    val minAmount: LiveData<Coin>
+        get() = _minAmount
+
+    private val _maxAmount = MutableLiveData(Coin.ZERO)
+    val maxAmount: LiveData<Coin>
+        get() = _maxAmount
+
+    internal val _amount = MutableLiveData<Coin>()
+    val amount: LiveData<Coin>
+        get() = _amount
+
+    val canContinue: LiveData<Boolean>
+        get() = MediatorLiveData<Boolean>().apply {
+            fun canContinue(): Boolean {
+                val amount = _amount.value ?: Coin.ZERO
+                val minAmount = _minAmount.value ?: Coin.ZERO
+                val maxAmount = _maxAmount.value ?: Coin.ZERO
+
+                return amount > minAmount && (maxAmount == Coin.ZERO || amount <= maxAmount)
+            }
+
+            addSource(_amount) { value = canContinue() }
+            addSource(_minAmount) { value = canContinue() }
+            addSource(_maxAmount) { value = canContinue() }
+            addSource(_dashToFiatDirection) { value = canContinue() }
+        }
 
     init {
         _selectedCurrencyCode
@@ -57,5 +87,13 @@ class EnterAmountViewModel @Inject constructor(
                 exchangeRates.observeExchangeRate(code)
             }.onEach(_selectedExchangeRate::postValue)
             .launchIn(viewModelScope)
+    }
+
+    fun setMaxAmount(coin: Coin) {
+        _maxAmount.value = coin
+    }
+
+    fun setMinAmount(coin: Coin) {
+        _minAmount.value = coin
     }
 }

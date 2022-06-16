@@ -24,11 +24,11 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import de.schildbach.wallet.ExploreDataSyncStatus
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.service.WalletTransactionMetadataProvider
 import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.ExploreDataSyncStatus
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService

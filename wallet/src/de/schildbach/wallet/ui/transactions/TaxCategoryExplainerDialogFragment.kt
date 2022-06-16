@@ -32,7 +32,7 @@ import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class TaxCategoryExplainerDialogFragment : OffsetDialogFragment<ConstraintLayout>() {
+class TaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
 
     override val forceExpand = true
     private val binding by viewBinding(DialogTaxCategoryExplainerBinding::bind)

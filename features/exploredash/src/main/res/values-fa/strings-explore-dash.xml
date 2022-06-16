@@ -23,6 +23,7 @@
     <string name="explore_merchants_subtitle">یافتن فروشندگانی که دش را می‌پذیرند</string>
     <string name="explore_atms_title">خودپردازها</string>
     <string name="explore_atms_subtitle">یافتن مراکز خرید و فروش دش و سایر رمزارزها</string>
+    <string name="explore_staking_subtitle">با چند کلیک ساده، به راحتی دش را سپرده‌گذاری کرده و درآمدی جانبی برای خودتان ایجاد کنید. </string>
 
     <!-- Search -->
     <string name="explore_search_results">نتیجه جستجو</string>
@@ -34,7 +35,6 @@
     <string name="explore_option_buy">خرید</string>
     <string name="explore_option_sell">فروش</string>
     <string name="explore_option_buy_sell">خرید &amp;؛ فروش</string>
-    <string name="explore_menu_info">اطلاعات</string>
     <string name="explore_where_to_spend">کجا خرج کنیم؟ </string>
     <string name="explore_atms">خودپردازها</string>
     <string name="explore_all_states">همه ایالات</string>
@@ -47,12 +47,12 @@
     <string name="distance_kilometers">%sکیلومتر</string>
 
     <plurals name="explore_merchant_amount">
-        <item quantity="one">%dفروشنده</item>
-        <item quantity="other">%dفروشنده</item>
+        <item quantity="one">%d فروشنده</item>
+        <item quantity="other">%d فروشنده</item>
     </plurals>
 
     <plurals name="explore_atm_amount">
-        <item quantity="one">%dخودپرداز</item>
+        <item quantity="one">%d خودپرداز</item>
         <item quantity="other">%d خودپرداز</item>
     </plurals>
 
@@ -132,7 +132,7 @@
     <string name="explore_location_denied">غیرمجاز</string>
     <string name="explore_manager_permissions">اجازه استفاده از جی‌پی‌اس</string>
     <string name="explore_location_request">دریافت اجازه استفاده از جی‌پی‌اس به منظور نمایش موقعیت‌های نزدیک به شما</string>
-    <string name="explore_location_explainer">از موقعیت شما برای نشان دادن مکان‌تان در نقشه، فروشندگان در شعاع مورد نظر و نیز بهبود نتیجه جستجو استفاده می‌شود. </string>
+    <string name="explore_location_explainer">از موقعیت شما برای نشان دادن مکان‌تان در نقشه، فروشندگان در شعاع مورد نظر و نیز بهبود نتیجه جستجو استفاده می‌شود.</string>
     <string name="explore_merchant_location_explainer_title">پس از روشن کردن موقعیت مکانی دستگاه، جستجوی فروشندگان بهتر عمل می‌کند. </string>
     <string name="explore_merchant_location_explainer_message">از موقعیت شما برای نشان دادن مکان‌تان در نقشه، فروشندگان در شعاع مورد نظر و نیز بهبود نتیجه جستجو استفاده می‌شود.</string>
     <string name="explore_atm_location_explainer_title">وقتی موقعیت مکانی دستگاه‌تان روشن است، جستجوی خودپرداز بهتر عمل می‌کند. </string>

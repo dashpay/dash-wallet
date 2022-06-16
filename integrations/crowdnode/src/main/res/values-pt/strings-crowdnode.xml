@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="crowdnode_get_started">Introdução ao CrowdNode</string>
+    <string name="crowdnode_get_started_hint">Para iniciar as operações de staking, crie uma conta no CrowdNode ou conecte-se a uma existente.</string>
+    <string name="new_account">Nova conta CrowdNode</string>
+    <string name="account_create">Criar Conta</string>
+    <string name="account_link">Vincular Conta Existente</string>
+    <string name="crowdnode_login">Faça login no CrowdNode</string>
+    <string name="crowdnode_link">Vincular Conta Existente no CrowdNode</string>
+    <string name="required_passphrase_backup">Você precisa fazer backup da sua frase de recuperação na Dash Wallet</string>
+    <string name="backup_passphrase">Backup da frase de recuperação</string>
+    <string name="required_dash_amount">Você precisa de pelo menos %s Dash em sua carteira</string>
+    <string name="crowdnode_new_account_warning_1">CrowdNode usa este endereço como seu ID da conta. Você perderá o acesso aos seus fundos nesta carteira e à sua conta CrowdNode se perder a frase de recuperação associada a este endereço.</string>
+    <string name="crowdnode_new_account_warning_2">Quantidades muito pequenas de Dash serão enviadas de/para CrowdNode para verificar se você é o proprietário desta carteira.</string>
+    <string name="crowdnode_link_account_description">Todas as transferências de/para CrowdNode deste dispositivo serão realizadas com o endereço Dash abaixo.</string>
+    <string name="dash_address">Endereço Dash</string>
+    <string name="primary_dash_address">Endereço Dash Primário</string>
+    <string name="crowdnode_secure_wallet">Faça backup da sua frase de recuperação para criar uma conta CrowdNode</string>
+    <string name="crowdnode_secure_wallet_explainer">Se você perder sua frase de recuperação para esta carteira, perder este dispositivo ou desinstalar a Carteira Dash, você perderá o acesso aos seus fundos no CrowdNode e aos fundos desta carteira.</string>
+    <string name="insufficient_funds">Você não tem fundos suficientes para prosseguir.</string>
+    <string name="crowdnode_minimum_dash">Você deve ter pelo menos %s Dash para prosseguir com a verificação do CrowdNode.</string>
+    <string name="crowdnode_agree_to_terms">Eu concordo com CrowdNode %1$s e %2$s</string>
+    <string name="terms_of_use">Termos de uso</string>
+    <string name="privacy_policy">Política de Privacidade</string>
+    <string name="crowdnode_account_ready">Sua conta CrowdNode está configurada e pronta para uso!</string>
+    <string name="notify_when_done">Fechar e notificar quando finalizar</string>
+    <string name="crowdnode_creating">Sua conta CrowdNode está sendo criada…</string>
+    <string name="accepting_terms">Aceitando os termos de uso…</string>
+    <string name="crowdnode_signup_error">Não foi possível criar sua conta CrowdNode.</string>
+    <string name="crowdnode_deposit_error">Não foi possível fazer um depósito na sua conta CrowdNode.</string>
+    <string name="crowdnode_withdraw_error">Não foi possível realizar um saque da sua conta CrowdNode.</string>
+    <string name="crowdnode_transfer_error">Sua transferência do CrowdNode não foi bem-sucedida.</string>
+    <string name="crowdnode_deposit_received">Seu depósito no CrowdNode foi recebido.</string>
+    <string name="deposit">Depósito</string>
+    <string name="deposit_sent">Depósito enviado</string>
+    <string name="deposit_sent_message">Pode levar um minuto para que seu saldo seja atualizado.</string>
+    <string name="crowdnode_deposit_from_wallet">Carteira Dash ➝ CrowdNode</string>
+    <string name="from_wallet">da Carteira Dash</string>
+    <string name="from_crowdnode">do CrowdNode</string>
+    <string name="withdraw">Saque</string>
+    <string name="withdrawal_requested">Saque solicitado</string>
+    <string name="withdrawal_requested_message">Pode levar um minuto para que os valores cheguem.</string>
+    <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ Carteira Dash</string>
+    <string name="online_account">Conta on-line</string>
+    <string name="online_account_create">Criar conta online</string>
+    <string name="secure_online_account">Proteja seus ganhos</string>
+    <string name="crowdnode_support">Suporte CrowdNode</string>
+    <string name="unlink_account">Desvincular Conta</string>
+    <string name="online_account_title">Por que você precisa de uma conta online?</string>
+    <string name="crowdnode_online_synced">Sincronizado com a Carteira Dash atual</string>
+    <string name="crowdnode_in_process">Processando…</string>
+    <string name="account_recovery">Recuperação de Conta</string>
+    <string name="crowdnode_recovery_info">Se você perder sua frase de recuperação, poderá ser verificado por outros meios para recuperar o acesso aos seus fundos do CrowdNode.</string>
+    <string name="transaction_history">Histórico de Transações</string>
+    <string name="see_staking_details">Você pode ver informações detalhadas sobre seus depósitos, saques e ganhos de recompensa.</string>
+    <string name="payout_options">Opções de Pagamento</string>
+    <string name="payout_options_details">Você pode alterar como / quando seus ganhos de recompensa serão pagos.</string>
+    <string name="crowdnode_balance">Saldo no CrowdNode</string>
+    <string name="crowdnode_your_address_title">Aqui está o endereço do Dash que você usou na integração com o CrowdNode</string>
+    <string name="chain_syncing">A cadeia está sendo sincronizada…</string>
+    <string name="crowdnode_wait_for_sync">Aguarde até que a cadeia esteja totalmente sincronizada para que possamos revisar seu histórico de transações. Visite o site do CrowdNode para fazer login ou se inscrever.</string>
+    <string name="crowdnode_open_website">Acesse o site do CrowdNode</string>
+    <string name="crowdnode_info_title">Torne-se parte de um Masternode Dash com CrowdNode</string>
+    <string name="introducing_staking">Introdução ao Staking</string>
+    <string name="crowdnode_staking_info">Ganhe recompensas de depósitos em Dash Masternodes com apenas 0,5 Dash.</string>
+    <string name="instant_rewards">Receba Recompensas Instantaneamente</string>
+    <string name="daily_rewards_info">Receba sua parte de recompensas diariamente.</string>
+    <string name="crowdnode_sending_to">Enviando para a conta CrowdNode</string>
+    <string name="wallet_sending_to">Enviando para a Dash Wallet neste dispositivo</string>
+    <string name="available_balance">Saldo: %s</string>
+    <string name="crowdnode_minimum_deposit">Deposite pelo menos %s para começar a ganhar</string>
+    <string name="crowdnode_minimum_deposit_difference">Deposite %s para começar a ganhar</string>
+    <string name="crowdnode_first_deposit">O primeiro depósito deve ser superior a %s</string>
+    <string name="crowdnode_staking_info_title">Como funciona o staking</string>
+    <string name="crowdnode_staking_info_message">Você começa a ganhar se sua conta CrowdNode tiver mais de %s</string>
+    <string name="crowdnode_verify_api_address">Verifique seu endereço de API Dash</string>
+    <string name="crowdnode_how_to_verify">Como confirmar seu endereço de API Dash</string>
+    <string name="crowdnode_how_to_verify_description1">Envie %s Dash do seu endereço primário Dash utilizado atualmente para sua conta CrowdNode</string>
+    <string name="crowdnode_how_to_verify_description2">para o endereço Dash designado para sua conta CrowdNode na Carteira Dash neste dispositivo</string>
+    <string name="crowdnode_how_to_verify_description3">Iremos detectar automaticamente esta transação para transferir o mesmo valor para sua conta CrowdNode. Depois disso, você poderá fazer depósitos e saques na Dash Wallet neste dispositivo.</string>
+    <string name="button_show_qr">Mostrar QR</string>
+    <string name="scan_qr">Digitalizar QR</string>
+    <string name="qr_contains_request">Este QR já contém a solicitação de pagamento de %s Dash</string>
+    <string name="verification_required">Verificação Necessária</string>
+    <string name="validating_address">Validando endereço…</string>
+    <string name="crowdnode_address_validated">Seu endereço CrowdNode foi validado, mas a verificação é necessária.</string>
+    <string name="crowdnode_address_confirmed">Seu endereço CrowdNode foi confirmado.</string>
+    <string name="crowdnode_bad_confirmation">Confirmação enviada de um endereço primário errado</string>
+    <string name="crowdnode_online_account_details_title">Informações sobre sua conta online</string>
+    <string name="crowdnode_online_account_details_primary">Seu endereço primário Dash que você usa atualmente para sua conta CrowdNode</string>
+    <string name="crowdnode_online_account_details_api">Endereço Dash designado para sua conta CrowdNode na Carteira Dash neste dispositivo</string>
+    <string name="crowdnode_reset_address">Redefinir Endereço</string>
+
+    </resources>

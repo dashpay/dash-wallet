@@ -22,7 +22,6 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -32,9 +31,9 @@ import androidx.core.os.CancellationSignal
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
-import de.schildbach.wallet.WalletApplication
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
@@ -44,13 +43,14 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentEnterPinBinding
 import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.resumeWithException
 
+@AndroidEntryPoint
 open class CheckPinDialog(
-    private val onSuccessOrDismiss: ((String?) -> Unit)? = null
+    private val onSuccessOrDismiss: ((String?) -> Unit)?
 ) : DialogFragment() {
 
     companion object {
@@ -62,8 +62,11 @@ open class CheckPinDialog(
         internal const val ARG_PIN_ONLY = "arg_pin_only"
 
         private fun showDialog(checkPinDialog: CheckPinDialog, activity: FragmentActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
-            if (PinRetryController.getInstance().isLocked) {
-                checkPinDialog.showLockedAlert(activity)
+            val controller = PinRetryController.getInstance()
+
+            if (controller.isLocked) {
+                val message = controller.getWalletTemporaryLockedMessage(activity.resources)
+                checkPinDialog.showLockedAlert(activity, message)
             } else {
                 val args = Bundle()
                 args.putInt(ARG_REQUEST_CODE, requestCode)
@@ -75,7 +78,7 @@ open class CheckPinDialog(
 
         @JvmStatic
         fun show(activity: FragmentActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
-            val checkPinDialog = CheckPinDialog {}
+            val checkPinDialog = CheckPinDialog()
             showDialog(checkPinDialog, activity, requestCode, pinOnly)
         }
 
@@ -104,22 +107,20 @@ open class CheckPinDialog(
     }
 
     private val binding by viewBinding(FragmentEnterPinBinding::bind)
+    protected open val sharedModel by activityViewModels<CheckPinSharedModel>()
+    protected open val viewModel by viewModels<CheckPinViewModel>()
     private lateinit var state: State
 
-    protected lateinit var viewModel: CheckPinViewModel
-    protected lateinit var sharedModel: CheckPinSharedModel
-
-    protected val pinRetryController = PinRetryController.getInstance()
     protected var fingerprintHelper: FingerprintHelper? = null
     private lateinit var fingerprintCancellationSignal: CancellationSignal
-
-    protected var pinLength = WalletApplication.getInstance().configuration.pinLength
 
     protected enum class State {
         ENTER_PIN,
         INVALID_PIN,
         DECRYPTING
     }
+
+    constructor(): this(null)
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
@@ -150,12 +151,12 @@ open class CheckPinDialog(
         binding.numericKeyboard.isFunctionEnabled = false
         binding.numericKeyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
             override fun onNumber(number: Int) {
-                if (viewModel.pin.length < pinLength) {
+                if (viewModel.pin.length < viewModel.pinLength) {
                     viewModel.pin.append(number)
                     binding.pinPreview.next()
                 }
-                if (viewModel.pin.length == pinLength) {
-                    Handler().postDelayed({
+                if (viewModel.pin.length == viewModel.pinLength) {
+                    binding.pinPreview.postDelayed({
                         checkPin(viewModel.pin.toString())
                     }, 200)
                 }
@@ -193,15 +194,15 @@ open class CheckPinDialog(
         and actions
      */
     protected open fun initViewModel() {
-        viewModel = ViewModelProvider(this)[CheckPinViewModel::class.java]
-        viewModel.checkPinLiveData.observe(viewLifecycleOwner, Observer {
+        viewModel.checkPinLiveData.observe(viewLifecycleOwner) {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(it.data!!)
-                    if (pinRetryController.isLocked) {
-                        showLockedAlert(requireContext())
+                    viewModel.registerFailedAttempt(it.data!!)
+                    if (viewModel.isWalletLocked) {
+                        val message = viewModel.getLockedMessage(requireContext().resources)
+                        showLockedAlert(requireActivity(), message)
                         dismiss()
-                        return@Observer
+                        return@observe
                     }
                     setState(State.INVALID_PIN)
                 }
@@ -212,17 +213,17 @@ open class CheckPinDialog(
                     dismiss(it.data!!)
                 }
             }
-        })
+        }
     }
 
     private fun dismiss(pin: String) {
-        if (pinRetryController.isLocked) {
+        if (viewModel.isWalletLocked) {
             return
         }
         val requestCode = requireArguments().getInt(ARG_REQUEST_CODE)
         sharedModel.onCorrectPinCallback.value = Pair(requestCode, pin)
         onSuccessOrDismiss?.invoke(pin)
-        pinRetryController.clearPinFailPrefs()
+        viewModel.resetFailedPinAttempts()
         dismiss()
     }
 
@@ -234,21 +235,10 @@ open class CheckPinDialog(
         }
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        activity?.run {
-            initSharedModel(this)
-        } ?: throw IllegalStateException("Invalid Activity")
-    }
-
-    protected open fun FragmentActivity.initSharedModel(activity: FragmentActivity) {
-        sharedModel = ViewModelProvider(activity)[CheckPinSharedModel::class.java]
-    }
-
     protected fun setState(newState: State) {
         when (newState) {
             State.ENTER_PIN -> {
-                if (pinLength != PinPreviewView.DEFAULT_PIN_LENGTH) {
+                if (viewModel.pinLength != PinPreviewView.DEFAULT_PIN_LENGTH) {
                     binding.pinPreview.mode = PinPreviewView.PinType.CUSTOM
                 }
                 if (binding.pinProgressSwitcher.currentView.id == R.id.progress) {
@@ -264,11 +254,12 @@ open class CheckPinDialog(
                     binding.pinProgressSwitcher.showPrevious()
                 }
                 viewModel.pin.clear()
-                binding.pinPreview.shake()
-                Handler().postDelayed({
-                    binding.pinPreview.clear()
+                val pinPreview = binding.pinPreview
+                pinPreview.shake()
+                pinPreview.postDelayed({
+                    pinPreview.clear()
                 }, 200)
-                binding.pinPreview.badPin(pinRetryController.getRemainingAttemptsMessage(context))
+                pinPreview.badPin(viewModel.getRemainingAttemptsMessage(resources))
                 binding.numericKeyboard.isEnabled = true
             }
             State.DECRYPTING -> {
@@ -348,11 +339,12 @@ open class CheckPinDialog(
         dismiss(savedPass)
     }
 
-    protected open fun showLockedAlert(context: Context) {
-        BaseAlertDialogBuilder(context).apply {
-            title = context.getString(R.string.wallet_lock_wallet_disabled)
-            message = pinRetryController.getWalletTemporaryLockedMessage(context)
-            positiveText = context.getString(android.R.string.ok)
-        }.buildAlertDialog().show()
+    protected open fun showLockedAlert(activity: FragmentActivity, lockedTimeMessage: String) {
+        AdaptiveDialog.create(
+            null,
+            activity.getString(R.string.wallet_lock_wallet_disabled),
+            lockedTimeMessage,
+            activity.getString(android.R.string.ok)
+        ).show(activity)
     }
 }

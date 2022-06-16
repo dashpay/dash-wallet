@@ -35,7 +35,7 @@ import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 
 @AndroidEntryPoint
-class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment<ConstraintLayout>() {
+class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
 
     private val binding by viewBinding(DialogChangeTaxCategoryExplainerBinding::bind)
     private val wallet by lazy { WalletApplication.getInstance().wallet }
@@ -74,7 +74,7 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment<Constraint
                 dismissAllowingStateLoss()
             }
 
-            val tx = wallet.getTransaction(exampleTxId)
+            val tx = wallet!!.getTransaction(exampleTxId)
             val transactionResultViewBinder = TransactionResultViewBinder(transactionDetails)
             tx?.apply {
                 transactionDetails.findViewById<ImageView>(R.id.transaction_close_btn).isVisible =

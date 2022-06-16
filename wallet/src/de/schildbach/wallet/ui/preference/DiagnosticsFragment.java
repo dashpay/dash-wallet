@@ -32,7 +32,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder;
 import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.Qr;
+import org.dash.wallet.common.util.Qr;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 

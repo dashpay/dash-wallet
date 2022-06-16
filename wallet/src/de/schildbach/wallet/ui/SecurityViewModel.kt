@@ -18,54 +18,65 @@
 
 package de.schildbach.wallet.ui
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.GenericUtils
 import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
 @HiltViewModel
-class SecurityViewModel @Inject constructor(var exchangeRates: ExchangeRatesProvider,
-                                            var configuration: Configuration)
-    : ViewModel() {
+class SecurityViewModel @Inject constructor(
+    private val exchangeRates: ExchangeRatesProvider,
+    private val configuration: Configuration,
+    private val walletData: WalletDataProvider,
+    private val analytics: AnalyticsService,
+    private val walletApplication: WalletApplication
+): ViewModel() {
+    private var selectedExchangeRate: ExchangeRate? = null
 
-    private val _selectedCurrencyCode = MutableStateFlow(configuration.exchangeCurrencyCode)
-    private val _selectedExchangeRate = MutableLiveData<ExchangeRate>()
-    val selectedExchangeRate: LiveData<ExchangeRate>
-        get() = _selectedExchangeRate
+    val currencyCode
+        get() = configuration.exchangeCurrencyCode ?: Constants.DEFAULT_EXCHANGE_CURRENCY
 
-    init {
-        _selectedCurrencyCode
-            .filterNotNull()
-            .flatMapLatest { code -> exchangeRates.observeExchangeRate(code) }
-            .onEach(_selectedExchangeRate::postValue)
+    val needPassphraseBackUp
+        get() = configuration.remindBackupSeed
+
+    val balance: Coin
+        get() = walletData.wallet?.getBalance(Wallet.BalanceType.ESTIMATED) ?: Coin.ZERO
+
+    fun init() {
+        exchangeRates.observeExchangeRate(currencyCode)
+            .onEach { selectedExchangeRate = it }
             .launchIn(viewModelScope)
     }
 
-    fun getBalanceInLocalFormat(balanceInFiat: Fiat?): String {
-        return if (balanceInFiat == null){
-            formatFiatBalance(Fiat.parseFiat(_selectedCurrencyCode.value, "0"))
-        } else {
-            formatFiatBalance(balanceInFiat)
+    fun getBalanceInLocalFormat(): String {
+        selectedExchangeRate?.fiat?.let {
+            val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it)
+            return GenericUtils.fiatToString(exchangeRate.coinToFiat(balance))
         }
+
+        return ""
     }
 
-    private fun formatFiatBalance(fiat: Fiat): String {
-        val localCurrencySymbol = GenericUtils.currencySymbol(_selectedCurrencyCode.value)
-        return if (GenericUtils.isCurrencyFirst(fiat)) {
-            "$localCurrencySymbol ${fiat.toPlainString()}"
-        } else {
-            "${fiat.toPlainString()} $localCurrencySymbol"
-        }
+    fun logEvent(event: String) {
+        analytics.logEvent(event, bundleOf())
+    }
+
+    fun triggerWipe() {
+        walletApplication.triggerWipe()
     }
 }

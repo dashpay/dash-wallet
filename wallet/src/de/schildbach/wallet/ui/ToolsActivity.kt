@@ -27,7 +27,7 @@ import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.send.SweepWalletActivity
-import de.schildbach.wallet.util.Qr
+import org.dash.wallet.common.util.Qr
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_tools.*
@@ -86,7 +86,7 @@ class ToolsActivity : BaseMenuActivity() {
                     getString(R.string.report_transaction_history_not_synced_title),
                     getString(R.string.report_transaction_history_not_synced_message),
                     "",
-                    getString(R.string.close))
+                    getString(R.string.button_close))
                 dialog.show(supportFragmentManager, "requireSyncing")
             } else {
                 viewModel.getTransactionExporter()
@@ -154,7 +154,7 @@ class ToolsActivity : BaseMenuActivity() {
     private fun handleCopyAddress(xpub: String) {
         viewModel.copyXpubToClipboard()
 
-        Toast(this).toast(R.string.receive_copied)
+        Toast(this).toast(R.string.copied)
         log.info("xpub copied to clipboard: {}", xpub)
     }
 }

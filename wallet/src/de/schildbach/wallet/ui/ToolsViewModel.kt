@@ -48,7 +48,7 @@ class ToolsViewModel @Inject constructor(
     val xpubWithCreationDate: String
 
     init {
-        val extendedKey: DeterministicKey = walletApplication.wallet.watchingKey
+        val extendedKey: DeterministicKey = walletApplication.wallet!!.watchingKey
         xpub = extendedKey.serializePubB58(Constants.NETWORK_PARAMETERS);
         xpubWithCreationDate = String.format(
             Locale.US,

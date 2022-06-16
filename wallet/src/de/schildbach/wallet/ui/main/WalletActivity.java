@@ -395,7 +395,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                         R.drawable.ic_info_red,
                         getString(errorDialogTitleResId),
                         messageArgs.length > 0 ? getString(messageResId, messageArgs) : getString(messageResId),
-                        getString(R.string.close),
+                        getString(R.string.button_close),
                         null
                 );
                 dialog.setMessageSelectable(true);
@@ -488,7 +488,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     R.drawable.ic_info_red,
                     getString(R.string.shortcut_pay_to_address),
                     getString(R.string.scan_to_pay_error_dialog_message_no_data),
-                    getString(R.string.close),
+                    getString(R.string.button_close),
                     null
             ).show(this, reportIssue -> Unit.INSTANCE);
         }

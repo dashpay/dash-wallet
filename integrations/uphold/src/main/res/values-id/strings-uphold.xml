@@ -23,7 +23,7 @@
     <string name="uphold_error">Uphold Error</string>
     <string name="uphold_error_not_logged_in">Dash Wallet tidak lagi ditautkan ke akun Uphold Anda. Pada layar berikutnya tekan Tautkan akun Uphold.</string>
     <string name="uphold_error_not_available">Layanan Uphold tidak tersedia. Silakan coba lagi nanti.</string>
-    <string name="uphold_error_report_issue">Silakan laporkan masalah ini ke tim dukungan Dash Wallet menggunakan "Laporkan Masalah" dari menu utama.</string>
+    <string name="uphold_error_report_issue">Silakan laporkan masalah ini ke tim dukungan Dash Wallet menggunakan \"Laporkan Masalah\" dari menu utama.</string>
 
     <string name="uphold_general_error_title">Kesalahan</string>
     <string name="uphold_api_error_title">Kesalahan Uphold</string>

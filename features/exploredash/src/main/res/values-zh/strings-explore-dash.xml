@@ -23,6 +23,7 @@
     <string name="explore_merchants_subtitle">查找接受Dash支付方式的商户.</string>
     <string name="explore_atms_title">自动提款机</string>
     <string name="explore_atms_subtitle">查找在哪里购买或出售Dash和其他加密货币以换取现金.</string>
+    <string name="explore_staking_subtitle">只需点击几下, 即可轻松质押Dash并赚取被动收益.</string>
 
     <!-- Search -->
     <string name="explore_search_results">搜索结果</string>
@@ -34,7 +35,6 @@
     <string name="explore_option_buy">购买</string>
     <string name="explore_option_sell">出售</string>
     <string name="explore_option_buy_sell">购买 &amp; 出售</string>
-    <string name="explore_menu_info">资讯</string>
     <string name="explore_where_to_spend">在哪里消费</string>
     <string name="explore_atms">自动提款机</string>
     <string name="explore_all_states">所有州</string>

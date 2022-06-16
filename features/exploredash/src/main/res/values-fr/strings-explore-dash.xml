@@ -23,6 +23,7 @@
     <string name="explore_merchants_subtitle">Trouvez des vendeurs qui acceptent les paiements avec Dash.</string>
     <string name="explore_atms_title">Distributeurs d\'espèces</string>
     <string name="explore_atms_subtitle">Trouvez où acheter ou vendre des dashs et d\'autres cryptomonnaies, contre des espèces.</string>
+    <string name="explore_staking_subtitle">Percevez facilement des gains Dash et gagnez un revenu passif après quelques simples clics.</string>
 
     <!-- Search -->
     <string name="explore_search_results">Résultats de la recherche</string>
@@ -34,7 +35,6 @@
     <string name="explore_option_buy">Acheter</string>
     <string name="explore_option_sell">Vendre</string>
     <string name="explore_option_buy_sell">Acheter &amp; vendre</string>
-    <string name="explore_menu_info">info</string>
     <string name="explore_where_to_spend">Où dépenser</string>
     <string name="explore_atms">Distributeurs d\'espèces</string>
     <string name="explore_all_states">Tous les états</string>
@@ -47,13 +47,15 @@
     <string name="distance_kilometers">%s kilomètres</string>
 
     <plurals name="explore_merchant_amount">
-        <item quantity="one">%d vendeurs</item>
+        <item quantity="one">%d vendeur</item>
+        <item quantity="many">%d vendeurs</item>
         <item quantity="other">%d vendeurs</item>
     </plurals>
 
     <plurals name="explore_atm_amount">
-        <item quantity="one">%d distributeurs</item>
-        <item quantity="other">%d distributeurs</item>
+        <item quantity="one">%d distributeur ATM</item>
+        <item quantity="many">%d distributeurs ATM</item>
+        <item quantity="other">%d distributeurs ATM</item>
     </plurals>
 
     <!-- Details -->
@@ -119,11 +121,13 @@
 
     <plurals name="radius_miles">
         <item quantity="one">%d mile</item>
+        <item quantity="many">%d miles</item>
         <item quantity="other">%d miles</item>
     </plurals>
 
     <plurals name="radius_kilometers">
-        <item quantity="one">%d kilomètres</item>
+        <item quantity="one">%d kilomètre</item>
+        <item quantity="many">%d kilomètres</item>
         <item quantity="other">%d kilomètres</item>
     </plurals>
 

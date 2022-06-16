@@ -7,14 +7,17 @@
     <string name="onboarding_load_wallet_error">Wallet kann nicht geladen werden!</string>
 
     <string name="set_pin_create_new_wallet">Neue Wallet erstellen</string>
+    <string name="set_pin_upgrade_wallet">Wallet aktualisieren</string>
     <string name="set_pin_restore_wallet">Wallet wiederherstellen</string>
     <string name="set_pin_enter_pin">Alte PIN eingeben</string>
-    <string name="set_pin_set_pin">PIN setzen</string>
+    <string name="set_pin_set_pin">PIN festsetzen</string>
     <string name="set_pin_confirm_pin">PIN bestätigen</string>
     <string name="set_pin_encrypting">Wallet verschlüsseln</string>
     <string name="set_pin_decrypting">Wallet entschlüsseln</string>
     <string name="set_pin_verifying_pin">Verifiziere PIN</string>
     <string name="set_pin_message">Die PIN muss bei jedem Verwenden der App zum Entsperren eingegeben werden.</string>
+    <string name="set_pin_confirm_pin_incorrect">Falsche PIN</string>
+
     <string name="home_available_balance">Verfügbares Guthaben</string>
     <string name="home_balance_hidden">Guthaben nicht angezeigt</string>
     <string name="home_balance_show_hint">Zum Anzeigen des Guthabens tippen</string>
@@ -29,13 +32,13 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Wallet jetzt absichern</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Zur Zahlung scannen</string>
+    <string name="shortcut_scan_to_pay">Scannen</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Zur Adresse senden</string>
+    <string name="shortcut_pay_to_address">An Adresse senden</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Kaufe / Verkaufe Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_receive">Empfangen</string>
+    <string name="shortcut_receive">Empfange</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Privaten Schlüssel importieren</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -60,11 +63,10 @@
     <string name="scan_to_pay_error_dialog_title">Zum Senden scannen</string>
     <string name="scan_to_pay_error_dialog_message">Keine gültige Dash-Adresse oder URL-Anfrage im Zwischenspeicher:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Keine gültige Dash-Adresse oder URL-Anfrage im Zwischenspeicher.</string>
-    <string name="receive_title">Empfangen</string>
+    <string name="receive_title">Empfange</string>
     <string name="receive_enter_amount_message">Zu empfangenen Betrag festsetzen</string>
     <string name="receive_enter_amount_button">Betrag festsetzen</string>
     <string name="receive_share_button">Teilen</string>
-    <string name="receive_copied">Kopiert</string>
 
     <string name="pay_title">Senden</string>
     <string name="history_title">Verlauf</string>
@@ -76,7 +78,7 @@
 
     <string name="payments_title">Zahlungen</string>
     <string name="payments_tab_pay_label">Senden</string>
-    <string name="payments_tab_receive_label">Empfangen</string>
+    <string name="payments_tab_receive_label">Empfange</string>
     <string name="payments_pay_by_qr_title">Gesendet von</string>
     <string name="payments_pay_by_qr_sub_title">QR-Code scannen</string>
     <string name="payments_pay_to_clipboard_title">An kopierte Adresse senden</string>
@@ -114,8 +116,7 @@
     <string name="import_export_keys_dialog_password_phrase">Hier bitte die Wiederherstellungsphrase eingeben.</string>
     <string name="preferences_report_issue_summary">Informationen über das Problem sammeln und an die Entwickler weiterleiten.</string>
     <string name="navigation_configuration">Konfiguration</string>
-    <string name="button_copy_address">Adresse kopieren</string>
-    <string name="request_coins_clipboard_address_msg">Dash-Adresse in die Zwischenablage kopiert</string>
+    <string name="request_coins_clipboard_address_msg">Dash Adresse wurde in die Zwischenablage kopiert</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Zeigen</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" ist kein Wort aus der Wiederherstellungs-Wortfolge</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Wiederherstellungs-Wortfolge muss 12 Wörter haben</string>
@@ -143,21 +144,6 @@
     <string name="wallet_lock_try_again">Versuches es wieder in %1$d %2$s</string>
     <string name="wallet_lock_reset">Zurücksetzen</string>
     <string name="wallet_lock_wrong_pin">Falscher PIN! %s</string>
-    <plurals name="wallet_lock_attempts_remaining">
-        <item quantity="one">%d Versuch verbleibend</item>
-        <item quantity="other">%d Versuche verbleiben</item>
-    </plurals>
-
-    <plurals name="minute">
-        <item quantity="one">Minute</item>
-        <item quantity="other">Minuten</item>
-    </plurals>
-
-    <plurals name="hour">
-        <item quantity="one">Stunde</item>
-        <item quantity="other">Stunden</item>
-    </plurals>
-
     <string name="encrypt_new_key_chain_upgrade_button">Upgrade</string>
     <string name="encrypt_new_key_chain_dialog_title">Wallet aktualisieren</string>
     <string name="encrypt_new_key_chain_dialog_message">Deine Wallet wird aktualisiert, damit sie den Import und Export zu mehr Apps unterstützt.</string>
@@ -194,7 +180,6 @@
     <string name="preferences_enable_payment_request_title">BIP70 für Scan-to-Pay</string>
 
     <string name="verify_continue">Fortfahren</string>
-    <string name="verify">Verifizieren</string>
     <string name="verify_backup_wallet">Wallet-Backup</string>
     <string name="verify_show_recovery_phrase">Wiederherstellungsphrase anzeigen</string>
     <string name="verify_secure_now">Wallet jetzt absichern</string>
@@ -253,6 +238,7 @@
     <string name="menu_rescan_blockchain">Blockchain erneut scannen</string>
     <string name="menu_contact_support_title">Support kontaktieren</string>
     <string name="menu_contact_support_subtitle">Ein Problem melden</string>
+    <string name="menu_explore_title">Explore</string>
     <string name="tools_address_book">Adressbuch</string>
     <string name="tools_import_private_key">Privaten Schlüssel importieren</string>
     <string name="tools_network_monitor">Netzwerk-Monitor</string>
@@ -308,7 +294,6 @@
     <string name="welcome_screen_subtitle_3">Habe die volle Kontrolle über deine Wallet und passe sie an deine Bedürfnisse an</string>
 
     <string name="sync_status_wait">Bitte bis zum Ende der Synchronisierung warten</string>
-    <string name="sync_status_syncing_title">Synchronisiere %1$d</string>
     <string name="sync_status_syncing_sub_title">mit der Dash-Blockchain</string>
     <string name="sync_status_unable_to_connect">Verbindung fehlgeschlagen</string>
     <string name="sync_status_check_connection">Verbindung überprüfen</string>
@@ -317,7 +302,6 @@
 
     <string name="appwidget_wallet_not_ready">Bitte Wallet einrichten</string>
 
-    <string name="payment_request_please_wait_title">Bitte warten</string>
     <string name="payment_request_please_wait_message">Mit dem Zahlungs-Server verbinden</string>
     <string name="payment_request_unable_to_connect">Verbindung fehlgeschlagen</string>
     <string name="payment_request_unable_to_send">Senden nicht möglich</string>
@@ -342,4 +326,6 @@
     <string name="all_transactions">Alles</string>
     <string name="received_transactions">Erhalten</string>
     <string name="sent_transactions">Gesendet</string>
+    <string name="continue_reset">Fortfahren</string>
+    <string name="reset_wallet_text">Wallet zurücksetzen</string>
 </resources>

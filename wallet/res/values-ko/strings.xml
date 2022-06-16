@@ -65,8 +65,6 @@
     <string name="send_coins_fragment_pin_label">PIN 입력하기</string>
     <string name="send_coins_fragment_hint_fee_economic">네트워크 승인을 위해 %s가 지불됩니다.</string>
     <string name="send_coins_fragment_hint_fee_priority">%s의 선행 수수료가 지불됩니다. 네트워크에서 최대한 빠른 확인이 필요하시다면 \'선행\'을 사용하세요.</string>
-    <string name="send_coins_fragment_hint_dusty_send">송금액이 너무 적어 전송할 수 없습니다</string>
-    <string name="send_coins_fragment_hint_insufficient_money">잔액 부족</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">극소량의 금액은 송금 가능액에 포함되지 않습니다.</string>
     <string name="send_coins_fragment_hint_replaying">지갑이 네트워크와 완전히 동기화되지 않아 현재 지불 할 수 없습니다</string>
     <string name="send_coins_fragment_direct_payment_enable">대시가 수신인에게 바로 송금됩니다.</string>
@@ -157,7 +155,7 @@
     <string name="transaction_row_message_received_pay_to_many">이 지불은 당신 외 여러 지갑에 대한 송금을 처리하고 있어, 결제 중 어플의 속도가 저하될 수있습니다. 가능한 경우, 이번 지불을 통해 당신만 송금을 받을 수 있도록 요청하십시오.</string>
     <string name="transaction_row_message_received_rbf">이 지불은 발신자가 안전하지 않은 거래 유형을 이용하여 지연되었습니다.</string>
     <string name="transaction_row_status_received">받음</string>
-    <string name="transaction_row_status_sent">보냄</string>
+    <string name="transaction_row_status_sent">전송 완료</string>
     <string name="transaction_row_status_sending">보내는 중</string>
     <string name="transaction_row_status_sent_internally">내부 처리 금액</string>
     <string name="transaction_row_status_processing">처리 중</string>
@@ -226,7 +224,7 @@
     <string name="backup_wallet_dialog_password_mismatch">일치하지 않습니다!</string>
     <string name="import_export_keys_dialog_show">패스워드 보이기</string>
     <string name="import_export_keys_dialog_failure_title">오류</string>
-    <string name="import_keys_intent_filter_action">전자 지갑 복구</string>
+    <string name="import_keys_intent_filter_action">지갑 복구</string>
     <string name="encrypt_keys_dialog_title">PIN 변경</string>
     <string name="encrypt_keys_dialog_message">당신의 지갑을 통해 송금하는 경우 선택된 PIN으로 보호됩니다.</string>
     <string name="encrypt_keys_dialog_warning">중요: PIN 번호를 기억하세요! (생일과 같은) 일반적인 숫자를 사용하지 마세요.</string>
@@ -280,7 +278,7 @@
     <string name="preferences_remind_balance_summary">앱에 잔액이 남아 있는 상태에서 몇 주간 사용을 하지 않으면 앱이 알림을 보냅니다.</string>
     <string name="preferences_show_disclaimer_title">법적 책임 문서를 보여줍니다</string>
     <string name="preferences_show_disclaimer_summary">안전성 노트를 읽으셨나요? 당신의 지갑을 안전한 장소에 백업하셨나요?</string>
-    <string name="preferences_report_issue_title">오류 보고</string>
+    <string name="preferences_report_issue_title">오류 보고하기</string>
     <string name="preferences_initiate_reset_title">블록체인 재설정</string>
     <string name="preferences_initiate_reset_summary">블록체인, 거래 및 지갑 잔액을 리셋합니다. 이 과정에는 다소의 시간이 소요될 수 있으므로 정당한 이유가 있는 때에만 이용하십시오.</string>
     <string name="preferences_initiate_reset_dialog_message">블록체인을 초기화한 후 다시 불러오시겠습니까?\n\n이 작업을 진행하면 지갑의 잔액과 거래 내역이 일시적으로 표시되지 않으며, 블록체인 동기화가 완료되면 다시 정상적으로 표시됩니다.</string>
@@ -339,7 +337,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">닫기</string>
     <string name="button_cancel">취소</string>
-    <string name="button_retry">재시도</string>
     <string name="button_help">도움말</string>
     <string name="button_add">추가</string>
     <string name="button_delete">삭제</string>
@@ -349,7 +346,6 @@
     <string name="button_copy">복사</string>
     <string name="button_copy_request">요청 복사</string>
     <string name="button_paste">붙여넣기</string>
-    <string name="button_share">공유</string>
     <string name="button_set_as_default">기본값으로 설정</string>
     <string name="button_request_coins">대시 요청</string>
     <string name="button_send_coins">대시 보내기</string>
@@ -393,5 +389,4 @@
     <string name="activity_buy_and_sell_dash_filter">필터</string>
     <string name="clear_filter">필터 초기화</string>
     <string name="select_currency">통화 선택</string>
-
 </resources>

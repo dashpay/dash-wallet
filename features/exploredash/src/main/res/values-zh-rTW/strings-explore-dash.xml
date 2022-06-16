@@ -23,6 +23,7 @@
     <string name="explore_merchants_subtitle">查找接受達世幣作為付款的商家。</string>
     <string name="explore_atms_title">自動提款機</string>
     <string name="explore_atms_subtitle">查找在哪裡購買或出售達世幣和其他加密貨幣以換取現金。</string>
+    <string name="explore_staking_subtitle">只需點擊幾下，即可輕鬆質押達世幣並賺取被動收入。</string>
 
     <!-- Search -->
     <string name="explore_search_results">搜索結果</string>
@@ -34,7 +35,6 @@
     <string name="explore_option_buy">購買</string>
     <string name="explore_option_sell">出售</string>
     <string name="explore_option_buy_sell">購買 &amp; 出售</string>
-    <string name="explore_menu_info">資訊</string>
     <string name="explore_where_to_spend">在哪裡消費</string>
     <string name="explore_atms">自動提款機</string>
     <string name="explore_all_states">所有州</string>
