@@ -78,6 +78,7 @@ import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.transactions.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
+import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
@@ -259,7 +260,6 @@ public class WalletApplication extends BaseWalletApplication
     }
 
     private void syncExploreData() {
-
         OneTimeWorkRequest syncDataWorkRequest =
                 new OneTimeWorkRequest.Builder(ExploreSyncWorker.class)
                         .setBackoffCriteria(
@@ -875,9 +875,8 @@ public class WalletApplication extends BaseWalletApplication
     /**
      * Removes all the data and restarts the app showing onboarding screen.
      */
-    public void triggerWipe(final Context context) {
+    public void triggerWipe() {
         log.info("Removing all the data and restarting the app.");
-
         startService(new Intent(BlockchainService.ACTION_WIPE_WALLET, null, this, BlockchainServiceImpl.class));
     }
 

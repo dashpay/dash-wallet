@@ -10,7 +10,7 @@ import javax.inject.Inject
 
 class ExploreDataSyncStatus @Inject constructor(): DataSyncStatusService {
     companion object {
-        val log = LoggerFactory.getLogger(ExploreDataSyncStatus::class.java)
+        private val log = LoggerFactory.getLogger(ExploreDataSyncStatus::class.java)
     }
 
     private val _syncProgressFlow = MutableStateFlow(Resource.loading(0.00))

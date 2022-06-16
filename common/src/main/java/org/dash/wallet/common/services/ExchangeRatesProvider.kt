@@ -23,4 +23,5 @@ import org.dash.wallet.common.data.ExchangeRate
 interface ExchangeRatesProvider {
     fun observeExchangeRates(): Flow<List<ExchangeRate>>
     fun observeExchangeRate(currencyCode: String): Flow<ExchangeRate>
+    suspend fun getExchangeRate(currencyCode: String): ExchangeRate?
 }

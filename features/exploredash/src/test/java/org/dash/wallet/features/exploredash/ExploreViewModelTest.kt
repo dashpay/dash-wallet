@@ -249,10 +249,10 @@ class ExploreViewModelTest {
                     emit(merchants
                             .filter { it.type != MerchantType.ONLINE }
                             .filter {
-                                it.latitude ?: 0.0 < bounds.northLat &&
-                                        it.latitude ?: 0.0 > bounds.southLat &&
-                                        it.longitude ?: 0.0 < bounds.eastLng &&
-                                        it.longitude ?: 0.0 > bounds.westLng
+                                (it.latitude ?: 0.0) < bounds.northLat &&
+                                        (it.latitude ?: 0.0) > bounds.southLat &&
+                                        (it.longitude ?: 0.0) < bounds.eastLng &&
+                                        (it.longitude ?: 0.0) > bounds.westLng
                             })
                 }
             }
@@ -275,10 +275,10 @@ class ExploreViewModelTest {
                     .filter { (it.type == MerchantType.PHYSICAL || it.type == MerchantType.BOTH) }
                     .filter { it.active != false }
                     .filter {
-                        it.latitude ?: 0.0 < bounds.northLat &&
-                                it.latitude ?: 0.0 > bounds.southLat &&
-                                it.longitude ?: 0.0 < bounds.eastLng &&
-                                it.longitude ?: 0.0 > bounds.westLng
+                        (it.latitude ?: 0.0) < bounds.northLat &&
+                                (it.latitude ?: 0.0) > bounds.southLat &&
+                                (it.longitude ?: 0.0) < bounds.eastLng &&
+                                (it.longitude ?: 0.0) > bounds.westLng
                     }
             val actual = viewModel.boundedSearchFlow.first()
 
