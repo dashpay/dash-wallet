@@ -624,6 +624,10 @@
         <item name="strokeColor">@color/gray_40</item>
     </style>
 
+    <style name="ExampleBackground" parent="GrayBackground">
+        <item name="cornerRadius">20dp</item>
+    </style>
+
     <style name="SearchInputBackground" parent="GrayBackground">
         <item name="cornerRadius">8dp</item>
     </style>

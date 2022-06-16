@@ -391,4 +391,14 @@
     <string name="launch_reset_wallet_extra_message">Back up your recovery phrase</string>
     <string name="start_reset_wallet_title">You may lose %s</string>
     <string name="reset_wallet_text">Reset Wallet</string>
+    <string name="reclassify_transactions_title">Reclassify Your Transactions</string>
+    <string name="reclassify_transactions_title_message">These classifications will be reflected in the CSV Export that can be used to import into tax reporting services.</string>
+    <string name="reclassify_transactions_question">Where can I change the tax category?</string>
+    <string name="reclassify_transactions_outgoing_title">Outgoing transactions</string>
+    <string name="reclassify_transactions_by_default_message">by default will be marked as</string>
+    <string name="reclassify_transactions_incoming_title">Incoming transactions</string>
+    <string name="reclassify_transactions_change_it_message">You can change it to</string>
+    <string name="reclassify_transactions_linked_accounts_title">Linked accounts</string>
+    <string name="reclassify_transactions_linked_accounts_message">by default all transactions to or from your linked accounts (exchanges, staking, etc) will be marked as transfers.</string>
+    <string name="reclassify_transactions_change_explanation">Choose any transaction from the homepage and change the category on the transaction details page.</string>
 </resources>

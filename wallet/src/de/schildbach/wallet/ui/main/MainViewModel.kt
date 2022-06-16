@@ -28,6 +28,7 @@ import de.schildbach.wallet.ui.SingleLiveEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -69,6 +70,10 @@ class MainViewModel @Inject constructor(
     val balance: LiveData<Coin>
         get() = _balance
 
+    private val _mostRecentTransaction = MutableLiveData<Transaction>()
+    val mostRecentTransaction: LiveData<Transaction>
+        get() = _mostRecentTransaction
+
     private val _hideBalance = MutableLiveData<Boolean>()
     val hideBalance: LiveData<Boolean>
         get() = _hideBalance
@@ -86,6 +91,10 @@ class MainViewModel @Inject constructor(
 
         walletDataProvider.observeBalance()
             .onEach(_balance::postValue)
+            .launchIn(viewModelScope)
+
+        walletDataProvider.observeMostRecentTransaction()
+            .onEach(_mostRecentTransaction::postValue)
             .launchIn(viewModelScope)
 
         currencyCode.filterNotNull()

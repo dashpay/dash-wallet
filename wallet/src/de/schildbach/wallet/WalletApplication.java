@@ -105,6 +105,7 @@ import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
+import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.security.SecurityGuard;
 import de.schildbach.wallet.util.CrashReporter;
@@ -295,6 +296,10 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         }
 
         config.updateLastVersionCode(packageInfo.versionCode);
+
+        if (config.getTaxCategoryInstallTime() == 0) {
+            config.setTaxCategoryInstallTime(System.currentTimeMillis());
+        }
 
         afterLoadWallet();
 
@@ -878,6 +883,12 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     @Override
     public Flow<Coin> observeBalance() {
         return new WalletBalanceObserver(wallet).observe();
+    }
+
+    @NonNull
+    @Override
+    public Flow<Transaction> observeMostRecentTransaction() {
+        return new WalletMostRecentTransactionsObserver(wallet).observe();
     }
 
     // wallets from v5.17.5 and earlier do not have a BIP44 path
