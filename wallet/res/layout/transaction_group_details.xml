@@ -17,7 +17,7 @@
         android:layout_height="wrap_content"
         android:clipToPadding="false"
         android:orientation="vertical"
-        android:layout_marginHorizontal="20dp"
+        android:layout_marginHorizontal="25dp"
         android:paddingTop="10dp">
 
         <TextView
@@ -37,17 +37,15 @@
             app:layout_constraintTop_toBottomOf="@id/group_title">
 
             <TextView
-                android:id="@+id/transaction_amount_signal"
+                android:id="@+id/amount_signal"
                 style="@style/Headline3.Regular"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="2dp"
-                android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="@+id/dash_amount"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@+id/dash_amount"
-                tools:text="-"
-                tools:visibility="visible" />
+                tools:text="-" />
 
             <org.dash.wallet.common.ui.CurrencyTextView
                 android:id="@+id/dash_amount"
@@ -56,7 +54,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="4dp"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toEndOf="@id/transaction_amount_signal"
+                app:layout_constraintStart_toEndOf="@id/amount_signal"
                 app:layout_constraintTop_toTopOf="parent"
                 tools:text="-3.14" />
 
@@ -87,59 +85,61 @@
             android:id="@+id/icon"
             android:layout_width="50dp"
             android:layout_height="50dp"
+            android:background="@drawable/rounded_background"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="10dp"
+            android:src="@drawable/ic_crowdnode_logo"
+            android:theme="@style/CrowdNodeLogoBackground"
             app:layout_constraintBottom_toBottomOf="@id/fiat_value"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/group_title"
-            tools:src="@drawable/ic_crowdnode_logo" />
-
-        <LinearLayout
-            android:id="@+id/transaction_details_card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:orientation="vertical"
-            android:paddingHorizontal="15dp"
-            android:paddingTop="11dp"
-            android:paddingBottom="15dp"
-            android:background="@drawable/rounded_background"
-            android:theme="@style/SecondaryBackground"
-            app:layout_constraintTop_toBottomOf="@id/fiat_value">
-
-            <TextView
-                android:id="@+id/transaction_details_title"
-                style="@style/Caption.Medium.Tertiary"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:textSize="13sp"
-                tools:text="@string/crowdnode_tx_set_title" />
-
-            <TextView
-                android:id="@+id/transaction_details_message"
-                style="@style/Caption"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginTop="6dp"
-                android:textSize="13sp"
-                tools:text="@string/crowdnode_tx_set_explainer" />
-        </LinearLayout>
+            app:layout_constraintTop_toTopOf="@id/group_title" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <include layout="@layout/fragment_explore"/>
+    <LinearLayout
+        android:id="@+id/details_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:orientation="vertical"
+        android:paddingHorizontal="15dp"
+        android:layout_marginHorizontal="15dp"
+        android:paddingTop="11dp"
+        android:paddingBottom="15dp"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/SecondaryBackground"
+        app:layout_constraintTop_toBottomOf="@id/fiat_value">
 
-<!--    <androidx.cardview.widget.CardView-->
-<!--        style="@style/CardViewRaised"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_marginTop="15dp"-->
-<!--        android:layout_marginHorizontal="20dp"-->
-<!--        app:cardCornerRadius="12dp">-->
+        <TextView
+            android:id="@+id/details_title"
+            style="@style/Caption.Medium.Tertiary"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:textSize="13sp"
+            tools:text="@string/crowdnode_tx_set_title" />
 
-<!--        <androidx.recyclerview.widget.RecyclerView-->
-<!--            android:id="@+id/transactions"-->
-<!--            android:layout_width="match_parent"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"-->
-<!--            tools:itemCount="5"-->
-<!--            tools:listitem="@layout/transaction_row" />-->
-<!--    </androidx.cardview.widget.CardView>-->
+        <TextView
+            android:id="@+id/details_message"
+            style="@style/Caption"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="6dp"
+            android:textSize="13sp"
+            tools:text="@string/crowdnode_tx_set_explainer" />
+    </LinearLayout>
+
+    <androidx.cardview.widget.CardView
+        style="@style/CardViewRaised"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="15dp"
+        app:cardCornerRadius="12dp">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/transactions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:itemCount="5"
+            tools:listitem="@layout/transaction_row" />
+    </androidx.cardview.widget.CardView>
 </LinearLayout>

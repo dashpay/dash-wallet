@@ -20,9 +20,9 @@
     <string name="crowdnode_account">CrowdNode Account</string>
     <string name="new_account">New CrowdNode Account</string>
     <string name="account_create">Create Account</string>
-    <string name="account_create_response">Create Account Response</string>
+    <string name="accept_terms_response">Please Accept Terms</string>
     <string name="accept_terms">Accept Terms</string>
-    <string name="accept_terms_response">Accept Terms Response</string>
+    <string name="welcome_response">Account Created</string>
     <string name="account_link">Link Existing Account</string>
     <string name="crowdnode_login">Log in to CrowdNode</string>
     <string name="crowdnode_signup">Sign up to CrowdNode</string>

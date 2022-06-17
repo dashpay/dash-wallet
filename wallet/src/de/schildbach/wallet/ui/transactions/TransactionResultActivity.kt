@@ -33,6 +33,8 @@ import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.slf4j.LoggerFactory
@@ -40,6 +42,8 @@ import org.slf4j.LoggerFactory
 /**
  * @author Samuel Barbosa
  */
+@FlowPreview
+@ExperimentalCoroutinesApi
 class TransactionResultActivity : AbstractWalletActivity() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
@@ -83,12 +87,16 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
         setContentView(R.layout.activity_successful_transaction)
 
-        val transactionResultViewBinder = TransactionResultViewBinder(container)
-        val tx = WalletApplication.getInstance().wallet!!.getTransaction(txId)
+        val transactionResultViewBinder = TransactionResultViewBinder(
+            walletData.wallet!!,
+            configuration.format.noCode(),
+            container
+        )
+        val tx = walletData.wallet!!.getTransaction(txId)
         if (tx != null) {
             val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
             val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
-            transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy, false)
+            transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
             open_explorer_card.setOnClickListener { viewOnExplorer(tx) }
             transaction_close_btn.setOnClickListener {
                 onTransactionDetailsDismiss()

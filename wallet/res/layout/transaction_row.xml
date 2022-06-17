@@ -22,8 +22,9 @@
     android:layout_height="wrap_content"
     android:clickable="true"
     android:focusable="true"
-    android:foreground="?attr/selectableItemBackground"
-    android:paddingEnd="15dp">
+    android:background="?attr/selectableItemBackground"
+    android:paddingEnd="15dp"
+    tools:context="de.schildbach.wallet.ui.main.TransactionAdapter">
 
     <ImageView
         android:id="@+id/icon"
@@ -47,12 +48,14 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:textSize="12sp"
+        android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/primary_status"
         app:layout_constraintStart_toStartOf="@id/primary_status"
         app:layout_constraintEnd_toEndOf="@id/primary_status"
         app:layout_constraintVertical_chainStyle="packed"
-        tools:text="5 transactions" />
+        tools:text="5 transactions"
+        tools:visibility="gone" />
 
     <TextView
         android:id="@+id/primary_status"
@@ -60,7 +63,6 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
-        android:layout_marginEnd="6dp"
         android:textSize="13sp"
         android:maxLines="1"
         android:ellipsize="end"

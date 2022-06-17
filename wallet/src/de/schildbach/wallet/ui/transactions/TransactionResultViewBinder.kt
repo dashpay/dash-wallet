@@ -23,24 +23,28 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.ui.CurrencyTextView
 
 /**
  * @author Samuel Barbosa
  */
-class TransactionResultViewBinder(private val containerView: View) {
-
+@ExperimentalCoroutinesApi
+class TransactionResultViewBinder(
+    private val wallet: Wallet,
+    private val dashFormat: MonetaryFormat,
+    private val containerView: View
+) {
     private val ctx by lazy { containerView.context }
     private val checkIcon by lazy { containerView.findViewById<ImageView>(R.id.check_icon) }
     private val transactionAmountSignal by lazy { containerView.findViewById<TextView>(R.id.transaction_amount_signal) }
@@ -72,12 +76,13 @@ class TransactionResultViewBinder(private val containerView: View) {
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
     private val explorerContainer by lazy { containerView.findViewById<View>(R.id.open_explorer_card) }
 
-    fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null, isTransactionHistory: Boolean = true) {
-        val noCodeFormat = WalletApplication.getInstance().configuration.format.noCode()
-        val wallet = WalletApplication.getInstance().wallet!!
-        val primaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet)
-        val secondaryStatus = TransactionUtil.getReceivedStatusString(tx, wallet)
-        val errorStatus = TransactionUtil.getErrorName(tx)
+    private val resourceMapper =
+        TxResourceMapper()
+
+    fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
+        val primaryStatus = resourceMapper.getTransactionTypeName(tx, wallet)
+        val secondaryStatus = resourceMapper.getReceivedStatusString(tx, wallet.context)
+        val errorStatus = resourceMapper.getErrorName(tx)
         var primaryStatusStr = if (tx.type != Transaction.Type.TRANSACTION_NORMAL || tx.isCoinBase) {
             ctx.getString(primaryStatus)
         } else {
@@ -108,7 +113,7 @@ class TransactionResultViewBinder(private val containerView: View) {
         }
 
         // handle sending
-        if (TransactionUtil.isSending(tx, wallet)) {
+        if (resourceMapper.isSending(tx, wallet)) {
             primaryStatusStr = ctx.getString(R.string.transaction_row_status_sending)
             secondaryStatusStr = ""
         }
@@ -149,7 +154,7 @@ class TransactionResultViewBinder(private val containerView: View) {
             outputsAddressesContainer.addView(addressView)
         }
 
-        dashAmount.setFormat(noCodeFormat)
+        dashAmount.setFormat(dashFormat)
         //For displaying purposes only
         val amountSentOrReceived : Coin? = tx.value?.let {
             if (isFeeAvailable(tx.fee)) {
@@ -166,7 +171,7 @@ class TransactionResultViewBinder(private val containerView: View) {
         }
 
         if (isFeeAvailable(tx.fee)) {
-            transactionFee.setFormat(noCodeFormat)
+            transactionFee.setFormat(dashFormat)
             transactionFee.setAmount(tx.fee)
         }
 

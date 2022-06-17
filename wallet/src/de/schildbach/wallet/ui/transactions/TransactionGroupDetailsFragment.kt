@@ -68,30 +68,37 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
         if (transactionWrapper is FullCrowdNodeSignUpTxSet) {
             binding.groupTitle.text = getString(R.string.crowdnode_account)
             binding.icon.setImageResource(R.drawable.ic_crowdnode_logo)
-            binding.transactionDetailsTitle.text = getString(R.string.crowdnode_tx_set_title)
-            binding.transactionDetailsMessage.text = getString(R.string.crowdnode_tx_set_explainer)
+            binding.detailsTitle.text = getString(R.string.crowdnode_tx_set_title)
+            binding.detailsMessage.text = getString(R.string.crowdnode_tx_set_explainer)
         }
 
-//        viewModel.walletData.wallet?.let { wallet ->
-//            val adapter = TransactionAdapter(wallet, viewModel.dashFormat, resources) { item, index ->
-//                Log.i("CROWDNODE", "index: ${index}")
-//            }
-//            binding.transactions.adapter = adapter
-//            val divider = ResourcesCompat.getDrawable(resources, R.drawable.list_divider, null)
-//            binding.transactions.addItemDecoration(ListDividerDecorator(
-//                divider!!,
-//                showAfterLast = false,
-//                marginStart = resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start)
-//            ))
-//
-//            viewModel.transactions.observe(viewLifecycleOwner, adapter::submitList)
-//        }
+        viewModel.walletData.wallet?.let { wallet ->
+            val adapter = TransactionAdapter(
+                wallet,
+                viewModel.dashFormat,
+                resources,
+                CrowdNodeTxResourceMapper()
+            ) { item, index ->
+                Log.i("CROWDNODE", "index: ${index}")
+            }
+            binding.transactions.adapter = adapter
+            val divider = ResourcesCompat.getDrawable(resources, R.drawable.list_divider, null)
+            binding.transactions.addItemDecoration(ListDividerDecorator(
+                divider!!,
+                showAfterLast = false,
+                marginStart = resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start)
+            ))
+
+            viewModel.transactions.observe(viewLifecycleOwner, adapter::submitList)
+        }
 
         viewModel.dashValue.observe(viewLifecycleOwner) {
             if (it.isNegative) {
                 binding.dashAmount.setAmount(it.negate())
+                binding.amountSignal.text = "-"
             } else {
                 binding.dashAmount.setAmount(it)
+                binding.amountSignal.text = "+"
             }
             setFiatValue()
         }

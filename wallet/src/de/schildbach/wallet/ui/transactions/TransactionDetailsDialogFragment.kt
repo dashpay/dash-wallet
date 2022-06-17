@@ -30,6 +30,7 @@ import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
@@ -54,6 +55,9 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
 
     @Inject
     lateinit var walletData: WalletDataProvider
+    @Inject
+    lateinit var configuration: Configuration
+
 
     companion object {
 
@@ -77,7 +81,11 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
         tx = walletData.wallet!!.getTransaction(txId)
         contentBinding = TransactionResultContentBinding.bind(binding.transactionResultContainer)
-        val transactionResultViewBinder = TransactionResultViewBinder(binding.transactionResultContainer)
+        val transactionResultViewBinder = TransactionResultViewBinder(
+            walletData.wallet!!,
+            configuration.format.noCode(),
+            binding.transactionResultContainer
+        )
 
         if (tx != null) {
             transactionResultViewBinder.bind(tx!!)
