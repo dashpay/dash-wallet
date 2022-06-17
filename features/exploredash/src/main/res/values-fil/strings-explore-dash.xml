@@ -48,7 +48,7 @@
 
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d mga merchant</item>
-        <item quantity="other">%d merchants</item>
+        <item quantity="other">%d mga merchant</item>
     </plurals>
 
     <plurals name="explore_atm_amount">

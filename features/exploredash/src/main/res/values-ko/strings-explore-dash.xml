@@ -116,11 +116,11 @@
     </string-array>
 
     <plurals name="radius_miles">
-        <item quantity="other">%d 마일</item>
+        <item quantity="other">%d마일</item>
     </plurals>
 
     <plurals name="radius_kilometers">
-        <item quantity="other">%d 킬로미터</item>
+        <item quantity="other">%d킬로미터</item>
     </plurals>
 
     <!-- Location Permission -->

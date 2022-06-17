@@ -11,6 +11,9 @@
     <string name="buy_dash">Acheter Dash</string>
     <string name="copied">Copié</string>
     <string name="staking_title">Récompenses</string>
+    <string name="email">E-mail</string>
+    <string name="email_placeholder">par exemple johndoe@mail.com</string>
+    <string name="error">Erreur</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">livre de Guernesey</string>
@@ -31,7 +34,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Titles/Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Ignorer</string>
     <string name="network_unavailable_return">Retourner au portefeuille</string>
     <string name="button_continue">Continuer</string>
@@ -44,7 +47,6 @@
     <string name="button_okay">OK</string>
     <string name="button_share">Partager</string>
     <string name="verify">Vérifier</string>
-    <string name="error">Erreur</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Chercher</string>
@@ -54,4 +56,7 @@
     <string name="select_currency">Choisir la monnaie</string>
     <string name="send_coins_error_dusty_send">Le montant est trop faible pour être envoyé</string>
     <string name="send_coins_error_insufficient_money">Fonds insuffisants</string>
+
+    <string name="empty_wallet_warning_title">Il semble que vous videz votre Dash Wallet</string>
+    <string name="empty_wallet_crowdnode_warning">Veuillez noter que vous ne pourrez pas retirer vos fonds de CrowdNode vers ce portefeuille, sans que vous ayez un solde minimum de 0,0003 dashs.</string>
 </resources>

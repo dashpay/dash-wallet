@@ -11,6 +11,7 @@
     <string name="buy_dash">Dash Al</string>
     <string name="copied">Kopyalandı</string>
     <string name="staking_title">Staking</string>
+    <string name="error">Hata</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Lirası</string>
@@ -31,7 +32,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Doları</string>
 
-    <!-- Generic Titles/Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Son Ver</string>
     <string name="network_unavailable_return">Cüzdan\'a Dön</string>
     <string name="button_continue">Devam</string>
@@ -44,7 +45,6 @@
     <string name="button_okay">Tamam</string>
     <string name="button_share">Paylaş</string>
     <string name="verify">Onayla</string>
-    <string name="error">Hata</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Ara</string>
@@ -54,4 +54,5 @@
     <string name="select_currency">Para Birimini Seçin</string>
     <string name="send_coins_error_dusty_send">Bu miktar göndermek için çok düşüktür</string>
     <string name="send_coins_error_insufficient_money">Yetersiz bakiye</string>
-</resources>
+
+    </resources>

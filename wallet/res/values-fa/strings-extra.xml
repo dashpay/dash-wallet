@@ -60,7 +60,7 @@
     <string name="perm_lock_wipe_wallet">حذف کیف پول</string>
     <string name="perm_lock_close_app">بستن</string>
 
-    <string name="scan_to_pay_error_dialog_title">اسکن برای ارسال</string>
+    <string name="scan_to_pay_error_dialog_title">اسکن برای ارسال </string>
     <string name="scan_to_pay_error_dialog_message">نشانی دش یا نشانی اینترنتی نامعتبر
 درخواست در کلیپ‌برد: \n\n %s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">نشانی دش یا نشانی اینترنتی نامعتبر
@@ -150,6 +150,21 @@
     <string name="wallet_lock_wrong_pin">رمز نادرست است! %s</string>
     <string name="wallet_last_attempt">آخرین امکان وارد کردن رمز</string>
     <string name="wallet_last_attempt_message">اگر یک بار دیگر، رمز به صورت اشتباه وارد شود، باید از عبارت‌ورودی برای بازگرداندن کیف پول استفاده کنید</string>
+
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%d بار دیگر می‌توانید تلاش کنید</item>
+        <item quantity="other">%d بار دیگر می‌توانید تلاش کنید</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">دقیقه</item>
+        <item quantity="other">دقیقه</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">ساعت</item>
+        <item quantity="other">ساعت</item>
+    </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">به‌روزرسانی</string>
     <string name="encrypt_new_key_chain_dialog_title">کیف پول‌تان را به‌روزرسانی کنید</string>

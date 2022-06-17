@@ -24,7 +24,7 @@
     <string name="exchange_rates_fragment_balance">Sold</string>
     <string name="exchange_rates_fragment_source">Preț de la %s</string>
     <string name="exchange_rates_options_search">Caută cursul de schimb</string>
-    <string name="exchange_rates_context_set_as_default_title">Setează ca si default</string>
+    <string name="exchange_rates_context_set_as_default_title">Setează ca și default</string>
     <string name="wallet_transactions_row_warning_backup">Felicitări, ai primit prima ta plată! Ai creat deja portofelul, pentru protecție împotriva pierderii?</string>
     <string name="wallet_transactions_fragment_coinbase">minerit</string>
     <string name="wallet_transactions_fragment_internal">intern</string>
@@ -57,7 +57,7 @@
     <string name="send_coins_fragment_pending">(%s se așteaptă confirmarea)</string>
     <string name="send_coins_fragment_pin_label">Introdu codul PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">O taxă de rețea de %s va fi plătită.</string>
-    <string name="send_coins_fragment_hint_fee_priority">O taxă de prioritate de %s va fi plătită. Dacă vrei taxe reduse, utilizează \"prioritate\" numai dacă ai nevoie de confirmare cât mai curând posibil.</string>
+    <string name="send_coins_fragment_hint_fee_priority">O taxă de prioritate de %s va fi plătită. Dacă vrei taxe reduse, utilizează "prioritate" numai dacă ai nevoie de confirmare cât mai curând posibil.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Suma plăților minuscule din portofel tău nu reprezintă o valoare care poate fi trimisă.</string>
     <string name="send_coins_fragment_direct_payment_enable">Trimite plata direct beneficiarului.</string>
     <string name="send_coins_fragment_direct_payment_ack">Plata ta directă a fost trimisă cu succes. </string>

@@ -39,8 +39,7 @@
     <string name="privacy_policy">سیاست محرمانگی</string>
     <string name="crowdnode_account_ready">حساب کراودنود شما ایجاد شده و آماده استفاده است! </string>
     <string name="notify_when_done">ببند و وقتی آماده شد، مرا مطلع کن. </string>
-    <string name="crowdnode_creating">حساب کراودنود شما در حال ایجاد شدن است…</string>
-    <string name="accepting_terms">پذیرش شرایط استفاده…</string>
+    <string name="accepting_terms">پذیرش شرایط استفاده...</string>
     <string name="crowdnode_signup_error">نمی‌توانیم حساب کراودنود شما را ایجاد کنیم. </string>
     <string name="crowdnode_deposit_error">نتوانستیم به حساب کراودنود مبلغی را واریز کنیم. </string>
     <string name="crowdnode_withdraw_error">نتوانستیم از حساب کراودنود شما مبلغی برداشت کنیم. </string>
@@ -58,12 +57,11 @@
     <string name="crowdnode_withdraw_to_wallet">دش‌والت ➝ کراودنود</string>
     <string name="online_account">حساب آنلاین</string>
     <string name="online_account_create">ایجاد حساب آنلاین</string>
-    <string name="secure_online_account"> از درآمدهایتان حفاظت کنید</string>
     <string name="crowdnode_support">پشتیبانی کراودنود</string>
     <string name="unlink_account">قطع اتصال حساب</string>
     <string name="online_account_title">چرا نیاز به یک حساب آنلاین دارید؟ </string>
     <string name="crowdnode_online_synced">همزمان‌سازی با دش والت کنونی</string>
-    <string name="crowdnode_in_process">اجرای فرآیند…</string>
+    <string name="crowdnode_in_process">اجرای فرآیند...</string>
     <string name="account_recovery">بازیابی حساب</string>
     <string name="crowdnode_recovery_info">اگر عبارت ورودی‌تان را گم کنید، می‌توانید با استفاده از روش‌های دیگر احراز هویت شوید تا بتوانید به موجودی کراودنود دسترسی یابید. </string>
     <string name="transaction_history">سابقه تراکنش‌ها</string>
@@ -71,8 +69,7 @@
     <string name="payout_options">گزینه‌های پاداش</string>
     <string name="payout_options_details">می‌توانید نحوه برداشت/زمان برداشت پاداشی که به شما داده می‌شود را تغییر دهید. </string>
     <string name="crowdnode_balance">موجودی در کراودنود</string>
-    <string name="crowdnode_your_address_title">نشانی دش که از آن برای اتصال به کراودنود استفاده می‌کنید این است:</string>
-    <string name="chain_syncing">بلاکچین در حال به‌روزرسانی…</string>
+    <string name="chain_syncing">بلاکچین در حال به‌روزرسانی...</string>
     <string name="crowdnode_wait_for_sync">منتظر بمانید تا بلاکچین کاملا به‌روزرسانی شود تا بتوانید سابقه تراکنش‌هایتان را ببینید. برای ورود به حساب یا ثبت‌نام به وب‌سایت کراودنود بروید. </string>
     <string name="crowdnode_open_website">رفتن به وب‌سایت کراودنود</string>
     <string name="crowdnode_info_title">از طریق کراودنود یکی از مسترنودهای دش بشوید.</string>
@@ -97,13 +94,11 @@
     <string name="scan_qr">اسکن کیوآر کد</string>
     <string name="qr_contains_request">این کیوآر کد از قبل شامل درخواست پرداخت برای%s دش بوده است</string>
     <string name="verification_required">نیازمند تائید</string>
-    <string name="validating_address">در حال اعتبارسنجی نشانی…</string>
+    <string name="validating_address">در حال اعتبارسنجی نشانی...</string>
     <string name="crowdnode_address_validated">نشانی کراودنود شما اعتبارسنجی شد، اما نیازمند تائید است. </string>
     <string name="crowdnode_address_confirmed">نشانی کراودنود شما تائید شد. </string>
     <string name="crowdnode_bad_confirmation">درخواست تائید از یک نشانی اصلی نادرست ارسال شد</string>
     <string name="crowdnode_online_account_details_title">اطلاعات درباره حساب آنلاین شما</string>
     <string name="crowdnode_online_account_details_primary">نشانی اصلی دش شما که از آن در حال حاضر برای حساب کراودنود  استفاده می‌کنید. </string>
     <string name="crowdnode_online_account_details_api">نشانی دش که برای حساب کراودنود در دش والت روی این دستگاه در نظر گرفته شده است. </string>
-    <string name="crowdnode_reset_address">تعیین دوباره نشانی</string>
-
     </resources>

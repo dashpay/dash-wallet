@@ -62,7 +62,7 @@
     <string name="scan_to_pay_error_dialog_message_no_data">Không phải một địa chỉ Dash hoặc URL yêu cầu trong bộ nhớ đệm.</string>
     <string name="receive_title">Nhận</string>
     <string name="receive_enter_amount_message">Hãy xác định rõ số lượng cần nhận</string>
-    <string name="receive_enter_amount_button">Xác định số lượng</string>
+    <string name="receive_enter_amount_button">Hãy cung cấp số lượng</string>
     <string name="receive_share_button">Chia sẻ</string>
 
     <string name="pay_title">Gửi</string>
@@ -73,7 +73,7 @@
     <string name="recover_wallet_title">Khôi phục Ví</string>
     <string name="tools_title">Công cụ</string>
 
-    <string name="payments_title">Các giao dịch</string>
+    <string name="payments_title">Giao dịch</string>
     <string name="payments_tab_pay_label">Gửi</string>
     <string name="payments_tab_receive_label">Nhận</string>
     <string name="payments_pay_by_qr_title">Gửi bởi</string>
@@ -101,7 +101,7 @@
     <string name="wallet_options_disconnect">Cắt kết nối</string>
 
     <string name="network_monitor_masternodes_title">Masternodes</string>
-    <string name="export_keys_dialog_title_to_seed">Xem cụm từ phục hồi</string>
+    <string name="export_keys_dialog_title_to_seed">Xem câu phục hồi</string>
     <string name="import_keys_dialog_title_from_seed">Khôi phục với câu phục hồi</string>
     <string name="backup_to_seed_wallet_dialog_message">Đây là câu phục hồi của bạn. Hãy ghi nó xuống.</string>
     <string name="backup_wallet_to_seed_dialog_warning">ĐỪNG ĐỂ bất kỳ ai nhìn thấy câu phục hồi của bạn nếu không họ sẽ tiêu sạch số Dash của bạn đấy.</string>
@@ -118,7 +118,7 @@
     <string name="restore_wallet_from_invalid_seed_failure">Ví không thể được phục hồi:\n\n%s\n\nCâu phục hồi không đúng?</string>
 
     <string name="send_coins_options_fee_category_zero">Không phí</string>
-    <string name="send_coins_fragment_hint_fee_zero">Không phải trả phí. Sử dụng \"không phí\" chỉ khi bạn không quan tâm đến thời gian chờ xác thực.</string>
+    <string name="send_coins_fragment_hint_fee_zero">Không phải trả phí. Sử dụng "không phí" chỉ khi bạn không quan tâm đến thời gian chờ xác thực.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">Ứng dụng %s muốn nhận khoá công khai tổng thể của bạn. Nó có thể được sử dụng để theo dõi ví của bạn, nhưng nó không thể được dùng để tiêu Dash của bạn.</string>
@@ -134,10 +134,22 @@
     <string name="wallet_lock_reset_wallet_title">Thiết lập lại ví</string>
     <string name="wallet_lock_reset_wallet_message">Bạn chắc chứ? Ví của bạn sẽ bị xoá và tất cả số Dash trong đó sẽ bị mất.\n\nCách duy nhất để khôi phục số Dash đó là với một file backup hoặc có dòng chữ phục hồi.</string>
 
-    <string name="wallet_lock_wallet_disabled">Ví đã bị vô hiệu hoá</string>
+    <string name="wallet_lock_wallet_disabled">Ví bị mất tác dụng</string>
     <string name="wallet_lock_try_again">Thử lại trong %1$d%2$s</string>
-    <string name="wallet_lock_reset">Thiết lập lại</string>
+    <string name="wallet_lock_reset">Thiết đặt lại</string>
     <string name="wallet_lock_wrong_pin">Sai mã PIN! %s</string>
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="other">%dlần còn có thể thử lại</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="other">phút</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="other">giờ</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">Nâng cấp</string>
     <string name="encrypt_new_key_chain_dialog_title">Nâng cấp ví</string>
     <string name="encrypt_new_key_chain_dialog_message">Ví của bạn sẽ được nâng cấp để hỗ trợ việc đưa dữ liệu vào hoặc xuất dữ liệu ra cho các app khác.</string>
@@ -178,17 +190,17 @@
     <string name="verify_show_recovery_phrase">Hiển thị câu phục hồi</string>
     <string name="verify_secure_now">Bảo mật ví ngay</string>
     <string name="verify_it_is_important">Điều này là quan trọng</string>
-    <string name="verify_it_is_important_subtitle">Chúng tôi sẽ hiển thị cho bạn xem khoá bí mật của ví của bạn</string>
-    <string name="verify_info_text_1">Cụm từ phục hồi này là quyền truy cập của bạn đến số tiền trong ví này.</string>
+    <string name="verify_it_is_important_subtitle">Chúng tôi sẽ hiển thị cho bạn khoá bí mật trong ví của bạn.</string>
+    <string name="verify_info_text_1">Câu phục hồi này là quyền truy cập đến tiền trong ví này của bạn.</string>
     <string name="verify_info_text_3">Bạn cần cụm từ phục hồi để truy cập đến khoản tiền của bạn nếu thiết bị này bị mất, hỏng hoặc ví Dash Wallet vô tình bị gỡ bỏ khỏi thiết bị này.</string>
     <string name="verify_skip">Bỏ qua</string>
     <string name="verify_secure_now_btn">Bảo mật ngay</string>
     <string name="verify_secure_now_message">Nếu bạn mất thiết bị này, bạn sẽ mất số tiền trong đó. Hãy thiết lập cụm từ phục hồi để bạn có thể khôi phục được ví trên một thiết bị khác.</string>
     <string name="verify_seed_title">Hãy vui lòng ghi xuống</string>
     <string name="verify_seed_write_down_confirmation">Tôi đã viết xuống</string>
-    <string name="verify_seed_buttons_tip">Hãy bấm vào những từ trong cụm từ phục hồi của bạn theo một thứ tự đúng</string>
-    <string name="verify_seed_success_title">Đã kiểm tra thành công</string>
-    <string name="verify_seed_success_message">Bây giờ ví của bạn đã được an toàn. Bạn có thể sử dụng dòng chữ phục hồi bất kỳ khi nào để khôi phục số tiền của mình trên một thiết bị khác.</string>
+    <string name="verify_seed_buttons_tip">Hãy bấm vào các từ trong câu phục hồi của bạn theo đúng thứ tự</string>
+    <string name="verify_seed_success_title">Xác thực thành công</string>
+    <string name="verify_seed_success_message">Ví của bạn bây giờ đã được bảo mật. Bạn có thể sử dụng câu phục hồi của mình bất cứ khi nào để khôi phục lại tiền của mình trên một thiết bị khác.</string>
     <string name="verify_no_screenshot_title">Đừng chụp ảnh màn hình</string>
     <string name="verify_why_no_screenshot">Tại sao tôi không nên chụp ảnh màn hình?</string>
     <string name="verify_warning_title">Cảnh báo</string>
@@ -218,7 +230,7 @@
     <string name="menu_security_title">Bảo mật</string>
     <string name="menu_security_subtitle">Xem mật khẩu, sao lưu ví...</string>
     <string name="menu_settings_title">Các thiết lập</string>
-    <string name="menu_settings_subtitle">Tiền tệ ngầm định, lối tắt, về...</string>
+    <string name="menu_settings_subtitle">Tiền tệ mặc định, phím tắt, về...</string>
     <string name="menu_tools_title">Công cụ</string>
     <string name="menu_tools_subtitle">Nhập khoá riêng...</string>
     <string name="menu_local_currency">Tiền địa phương</string>
@@ -243,8 +255,8 @@
 
     <string name="scan_private_key">Quét khoá riêng</string>
     <string name="scan_private_key_intro_1">Bạn sắp quét tiền từ một ví giấy Dash.</string>
-    <string name="scan_private_key_intro_2">Việc này sẽ chuyển toàn bộ số tiền từ ví đó sang ví của bạn trên thiết bị này.</string>
-    <string name="scan_private_key_intro_3">Khi các giao dịch được xác thực, ví kia sẽ trở nên vô giá trị và không nên được tiếp tục sử dụng vì những lý do an toàn.</string>
+    <string name="scan_private_key_intro_2">Việc này sẽ chuyển tất cả tiền từ ví đó vào ví của bạn trên thiết bị này.</string>
+    <string name="scan_private_key_intro_3">Khi giao dịch được xác thực, ví kia trở nên không còn gì nữa và không nên tiếp tục sử dụng lại ví những lý do an toàn.</string>
     <string name="confirm">Xác nhận</string>
 
     <string name="advanced_security_security_level">Mức độ bảo mật</string>
