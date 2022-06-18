@@ -73,28 +73,6 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
         activity.startActivityForResult(sendCoinsIntent, requestCode)
     }
 
-//    override fun sendCoins(address: Address, amount: Coin): LiveData<Resource<Transaction>> {
-//        checkWalletCreated()
-//        val wallet = walletApplication.wallet!!
-//        val sendRequest = createSendRequest(address, amount)
-//        val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
-//
-//        return SendCoinsTask.sendCoins(wallet, sendRequest, scryptIterationsTarget)
-//    }
-//
-//    override fun createSentDashAddress(address: String): Address {
-//        return Address.fromString(Constants.NETWORK_PARAMETERS, address.toString().trim { it <= ' ' })
-//    }
-//
-//    private fun createSendRequest(address: Address, amount: Coin): SendRequest {
-//        return SendRequest.to(address, amount).apply {
-//            coinSelector = ZeroConfCoinSelector.get()
-//            useInstantSend = false
-//            feePerKb = SendCoinsBaseViewModel.ECONOMIC_FEE
-//            ensureMinRequiredFee = true
-//        }
-//    }
-
     private fun checkWalletCreated() {
         if (getWalletData() == null) {
             throw RuntimeException("this method can't be used before creating the wallet")
