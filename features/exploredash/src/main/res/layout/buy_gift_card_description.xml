@@ -38,12 +38,13 @@
         android:layout_marginTop="40dp"
         android:textSize="28sp"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:text="@string/buy_card_header_text"
         style="@style/Headline4.Bold"
         android:lineSpacingExtra="0sp"
         android:paddingBottom="2dp"
-        android:paddingLeft="8dp"
-        android:paddingRight="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         />
 
     <TextView
@@ -54,6 +55,7 @@
         app:layout_constraintEnd_toEndOf="@id/right_guideline"
         app:layout_constraintTop_toBottomOf="@id/buy_card_header_label"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:text="@string/buy_card_desc_text"
         style="@style/Body2"
         android:layout_marginTop="10dp"
@@ -109,7 +111,7 @@
         app:layout_constraintBottom_toBottomOf="@id/buy_gift_card_blue_icon"
         android:text="@string/buy_gift_card_with_dash_text"
         style="@style/Body2"
-        android:layout_marginLeft="20dp"
+        android:layout_marginStart="20dp"
         android:paddingTop="16dp"
         android:paddingBottom="16dp"
         />

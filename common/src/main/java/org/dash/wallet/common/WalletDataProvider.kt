@@ -19,13 +19,23 @@ package org.dash.wallet.common
 
 import android.app.Activity
 import androidx.lifecycle.LiveData
+import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.ExchangeRateData
-import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.transactions.TransactionFilter
+import org.dash.wallet.common.transactions.TransactionWrapper
+import kotlin.jvm.Throws
 
 interface WalletDataProvider {
+    // The wallet is in here temporary. Do not use from the feature modules.
+    val wallet: Wallet?
+
+    val networkParameters: NetworkParameters
 
     fun currentReceiveAddress(): Address
 
@@ -34,19 +44,27 @@ interface WalletDataProvider {
     @Deprecated("Inject ExchangeRatesProvider instead")
     fun getExchangeRate(currencyCode: String): LiveData<ExchangeRateData>
 
-    @Deprecated("Inject ExchangeRatesProvider instead")
-    fun getExchangeRates(): LiveData<List<ExchangeRateData>>
-
     @Deprecated("Inject Configuration instead")
     fun defaultCurrencyCode(): String
-
-    fun sendCoins(address: Address, amount: Coin): LiveData<Resource<Transaction>>
 
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
 
     fun getWalletBalance(): Coin
 
-    fun createSentDashAddress(address: String): Address
+    fun observeBalance(balanceType: Wallet.BalanceType = Wallet.BalanceType.ESTIMATED): Flow<Coin>
+
+    fun observeTransactions(vararg filters: TransactionFilter): Flow<Transaction>
+
+    fun getTransactions(vararg filters: TransactionFilter): Collection<Transaction>
+
+    fun wrapAllTransactions(vararg wrappers: TransactionWrapper): Iterable<TransactionWrapper>
+
+    fun attachOnWalletWipedListener(listener: () -> Unit)
+
+    fun detachOnWalletWipedListener(listener: () -> Unit)
 
     fun processDirectTransaction(tx: Transaction)
+
+    @Throws(LeftoverBalanceException::class)
+    fun checkSendingConditions(address: Address, amount: Coin)
 }

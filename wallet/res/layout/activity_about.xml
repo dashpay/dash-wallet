@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/dash_lighter_gray"
+    android:background="@color/background_primary_light"
     tools:context="de.schildbach.wallet.ui.about.AboutActivity">
 
     <include
@@ -46,6 +46,7 @@
         android:layout_marginTop="5dp"
         android:layout_marginEnd="4dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/app_version_name"
@@ -59,6 +60,7 @@
         android:layout_marginTop="10dp"
         android:background="@drawable/selectable_background_dark"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -74,6 +76,7 @@
         android:layout_marginTop="10dp"
         android:background="@drawable/selectable_background_dark"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
         android:visibility="gone"
@@ -93,6 +96,7 @@
         android:maxLines="1"
         android:ellipsize="middle"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
         android:visibility="gone"

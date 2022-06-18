@@ -95,7 +95,7 @@ class CoinbaseServicesViewModel @Inject constructor(
 
     init {
         getUserAccountInfo()
-        exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode)
+        exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode!!)
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
     }

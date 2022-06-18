@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <!-- Explore screen -->
+    <string name="explore_dash">کاوش در دش</string>
+    <string name="explore_title">کاوش</string>
+    <string name="explore_subtitle">با دش به راحتی از بیش از ۱۵۵،۰۰۰ فروشگاه فیزیکی و آنلاین خرید کنید</string>
+    <string name="explore_merchants_title">کجا خرج کنیم؟ </string>
+    <string name="explore_merchants_subtitle">یافتن فروشندگانی که دش را می‌پذیرند</string>
+    <string name="explore_atms_title">خودپردازها</string>
+    <string name="explore_atms_subtitle">یافتن مراکز خرید و فروش دش و سایر رمزارزها</string>
+    <string name="explore_staking_subtitle">با چند کلیک ساده، به راحتی دش را سپرده‌گذاری کرده و درآمدی جانبی برای خودتان ایجاد کنید. </string>
+
+    <!-- Search -->
+    <string name="explore_search_results">نتیجه جستجو</string>
+    <string name="explore_physical_merchant">فروشندگان حضوری</string>
+    <string name="explore_online_merchant">آنلاین</string>
+    <string name="explore_both_types_merchant">فروشندگان آنلاین و حضوری</string>
+    <string name="explore_multiple_locations">+ موقعیت‌های ترکیبی</string>
+    <string name="explore_option_all">همه</string>
+    <string name="explore_option_buy">خرید</string>
+    <string name="explore_option_sell">فروش</string>
+    <string name="explore_option_buy_sell">خرید &amp;؛ فروش</string>
+    <string name="explore_where_to_spend">کجا خرج کنیم؟ </string>
+    <string name="explore_atms">خودپردازها</string>
+    <string name="explore_all_states">همه ایالات</string>
+    <string name="explore_no_results">هیچ نتیجه‌ای یافت نشد</string>
+    <string name="explore_all_merchants">همه فروشندگان</string>
+    <string name="explore_in_radius">%1$s در %2$s</string>
+    <string name="explore_no_merchants">هیچ فروشنده‌ای یافت نشد</string>
+    <string name="explore_no_atms">هیچ خودپردازی یافت نشد</string>
+    <string name="distance_miles">%s مایل</string>
+    <string name="distance_kilometers">%sکیلومتر</string>
+
+    <plurals name="explore_merchant_amount">
+        <item quantity="one">%d فروشنده</item>
+        <item quantity="other">%d فروشنده</item>
+    </plurals>
+
+    <plurals name="explore_atm_amount">
+        <item quantity="one">%d خودپرداز</item>
+        <item quantity="other">%d خودپرداز</item>
+    </plurals>
+
+    <!-- Details -->
+    <string name="explore_back_to_locations">بازگشت به همه موقعیت‌ها</string>
+    <string name="explore_back_to_nearest">بازگشت به نزدیک‌ترین موقعیت</string>
+    <string name="explore_select_location">انتخاب مکان</string>
+    <string name="explore_pay_with_dash">پرداخت با دش</string>
+    <string name="explore_buy_gift_card">خرید کارت هدیه</string>
+    <string name="explore_buy_dash">خرید دش</string>
+    <string name="explore_sell_dash">فروش دش</string>
+    <string name="explore_show_all">نمایش همه موقعیت‌ها</string>
+    <string name="explore_atm_location_hint"> این خودپرداز قرار دارد در</string>
+    <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
+
+    <!-- Filters -->
+    <string name="explore_filter">فیلتر</string>
+    <string name="explore_filters">فیلترها</string>
+    <string name="explore_apply_filter">اعمال</string>
+    <string name="explore_payment_method">روش پرداخت</string>
+    <string name="explore_payment_dash">دش</string>
+    <string name="explore_payment_gift_card">کارت هدیه</string>
+    <string name="explore_radius">شعاع</string>
+    <string name="explore_location">موقعیت</string>
+    <string name="explore_current_location">موقعیت کنونی</string>
+    <string name="explore_location_settings">تنظیمات موقعیت کنونی</string>
+    <string name="explore_reset_filters">بازنشانی فیلترها</string>
+    <string name="explore_reset_all_filters">بازنشانی همه فیلترها</string>
+    <string name="explore_filtered_by">فیلتر بر اساس: </string>
+    <string name="explore_pay_gift_card">پرداخت با کارت اعتباری</string>
+    <string name="explore_sort_by">مرتب کردن بر اساس</string>
+
+    <string-array name="merchants_filter_options">
+        <item>آنلاین</item>
+        <item>نزدیک‌ترین</item>
+        <item>همه</item>
+    </string-array>
+
+    <string-array name="atms_filter_options">
+        <item>همه</item>
+        <item>خرید</item>
+        <item>فروش</item>
+        <item>خرید/فروش</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_miles">
+        <item>۱ مایل</item>
+        <item>۵ مایل</item>
+        <item>۲۰ مایل</item>
+        <item>۵۰ مایل</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_kilometers">
+        <item>۱ کیلومتر</item>
+        <item>۵ کیلومتر</item>
+        <item>۲۰ کیلومتر</item>
+        <item>۵۰ کیلومتر</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>نام</item>
+        <item>فاصله</item>
+    </string-array>
+
+    <plurals name="radius_miles">
+        <item quantity="one">%d مایل</item>
+        <item quantity="other">%d مایل</item>
+    </plurals>
+
+    <plurals name="radius_kilometers">
+        <item quantity="one">%d کیلومتر</item>
+        <item quantity="other">%d کیلومتر</item>
+    </plurals>
+
+    <!-- Location Permission -->
+    <string name="explore_location_allowed">مجاز</string>
+    <string name="explore_location_denied">غیرمجاز</string>
+    <string name="explore_manager_permissions">اجازه استفاده از جی‌پی‌اس</string>
+    <string name="explore_location_request">دریافت اجازه استفاده از جی‌پی‌اس به منظور نمایش موقعیت‌های نزدیک به شما</string>
+    <string name="explore_location_explainer">از موقعیت شما برای نشان دادن مکان‌تان در نقشه، فروشندگان در شعاع مورد نظر و نیز بهبود نتیجه جستجو استفاده می‌شود.</string>
+    <string name="explore_merchant_location_explainer_title">پس از روشن کردن موقعیت مکانی دستگاه، جستجوی فروشندگان بهتر عمل می‌کند. </string>
+    <string name="explore_merchant_location_explainer_message">از موقعیت شما برای نشان دادن مکان‌تان در نقشه، فروشندگان در شعاع مورد نظر و نیز بهبود نتیجه جستجو استفاده می‌شود.</string>
+    <string name="explore_atm_location_explainer_title">وقتی موقعیت مکانی دستگاه‌تان روشن است، جستجوی خودپرداز بهتر عمل می‌کند. </string>
+    <string name="explore_atm_location_explainer_message">از موقعیت شما برای نشان دادن مکان‌تان در نقشه، فروشندگان در شعاع مورد نظر و نیز بهبود نتیجه جستجو استفاده می‌شود. </string>
+
+    <!-- Info screens -->
+    <string name="explore_info_header_text">ما دو نوع فروشنده داریم</string>
+    <string name="accept_dash_text">دش را به صورت مستقیم می‌پذیرند</string>
+    <string name="pay_with_dash_text">پرداخت با کیف پول دش</string>
+    <string name="buy_gift_card_text">خرید کارت هدیه با دش</string>
+    <string name="buy_gift_card_desc_text">با دش‌تان کارت هدیه دقیقا به اندازه خریدتان بخرید</string>
+    <string name="learn_more_text">اطلاعات بیشتر</string>
+    <string name="continue_text">ادامه</string>
+    <string name="buy_card_header_text">چطور از کارت هدیه استفاده کنیم</string>
+    <string name="buy_card_desc_text">این طور نیست که همه این فروشندگان، دش را به صورت مستقیم بپذیرند. اما می‌توانید با دش اقدام به خرید کارت هدیه کنید.</string>
+    <string name="find_merchant_text">یک فروشنده بیابید. </string>
+    <string name="buy_gift_card_with_dash_text">با دش یک کارت هدیه بخرید. </string>
+    <string name="redeem_gift_card_text">کارت هدیه را به صورت آنلاین یا در یک فروشگاه، طی چند ثانیه استفاده کنید. </string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">فرآیند همزمان‌سازی در جریان است...نتایج شاید کامل نباشد. </string>
+    <string name="sync_in_progress_error">فرآیند همزمان‌سازی در جریان است...یک خطا روی داد. </string>
+    <string name="sync_in_progress_canceled">فرآیند همزمان‌سازی لغو شد...بعدا دوباره این کار صورت می‌گیرد. </string>
+
+    <string name="sync_in_progress_file_not_found">خطای ساختاری: دیتابیس یافت نشد!</string>
+    <string name="sync_in_progress_network_error">اخلال در فرآیند همزمان‌سازی...شبکه آفلاین است یا در دسترس نیست. </string>
+</resources>

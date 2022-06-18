@@ -81,7 +81,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         getBaseIdForUSDModel()
     }
     private fun getBaseIdForUSDModel() = viewModelScope.launch(Dispatchers.Main) {
-        when (val response = coinBaseRepository.getBaseIdForUSDModel(userPreference.exchangeCurrencyCode)) {
+        when (val response = coinBaseRepository.getBaseIdForUSDModel(userPreference.exchangeCurrencyCode!!)) {
             is ResponseResource.Success -> {
                 response.value?.data?.let {
                     _baseIdForUSDModelCoinBase.value = it
@@ -95,7 +95,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
     private fun getUserAccountInfo() = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
-        when (val response = coinBaseRepository.getUserAccounts(userPreference.exchangeCurrencyCode)) {
+        when (val response = coinBaseRepository.getUserAccounts(userPreference.exchangeCurrencyCode!!)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
                 _userAccountsInfo.value = response.value
@@ -119,7 +119,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
         val tradesRequest = TradesRequest(
             GenericUtils.fiatToStringWithoutCurrencyCode(valueToConvert),
-            userPreference.exchangeCurrencyCode,
+            userPreference.exchangeCurrencyCode!!,
             source_asset = source_asset,
             target_asset = target_asset
         )

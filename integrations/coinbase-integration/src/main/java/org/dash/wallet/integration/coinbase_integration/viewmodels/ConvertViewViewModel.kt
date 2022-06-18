@@ -71,14 +71,14 @@ class ConvertViewViewModel @Inject constructor(
     val selectedCryptoCurrencyAccount: LiveData<CoinBaseUserAccountDataUIModel?>
         get() = this._selectedCryptoCurrencyAccount
 
-    private val _selectedLocalCurrencyCode = MutableStateFlow(userPreference.exchangeCurrencyCode)
+    private val _selectedLocalCurrencyCode = MutableStateFlow(userPreference.exchangeCurrencyCode!!)
     var selectedLocalCurrencyCode: String
         get() = _selectedLocalCurrencyCode.value
         set(value) {
             _selectedLocalCurrencyCode.value = value
         }
 
-    private val _selectedPickerCurrencyCode = MutableStateFlow(userPreference.exchangeCurrencyCode)
+    private val _selectedPickerCurrencyCode = MutableStateFlow(userPreference.exchangeCurrencyCode!!)
     var selectedPickerCurrencyCode: String
         get() = _selectedPickerCurrencyCode.value
         set(value) {

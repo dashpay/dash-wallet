@@ -57,7 +57,7 @@ class CryptoWalletsDialog(
     private val userAccountsWithBalance: List<CoinBaseUserAccountDataUIModel>,
     private val selectedCurrencyCode: String = "USD",
     private val clickListener: (Int, DialogFragment) -> Unit
-) : OffsetDialogFragment<LinearLayout>() {
+) : OffsetDialogFragment() {
     override val forceExpand: Boolean = true
     private val binding by viewBinding(DialogOptionPickerBinding::bind)
     private val viewModel: CryptoWalletsDialogViewModel by viewModels()

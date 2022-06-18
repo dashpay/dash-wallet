@@ -16,65 +16,76 @@
  */
 package de.schildbach.wallet.payments
 
-import com.google.common.base.Preconditions
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.security.SecurityGuard
+import androidx.annotation.VisibleForTesting
+import de.schildbach.wallet.security.SecurityFunctions
+import de.schildbach.wallet.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
-import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.ZeroConfCoinSelector
-import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.slf4j.LoggerFactory
 import java.security.GeneralSecurityException
 import javax.inject.Inject
 
-
 class SendCoinsTaskRunner @Inject constructor(
-    private val walletApplication: WalletApplication
+    private val walletData: WalletDataProvider,
+    private val walletApplication: WalletApplication,
+    private val securityFunctions: SecurityFunctions
 ) : SendPaymentService {
     private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
 
+    @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
         address: Address,
         amount: Coin,
-        constrainInputsTo: Address?,
-        emptyWallet: Boolean
+        coinSelector: CoinSelector?,
+        emptyWallet: Boolean,
+        checkBalanceConditions: Boolean
     ): Transaction {
-        val wallet = walletApplication.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
+        val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
         Context.propagate(wallet.context)
-        val sendRequest = createSendRequest(address, amount, constrainInputsTo, emptyWallet)
+
+        if (checkBalanceConditions && !wallet.isAddressMine(address)) {
+            // This can throw LeftoverBalanceException
+            walletData.checkSendingConditions(address, amount)
+        }
+
+        val sendRequest = createSendRequest(address, amount, coinSelector, emptyWallet)
         val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
 
         return sendCoins(wallet, sendRequest, scryptIterationsTarget)
     }
 
+    @Suppress("BlockingMethodInNonBlockingContext")
     override suspend fun estimateNetworkFee(
         address: Address,
         amount: Coin,
-        constrainInputsTo: Address?,
         emptyWallet: Boolean
     ): SendPaymentService.TransactionDetails {
-        val wallet = walletApplication.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
-        var sendRequest = createSendRequest(address, amount, constrainInputsTo, emptyWallet, false)
+        val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
+        var sendRequest = createSendRequest(address, amount, null, emptyWallet, false)
         try {
             val securityGuard = SecurityGuard()
             val password = securityGuard.retrievePassword()
             val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
-            val encryptionKey = deriveKey(wallet, password, scryptIterationsTarget)
+            val encryptionKey = securityFunctions.deriveKey(wallet, password, scryptIterationsTarget)
 
             sendRequest.aesKey = encryptionKey
 
             wallet.completeTx(sendRequest)
             if (checkDust(sendRequest)){
-                sendRequest = createSendRequest(address, amount, constrainInputsTo, emptyWallet)
+                sendRequest = createSendRequest(address, amount, null, emptyWallet)
                 wallet.completeTx(sendRequest)
             }
 
@@ -101,20 +112,25 @@ class SendCoinsTaskRunner @Inject constructor(
         return SendPaymentService.TransactionDetails(txFee.toPlainString(), amountToSend, totalAmount)
     }
 
-    private fun createSendRequest(
+    @VisibleForTesting
+    fun createSendRequest(
         address: Address,
         amount: Coin,
-        constrainInputsTo: Address? = null,
+        coinSelector: CoinSelector? = null,
         emptyWallet: Boolean = false,
         forceMinFee: Boolean = true
     ): SendRequest {
         return SendRequest.to(address, amount).apply {
-            coinSelector = ZeroConfCoinSelector.get()
-            coinSelector = if (constrainInputsTo == null) ZeroConfCoinSelector.get() else ByAddressCoinSelector(constrainInputsTo)
-            feePerKb = Constants.ECONOMIC_FEE
-            ensureMinRequiredFee = forceMinFee
-            changeAddress = constrainInputsTo
+            this.feePerKb = Constants.ECONOMIC_FEE
+            this.ensureMinRequiredFee = forceMinFee
             this.emptyWallet = emptyWallet
+
+            val selector = coinSelector ?: ZeroConfCoinSelector.get()
+            this.coinSelector = selector
+
+            if (selector is ByAddressCoinSelector) {
+                changeAddress = selector.address
+            }
         }
     }
 
@@ -130,7 +146,7 @@ class SendCoinsTaskRunner @Inject constructor(
 
         val securityGuard = SecurityGuard()
         val password = securityGuard.retrievePassword()
-        val encryptionKey = deriveKey(wallet, password, scryptIterationsTarget)
+        val encryptionKey = securityFunctions.deriveKey(wallet, password, scryptIterationsTarget)
 
         sendRequest.aesKey = encryptionKey
         sendRequest.exchangeRate = exchangeRate
@@ -160,41 +176,6 @@ class SendCoinsTaskRunner @Inject constructor(
             }
             throw ex
         }
-    }
-
-    @Throws(KeyCrypterException::class)
-    private fun deriveKey(wallet: Wallet, password: String, scryptIterationsTarget: Int): KeyParameter {
-        Preconditions.checkState(wallet.isEncrypted)
-        val keyCrypter = wallet.keyCrypter!!
-
-        // Key derivation takes time.
-        var key = keyCrypter.deriveKey(password)
-
-        // If the key isn't derived using the desired parameters, derive a new key.
-        if (keyCrypter is KeyCrypterScrypt) {
-            val scryptIterations = keyCrypter.scryptParameters.n
-
-            if (scryptIterations != scryptIterationsTarget.toLong()) {
-                log.info(
-                    "upgrading scrypt iterations from {} to {}; re-encrypting wallet",
-                    scryptIterations, scryptIterationsTarget
-                )
-                val newKeyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
-                val newKey: KeyParameter = newKeyCrypter.deriveKey(password)
-
-                // Re-encrypt wallet with new key.
-                try {
-                    wallet.changeEncryptionKey(newKeyCrypter, key, newKey)
-                    key = newKey
-                    log.info("scrypt upgrade succeeded")
-                } catch (x: KeyCrypterException) {
-                    log.info("scrypt upgrade failed: {}", x.message)
-                }
-            }
-        }
-
-        // Hand back the (possibly changed) encryption key.
-        return key
     }
 
     private fun checkDust(req: SendRequest): Boolean {

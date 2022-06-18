@@ -30,7 +30,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.ReceiveActivity
-import de.schildbach.wallet.util.Qr
+import org.dash.wallet.common.util.Qr
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.receive_info_view.view.*
@@ -119,7 +119,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
 
     private fun refreshData() {
         val walletApplication = context.applicationContext as WalletApplication
-        address = walletApplication.wallet.freshReceiveAddress()
+        address = walletApplication.wallet!!.freshReceiveAddress()
         val ownName = config!!.ownName
         paymentRequestUri = BitcoinURI.convertToBitcoinURI(address, amount, ownName, null)
     }
@@ -132,7 +132,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             } else {
                 clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash address", address.toBase58()))
             }
-            Toast(context).toast(R.string.receive_copied)
+            Toast(context).toast(R.string.copied)
             log.info("address copied to clipboard: {}", address)
         } catch (ignore: BitcoinURIParseException) {
 

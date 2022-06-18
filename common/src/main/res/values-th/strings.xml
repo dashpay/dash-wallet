@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Generic titles/messages -->
     <string name="loading">กำลังโหลด...</string>
     <string name="loading_error">เกิดข้อผิดพลาด  กรุณาลองใหม่อีกครั้งในภายหลัง.</string>
+    <string name="please_wait_title">กรุณารอสักครู่</string>
     <string name="dash_available">%1$s  นำไปใช้ได้</string>
     <string name="network_unavailable_title">เครือข่ายไม่พร้อมใช้งาน</string>
     <string name="network_unavailable_check_connection">โปรดตรวจสอบการเชื่อมต่อเครือข่ายของคุณ</string>
     <string name="network_unavailable_balance_not_accurate">ยอดเงินคงเหลืออาจไม่ถูกต้องเนื่องจากการเชื่อมต่อหายไป</string>
+    <string name="buy_dash">ซื้อ Dash </string>
+    <string name="copied">คัดลอก</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -26,11 +29,26 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Buttons -->
+    <!-- Generic Titles/Buttons -->
     <string name="button_dismiss">ยกเลิก</string>
     <string name="network_unavailable_return">รีเซ็ตกระเป๋าสตางค์</string>
     <string name="button_continue">ดำเนินการต่อ</string>
+    <string name="button_close">ปิด</string>
+    <string name="button_retry">ลองอีกครั้ง</string>
+    <string name="button_info">ข้อมูล</string>
+    <string name="button_copy_address">คัดลอกที่อยู่</string>
+    <string name="button_understand">ฉันเข้าใจ</string>
+    <string name="button_okay">ตกลง</string>
+    <string name="button_share">แบ่งปัน</string>
+    <string name="verify">ตรวจสอบ</string>
+    <string name="error">ผิดพลาด</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">ค้นหา</string>
+    <string name="permission_allow">อนุญาติ</string>
+    <string name="permission_deny">ปฏิเสธ</string>
     <string name="max">สูงสุด</string>
     <string name="select_currency">เลือกสกุลเงิน</string>
+    <string name="send_coins_error_dusty_send">จำนวนเงินน้อยเกินไปที่จะส่ง</string>
+    <string name="send_coins_error_insufficient_money">ยอดเงินไม่เพียงพอ</string>
 </resources>

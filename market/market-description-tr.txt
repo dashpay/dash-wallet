@@ -1,4 +1,4 @@
-Temel Açıklama
+﻿ANA AÇIKLAMA
 
 Dash Cüzdanı, Dash Core Group tarafından, Bitcoin'den daha iyi ödeme odaklı yenilikçi alternatifler sunan Dash - Dijital Para - için geliştirilmiş referans edilen cüzdandır.
 

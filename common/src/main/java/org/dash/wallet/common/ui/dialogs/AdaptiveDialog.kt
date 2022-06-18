@@ -37,13 +37,16 @@ import org.dash.wallet.common.UserInteractionAwareCallback
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
+open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
+
+    constructor() : this(R.layout.dialog_adaptive)
+
     companion object {
-        private const val ICON_RES_ARG = "icon_res"
-        private const val TITLE_ARG = "title"
-        private const val MESSAGE_ARG = "message"
-        private const val POS_BUTTON_ARG = "positive_text"
-        private const val NEG_BUTTON_ARG = "negative_text"
+        const val ICON_RES_ARG = "icon_res"
+        const val TITLE_ARG = "title"
+        const val MESSAGE_ARG = "message"
+        const val POS_BUTTON_ARG = "positive_text"
+        const val NEG_BUTTON_ARG = "negative_text"
 
         @JvmStatic
         fun simple(
@@ -59,6 +62,36 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
                 negativeButtonText,
                 positiveButtonText
             )
+        }
+
+        suspend fun <T> withProgress(
+            message: String,
+            activity: FragmentActivity,
+            action: suspend () -> T
+        ): T {
+            val dialog = progress(message)
+            dialog.show(activity) { }
+            val result = action.invoke()
+
+            if (dialog.activity != null && dialog.isAdded) {
+                dialog.dismissAllowingStateLoss()
+            }
+
+            return result
+        }
+
+        @JvmStatic
+        fun progress(
+            message: String
+        ): AdaptiveDialog {
+            return custom(
+                R.layout.dialog_progress,
+                null,
+                null,
+                message,
+                "",
+                null
+            ).apply { isCancelable = false }
         }
 
         @JvmStatic
@@ -101,7 +134,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         }
     }
 
-    private var onResultListener: ((Boolean?) -> Unit)? = null
+    protected var onResultListener: ((Boolean?) -> Unit)? = null
     var isMessageSelectable = false
 
     override fun onCreateView(
@@ -172,7 +205,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         }
     }
 
-    fun show(activity: FragmentActivity, onResult: (Boolean?) -> Unit) {
+    fun show(activity: FragmentActivity, onResult: ((Boolean?) -> Unit)? = null) {
         onResultListener = onResult
         show(activity.supportFragmentManager, "adaptive_dialog")
     }
@@ -205,13 +238,13 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         }
     }
 
-    private fun onPositiveAction() {
+    protected open fun onPositiveAction() {
         onResultListener?.invoke(true)
         onResultListener = null
         dismiss()
     }
 
-    private fun onNegativeAction() {
+    protected open fun onNegativeAction() {
         onResultListener?.invoke(false)
         onResultListener = null
         dismiss()
@@ -223,7 +256,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         onResultListener = null
     }
 
-    private fun showIfNotEmpty(view: TextView?, argKey: String): Boolean {
+    protected fun showIfNotEmpty(view: TextView?, argKey: String): Boolean {
         if (view == null) {
             return false
         }
@@ -241,7 +274,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         return view.isVisible
     }
 
-    private fun showIfNotEmpty(view: ImageView?, argKey: String): Boolean {
+    protected fun showIfNotEmpty(view: ImageView?, argKey: String): Boolean {
         if (view == null) {
             return false
         }

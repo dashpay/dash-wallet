@@ -23,6 +23,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.dash.wallet.common.WalletDataProvider
@@ -186,7 +187,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     }
 
     private suspend fun sendDashToCoinbase(coin: Coin, addressInfo: String): Boolean {
-        val address = walletDataProvider.createSentDashAddress(addressInfo)
+        val address = Address.fromString(walletDataProvider.networkParameters, addressInfo.trim { it <= ' ' })
         return try {
             val transaction = sendPaymentService.sendCoins(address, coin)
             transaction.isPending

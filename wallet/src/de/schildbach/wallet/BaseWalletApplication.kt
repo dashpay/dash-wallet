@@ -28,17 +28,11 @@ import androidx.lifecycle.switchMap
 import androidx.multidex.MultiDexApplication
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.ui.send.SendCoinsActivity
-import de.schildbach.wallet.ui.send.SendCoinsBaseViewModel
-import de.schildbach.wallet.ui.send.SendCoinsTask
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
-import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRateData
-import org.dash.wallet.common.data.Resource
 
 abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider {
 
@@ -68,18 +62,8 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
         }
     }
 
-    override fun getExchangeRates(): LiveData<List<ExchangeRateData>> {
-        return ExchangeRatesRepository.instance.rates.switchMap {
-            return@switchMap MutableLiveData<List<ExchangeRateData>>().apply {
-                value = it.map { exchangeRate ->
-                    ExchangeRateData(exchangeRate.currencyCode, exchangeRate.rate ?: "0.0", exchangeRate.getCurrencyName(this@BaseWalletApplication), exchangeRate.fiat)
-                }
-            }
-        }
-    }
-
     override fun defaultCurrencyCode(): String {
-        return walletApplication.configuration.exchangeCurrencyCode
+        return walletApplication.configuration.exchangeCurrencyCode!!
     }
 
     override fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?) {
@@ -89,35 +73,31 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
         activity.startActivityForResult(sendCoinsIntent, requestCode)
     }
 
-    override fun sendCoins(address: Address, amount: Coin): LiveData<Resource<Transaction>> {
-        checkWalletCreated()
-        val wallet = walletApplication.wallet!!
-        val sendRequest = createSendRequest(address, amount)
-        val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
-
-        return SendCoinsTask.sendCoins(wallet, sendRequest, scryptIterationsTarget)
-    }
-
-    override fun createSentDashAddress(address: String): Address {
-        return Address.fromString(Constants.NETWORK_PARAMETERS, address.toString().trim { it <= ' ' })
-    }
-
-    private fun createSendRequest(address: Address, amount: Coin): SendRequest {
-        return SendRequest.to(address, amount).apply {
-            coinSelector = ZeroConfCoinSelector.get()
-            useInstantSend = false
-            feePerKb = SendCoinsBaseViewModel.ECONOMIC_FEE
-            ensureMinRequiredFee = true
-        }
-    }
-
-    override fun getWalletBalance(): Coin {
-        return walletApplication.wallet.getBalance(Wallet.BalanceType.ESTIMATED)
-    }
+//    override fun sendCoins(address: Address, amount: Coin): LiveData<Resource<Transaction>> {
+//        checkWalletCreated()
+//        val wallet = walletApplication.wallet!!
+//        val sendRequest = createSendRequest(address, amount)
+//        val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
+//
+//        return SendCoinsTask.sendCoins(wallet, sendRequest, scryptIterationsTarget)
+//    }
+//
+//    override fun createSentDashAddress(address: String): Address {
+//        return Address.fromString(Constants.NETWORK_PARAMETERS, address.toString().trim { it <= ' ' })
+//    }
+//
+//    private fun createSendRequest(address: Address, amount: Coin): SendRequest {
+//        return SendRequest.to(address, amount).apply {
+//            coinSelector = ZeroConfCoinSelector.get()
+//            useInstantSend = false
+//            feePerKb = SendCoinsBaseViewModel.ECONOMIC_FEE
+//            ensureMinRequiredFee = true
+//        }
+//    }
 
     private fun checkWalletCreated() {
         if (getWalletData() == null) {
-            throw RuntimeException("this method cant't be used before creating the wallet")
+            throw RuntimeException("this method can't be used before creating the wallet")
         }
     }
 }

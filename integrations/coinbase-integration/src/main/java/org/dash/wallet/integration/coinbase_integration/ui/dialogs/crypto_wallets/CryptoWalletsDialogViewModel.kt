@@ -35,7 +35,7 @@ class CryptoWalletsDialogViewModel @Inject constructor(
     val exchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
     init {
-        exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode)
+        exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode!!)
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
     }

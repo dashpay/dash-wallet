@@ -92,6 +92,7 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
         }
 
         amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
+            analyticsService.logEvent(AnalyticsConstants.Coinbase.CONTINUE_DASH_PURCHASE, bundleOf())
             binding.authLimitBanner.root.isVisible = viewModel.isInputGreaterThanLimit(pair.first)
             if (!binding.authLimitBanner.root.isVisible) {
                 viewModel.onContinueClicked(pair.second, binding.paymentMethodPicker.selectedMethodIndex)
@@ -123,11 +124,7 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
             safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
         }
 
-        amountViewModel.continueCallback.observe(viewLifecycleOwner){
-            analyticsService.logEvent(AnalyticsConstants.Coinbase.CONTINUE_DASH_PURCHASE, bundleOf())
-        }
-
-        amountViewModel.convertDirectionCallback.observe(viewLifecycleOwner){ dashToFiat ->
+        amountViewModel.dashToFiatDirection.observe(viewLifecycleOwner){ dashToFiat ->
             analyticsService.logEvent(if (dashToFiat) AnalyticsConstants.Coinbase.ENTER_AMOUNT_DASH
             else AnalyticsConstants.Coinbase.ENTER_AMOUNT_FIAT,
                 bundleOf()

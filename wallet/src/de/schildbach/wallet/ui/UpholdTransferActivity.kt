@@ -41,7 +41,7 @@ import org.dash.wallet.integration.uphold.data.UpholdConstants
 import org.dash.wallet.integration.uphold.data.UpholdTransaction
 import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper
 import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper.OnTransferListener
-import org.dash.wallet.integration.uphold.ui.openCustomTab
+import org.dash.wallet.common.util.openCustomTab
 import java.math.BigDecimal
 
 @AndroidEntryPoint
@@ -136,7 +136,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
     private fun showPaymentConfirmation(amount: Coin) {
 
         val application = application as WalletApplication
-        val receiveAddress = application.wallet.freshReceiveAddress()
+        val receiveAddress = application.wallet!!.freshReceiveAddress()
 
         withdrawalDialog = UpholdWithdrawalHelper(BigDecimal(balance.toPlainString()), object : OnTransferListener {
             override fun onConfirm(transaction: UpholdTransaction) {

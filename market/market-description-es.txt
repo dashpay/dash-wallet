@@ -1,4 +1,4 @@
-DESCRIPCIÓN PRINCIPAL
+﻿DESCRIPCIÓN PRINCIPAL
 
 La billetera de Dash es la billetera Android de referencia mantenida por el grupo central de Dash para Dash - Dinero digital - una alternativa innovadora a Bitcoin que está específicamente diseñada para pagos.
 

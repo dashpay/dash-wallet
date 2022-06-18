@@ -43,7 +43,8 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         .noCode().minDecimals(2).optionalDecimals()
 
     private var onCurrencyToggleClicked: (() -> Unit)? = null
-    private var onConvertDirectionBtnClicked: (() -> Unit)? = null
+    private var onConvertDirectionChanged: ((Boolean) -> Unit)? = null
+    private var onAmountChanged: ((Coin) -> Unit)? = null
 
     private var currencySymbol = "$"
     private var isCurrencySymbolFirst = true
@@ -52,7 +53,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     var input: String
         get() = _input
         set(value) {
-            _input = if(value.isEmpty()) "0" else value
+            _input = value.ifEmpty { "0" }
             updateAmount()
         }
 
@@ -60,7 +61,10 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         private set
 
     var dashAmount: Coin = Coin.ZERO
-        private set
+        private set(value) {
+            field = value
+            onAmountChanged?.invoke(value)
+        }
 
     var exchangeRate: ExchangeRate? = null
         set(value) {
@@ -75,6 +79,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             if (field != value) {
                 field = value
                 updateDashSymbols()
+                onConvertDirectionChanged?.invoke(value)
 
                 if (value) {
                     input = dashFormat.minDecimals(0)
@@ -105,9 +110,6 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         updateCurrency()
         binding.convertDirectionBtn.setOnClickListener {
             dashToFiat = !dashToFiat
-            if (!showCurrencySelector){
-                onConvertDirectionBtnClicked?.invoke()
-            }
         }
         binding.inputCurrencyToggle.setOnClickListener {
             onCurrencyToggleClicked?.invoke()
@@ -119,6 +121,14 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
 
     fun setOnCurrencyToggleClicked(listener: () -> Unit) {
         onCurrencyToggleClicked = listener
+    }
+
+    fun setOnConvertDirectionChanged(listener: (Boolean) -> Unit) {
+        onConvertDirectionChanged = listener
+    }
+
+    fun setOnAmountChanged(listener: (Coin) -> Unit) {
+        onAmountChanged = listener
     }
 
     private fun updateCurrency() {
@@ -182,9 +192,5 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             isCurrencySymbolFirst -> "$currencySymbol $input"
             else -> "$input $currencySymbol"
         }
-    }
-
-    fun setOnConvertDirectionBtnClicked(listener: () -> Unit){
-        onConvertDirectionBtnClicked = listener
     }
 }

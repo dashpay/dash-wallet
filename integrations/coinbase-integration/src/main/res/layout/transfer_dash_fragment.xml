@@ -103,6 +103,7 @@
         android:layout_height="wrap_content"
         android:background="@color/red_300"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:paddingVertical="8dp"
         android:text="@string/dash_wallet_limit_description"
         android:textColor="@color/dash_white"

@@ -34,6 +34,7 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.util.GenericUtils;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,6 +113,10 @@ public class Configuration {
     public static final String PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN = "has_location_dialog_been_shown";
     public static final String PREFS_KEY_EXPLORE_DATABASE_NAME = "explore_database_name";
 
+    // CrowdNode
+    public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
+    public static final String PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS = "crowdnode_primary_address";
+
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
     public Configuration(final SharedPreferences prefs, final Resources res) {
@@ -178,6 +183,7 @@ public class Configuration {
             return new MonetaryFormat().shift(6).minDecimals(0).optionalDecimals(2);
     }
 
+    @Nullable
     public String getOwnName() {
         return Strings.emptyToNull(prefs.getString(PREFS_KEY_OWN_NAME, "").trim());
     }
@@ -198,6 +204,7 @@ public class Configuration {
         return prefs.getBoolean(PREFS_KEY_CONNECTIVITY_NOTIFICATION, false);
     }
 
+    @Nullable
     public String getTrustedPeerHost() {
         return Strings.emptyToNull(prefs.getString(PREFS_KEY_TRUSTED_PEER, "").trim());
     }
@@ -322,6 +329,7 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_DISCLAIMER, enabled).apply();
     }
 
+    @Nullable
     public String getExchangeCurrencyCode() {
         String currencyCode = prefs.getString(PREFS_KEY_EXCHANGE_CURRENCY, null);
         // previous versions of the app (prior to 7.3.3) may have stored an obsolete
@@ -332,6 +340,7 @@ public class Configuration {
     public void setExchangeCurrencyCode(final String exchangeCurrencyCode) {
         prefs.edit().putString(PREFS_KEY_EXCHANGE_CURRENCY, exchangeCurrencyCode).apply();
     }
+
     public boolean getExchangeCurrencyCodeDetected() {
         return prefs.getBoolean(PREFS_KEY_EXCHANGE_CURRENCY_DETECTED, false);
     }
@@ -545,7 +554,6 @@ public class Configuration {
         return prefs.getString(PREFS_KEY_EXPLORE_DATABASE_NAME, "explore-database");
     }
 
-
     // Coinbase
 
     public void setLastCoinBaseAccessToken(String token) {
@@ -601,7 +609,27 @@ public class Configuration {
         prefs.edit().putString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, currency).apply();
     }
 
-    public String getCoinbaseSendLimitCurrency(){
+    public String getCoinbaseSendLimitCurrency() {
         return prefs.getString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, GenericUtils.getLocaleCurrencyCode());
+    }
+
+    // CrowdNode
+
+    @NonNull
+    public String getCrowdNodeAccountAddress() {
+        return prefs.getString(PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS, "");
+    }
+
+    public void setCrowdNodeAccountAddress(@NonNull String address) {
+        prefs.edit().putString(PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS, address).apply();
+    }
+
+    @NonNull
+    public String getCrowdNodePrimaryAddress() {
+        return prefs.getString(PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS, "");
+    }
+
+    public void setCrowdNodePrimaryAddress(@NonNull String address) {
+        prefs.edit().putString(PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS, address).apply();
     }
 }

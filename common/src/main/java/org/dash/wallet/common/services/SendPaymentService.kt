@@ -19,20 +19,27 @@ package org.dash.wallet.common.services
 
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.wallet.CoinSelector
+
+class LeftoverBalanceException(missing: Coin, message: String): InsufficientMoneyException(missing, message)
 
 interface SendPaymentService {
+    @Throws(LeftoverBalanceException::class)
     suspend fun sendCoins(
         address: Address,
         amount: Coin,
-        constrainInputsTo: Address? = null,
-        emptyWallet: Boolean = false
+        coinSelector: CoinSelector? = null,
+        emptyWallet: Boolean = false,
+        checkBalanceConditions: Boolean = true
     ): Transaction
 
-    suspend fun estimateNetworkFee(address: Address,
-                                   amount: Coin,
-                                   constrainInputsTo: Address? = null,
-                                   emptyWallet: Boolean = false) : TransactionDetails
+    suspend fun estimateNetworkFee(
+        address: Address,
+        amount: Coin,
+        emptyWallet: Boolean = false
+    ): TransactionDetails
 
     data class TransactionDetails(
         val fee: String,

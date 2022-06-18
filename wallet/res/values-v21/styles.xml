@@ -16,7 +16,7 @@
     </style>
 
     <style name="LockScreenActivity.Child.Theme" parent="SplashActivity.Theme">
-        <item name="android:windowBackground">@color/bg_less_bright</item>
+        <item name="android:windowBackground">@color/background_primary_light</item>
     </style>
 
 </resources>

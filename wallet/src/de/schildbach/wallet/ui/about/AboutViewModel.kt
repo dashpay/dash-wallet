@@ -41,7 +41,15 @@ class AboutViewModel @Inject constructor(
         get() = _exploreRemoteTimestamp
 
     val exploreLastSync: Long
-        get() = exploreRepository.localTimestamp
+        get() {
+            val lastSync = exploreRepository.lastSyncTimestamp
+            return if (lastSync > 0) {
+                lastSync
+            } else {
+                // If no sync run yet, show the timestamp of the preloaded db
+                exploreRepository.localTimestamp
+            }
+        }
 
     private val _firebaseInstallationId = MutableLiveData<String>()
     val firebaseInstallationId: LiveData<String>

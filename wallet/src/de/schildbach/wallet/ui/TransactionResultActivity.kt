@@ -24,6 +24,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity.ACTION_SEND_FROM_WALLET_URI
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -80,7 +81,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
         setContentView(R.layout.activity_successful_transaction)
 
         val transactionResultViewBinder = TransactionResultViewBinder(container)
-        val tx = WalletApplication.getInstance().wallet.getTransaction(txId)
+        val tx = WalletApplication.getInstance().wallet!!.getTransaction(txId)
         if (tx != null) {
             val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
             val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)

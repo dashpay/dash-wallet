@@ -64,9 +64,7 @@
     <string name="send_coins_fragment_amount_label">Poslať sumu</string>
     <string name="send_coins_fragment_pin_label">Zadať PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Bude zaplatený sieťový poplatok %s.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Bude zaplatený prioritný poplatok %s. Ak Vám záleží na nízkych poplatkoch, používajte "prioritu" iba ak potrebujete rýchle potvrdenie.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Čiastka je príliš nízka pre odoslanie</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Nedostatok prostriedkov</string>
+    <string name="send_coins_fragment_hint_fee_priority">Bude zaplatený prioritný poplatok %s. Ak Vám záleží na nízkych poplatkoch, používajte \"prioritu\" iba ak potrebujete rýchle potvrdenie.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Súčet malých platieb vo vašej peňaženke neumožňuje v súčte zaslanie platby.</string>
     <string name="send_coins_fragment_hint_replaying">Platby nie sú momentálne možne, pretože peňaženka nie je plne synchronizovaná so sieťou </string>
     <string name="send_coins_fragment_direct_payment_enable">Odoslať platbu priamo príjemcovi.</string>
@@ -74,13 +72,13 @@
     <string name="send_coins_fragment_direct_payment_nack">Platba cez priame spojenie bola zamietnutá.</string>
     <string name="send_coins_fragment_direct_payment_failed_title">Priama platba zlyhala</string>
     <string name="send_coins_fragment_direct_payment_failed_msg">Platba bude odoslaná cez P2P sieť.</string>
-    <string name="send_coins_fragment_button_send">Odoslať</string>
+    <string name="send_coins_fragment_button_send">Poslať</string>
     <string name="send_coins_fragment_button_back">Späť</string>
     <string name="send_coins_fragment_insufficient_money_title">Nedostatočné množstvo dostupných Dashov</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Chýba %s.</string>
     <string name="send_coins_fragment_insufficient_money_msg2">Chcete poslať všetko čo máte?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Vyprázdnenie peňaženky zlyhalo</string>
-    <string name="send_coins_fragment_state_decrypting">Dešifrovanie…</string>
+    <string name="send_coins_fragment_state_decrypting">Dešifruje sa…</string>
     <string name="send_coins_preparation_msg">Podpisujem…</string>
     <string name="send_coins_sending_msg">Odosielam…</string>
     <string name="send_coins_sent_msg">Odoslané!</string>
@@ -90,9 +88,9 @@
     <string name="send_coins_options_fee_category_economic">Ekonomický</string>
     <string name="send_coins_options_fee_category_priority">Prioritný</string>
     <string name="send_coins_options_empty">Vyprázdniť peňaženku</string>
-    <string name="sweep_wallet_activity_title">Importovať Privátny Kľúč</string>
+    <string name="sweep_wallet_activity_title">Importovať privátny Kľúč</string>
     <string name="sweep_wallet_fragment_intro">Chystáte sa načítať papierovú peňaženku alebo kupón. Táto akcia presunie všetky mince z papiera do vašej peňaženky na tomto zariadení. Potom čo bude transakcia potvrdená už papier nepotrebujete a nemal by byť z bezpečnostných dôvodov ďalej používaný.</string>
-    <string name="sweep_wallet_fragment_hint">Papierové peňaženky sa najčastejšie používajú ako "cold storage" - offline uloženie mincí. Niektoré bankomati radšej tlačia na lístok, než aby poslali mince priamo do vašeho zariadenia. Ľudia tiež niekdy používajú pred-nabité papierové peňaženky pre poslanie mincí (nedoporučuje sa).</string>
+    <string name="sweep_wallet_fragment_hint">Papierové peňaženky sa najčastejšie používajú ako \"cold storage\" - offline uloženie mincí. Niektoré bankomati radšej tlačia na lístok, než aby poslali mince priamo do vašeho zariadenia. Ľudia tiež niekdy používajú pred-nabité papierové peňaženky pre poslanie mincí (nedoporučuje sa).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Začnite načítaním privátneho kľúča z papierovej peňaženky. Použite tlačítko kamery.</string>
     <string name="sweep_wallet_fragment_encrypted">Tento súkromný kľúč je chránený heslom.</string>
     <string name="sweep_wallet_fragment_password">Heslo</string>
@@ -108,7 +106,7 @@
     <string name="sweep_wallet_options_reload">Znova načítať bilanciu</string>
     <string name="maintenance_dialog_title">Doporučuje sa údržba</string>
     <string name="maintenance_dialog_message">Prijali ste %1$s na nezabezpečenú adresu. Prajete si previesť tieto mince na zabezpečenú adresu? Bude zaplatený malý sieťový poplatok %2$s.</string>
-    <string name="maintenance_dialog_state_decrypting">Dešifrovanie…</string>
+    <string name="maintenance_dialog_state_decrypting">Dešifruje sa…</string>
     <string name="maintenance_dialog_state_done">Hotovo.</string>
     <string name="maintenance_dialog_button_move">Presunúť</string>
     <string name="request_coins_activity_title">Vyžiadať Dash</string>
@@ -193,7 +191,7 @@
     <string name="peer_list_row_ping_time">⇆ %d&#x2009;ms</string>
     <string name="restore_wallet_permission_dialog_title">Chýbajú prístupové práva</string>
     <string name="restore_wallet_permission_dialog_message">Aby ste na vašom externom úložišti mohli vyhľadávať zálohy peňaženky, potrebujete povoliť právo na čítanie.</string>
-    <string name="import_keys_dialog_title">Obnoviť privátne kľúče</string>
+    <string name="import_keys_dialog_title">Obnoviť peňaženku</string>
     <string name="import_keys_dialog_message">Vyberte záložný súbor peňaženky z externého úložiska (%s):</string>
     <string name="restore_wallet_dialog_replace_warning">Chystáte sa nahradiť vašu súčasnú peňaženku. Všetky mince zo súčasnej peňaženky budú stratené, pokiaľ nemáte zálohu.</string>
     <string name="import_keys_dialog_warning">Dôležité: Nenahrávajte privátne kľúče z pochybných zdrojov! Ak tak spravíte, niekto iný môže získať kontrolu nad vašimi peniazmi.</string>
@@ -284,7 +282,7 @@
     <string name="preferences_initiate_reset_title">Resetovať reťazec blokov</string>
     <string name="preferences_initiate_reset_summary">Vymazať reťazec blokov, transakcie a zostatok v peňaženke. Opätovné načítanie bude chvíľu trvať, preto používajte iba v prípade nutnosti.</string>
     <string name="preferences_initiate_reset_dialog_message">Chcete vymazať a znova nahrať reťazec blokov?\n\nTýmto dočasne skryjete svoju bilanciu a zmažete transakcie. Oboje bude obnovené počas synchronizácie reťazca blokov. Uistite sa, že máte spoľahlivé internetové pripojenie</string>
-    <string name="preferences_initiate_reset_dialog_positive">Reset</string>
+    <string name="preferences_initiate_reset_dialog_positive">Obnoviť</string>
     <string name="preferences_extended_public_key_title">Ukázať xpub</string>
     <string name="preferences_extended_public_key_summary">Zobraziť rozšírený verejný kľúč vašej peňaženky, za účelom importovania do iných aplikácií a služieb. Buďte opatrní: odhalíte tým vaše finančné informácie s danou aplikáciou.</string>
     <string name="bitmap_fragment_share">Zdieľať...</string>
@@ -303,6 +301,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Pripojiť dáta peňaženky</string>
     <string name="report_issue_dialog_mail_intent_chooser">Odoslať správu použitím…</string>
     <string name="report_issue_dialog_mail_intent_failed">Odosielanie hlásenia zlyhalo.</string>
+    <string name="report_transaction_history_export">Exportovať</string>
+    <string name="report_transaction_history_title">Export CSV</string>
+    <string name="report_transaction_history_not_synced_title">Export CSV</string>
+    <string name="report_transaction_history_not_synced_message">Pred exportovaním histórie transakcií počkajte, kým sa peňaženka úplne zosynchronizuje.</string>
+    <string name="report_transaction_history_message">Exportuje sa úplná história transakcií.\n\nVšetky platby sa budú považovať za výdavok a všetky prichádzajúce transakcie budú príjmom. Vlastník tejto peňaženky je zodpovedný za vykonanie akýchkoľvek úprav základu nákladov vo zvolenom systéme daňového výkazníctva.</string>
+    <string name="report_transaction_history_mail_intent_chooser">Odoslať históriu transakcií pomocou…</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">Odoslanie histórie transakcií zlyhalo.</string>
+
     <string name="about_title">O aplikácií</string>
     <string name="about_version_title">Verzia</string>
     <string name="about_copyright_title">Autorské práva</string>
@@ -311,7 +317,7 @@
     <string name="about_category_credits">Táto aplikácia používa...</string>
     <string name="about_credits_bitcoinj_title">dashj %s, a implementáciu protokolu Dash</string>
     <string name="about_credits_zxing_title">ZXing, knižnicu na spracovanie QR kódov</string>
-    <string name="about_credits_icon_title">Táto aplikácia používa ikony od "bitboy"</string>
+    <string name="about_credits_icon_title">Táto aplikácia používa ikony od \"bitboy\"</string>
     <string name="about_credits_scrypt_title">Scrypt, implementovali Will Glozer a Colin Percival</string>
     <string name="about_market_app_title">Stránka Google Play</string>
     <string name="about_market_app_summary">Ohodnotiť aplikáciu</string>
@@ -331,7 +337,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">Zrušiť</string>
     <string name="button_cancel">Zrušiť</string>
-    <string name="button_retry">Znovu</string>
     <string name="button_help">Nápoveda</string>
     <string name="button_add">Pridať</string>
     <string name="button_delete">Zmazať</string>
@@ -341,7 +346,6 @@
     <string name="button_copy">Kopírovať</string>
     <string name="button_copy_request">Kopírovať požiadavok</string>
     <string name="button_paste">Vložiť</string>
-    <string name="button_share">Zdieľať</string>
     <string name="button_set_as_default">Nastaviť ako predvolené</string>
     <string name="button_request_coins">Vyžiadať Dash</string>
     <string name="button_send_coins">Poslať Dash</string>
@@ -385,5 +389,4 @@
     <string name="activity_buy_and_sell_dash_filter">Filter platieb</string>
     <string name="clear_filter">Zrušiť filter</string>
     <string name="select_currency">Vyberte menu</string>
-
 </resources>

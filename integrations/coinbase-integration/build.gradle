@@ -76,6 +76,7 @@ dependencies {
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "io.coil-kt:coil:$coilVersion"
     implementation 'me.grantland:autofittextview:0.2.1'
+    implementation "androidx.browser:browser:$browserVersion"
 
     implementation 'com.scottyab:secure-preferences-lib:0.1.7'
 

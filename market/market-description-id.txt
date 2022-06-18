@@ -1,4 +1,4 @@
-DESKRIPSI UTAMA
+﻿DESKRIPSI UTAMA
 
 Dash Wallet is the reference Android wallet maintained by Dash Core Group for Dash - Digital Cash - an innovative alternative to Bitcoin which is explicitly designed for payments.
 

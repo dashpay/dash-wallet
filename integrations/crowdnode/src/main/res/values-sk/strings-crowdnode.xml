@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="crowdnode_get_started">Začíname s CrowdNode</string>
+    <string name="crowdnode_get_started_hint">Ak chcete začať stávkovať, vytvorte si účet na CrowdNode alebo sa pripojte k existujúcemu účtu.</string>
+    <string name="new_account">Nový CrowdNode účet</string>
+    <string name="account_create">Vytvoriť účet</string>
+    <string name="account_link">Prepojiť existujúci účet</string>
+    <string name="crowdnode_login">Prihláste sa do CrowdNode</string>
+    <string name="crowdnode_link">Prepojiť existujúci CrowdNode účet</string>
+    <string name="required_passphrase_backup">V Dash peňaženke si musíte zálohovať svoju prístupovú frázu </string>
+    <string name="backup_passphrase">Zálohovať prístupovú frázu</string>
+    <string name="required_dash_amount">V Dash peňaženke potrebujete aspoň %s Dash</string>
+    <string name="crowdnode_new_account_warning_1">CrowdNode používa túto adresu ako ID vášho účtu. Ak stratíte prístupovú frázu priradenú k tejto adrese, stratíte prístup k svojim finančným prostriedkom v tejto peňaženke a k účtu CrowdNode.</string>
+    <string name="crowdnode_new_account_warning_2">Do a z CrowdNode budú odoslané veľmi malé množstvá Dash, aby sme overili, že ste vlastníkom tejto adresy peňaženky.</string>
+    <string name="crowdnode_link_account_description">Všetky prenosy do a z CrowdNode z tohto zariadenia sa budú vykonávať s nižšie uvedenou Dash adresou z tohto zariadenia.</string>
+    <string name="dash_address">Dash adresa</string>
+    <string name="primary_dash_address">Primárna Dash adresa</string>
+    <string name="crowdnode_secure_wallet">Zálohujte si svoju prístupovú frázu a vytvorte si účet CrowdNode</string>
+    <string name="crowdnode_secure_wallet_explainer">Ak stratíte prístupovú frázu pre túto peňaženku a stratíte toto zariadenie alebo odinštalujete Dash peňaženku, stratíte prístup k svojim finančným prostriedkom v CrowdNode a k prostriedkom v tejto peňaženke.</string>
+    <string name="insufficient_funds">Na pokračovanie nemáte dostatok finančných prostriedkov.</string>
+    <string name="crowdnode_minimum_dash">Na pokračovanie v overení CrowdNode by ste mali mať aspoň %s Dash.</string>
+    <string name="crowdnode_agree_to_terms">Súhlasím s CrowdNode %1$s a %2$s</string>
+    <string name="terms_of_use">Podmienky používania</string>
+    <string name="privacy_policy">Zásady ochrany osobných údajov</string>
+    <string name="crowdnode_account_ready">Váš účet CrowdNode je nastavený a pripravený na použitie!</string>
+    <string name="notify_when_done">Zatvoriť a upozorniť, keď to bude hotové</string>
+    <string name="crowdnode_creating">Váš CrowdNode účet sa vytvára…</string>
+    <string name="accepting_terms">Prijímam podmienky používania…</string>
+    <string name="crowdnode_signup_error">Nepodarilo sa nám vytvoriť váš CrowdNode účet.</string>
+    <string name="crowdnode_deposit_error">Nepodarilo sa nám uskutočniť vklad na váš CrowdNode účet.</string>
+    <string name="crowdnode_withdraw_error">Nepodarilo sa nám vybrať z vášho CrowdNode účtu.</string>
+    <string name="crowdnode_transfer_error">Váš CrowdNode prenos bol neúspešný.</string>
+    <string name="crowdnode_deposit_received">Váš vklad do CrowdNode je prijatý.</string>
+    <string name="deposit">Vklad</string>
+    <string name="deposit_sent">Vklad odoslaný</string>
+    <string name="deposit_sent_message">Aktualizácia zostatku môže chvíľu trvať.</string>
+    <string name="crowdnode_deposit_from_wallet">DashWallet ➝ CrowdNode</string>
+    <string name="from_wallet">z Dash peňaženky</string>
+    <string name="from_crowdnode">z CrowdNode</string>
+    <string name="withdraw">Vybrať</string>
+    <string name="withdrawal_requested">Žiadosť o výber</string>
+    <string name="withdrawal_requested_message">Doručenie prostriedkov môže chvíľu trvať.</string>
+    <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
+    <string name="online_account">Online účet</string>
+    <string name="online_account_create">Vytvoriť online účet</string>
+    <string name="secure_online_account">Chráňte svoje zárobky</string>
+    <string name="crowdnode_support">Podpora CrowdNode</string>
+    <string name="unlink_account">Odpojiť účet</string>
+    <string name="online_account_title">Prečo potrebujete online účet?</string>
+    <string name="crowdnode_online_synced">Synchronizované s aktuálnou Dash peňaženkou </string>
+    <string name="crowdnode_in_process">V procese…</string>
+    <string name="account_recovery">Obnovenie účtu</string>
+    <string name="crowdnode_recovery_info">Ak niekedy stratíte svoju prístupovú frázu, môžete sa overiť inými spôsobmi, aby ste znova získali prístup k svojim prostriedkom na CrowdNode.</string>
+    <string name="transaction_history">História transakcií</string>
+    <string name="see_staking_details">Môžete vidieť podrobné informácie o svojich vkladoch, výberoch a zárobkoch z odmien.</string>
+    <string name="payout_options">Možnosti výplaty</string>
+    <string name="payout_options_details">Môžete zmeniť spôsob alebo kedy sa vám budú vyplácať vaše zárobky.</string>
+    <string name="crowdnode_balance">Zostatok na CrowdNode</string>
+    <string name="crowdnode_your_address_title">Tu je Dash adresa, ktorú ste použili pri integrácii s CrowdNode</string>
+    <string name="chain_syncing">Reťazec sa synchronizuje…</string>
+    <string name="crowdnode_wait_for_sync">Počkajte, kým sa reťazec úplne zosynchronizuje, aby sme mohli skontrolovať vašu históriu transakcií. Pre prihlásenie alebo registráciu navštívte webovú stránku CrowdNode.</string>
+    <string name="crowdnode_open_website">Prejdite na webovú stránku CrowdNode</string>
+    <string name="crowdnode_info_title">Staňte sa súčasťou Dash Masternode s CrowdNode</string>
+    <string name="introducing_staking">Predstavujeme stávkovanie</string>
+    <string name="crowdnode_staking_info">Získajte odmeny z vkladov v Dash Masternodes už za 0,5 Dash.</string>
+    <string name="instant_rewards">Získajte odmeny okamžite</string>
+    <string name="daily_rewards_info">Denne získajte svoj podiel na odmenách.</string>
+    <string name="crowdnode_sending_to">Odosielanie na účet CrowdNode</string>
+    <string name="wallet_sending_to">Odosiela sa do Dash peňaženky na tomto zariadení</string>
+    <string name="available_balance">Zostatok: %s</string>
+    <string name="crowdnode_minimum_deposit">Vložte aspoň %s, aby ste mohli začať zarábať</string>
+    <string name="crowdnode_minimum_deposit_difference">Vložte %s, aby ste mohli začať zarábať</string>
+    <string name="crowdnode_first_deposit">Prvý vklad by mal byť vyšší ako %s</string>
+    <string name="crowdnode_staking_info_title">Ako funguje stávkovanie</string>
+    <string name="crowdnode_staking_info_message">Zarábať začnete, ak má váš účet CrowdNode viac ako %s</string>
+    <string name="crowdnode_verify_api_address">Overte svoju API Dash adresu</string>
+    <string name="crowdnode_how_to_verify">Ako potvrdiť svoju API Dash adresu </string>
+    <string name="crowdnode_how_to_verify_description1">Pošlite %s Dash zo svojej primárnej Dash adresy, ktorú momentálne používate pre svoj účet CrowdNode</string>
+    <string name="crowdnode_how_to_verify_description2">na Dash adresu určenú pre váš účet CrowdNode v Dash peňaženke na tomto zariadení</string>
+    <string name="crowdnode_how_to_verify_description3">Túto transakciu automaticky zistíme a prevedieme rovnakú sumu na váš účet CrowdNode. Potom budete môcť na tomto zariadení vykonávať vklady a výbery v Dash peňaženke.</string>
+    <string name="button_show_qr">Zobraziť QR kód</string>
+    <string name="scan_qr">Skenovať QR kód</string>
+    <string name="qr_contains_request">Tento QR kód už obsahuje žiadosť o platbu pre %s Dash</string>
+    <string name="verification_required">Vyžaduje sa overenie</string>
+    <string name="validating_address">Overuje sa adresa…</string>
+    <string name="crowdnode_address_validated">Vaša adresa CrowdNode bola overená, ale vyžaduje sa overenie.</string>
+    <string name="crowdnode_address_confirmed">Vaša adresa CrowdNode bola potvrdená.</string>
+    <string name="crowdnode_bad_confirmation">Potvrdenie bolo odoslané z nesprávnej primárnej adresy</string>
+    <string name="crowdnode_online_account_details_title">Informácie o vašom online účte</string>
+    <string name="crowdnode_online_account_details_primary">Vaša primárna Dash adresa, ktorú momentálne používate pre svoj účet CrowdNode</string>
+    <string name="crowdnode_online_account_details_api">Dash adresa určená pre váš CrowdNode účet v Dash peňaženke na tomto zariadení</string>
+    <string name="crowdnode_reset_address">Resetovať adresu</string>
+
+    </resources>

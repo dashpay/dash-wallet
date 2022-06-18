@@ -31,9 +31,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.adapter.BuyAndSellDashServicesAdapter
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
-import de.schildbach.wallet.rates.ExchangeRatesViewModel
 import de.schildbach.wallet.ui.coinbase.CoinBaseWebClientActivity
 import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
+import de.schildbach.wallet.ui.rates.ExchangeRatesViewModel
 import de.schildbach.wallet_test.R
 import org.dash.wallet.integration.coinbase_integration.R as R_coinbase
 import de.schildbach.wallet_test.databinding.ActivityBuyAndSellIntegrationsBinding

@@ -31,6 +31,7 @@ import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
@@ -138,7 +139,7 @@ class SetPinActivity : InteractionAwareActivity() {
         if (walletApplication.wallet == null) {
             showErrorDialog(false, NullPointerException("wallet is null in SetPinActivity"))
         } else {
-            if (walletApplication.wallet.isEncrypted) {
+            if (walletApplication.wallet!!.isEncrypted) {
                 if (initialPin != null) {
                     if (changePin) {
                         viewModel.oldPinCache = initialPin
@@ -158,7 +159,7 @@ class SetPinActivity : InteractionAwareActivity() {
                     }
                 }
             } else {
-                seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
+                seed = walletApplication.wallet!!.keyChainSeed.mnemonicCode!!
             }
         }
     }
@@ -278,7 +279,7 @@ class SetPinActivity : InteractionAwareActivity() {
                 viewModel.pin.clear()
                 pin.clear()
                 if (pinRetryController.failCount() > 0) {
-                    pinPreviewView.badPin(pinRetryController.getRemainingAttemptsMessage(this))
+                    pinPreviewView.badPin(pinRetryController.getRemainingAttemptsMessage(resources))
                 }
                 if (newState == State.INVALID_PIN) {
                     pinPreviewView.shake()
@@ -339,7 +340,7 @@ class SetPinActivity : InteractionAwareActivity() {
                 pin.clear()
                 pinPreviewView.clear()
                 pageTitleView.setText(R.string.wallet_lock_wallet_disabled)
-                pageMessageView.text = pinRetryController.getWalletTemporaryLockedMessage(this)
+                pageMessageView.text = pinRetryController.getWalletTemporaryLockedMessage(resources)
                 pageMessageView.visibility = View.VISIBLE
                 pinProgressSwitcherView.visibility = View.GONE
                 numericKeyboardView.visibility = View.INVISIBLE
@@ -377,7 +378,7 @@ class SetPinActivity : InteractionAwareActivity() {
                 }
                 Status.SUCCESS -> {
                     if (state == State.DECRYPTING) {
-                        seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
+                        seed = walletApplication.wallet!!.keyChainSeed.mnemonicCode!!
                         setState(State.SET_PIN)
                     } else {
                         if (changePin) {
@@ -501,7 +502,7 @@ class SetPinActivity : InteractionAwareActivity() {
     }
 
     private fun startVerifySeedActivity() {
-        startActivity(VerifySeedActivity.createIntent(this, seed.toTypedArray()))
+        startActivity(VerifySeedActivity.createIntent(this, seed.toTypedArray(), true))
         finish()
     }
 
