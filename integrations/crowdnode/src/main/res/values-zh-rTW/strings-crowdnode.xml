@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="crowdnode_get_started">開始使用 CrowdNode</string>
+    <string name="crowdnode_get_started_hint">要開始質押，請在 CrowdNode 上創建一個帳戶或連接到現有帳戶。</string>
+    <string name="new_account">新建 CrowdNode 帳戶</string>
+    <string name="account_create">創建帳號</string>
+    <string name="account_link">鏈接現有帳戶</string>
+    <string name="crowdnode_login">登入到 CrowdNode</string>
+    <string name="crowdnode_link">鏈接現有的 CrowdNode 帳戶</string>
+    <string name="required_passphrase_backup">您必須在達世幣錢包中備份您的恢復詞組</string>
+    <string name="backup_passphrase">備份詞組</string>
+    <string name="required_dash_amount">您的達世幣錢包中至少需要 %s 的 Dash</string>
+    <string name="crowdnode_new_account_warning_1">CrowdNode 使用此位址作為您的帳戶 ID。如果您丟失了與此位址關聯的密碼，您將無法訪問此錢包和您的 CrowdNode 帳戶中的資金。</string>
+    <string name="crowdnode_new_account_warning_2">將會向 CrowdNode 發送非常少量的達世幣，以驗證您是該錢包位址的所有者。</string>
+    <string name="crowdnode_link_account_description">從此設備與 CrowdNode 之間的所有交易都將使用來自該設備的以下達世幣位址來執行。</string>
+    <string name="dash_address">達世幣位址</string>
+    <string name="primary_dash_address">主要達世幣位址</string>
+    <string name="crowdnode_secure_wallet">備份您的恢復詞組以創建 CrowdNode 帳戶</string>
+    <string name="crowdnode_secure_wallet_explainer">如果您丟失此錢包的恢復詞組並丟失此設備或卸載達世幣錢包，您將無法訪問 CrowdNode 上的資金和此錢包中的資金。</string>
+    <string name="insufficient_funds">您沒有足夠的資金來繼續進行。</string>
+    <string name="crowdnode_minimum_dash">您應該至少有 %s Dash 才能繼續進行 CrowdNode 驗證。</string>
+    <string name="crowdnode_agree_to_terms">我同意 CrowdNode %1$s 和 %2$s</string>
+    <string name="terms_of_use">使用條款</string>
+    <string name="privacy_policy">隱私政策</string>
+    <string name="crowdnode_account_ready">您的 CrowdNode 帳戶已設置好並可以使用!</string>
+    <string name="notify_when_done">完成後關閉並發送通知</string>
+    <string name="crowdnode_creating">正在創建您的 CrowdNode 帳戶…</string>
+    <string name="accepting_terms">接受使用條款…</string>
+    <string name="crowdnode_signup_error">我們無法創建您的 CrowdNode 帳戶。</string>
+    <string name="crowdnode_deposit_error">我們無法向您的 CrowdNode 賬戶存款。</string>
+    <string name="crowdnode_withdraw_error">我們無法從您的 CrowdNode 帳戶中提款。</string>
+    <string name="crowdnode_transfer_error">您的 CrowdNode 轉帳不成功。</string>
+    <string name="crowdnode_deposit_received">您對 CrowdNode 的存款已收到了。</string>
+    <string name="deposit">存款</string>
+    <string name="deposit_sent">存款已發送</string>
+    <string name="deposit_sent_message">您的餘額可能需要一分鐘後才能更新。</string>
+    <string name="crowdnode_deposit_from_wallet">達世幣錢包 ➝ CrowdNode</string>
+    <string name="from_wallet">來自達世幣錢包</string>
+    <string name="from_crowdnode">來自 CrowdNode</string>
+    <string name="withdraw">提款</string>
+    <string name="withdrawal_requested">提款請求</string>
+    <string name="withdrawal_requested_message">您的資金可能需要一分鐘後才能到賬。</string>
+    <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ 達世幣錢包</string>
+    <string name="online_account">在線賬戶</string>
+    <string name="online_account_create">創建在線帳戶</string>
+    <string name="secure_online_account">保護您的收入</string>
+    <string name="crowdnode_support">CrowdNode 支援</string>
+    <string name="unlink_account">取消帳戶鏈接</string>
+    <string name="online_account_title">為什麼需要在線帳戶?</string>
+    <string name="crowdnode_online_synced">與當前達世幣錢包同步</string>
+    <string name="crowdnode_in_process">進行中…</string>
+    <string name="account_recovery">恢復帳戶</string>
+    <string name="crowdnode_recovery_info">如果您丟失了密碼，您可以通過其他方式驗證自己以重新獲得對您的 CrowdNode 資金的訪問權限。</string>
+    <string name="transaction_history">交易記錄</string>
+    <string name="see_staking_details">您可以查看有關您的存款、提款和獎勵收入的詳細信息。</string>
+    <string name="payout_options">支付選項</string>
+    <string name="payout_options_details">您可以更改向您支付獎勵收入的方式/時間。</string>
+    <string name="crowdnode_balance">CrowdNode 上的餘額</string>
+    <string name="crowdnode_your_address_title">這是您在與 CrowdNode 整合時使用的達世幣位址</string>
+    <string name="chain_syncing">區塊鏈正在同步…</string>
+    <string name="crowdnode_wait_for_sync">等到區塊鏈完全同步後，我們才能查看您的交易歷史。訪問 CrowdNode 網站登錄或註冊。</string>
+    <string name="crowdnode_open_website">訪問 CrowdNode 網站</string>
+    <string name="crowdnode_info_title">通過 CrowdNode 成為達世幣主節點的一部分</string>
+    <string name="introducing_staking">介紹質押</string>
+    <string name="crowdnode_staking_info">只需 0.5 Dash，即可從達世幣主節點中的存款中獲得獎勵。</string>
+    <string name="instant_rewards">立即獲得獎勵</string>
+    <string name="daily_rewards_info">每天收到屬於您的獎勵金額。</string>
+    <string name="crowdnode_sending_to">發送到 CrowdNode 帳戶</string>
+    <string name="wallet_sending_to">發送到此設備上的達世幣錢包</string>
+    <string name="available_balance">結餘: %s</string>
+    <string name="crowdnode_minimum_deposit">至少存入 %s 來開始賺取收益</string>
+    <string name="crowdnode_minimum_deposit_difference">存入%s 來開始賺錢</string>
+    <string name="crowdnode_first_deposit">首次存款應該超過 %s</string>
+    <string name="crowdnode_staking_info_title">質押如何運作</string>
+    <string name="crowdnode_staking_info_message">如果您的 CrowdNode 帳戶擁有超過 %s 就會開始賺錢</string>
+    <string name="crowdnode_verify_api_address">驗證您的 API 達世幣位址</string>
+    <string name="crowdnode_how_to_verify">如何確認您的 API 達世幣位址</string>
+    <string name="crowdnode_how_to_verify_description1">從您當前用於 CrowdNode 帳戶的主要達世幣位址發送 %s Dash</string>
+    <string name="crowdnode_how_to_verify_description2">到此設備上達世幣錢包中為您的 CrowdNode 帳戶指定的達世幣位址</string>
+    <string name="crowdnode_how_to_verify_description3">我們將自動檢測此交易並將相同的金額轉移到您的 CrowdNode 帳戶。之後，您將能夠在此設備上的達世幣錢包中進行存款和提款。</string>
+    <string name="button_show_qr">顯示二維碼</string>
+    <string name="scan_qr">掃描二維碼</string>
+    <string name="qr_contains_request">此二維碼已包含 %s 達世幣的付款請求</string>
+    <string name="verification_required">需要驗證</string>
+    <string name="validating_address">正在核實位址…</string>
+    <string name="crowdnode_address_validated">您的 CrowdNode 地址已經過核實，但需要驗證。</string>
+    <string name="crowdnode_address_confirmed">您的 CrowdNode 位址已確認。</string>
+    <string name="crowdnode_bad_confirmation">從錯誤的主位址發送確認</string>
+    <string name="crowdnode_online_account_details_title">有關您的在線帳戶的信息</string>
+    <string name="crowdnode_online_account_details_primary">您當前用於 CrowdNode 帳戶的主要達世幣位址</string>
+    <string name="crowdnode_online_account_details_api">此設備上達世幣錢包中為您的 CrowdNode 帳戶指定的達世幣位址</string>
+    <string name="crowdnode_reset_address">重設位址</string>
+
+    </resources>

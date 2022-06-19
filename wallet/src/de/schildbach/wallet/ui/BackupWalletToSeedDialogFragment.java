@@ -256,7 +256,7 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
         List<String> mnemonicCode = seed.getMnemonicCode();
         String[] seedArr = new String[mnemonicCode.size()];
         seedArr = mnemonicCode.toArray(seedArr);
-        Intent intent = VerifySeedActivity.Companion.createIntent(activity, seedArr);
+        Intent intent = VerifySeedActivity.Companion.createIntent(activity, seedArr, true);
         startActivity(intent);
     }
 
@@ -316,7 +316,7 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
                     pinRetryController.failedAttempt(pin);
                     privateKeyBadPasswordView.setVisibility(View.VISIBLE);
                     privateKeyBadPasswordView.setText(getString(R.string.wallet_lock_wrong_pin,
-                            pinRetryController.getRemainingAttemptsMessage(getContext())));
+                            pinRetryController.getRemainingAttemptsMessage(getResources())));
                     privateKeyPasswordView.setEnabled(true);
                     privateKeyPasswordView.requestFocus();
                     showMnemonicSeedButton.setText(getText(R.string.backup_wallet_to_seed_show_recovery_phrase));
@@ -332,12 +332,9 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
     private void showPasswordViewGroup(boolean show) {
         if (show) {
             seedViewGroup.setVisibility(View.GONE);
-            privateKeyPasswordView.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (isAdded()) {
-                        KeyboardUtil.showSoftKeyboard(getActivity(), privateKeyPasswordView);
-                    }
+            privateKeyPasswordView.post(() -> {
+                if (isAdded()) {
+                    KeyboardUtil.showSoftKeyboard(getActivity(), privateKeyPasswordView);
                 }
             });
         } else {

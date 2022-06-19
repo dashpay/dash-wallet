@@ -69,7 +69,6 @@
     <string name="receive_enter_amount_message">Indiquez le montant à recevoir</string>
     <string name="receive_enter_amount_button">Indiquez le montant</string>
     <string name="receive_share_button">Partager</string>
-    <string name="receive_copied">Copié</string>
 
     <string name="pay_title">Envoyer</string>
     <string name="history_title">Historique</string>
@@ -119,8 +118,7 @@
     <string name="import_export_keys_dialog_password_phrase">La phrase de récupération va ici.</string>
     <string name="preferences_report_issue_summary">Collectez informations de votre problème et email aux développeurs.</string>
     <string name="navigation_configuration">Configuration</string>
-    <string name="button_copy_address">Copiez addrese</string>
-    <string name="request_coins_clipboard_address_msg">Adresse Dash copiée dans le presse-papiers</string>
+    <string name="request_coins_clipboard_address_msg">Adresse Dash copiée dans le presse-papier</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Afficher </string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" n\'est pas un mot de phrase de récupération</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">La phrase de récupération doit avoir 12 mots</string>
@@ -153,16 +151,19 @@
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d tentative restante</item>
+        <item quantity="many">%d tentatives restantes</item>
         <item quantity="other">%d tentatives restantes</item>
     </plurals>
 
     <plurals name="minute">
         <item quantity="one">minute</item>
+        <item quantity="many">minutes</item>
         <item quantity="other">minutes</item>
     </plurals>
 
     <plurals name="hour">
         <item quantity="one">heure</item>
+        <item quantity="many">heures</item>
         <item quantity="other">heures</item>
     </plurals>
 
@@ -184,6 +185,8 @@
     <string name="notification_transactions_channel_description">Recevoir des alertes sur les transactions entrantes.</string>
     <string name="notification_synchronization_channel_name">Synchronisation</string>
     <string name="notification_synchronization_channel_description">Affiche une notification quand l\'application se synchronise au réseau.</string>
+    <string name="notification_generic_channel_name">Notifications génériques</string>
+    <string name="notification_generic_channel_description">Autres événements Dash Wallet</string>
     <string name="notification_push_channel_name">Notifications</string>
     <string name="notification_push_channel_description">Montre les notifications push envoyées à vous par Dash</string>
     <string name="notification_settings_title">Notifications</string>
@@ -207,7 +210,6 @@
     <string name="preferences_enable_payment_request_title">BIP70 pour scanner-pour-payer</string>
 
     <string name="verify_continue">Continuer</string>
-    <string name="verify">Vérifier</string>
     <string name="verify_backup_wallet">Sauvegarder le portefeuille</string>
     <string name="verify_show_recovery_phrase">Voir la phase de récupération</string>
     <string name="verify_secure_now">Sécuriser le portefeuille maintenant</string>
@@ -329,7 +331,6 @@
     <string name="welcome_screen_subtitle_3">Gardez un contrôle complet et personnalisez votre portefeuille selon vos besoins</string>
 
     <string name="sync_status_wait">Veuillez attendre la fin de la synchronisation</string>
-    <string name="sync_status_syncing_title">Synchronisation %1$d</string>
     <string name="sync_status_syncing_sub_title">avec la blockchain Dash</string>
     <string name="sync_status_unable_to_connect">Impossible de se connecter</string>
     <string name="sync_status_check_connection">Vérifier votre connexion</string>
@@ -338,7 +339,6 @@
 
     <string name="appwidget_wallet_not_ready">Veuillez configurer votre portefeuille</string>
 
-    <string name="payment_request_please_wait_title">Veuillez patienter</string>
     <string name="payment_request_please_wait_message">Connexion au serveur de paiement…</string>
     <string name="payment_request_unable_to_connect">Impossible de se connecter</string>
     <string name="payment_request_unable_to_send">Impossible d\'envoyer</string>
@@ -369,4 +369,13 @@
     <string name="wallet_encryption_error_message">Il y a un problème à la création du portefeuille. Veuillez le signaler au service d\'assistance.</string>
     <string name="wallet_not_encrypted_error_message">Il y a un problème avec votre portefeuille.\n\nSi vous n\'avez pas de dashs dans ce portefeuille, alors désinstallez puis réinstallez cette application. Cela créera un nouveau portefeuille.\n\nSi vous avez une phrase de restauration ou un fichier de sauvegarde, désinstallez puis réinstallez cette application.\n\nDans les autres cas, veuillez signaler ce problème au service d\'assistance.</string>
 
- </resources>
+    <string name="reset_wallet_title">Voulez-vous vraiment réinitialiser ce portefeuille ?</string>
+    <string name="reset_wallet_message">Si vous réinitialisez votre portefeuille, le seul moyen de retrouver l\'accès est de restaurer le portefeuille avec la phrase de récupération.</string>
+    <string name="positive_reset_text">Oui, réinitialiser le portefeuille</string>
+    <string name="launch_reset_wallet_title">Vous avez un solde positif</string>
+    <string name="launch_reset_wallet_message">Si vous réinitialisez votre portefeuille, vous perdrez tous vos fonds si vous n\'avez pas sauvegardé votre phrase de récupération.</string>
+    <string name="continue_reset">Continuer</string>
+    <string name="launch_reset_wallet_extra_message">Sauvegarder votre phrase de récupération</string>
+    <string name="start_reset_wallet_title">Vous pouvez perdre %s</string>
+    <string name="reset_wallet_text">Réinitialiser le portefeuille</string>
+</resources>

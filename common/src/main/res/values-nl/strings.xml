@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Generic titles/messages -->
     <string name="loading">Laden...</string>
     <string name="loading_error">Er is een fout opgetreden. Probeer het later nog eens.</string>
+    <string name="please_wait_title">Even wachten a.u.b.</string>
     <string name="dash_available">%1$s beschikbaar</string>
     <string name="network_unavailable_title">Netwerk niet beschikbaar</string>
     <string name="network_unavailable_check_connection">Controleer de netwerkverbinding</string>
     <string name="network_unavailable_balance_not_accurate">Het saldo is mogelijk niet correct vanwege de verbroken verbinding</string>
+    <string name="buy_dash">Koop Dash</string>
+    <string name="copied">Gekopieerd</string>
+    <string name="staking_title">Staking</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -26,11 +31,20 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Buttons -->
+    <!-- Generic Titles/Buttons -->
     <string name="button_dismiss">Annuleren</string>
     <string name="network_unavailable_return">Keer terug naar portemonnee</string>
     <string name="button_continue">Doorgaan</string>
+    <string name="button_close">Sluit</string>
+    <string name="button_retry">Probeer opnieuw</string>
+    <string name="button_send_report">Verstuur rapport</string>
+    <string name="button_info">info</string>
+    <string name="button_copy_address">Kopieer adres</string>
+    <string name="button_understand">ik snap het</string>
     <string name="button_okay">Oké</string>
+    <string name="button_share">Deel</string>
+    <string name="verify">Verifiëren</string>
+    <string name="error">Fout</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Zoek</string>
@@ -38,4 +52,6 @@
     <string name="permission_deny">Weiger</string>
     <string name="max">Max</string>
     <string name="select_currency">Selecteer valuta</string>
+    <string name="send_coins_error_dusty_send">bedrag is te klein om te versturen</string>
+    <string name="send_coins_error_insufficient_money">Ontoereikende fondsen</string>
 </resources>

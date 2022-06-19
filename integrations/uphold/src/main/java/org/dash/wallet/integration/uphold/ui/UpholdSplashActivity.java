@@ -22,7 +22,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
@@ -35,6 +34,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
+import org.dash.wallet.common.util.ActivityExtKt;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
@@ -181,7 +181,7 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
     private void openLoginUrl() {
         final String url = String.format(UpholdConstants.INITIAL_URL,
                 UpholdClient.getInstance().getEncryptionKey());
-        UpholdUtilsKt.openCustomTab(this, url);
+        ActivityExtKt.openCustomTab(this, url);
         super.turnOffAutoLogout();
     }
 

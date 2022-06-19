@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-  ~ Copyright 2022 Dash Core Group.
+  ~ Copyright 2021 Dash Core Group.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -20,30 +20,33 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary"
+    android:background="@color/background_primary_light"
     tools:context=".ui.enter_amount.EnterAmountFragment">
 
     <org.dash.wallet.common.ui.enter_amount.AmountView
         android:id="@+id/amount_view"
-        android:layout_height="wrap_content"
         android:layout_width="match_parent"
-        app:layout_constraintStart_toStartOf="parent"
+        android:layout_height="wrap_content"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- Wrapper with background is needed so that the text that
+         goes behind the button looks better at the point of cutoff -->
     <FrameLayout
         android:id="@+id/max_button_wrapper"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="7dp"
         android:layout_marginStart="15dp"
-        android:background="@color/background_primary"
+        android:background="@color/background_primary_light"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/amount_view">
 
         <Button
             android:id="@+id/max_button"
-            style="@style/Button.Secondary.Small.Round"
+            style="@style/Button.Primary.Small.Round"
             android:layout_width="34dp"
             android:layout_height="34dp"
             android:text="@string/max"

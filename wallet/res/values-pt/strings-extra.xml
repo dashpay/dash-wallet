@@ -23,7 +23,7 @@
     <string name="home_balance_show_hint">Toque para mostrar o saldo</string>
     <string name="home_balance_hide_hint">Toque para esconder o saldo</string>
 
-    <string name="dialog_confirm_confirm">Confirme</string>
+    <string name="dialog_confirm_confirm">Confirmar</string>
     <string name="dialog_confirm_pay_to">Enviar para</string>
     <string name="dialog_confirm_secured_by">Protegido por</string>
     <string name="dialog_confirm_fee">Taxa de rede</string>
@@ -60,7 +60,7 @@
     <string name="perm_lock_wipe_wallet">Limpar Carteira</string>
     <string name="perm_lock_close_app">Fechar</string>
 
-    <string name="scan_to_pay_error_dialog_title">Scanear para Enviar</string>
+    <string name="scan_to_pay_error_dialog_title">Enviar</string>
     <string name="scan_to_pay_error_dialog_message">Não contém um endereço ou link de de Dash válido na área de transferência:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Não contém um endereço ou link de de Dash válido na área de transferência.</string>
     <string name="pay_to_confirm_address">Este é o endereço Dash para o qual você deseja enviar o pagamento?</string>
@@ -69,12 +69,11 @@
     <string name="receive_enter_amount_message">Especifique o valor a ser recebido</string>
     <string name="receive_enter_amount_button">Especificar Valor</string>
     <string name="receive_share_button">Compartilhar</string>
-    <string name="receive_copied">Copiado</string>
 
     <string name="pay_title">Enviar</string>
     <string name="history_title">Histórico</string>
     <string name="more_title">Mais</string>
-    <string name="settings_title">Ajustes</string>
+    <string name="settings_title">Configurações</string>
     <string name="security_title">Segurança</string>
     <string name="recover_wallet_title">Restaurar Carteira</string>
     <string name="tools_title">Ferramentas</string>
@@ -119,7 +118,6 @@
     <string name="import_export_keys_dialog_password_phrase">A frase de recuperação vai aqui.</string>
     <string name="preferences_report_issue_summary">Coletar informações sobre seu problema e enviar seu relatório por e-mail para os desenvolvedores.</string>
     <string name="navigation_configuration">Configuração</string>
-    <string name="button_copy_address">Copiar endereço</string>
     <string name="request_coins_clipboard_address_msg">Endereço Dash copiado para a área de transferência</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" não é uma frase de recuperação </string>
@@ -150,21 +148,6 @@
     <string name="wallet_lock_wrong_pin">PIN incorreto! %s</string>
     <string name="wallet_last_attempt">Última tentativa de PIN</string>
     <string name="wallet_last_attempt_message">Outra tentativa fracassada exigirá minha frase de recuperação para recuperar minha carteira</string>
-
-    <plurals name="wallet_lock_attempts_remaining">
-        <item quantity="one">%d tentativa restante</item>
-        <item quantity="other">%d tentativas restantes</item>
-    </plurals>
-
-    <plurals name="minute">
-        <item quantity="one">minuto</item>
-        <item quantity="other">minutos</item>
-    </plurals>
-
-    <plurals name="hour">
-        <item quantity="one">hora</item>
-        <item quantity="other">horas</item>
-    </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">Atualizar</string>
     <string name="encrypt_new_key_chain_dialog_title">Atualize sua carteira</string>
@@ -207,7 +190,6 @@
     <string name="preferences_enable_payment_request_title">Escanear para pagar con BIP70</string>
 
     <string name="verify_continue">Continuar</string>
-    <string name="verify">Verificar</string>
     <string name="verify_backup_wallet">Fazer Backup</string>
     <string name="verify_show_recovery_phrase">Mostrar Frase de Recuperação</string>
     <string name="verify_secure_now">Proteger Carteira Agora</string>
@@ -329,7 +311,6 @@
     <string name="welcome_screen_subtitle_3">Tenha controle completo e customize sua carteira de acordo com suas necessidades</string>
 
     <string name="sync_status_wait">Por favor aguarde que a sincronização termine</string>
-    <string name="sync_status_syncing_title">Sincronizando%1$d</string>
     <string name="sync_status_syncing_sub_title">com a blockchain de Dash</string>
     <string name="sync_status_unable_to_connect">Não foi possível conectar</string>
     <string name="sync_status_check_connection">Verifique sua conexão</string>
@@ -338,7 +319,6 @@
 
     <string name="appwidget_wallet_not_ready">Configure sua carteira por favor</string>
 
-    <string name="payment_request_please_wait_title">Espere por favor</string>
     <string name="payment_request_please_wait_message">Conectando ao Servidor de Pagamentos</string>
     <string name="payment_request_unable_to_connect">Não foi possível conectar-se</string>
     <string name="payment_request_unable_to_send">Não foi possível Enviar</string>
@@ -363,8 +343,12 @@
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recebido</string>
     <string name="sent_transactions">Enviado</string>
+    <string name="set_pin_error_missing_wallet_title">Erro de carteira ausente</string>
+    <string name="set_pin_error_missing_wallet_message">A carteira está ausente. Por favor, informe isso ao Suporte Técnico.</string>
     <string name="wallet_encryption_error_title">Erro de criação de carteira</string>
     <string name="wallet_encryption_error_message">Houve um problema ao criar a carteira. Por favor, informe isso ao Suporte Técnico.</string>
     <string name="wallet_not_encrypted_error_message">Há um problema com sua carteira.\n\nSe você não tiver Dash nesta carteira, desinstale e reinstale este aplicativo. Em seguida, crie uma nova carteira.\n\nSe você tiver uma frase de recuperação ou um arquivo de backup, desinstale este aplicativo e reinstale-o.\n\nCaso contrário, informe ao Suporte.</string>
 
+    <string name="continue_reset">Continuar</string>
+    <string name="reset_wallet_text">Resetar Carteira</string>
 </resources>

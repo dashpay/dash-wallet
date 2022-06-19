@@ -10,7 +10,7 @@
     <string name="set_pin_upgrade_wallet">Обновить кошелёк</string>
     <string name="set_pin_restore_wallet">Восстановить кошелёк</string>
     <string name="set_pin_enter_pin">Введите старый PIN</string>
-    <string name="set_pin_set_pin">Установите PIN</string>
+    <string name="set_pin_set_pin">Установить PIN</string>
     <string name="set_pin_confirm_pin">Подтвердите PIN</string>
     <string name="set_pin_encrypting">Шифрование кошелька</string>
     <string name="set_pin_decrypting">Расшифровка кошелька</string>
@@ -27,7 +27,7 @@
     <string name="dialog_confirm_pay_to">Отправить</string>
     <string name="dialog_confirm_secured_by">Защищено</string>
     <string name="dialog_confirm_fee">Комиссия сети</string>
-    <string name="dialog_confirm_total">Итого</string>
+    <string name="dialog_confirm_total">Всего</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Сохраните кошелёк</string>
@@ -53,7 +53,7 @@
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">Сканировать</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
-    <string name="lock_enter_pin">Введите PIN-код</string>
+    <string name="lock_enter_pin">Введите PIN</string>
     <string name="lock_unlock_with_fingerprint">Используйте свой отпечаток пальца, чтобы разблокировать</string>
 
     <string name="perm_lock_info">Кошелёк заблокирован навсегда</string>
@@ -69,14 +69,13 @@
     <string name="receive_enter_amount_message">Введите сумму для получения</string>
     <string name="receive_enter_amount_button">Введите сумму</string>
     <string name="receive_share_button">Поделиться</string>
-    <string name="receive_copied">Скопировано</string>
 
     <string name="pay_title">Отправить</string>
     <string name="history_title">История</string>
     <string name="more_title">Больше</string>
     <string name="settings_title">Настройки</string>
     <string name="security_title">Безопасность</string>
-    <string name="recover_wallet_title">Восстановить кошелёк</string>
+    <string name="recover_wallet_title">Восстановить кошелек</string>
     <string name="tools_title">Инструменты</string>
 
     <string name="payments_title">Платежи</string>
@@ -96,13 +95,13 @@
     <string name="forgot_pin_recover">Введите фразу восстановления</string>
     <string name="forgot_pin_passphrase_doesnt_match">Эта фраза восстановления не совпадает с заданной при создании этого кошелька.</string>
 
-    <string name="send_coins_auto_lock_feasible">Эту транзакция будет подтверждена немедленно без дополнительной комиссии</string>
+    <string name="send_coins_auto_lock_feasible">Эта транзакция будет подтверждена немедленно без дополнительной комиссии</string>
     <string name="send_coins_auto_lock_not_feasible">Подтверждение может занять несколько минут. Провести мгновенно за %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Подтверждение может занять несколько минут.</string>
 
     <string name="options_paste_from_clipboard_title">Вставить из буфера обмена</string>
 
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Платёж ещё не был передан в сеть.</string>
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Этот платёж ещё не был передан в сеть.</string>
     <string name="transaction_row_message_sent_to_single_peer">Платёж был передан в сеть.</string>
 
     <string name="regular_transaction_info_message">Транзакция не была подтверждена мгновенно.</string>
@@ -114,12 +113,11 @@
     <string name="import_keys_dialog_title_from_seed">Восстановить из фразы восстановления</string>
     <string name="backup_to_seed_wallet_dialog_message">Это Ваша фраза восстановления. Пожалуйста, запишите и сохраните её.</string>
     <string name="backup_wallet_to_seed_dialog_warning">НЕ РАСКРЫВАЙТЕ никому свою фразу восстановления: она даёт доступ ко всем Вашим средствам.</string>
-    <string name="backup_to_seed_wallet_dialog_enter_pin_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН и нажмите "Показать" для просмотра фразы восстановления.</string>
+    <string name="backup_to_seed_wallet_dialog_enter_pin_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН и нажмите \"Показать\" для просмотра фразы восстановления.</string>
     <string name="import_keys_from_seed_dialog_message">Введите свою фразу восстановления.</string>
     <string name="import_export_keys_dialog_password_phrase">Ваша фраза восстановления.</string>
     <string name="preferences_report_issue_summary">Изложите в подробностях вашу проблему и отправьте на электронный адрес разработчиков.</string>
     <string name="navigation_configuration">Конфигурация</string>
-    <string name="button_copy_address">Скопировать адрес</string>
     <string name="request_coins_clipboard_address_msg">Адрес скопирован в буфер обмена</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Показать</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">«%s» не является словом из фразы восстановления</string>
@@ -140,37 +138,16 @@
     <string name="wallet_lock_unlock_to_see_txs_title">Кошелёк закрыт</string>
     <string name="wallet_lock_unlock_to_see_txs_txt">Коснитесь иконки сверху, чтобы открыть свой кошелёк и увидеть историю транзакций.</string>
     <string name="wallet_lock_unlock_dialog_title">Открыть ваш кошелёк</string>
-    <string name="wallet_lock_unlock_dialog_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН-код и нажмите "Открыть".</string>
-    <string name="wallet_lock_reset_wallet_title">Сброс кошелька</string>
+    <string name="wallet_lock_unlock_dialog_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН-код и нажмите \"Открыть\".</string>
+    <string name="wallet_lock_reset_wallet_title">Сбросить кошелек</string>
     <string name="wallet_lock_reset_wallet_message">Вы уверены? Ваш кошелёк будет удалён, а доступ к средствам утерян.\n\nВаш кошелёк Dash можно будет восстановить только с помощью файла восстановления или фразы восстановления.</string>
 
     <string name="wallet_lock_wallet_disabled">Кошелёк отключён</string>
     <string name="wallet_lock_try_again">Попробуйте снова через %1$d%2$s</string>
-    <string name="wallet_lock_reset">Сброс</string>
+    <string name="wallet_lock_reset">Сбросить</string>
     <string name="wallet_lock_wrong_pin">Неправильный ПИН-код! %s</string>
     <string name="wallet_last_attempt">Последняя попытка ввести PIN</string>
     <string name="wallet_last_attempt_message">После ещё одной неудачной попытки для восстановления кошелька потребуется фраза восстановления</string>
-
-    <plurals name="wallet_lock_attempts_remaining">
-        <item quantity="one">Осталось попыток: %d</item>
-        <item quantity="few">Осталось попыток: %d</item>
-        <item quantity="many">Осталось попыток: %d</item>
-        <item quantity="other">Осталось попыток: %d</item>
-    </plurals>
-
-    <plurals name="minute">
-        <item quantity="one">мин</item>
-        <item quantity="few">мин</item>
-        <item quantity="many">мин</item>
-        <item quantity="other">минуты</item>
-    </plurals>
-
-    <plurals name="hour">
-        <item quantity="one">ч</item>
-        <item quantity="few">ч</item>
-        <item quantity="many">ч</item>
-        <item quantity="other">часы</item>
-    </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">Обновление</string>
     <string name="encrypt_new_key_chain_dialog_title">Обновление Вашего кошелька</string>
@@ -210,13 +187,12 @@
     <string name="exchange_rate_missing">Это давний платёж, фиатный эквивалент недоступен.</string>
 
     <string name="preferences_enable_payment_request_summary">Используйте платёжный протокол для платежей через QR-код</string>
-    <string name="preferences_enable_payment_request_title">BIP70 для функции "сканируй и плати"</string>
+    <string name="preferences_enable_payment_request_title">BIP70 для функции \"сканируй и плати\"</string>
 
     <string name="verify_continue">Продолжить</string>
-    <string name="verify">Подтвердить</string>
     <string name="verify_backup_wallet">Резервное копирование кошелька</string>
     <string name="verify_show_recovery_phrase">Показать фразу восстановления</string>
-    <string name="verify_secure_now">Сохранить кошелёк сейчас</string>
+    <string name="verify_secure_now">Сохраните кошелёк</string>
     <string name="verify_it_is_important">Это важно</string>
     <string name="verify_it_is_important_subtitle">Сейчас мы покажем секретный ключ к Вашему кошельку.</string>
     <string name="verify_info_text_1">Эта фраза восстановления - Ваш доступ к средствам на этом кошельке.</string>
@@ -229,7 +205,7 @@
     <string name="verify_seed_write_down_confirmation">Я записал</string>
     <string name="verify_seed_buttons_tip">Пожалуйста, нажмите на слова из Вашей фразы восстановления в правильном порядке</string>
     <string name="verify_seed_success_title">Успешно подтверждено</string>
-    <string name="verify_seed_success_message">Сейчас Ваш кошелёк защищён. Вы можете использовать фразу восстановления в любое время, чтобы получить доступ к Вашему аккаунту на другом устройстве.</string>
+    <string name="verify_seed_success_message">Ваш кошелёк защищён. Вы можете использовать фразу восстановления в любое время, чтобы получить доступ к Вашему кошельку на другом устройстве.</string>
     <string name="verify_no_screenshot_title">Не делайте скриншот</string>
     <string name="verify_no_screenshot_message">Пожалуйста, запишите фразу восстановления в надёжном месте.</string>
     <string name="verify_why_no_screenshot">Почему я не могу сделать скриншот?</string>
@@ -243,7 +219,7 @@
     <string name="view_seed_title">Фраза восстановления</string>
     <string name="transaction_result_view_on_explorer">Посмотреть в Block Explorer</string>
     <string name="transaction_result_paid_successfully">Успешно отправлено</string>
-    <string name="transaction_result_sent_to">Отправить</string>
+    <string name="transaction_result_sent_to">Отправлено</string>
     <string name="transaction_date_and_time">Дата</string>
     <string name="transaction_close">Закрыть</string>
     <string name="transaction_details_amount_received">Полученная сумма</string>
@@ -252,7 +228,7 @@
     <string name="transaction_details_sent_to">Отправлено</string>
     <string name="transaction_details_received_at">Получено на</string>
     <string name="transaction_details_moved_from">Перемещено из</string>
-    <string name="transaction_details_moved_internally_to">Перемещено в </string>
+    <string name="transaction_details_moved_internally_to">Внутренний перевод на</string>
 
     <string name="authenticate_fingerprint_title">Аутентифицировать</string>
     <string name="authenticate_fingerprint_message">Подтвердите отпечаток пальца, чтобы продолжить</string>
@@ -268,7 +244,7 @@
     <string name="menu_settings_subtitle">Валюта по умолчанию, ярлыки, о программе…</string>
     <string name="menu_tools_title">Инструменты</string>
     <string name="menu_tools_subtitle">Импортировать приватный ключ…</string>
-    <string name="menu_local_currency">Местная валюта</string>
+    <string name="menu_local_currency">Валюта</string>
     <string name="menu_rescan_blockchain">Пересканировать блокчейн</string>
     <string name="menu_contact_support_title">Связаться с поддержкой</string>
     <string name="menu_contact_support_subtitle">Сообщить о проблеме</string>
@@ -276,7 +252,7 @@
     <string name="menu_explore_subtitle">Покупайте за DASH в более чем 155 000 магазинах</string>
 
     <string name="tools_address_book">Адресная книга</string>
-    <string name="tools_import_private_key">Импортировать приватный ключ</string>
+    <string name="tools_import_private_key">Импорт ключа</string>
     <string name="tools_network_monitor">Сетевой монитор</string>
     <string name="tools_show_xpub">Расширенный  публичный ключ</string>
 
@@ -335,7 +311,6 @@
     <string name="welcome_screen_subtitle_3">Полный контроль и настройки кошелька для Ваших нужд</string>
 
     <string name="sync_status_wait">Пожалуйста, подождите завершения синхронизации</string>
-    <string name="sync_status_syncing_title">Синхронизация %1$d</string>
     <string name="sync_status_syncing_sub_title">с Dash блокчейн</string>
     <string name="sync_status_unable_to_connect">Не удалось подключиться</string>
     <string name="sync_status_check_connection">Проверьте ваше интернет-соединение</string>
@@ -344,7 +319,6 @@
 
     <string name="appwidget_wallet_not_ready">Пожалуйста, настройте свой кошелек</string>
 
-    <string name="payment_request_please_wait_title">Пожалуйста, подождите</string>
     <string name="payment_request_please_wait_message">Подключение к платёжному серверу</string>
     <string name="payment_request_unable_to_connect">Невозможно подключиться</string>
     <string name="payment_request_unable_to_send">Невозможно отправить</string>
@@ -374,4 +348,7 @@
     <string name="wallet_encryption_error_title">Ошибка при создании кошелька</string>
     <string name="wallet_encryption_error_message">При создании кошелька возникла проблема. Пожалуйста, обратитесь в Службу поддержки.</string>
     <string name="wallet_not_encrypted_error_message">С вашим кошельком возникла проблема.\n\nЕсли в вашем кошельке нет Dash, тогда удалите и установите это приложение заново. Затем создайте новый кошелёк.\n\nЕсли у вас есть фраза восстановления или резервная копия, тогда удалите это приложение и установите его заново.\n\nВ иных случаях обратитесь в Службу поддержки.</string>
+
+    <string name="continue_reset">Продолжить</string>
+    <string name="reset_wallet_text">Сбросить кошелек</string>
 </resources>

@@ -17,18 +17,32 @@
 
 package de.schildbach.wallet.ui.explore
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.ui.BaseMenuActivity
 import de.schildbach.wallet.ui.PaymentsActivity
+import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.NavigationRequest
+import javax.inject.Inject
 
 @AndroidEntryPoint
+@FlowPreview
+@ExperimentalCoroutinesApi
 class ExploreActivity : BaseMenuActivity() {
     private val viewModel: ExploreViewModel by viewModels()
+    @Inject
+    lateinit var blockChainDao: BlockchainStateDao
 
     override fun getLayoutId(): Int {
         return R.layout.activity_explore
@@ -47,8 +61,38 @@ class ExploreActivity : BaseMenuActivity() {
                     val sendCoinsIntent = PaymentsActivity.createIntent(this, 1)
                     startActivity(sendCoinsIntent)
                 }
-                else -> {}
+                NavigationRequest.Staking -> {
+                    handleStakingNavigation()
+                }
+                else -> { }
             }
         }
+    }
+
+    private fun handleStakingNavigation() {
+        lifecycleScope.launch {
+            if (isSynced()) {
+                startActivity(Intent(this@ExploreActivity, StakingActivity::class.java))
+            } else {
+                val openWebsite = AdaptiveDialog.create(
+                    null,
+                    getString(R.string.chain_syncing),
+                    getString(R.string.crowdnode_wait_for_sync),
+                    getString(R.string.button_close),
+                    getString(R.string.crowdnode_open_website)
+                ).showAsync(this@ExploreActivity)
+
+                if (openWebsite == true) {
+                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.crowdnode_website)))
+                    startActivity(browserIntent)
+                }
+            }
+        }
+    }
+
+    private suspend fun isSynced(): Boolean {
+        val blockChainState = blockChainDao.get()
+
+        return blockChainState != null && blockChainState.isSynced()
     }
 }

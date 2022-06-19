@@ -23,18 +23,18 @@
     <string name="explore_merchants_subtitle">Найдите места где принимают DASH в качестве оплаты.</string>
     <string name="explore_atms_title">Банкоматы</string>
     <string name="explore_atms_subtitle">Найдите, где купить или продать DASH и другие криптовалюты за наличные.</string>
+    <string name="explore_staking_subtitle">Застейкайте Dash и получите пассивный доход всего за несколько кликов.</string>
 
     <!-- Search -->
     <string name="explore_search_results">Результаты поиска</string>
     <string name="explore_physical_merchant">Физический магазин</string>
-    <string name="explore_online_merchant">Интернет-магазин</string>
+    <string name="explore_online_merchant">Онлайн</string>
     <string name="explore_both_types_merchant">Интернет-магазин, Физический магазин</string>
     <string name="explore_multiple_locations">+ несколько точек</string>
     <string name="explore_option_all">Все</string>
     <string name="explore_option_buy">Купить</string>
     <string name="explore_option_sell">Продать</string>
     <string name="explore_option_buy_sell">Купить и Продать</string>
-    <string name="explore_menu_info">информация</string>
     <string name="explore_where_to_spend">Где потратить</string>
     <string name="explore_atms">Банкоматы</string>
     <string name="explore_all_states">Все области</string>
@@ -123,14 +123,14 @@
 
     <plurals name="radius_miles">
         <item quantity="one">%d миля</item>
-        <item quantity="few">%d миль</item>
+        <item quantity="few">%d мили</item>
         <item quantity="many">%d миль</item>
         <item quantity="other">%d миль</item>
     </plurals>
 
     <plurals name="radius_kilometers">
         <item quantity="one">%d километр</item>
-        <item quantity="few">%d километров</item>
+        <item quantity="few">%d километра</item>
         <item quantity="many">%d километров</item>
         <item quantity="other">%d километров</item>
     </plurals>

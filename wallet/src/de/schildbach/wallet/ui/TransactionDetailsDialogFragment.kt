@@ -45,7 +45,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        tx = wallet.getTransaction(txId)
+        tx = wallet!!.getTransaction(txId)
         val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
         if (tx != null) {
             transactionResultViewBinder.bind(tx!!)

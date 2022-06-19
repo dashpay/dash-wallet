@@ -21,9 +21,9 @@
     <string name="uphold_logout_explanation_text">Potrzebujesz także wylogować się z przeglądarki na swoim koncie Uphold </string>
     <string name="uphold_go_to_website">Przejdź do strony internetowej</string>
     <string name="uphold_error">Błąd po stronie Uphold</string>
-    <string name="uphold_error_not_logged_in">Portfel stracił połączenie z kontem Uphold. Na następnej stronie kliknij "Połącz z kontem Uphold"</string>
+    <string name="uphold_error_not_logged_in">Portfel stracił połączenie z kontem Uphold. Na następnej stronie kliknij \"Połącz z kontem Uphold\"</string>
     <string name="uphold_error_not_available">Usługa Uphold niedostępna. Spróbuj ponownie później.</string>
-    <string name="uphold_error_report_issue">Proszę wyślij raport o zaistniałym problemie do zespołu wsparcia poprzez wybór "Zgłoś problem" z głównego menu.</string>
+    <string name="uphold_error_report_issue">Proszę wyślij raport o zaistniałym problemie do zespołu wsparcia poprzez wybór \"Zgłoś problem\" z głównego menu.</string>
 
     <string name="uphold_general_error_title">Błąd</string>
     <string name="uphold_api_error_title">Błąd po stronie Uphold</string>

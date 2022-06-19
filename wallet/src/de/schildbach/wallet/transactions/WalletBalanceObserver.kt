@@ -30,11 +30,14 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.Wallet.BalanceType
 
 @ExperimentalCoroutinesApi
-class WalletBalanceObserver(private val wallet: Wallet) {
+class WalletBalanceObserver(
+    private val wallet: Wallet,
+    private val balanceType: BalanceType = BalanceType.ESTIMATED
+) {
     fun observe(): Flow<Coin> = callbackFlow {
         fun emitBalance() {
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
-            trySend(wallet.getBalance(BalanceType.ESTIMATED))
+            trySend(wallet.getBalance(balanceType))
         }
 
         val walletChangeListener = object : ThrottlingWalletChangeListener() {

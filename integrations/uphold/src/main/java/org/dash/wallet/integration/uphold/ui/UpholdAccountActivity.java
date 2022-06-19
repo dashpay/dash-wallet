@@ -35,6 +35,7 @@ import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.ui.CurrencyTextView;
+import org.dash.wallet.common.util.ActivityExtKt;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult;
 import org.dash.wallet.integration.uphold.data.UpholdCard;
@@ -187,7 +188,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
     }
 
     private void openUpholdUrl(String url) {
-        UpholdUtilsKt.openCustomTab(this, url);
+        ActivityExtKt.openCustomTab(this, url);
         super.turnOffAutoLogout();
     }
 
@@ -271,7 +272,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
 
     private void openUpholdToLogout() {
         final String url = UpholdConstants.LOGOUT_URL;
-        UpholdUtilsKt.openCustomTab(this, url);
+        ActivityExtKt.openCustomTab(this, url);
         super.turnOffAutoLogout();
     }
 

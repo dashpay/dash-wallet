@@ -19,7 +19,7 @@
 
     <item
         android:id="@+id/menu_info"
-        android:title="@string/explore_menu_info"
+        android:title="@string/button_info"
         android:icon="@drawable/ic_info"
         app:showAsAction="always"/>
 </menu>

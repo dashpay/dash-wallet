@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="crowdnode_get_started">크라우드노드 시작하기</string>
+    <string name="crowdnode_get_started_hint">스테이킹을 시작하려면 크라우드노드에 계정을 만들거나 기존 계정에 연결하세요.</string>
+    <string name="new_account">새로운 크라우드노드 계정</string>
+    <string name="account_create">계정 생성하기</string>
+    <string name="account_link">기존 계정 연결</string>
+    <string name="crowdnode_login">크라우드노드에 로그인</string>
+    <string name="crowdnode_link">기존의 크라우드노드 계정 연결</string>
+    <string name="required_passphrase_backup">대시 지갑에 암호 문구를 백업해야 합니다</string>
+    <string name="backup_passphrase">암호 문구 백업하기</string>
+    <string name="required_dash_amount">대시 지갑에 최소 %s대시가 있어야 합니다</string>
+    <string name="crowdnode_new_account_warning_1">크라우드노가 이 주소를 당신의 계정 ID로 사용합니다. 이 주소에 연결된 암호 문구를 잃게되는 경우, 이 지갑 안의 자금 및 크라우드노드 계정에 대한 액세스를 잃게 됩니다. </string>
+    <string name="crowdnode_new_account_warning_2">이 지갑의 소유 여부를 검증하기 위해 아주 적은 금액의 대시가 크라우드노드에/로부터 전송됩니다.</string>
+    <string name="crowdnode_link_account_description">이 기기의 크라우드노드에서/로부터 발생하는 모든 거래는 이 기기의 아래 대시 주소로 이루어집니다.</string>
+    <string name="dash_address">대시 주소</string>
+    <string name="primary_dash_address">주요 대시 주소</string>
+    <string name="crowdnode_secure_wallet">크라우드노드 계정을 생성하려면 암호 문구를 백업하세요</string>
+    <string name="crowdnode_secure_wallet_explainer">이 지갑의 암호 문구를 잃어버리고 기기를 잃는 경우 혹은 대시 지갑을 삭제하는 경우에는 크라우드노드의 자금 및 이 지갑 내 자금에 대한 액세스를 잃게 됩니다.</string>
+    <string name="insufficient_funds">진행을 위한 잔액이 부족합니다.</string>
+    <string name="crowdnode_minimum_dash">크라우드노드 인증을 진행하기 위해서는 최소 %s대시가 필요합니다.</string>
+    <string name="crowdnode_agree_to_terms">크라우드노드 %1$s 및 %2$s에 동의합니다</string>
+    <string name="terms_of_use">이용 약관</string>
+    <string name="privacy_policy">개인정보보호정책</string>
+    <string name="crowdnode_account_ready">크라우드노드 계정 설정이 완료되어 지금 사용할 수 있습니다!</string>
+    <string name="notify_when_done">완료되면 종료하고 알림받기</string>
+    <string name="crowdnode_creating">당신의 크라우드노드 계정을 생성하는 중입니다…</string>
+    <string name="accepting_terms">이용 약관에 동의하는 중…</string>
+    <string name="crowdnode_signup_error">당신의 크라우드노드 계정을 생성하지 못했습니다.</string>
+    <string name="crowdnode_deposit_error">당신의 크라우드노드 계정에 입금하지 못했습니다.</string>
+    <string name="crowdnode_withdraw_error">당신의 크라우드노드 계정에서 출금하지 못했습니다.</string>
+    <string name="crowdnode_transfer_error">크라우드노드 송금에 실패했습니다.</string>
+    <string name="crowdnode_deposit_received">크라우드노드 입금이 완료되었습니다.</string>
+    <string name="deposit">입금</string>
+    <string name="deposit_sent">입금 완료</string>
+    <string name="deposit_sent_message">잔고가 업데이트되는 데에는 잠시 시간이 소요될 수 있습니다.</string>
+    <string name="crowdnode_deposit_from_wallet">대시지갑 ➝ 크라우드노드</string>
+    <string name="from_wallet">대시 지갑에서</string>
+    <string name="from_crowdnode">크라우드노드에서</string>
+    <string name="withdraw">출금</string>
+    <string name="withdrawal_requested">출금이 요청됨</string>
+    <string name="withdrawal_requested_message">당신의 자금이 도착하는 데에는 잠시 시간이 소요될 수 있습니다.</string>
+    <string name="crowdnode_withdraw_to_wallet">크라우드노드 ➝ 대시지갑</string>
+    <string name="online_account">온라인 계정</string>
+    <string name="online_account_create">온라인 계정 생성하기</string>
+    <string name="secure_online_account">수입 보호하기</string>
+    <string name="crowdnode_support">크라우드노드 지원</string>
+    <string name="unlink_account">계정 연결 해제</string>
+    <string name="online_account_title">왜 온라인 계정이 필요한가요?</string>
+    <string name="crowdnode_online_synced">현재 대시 지갑과 동기화됨</string>
+    <string name="crowdnode_in_process">처리중…</string>
+    <string name="account_recovery">계정 복구</string>
+    <string name="crowdnode_recovery_info">암호 문구를 잃어버리게 되면 크라우드노드 자금에 다시 액세스하기 위해 다른 방법으로 본인 인증을 해야 합니다.</string>
+    <string name="transaction_history">거래 내역</string>
+    <string name="see_staking_details">입금, 출금 및 리워드 수익에 대한 자세한 정보를 확인할 수 있습니다.</string>
+    <string name="payout_options">지불 옵션</string>
+    <string name="payout_options_details">당신의 리워드 수익을 어떻게 / 언제 받을 것인지 변경할 수 있습니다.</string>
+    <string name="crowdnode_balance">크라우드노드 잔고</string>
+    <string name="crowdnode_your_address_title">크라우드노드에 통합한 당신의 대시 주소입니다</string>
+    <string name="chain_syncing">체인 동기화 중…</string>
+    <string name="crowdnode_wait_for_sync">우리가 당신의 거래 내역을 리뷰할 수 있도록 체인이 완전히 동기화될 때까지 기다려 주세요. 크라우드노드 웹사이트에 방문하셔서 로그인하거나 가입하세요.</string>
+    <string name="crowdnode_open_website">크라우드노드 웹사이트 방문하기</string>
+    <string name="crowdnode_info_title">크라우드노드를 통해 대시 마스터노드의 일원이 되세요</string>
+    <string name="introducing_staking">스테이킹 소개</string>
+    <string name="crowdnode_staking_info">대시 마스터노드에 최소 보증금 0.5대시로 리워드를 받아보세요.</string>
+    <string name="instant_rewards">지금 리워드 받기</string>
+    <string name="daily_rewards_info">매일 당신의 리워드를 받아보세요.</string>
+    <string name="crowdnode_sending_to">크라우드노드 계정에 보내는 중</string>
+    <string name="wallet_sending_to">이 기기의 대시 지갑에 보내는 중</string>
+    <string name="available_balance">잔고: %s</string>
+    <string name="crowdnode_minimum_deposit">최소 보증금 %s로 리워드를 받으세요</string>
+    <string name="crowdnode_minimum_deposit_difference">보증금 %s로 리워드를 받으세요</string>
+    <string name="crowdnode_first_deposit">첫 보증금은 %s 이상이어야 합니다</string>
+    <string name="crowdnode_staking_info_title">스테이킹이 이루어지는 방식</string>
+    <string name="crowdnode_staking_info_message">당신의 크라우드노드 계정에 %s이상 보유하면 보상을 받기 시작합니다.</string>
+    <string name="crowdnode_verify_api_address">API 대시 주소 인증하기</string>
+    <string name="crowdnode_how_to_verify">당신의 API 대시 주소를 확인하는 방법</string>
+    <string name="crowdnode_how_to_verify_description1">당신이 현재 크라우드노드 계정을 위해 사용하고 있는 주요 대시 주소에서 %s대시를 </string>
+    <string name="crowdnode_how_to_verify_description2">이 기기의 대시 지갑 내 크라우드노드 계정에 지정한 대시 주소로 송금합니다.</string>
+    <string name="crowdnode_how_to_verify_description3">이와 같은 거래는 자동으로 감지되어, 동일한 금액이 당신의 크라우드노드 계정으로 송금됩니다. 이후부터 이 기기의 대시 지갑에서 입금 및 출금을 할 수 있게 됩니다.</string>
+    <string name="button_show_qr">QR 코드 보기</string>
+    <string name="scan_qr">QR 코드 스캔</string>
+    <string name="qr_contains_request">이 QR은 이미 %s 대시 지불 요청을 담고 있습니다</string>
+    <string name="verification_required">인증이 필요함</string>
+    <string name="validating_address">주소 확인중…</string>
+    <string name="crowdnode_address_validated">당신의 크라우드노드 주소가 확인되었으나, 인증이 필요합니다.</string>
+    <string name="crowdnode_address_confirmed">당신의 크라우드노드 주소가 확인되었습니다.</string>
+    <string name="crowdnode_bad_confirmation">잘못된 주요 주소로 확인이 전송되었습니다</string>
+    <string name="crowdnode_online_account_details_title">당신의 온라인 계정에 대한 정보</string>
+    <string name="crowdnode_online_account_details_primary">당신이 현재 크라우드노드 계정을 위해 사용하고 있는 주요 대시 주소</string>
+    <string name="crowdnode_online_account_details_api">이 기기의 대시 지갑 내 크라우드노드 계정에 지정한 대시 주소</string>
+    <string name="crowdnode_reset_address">주소 재설정</string>
+
+    </resources>

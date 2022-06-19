@@ -65,8 +65,6 @@
     <string name="send_coins_fragment_pin_label">I-enter ang PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Ang network fee na %s ay mababayaran na.</string>
     <string name="send_coins_fragment_hint_fee_priority">Ang priority fee na %say mababayaran. Kung alintana ang mababang bayad, gamitin lamang ang \'priority\' kung kailangan ng kumpirmasyon sa lalong madaling panahon.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Ang halaga ay sobrang liit para maipadala</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Hindi sapat na pondo</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Ang halaga ng maliit na bayad sa iyong pitaka ay hindi dumagdag sa ipinadalang halaga.</string>
     <string name="send_coins_fragment_hint_replaying">Ang kasalukuyang bayad ay hindi posible dahil ang pitaka ay hindi sync sa network</string>
     <string name="send_coins_fragment_direct_payment_enable">Magbayad ng direkta sa binabayaran.</string>
@@ -290,7 +288,7 @@
     <string name="bitmap_fragment_share">Ipamahagi...</string>
     <string name="extended_public_key_fragment_title">Pinalawak na Public Key</string>
     <string name="extended_public_key_fragment_share">Ibahagi ang xpub...</string>
-    <string name="report_issue_dialog_title_issue">I-report ang isyu</string>
+    <string name="report_issue_dialog_title_issue">I-report ang issue</string>
     <string name="report_issue_dialog_title_crash">Naka-detect ng previous crash</string>
     <string name="report_issue_dialog_title_transaction">I-report ang issue kalakip ang napiling bayad</string>
     <string name="report_issue_dialog_message_issue">Ilarawan ng mabuti ang iyong isyu upang maparami ito sa tamang bilang. Gamitin ang Ingles na lengwahe hanggat maaari. Asahan ang email mula sa Dash Support tungkol sa isyu sa loob ng 24 na oras.</string>
@@ -303,6 +301,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Ilakip ang wallet dump</string>
     <string name="report_issue_dialog_mail_intent_chooser">Magpadala ng report gamit ang...</string>
     <string name="report_issue_dialog_mail_intent_failed">Nabigo ang pagpapadala ng report.</string>
+    <string name="report_transaction_history_export">Export</string>
+    <string name="report_transaction_history_title">CSV Export</string>
+    <string name="report_transaction_history_not_synced_title">CSV Export</string>
+    <string name="report_transaction_history_not_synced_message">Mangyaring maghintay hanggang ang wallet ay ganap na ma-sync bago i-export ang iyong kasaysayan ng transaksyon.</string>
+    <string name="report_transaction_history_message">Ie-export ang buong history ng transaksyon.\n\nAng lahat ng pagbabayad ay ituturing na gastos at lahat ng papasok na transaksyon ay magiging kita. Ang may-ari ng wallet na ito ay may pananagutan sa paggawa ng anumang mga pagsasaayos sa batayan ng gastos sa kanilang napiling sistema ng pag-uulat ng buwis.</string>
+    <string name="report_transaction_history_mail_intent_chooser">Magpadala ng history ng transaksyon gamit ang…</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">Nabigo ang pagpapadala ng history ng transaksyon.</string>
+
     <string name="about_title">Tungkol sa</string>
     <string name="about_version_title">Bersyon</string>
     <string name="about_copyright_title">Copyright</string>
@@ -331,7 +337,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">Buwagin</string>
     <string name="button_cancel">Kanselahin</string>
-    <string name="button_retry">Subukang muli</string>
     <string name="button_help">Tulong</string>
     <string name="button_add">Dagdagan</string>
     <string name="button_delete">Burahin</string>
@@ -341,7 +346,6 @@
     <string name="button_copy">Kopyahin</string>
     <string name="button_copy_request">Kopyahin ang hiling</string>
     <string name="button_paste">I-dikit</string>
-    <string name="button_share">Ibahagi</string>
     <string name="button_set_as_default">Itakda bilang default</string>
     <string name="button_request_coins">Humiling ng Dash</string>
     <string name="button_send_coins">Ipadala ang Dash</string>
@@ -369,7 +373,7 @@
     <string name="dash_wallet">Pitaka</string>
 
     <string name="activity_security_backup_wallet">I-back up ang pitaka sa file</string>
-    <string name="activity_security_view_recovery_phrase">Ipakita ang parirala ng muling pagbawi</string>
+    <string name="activity_security_view_recovery_phrase">Ipakita ang recovery phrase</string>
     <string name="activity_security_advanced">Masusing seguridad</string>
     <string name="activity_security_biometric_auth">Pagpapatunay ng bakas-daliri</string>
     <string name="activity_security_hide_balance">Awtimatikong Pagtago ng Balanse</string>
@@ -385,5 +389,4 @@
     <string name="activity_buy_and_sell_dash_filter">Salain</string>
     <string name="clear_filter">I-clear ang Filter</string>
     <string name="select_currency">Piliin ang Pera</string>
-
 </resources>

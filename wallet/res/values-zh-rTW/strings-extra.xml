@@ -69,7 +69,6 @@
     <string name="receive_enter_amount_message">指定收款金額</string>
     <string name="receive_enter_amount_button">指定金額</string>
     <string name="receive_share_button">分享</string>
-    <string name="receive_copied">已複製</string>
 
     <string name="pay_title">付款</string>
     <string name="history_title">歷史</string>
@@ -119,8 +118,7 @@
     <string name="import_export_keys_dialog_password_phrase">恢復詞組在這裡。</string>
     <string name="preferences_report_issue_summary">收集有關您問題的信息，並將您的報告以電子郵件發方式發送給開發人員。</string>
     <string name="navigation_configuration">配置</string>
-    <string name="button_copy_address">複製位址</string>
-    <string name="request_coins_clipboard_address_msg">達世幣位址複製到剪貼板</string>
+    <string name="request_coins_clipboard_address_msg">達世幣位址已經複製到剪貼簿</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">顯示</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" 不是恢復詞組的字詞</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">恢復詞組必須包含 12 個字</string>
@@ -150,18 +148,6 @@
     <string name="wallet_lock_wrong_pin">錯誤的 PIN碼! %s</string>
     <string name="wallet_last_attempt">最後一次 PIN 嘗試</string>
     <string name="wallet_last_attempt_message">再次失敗的話將需要我的恢復詞組來恢復我的錢包</string>
-
-    <plurals name="wallet_lock_attempts_remaining">
-        <item quantity="other">剩餘%d 次嘗試機會</item>
-    </plurals>
-
-    <plurals name="minute">
-        <item quantity="other">分鐘</item>
-    </plurals>
-
-    <plurals name="hour">
-        <item quantity="other">小時</item>
-    </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">升級</string>
     <string name="encrypt_new_key_chain_dialog_title">升級你的錢包</string>
@@ -204,7 +190,6 @@
     <string name="preferences_enable_payment_request_title">BIP70 用於掃描付費</string>
 
     <string name="verify_continue">繼續</string>
-    <string name="verify">檢查</string>
     <string name="verify_backup_wallet">備用錢包</string>
     <string name="verify_show_recovery_phrase">顯示恢復詞組</string>
     <string name="verify_secure_now">立即確保錢包安全</string>
@@ -326,7 +311,6 @@
     <string name="welcome_screen_subtitle_3">能夠讓您完全控制並根據您的個人需要自定義錢包</string>
 
     <string name="sync_status_wait">請等待同步完成</string>
-    <string name="sync_status_syncing_title">同步中%1$d</string>
     <string name="sync_status_syncing_sub_title">與達世幣區塊鏈</string>
     <string name="sync_status_unable_to_connect">無法連接</string>
     <string name="sync_status_check_connection">Check your connection</string>
@@ -335,7 +319,6 @@
 
     <string name="appwidget_wallet_not_ready">請設置您的錢包</string>
 
-    <string name="payment_request_please_wait_title">請稍等</string>
     <string name="payment_request_please_wait_message">連接到支付服務器</string>
     <string name="payment_request_unable_to_connect">無法連接</string>
     <string name="payment_request_unable_to_send">無法發送</string>
@@ -366,4 +349,6 @@
     <string name="wallet_encryption_error_message">創建錢包時出現問題。請將此報告給支援平台。</string>
     <string name="wallet_not_encrypted_error_message">您的錢包有問題。\n\n如果您的錢包中沒有達世幣，請卸載並重新安裝此應用。然後創建一個新錢包。\n\n如果您有恢復詞組或備份文件，請卸載此應用並重新安裝。\n\n否則，請向支援平台報告。</string>
 
+    <string name="continue_reset">繼續</string>
+    <string name="reset_wallet_text">重置錢包</string>
 </resources>
