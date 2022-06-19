@@ -18,7 +18,7 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/dash_amount_container"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="42dp"
         android:gravity="center"
         android:orientation="horizontal"
         app:layout_constraintStart_toStartOf="@id/left_guideline"
@@ -85,7 +85,7 @@
         app:srcCompat="@drawable/check_animated"
         tools:src="@drawable/ic_transaction_sent" />
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:id="@+id/transaction_details_card"
         style="@style/ViewRaised"
         android:layout_width="match_parent"
@@ -94,9 +94,44 @@
         android:layout_marginTop="20dp"
         android:paddingHorizontal="15dp"
         android:paddingVertical="5dp"
+        android:orientation="vertical"
         android:background="@drawable/rounded_background"
         android:theme="@style/SecondaryBackground"
         app:layout_constraintTop_toBottomOf="@id/fiat_value">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/error_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingVertical="12dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/error_label"
+                style="@style/Caption.Medium.Tertiary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="4dp"
+                android:ellipsize="end"
+                android:lines="1"
+                android:text="@string/reason"
+                android:textSize="13sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/error_description"
+                style="@style/Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="13sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/error_label"
+                tools:text="Nonstandard" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
         <LinearLayout
             android:id="@+id/payment_memo_container"
@@ -105,8 +140,7 @@
             android:orientation="vertical"
             android:paddingVertical="12dp"
             android:visibility="gone"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:visibility="gone">
+            tools:visibility="visible">
 
             <TextView
                 android:id="@+id/payment_memo"
@@ -123,8 +157,7 @@
             android:id="@+id/inputs_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingVertical="12dp"
-            app:layout_constraintTop_toBottomOf="@id/payment_memo_container">
+            android:paddingVertical="12dp">
 
             <LinearLayout
                 android:id="@+id/transaction_input_addresses_container"
@@ -154,8 +187,7 @@
             android:id="@+id/outputs_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingVertical="12dp"
-            app:layout_constraintTop_toBottomOf="@id/inputs_container">
+            android:paddingVertical="12dp">
 
             <LinearLayout
                 android:id="@+id/transaction_output_addresses_container"
@@ -185,8 +217,7 @@
             android:id="@+id/fee_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingVertical="12dp"
-            app:layout_constraintTop_toBottomOf="@id/outputs_container">
+            android:paddingVertical="12dp">
 
             <TextView
                 android:id="@+id/network_fee_label"
@@ -226,8 +257,7 @@
             android:id="@+id/date_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingVertical="12dp"
-            app:layout_constraintTop_toBottomOf="@id/fee_container">
+            android:paddingVertical="12dp">
 
             <TextView
                 android:id="@+id/transaction_date_and_time_label"
@@ -253,40 +283,7 @@
                 app:layout_constraintTop_toTopOf="parent"
                 tools:text="2014-01-19 01:40" />
         </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/error_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingVertical="12dp"
-            android:visibility="gone"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <TextView
-                android:id="@+id/error_label"
-                style="@style/Caption.Medium.Tertiary"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginRight="4dp"
-                android:ellipsize="end"
-                android:lines="1"
-                android:text="@string/reason"
-                android:textSize="13sp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <TextView
-                android:id="@+id/error_description"
-                style="@style/Caption"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:textSize="13sp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/error_label" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
 
     <RelativeLayout
@@ -330,7 +327,8 @@
         android:visibility="gone"
         android:background="@drawable/rounded_ripple_background"
         android:theme="@style/ListViewButtonBackground"
-        app:layout_constraintTop_toBottomOf="@id/transaction_details_card">
+        app:layout_constraintTop_toBottomOf="@id/transaction_details_card"
+        tools:visibility="visible">
 
         <TextView
             android:id="@+id/report_error"

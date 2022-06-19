@@ -49,7 +49,6 @@ open class FullCrowdNodeSignUpTxSet(
         get() = (matchedFilters.firstOrNull { it is CrowdNodeSignUpTx } as? CrowdNodeSignUpTx)?.fromAddresses?.first()
 
     override fun tryInclude(tx: Transaction): Boolean {
-        println(tx.toString())
         if (TransactionUtils.isEntirelySelf(tx, bag)) {
             // We might not have our CrowdNode account address by the time the topUp
             // transaction is found, which means we need to check its `spentBy`

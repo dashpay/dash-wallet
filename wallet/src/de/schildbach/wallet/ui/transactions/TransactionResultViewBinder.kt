@@ -26,6 +26,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,6 +36,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
 import org.dash.wallet.common.ui.CurrencyTextView
 
 /**
@@ -123,9 +125,9 @@ class TransactionResultViewBinder(
         val inputAddresses: List<Address>
         val outputAddresses: List<Address>
 
-        if (tx.isOutgoing()) {
+        if (tx.getValue(wallet).signum() < 0) {
             inputAddresses = TransactionUtils.getFromAddressOfSent(tx)
-            outputAddresses = if (tx.isEntirelySelf) {
+            outputAddresses = if (TransactionUtils.isEntirelySelf(tx, wallet)) {
                 inputsLabel.setText(R.string.transaction_details_moved_from)
                 outputsLabel.setText(R.string.transaction_details_moved_internally_to)
                 tx.allOutputAddresses
@@ -157,7 +159,7 @@ class TransactionResultViewBinder(
 
         dashAmount.setFormat(dashFormat)
         //For displaying purposes only
-        val amountSentOrReceived : Coin? = tx.value?.let {
+        val amountSentOrReceived : Coin? = tx.getValue(wallet)?.let {
             if (isFeeAvailable(tx.fee)) {
                 it.plus(tx.fee)
             } else it
@@ -181,7 +183,7 @@ class TransactionResultViewBinder(
 
         val exchangeRate = tx.exchangeRate
         if (exchangeRate != null) {
-            fiatValue.setFiatAmount(tx.value, exchangeRate, Constants.LOCAL_FORMAT,
+            fiatValue.setFiatAmount(tx.getValue(wallet), exchangeRate, Constants.LOCAL_FORMAT,
                     exchangeRate.fiat?.currencySymbol)
         } else {
             fiatValue.isVisible = false
@@ -209,7 +211,7 @@ class TransactionResultViewBinder(
             errorDescription.text = errorStatusStr
             transactionAmountSignal.text = "-"
         } else {
-            if (tx.isOutgoing()) {
+            if (tx.getValue(wallet).signum() < 0) {
                 checkIcon.setImageResource(if (TransactionUtils.isEntirelySelf(tx, wallet)) {
                     R.drawable.ic_shuffle
                 } else {
@@ -219,14 +221,15 @@ class TransactionResultViewBinder(
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
                 transactionAmountSignal.text = "-"
+                transactionAmountSignal.isVisible = !TransactionUtils.isEntirelySelf(tx, wallet)
             } else {
                 checkIcon.setImageResource(R.drawable.ic_transaction_received)
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.system_green))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
+                transactionAmountSignal.isVisible = true
                 transactionAmountSignal.text = "+"
             }
-            checkIcon.visibility = View.VISIBLE
-            transactionAmountSignal.visibility = View.VISIBLE
+            checkIcon.isVisible = true
         }
 
         feeRow.visibility = if (isFeeAvailable(tx.fee)) View.VISIBLE else View.GONE

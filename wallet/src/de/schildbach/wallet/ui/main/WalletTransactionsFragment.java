@@ -27,6 +27,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -38,6 +39,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
@@ -107,8 +109,9 @@ public class WalletTransactionsFragment extends Fragment implements OnSharedPref
                 TransactionGroupDetailsFragment fragment = new TransactionGroupDetailsFragment(wrapper);
                 fragment.show(getParentFragmentManager(), "transaction_group");
             } else {
+                Sha256Hash txId = wrapper.getTransactions().iterator().next().getTxId();
                 TransactionDetailsDialogFragment transactionDetailsDialogFragment =
-                        TransactionDetailsDialogFragment.newInstance(wrapper.getTransactions().iterator().next().getTxId());
+                        TransactionDetailsDialogFragment.newInstance(txId);
                 transactionDetailsDialogFragment.show(getParentFragmentManager(), null);
             }
 
@@ -175,6 +178,7 @@ public class WalletTransactionsFragment extends Fragment implements OnSharedPref
         viewModel.isBlockchainSynced().observe(getViewLifecycleOwner(), isSynced -> updateSyncState());
         viewModel.getBlockchainSyncPercentage().observe(getViewLifecycleOwner(), percentage -> updateSyncState());
         viewModel.getTransactions().observe(getViewLifecycleOwner(), wrappedTransactions -> {
+            Log.i("CROWDNODE", "observedTransactions");
             loading.setVisibility(View.GONE);
             adapter.submitList(new ArrayList<>(wrappedTransactions));
             updateView();

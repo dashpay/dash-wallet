@@ -26,14 +26,15 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.transactions.TxResourceMapper
-import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionRowBinding
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.transactions.TransactionComparator
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.ui.getRoundedBackground
@@ -46,8 +47,8 @@ class TransactionWrapperAdapter(
     dashFormat: MonetaryFormat,
     resources: Resources,
     private val clickListener: (TransactionWrapper, Int) -> Unit
-) : TransactionsHolderAdapter<TransactionWrapper>(
-    wallet, dashFormat, resources, DiffCallback()
+) : TransactionAdapter<TransactionWrapper>(
+    wallet, dashFormat, resources, DiffCallback(wallet)
 ) {
     override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) {
         val wrapper = getItem(position)
@@ -58,24 +59,38 @@ class TransactionWrapperAdapter(
         }
     }
 
-    class DiffCallback : DiffUtil.ItemCallback<TransactionWrapper>() {
+    class DiffCallback(private val bag: TransactionBag) : DiffUtil.ItemCallback<TransactionWrapper>() {
         override fun areItemsTheSame(oldItem: TransactionWrapper, newItem: TransactionWrapper): Boolean {
-            return oldItem == newItem
+            return oldItem.transactions.first().txId == newItem.transactions.first().txId
         }
 
         override fun areContentsTheSame(oldItem: TransactionWrapper, newItem: TransactionWrapper): Boolean {
-            return oldItem.transactions.first().txId == newItem.transactions.first().txId
+            val isTheSame = if (newItem.transactions.size > 1) {
+                // For wrappers with > 1 tx, only size and value is changing
+                oldItem.transactions.size == newItem.transactions.size &&
+                        oldItem.getValue(bag) == newItem.getValue(bag)
+            } else {
+                // For a single transaction, the status can change
+                Context.propagate(Constants.CONTEXT)
+                val tx1 = oldItem.transactions.first()
+                val tx2 = newItem.transactions.first()
+                Log.i("CROWDNODE", "areContentsTheSame, ixType: ${tx1.confidence.ixType} : ${tx2.confidence.ixType}, txId: ${tx1.txId}")
+                TransactionComparator().compare(tx1, tx2) == 0 &&
+                        tx1.confidence.ixType == tx2.confidence.ixType &&
+                        tx1.confidence.depthInBlocks == tx2.confidence.depthInBlocks
+            }
+            return isTheSame
         }
     }
 }
 
-class TransactionAdapter(
+class SingleTransactionAdapter(
     wallet: Wallet,
     dashFormat: MonetaryFormat,
     resources: Resources,
     private val resourceMapper: TxResourceMapper = TxResourceMapper(),
     private val clickListener: (Transaction, Int) -> Unit
-) : TransactionsHolderAdapter<Transaction>(
+) : TransactionAdapter<Transaction>(
     wallet, dashFormat, resources, DiffCallback()
 ) {
     override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) {
@@ -89,21 +104,24 @@ class TransactionAdapter(
 
     class DiffCallback : DiffUtil.ItemCallback<Transaction>() {
         override fun areItemsTheSame(oldItem: Transaction, newItem: Transaction): Boolean {
-            return oldItem == newItem
+            return oldItem.txId == newItem.txId
         }
 
         override fun areContentsTheSame(oldItem: Transaction, newItem: Transaction): Boolean {
-            return oldItem.txId == newItem.txId
+            Context.propagate(Constants.CONTEXT)
+            return TransactionComparator().compare(oldItem, newItem) == 0 &&
+                    oldItem.confidence.ixType == newItem.confidence.ixType &&
+                    oldItem.confidence.depthInBlocks == newItem.confidence.depthInBlocks
         }
     }
 }
 
-open class TransactionsHolderAdapter<T>(
+open class TransactionAdapter<T>(
     private val wallet: Wallet,
     private val dashFormat: MonetaryFormat,
     private val resources: Resources,
     diffCallback: DiffUtil.ItemCallback<T>
-) : ListAdapter<T, TransactionsHolderAdapter<T>.TransactionViewHolder>(diffCallback) {
+) : ListAdapter<T, TransactionAdapter<T>.TransactionViewHolder>(diffCallback) {
     private val colorSecondaryStatus = resources.getColor(R.color.secondary_status, null)
     private val contentColor = resources.getColor(R.color.content_primary, null)
     private val warningColor = resources.getColor(R.color.content_warning, null)
@@ -129,9 +147,7 @@ open class TransactionsHolderAdapter<T>(
 
         fun bind(txWrapper: TransactionWrapper, wallet: Wallet) {
             binding.root.background = resources.getRoundedRippleBackground(R.style.TransactionRowBackground)
-
-            val tx = txWrapper.transactions.first()
-            Log.i("CROWDNODE", "value: $tx")
+            val tx = txWrapper.transactions.last()
 
             if (txWrapper is FullCrowdNodeSignUpTxSet) {
                 val value = txWrapper.getValue(wallet)
@@ -284,7 +300,7 @@ open class TransactionsHolderAdapter<T>(
                 if (exchangeRate != null) {
                     val exchangeCurrencyCode = GenericUtils.currencySymbol(exchangeRate.fiat.currencyCode)
                     binding.fiatView.setFiatAmount(
-                        value, exchangeRate, de.schildbach.wallet.Constants.LOCAL_FORMAT,
+                        value, exchangeRate, Constants.LOCAL_FORMAT,
                         exchangeCurrencyCode
                     )
                     binding.fiatView.isVisible = true

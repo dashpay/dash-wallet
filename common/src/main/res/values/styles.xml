@@ -724,7 +724,7 @@
     </style>
 
     <style name="Headline5.Bold.Green">
-        <item name="android:textColor">@color/system_red</item>
+        <item name="android:textColor">@color/system_green</item>
     </style>
 
 

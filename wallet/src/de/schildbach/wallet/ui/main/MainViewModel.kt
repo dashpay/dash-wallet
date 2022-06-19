@@ -20,10 +20,10 @@ package de.schildbach.wallet.ui.main
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
@@ -31,7 +31,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Context
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -55,7 +54,6 @@ class MainViewModel @Inject constructor(
     blockchainStateDao: BlockchainStateDao,
     exchangeRatesProvider: ExchangeRatesProvider,
     private val walletData: WalletDataProvider,
-    walletApplication: WalletApplication,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     companion object {
@@ -110,11 +108,14 @@ class MainViewModel @Inject constructor(
 
         _transactionsDirection
             .flatMapLatest { direction ->
-                val filter = TxDirectionFilter(direction, walletApplication.wallet!!)
+                val filter = TxDirectionFilter(direction, walletData.wallet!!)
                 refreshTransactions(filter)
                 walletData.observeTransactions(filter)
                     .debounce(THROTTLE_DURATION)
-                    .onEach { refreshTransactions(filter) }
+                    .onEach {
+                        Log.i("CROWDNODE", "transactions flowed in")
+                        refreshTransactions(filter)
+                    }
             }
             .launchIn(viewModelScope)
 
@@ -213,6 +214,7 @@ class MainViewModel @Inject constructor(
             val wrappedTransactions = walletData.wrapAllTransactions(
                 FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
             ).filter { it.transactions.any { tx -> filter.matches(tx) } }
+
             _transactions.postValue(wrappedTransactions.toSortedSet(TransactionWrapperComparator()))
         }
     }

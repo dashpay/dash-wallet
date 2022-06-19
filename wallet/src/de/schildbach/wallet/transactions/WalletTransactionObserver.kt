@@ -72,6 +72,7 @@ class WalletTransactionObserver(private val wallet: Wallet) {
             override fun onTransactionConfidenceChanged(wallet: Wallet?, tx: Transaction?) {
                 super.onTransactionConfidenceChanged(wallet, tx)
 
+                Log.i("CROWDNODE", "onTransactionConfidenceChanged: ${tx?.confidence?.ixType ?: "null"}, txid: ${tx?.txId ?: "null"}")
                 if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
                     trySend(tx)
                 }
