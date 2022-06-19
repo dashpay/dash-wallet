@@ -6,6 +6,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.script.ScriptException
+import org.dash.wallet.common.transactions.TransactionUtils
 import java.util.ArrayList
 
 fun Transaction.isOutgoing(): Boolean {
@@ -16,7 +17,7 @@ val Transaction.value: Coin?
     get() = getValue(WalletApplication.getInstance().wallet)
 
 val Transaction.isEntirelySelf: Boolean
-    get() = WalletUtils.isEntirelySelf(this, WalletApplication.getInstance().wallet)
+    get() = TransactionUtils.isEntirelySelf(this, WalletApplication.getInstance().wallet!!)
 
 val Transaction.allOutputAddresses: List<Address>
     get() {

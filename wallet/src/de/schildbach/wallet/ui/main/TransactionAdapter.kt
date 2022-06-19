@@ -34,6 +34,7 @@ import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.getRoundedRippleBackground
@@ -169,7 +170,7 @@ open class TransactionsHolderAdapter<T>(
                 val isSent = value.signum() < 0
                 val fee = tx.fee
                 val showFee = isSent && fee != null && !fee.isZero
-                val isInternal = WalletUtils.isEntirelySelf(tx, wallet)
+                val isInternal = TransactionUtils.isEntirelySelf(tx, wallet)
 
                 txCache = TransactionCacheEntry(
                     value, isSent, isInternal, fee, showFee

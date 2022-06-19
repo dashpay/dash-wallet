@@ -20,11 +20,17 @@ package org.dash.wallet.integrations.crowdnode.transactions
 import org.bitcoinj.core.*
 import org.dash.wallet.common.transactions.TransactionComparator
 import org.dash.wallet.common.transactions.TransactionFilter
+import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dashj.bls.Utils
 
-open class FullCrowdNodeSignUpTxSet(networkParams: NetworkParameters): TransactionWrapper {
-    private val crowdNodeTxFilters = listOf(
-        CrowdNodeSignUpTx(networkParams),
+open class FullCrowdNodeSignUpTxSet(
+    networkParams: NetworkParameters,
+    private val bag: TransactionBag
+): TransactionWrapper {
+    private val signUpFilter = CrowdNodeSignUpTx(networkParams)
+    private val crowdNodeTxFilters = mutableListOf(
+        signUpFilter,
         CrowdNodeAcceptTermsResponse(networkParams),
         CrowdNodeAcceptTermsTx(networkParams),
         CrowdNodeWelcomeToApiResponse(networkParams)
@@ -43,6 +49,20 @@ open class FullCrowdNodeSignUpTxSet(networkParams: NetworkParameters): Transacti
         get() = (matchedFilters.firstOrNull { it is CrowdNodeSignUpTx } as? CrowdNodeSignUpTx)?.fromAddresses?.first()
 
     override fun tryInclude(tx: Transaction): Boolean {
+        println(tx.toString())
+        if (TransactionUtils.isEntirelySelf(tx, bag)) {
+            // We might not have our CrowdNode account address by the time the topUp
+            // transaction is found, which means we need to check its `spentBy`
+            for (output in tx.outputs) {
+                output.spentBy?.let {
+                    if (signUpFilter.matches(it.parentTransaction)) {
+                        val accountAddress = signUpFilter.fromAddresses.first()
+                        crowdNodeTxFilters.add(CrowdNodeTopUpTx(accountAddress, bag))
+                    }
+                }
+            }
+        }
+
         val matchedFilter = crowdNodeTxFilters.firstOrNull { it.matches(tx) }
 
         if (matchedFilter != null) {

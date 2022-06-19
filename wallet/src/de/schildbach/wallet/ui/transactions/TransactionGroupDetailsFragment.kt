@@ -17,7 +17,6 @@
 package de.schildbach.wallet.ui.transactions
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -72,15 +71,24 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
             binding.detailsMessage.text = getString(R.string.crowdnode_tx_set_explainer)
         }
 
+        val resourceMapper = if (transactionWrapper is FullCrowdNodeSignUpTxSet) {
+            CrowdNodeTxResourceMapper()
+        } else {
+            TxResourceMapper()
+        }
+
         viewModel.walletData.wallet?.let { wallet ->
             val adapter = TransactionAdapter(
                 wallet,
                 viewModel.dashFormat,
                 resources,
-                CrowdNodeTxResourceMapper()
-            ) { item, index ->
-                Log.i("CROWDNODE", "index: ${index}")
+                resourceMapper
+            ) { item, _ ->
+                TransactionDetailsDialogFragment
+                    .newInstance(item.txId)
+                    .show(parentFragmentManager, "transaction_details")
             }
+
             binding.transactions.adapter = adapter
             val divider = ResourcesCompat.getDrawable(resources, R.drawable.list_divider, null)
             binding.transactions.addItemDecoration(ListDividerDecorator(

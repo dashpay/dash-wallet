@@ -29,6 +29,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.transactions.TransactionUtils;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.WalletUtils;
@@ -63,7 +64,7 @@ public class TxResourceMapper {
                     TransactionConfidence confidence = tx.getConfidence();
                     if (confidence.hasErrors())
                         typeId = R.string.transaction_row_status_error_sending;
-                    else if (WalletUtils.isEntirelySelf(tx, wallet))
+                    else if (TransactionUtils.INSTANCE.isEntirelySelf(tx, wallet))
                         typeId = R.string.transaction_row_status_sent_internally;
                     else if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING ||
                             (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING &&

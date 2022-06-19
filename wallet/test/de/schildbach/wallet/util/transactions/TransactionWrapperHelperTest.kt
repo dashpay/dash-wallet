@@ -23,6 +23,7 @@ import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.TransactionBag
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
@@ -33,7 +34,7 @@ import org.junit.Test
 class TransactionWrapperHelperTest {
     private val networkParams = TestNet3Params.get()
 
-    private val signUpData = "0100000001f15743be9d858f7e6213bca8262bda38b9b59d44747051899533764cd3ca6606000000006a4730440220412fb2a56090bc271d25fd66a095749bc8c9d4b8200716ed452e91870dddc43702206c3b42a0f3ef11da3a563960c9ac208b6d4da02bafecb06eb7a28d29f8b7cb0f012103691a23ea571114b17de25c310e2b5f978551e1547d1fa465fdb6bb72d17ba3adffffffff02204e0200000000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888ac9d6c0b00000000001976a914f57766c540e7e165092e739e115383bd04d2c21888ac00000000"
+    private val signUpData = "0100000001728d9b2f7080e4d404a0d5f1d6f1a1e5e8c08441934d65ceb70c8a0082f006da010000006a473044022054401d60d62e97d7f4ab5e1c826d520dde0282d8519806ff9ad42642dc12930002200e9d850b926191662d6faf3c9d01489d037710d3f43d1f01063dabfa31b4beec012102c9ec4d5cd8547b6811c0ecb9f18a6970443fa103ff30846ec369b5bf06a252a3ffffffff02204e0200000000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888ac9d6c0b00000000001976a9144a37287587b5c58c704ccdee322ab43521d3ecd288ac00000000"
     private val signUpRequestTx = Transaction(networkParams, Utils.HEX.decode(signUpData))
     private val acceptTermsResponseData = "02000000042607763cf6eceb2478060ead38fbb3151b7676b6a243e78b58c420a4ad99cb05010000006a47304402201f95f3a194bd51c521adcd46173d3d5c9bd2dd148004dd1da72e686fd6d946e4022020e34d85cd817aff0663b133915ca2eda5ecd5d5a93fba33f2e9644f1d1513a3012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffffe27ecbb210e98a5d2dba6e3bfa0732b8f6371155c3f8bd0420027d2eb3d24a7d010000006b483045022100c7d5c710ebdf8a2526389347823c3de83b3da498eeac5d1e9001e2e86f4cd0d002200e91ee98abc4f5fb5a78e8e80ed6fd17697a706e7118f87e545d8fdad65a845b012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffff70a65da4b8d4438058c2e8f36811577cdb244d33c7973644386259135e3635a3010000006b483045022100d1c279574bdb0a4c72b6a11247f2945746b50f3a847c9c6925f0badfa8f5827a0220059884f1e9099fcfbb4966cced355e764ddf18bc60a3e03a3804c0c9b20618a4012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffff4605e08cc9758029e89705c41872f063854684b5abf2020e56aca53f161b3fea000000006b483045022100f5afc8c1e722b25532b0a3561f0c37cf80bcd288a40fa0ced53d9a137f06dbc8022067c8ad28484b4a504f74cc7ad754ab4b87f0fbb46a4725e915b625eb000be8fd012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffff02224e0000000000001976a914b889fb3449a36530c85d9689c4773c5cd1ba223388ac51844c8c060000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888acb1f80a00"
     private val acceptTermsResponseTx = Transaction(networkParams, Utils.HEX.decode(acceptTermsResponseData))
@@ -43,12 +44,15 @@ class TransactionWrapperHelperTest {
     private val welcomeResponseTx = Transaction(networkParams, Utils.HEX.decode(welcomeData))
     private val receivedData = "0200000001eb1543c0d57f5baa4f841b9017b7c9e056784b35c3771cbe3dbc7dc3d1f64f8e010000006b483045022100805c75979e175e7ed621ef7d22fe830a21137271e0f6bae52bb42a7386cf936102207770ccac9e5be357731fd01d205a7aec792413145ab966266a2e2f1df7182732012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffff02250fad02000000001976a914f57766c540e7e165092e739e115383bd04d2c21888ac10c9e24c000000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888acdbde0a00"
     private val receivedTx = Transaction(networkParams, Utils.HEX.decode(receivedData))
+    private val topUpData = "0100000001fcb93a5a93588ece9b4b9b8ece83a7afa4e9d2ffd5da0b76ed30c8dff07498ba000000006a47304402203c0226cb59e0b512cea751cf0d44a52a1bb07c9628b26a58221d27665a48eccf0220107831d8e72ef41822bfaac8f5082a18e575f178fa581cc310c9591aefea8dd90121028b14bfe13b4e77af8d2b7e1da61b034bec0e36f9fd4ddea2c02537027ddec68dffffffff02bd850100000000001976a9148b6743bde3b5b5778220891e8572d2475c1c9e0d88aca0bb0d00000000001976a9144a37287587b5c58c704ccdee322ab43521d3ecd288ac00000000"
+    private val topUpTx = Transaction(networkParams, Utils.HEX.decode(topUpData))
 
     @Before
     fun setup() {
-        val signupConnected = "0100000001a14301088210333bd5d0959624b153d6d0dcfd5a67813ec11df4879808b1b6ac000000006a473044022000c5bb339303d916de5765446a93a1513d151407c598f0f7aba79ea62795892b022012f97f16d00876b08d8e55a8c99ad4b009615789c6e4322cdb760f4a649d3ed5012103626557ad8e11b2bf7004683e2bd634579329b00902e67177c768bfa76fc3796bffffffff02a0bb0d00000000001976a914f57766c540e7e165092e739e115383bd04d2c21888acfdd98a00000000001976a914bd065b89a786f96a4529a4dacc0bb4a14268147088ac00000000"
-        val signupConnectedTx = Transaction(networkParams, Utils.HEX.decode(signupConnected))
-        signUpRequestTx.inputs[0].connect(signupConnectedTx.outputs[0])
+        val topUpConnectedData = "0100000001e0ab1c7b601baebdccf03bc55787ad3957d8d13ba9a0a5e4d39c161302194aad000000006a473044022074266bfc5df38745604753ee0a48fa9ed7729c305b97a8816fa1c286da53bf0c02204ae1b458a3a956b8ad1a20c8c4f6c48dfe4ef05169afa77106a1816d07fb5c030121027c974ed291479646948719c1889aee27bc4e29af2a6c7236a92555d2b3348b97ffffffff0240420f00000000001976a91428fd6a3abc9633389c146b44f59243ac1ec3caac88ac629cd223000000001976a9140817e5a5adce5731e83f318fb725bd0e339effef88ac00000000"
+        val topUpConnectedTx = Transaction(networkParams, Utils.HEX.decode(topUpConnectedData))
+        topUpTx.inputs[0].connect(topUpConnectedTx.outputs[0])
+        signUpRequestTx.inputs[0].connect(topUpTx.outputs[1])
 
         val acceptTermsResponseConnectedData = "0100000001fc44931460fcb2a3b366f4b967fb4bde573667c6bcee2eaae198e3c8ed1faff5000000006b483045022100832d93353b7651d8bcf38d9d450de4234e9dc3bd243199ab06fa775cc9096c9502200f7d574aaa4b52ac254aeaf372efa7833f245acefb4e9ae2b81a1faeffcd9016012103f5ca44dde27d2a4219ad6e66617ef2bfbeb11021e761e835021e781505650915ffffffff02204e0200000000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888ac9d6c0b00000000001976a914b889fb3449a36530c85d9689c4773c5cd1ba223388ac00000000"
         val acceptTermsResponseConnectedTx = Transaction(networkParams, Utils.HEX.decode(acceptTermsResponseConnectedData))
@@ -87,16 +91,27 @@ class TransactionWrapperHelperTest {
             acceptTermsResponseTx,
             acceptTermsRequestTx,
             welcomeResponseTx,
+            topUpTx,
             receivedTx
         )
 
-        val crowdNodeWrapper = FullCrowdNodeSignUpTxSet(networkParams)
+        val hash1 = Utils.HEX.decode("28fd6a3abc9633389c146b44f59243ac1ec3caac")
+        val hash2 = Utils.HEX.decode("8b6743bde3b5b5778220891e8572d2475c1c9e0d")
+        val hash3 = Utils.HEX.decode("4a37287587b5c58c704ccdee322ab43521d3ecd2")
+
+        val bagMock = mockk<TransactionBag>()
+        every { bagMock.isPubKeyHashMine(any(), any()) } returns false
+        every { bagMock.isPubKeyHashMine(eq(hash1), any()) } returns true
+        every { bagMock.isPubKeyHashMine(eq(hash2), any()) } returns true
+        every { bagMock.isPubKeyHashMine(eq(hash3), any()) } returns true
+
+        val crowdNodeWrapper = FullCrowdNodeSignUpTxSet(networkParams, bagMock)
         val wrappedTransactions = TransactionWrapperHelper.wrapTransactions(
             allTransactions,
             crowdNodeWrapper
         )
 
         assertEquals("Must have CrowdNode wrapper and 2 anon wrappers:", 3, wrappedTransactions.size)
-        assertEquals("CrowdNode wrapper must have 4 transactions", 4, crowdNodeWrapper.transactions.size)
+        assertEquals("CrowdNode wrapper must have 5 transactions", 5, crowdNodeWrapper.transactions.size)
     }
 }

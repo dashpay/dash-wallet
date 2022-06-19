@@ -17,16 +17,18 @@
 
 package org.dash.wallet.integrations.crowdnode
 
+import android.util.Log
 import junit.framework.TestCase.*
 import org.bitcoinj.core.*
 import org.bitcoinj.params.TestNet3Params
-import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeAcceptTermsTx
-import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeDepositTx
-import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeSignUpTx
-import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWithdrawalReceivedTx
+import org.dash.wallet.integrations.crowdnode.transactions.*
 import org.dashj.bls.Utils
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 
 class CrowdNodeTxFilterTest {
     private val networkParams = TestNet3Params.get()
@@ -139,5 +141,28 @@ class CrowdNodeTxFilterTest {
         notAcceptTermsData = "02000000024b86656e0590d048c666970225930d5806f746646eea0982be81fb354114e60d010000006a4730440220318c122e24d780b6123f001eb7fb006eda71a17067f25c96f067261da2fab4290220351d6a75c278d780550f0a5494082c749ed7737b4905c4383a206154ab4b7f94012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffff476e14bb4fa20abc1fd23ef0ad17c2b65a6cf8959f51cfc412656a1a773c9249000000006a47304402201ebad0b1f3a2df05e9368d94a91970334283a5812537e34302260e8b6e124e180220141defc2b70fbd45ac4bb968ce9d51dc219d33709d2cc9fae2c73d61afe9f654012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffff02244e0000000000001976a9140a5d65dba28a8a9b50b2f0d50da31f24990856fb88ace3b180290a0000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888aca2dc0a00"
         notAcceptTermsTx = Transaction(networkParams, Utils.HEX.decode(notAcceptTermsData))
         assertFalse("Tx matches but should not", filter.matches(notAcceptTermsTx))
+    }
+
+    @Test
+    fun topUpTxFilter_correctMatch() {
+        val transactionBag = mock<TransactionBag> {
+            on { isPubKeyHashMine(any(), any()) } doReturn true
+        }
+        val filter = CrowdNodeTopUpTx(
+            Address.fromBase58(networkParams, "yT5rvr43KgBt2R6opiNznRTajFk2u1Lr2o"),
+            transactionBag
+        )
+        assertFalse("Tx matches but should not", filter.matches(receivedTx))
+
+        val topUpData = "0100000001fcb93a5a93588ece9b4b9b8ece83a7afa4e9d2ffd5da0b76ed30c8dff07498ba000000006a47304402203c0226cb59e0b512cea751cf0d44a52a1bb07c9628b26a58221d27665a48eccf0220107831d8e72ef41822bfaac8f5082a18e575f178fa581cc310c9591aefea8dd90121028b14bfe13b4e77af8d2b7e1da61b034bec0e36f9fd4ddea2c02537027ddec68dffffffff02bd850100000000001976a9148b6743bde3b5b5778220891e8572d2475c1c9e0d88aca0bb0d00000000001976a9144a37287587b5c58c704ccdee322ab43521d3ecd288ac00000000"
+        val topUpTx = Transaction(networkParams, Utils.HEX.decode(topUpData))
+        val connectedData = "0100000001e0ab1c7b601baebdccf03bc55787ad3957d8d13ba9a0a5e4d39c161302194aad000000006a473044022074266bfc5df38745604753ee0a48fa9ed7729c305b97a8816fa1c286da53bf0c02204ae1b458a3a956b8ad1a20c8c4f6c48dfe4ef05169afa77106a1816d07fb5c030121027c974ed291479646948719c1889aee27bc4e29af2a6c7236a92555d2b3348b97ffffffff0240420f00000000001976a91428fd6a3abc9633389c146b44f59243ac1ec3caac88ac629cd223000000001976a9140817e5a5adce5731e83f318fb725bd0e339effef88ac00000000"
+        val connectedTx = Transaction(networkParams, Utils.HEX.decode(connectedData))
+        val spentByData = "0100000001728d9b2f7080e4d404a0d5f1d6f1a1e5e8c08441934d65ceb70c8a0082f006da010000006a473044022054401d60d62e97d7f4ab5e1c826d520dde0282d8519806ff9ad42642dc12930002200e9d850b926191662d6faf3c9d01489d037710d3f43d1f01063dabfa31b4beec012102c9ec4d5cd8547b6811c0ecb9f18a6970443fa103ff30846ec369b5bf06a252a3ffffffff02204e0200000000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888ac9d6c0b00000000001976a9144a37287587b5c58c704ccdee322ab43521d3ecd288ac00000000"
+        val spentByTx = Transaction(networkParams, Utils.HEX.decode(spentByData))
+        topUpTx.inputs[0].connect(connectedTx.outputs[0])
+        topUpTx.outputs[1].markAsSpent(spentByTx.inputs[0])
+
+        assertTrue("TopUp Tx does not match", filter.matches(topUpTx))
     }
 }

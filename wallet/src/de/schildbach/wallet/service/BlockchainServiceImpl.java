@@ -84,6 +84,7 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.NotificationService;
 import org.dash.wallet.common.transactions.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.TransactionFilter;
+import org.dash.wallet.common.transactions.TransactionUtils;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationHandler;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi;
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeDepositReceivedResponse;
@@ -242,7 +243,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             transactionsReceived.incrementAndGet();
 
 
-            final Address address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
+            final Address address = TransactionUtils.INSTANCE.getWalletAddressOfReceived(tx, wallet);
             final Coin amount = tx.getValue(wallet);
             final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
             final boolean isRestoringBackup = application.getConfiguration().isRestoringBackup();

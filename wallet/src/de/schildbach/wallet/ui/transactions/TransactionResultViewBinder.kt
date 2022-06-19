@@ -34,6 +34,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.ui.CurrencyTextView
 
 /**
@@ -123,18 +124,18 @@ class TransactionResultViewBinder(
         val outputAddresses: List<Address>
 
         if (tx.isOutgoing()) {
-            inputAddresses = WalletUtils.getFromAddressOfSent(tx)
+            inputAddresses = TransactionUtils.getFromAddressOfSent(tx)
             outputAddresses = if (tx.isEntirelySelf) {
                 inputsLabel.setText(R.string.transaction_details_moved_from)
                 outputsLabel.setText(R.string.transaction_details_moved_internally_to)
                 tx.allOutputAddresses
             } else {
                 outputsLabel.setText(R.string.transaction_details_sent_to)
-                WalletUtils.getToAddressOfSent(tx, wallet)
+                TransactionUtils.getToAddressOfSent(tx, wallet)
             }
         } else {
             inputAddresses = arrayListOf()
-            outputAddresses = WalletUtils.getToAddressOfReceived(tx, wallet)
+            outputAddresses = TransactionUtils.getToAddressOfReceived(tx, wallet)
             outputsLabel.setText(R.string.transaction_details_received_at)
         }
 
@@ -209,7 +210,7 @@ class TransactionResultViewBinder(
             transactionAmountSignal.text = "-"
         } else {
             if (tx.isOutgoing()) {
-                checkIcon.setImageResource(if (WalletUtils.isEntirelySelf(tx, wallet)) {
+                checkIcon.setImageResource(if (TransactionUtils.isEntirelySelf(tx, wallet)) {
                     R.drawable.ic_shuffle
                 } else {
                     R.drawable.ic_transaction_sent

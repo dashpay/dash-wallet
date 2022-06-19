@@ -63,6 +63,7 @@ import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.LinuxSecureRandom;
@@ -94,6 +95,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InvalidObjectException;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
@@ -513,7 +515,12 @@ public class WalletApplication extends BaseWalletApplication
     }
 
     @Override
-    public Wallet getWalletData() {
+    @NonNull
+    public TransactionBag getTransactionBag() {
+        if (wallet == null) {
+            throw new IllegalStateException("Wallet is null");
+        }
+
         return wallet;
     }
 

@@ -209,9 +209,11 @@ class MainViewModel @Inject constructor(
     }
 
     private fun refreshTransactions(filter: TransactionFilter) {
-        val wrappedTransactions = walletData.wrapAllTransactions(
-            FullCrowdNodeSignUpTxSet(walletData.networkParameters)
-        ).filter { it.transactions.any { tx -> filter.matches(tx) } }
-        _transactions.postValue(wrappedTransactions.toSortedSet(TransactionWrapperComparator()))
+        walletData.wallet?.let { wallet ->
+            val wrappedTransactions = walletData.wrapAllTransactions(
+                FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
+            ).filter { it.transactions.any { tx -> filter.matches(tx) } }
+            _transactions.postValue(wrappedTransactions.toSortedSet(TransactionWrapperComparator()))
+        }
     }
 }

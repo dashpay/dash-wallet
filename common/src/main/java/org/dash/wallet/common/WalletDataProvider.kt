@@ -20,10 +20,7 @@ package org.dash.wallet.common
 import android.app.Activity
 import androidx.lifecycle.LiveData
 import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.*
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.services.LeftoverBalanceException
@@ -32,8 +29,10 @@ import org.dash.wallet.common.transactions.TransactionWrapper
 import kotlin.jvm.Throws
 
 interface WalletDataProvider {
-    // The wallet is in here temporary. Do not use from the feature modules.
+    // The wallet is in here temporary. In the feature modules, use transactionBag instead.
     val wallet: Wallet?
+
+    val transactionBag: TransactionBag
 
     val networkParameters: NetworkParameters
 
@@ -48,8 +47,6 @@ interface WalletDataProvider {
 
     @Deprecated("Inject Configuration instead")
     fun defaultCurrencyCode(): String
-
-    fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
 
     fun observeBalance(balanceType: Wallet.BalanceType = Wallet.BalanceType.ESTIMATED): Flow<Coin>
 
