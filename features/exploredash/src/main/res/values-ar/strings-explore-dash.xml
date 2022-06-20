@@ -57,10 +57,10 @@
 
     <plurals name="explore_atm_amount">
         <item quantity="zero">%d أجهزة الصراف الآلي</item>
-        <item quantity="one">%d أجهزة الصراف الآلي</item>
-        <item quantity="two">%d أجهزة الصراف الآلي</item>
-        <item quantity="few">%d أجهزة الصراف الآلي</item>
-        <item quantity="many">%d أجهزة الصراف الآلي</item>
+        <item quantity="one">%d جهاز صراف آلي</item>
+        <item quantity="two">%d جهازان الصراف الآلي</item>
+        <item quantity="few">%dأجهزة الصراف الآلي</item>
+        <item quantity="many">%dأجهزة الصراف الآلي</item>
         <item quantity="other">%d أجهزة الصراف الآلي</item>
     </plurals>
 
@@ -126,19 +126,19 @@
     </string-array>
 
     <plurals name="radius_miles">
-        <item quantity="zero">%d اميال</item>
-        <item quantity="one">1%dميل</item>
-        <item quantity="two">%d اميال</item>
-        <item quantity="few">%d اميال</item>
-        <item quantity="many">%d اميال</item>
+        <item quantity="zero">%dاميال</item>
+        <item quantity="one">%dميل</item>
+        <item quantity="two">%dاميال</item>
+        <item quantity="few">%dاميال</item>
+        <item quantity="many">%dاميال</item>
         <item quantity="other">%d اميال</item>
     </plurals>
 
     <plurals name="radius_kilometers">
-        <item quantity="zero">%d كيلومترات</item>
+        <item quantity="zero">%d كيلومتر</item>
         <item quantity="one">%d كيلومتر</item>
-        <item quantity="two">%d كيلومترات</item>
-        <item quantity="few">%d كيلومترات</item>
+        <item quantity="two">%dكيلومتر</item>
+        <item quantity="few">%dكيلومترات</item>
         <item quantity="many">%d كيلومترات</item>
         <item quantity="other">%d كيلومترات</item>
     </plurals>

@@ -155,7 +155,7 @@
     <string name="transaction_row_message_received_dust">Dieser kleine Betrag kann vermutlich nie wirtschaftlich ausgegeben werden.</string>
     <string name="transaction_row_message_received_pay_to_many">Diese Zahlung war neben Dir auch an andere gerichtet gewesen, was die App im Laufe der Zeit verlangsamen kann. Versuche wenn möglich Zahlungen zu empfangen, die nur an Dich gerichtet sind.</string>
     <string name="transaction_row_message_received_rbf">Die Zahlung verzögert sich, da der Sender eine unsichere Transaktionsmethode verwendet hat.</string>
-    <string name="transaction_row_status_received">Erhalten</string>
+    <string name="transaction_row_status_received">Empfangen</string>
     <string name="transaction_row_status_sent">Gesendet</string>
     <string name="transaction_row_status_sending">Versenden</string>
     <string name="transaction_row_status_sent_internally">Intern</string>
@@ -335,7 +335,7 @@
     <string name="appwidget_wallet_balance_title">Dash-Guthaben</string>
 
     <!-- generic buttons -->
-    <string name="button_ok">OK</string>
+    <string name="button_ok">Ok</string>
     <string name="button_dismiss">Schließen</string>
     <string name="button_cancel">Abbrechen</string>
     <string name="button_help">Hilfe</string>
@@ -347,7 +347,7 @@
     <string name="button_copy">Kopieren</string>
     <string name="button_copy_request">Anfrage kopieren</string>
     <string name="button_paste">Einfügen</string>
-    <string name="button_set_as_default">Als Standard festsetzen</string>
+    <string name="button_set_as_default">Als Standard setzen</string>
     <string name="button_request_coins">Dash anfordern</string>
     <string name="button_send_coins">Dash senden</string>
     <string name="button_pay">Senden</string>

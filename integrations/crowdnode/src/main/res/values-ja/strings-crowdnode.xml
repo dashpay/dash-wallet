@@ -19,8 +19,12 @@
     <string name="crowdnode_get_started_hint">ステーキングを開始するには、CrowdNodeにアカウントを作成するか、既存のアカウントに接続します。</string>
     <string name="new_account">CrowdNodeの新規アカウント</string>
     <string name="account_create">アカウントの作成</string>
+    <string name="account_create_response">アカウント作成の対応</string>
+    <string name="accept_terms">規約に同意する</string>
+    <string name="accept_terms_response">規約の同意の対応</string>
     <string name="account_link">既存アカウントへのリンク</string>
     <string name="crowdnode_login">CrowdNodeにログイン</string>
+    <string name="crowdnode_signup">CrowdNodeにサインアップ</string>
     <string name="crowdnode_link">既存のCrowdNodeアカウントへのリンク</string>
     <string name="required_passphrase_backup">Dash Walletにパスフレーズをバックアップしておく必要があります</string>
     <string name="backup_passphrase">バックアップのパスフレーズ</string>
@@ -39,8 +43,8 @@
     <string name="privacy_policy">プライバシーポリシー</string>
     <string name="crowdnode_account_ready">お客様のCrowdNodeアカウントが設定され、ご利用いただけるようになりました。</string>
     <string name="notify_when_done">完了したら、閉じて通知する</string>
-    <string name="crowdnode_creating">お客様のCrowdNodeアカウントを作成中…</string>
-    <string name="accepting_terms">利用規約に同意しています…</string>
+    <string name="crowdnode_creating">CrowdNodeのアカウントを作成中...</string>
+    <string name="accepting_terms">利用規約に同意しています...</string>
     <string name="crowdnode_signup_error">お客様のCrowdNodeアカウントを作成できませんでした。</string>
     <string name="crowdnode_deposit_error">お客様のCrowdNodeアカウントに入金できませんでした。</string>
     <string name="crowdnode_withdraw_error">お客様のCrowdNodeアカウントから出金できませんでした。</string>
@@ -58,12 +62,15 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNodeからDashWalletへ</string>
     <string name="online_account">オンラインアカウント</string>
     <string name="online_account_create">オンラインアカウントを作成</string>
-    <string name="secure_online_account">お客様の資産を保護</string>
+    <string name="secure_online_account">貯蓄の保護</string>
+    <string name="crowdnode_signup_to_finish">サインアップしてアカウント設定を完了する</string>
+    <string name="online_account_create_full">CrowdNodeのオンラインアカウントを作成</string>
+    <string name="online_account_email_privacy">メールはDash Walletには保存されず、Crowdnodeにのみ送信されることにご留意ください。</string>
     <string name="crowdnode_support">CrowdNodeのサポート</string>
     <string name="unlink_account">アカウント連携の解除</string>
     <string name="online_account_title">なぜオンラインアカウントが必要なのですか。</string>
     <string name="crowdnode_online_synced">現在使用しているDash Walletと同期</string>
-    <string name="crowdnode_in_process">処理中…</string>
+    <string name="crowdnode_in_process">処理中...</string>
     <string name="account_recovery">アカウントの復旧</string>
     <string name="crowdnode_recovery_info">パスフレーズを紛失した場合、他の方法で本人確認を行うことで、再びCrowdNodeの資金にアクセスできるようになります。</string>
     <string name="transaction_history">取引履歴</string>
@@ -71,8 +78,8 @@
     <string name="payout_options">支払い方法</string>
     <string name="payout_options_details">お客様は、報酬の支払い方法や支払い時期を変更できます。</string>
     <string name="crowdnode_balance">CrowdNodeの残高</string>
-    <string name="crowdnode_your_address_title">CrowdNodeとの連携で使用したDashアドレスはこちらです。</string>
-    <string name="chain_syncing">チェーンを同期中…</string>
+    <string name="crowdnode_your_address_title">CrowdNodeアカウントに紐付いたDashアドレスはこちらです。</string>
+    <string name="chain_syncing">チェーンを同期中...</string>
     <string name="crowdnode_wait_for_sync">チェーンが完全に同期されるまで待ち、お客様の取引履歴を確認できるようにします。CrowdNodeのウェブサイトにアクセスし、ログインまたはサインアップしてください。</string>
     <string name="crowdnode_open_website">CrowdNodeのウェブサイトへ移動</string>
     <string name="crowdnode_info_title">CrowdNodeでDashのMasterNodeに加入します</string>
@@ -97,13 +104,20 @@
     <string name="scan_qr">QRをスキャンする</string>
     <string name="qr_contains_request">このQRには、すでに%sDashの支払いリクエストが含まれています</string>
     <string name="verification_required">認証が必要です</string>
-    <string name="validating_address">アドレスを有効化中…</string>
+    <string name="validating_address">アドレスを有効化中...</string>
     <string name="crowdnode_address_validated">お客様のCrowdNodeアドレスが有効化されていますが、認証が必要です。</string>
     <string name="crowdnode_address_confirmed">お客様のCrowdNodeアドレスが確認されました。</string>
     <string name="crowdnode_bad_confirmation">誤ったメインのアドレスから送信された確認メール</string>
     <string name="crowdnode_online_account_details_title">オンラインアカウントに関する情報</string>
     <string name="crowdnode_online_account_details_primary">お客様のCrowdNodeアカウントで使用中のメインのDashアドレス</string>
     <string name="crowdnode_online_account_details_api">このデバイスのDash WalletでCrowdNodeのアカウントに指定されたDashアドレス</string>
-    <string name="crowdnode_reset_address">アドレスの再設定</string>
+    <string name="crowdnode_primary_missing">お客様のアカウントにメインのDashアドレスがありません。CrowdNodeのWebサイトで明記してください。</string>
+    <string name="crowdnode_wait_signed_email">メールが送信されるまでお待ちください...</string>
+    <string name="cannot_send">送信できません。</string>
+    <string name="crowdnode_tx_set_title">なぜこのような取引があるのですか。</string>
+    <string name="crowdnode_tx_set_explainer">お客様のCrowdNodeアカウントは、これらの取引を利用して作成されました。</string>
+    <string name="shuffle_coins">コインを振り分ける</string>
+    <string name="positive_balance_required">Dash Walletに残高が残っている状態にする必要があります。</string>
+    <string name="withdrawal_required_balance">Dash Walletに0.0003Dash以上入金することで、出金が完了します。</string>
 
     </resources>

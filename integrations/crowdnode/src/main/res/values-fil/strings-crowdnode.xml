@@ -39,7 +39,6 @@
     <string name="privacy_policy">Patakaran sa Privacy</string>
     <string name="crowdnode_account_ready">Ang iyong CrowdNode account ay naka-set up at handa nang gamitin!</string>
     <string name="notify_when_done">Isara at ipaalam kapag tapos na ito</string>
-    <string name="crowdnode_creating">Linilikha na ang iyong CrowdNode account…</string>
     <string name="accepting_terms">Tumatanggap ng mga tuntunin sa paggamit…</string>
     <string name="crowdnode_signup_error">Hindi namin magawa ang iyong CrowdNode account.</string>
     <string name="crowdnode_deposit_error">Hindi kami makapagdeposito sa iyong CrowdNode account</string>
@@ -58,7 +57,6 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
     <string name="online_account">Online na Account</string>
     <string name="online_account_create">Lumikha ng Online na Account</string>
-    <string name="secure_online_account">Protektahan ang iyong mga kita</string>
     <string name="crowdnode_support">Suporta sa CrowdNode</string>
     <string name="unlink_account">I-unlink ang Account</string>
     <string name="online_account_title">Bakit kailangan mo ng online na account?</string>
@@ -71,7 +69,6 @@
     <string name="payout_options">Mga Pagpipilian sa Pagbabayad</string>
     <string name="payout_options_details">Maaari mong baguhin kung paano / kailan binabayaran sa iyo ang iyong mga kita sa reward.</string>
     <string name="crowdnode_balance">Balanse sa CrowdNode</string>
-    <string name="crowdnode_your_address_title">Narito ang Dash address na ginamit mo sa pagsasama sa CrowdNode</string>
     <string name="chain_syncing">Nagsi-sync ang chain…</string>
     <string name="crowdnode_wait_for_sync">Maghintay hanggang sa ganap na ma-sync ang chain, para masuri namin ang iyong history ng transaksyon. Bisitahin ang website ng CrowdNode upang mag-log in o mag-sign up.</string>
     <string name="crowdnode_open_website">Pumunta sa website ng CrowdNode</string>
@@ -97,12 +94,11 @@
     <string name="scan_qr">I-scan ang QR</string>
     <string name="qr_contains_request">Ang QR na ito ay naglalaman na ng kahilingan sa pagbabayad para sa %s Dash</string>
     <string name="verification_required">Kailangan ng beripikasyon</string>
-    <string name="validating_address">Pinapatunayan ang address…</string>
+    <string name="validating_address">Pinapatunayan ang address...</string>
     <string name="crowdnode_address_validated">Na-validate na ang iyong CrowdNode address, ngunit kailangan ang pag-verify.</string>
     <string name="crowdnode_address_confirmed">Ang iyong CrowdNode address ay nakumpirma na.</string>
     <string name="crowdnode_bad_confirmation">Ipinadala ang kumpirmasyon mula sa isang maling pangunahing address</string>
     <string name="crowdnode_online_account_details_title">Impormasyon tungkol sa iyong online na account</string>
     <string name="crowdnode_online_account_details_primary">Ang iyong pangunahing Dash address na kasalukuyan mong ginagamit para sa iyong CrowdNode account</string>
     <string name="crowdnode_online_account_details_api">Dash address na itinalaga para sa iyong CrowdNode account sa Dash Wallet sa device na ito</string>
-
-    </resources>
+</resources>

@@ -79,7 +79,7 @@
     <string name="send_coins_fragment_insufficient_money_msg1"> به میزان %s کمبود موجودی دارید. </string>
     <string name="send_coins_fragment_insufficient_money_msg2">آیا می‌خواهید همه موجودی‌تان را بفرستید؟</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">خالی کردن موجودی کیف پول ناموفق بود</string>
-    <string name="send_coins_fragment_state_decrypting">رمزگشایی...</string>
+    <string name="send_coins_fragment_state_decrypting">در حال رمزگشایی...</string>
     <string name="send_coins_preparation_msg">در حال امضاء کردن تراکنش...</string>
     <string name="send_coins_sending_msg">در حال ارسال...</string>
     <string name="send_coins_sent_msg">ارسال شد!</string>
@@ -225,7 +225,7 @@
     <string name="backup_wallet_dialog_password_mismatch">دو گذرواژه همخوانی ندارند!</string>
     <string name="import_export_keys_dialog_show">نمایش گذرواژه</string>
     <string name="import_export_keys_dialog_failure_title">خطا</string>
-    <string name="import_keys_intent_filter_action">بازگردانی کیف پول</string>
+    <string name="import_keys_intent_filter_action">بازیابی کیف پول</string>
     <string name="encrypt_keys_dialog_title">تغییر پین کد</string>
     <string name="encrypt_keys_dialog_message">پرداخت از کیف پول‌تان فقط پس از وارد کردن رمز انتخابی امکان‌پذیر خواهد شد.</string>
     <string name="encrypt_keys_dialog_warning">توجه: حتما باید این رمز را به خاطر بسپارید. از اعداد رایج (نظیر سال تولد) استفاده نکنید. </string>

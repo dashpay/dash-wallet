@@ -11,6 +11,7 @@
     <string name="buy_dash">대시 매수</string>
     <string name="copied">복사됨</string>
     <string name="staking_title">스테이킹</string>
+    <string name="error">오류</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">건지섬 파운드</string>
@@ -31,7 +32,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">제미니 파운드</string>
 
-    <!-- Generic Titles/Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">닫기</string>
     <string name="network_unavailable_return">지갑으로 돌아가기</string>
     <string name="button_continue">계속</string>
@@ -44,7 +45,6 @@
     <string name="button_okay">알겠습니다</string>
     <string name="button_share">공유</string>
     <string name="verify">인증하기</string>
-    <string name="error">오류</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">검색</string>
@@ -54,4 +54,5 @@
     <string name="select_currency">통화 선택</string>
     <string name="send_coins_error_dusty_send">송금액이 너무 적어 전송할 수 없습니다</string>
     <string name="send_coins_error_insufficient_money">잔액 부족</string>
-</resources>
+
+    </resources>

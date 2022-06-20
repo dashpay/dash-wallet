@@ -57,7 +57,7 @@
     <string name="send_coins_fragment_pending">(%s čeka se potvrda)</string>
     <string name="send_coins_fragment_pin_label">Unesite PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Mrežna provizija od %s će biti plaćena.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Prioritetna provizija od %s će biti plaćena. Ako vam je bitna mala provizija koristite \"prioritet\" samo ukoliko vam je bitno da dobijete potvrdu što pre.</string>
+    <string name="send_coins_fragment_hint_fee_priority">Prioritetna provizija od %s će biti plaćena. Ako vam je bitna mala provizija koristite "prioritet" samo ukoliko vam je bitno da dobijete potvrdu što pre.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Iznos zbira malih uplata u vašem novčaniku ne odgovara vrednosti koja se može poslati.</string>
     <string name="send_coins_fragment_direct_payment_enable">Pošalji uplatu primaocu direktno.</string>
     <string name="send_coins_fragment_direct_payment_ack">Direktno slanje vaše uplate je uspešno izvršeno.</string>
@@ -80,8 +80,8 @@
     <string name="send_coins_options_fee_category_priority">Prioritet</string>
     <string name="send_coins_options_empty">Prazan novčanik</string>
     <string name="sweep_wallet_activity_title">Uvezi privatni ključ</string>
-    <string name="sweep_wallet_fragment_intro">Sada ćete prebaciti i odraditi \"sweep\" sa paprinog novčanika ili kupona. Ovim ćete prebaciti sve novčiće sa papira na vaš novčanik na ovom uredjaju. Kada se transakcija potvrdi, taj papir će biti bezvredan i ne bi ga trebalo ponovo upotrebiti iz sigurnosnih razloga.</string>
-    <string name="sweep_wallet_fragment_hint">Papirni novčanici se najčešće koriste kao \"hladno\" skladište. Neki ATM uredjaji štampaju papirni novčanik na potvrdama koje izbacuju umesto da direktno pošalju novčiće na vaš mobilni uredjaj. Ljudi ponekad koriste prethodno napunjene papirne novčanike za slanje iznosa (ovo se ne preporučuje).</string>
+    <string name="sweep_wallet_fragment_intro">Sada ćete prebaciti i odraditi "sweep" sa paprinog novčanika ili kupona. Ovim ćete prebaciti sve novčiće sa papira na vaš novčanik na ovom uredjaju. Kada se transakcija potvrdi, taj papir će biti bezvredan i ne bi ga trebalo ponovo upotrebiti iz sigurnosnih razloga.</string>
+    <string name="sweep_wallet_fragment_hint">Papirni novčanici se najčešće koriste kao "hladno" skladište. Neki ATM uredjaji štampaju papirni novčanik na potvrdama koje izbacuju umesto da direktno pošalju novčiće na vaš mobilni uredjaj. Ljudi ponekad koriste prethodno napunjene papirne novčanike za slanje iznosa (ovo se ne preporučuje).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Započnite tako što ćete skenirati privatni ključ sa papirnog novčanika. Iskoristite dugme za akciju sa kamerom.</string>
     <string name="sweep_wallet_fragment_encrypted">Privatni ključ je zaštićen šifrom.</string>
     <string name="sweep_wallet_fragment_balance">Stanje za prebacivanje i čišćenje</string>
@@ -270,7 +270,7 @@
     <string name="about_category_credits">Ova aplikacija koristi...</string>
     <string name="about_credits_bitcoinj_title">dashj %s, implementacija Dash protokola</string>
     <string name="about_credits_zxing_title">ZXing, biblioteka za obradu QR-kodova</string>
-    <string name="about_credits_icon_title">Ova aplikacija koristi ikonu koju je napravio \"bitboy\"</string>
+    <string name="about_credits_icon_title">Ova aplikacija koristi ikonu koju je napravio "bitboy"</string>
     <string name="about_credits_scrypt_title">Scrypt, implementaciju odradili Will Glozer i Colin Percival</string>
     <string name="about_market_app_title">Google Play stranica</string>
     <string name="about_market_app_summary">Napisite recenziju ili ocenite aplikaciju</string>

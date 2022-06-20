@@ -62,7 +62,7 @@
     <string name="send_coins_fragment_receiving_address_complex">复杂\n地址</string>
     <string name="send_coins_fragment_pending">(%s 正在等待确认)</string>
     <string name="send_coins_fragment_amount_label">要发送的数额</string>
-    <string name="send_coins_fragment_pin_label">输入PIN</string>
+    <string name="send_coins_fragment_pin_label">输入 PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">将支付 %s 的网络费用.</string>
     <string name="send_coins_fragment_hint_fee_priority">将支付 %s 作为优先确认费用. 如果您不在意些许的手续费, 使用\'优先确认\'可以使您的交易尽快完成确认.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">您钱包中的微小付款金额无法达到可支付的金额.</string>
@@ -84,7 +84,7 @@
     <string name="send_coins_sent_msg">已发送!</string>
     <string name="send_coins_failed_msg">失败!</string>
     <string name="send_coins_error_msg">支付Dash时出现了问题!</string>
-    <string name="send_coins_options_fee_category">手续费</string>
+    <string name="send_coins_options_fee_category">费用</string>
     <string name="send_coins_options_fee_category_economic">经济的</string>
     <string name="send_coins_options_fee_category_priority">优先级</string>
     <string name="send_coins_options_empty">清空钱包</string>
@@ -142,7 +142,7 @@
     <string name="edit_address_book_entry_dialog_address_label">地址</string>
     <string name="edit_address_book_entry_dialog_label_label">名称</string>
     <string name="edit_address_book_entry_dialog_button_edit">保存</string>
-    <string name="transaction_row_fee">网络手续费</string>
+    <string name="transaction_row_fee">网络费用</string>
     <string name="transaction_row_message_purpose_key_rotation">该项交易能加强您的钱包安全性, 防止被盗. &lt;u&gt;更多信息.&lt;/u&gt;</string>
     <string name="transaction_row_message_purpose_raise_fee">由于此前的支付, 本次交易会增加网络费用</string>
     <string name="transaction_row_message_own_unbroadcasted">此项支付尚未传输.</string>
@@ -334,7 +334,7 @@
     <string name="appwidget_wallet_balance_title">Dash余额</string>
 
     <!-- generic buttons -->
-    <string name="button_ok">好</string>
+    <string name="button_ok">确定</string>
     <string name="button_dismiss">忽略</string>
     <string name="button_cancel">取消</string>
     <string name="button_help">帮助</string>
