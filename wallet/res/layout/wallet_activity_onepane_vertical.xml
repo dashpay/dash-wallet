@@ -47,7 +47,7 @@
 
             <fragment
                 android:id="@+id/wallet_transactions_fragment"
-                android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
+                android:name="de.schildbach.wallet.ui.main.WalletTransactionsFragment"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 app:layout_behavior="@string/appbar_scrolling_view_behavior"

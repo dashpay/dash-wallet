@@ -50,7 +50,7 @@ class RestoreWalletFromFileViewModel(application: Application) : AndroidViewMode
         if (!wallet.hasKeyChain(Constants.BIP44_PATH) && wallet.isEncrypted) {
             showUpgradeWalletAction.call(wallet)
         } else {
-            walletApplication.wallet = wallet
+            walletApplication.setWallet(wallet)
             log.info("successfully restored wallet from file")
             walletApplication.resetBlockchainState()
             startActivityAction.call(SetPinActivity.createIntent(getApplication(),

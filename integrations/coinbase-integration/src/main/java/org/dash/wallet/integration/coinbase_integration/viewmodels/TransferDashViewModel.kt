@@ -195,7 +195,7 @@ class TransferDashViewModel @Inject constructor(
     }
 
     val dashAddress: Address
-        get() = walletDataProvider.createSentDashAddress(observeCoinbaseAddressState.value ?: "")
+        get() = Address.fromString(walletDataProvider.networkParameters, (observeCoinbaseAddressState.value ?: "").trim { it <= ' ' })
 }
 
 sealed class SendDashResponseState{

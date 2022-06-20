@@ -23,6 +23,7 @@
     <string name="explore_merchants_subtitle">Encuentra comerciantes que acepten Dash como forma de pago.</string>
     <string name="explore_atms_title">Cajeros automáticos</string>
     <string name="explore_atms_subtitle">Encuentra dónde comprar o vender DASH y otras criptomonedas por dinero en efectivo.</string>
+    <string name="explore_staking_subtitle">Haz fácilmente staking de tus Dash y obtén ingresos pasivos con unos pocos clics.</string>
 
     <!-- Search -->
     <string name="explore_search_results">Buscar resultados</string>
@@ -34,7 +35,6 @@
     <string name="explore_option_buy">Comprar</string>
     <string name="explore_option_sell">Vender</string>
     <string name="explore_option_buy_sell">Comprar y Vender</string>
-    <string name="explore_menu_info">Información</string>
     <string name="explore_where_to_spend">Donde gastar?</string>
     <string name="explore_atms">Cajeros automáticos</string>
     <string name="explore_all_states">Todos los estados</string>
@@ -47,13 +47,15 @@
     <string name="distance_kilometers">%s kilómetros</string>
 
     <plurals name="explore_merchant_amount">
-        <item quantity="one">%d comercio</item>
-        <item quantity="other">%d comercios</item>
+        <item quantity="one">%d comerciante</item>
+        <item quantity="many">%d comerciantes</item>
+        <item quantity="other">%d comerciantes</item>
     </plurals>
 
     <plurals name="explore_atm_amount">
-        <item quantity="one">%d cajero automático</item>
-        <item quantity="other">%d cajeros automáticos</item>
+        <item quantity="one">%d Cajero automático</item>
+        <item quantity="many">%d Cajeros automáticos</item>
+        <item quantity="other">%d Cajeros automáticos</item>
     </plurals>
 
     <!-- Details -->
@@ -119,11 +121,13 @@
 
     <plurals name="radius_miles">
         <item quantity="one">%d milla</item>
+        <item quantity="many">%d millas</item>
         <item quantity="other">%d millas</item>
     </plurals>
 
     <plurals name="radius_kilometers">
         <item quantity="one">%d kilómetro</item>
+        <item quantity="many">%d kilómetros</item>
         <item quantity="other">%d kilómetros</item>
     </plurals>
 
@@ -151,4 +155,12 @@
     <string name="find_merchant_text">Encontrar un comercio.</string>
     <string name="buy_gift_card_with_dash_text">Compra un tarjeta de regalo con tus Dash.</string>
     <string name="redeem_gift_card_text">Canjea tu tarjeta de regalo en línea en segundos o en el cajero.</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Sincronización en curso... Es posible que los resultados no estén completos.</string>
+    <string name="sync_in_progress_error">Sincronización en curso... Ha ocurrido un error.</string>
+    <string name="sync_in_progress_canceled">Sincronización cancelada... Se realizará otro intento más tarde.</string>
+
+    <string name="sync_in_progress_file_not_found">Error de compilación: ¡No se encontró la base de datos!</string>
+    <string name="sync_in_progress_network_error">Sincronización interrumpida... La red está desconectada o inaccesible</string>
 </resources>

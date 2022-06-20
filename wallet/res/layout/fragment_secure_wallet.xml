@@ -6,12 +6,10 @@
 
     <TextView
         android:id="@+id/title"
-        style="@style/MontserratMedium"
+        style="@style/Headline6"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/verify_secure_now"
-        android:textColor="@android:color/black"
-        android:textSize="20sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -29,7 +27,7 @@
 
     <TextView
         android:id="@+id/textView"
-        style="@style/MontserratRegular.MG.14"
+        style="@style/Body2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
@@ -46,7 +44,7 @@
 
     <Button
         android:id="@+id/verify_skip_button"
-        style="@style/NewMontserratButton.Secondary"
+        style="@style/Button.Tertiary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
@@ -61,7 +59,7 @@
 
     <Button
         android:id="@+id/verify_secure_now_button"
-        style="@style/NewMontserratButton.Primary"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"

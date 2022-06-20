@@ -17,13 +17,13 @@
 
 package de.schildbach.wallet.di
 
-import android.content.Context
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.rates.ExchangeRatesDao
 import javax.inject.Singleton
 
 @Module
@@ -31,7 +31,17 @@ import javax.inject.Singleton
 object DatabaseModule {
     @Singleton
     @Provides
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
+    fun provideDatabase(): AppDatabase {
         return AppDatabase.getAppDatabase()
+    }
+
+    @Provides
+    fun provideBlockchainStateDao(appDatabase: AppDatabase): BlockchainStateDao {
+        return appDatabase.blockchainStateDao()
+    }
+
+    @Provides
+    fun provideExchangeRatesDao(appDatabase: AppDatabase): ExchangeRatesDao {
+        return appDatabase.exchangeRatesDao()
     }
 }

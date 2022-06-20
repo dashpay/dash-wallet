@@ -12,7 +12,6 @@
     <string name="credit_card">Cartão de crédito</string>
 
     <string name="buy">Comprar</string>
-    <string name="buy_dash">Comprar Dash</string>
     <string name="sell_dash">Vender Dash</string>
     <string name="buy_sell_dash_">Comprar &amp; Vender Dash</string>
     <string name="button_cancel">Cancelar</string>
@@ -20,7 +19,6 @@
     <string name="crypto_support">Suporte de cripto</string>
     <string name="credit_card_support">Suporte para cartão de crédito</string>
     <string name="okay">Okay</string>
-    <string name="close">Fechar</string>
     <string name="list_of_countries">Veja a lista de países sem suporte.</string>
     <string name="buying_dash_not_supported_credit_cards">Comprar Dash com cartão de crédito não é suportado em alguns países.</string>
     <string name="buying_dash_not_supported_crypto">Comprar Dash com criptomoedas não é suportado em alguns países.</string>

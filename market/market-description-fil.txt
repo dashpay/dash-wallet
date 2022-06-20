@@ -1,4 +1,4 @@
-PANGUNAHING PAGLALARAWAN
+﻿PANGUNAHING PAGLALARAWAN
 
 Ang Dash Wallet ay sanggunian ng Android wallet na pinapanatili ng Dash Core Group para sa Dash - Digital Cash - ang makabagong alternatibo kaysa Bitcoin na malinaw na nakadesinyo sa mga bayarin.
 

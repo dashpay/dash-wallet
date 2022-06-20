@@ -62,10 +62,7 @@ fun Context.formatString(messageResId: Int,
 
 fun AlertDialog.dismissDialog() {
     if (isShowing) {
-        Log.e(this::class.java.simpleName, "Dialog is showing")
         dismiss()
-    } else {
-        Log.e(this::class.java.simpleName, "Dialog not showing")
     }
 }
 

@@ -61,8 +61,8 @@
     <string name="send_coins_fragment_receiving_address_complex">monimutkainen\nosoite</string>
     <string name="send_coins_fragment_pending">(%s odottaa vahvistusta)</string>
     <string name="send_coins_fragment_amount_label">Maksettava määrä</string>
-    <string name="send_coins_fragment_hint_dusty_send">Määrä lähettämistä varten on liian pieni.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Käytettäviä varoja ei ole tarpeeksi. Sinulta puuttuu %s.</string>
+    <string name="send_coins_error_dusty_send">Määrä lähettämistä varten on liian pieni.</string>
+    <string name="send_coins_error_insufficient_money">Käytettäviä varoja ei ole tarpeeksi. Sinulta puuttuu %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Pieniä maksuja lompakossasi ei yhteenlasketa lähetyskelpoiseen arvoon.</string>
     <string name="send_coins_fragment_direct_payment_enable">Lähetä maksu suoraan saajalle.</string>
     <string name="send_coins_fragment_direct_payment_ack">Maksu lähetettiin onnistuneesti suoraan.</string>
@@ -263,7 +263,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">Hylkää</string>
     <string name="button_cancel">Peruuta</string>
-    <string name="button_retry">Yritä uudelleen</string>
     <string name="button_help">Ohje</string>
     <string name="button_add">Lisää</string>
     <string name="button_delete">Poista</string>

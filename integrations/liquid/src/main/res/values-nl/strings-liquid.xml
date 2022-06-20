@@ -12,7 +12,6 @@
     <string name="credit_card">Credticard</string>
 
     <string name="buy">Koop</string>
-    <string name="buy_dash">Koop Dash</string>
     <string name="sell_dash">Verkoop Dash</string>
     <string name="buy_sell_dash_">Koop &amp; verkoop Dash</string>
     <string name="button_cancel">Annuleer</string>
@@ -20,7 +19,6 @@
     <string name="crypto_support">Crypto-ondersteuning</string>
     <string name="credit_card_support">Ondersteuning voor creditcard</string>
     <string name="okay">Oké</string>
-    <string name="close">Sluit</string>
     <string name="list_of_countries">Bekijk een lijst met niet-ondersteunde landen.</string>
     <string name="buying_dash_not_supported_credit_cards">Dash kopen met een creditcard wordt in sommige landen niet ondersteund.</string>
     <string name="buying_dash_not_supported_crypto">Het kopen van Dash met cryptocurrency wordt in sommige landen niet ondersteund.</string>

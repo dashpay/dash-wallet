@@ -23,14 +23,22 @@
     <string name="uphold_error">Uphold Error</string>
     <string name="uphold_error_not_logged_in">Ang iyong dash wallet ay hindi na konektado sa iyong Uphold account.  Sa susunod na screen pindutin ang Link Uphold account</string>
     <string name="uphold_error_not_available">Ang serbisyo ng uphold ay hindi maaring gamitin. Subukan ulit mamaya.</string>
-    <string name="uphold_error_report_issue">Paki-report ang isyu ng Dash Wallet support team gamit ang "Isumbong Isyu" mula sa pangunahing menu. </string>
+    <string name="uphold_error_report_issue">Paki-report ang isyu ng Dash Wallet support team gamit ang \"Isumbong Isyu\" mula sa pangunahing menu. </string>
 
     <string name="uphold_general_error_title">Mali</string>
     <string name="uphold_api_error_title">Uphold Error</string>
     <string name="uphold_api_error_identity">Ang iyong Uphold account ay hinda pa napapatunayan. Ang mga pondo ay hindi maaaring bawiin</string>
+    <string name="uphold_api_error_403_description">Ang iyong Uphold account ay na-flag para sa pagsusuri.\n\nAng uphold ay pansamantalang naghigpit sa iyong account at hindi ka makakapag-withdraw ng mga pondo.\n\n%s</string>
+    <string name="uphold_api_error_403_generic">Makikipag-ugnayan ang Uphold para tulungan kang ayusin ito nang mabilis.</string>
+    <string name="uphold_api_error_403_due_diligence">Mangyaring pumunta sa iyong Uphold account para sagutin ang ilang katanungan tungkol sa iyong sarili.</string>
+    <string name="uphold_api_error_403_identity">Mangyaring pumunta sa iyong Uphold account upang i-verify ang iyong pagkakakilanlan.</string>
+    <string name="uphold_api_error_403_proof_of_address">Mangyaring makipag-ugnayan sa Uphold upang i-update ang iyong patunay ng address.</string>
+
     <string name="uphold_api_error_400_description">Ang mga pondo sa Uphold ay naka-lock sa loob ng 24 na oras.\n\nMagkakaroon ka ng sapat na mga pondo para sa paglipat na ito ng %s.</string>
     <string name="uphold_api_error_400_locked">Ang mga pondo sa uphold (%1$s %2$s) ay naka-lock sa loob ng 65 na araw.\n\nMagkakaroon ka ng sapat na pondo para sa paglipat na ito ng %3$s.</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">Wala kang sapat na pondo para sa paglipat na ito</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">Ang halagang ililipat ay dapat mas mababa sa %s DASH.</string>
+    <string name="uphold_api_error_400_greater_than_or_equal_to">Ang halagang ililipat ay dapat na higit sa %s DASH.</string>
     <string name="uphold_api_error_400_tx_validation">Hindi mailipat ang ganyang halaga sa app na ito (max $ 3000)</string>
     <string name="uphold_api_error_400_password_reset">Ang mga pondo sa Uphold ay naka-lock dahil sa kamakailang pagbabago ng password.\n\nDapat kang maghintay hanggang sa %s bago ka makapaglipat ng mga pondo.</string>
     <string name="uphold_api_error_400_authentication_change">Ang mga pondo sa Uphold ay naka-lock dahil sa kamakailang pagbabago ng pamamaraan ng pagpapatotoo.\n\nDapat kang maghintay hanggang sa %s bago ka makapaglipat ng mga pondo.</string>
@@ -38,4 +46,5 @@
     <string name="uphold_api_error_400_invalid_beneficiary">Hindi mailipat ang ganyang halaga sa app na ito (max $3000)\n\nMangyaring gamitin ang iyong Uphold account upang magawa ang paglipat.</string>
     <string name="uphold_api_error_400_required">Hindi mailipat ang ganyang halaga sa app na ito (max $3000)\n\nMangyaring gamitin ang iyong Uphold account upang magawa ang paglipat.</string>
 
+    <string name="uphold_requirement_not_met_base_message">Hindi mo maaaring gawin ang operasyong ito sa oras na ito. %s</string>
 </resources>

@@ -61,11 +61,9 @@
     <string name="send_coins_fragment_receiving_address_complex">комплексен\\nадрес</string>
     <string name="send_coins_fragment_pending">(%s чака за потвърждение)</string>
     <string name="send_coins_fragment_amount_label">Сума за изпращане</string>
-    <string name="send_coins_fragment_pin_label">Въведи PIN</string>
+    <string name="send_coins_fragment_pin_label">Въведи ПИН</string>
     <string name="send_coins_fragment_hint_fee_economic">Мрежова такса от %s ще бъде платена.</string>
     <string name="send_coins_fragment_hint_fee_priority">Приоритетна такса от %s ще бъде платена. Ако се интересувате от ниски такси, използвайте \'приоритетна\' само ако се нуждаете от бързо потвърждение.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Тази сума е прекалено малка за да бъде изпратена.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Недостатъчно средства</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Сумата на малките плащания във вашият портфейл не може да се добави към стойността за изпращане.</string>
     <string name="send_coins_fragment_hint_replaying">В момента плащанията не са възможни, защото портфейлът не е напълно синхронизиран с мрежата</string>
     <string name="send_coins_fragment_direct_payment_enable">Изпратете плащането директно до получателя.</string>
@@ -176,7 +174,7 @@
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">На %s от %s</string>
     <string name="transaction_row_rate_not_available">Не е налично</string>
-    <string name="transaction_row_status_masternode_registration">Masternode регистрирация</string>
+    <string name="transaction_row_status_masternode_registration">Masternode регистрация</string>
     <string name="transaction_row_status_masternode_update_registrar">Masternode обновяване</string>
     <string name="transaction_row_status_masternode_update_service">Masternode обновяване</string>
     <string name="transaction_row_status_masternode_revoke">Masternode отменяне</string>
@@ -308,7 +306,7 @@
     <string name="about_category_credits">Това приложение използва...</string>
     <string name="about_credits_bitcoinj_title">dashj %s, изпълнява Dash протокола</string>
     <string name="about_credits_zxing_title">ZXing, обработва QR библиотеката</string>
-    <string name="about_credits_icon_title">Това приложение използва икона от "bitboy"</string>
+    <string name="about_credits_icon_title">Това приложение използва икона от \"bitboy\"</string>
     <string name="about_credits_scrypt_title">Скрипт,осъществен от Will Glozer и Colin Percival</string>
     <string name="about_market_app_title">Google Play страница</string>
     <string name="about_market_app_summary">Прегледайте и оценете приложението</string>
@@ -328,7 +326,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">Отхвърляне</string>
     <string name="button_cancel">Отказ</string>
-    <string name="button_retry">Опитай отново</string>
     <string name="button_help">Помощ</string>
     <string name="button_add">Добави</string>
     <string name="button_delete">Изтрий</string>
@@ -338,13 +335,12 @@
     <string name="button_copy">Копирай</string>
     <string name="button_copy_request">Копиране на заявката</string>
     <string name="button_paste">Постави</string>
-    <string name="button_share">Сподели</string>
     <string name="button_set_as_default">Задай по подразбиране</string>
     <string name="button_request_coins">Заяви Dash</string>
     <string name="button_send_coins">Изпрати Dash</string>
     <string name="button_pay">Изпрати</string>
     <string name="button_scan">Сканирай</string>
-    <string name="button_settings">Настройки </string>
+    <string name="button_settings">Настройки</string>
     <string name="action_show_qr">Покажи QR код</string>
     <string name="action_browse">Търси</string>
 
@@ -366,7 +362,7 @@
     <string name="dash_wallet">Портфейл</string>
 
     <string name="activity_security_backup_wallet">Архивирайте портфейла във файл</string>
-    <string name="activity_security_view_recovery_phrase">Вижте фраза за възстановяване</string>
+    <string name="activity_security_view_recovery_phrase">Виж фразата за възстановяване</string>
     <string name="activity_security_advanced">Разширена сигурност</string>
     <string name="activity_security_biometric_auth">Удостоверяване с пръстов отпечатък</string>
     <string name="activity_security_hide_balance">Автоматично скриване на баланса</string>

@@ -91,7 +91,6 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.setOnClickListener {
-            viewModel.continueCallback.call()
             viewModel.onContinueEvent.value = Pair(
                 binding.amountView.dashAmount,
                 binding.amountView.fiatAmount
@@ -100,7 +99,7 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
 
         binding.maxButton.setOnClickListener {
             binding.amountView.dashToFiat = true
-            binding.amountView.input = viewModel.maxAmount.toPlainString()
+            binding.amountView.input = (viewModel.maxAmount.value ?: Coin.ZERO).toPlainString()
             maxSelected = true
         }
 
@@ -113,18 +112,27 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
             }
         }
 
+        binding.amountView.setOnConvertDirectionChanged {
+            viewModel._dashToFiatDirection.value = binding.amountView.dashToFiat
+        }
+
+        binding.amountView.setOnAmountChanged {
+            viewModel._amount.value = it
+        }
+
         viewModel.selectedExchangeRate.observe(viewLifecycleOwner) {
             binding.amountView.exchangeRate = ExchangeRate(Coin.COIN, it.fiat)
         }
 
-        binding.amountView.setOnConvertDirectionBtnClicked {
-            viewModel.convertDirectionCallback.value = binding.amountView.dashToFiat
+        viewModel.canContinue.observe(viewLifecycleOwner) {
+            binding.continueBtn.isEnabled = it
         }
 
         parentFragmentManager.beginTransaction()
             .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
             .commit()
     }
+
 
     fun setViewDetails(continueText: String, keyboardHeader: View?) {
         lifecycleScope.launchWhenStarted {

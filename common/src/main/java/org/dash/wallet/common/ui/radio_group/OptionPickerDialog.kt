@@ -24,7 +24,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
@@ -44,7 +43,7 @@ class OptionPickerDialog(
     private val selectedIndex: Int = 0,
     private val showSearch: Boolean = true,
     private val clickListener: (IconifiedViewItem, Int, DialogFragment) -> Unit
-) : OffsetDialogFragment<LinearLayout>() {
+) : OffsetDialogFragment() {
     private val binding by viewBinding(DialogOptionPickerBinding::bind)
 
     override fun onCreateView(

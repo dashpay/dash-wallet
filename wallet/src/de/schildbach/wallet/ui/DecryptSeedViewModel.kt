@@ -16,19 +16,27 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Application
+import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.DecryptSeedLiveData
-import org.slf4j.LoggerFactory
+import de.schildbach.wallet.ui.preference.PinRetryController
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
+import javax.inject.Inject
 
 /**
  * @author:  Eric Britten
  */
 
-class DecryptSeedViewModel(application: Application) : CheckPinViewModel(application) {
+@HiltViewModel
+class DecryptSeedViewModel @Inject constructor(
+    walletData: WalletDataProvider,
+    pinRetryController: PinRetryController,
+    walletApplication: WalletApplication,
+    configuration: Configuration
+) : CheckPinViewModel(walletData, configuration, pinRetryController) {
 
-    private val log = LoggerFactory.getLogger(DecryptSeedViewModel::class.java)
-
-    internal val decryptSeedLiveData = DecryptSeedLiveData(application)
+    internal val decryptSeedLiveData = DecryptSeedLiveData(walletApplication)
 
     override fun checkPin(pin: CharSequence) {
         decryptSeedLiveData.checkPin(pin.toString())

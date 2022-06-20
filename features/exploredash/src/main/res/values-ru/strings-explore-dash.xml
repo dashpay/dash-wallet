@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <!-- Explore screen -->
+    <string name="explore_dash">Исследовать Dash</string>
+    <string name="explore_title">Исследовать</string>
+    <string name="explore_subtitle">Совершайте покупки используя DASH в более чем 155 000 магазинах и онлайн</string>
+    <string name="explore_merchants_title">Где потратить?</string>
+    <string name="explore_merchants_subtitle">Найдите места где принимают DASH в качестве оплаты.</string>
+    <string name="explore_atms_title">Банкоматы</string>
+    <string name="explore_atms_subtitle">Найдите, где купить или продать DASH и другие криптовалюты за наличные.</string>
+    <string name="explore_staking_subtitle">Застейкайте Dash и получите пассивный доход всего за несколько кликов.</string>
+
+    <!-- Search -->
+    <string name="explore_search_results">Результаты поиска</string>
+    <string name="explore_physical_merchant">Физический магазин</string>
+    <string name="explore_online_merchant">Онлайн</string>
+    <string name="explore_both_types_merchant">Интернет-магазин, Физический магазин</string>
+    <string name="explore_multiple_locations">+ несколько точек</string>
+    <string name="explore_option_all">Все</string>
+    <string name="explore_option_buy">Купить</string>
+    <string name="explore_option_sell">Продать</string>
+    <string name="explore_option_buy_sell">Купить и Продать</string>
+    <string name="explore_where_to_spend">Где потратить</string>
+    <string name="explore_atms">Банкоматы</string>
+    <string name="explore_all_states">Все области</string>
+    <string name="explore_no_results">Результатов не найдено</string>
+    <string name="explore_all_merchants">Все продавцы</string>
+    <string name="explore_in_radius">%1$s в %2$s</string>
+    <string name="explore_no_merchants">Нет продавцов</string>
+    <string name="explore_no_atms">Нет банкоматов</string>
+    <string name="distance_miles">%s миль</string>
+    <string name="distance_kilometers">%s километров</string>
+
+    <plurals name="explore_merchant_amount">
+        <item quantity="one">%d продавец</item>
+        <item quantity="few">%d продавца</item>
+        <item quantity="many">%d продавцов</item>
+        <item quantity="other">%d продавцов</item>
+    </plurals>
+
+    <plurals name="explore_atm_amount">
+        <item quantity="one">%d банкомат</item>
+        <item quantity="few">%d банкомата</item>
+        <item quantity="many">%d банкоматов</item>
+        <item quantity="other">%d банкоматов</item>
+    </plurals>
+
+    <!-- Details -->
+    <string name="explore_back_to_locations">Назад ко всем точкам</string>
+    <string name="explore_back_to_nearest">Назад к ближайшим точкам</string>
+    <string name="explore_select_location">Выбрать точку</string>
+    <string name="explore_pay_with_dash">Оплатить с помощью Dash</string>
+    <string name="explore_buy_gift_card">Купить подарочную карту</string>
+    <string name="explore_buy_dash">Купить Dash</string>
+    <string name="explore_sell_dash">Продать Dash</string>
+    <string name="explore_show_all">Показать все точки</string>
+    <string name="explore_atm_location_hint">Этот банкомат находится в</string>
+    <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
+
+    <!-- Filters -->
+    <string name="explore_filter">Фильтр</string>
+    <string name="explore_filters">Фильтры</string>
+    <string name="explore_apply_filter">Применить</string>
+    <string name="explore_payment_method">Способ оплаты</string>
+    <string name="explore_payment_dash">Dash</string>
+    <string name="explore_payment_gift_card">Подарочная карта</string>
+    <string name="explore_radius">Радиус</string>
+    <string name="explore_location">Место нахождения</string>
+    <string name="explore_current_location">Текущее местоположение</string>
+    <string name="explore_location_settings">Настройки текущего местоположения</string>
+    <string name="explore_reset_filters">Сбросить фильтры</string>
+    <string name="explore_reset_all_filters">Сбросить все фильтры</string>
+    <string name="explore_filtered_by">Отфильтровано по:</string>
+    <string name="explore_pay_gift_card">Оплатить подарочной картой</string>
+    <string name="explore_sort_by">Упорядочить по</string>
+
+    <string-array name="merchants_filter_options">
+        <item>Онлайн</item>
+        <item>Рядом</item>
+        <item>Все</item>
+    </string-array>
+
+    <string-array name="atms_filter_options">
+        <item>Все</item>
+        <item>Купить</item>
+        <item>Продать</item>
+        <item>Куп/Прод</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_miles">
+        <item>1 миля</item>
+        <item>5 миль</item>
+        <item>20 миль</item>
+        <item>50 миль</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_kilometers">
+        <item>1 километр</item>
+        <item>5 километров</item>
+        <item>20 километров</item>
+        <item>50 километров</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>Название</item>
+        <item>Расстояние</item>
+    </string-array>
+
+    <plurals name="radius_miles">
+        <item quantity="one">%d миля</item>
+        <item quantity="few">%d мили</item>
+        <item quantity="many">%d миль</item>
+        <item quantity="other">%d миль</item>
+    </plurals>
+
+    <plurals name="radius_kilometers">
+        <item quantity="one">%d километр</item>
+        <item quantity="few">%d километра</item>
+        <item quantity="many">%d километров</item>
+        <item quantity="other">%d километров</item>
+    </plurals>
+
+    <!-- Location Permission -->
+    <string name="explore_location_allowed">Разрешено</string>
+    <string name="explore_location_denied">Запрещено</string>
+    <string name="explore_manager_permissions">Изменить разрешения GPS</string>
+    <string name="explore_location_request">Предоставьте разрешения GPS, чтобы мы могли показывать вам точки поблизости с вами.</string>
+    <string name="explore_location_explainer">Ваше местоположение используется для отображения его на карте, показа продавцов в выбранном радиусе и улучшения результатов поиска.</string>
+    <string name="explore_merchant_location_explainer_title">Поиск продавцов работает лучше всего с включенными службами геолокации.</string>
+    <string name="explore_merchant_location_explainer_message">Ваше местоположение используется для отображения его на карте, показа продавцов в выбранном радиусе и улучшения результатов поиска.</string>
+    <string name="explore_atm_location_explainer_title">Поиск банкоматов работает лучше всего с включенными службами геолокации.</string>
+    <string name="explore_atm_location_explainer_message">Ваше местоположение используется для отображения его на карте, показа банкоматов в выбранном радиусе и улучшения результатов поиска.</string>
+
+    <!-- Info screens -->
+    <string name="explore_info_header_text">У нас есть 2 типа продавцов</string>
+    <string name="accept_dash_text">Принимают DASH напрямую</string>
+    <string name="pay_with_dash_text">Платите через DASH-кошелек.</string>
+    <string name="buy_gift_card_text">Покупайте подарочные карты с помощью Dash</string>
+    <string name="buy_gift_card_desc_text">Купите подарочные карты на точную сумму вашей покупки используя Dash.</string>
+    <string name="learn_more_text">Узнать больше</string>
+    <string name="continue_text">Продолжить</string>
+    <string name="buy_card_header_text">Как использовать подарочную карту</string>
+    <string name="buy_card_desc_text">Не все магазины принимают DASH напрямую, но вы можете купить подарочную карту с помощью Dash.</string>
+    <string name="find_merchant_text">Найдите продавца.</string>
+    <string name="buy_gift_card_with_dash_text">Купите подарочную карту с помощью Dash.</string>
+    <string name="redeem_gift_card_text">Используйте подарочную карту сразу же онлайн или в кассе.</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Синхронизация... Результаты могут быть неполными.</string>
+    <string name="sync_in_progress_error">Синхронизация... Произошла ошибка.</string>
+    <string name="sync_in_progress_canceled">Синхронизация отменена. Позже будет выполнена ещё одна попытка.</string>
+
+    <string name="sync_in_progress_file_not_found">Ошибка сборки: не найдена база данных!</string>
+    <string name="sync_in_progress_network_error">Синхронизация прервана... Сеть отключена или недоступна</string>
+</resources>

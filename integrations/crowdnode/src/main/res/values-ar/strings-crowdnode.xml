@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="crowdnode_get_started">الشروع في العمل مع CrowdNode</string>
+    <string name="crowdnode_get_started_hint">لبدء التخزين ، أنشئ حسابًا على CrowdNode أو اتصل بحساب موجود.</string>
+    <string name="new_account">حساب CrowdNode جديد</string>
+    <string name="account_create">إنشاء حساب</string>
+    <string name="account_link">ربط حساب موجود</string>
+    <string name="crowdnode_login">سجّل الدخول إلى CrowdNode</string>
+    <string name="crowdnode_link">ربط حساب CrowdNode الحالي</string>
+    <string name="required_passphrase_backup">يجب عليك الاحتفاظ بنسخة احتياطية من عبارة مرورك في Dash Wallet</string>
+    <string name="backup_passphrase">نسخة احتياطية من عبارة المرور</string>
+    <string name="required_dash_amount">تحتاج على الأقل إلى %s داش في محفظة داش الخاصة بك</string>
+    <string name="crowdnode_new_account_warning_1">يستخدم CrowdNode هذا العنوان باعتباره معرف حسابك. ستفقد الوصول إلى أموالك داخل هذه المحفظة وحساب CrowdNode الخاص بك إذا فقدت عبارة المرور المرتبطة بهذا العنوان.</string>
+    <string name="crowdnode_new_account_warning_2">سيتم إرسال كميات صغيرة جدًا من داش من وإلى CrowdNode للتحقق من أنك مالك عنوان المحفظة هذا.</string>
+    <string name="crowdnode_link_account_description">سيتم إجراء جميع عمليات النقل من وإلى CrowdNode من هذا الجهاز باستخدام عنوان Dash أدناه من هذا الجهاز.</string>
+    <string name="dash_address">عنوان داش</string>
+    <string name="primary_dash_address">عنوان داش الأساسي</string>
+    <string name="crowdnode_secure_wallet">قم بعمل نسخة احتياطية من عبارة مرورك لإنشاء حساب CrowdNode</string>
+    <string name="crowdnode_secure_wallet_explainer">إذا فقدت عبارة مرورك لهذه المحفظة وفقدت هذا الجهاز أو ألغيت تثبيت Dash Wallet ، فستفقد إمكانية الوصول إلى أموالك على CrowdNode والأموال الموجودة في هذه المحفظة.</string>
+    <string name="insufficient_funds">ليس لديك أموال كافية للمتابعة.</string>
+    <string name="crowdnode_minimum_dash">يجب أن يكون لديك %s داش على الأقل لمتابعة التحقق من CrowdNode.</string>
+    <string name="crowdnode_agree_to_terms">أوافق على CrowdNode %1$s و %2$s</string>
+    <string name="terms_of_use">شروط الاستخدام</string>
+    <string name="privacy_policy">سياسة الخصوصية</string>
+    <string name="crowdnode_account_ready">تم إعداد حساب CrowdNode الخاص بك وهو جاهز للاستخدام!</string>
+    <string name="notify_when_done">أغلق وأبلغ عند الانتهاء</string>
+    <string name="crowdnode_creating">حساب CrowdNode الخاص بك قيد الإنشاء …</string>
+    <string name="accepting_terms">قبول شروط الاستخدام …</string>
+    <string name="crowdnode_signup_error">لم نتمكن من إنشاء حساب CrowdNode الخاص بك.</string>
+    <string name="crowdnode_deposit_error">لم نتمكن من الإيداع في حساب CrowdNode الخاص بك.</string>
+    <string name="crowdnode_withdraw_error">لم نتمكن من الانسحاب من حسابك في CrowdNode.</string>
+    <string name="crowdnode_transfer_error">لم ينجح نقل CrowdNode الخاص بك.</string>
+    <string name="crowdnode_deposit_received">تم استلام الإيداع الخاص بك إلى CrowdNode.</string>
+    <string name="deposit">إيداع</string>
+    <string name="deposit_sent">تم إرسال الإيداع</string>
+    <string name="deposit_sent_message">قد يستغرق تحديث رصيدك دقيقة.</string>
+    <string name="crowdnode_deposit_from_wallet">DashWallet ➝ CrowdNode</string>
+    <string name="from_wallet">من Dash Wallet</string>
+    <string name="from_crowdnode">من CrowdNode</string>
+    <string name="withdraw">سحب</string>
+    <string name="withdrawal_requested">طلب سحب</string>
+    <string name="withdrawal_requested_message">قد يستغرق وصول أموالك دقيقة.</string>
+    <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
+    <string name="online_account">حساب على الانترنت</string>
+    <string name="online_account_create">إنشاء حساب على الإنترنت</string>
+    <string name="secure_online_account">حماية أرباحك</string>
+    <string name="crowdnode_support">دعم CrowdNode</string>
+    <string name="unlink_account">إلغاء ربط الحساب</string>
+    <string name="online_account_title">لماذا تحتاج إلى حساب على الإنترنت؟</string>
+    <string name="crowdnode_online_synced">متزامن مع محفظة داش الحالية</string>
+    <string name="crowdnode_in_process">تحت المعالجة…</string>
+    <string name="account_recovery">استرجاع الحساب</string>
+    <string name="crowdnode_recovery_info">إذا فقدت عبارة مرورك في أي وقت ، فيمكنك إثبات هويتك بوسائل أخرى لاستعادة الوصول إلى أموال CrowdNode الخاصة بك.</string>
+    <string name="transaction_history">تاريخ المعاملات</string>
+    <string name="see_staking_details">يمكنك الاطلاع على معلومات مفصلة حول الإيداعات والسحوبات وأرباح المكافآت.</string>
+    <string name="payout_options">خيارات الدفع</string>
+    <string name="payout_options_details">يمكنك تغيير كيفية / وقت دفع أرباح المكافآت لك.</string>
+    <string name="crowdnode_balance">التوازن على CrowdNode</string>
+    <string name="crowdnode_your_address_title">هذا هو عنوان داش الذي استخدمته في التكامل مع CrowdNode</string>
+    <string name="chain_syncing">السلسلة قيد المزامنة …</string>
+    <string name="crowdnode_wait_for_sync">انتظر حتى تتم مزامنة السلسلة بالكامل ، حتى نتمكن من مراجعة سجل معاملاتك. قم بزيارة موقع CrowdNode لتسجيل الدخول أو التسجيل.</string>
+    <string name="crowdnode_open_website">انتقل إلى موقع CrowdNode</string>
+    <string name="crowdnode_info_title">كن جزءًا من Dash Masternode مع CrowdNode</string>
+    <string name="introducing_staking">نقدم لكم ستاكنج</string>
+    <string name="crowdnode_staking_info">احصل على مكافآت من الودائع في Dash Masternodes بأقل من 0.5 داش.</string>
+    <string name="instant_rewards">احصل على المكافآت على الفور</string>
+    <string name="daily_rewards_info">احصل على حصتك من المكافآت يوميًا.</string>
+    <string name="crowdnode_sending_to">الإرسال إلى حساب CrowdNode</string>
+    <string name="wallet_sending_to">الإرسال إلى Dash Wallet على هذا الجهاز</string>
+    <string name="available_balance">الرصيد: %s</string>
+    <string name="crowdnode_minimum_deposit">قم بإيداع %s على الأقل لبدء الكسب</string>
+    <string name="crowdnode_minimum_deposit_difference">قم بإيداع %s  لبدء الكسب</string>
+    <string name="crowdnode_first_deposit">يجب أن يكون الإيداع الأول أكثر من %s</string>
+    <string name="crowdnode_staking_info_title">كيف يعمل الستاكنج</string>
+    <string name="crowdnode_staking_info_message">تبدأ في الكسب إذا كان حساب CrowdNode الخاص بك يحتوي على أكثر من %s</string>
+    <string name="crowdnode_verify_api_address">تحقق من عنوان API Dash الخاص بك</string>
+    <string name="crowdnode_how_to_verify">كيفية تأكيد عنوان API Dash الخاص بك</string>
+    <string name="crowdnode_how_to_verify_description1">أرسل %s داش من عنوان داش الأساسي الذي تستخدمه حاليًا لحساب CrowdNode الخاص بك</string>
+    <string name="crowdnode_how_to_verify_description2">إلى عنوان Dash المخصص لحساب CrowdNode الخاص بك في Dash Wallet على هذا الجهاز</string>
+    <string name="crowdnode_how_to_verify_description3">سنكتشف تلقائيًا هذه المعاملة ونحول نفس المبلغ إلى حساب CrowdNode الخاص بك. بعد ذلك ستتمكن من إجراء عمليات الإيداع والسحب في Dash Wallet على هذا الجهاز.</string>
+    <string name="button_show_qr">إظهار QR</string>
+    <string name="scan_qr">مسح QR</string>
+    <string name="qr_contains_request">يحتوي QR بالفعل على طلب دفع %s داش</string>
+    <string name="verification_required">التحقق مطلوب</string>
+    <string name="validating_address">التحقق من صحة العنوان …</string>
+    <string name="crowdnode_address_validated">تم التحقق من صحة عنوان CrowdNode الخاص بك ، ولكن التحقق مطلوب.</string>
+    <string name="crowdnode_address_confirmed">تم تأكيد عنوان CrowdNode الخاص بك.</string>
+    <string name="crowdnode_bad_confirmation">تم إرسال التأكيد من عنوان أساسي خاطئ</string>
+    <string name="crowdnode_online_account_details_title">معلومات حول حسابك على الإنترنت</string>
+    <string name="crowdnode_online_account_details_primary">عنوان داش الأساسي الذي تستخدمه حاليًا لحساب CrowdNode الخاص بك</string>
+    <string name="crowdnode_online_account_details_api">عنوان داش المخصص لحساب CrowdNode الخاص بك في محفظة داش على هذا الجهاز</string>
+    <string name="crowdnode_reset_address">إعادة تعيين العنوان</string>
+
+    </resources>

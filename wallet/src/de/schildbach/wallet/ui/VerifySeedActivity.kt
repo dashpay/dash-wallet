@@ -20,11 +20,11 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
+import androidx.activity.viewModels
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
 
@@ -37,18 +37,21 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
 
         private const val EXTRA_SEED = "extra_seed"
         private const val EXTRA_PIN = "extra_pin"
+        private const val NAVIGATE_TO_HOME = "navigate_to_home"
 
         @JvmStatic
-        fun createIntent(context: Context, seed: Array<String>): Intent {
+        fun createIntent(context: Context, seed: Array<String>, goHomeOnClose: Boolean = true): Intent {
             val intent = Intent(context, VerifySeedActivity::class.java)
             intent.putExtra(EXTRA_SEED, seed)
+            intent.putExtra(NAVIGATE_TO_HOME, goHomeOnClose)
             return intent
         }
 
         @JvmStatic
-        fun createIntent(context: Context, pin: String): Intent {
+        fun createIntent(context: Context, pin: String, goHomeOnClose: Boolean = true): Intent {
             val intent = Intent(context, VerifySeedActivity::class.java)
             intent.putExtra(EXTRA_PIN, pin)
+            intent.putExtra(NAVIGATE_TO_HOME, goHomeOnClose)
             return intent
         }
     }
@@ -61,7 +64,7 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
 
     var currentFragment = VerificationStep.ViewImportantInfo
 
-    private lateinit var decryptSeedViewModel: DecryptSeedViewModel
+    private val decryptSeedViewModel: DecryptSeedViewModel by viewModels()
 
     private var seed: Array<String> = arrayOf()
 
@@ -84,8 +87,7 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
     }
 
     private fun initViewModel() {
-        decryptSeedViewModel = ViewModelProviders.of(this).get(DecryptSeedViewModel::class.java)
-        decryptSeedViewModel.decryptSeedLiveData.observe(this, Observer {
+        decryptSeedViewModel.decryptSeedLiveData.observe(this) {
             when (it.status) {
                 Status.ERROR -> {
                     finish()
@@ -94,8 +96,9 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
                     val deterministicSeed = it.data!!.first
                     seed = deterministicSeed!!.mnemonicCode!!.toTypedArray()
                 }
+                else -> { }
             }
-        })
+        }
     }
 
     private fun replaceFragment(fragment: Fragment) {
@@ -117,7 +120,7 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
     }
 
     override fun skipSeedVerification() {
-        goHome()
+        goBack()
     }
 
     override fun showRecoveryPhrase() {
@@ -139,7 +142,7 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
             disarmBackupSeedReminder()
             setLastBackupSeedTime()
         }
-        goHome()
+        goBack()
     }
 
     override fun onBackPressed() {
@@ -152,8 +155,13 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
         goingBack = false
     }
 
-    private fun goHome() {
-        startActivity(Intent(this, WalletActivity::class.java))
+    private fun goBack() {
+        val navigateToHome = intent.getBooleanExtra(NAVIGATE_TO_HOME, true)
+
+        if (navigateToHome) {
+            startActivity(Intent(this, WalletActivity::class.java))
+        }
+
         finish()
     }
 

@@ -21,12 +21,12 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.telephony.TelephonyManager
-import android.util.Log
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
+import android.view.inputmethod.InputMethodManager
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -41,7 +41,6 @@ import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
-import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
@@ -50,10 +49,12 @@ import kotlinx.android.synthetic.main.activity_lock_screen_root.*
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.LockScreenBroadcaster
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -69,6 +70,7 @@ open class LockScreenActivity : SecureActivity() {
     @Inject lateinit var baseAlertDialogBuilder: BaseAlertDialogBuilder
     protected lateinit var alertDialog: AlertDialog
     @Inject lateinit var walletApplication: WalletApplication
+    @Inject lateinit var walletData: WalletDataProvider
     @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     @Inject lateinit var configuration: Configuration
     private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
@@ -113,7 +115,7 @@ open class LockScreenActivity : SecureActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (walletApplication.wallet == null) {
+        if (walletData.wallet == null) {
             finish()
             return
         }
@@ -138,7 +140,7 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private val onLogoutListener = AutoLogout.OnLogoutListener {
-        Log.e(this::class.java.simpleName, "OnLogoutListener")
+        dismissKeyboard()
         setLockState(State.USE_DEFAULT)
         onLockScreenActivated()
     }
@@ -151,12 +153,22 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
+    protected open fun turnOffAutoLogout() {
+        autoLogout.stopTimer()
+    }
+
+    protected open fun turnOnAutoLogout() {
+        if (!autoLogout.isTimerActive) {
+            autoLogout.startTimer()
+        }
+    }
+
     private fun resetAutoLogoutTimer() {
         autoLogout.resetTimerIfActive()
     }
 
     private fun setupBackupSeedReminder() {
-        val hasBalance = walletApplication.wallet.getBalance(BalanceType.ESTIMATED).isPositive
+        val hasBalance = walletData.wallet?.getBalance(BalanceType.ESTIMATED)?.isPositive ?: false
         if (hasBalance && configuration.lastBackupSeedTime == 0L) {
             configuration.setLastBackupSeedTime()
         }
@@ -359,7 +371,7 @@ open class LockScreenActivity : SecureActivity() {
                 }
 
                 if (pinRetryController.failCount() > 0) {
-                    pin_preview.badPin(pinRetryController.getRemainingAttemptsMessage(this))
+                    pin_preview.badPin(pinRetryController.getRemainingAttemptsMessage(resources))
                 }
 
                 if (pinRetryController.remainingAttempts == 1) {
@@ -396,7 +408,7 @@ open class LockScreenActivity : SecureActivity() {
                 temporaryLockCheckHandler.postDelayed(temporaryLockCheckRunnable, temporaryLockCheckInterval)
 
                 action_title.setText(R.string.wallet_lock_wallet_disabled)
-                action_subtitle.text = pinRetryController.getWalletTemporaryLockedMessage(this)
+                action_subtitle.text = pinRetryController.getWalletTemporaryLockedMessage(resources)
 
                 action_login_with_pin.visibility = View.GONE
                 action_login_with_fingerprint.visibility = View.GONE
@@ -514,9 +526,7 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     open fun onLockScreenActivated() {
-        Log.e(this::class.java.simpleName, "Closing dialog")
         if (this::alertDialog.isInitialized){
-            Log.e(this::class.java.simpleName, "Dialog is initialized")
             alertDialog.dismissDialog()
         }
 
@@ -530,11 +540,21 @@ open class LockScreenActivity : SecureActivity() {
         fragmentManager.fragments
             .takeIf { it.isNotEmpty() }
             ?.forEach { fragment ->
-                if (fragment is DialogFragment) {
-                    fragment.dismissAllowingStateLoss()
-                } else if (fragment is NavHostFragment) {
-                    dismissDialogFragments(fragment.childFragmentManager)
+                // check to see if the activity is valid and fragment is added to its activity
+                if (fragment.activity != null && fragment.isAdded) {
+                    if (fragment is DialogFragment) {
+                        fragment.dismissAllowingStateLoss()
+                    } else if (fragment is NavHostFragment) {
+                        dismissDialogFragments(fragment.childFragmentManager)
+                    }
                 }
             }
+    }
+
+    private fun dismissKeyboard() {
+        val inputManager = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        currentFocus?.windowToken?.let { token ->
+            inputManager?.hideSoftInputFromWindow(token, 0)
+        }
     }
 }

@@ -32,11 +32,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.ConfirmTransactionService
-import org.dash.wallet.common.services.SecurityModel
+import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.ui.*
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -66,7 +65,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private val transferDashViewModel by activityViewModels<TransferDashViewModel>()
     private val binding by viewBinding(TransferDashFragmentBinding::bind)
     private var loadingDialog: FancyAlertDialog? = null
-    @Inject lateinit var securityModel: SecurityModel
+    @Inject lateinit var securityFunctions: ISecurityFunctions
     @Inject lateinit var confirmTransactionLauncher: ConfirmTransactionService
     @Inject lateinit var transactionDetails: SendPaymentService
     private var dashValue: Coin = Coin.ZERO
@@ -131,7 +130,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
                 if (!binding.dashWalletLimitBanner.isVisible && transferDashViewModel.isUserAuthorized()){
                     lifecycleScope.launch {
-                        securityModel.requestPinCode(requireActivity())?.let {
+                        securityFunctions.requestPinCode(requireActivity())?.let {
                             transferDashViewModel.createAddressForAccount()
                         }
                     }

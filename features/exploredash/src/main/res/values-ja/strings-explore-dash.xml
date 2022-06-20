@@ -23,6 +23,7 @@
     <string name="explore_merchants_subtitle">Dashでの支払いが可能な加盟店を探します。</string>
     <string name="explore_atms_title">ATM</string>
     <string name="explore_atms_subtitle">DASHやその他の仮想通貨を現金で売買できる場所を探します。</string>
+    <string name="explore_staking_subtitle">簡単にDashをステークし、数回のクリックでパッシブ収入を得ます。</string>
 
     <!-- Search -->
     <string name="explore_search_results">検索結果</string>
@@ -34,7 +35,6 @@
     <string name="explore_option_buy">購入</string>
     <string name="explore_option_sell">売却</string>
     <string name="explore_option_buy_sell">購入・売却</string>
-    <string name="explore_menu_info">情報</string>
     <string name="explore_where_to_spend">使用できる場所</string>
     <string name="explore_atms">ATM</string>
     <string name="explore_all_states">全州</string>
@@ -47,11 +47,11 @@
     <string name="distance_kilometers">%skm</string>
 
     <plurals name="explore_merchant_amount">
-        <item quantity="other">%d店舗</item>
+        <item quantity="other">%dカ所の加盟店があります</item>
     </plurals>
 
     <plurals name="explore_atm_amount">
-        <item quantity="other">%dカ所</item>
+        <item quantity="other">%dカ所のATMがあります</item>
     </plurals>
 
     <!-- Details -->
@@ -147,4 +147,12 @@
     <string name="find_merchant_text">加盟店を探す。</string>
     <string name="buy_gift_card_with_dash_text">Dashでギフトカードを購入</string>
     <string name="redeem_gift_card_text">ギフトカードは、オンラインで数秒以内またはレジでご利用いただけます。</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">同期中...。同期結果は完全ではない可能性があります。</string>
+    <string name="sync_in_progress_error">同期中...。エラーが発生しました。</string>
+    <string name="sync_in_progress_canceled">同期が中止されました...。後ほど再試行します。</string>
+
+    <string name="sync_in_progress_file_not_found">ビルドエラー：データベースが見つかりません。</string>
+    <string name="sync_in_progress_network_error">同期が中断されました...。ネットワークがオフラインまたはアクセスできません。</string>
 </resources>

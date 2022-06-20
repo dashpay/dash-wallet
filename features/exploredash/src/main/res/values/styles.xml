@@ -15,12 +15,7 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <style name="Explore.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
-        <item name="android:background">@color/white</item>
-        <item name="android:textColor">@color/gray_900</item>
-    </style>
-
-    <style name="ExploreTestBottomContentBackground" parent="WhiteBackground">
+    <style name="ExploreTestBottomContentBackground" parent="SecondaryBackground">
         <item name="cornerRadius">8dp</item>
     </style>
 
@@ -30,21 +25,15 @@
         <item name="cornerRadius">8dp</item>
     </style>
 
-    <style name="ExploreSearchResultsBackground" parent="WhiteBackground">
+    <style name="ExploreSearchResultsBackground" parent="SecondaryBackground">
         <item name="cornerRadius">8dp</item>
-    </style>
-
-    <style name="DialogIconBackground">
-        <item name="backgroundColor">@color/blue_50</item>
-        <item name="strokeColor">@color/blue_50</item>
-        <item name="cornerRadius">25dp</item>
     </style>
 
     <style name="MerchantLocationBackground">
         <item name="backgroundColor">@color/steel_gray_40</item>
         <item name="strokeColor">@color/steel_gray_40</item>
-        <item name="rippleColor">@color/button_ripple_color</item>
         <item name="cornerRadius">10dp</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
     <style name="UpButtonBackground">

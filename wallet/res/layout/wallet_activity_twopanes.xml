@@ -14,11 +14,11 @@
         <FrameLayout
             android:layout_width="@dimen/exchange_rate_pane_width"
             android:layout_height="match_parent"
-            android:background="@color/bg_less_bright" >
+            android:background="@color/background_primary_light" >
 
 			<fragment
 				android:id="@+id/exchange_rates_fragment"
-				android:name="de.schildbach.wallet.ui.ExchangeRatesFragment"
+				android:name="de.schildbach.wallet.ui.rates.ExchangeRatesFragment"
 				android:layout_width="match_parent"
 				android:layout_height="match_parent"
 				tools:layout="@layout/exchange_rate_row" />
@@ -45,7 +45,7 @@
 
 					<fragment
 						android:id="@+id/wallet_balance_fragment"
-						android:name="de.schildbach.wallet.ui.WalletBalanceFragment"
+						android:name="de.schildbach.wallet.ui.main.WalletBalanceFragment"
 						android:layout_width="0px"
 						android:layout_height="wrap_content"
 						android:layout_gravity="center"
@@ -65,13 +65,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="0px"
                     android:layout_weight="1"
-                    android:background="@color/bg_less_bright"
+                    android:background="@color/background_primary_light"
                     android:foreground="@drawable/view_shadow_bottom"
                     android:foregroundGravity="top|fill_horizontal" >
 
 					<fragment
 						android:id="@+id/wallet_transactions_fragment"
-						android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
+						android:name="de.schildbach.wallet.ui.main.WalletTransactionsFragment"
 						android:layout_width="match_parent"
 						android:layout_height="match_parent"
 						android:layout_gravity="bottom|center_horizontal"

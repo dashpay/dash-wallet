@@ -24,6 +24,7 @@ import android.view.animation.AnimationUtils
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
@@ -43,6 +44,7 @@ import org.dash.wallet.common.ui.BaseLockScreenFragment
 import org.dash.wallet.common.util.GenericUtils
 import org.slf4j.LoggerFactory
 
+@AndroidEntryPoint
 class PaymentProtocolFragment : BaseLockScreenFragment() {
 
     companion object {

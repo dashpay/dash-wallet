@@ -33,6 +33,10 @@ class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
     private val firebaseAnalytics = Firebase.analytics
     private val crashlytics = Firebase.crashlytics
 
+    init {
+        crashlytics.setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
+    }
+
     override fun logEvent(event: String, params: Bundle) {
         if (BuildConfig.DEBUG) {
             return
@@ -54,10 +58,10 @@ class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
         crashlytics.recordException(error)
     }
 
-    // TODO: remove when merged with DashPay, replace usages to injected service
     companion object {
         private var analyticsService: FirebaseAnalyticsServiceImpl? = null
 
+        @Deprecated("Inject AnalyticsService instead")
         fun getInstance(): FirebaseAnalyticsServiceImpl {
             if (analyticsService == null) {
                 analyticsService = FirebaseAnalyticsServiceImpl()

@@ -68,7 +68,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
             }
         }
 
-    private val _localCurrencyCode = MutableStateFlow(configuration.exchangeCurrencyCode)
+    private val _localCurrencyCode = MutableStateFlow(configuration.exchangeCurrencyCode!!)
     var localCurrencyCode: String
         get() = _localCurrencyCode.value
         set(value) {

@@ -13,7 +13,7 @@
     <string name="uphold_withdrawal_instructions">Ingresa la cantidad a transferir</string>
     <string name="uphold_withdrawal_success_title">Éxito</string>
     <string name="uphold_withdrawal_success_message">Tu transacción se envió y el monto debe aparecer en tu billetera en unos minutos.\n\n ID de transacción: %s</string>
-    <string name="uphold_otp_dialog_title">Ingresa tu código 2FA debajo</string>
+    <string name="uphold_otp_dialog_title">Ingresar tu código 2FA debajo</string>
     <string name="uphold_transfer">Transferir</string>
     <string name="uphold_see_on_uphold">Ver en Uphold</string>
     <string name="uphold_logout_title">Cerrar sesión desde Uphold</string>
@@ -28,9 +28,17 @@
     <string name="uphold_general_error_title">Error</string>
     <string name="uphold_api_error_title">Error de Uphold</string>
     <string name="uphold_api_error_identity">Tu cuenta de Uphold aún no está verificada. No se pueden retirar fondos.</string>
+    <string name="uphold_api_error_403_description">Tu cuenta de Uphold ha sido marcada para revisión.\n\nUphold ha restringido temporalmente tu cuenta y no podrás retirar fondos.\n\n%s</string>
+    <string name="uphold_api_error_403_generic">Uphold se pondrá en contacto contigo para ayudarte a resolver esto rápidamente.</string>
+    <string name="uphold_api_error_403_due_diligence">Por favor ve a tu cuenta de Uphold para responder algunas preguntas sobre ti.</string>
+    <string name="uphold_api_error_403_identity">Por favor ve a tu cuenta de Uphold para verificar tu identidad.</string>
+    <string name="uphold_api_error_403_proof_of_address">Por favor comunícate con Uphold para actualizar tu comprobante de domicilio.</string>
+
     <string name="uphold_api_error_400_description">Los fondos de Uphold están bloqueados durante 24 horas.\n\nTendrás fondos suficientes para esta transferencia el %s.</string>
     <string name="uphold_api_error_400_locked">Los fondos en Uphold (%1$s %2$s) están bloqueados por hasta 65 días.\n\nTendrás fondos suficientes para esta transferencia al %3$s.</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">No tienes fondos suficientes para esta transferencia</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">El monto a transferir debe ser inferior a %s DASH.</string>
+    <string name="uphold_api_error_400_greater_than_or_equal_to">La cantidad a transferir debe ser más de %s DASH.</string>
     <string name="uphold_api_error_400_tx_validation">No se puede transferir tanto con esta aplicación (máximo $ 3000)</string>
     <string name="uphold_api_error_400_password_reset">Los fondos de Uphold están bloqueados debido a un cambio de contraseña reciente.\n\Debes esperar hasta %s antes de que puedas transferir los fondos.</string>
     <string name="uphold_api_error_400_authentication_change">Los fondos de Uphold están bloqueados debido a un cambio reciente en el método de autenticación.\n\Debes esperar hasta %s antes de que puedas transferir los fondos.</string>
@@ -38,4 +46,5 @@
     <string name="uphold_api_error_400_invalid_beneficiary">No se puede transferir tanto con esta aplicación (máximo $3000)\n\nPor favor, usa tu cuenta de Uphold para realizar la transferencia.</string>
     <string name="uphold_api_error_400_required">No se puede transferir tanto con esta aplicación (máximo $3000)\n\nPor favor, usa tu cuenta de Uphold para realizar la transferencia.</string>
 
+    <string name="uphold_requirement_not_met_base_message">No puedes realizar esta operación en este momento. %s</string>
 </resources>

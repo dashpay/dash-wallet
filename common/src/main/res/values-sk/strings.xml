@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Generic titles/messages -->
     <string name="loading">Načítava sa...</string>
     <string name="loading_error">Nastala chyba. Skúste neskôr prosím.</string>
+    <string name="please_wait_title">Prosím čakajte</string>
     <string name="dash_available">Dostupných %1$s</string>
     <string name="network_unavailable_title">Sieť nedostupná</string>
     <string name="network_unavailable_check_connection">Skontrolujte svoje sieťové pripojenie</string>
     <string name="network_unavailable_balance_not_accurate">Zostatok nemusí byť presný kvôli stratenému spojeniu</string>
+    <string name="buy_dash">Kúpiť Dash</string>
+    <string name="copied">Skopírované</string>
+    <string name="staking_title">Stávkovanie</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernseyova libra</string>
     <!-- Local Currency List: JEP -->
@@ -26,11 +31,27 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini dolár</string>
 
-    <!-- Generic Buttons -->
+    <!-- Generic Titles/Buttons -->
     <string name="button_dismiss">Zrušiť</string>
     <string name="network_unavailable_return">Návrat do Peňaženky</string>
     <string name="button_continue">Pokračovať</string>
+    <string name="button_close">Zatvoriť</string>
+    <string name="button_retry">Znovu</string>
+    <string name="button_send_report">Poslať správu</string>
+    <string name="button_info">Informácie</string>
+    <string name="button_copy_address">Kopírovať adresu</string>
+    <string name="button_understand">Rozumiem</string>
+    <string name="button_okay">Dobre</string>
+    <string name="button_share">Zdieľať</string>
+    <string name="verify">Overiť</string>
+    <string name="error">Chyba</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Hľadať</string>
+    <string name="permission_allow">Povoliť</string>
+    <string name="permission_deny">Zamietnuť</string>
     <string name="max">Max</string>
     <string name="select_currency">Vyberte menu</string>
+    <string name="send_coins_error_dusty_send">Čiastka je príliš nízka pre odoslanie</string>
+    <string name="send_coins_error_insufficient_money">Nedostatok prostriedkov</string>
 </resources>
