@@ -72,7 +72,10 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
             val dialog = progress(message)
             dialog.show(activity) { }
             val result = action.invoke()
-            dialog.dismiss()
+
+            if (dialog.activity != null && dialog.isAdded) {
+                dialog.dismissAllowingStateLoss()
+            }
 
             return result
         }
