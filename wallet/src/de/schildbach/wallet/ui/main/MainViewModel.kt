@@ -40,9 +40,7 @@ import org.dash.wallet.common.transactions.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
-import java.util.*
 import javax.inject.Inject
-import kotlin.system.measureTimeMillis
 
 @HiltViewModel
 @FlowPreview
