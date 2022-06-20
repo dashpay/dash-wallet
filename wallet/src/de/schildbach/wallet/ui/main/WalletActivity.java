@@ -374,6 +374,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
             @Override
             protected void error(Exception x, final int messageResId, final Object... messageArgs) {
+                System.out.println("handlePaste error" + x);
+                x.printStackTrace();
                 AdaptiveDialog dialog = AdaptiveDialog.create(
                         R.drawable.ic_info_red,
                         getString(errorDialogTitleResId),
