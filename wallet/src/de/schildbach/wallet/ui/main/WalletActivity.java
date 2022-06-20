@@ -24,6 +24,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -119,7 +120,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         NavigationView.OnNavigationItemSelectedListener,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
-        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
+        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
+        SharedPreferences.OnSharedPreferenceChangeListener {
 
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
@@ -263,11 +265,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
     protected void onResume() {
         super.onResume();
 
+        config.registerOnSharedPreferenceChangeListener(this);
         checkLowStorageAlert();
         checkWalletEncryptionDialog();
         detectUserCountry();
         showBackupWalletDialogIfNeeded();
-        showHideSecureAction();
+        refreshShortcutBar();
     }
 
     private void showBackupWalletDialogIfNeeded() {
@@ -280,6 +283,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     protected void onPause() {
         handler.removeCallbacksAndMessages(null);
+        config.unregisterOnSharedPreferenceChangeListener(this);
 
         super.onPause();
     }
@@ -1036,5 +1040,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         dialog.show(this, result -> Unit.INSTANCE);
         config.setShowNotificationsExplainer(false);
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
+        if (Configuration.PREFS_KEY_REMIND_BACKUP.equals(key) || Configuration.PREFS_KEY_REMIND_BACKUP_SEED.equals(key)) {
+            refreshShortcutBar();
+        }
     }
 }

@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui.main
 
 import android.content.res.Resources
 import android.text.format.DateUtils
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.view.isVisible
@@ -27,105 +26,45 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet.ui.transactions.TxResourceMapper
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionRowBinding
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
-import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.transactions.TransactionComparator
-import org.dash.wallet.common.transactions.TransactionUtils
-import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.getRoundedRippleBackground
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 
-class TransactionWrapperAdapter(
-    private val wallet: Wallet,
-    dashFormat: MonetaryFormat,
-    resources: Resources,
-    private val clickListener: (TransactionWrapper, Int) -> Unit
-) : TransactionAdapter<TransactionWrapper>(
-    wallet, dashFormat, resources, DiffCallback(wallet)
-) {
-    override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) {
-        val wrapper = getItem(position)
-        holder.bind(wrapper, wallet)
+class TransactionAdapter(
+    private val dashFormat: MonetaryFormat,
+    private val resources: Resources,
+    private val drawBackground: Boolean = false,
+    private val clickListener: (TransactionRowView, Int) -> Unit
+) : ListAdapter<TransactionRowView, TransactionAdapter.TransactionViewHolder>(DiffCallback()) {
+    private val contentColor = resources.getColor(R.color.content_primary, null)
+    private val warningColor = resources.getColor(R.color.content_warning, null)
+    private val colorSecondaryStatus = resources.getColor(R.color.secondary_status, null)
 
-        holder.itemView.setOnClickListener {
-            clickListener.invoke(wrapper, position)
+    class DiffCallback : DiffUtil.ItemCallback<TransactionRowView>() {
+        override fun areItemsTheSame(oldItem: TransactionRowView, newItem: TransactionRowView): Boolean {
+            return oldItem.txId == newItem.txId
+        }
+
+        override fun areContentsTheSame(oldItem: TransactionRowView, newItem: TransactionRowView): Boolean {
+            return oldItem == newItem
         }
     }
 
-    class DiffCallback(private val bag: TransactionBag) : DiffUtil.ItemCallback<TransactionWrapper>() {
-        override fun areItemsTheSame(oldItem: TransactionWrapper, newItem: TransactionWrapper): Boolean {
-            return oldItem.transactions.first().txId == newItem.transactions.first().txId
-        }
-
-        override fun areContentsTheSame(oldItem: TransactionWrapper, newItem: TransactionWrapper): Boolean {
-            val isTheSame = if (newItem.transactions.size > 1) {
-                // For wrappers with > 1 tx, only size and value is changing
-                oldItem.transactions.size == newItem.transactions.size &&
-                        oldItem.getValue(bag) == newItem.getValue(bag)
-            } else {
-                // For a single transaction, the status can change
-                Context.propagate(Constants.CONTEXT)
-                val tx1 = oldItem.transactions.first()
-                val tx2 = newItem.transactions.first()
-                Log.i("CROWDNODE", "areContentsTheSame, ixType: ${tx1.confidence.ixType} : ${tx2.confidence.ixType}, txId: ${tx1.txId}")
-                TransactionComparator().compare(tx1, tx2) == 0 &&
-                        tx1.confidence.ixType == tx2.confidence.ixType &&
-                        tx1.confidence.depthInBlocks == tx2.confidence.depthInBlocks
-            }
-            return isTheSame
-        }
-    }
-}
-
-class SingleTransactionAdapter(
-    wallet: Wallet,
-    dashFormat: MonetaryFormat,
-    resources: Resources,
-    private val resourceMapper: TxResourceMapper = TxResourceMapper(),
-    private val clickListener: (Transaction, Int) -> Unit
-) : TransactionAdapter<Transaction>(
-    wallet, dashFormat, resources, DiffCallback()
-) {
     override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) {
         val tx = getItem(position)
-        holder.bind(tx, resourceMapper)
+        holder.bind(tx)
 
         holder.itemView.setOnClickListener {
             clickListener.invoke(tx, position)
         }
     }
-
-    class DiffCallback : DiffUtil.ItemCallback<Transaction>() {
-        override fun areItemsTheSame(oldItem: Transaction, newItem: Transaction): Boolean {
-            return oldItem.txId == newItem.txId
-        }
-
-        override fun areContentsTheSame(oldItem: Transaction, newItem: Transaction): Boolean {
-            Context.propagate(Constants.CONTEXT)
-            return TransactionComparator().compare(oldItem, newItem) == 0 &&
-                    oldItem.confidence.ixType == newItem.confidence.ixType &&
-                    oldItem.confidence.depthInBlocks == newItem.confidence.depthInBlocks
-        }
-    }
-}
-
-open class TransactionAdapter<T>(
-    private val wallet: Wallet,
-    private val dashFormat: MonetaryFormat,
-    private val resources: Resources,
-    diffCallback: DiffUtil.ItemCallback<T>
-) : ListAdapter<T, TransactionAdapter<T>.TransactionViewHolder>(diffCallback) {
-    private val colorSecondaryStatus = resources.getColor(R.color.secondary_status, null)
-    private val contentColor = resources.getColor(R.color.content_primary, null)
-    private val warningColor = resources.getColor(R.color.content_warning, null)
-    private val transactionCache = hashMapOf<Sha256Hash, TransactionCacheEntry>()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TransactionViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -133,8 +72,6 @@ open class TransactionAdapter<T>(
 
         return TransactionViewHolder(binding)
     }
-
-    override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) { }
 
     inner class TransactionViewHolder(
         private val binding: TransactionRowBinding
@@ -145,124 +82,53 @@ open class TransactionAdapter<T>(
             binding.fiatView.setApplyMarkup(false)
         }
 
-        fun bind(txWrapper: TransactionWrapper, wallet: Wallet) {
-            binding.root.background = resources.getRoundedRippleBackground(R.style.TransactionRowBackground)
-            val tx = txWrapper.transactions.last()
-
-            if (txWrapper is FullCrowdNodeSignUpTxSet) {
-                val value = txWrapper.getValue(wallet)
-                binding.icon.setImageResource(R.drawable.ic_crowdnode_logo)
-                binding.icon.background = resources.getRoundedBackground(R.style.TxNoBackground)
-                binding.primaryStatus.text = resources.getString(R.string.crowdnode_account)
-
-                setValue(value, false)
-                setFiatValue(value, tx.exchangeRate)
-                setTime(tx, resourceMapper.dateTimeFormat)
-                setDetails(txWrapper.transactions.size)
-            } else {
-                bind(tx, resourceMapper)
-            }
-        }
-
-        fun bind(tx: Transaction, resourceMapper: TxResourceMapper) {
-            val txCache = getTxCache(tx)
-
-            setIcon(txCache)
-            setPrimaryStatus(tx, resourceMapper)
-            setSecondaryStatus(tx, txCache, resourceMapper)
-
-            val value = if (txCache.showFee) txCache.value.add(txCache.fee) else txCache.value
-            setValue(value, tx.confidence.hasErrors())
-            setFiatValue(value, tx.exchangeRate)
-            setTime(tx, resourceMapper.dateTimeFormat)
-            setDetails(1)
-        }
-
-        private fun getTxCache(tx: Transaction): TransactionCacheEntry {
-            var txCache = transactionCache[tx.txId]
-
-            if (txCache == null) {
-                val value = tx.getValue(wallet)
-                val isSent = value.signum() < 0
-                val fee = tx.fee
-                val showFee = isSent && fee != null && !fee.isZero
-                val isInternal = TransactionUtils.isEntirelySelf(tx, wallet)
-
-                txCache = TransactionCacheEntry(
-                    value, isSent, isInternal, fee, showFee
-                )
-                transactionCache[tx.txId] = txCache
+        fun bind(txView: TransactionRowView) {
+            if (drawBackground) {
+                binding.root.background = resources.getRoundedRippleBackground(R.style.TransactionRowBackground)
             }
 
-            return txCache
-        }
+            binding.icon.setImageResource(txView.icon)
+            binding.icon.background = resources.getRoundedBackground(txView.iconBackground)
 
-        private fun setIcon(txCache: TransactionCacheEntry) {
-            if (txCache.isInternal) {
-                binding.icon.setImageResource(R.drawable.ic_shuffle)
-                binding.icon.background = resources.getRoundedBackground(R.style.TxSentBackground)
-            } else if (txCache.isSent) {
-                binding.icon.setImageResource(R.drawable.ic_transaction_sent)
-                binding.icon.background = resources.getRoundedBackground(R.style.TxSentBackground)
-            } else {
-                binding.icon.setImageResource(R.drawable.ic_transaction_received)
-                binding.icon.background = resources.getRoundedBackground(R.style.TxReceivedBackground)
-            }
-        }
-
-        private fun setPrimaryStatus(tx: Transaction, resourceMapper: TxResourceMapper) {
-            // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal
-            //                      Received:  Received, Mining Rewards, Masternode Rewards
-            val idPrimaryStatus = resourceMapper.getTransactionTypeName(tx, wallet)
-            binding.primaryStatus.setText(idPrimaryStatus)
-            binding.primaryStatus.setTextColor(if (tx.confidence.hasErrors()) {
+            binding.primaryStatus.text = resources.getString(txView.title)
+            binding.primaryStatus.setTextColor(if (txView.hasErrors) {
                 warningColor
             } else {
                 contentColor
             })
+
+            if (txView.status < 0) {
+                binding.secondaryStatus.text = null
+            } else {
+                binding.secondaryStatus.text = resources.getString(txView.status)
+                binding.secondaryStatus.setTextColor(if (txView.hasErrors) {
+                    warningColor
+                } else {
+                    colorSecondaryStatus
+                })
+            }
+
+            setValue(txView.value, txView.hasErrors)
+            setFiatValue(txView.value, txView.exchangeRate)
+            setTime(txView.time, resourceMapper.dateTimeFormat)
+            setDetails(txView.transactionAmount)
         }
 
-        private fun setDetails(transactionsCount: Int) {
-            if (transactionsCount > 1) {
+        private fun setDetails(transactionAmount: Int) {
+            if (transactionAmount > 1) {
                 binding.details.isVisible = true
-                binding.details.text = resources.getString(R.string.transaction_count, transactionsCount)
+                binding.details.text = resources.getString(R.string.transaction_count, transactionAmount)
             } else {
                 binding.details.isVisible = false
             }
         }
 
-        private fun setTime(tx: Transaction, dateTimeFormat: Int) {
+        private fun setTime(time: Long, dateTimeFormat: Int) {
             // Set the time. eg.  "<date> <time>"
             binding.time.text = DateUtils.formatDateTime(
-                itemView.context, tx.updateTime.time,
+                itemView.context, time,
                 dateTimeFormat
             )
-        }
-
-        private fun setSecondaryStatus(
-            tx: Transaction,
-            txCache: TransactionCacheEntry,
-            resourceMapper: TxResourceMapper
-        ) {
-            var secondaryStatusId: Int = -1
-
-            if (tx.confidence.hasErrors()) {
-                secondaryStatusId = resourceMapper.getErrorName(tx)
-            } else if (!txCache.isSent) {
-                secondaryStatusId = resourceMapper.getReceivedStatusString(tx, wallet.context)
-            }
-
-            if (secondaryStatusId != -1) {
-                binding.secondaryStatus.setText(secondaryStatusId)
-            } else {
-                binding.secondaryStatus.text = null
-            }
-
-            binding.secondaryStatus.setTextColor(if (tx.confidence.hasErrors()) {
-                warningColor
-            } else {
-                colorSecondaryStatus
-            })
         }
 
         private fun setValue(value: Coin, hasErrors: Boolean) {
@@ -315,12 +181,4 @@ open class TransactionAdapter<T>(
             }
         }
     }
-
-    internal data class TransactionCacheEntry(
-        val value: Coin,
-        val isSent: Boolean,
-        val isInternal: Boolean,
-        val fee: Coin?,
-        val showFee: Boolean
-    )
 }

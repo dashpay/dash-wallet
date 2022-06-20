@@ -1009,7 +1009,7 @@ public class WalletApplication extends BaseWalletApplication
     @NonNull
     @Override
     public Collection<TransactionWrapper> wrapAllTransactions(@NonNull TransactionWrapper... wrappers) {
-        propagateContext();
+        org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
         return TransactionWrapperHelper.INSTANCE.wrapTransactions(
                 wallet.getTransactions(true),
                 wrappers
@@ -1025,11 +1025,6 @@ public class WalletApplication extends BaseWalletApplication
     @Override
     public NetworkParameters getNetworkParameters() {
         return Constants.NETWORK_PARAMETERS;
-    }
-
-    @Override
-    public void propagateContext() {
-        org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
     }
 
     @Override

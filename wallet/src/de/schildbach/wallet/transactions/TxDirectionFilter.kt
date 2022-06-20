@@ -18,6 +18,7 @@
 package de.schildbach.wallet.transactions
 
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.TransactionBag
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.transactions.TransactionFilter
 
@@ -25,13 +26,16 @@ enum class TxDirection {
     RECEIVED, SENT, ALL
 }
 
-class TxDirectionFilter(private val direction: TxDirection, private val wallet: Wallet): TransactionFilter {
+class TxDirectionFilter(
+    private val direction: TxDirection,
+    private val bag: TransactionBag
+): TransactionFilter {
     override fun matches(tx: Transaction): Boolean {
         if (direction == TxDirection.ALL) {
             return true
         }
 
-        val isSent = tx.getValue(wallet).signum() < 0
+        val isSent = tx.getValue(bag).signum() < 0
         val isInternal = tx.purpose == Transaction.Purpose.KEY_ROTATION
 
         return !isInternal && ((direction == TxDirection.SENT && isSent) ||

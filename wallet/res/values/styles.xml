@@ -9,7 +9,6 @@
         <item name="android:windowTranslucentNavigation">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-<!--        <item name="colorControlHighlight">@color/button_ripple_color</item>-->
     </style>
 
     <style name="LockScreenActivity.Theme" parent="SplashActivity.Theme">

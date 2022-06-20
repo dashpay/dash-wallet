@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Dash Core Group.
+ * Copyright 2019 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,6 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi

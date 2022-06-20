@@ -20,15 +20,13 @@ package de.schildbach.wallet.ui.main
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
@@ -42,7 +40,9 @@ import org.dash.wallet.common.transactions.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
+import java.util.*
 import javax.inject.Inject
+import kotlin.system.measureTimeMillis
 
 @HiltViewModel
 @FlowPreview
@@ -53,21 +53,24 @@ class MainViewModel @Inject constructor(
     private val config: Configuration,
     blockchainStateDao: BlockchainStateDao,
     exchangeRatesProvider: ExchangeRatesProvider,
-    private val walletData: WalletDataProvider,
+    val walletData: WalletDataProvider,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     companion object {
-        private const val THROTTLE_DURATION = 1000L
+        private const val THROTTLE_DURATION = 500L
         private const val DIRECTION_KEY = "tx_direction"
     }
+
+    private val workerJob = SupervisorJob()
+    private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
     private val listener: SharedPreferences.OnSharedPreferenceChangeListener
     private val currencyCode = MutableStateFlow(config.exchangeCurrencyCode)
 
     val balanceDashFormat: MonetaryFormat = config.format.noCode()
 
-    private val _transactions = MutableLiveData<Set<TransactionWrapper>>()
-    val transactions: LiveData<Set<TransactionWrapper>>
+    private val _transactions = MutableLiveData<List<TransactionWrapper>>()
+    val transactions: LiveData<List<TransactionWrapper>>
         get() = _transactions
 
     private val _transactionsDirection = MutableStateFlow(TxDirection.ALL)
@@ -112,12 +115,9 @@ class MainViewModel @Inject constructor(
                 refreshTransactions(filter)
                 walletData.observeTransactions(filter)
                     .debounce(THROTTLE_DURATION)
-                    .onEach {
-                        Log.i("CROWDNODE", "transactions flowed in")
-                        refreshTransactions(filter)
-                    }
+                    .onEach { refreshTransactions(filter) }
             }
-            .launchIn(viewModelScope)
+            .launchIn(viewModelWorkerScope)
 
         blockchainStateDao.observeState()
             .filterNotNull()
@@ -214,8 +214,7 @@ class MainViewModel @Inject constructor(
             val wrappedTransactions = walletData.wrapAllTransactions(
                 FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
             ).filter { it.transactions.any { tx -> filter.matches(tx) } }
-
-            _transactions.postValue(wrappedTransactions.toSortedSet(TransactionWrapperComparator()))
+            _transactions.postValue(wrappedTransactions.sortedWith(TransactionWrapperComparator()))
         }
     }
 }

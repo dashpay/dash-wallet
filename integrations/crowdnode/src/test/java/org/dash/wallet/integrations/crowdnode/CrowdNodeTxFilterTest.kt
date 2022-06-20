@@ -17,7 +17,6 @@
 
 package org.dash.wallet.integrations.crowdnode
 
-import android.util.Log
 import junit.framework.TestCase.*
 import org.bitcoinj.core.*
 import org.bitcoinj.params.TestNet3Params
@@ -26,7 +25,6 @@ import org.dashj.bls.Utils
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 
@@ -69,6 +67,7 @@ class CrowdNodeTxFilterTest {
         val filter = CrowdNodeSignUpTx(networkParams)
 
         assertTrue("SignUp tx doesn't match", filter.matches(signUpRequestTx))
+        assertEquals(1, filter.fromAddresses.size)
         assertEquals("yihMSMoesHX1JhbntTiV5Nptf5NLrmFMCu", filter.fromAddresses.first().toBase58())
 
         var notSignUpData = "01000000033f90cbc2d751c77358b3ff37efd72936b389a17b9ec72bdec4678394814cfe2d000000006a473044022050d2f3b6f097f1973b29bb5a0e98f307f6fc338bb8d29e4a7eb257eebd147ccd022055f88aa06cf90aec97991db9c351fd622fa60fe2cb6bbe6df2ecfef03ca047fa012102d336120a91d7d3497056715f6078e36c56e84c41038cf630260ef3245f6ba39effffffff94cae0fa480e004218a66ea7eae8c0a1a39dbd8ebba966004ddfdcac1e11f089000000006b483045022100ed1fbe54b90c8d69e616b79ba5e03e192bdee6b26f66d40d9da14ae7c7e64a9c022062c54fb1635937a38f3b43b504777c9faf357734cad6f53130870f7e980a3be60121037c4c4205eceb06bbf1e4894e52ecddcf700e1a699e2a4cbee9fd7ed748fb7a59ffffffff3e2611f35c7a2fefadce6b115ce8e14b31b627667af9c04909c0ddcceb8294a3000000006a473044022036bed2e8600ed1a715618ca398553254c14fcea824b77ed784cee5f5b23b84df022041c4821e6e639169ddc891e4d6b4e146e5f4684e5687daf5fcce2fd1f73392230121037c4c4205eceb06bbf1e4894e52ecddcf700e1a699e2a4cbee9fd7ed748fb7a59ffffffff0260182300000000001976a9140205411ec940f9139ea72e3a999d21fceff671e688ac4dc27200000000001976a91425b2b9126bf32e6115a813d019e72b7b9106211b88ac00000000"

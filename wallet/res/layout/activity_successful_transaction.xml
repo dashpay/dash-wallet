@@ -24,6 +24,7 @@
             android:layout_marginBottom="15dp"
             android:layout_marginHorizontal="25dp"
             android:text="@string/transaction_close"
+            app:layout_constraintTop_toTopOf="@id/payee_verified_by_container"
             app:layout_constraintBottom_toBottomOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

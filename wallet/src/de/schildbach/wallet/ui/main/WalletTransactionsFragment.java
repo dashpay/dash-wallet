@@ -17,17 +17,10 @@
 
 package de.schildbach.wallet.ui.main;
 
-import android.content.ContentResolver;
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
-import android.database.ContentObserver;
 import android.graphics.Rect;
 import android.os.Bundle;
-import android.os.Handler;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -40,17 +33,16 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
+import org.dash.wallet.common.transactions.TransactionWrapper;
 
 import java.util.ArrayList;
+import java.util.List;
 
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment;
 import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment;
+import de.schildbach.wallet.ui.transactions.TransactionRowView;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 import kotlinx.coroutines.ExperimentalCoroutinesApi;
@@ -61,72 +53,14 @@ import kotlinx.coroutines.FlowPreview;
  */
 @FlowPreview
 @ExperimentalCoroutinesApi
-public class WalletTransactionsFragment extends Fragment implements OnSharedPreferenceChangeListener {
-
-    private Configuration config;
-    private Wallet wallet;
-    private ContentResolver resolver;
+public class WalletTransactionsFragment extends Fragment {
 
     private TextView emptyView;
     private View loading;
     private RecyclerView recyclerView;
-    private TransactionWrapperAdapter adapter;
+    private TransactionAdapter adapter;
     private TextView syncingText;
     private MainViewModel viewModel;
-
-    private final Handler handler = new Handler();
-
-    private final ContentObserver addressBookObserver = new ContentObserver(handler) {
-        @Override
-        public void onChange(final boolean selfChange) {
-            ////    public void clearCacheAndNotifyDataSetChanged() { // TODO
-////        transactionCache.clear();
-////
-////        notifyDataSetChanged();
-////    }
-        }
-    };
-
-    @Override
-    public void onAttach(@NonNull final Context context) {
-        super.onAttach(context);
-
-        WalletApplication application = (WalletApplication) requireActivity().getApplication();
-        this.config = application.getConfiguration();
-        this.wallet = application.getWallet();
-        this.resolver = requireActivity().getContentResolver();
-    }
-
-    @Override
-    public void onCreate(final Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        MonetaryFormat dashFormat = config.getFormat().noCode();
-        adapter = new TransactionWrapperAdapter(wallet, dashFormat, getResources(), (wrapper, position) -> {
-            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS);
-
-            if (wrapper.getTransactions().size() > 1) {
-                TransactionGroupDetailsFragment fragment = new TransactionGroupDetailsFragment(wrapper);
-                fragment.show(getParentFragmentManager(), "transaction_group");
-            } else {
-                Sha256Hash txId = wrapper.getTransactions().iterator().next().getTxId();
-                TransactionDetailsDialogFragment transactionDetailsDialogFragment =
-                        TransactionDetailsDialogFragment.newInstance(txId);
-                transactionDetailsDialogFragment.show(getParentFragmentManager(), null);
-            }
-
-            return Unit.INSTANCE;
-        });
-
-        adapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
-            @Override
-            public void onItemRangeInserted(int positionStart, int itemCount) {
-                if (positionStart == 0) {
-                    recyclerView.scrollToPosition(0);
-                }
-            }
-        });
-    }
 
     @Override
     public void onDestroyView() {
@@ -143,6 +77,36 @@ public class WalletTransactionsFragment extends Fragment implements OnSharedPref
         emptyView = view.findViewById(R.id.wallet_transactions_empty);
         loading = view.findViewById(R.id.loading);
         syncingText = view.findViewById(R.id.syncing);
+
+        adapter = new TransactionAdapter(viewModel.getBalanceDashFormat(), getResources(), true, (txView, position) -> {
+            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS);
+            List<TransactionWrapper> wrappers = viewModel.getTransactions().getValue();
+
+            if (wrappers != null) {
+                TransactionWrapper wrapper = wrappers.get(position);
+
+                if (wrapper.getTransactions().size() > 1) {
+                    TransactionGroupDetailsFragment fragment = new TransactionGroupDetailsFragment(wrapper);
+                    fragment.show(getParentFragmentManager(), "transaction_group");
+                } else {
+                    Sha256Hash txId = wrapper.getTransactions().iterator().next().getTxId();
+                    TransactionDetailsDialogFragment transactionDetailsDialogFragment =
+                            TransactionDetailsDialogFragment.newInstance(txId);
+                    transactionDetailsDialogFragment.show(getParentFragmentManager(), null);
+                }
+            }
+
+            return Unit.INSTANCE;
+        });
+
+        adapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
+            @Override
+            public void onItemRangeInserted(int positionStart, int itemCount) {
+                if (positionStart == 0) {
+                    recyclerView.scrollToPosition(0);
+                }
+            }
+        });
 
         view.findViewById(R.id.transaction_filter_btn).setOnClickListener(v -> {
             TransactionsFilterDialog dialogFragment = new TransactionsFilterDialog((direction, dialog) -> {
@@ -178,10 +142,17 @@ public class WalletTransactionsFragment extends Fragment implements OnSharedPref
         viewModel.isBlockchainSynced().observe(getViewLifecycleOwner(), isSynced -> updateSyncState());
         viewModel.getBlockchainSyncPercentage().observe(getViewLifecycleOwner(), percentage -> updateSyncState());
         viewModel.getTransactions().observe(getViewLifecycleOwner(), wrappedTransactions -> {
-            Log.i("CROWDNODE", "observedTransactions");
             loading.setVisibility(View.GONE);
-            adapter.submitList(new ArrayList<>(wrappedTransactions));
-            updateView();
+            List<TransactionRowView> transactionViews = new ArrayList<>();
+
+            for (TransactionWrapper wrapper: wrappedTransactions) {
+                transactionViews.add(TransactionRowView.Companion.fromTransactionWrapper(
+                        wrapper, viewModel.getWalletData().getTransactionBag(),
+                        Constants.CONTEXT
+                ));
+            }
+
+            adapter.submitList(transactionViews);
 
             if (wrappedTransactions.isEmpty()) {
                 showEmptyView();
@@ -191,25 +162,6 @@ public class WalletTransactionsFragment extends Fragment implements OnSharedPref
         });
 
         return view;
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        resolver.registerContentObserver(
-                AddressBookProvider.contentUri(requireContext().getPackageName()),
-                true,
-                addressBookObserver
-        );
-        config.registerOnSharedPreferenceChangeListener(this);
-        updateView();
-    }
-
-    @Override
-    public void onPause() {
-        config.unregisterOnSharedPreferenceChangeListener(this);
-        resolver.unregisterContentObserver(addressBookObserver);
-        super.onPause();
     }
 
     private void updateSyncState() {
@@ -244,17 +196,6 @@ public class WalletTransactionsFragment extends Fragment implements OnSharedPref
     private void showEmptyView() {
         emptyView.setVisibility(View.VISIBLE);
         recyclerView.setVisibility(View.INVISIBLE);
-    }
-
-    @Override
-    public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
-        if (Configuration.PREFS_KEY_BTC_PRECISION.equals(key) || Configuration.PREFS_KEY_REMIND_BACKUP.equals(key) ||
-                Configuration.PREFS_KEY_REMIND_BACKUP_SEED.equals(key))
-            updateView();
-    }
-
-    private void updateView() {
-//        adapter.setFormat(config.getFormat()); TODO
     }
 
     public boolean isHistoryEmpty() {

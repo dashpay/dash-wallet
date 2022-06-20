@@ -24,7 +24,7 @@
     android:focusable="true"
     android:background="?attr/selectableItemBackground"
     android:paddingEnd="15dp"
-    tools:context="de.schildbach.wallet.ui.main.SingleTransactionAdapter">
+    tools:context="de.schildbach.wallet.ui.main.TransactionAdapter">
 
     <ImageView
         android:id="@+id/icon"

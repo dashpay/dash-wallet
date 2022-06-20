@@ -22,7 +22,6 @@ import org.dash.wallet.common.transactions.TransactionComparator
 import org.dash.wallet.common.transactions.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionWrapper
-import org.dashj.bls.Utils
 
 open class FullCrowdNodeSignUpTxSet(
     networkParams: NetworkParameters,
@@ -49,6 +48,10 @@ open class FullCrowdNodeSignUpTxSet(
         get() = (matchedFilters.firstOrNull { it is CrowdNodeSignUpTx } as? CrowdNodeSignUpTx)?.fromAddresses?.first()
 
     override fun tryInclude(tx: Transaction): Boolean {
+        if (transactions.any { it.txId == tx.txId }) {
+            return false
+        }
+
         if (TransactionUtils.isEntirelySelf(tx, bag)) {
             // We might not have our CrowdNode account address by the time the topUp
             // transaction is found, which means we need to check its `spentBy`

@@ -36,8 +36,6 @@ interface WalletDataProvider {
 
     val networkParameters: NetworkParameters
 
-    fun propagateContext()
-
     fun currentReceiveAddress(): Address
 
     fun freshReceiveAddress(): Address

@@ -96,7 +96,7 @@ class MainViewModelTest {
 
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, mockk(), mockk()
+            exchangeRatesMock, walletDataMock, mockk()
         ))
 
         val clipboardInput = viewModel.getClipboardInput()
@@ -115,7 +115,7 @@ class MainViewModelTest {
 
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, mockk(), mockk()
+            exchangeRatesMock, walletDataMock, mockk()
         ))
 
         every { clipboardManagerMock.primaryClip?.getItemAt(0)?.uri?.toString() } returns mockUri
@@ -147,7 +147,7 @@ class MainViewModelTest {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, mockk(), mockk()
+            exchangeRatesMock, walletDataMock, mockk()
         ))
 
         assertEquals(false, viewModel.isBlockchainSynced.value)
@@ -160,7 +160,7 @@ class MainViewModelTest {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(state)
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, mockk(), mockk()
+            exchangeRatesMock, walletDataMock, mockk()
         ))
 
         assertEquals(true, viewModel.isBlockchainSynced.value)

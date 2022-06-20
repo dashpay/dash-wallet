@@ -20,7 +20,10 @@ package de.schildbach.wallet.ui.transactions
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.ExchangeRate
@@ -50,10 +53,20 @@ class TransactionGroupViewModel @Inject constructor(
         get() = _transactions
 
     fun init(transactionWrapper: TransactionWrapper) {
-        _transactions.value = transactionWrapper.transactions.toList()
         _exchangeRate.value = transactionWrapper.transactions.first().exchangeRate
-        walletData.wallet?.let {
-            _dashValue.value = transactionWrapper.getValue(it)
-        }
+        refreshTransactions(transactionWrapper)
+
+        walletData.observeTransactions()
+            .onEach { tx ->
+                if (transactionWrapper.tryInclude(tx)) {
+                    refreshTransactions(transactionWrapper)
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun refreshTransactions(transactionWrapper: TransactionWrapper) {
+        _transactions.value = transactionWrapper.transactions.toList()
+        _dashValue.value = transactionWrapper.getValue(walletData.transactionBag)
     }
 }

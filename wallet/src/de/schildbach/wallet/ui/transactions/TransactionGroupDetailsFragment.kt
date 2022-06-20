@@ -25,7 +25,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.ui.main.SingleTransactionAdapter
+import de.schildbach.wallet.ui.main.TransactionAdapter
 import de.schildbach.wallet.util.currencySymbol
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionGroupDetailsBinding
@@ -78,11 +78,9 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
         }
 
         viewModel.walletData.wallet?.let { wallet ->
-            val adapter = SingleTransactionAdapter(
-                wallet,
+            val adapter = TransactionAdapter(
                 viewModel.dashFormat,
-                resources,
-                resourceMapper
+                resources
             ) { item, _ ->
                 TransactionDetailsDialogFragment
                     .newInstance(item.txId)
@@ -97,7 +95,13 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
                 marginStart = resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start)
             ))
 
-            viewModel.transactions.observe(viewLifecycleOwner, adapter::submitList)
+            viewModel.transactions.observe(viewLifecycleOwner) { transactions ->
+                adapter.submitList(transactions.map {
+                    TransactionRowView.fromTransaction(
+                        it, wallet, wallet.context, resourceMapper
+                    )
+                })
+            }
         }
 
         viewModel.dashValue.observe(viewLifecycleOwner) {
