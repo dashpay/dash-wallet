@@ -1,4 +1,10 @@
 Dash Wallet
+v7.5.1
+* Fix CrowdNode issues
+* Add link CrowdNode account
+* Fix autologout issue on Liquid and Uphold screens
+* Add low balance warning
+
 v7.5
 * Add CrowdNode integration
 * Improve Reset Wallet functionality
