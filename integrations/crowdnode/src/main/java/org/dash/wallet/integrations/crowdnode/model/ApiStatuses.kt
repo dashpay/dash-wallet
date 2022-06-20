@@ -45,7 +45,6 @@ open class CrowdNodeException(message: String): Exception(message) {
         const val CONFIRMATION_ERROR = "confirmation_error"
         const val WITHDRAWAL_ERROR = "withdrawal_error"
         const val MISSING_PRIMARY = "primary_not_specified"
-        const val SEND_MESSAGE_ERROR = "send_message_error"
     }
 }
 

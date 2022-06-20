@@ -331,7 +331,6 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             CrowdNodeException.WITHDRAWAL_ERROR -> R.string.crowdnode_withdraw_error
             CrowdNodeException.DEPOSIT_ERROR -> R.string.crowdnode_deposit_error
             CrowdNodeException.CONFIRMATION_ERROR -> R.string.crowdnode_bad_confirmation
-            CrowdNodeException.SEND_MESSAGE_ERROR -> R.string.crowdnode_signup_error
             else -> R.string.crowdnode_transfer_error
         })
     }
