@@ -40,19 +40,19 @@
     <string name="explore_all_states">Tüm eyaletler</string>
     <string name="explore_no_results">Sonuç bulunamadı</string>
     <string name="explore_all_merchants">Tüm Tüccarlar</string>
-    <string name="explore_in_radius">%2$s içinde %1$s</string>
+    <string name="explore_in_radius">%2$s den %1$s</string>
     <string name="explore_no_merchants">Tüccar yok</string>
     <string name="explore_no_atms">ATMler Yok</string>
     <string name="distance_miles">%s mil</string>
     <string name="distance_kilometers">%s kilometre</string>
 
     <plurals name="explore_merchant_amount">
-        <item quantity="one">%d tüccar</item>
+        <item quantity="one">%d tüccarlar</item>
         <item quantity="other">%d tüccarlar</item>
     </plurals>
 
     <plurals name="explore_atm_amount">
-        <item quantity="one">%d ATMs</item>
+        <item quantity="one">%d ATMler</item>
         <item quantity="other">%d ATMler</item>
     </plurals>
 

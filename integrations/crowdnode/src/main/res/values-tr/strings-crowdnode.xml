@@ -39,7 +39,6 @@
     <string name="privacy_policy">Gizlilik Politikası</string>
     <string name="crowdnode_account_ready">CrowdNode hesabınız kuruldu ve kullanıma hazır!</string>
     <string name="notify_when_done">Kapat ve bittiğinde haber ver</string>
-    <string name="crowdnode_creating">CrowdNode hesabınız oluşturuyor…</string>
     <string name="accepting_terms">Kullanım şartlarını kabul etmek…</string>
     <string name="crowdnode_signup_error">CrowdNode hesabınızı oluşturamadık.</string>
     <string name="crowdnode_deposit_error">CrowdNode hesabınıza para yatıramadık.</string>
@@ -58,7 +57,6 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
     <string name="online_account">Çevrimiçi Hesap</string>
     <string name="online_account_create">Çevrimiçi Hesap Oluştur</string>
-    <string name="secure_online_account">Kazançlarınızı koruyun</string>
     <string name="crowdnode_support">CrowdNode Desteği</string>
     <string name="unlink_account">Hesabın Bağlantısını Kaldır</string>
     <string name="online_account_title">Neden çevrimiçi bir hesaba ihtiyacınız var?</string>
@@ -71,7 +69,6 @@
     <string name="payout_options">Ödeme Seçenekleri</string>
     <string name="payout_options_details">Ödüllerinizin nasıl ve ne zaman ödeneceğini değiştirebilirsiniz.</string>
     <string name="crowdnode_balance">CrowdNode\'daki Bakiye</string>
-    <string name="crowdnode_your_address_title">CrowdNode ile entegrasyonda kullandığınız Dash adresi</string>
     <string name="chain_syncing">Zincir senkronize ediliyor…</string>
     <string name="crowdnode_wait_for_sync">Zincir tamamen senkronize olana kadar bekleyin, böylece işlem geçmişinizi gözden geçirebiliriz. Giriş yapmak veya kaydolmak için CrowdNode web sitesini ziyaret edin.</string>
     <string name="crowdnode_open_website">CrowdNode web sitesine gidin</string>
@@ -104,6 +101,4 @@
     <string name="crowdnode_online_account_details_title">Çevrimiçi hesabınızla ilgili bilgiler</string>
     <string name="crowdnode_online_account_details_primary">Şu anda CrowdNode hesabınız için kullandığınız birincil Dash adresiniz</string>
     <string name="crowdnode_online_account_details_api">Bu cihazdaki Dash Cüzdanında CrowdNode hesabınız için belirlenmiş Dash adresi</string>
-    <string name="crowdnode_reset_address">Adresi Sıfırla</string>
-
     </resources>

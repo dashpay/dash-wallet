@@ -119,7 +119,7 @@
 
     <plurals name="radius_miles">
         <item quantity="one">%d mile</item>
-        <item quantity="other">%d milen</item>
+        <item quantity="other">%d miles</item>
     </plurals>
 
     <plurals name="radius_kilometers">

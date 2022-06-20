@@ -88,7 +88,7 @@
     <string name="send_coins_options_fee_category_economic">ประหยัด</string>
     <string name="send_coins_options_fee_category_priority">สิทธิพิเศษ</string>
     <string name="send_coins_options_empty">wallet ว่างเปล่า</string>
-    <string name="sweep_wallet_activity_title">นำเข้ากุญแจส่วนตัว</string>
+    <string name="sweep_wallet_activity_title">นำเข้าคีย์ส่วนตัว</string>
     <string name="sweep_wallet_fragment_intro">คุณกำลังจะปัดกวาด paper wallet  หรือ คูปอง  วิธีนี้จะย้ายเหรียญทั้งหมดจากกระดาษดังกล่าวไปยัง wallet ของคุณบนอุปกรณ์นี้  เมื่อการทำธุรกรรมได้รับการยืนยันแล้ว กระดาษจะไม่มีราคาและไม่ควรนำมาใช้อีกครั้งเพื่อความปลอดภัย</string>
     <string name="sweep_wallet_fragment_hint">paper wallet มักจะถูกใช้สำหรับ cold storage  เครื่องเอทีเอ็มบางเครื่องพิมพ์บนใบเสร็จรับเงินแทนการส่งเหรียญไปยังโทรศัพท์มือถือโดยตรง  บางครั้งผู้คนใช้ pre-charged paper wallets เพื่อส่งหลักทรัพย์ให้กับบุคคลอื่น (ไม่แนะนำ)</string>
     <string name="sweep_wallet_fragment_wallet_unknown">เริ่มต้นสแกน private key ของ paper wallet   ใช้ปุ่มการทำงานกล้องถ่ายรูป</string>
@@ -106,7 +106,7 @@
     <string name="sweep_wallet_options_reload">โหลดยอดคงเหลืออีกครั้ง</string>
     <string name="maintenance_dialog_title">แนะนำให้ทำการบำรุงรักษา</string>
     <string name="maintenance_dialog_message">คุณได้รับ %1$s ไปยังที่อยู่ที่ไม่ปลอดภัย  คุณต้องการย้ายเหรียญเหล่านี้ไปยังที่อยู่ที่ปลอดภัยหรือไม่? ค่าธรรมเนียมเครือข่ายของ %2$s จะต้องจ่าย</string>
-    <string name="maintenance_dialog_state_decrypting">กำลังถอดรหัส...</string>
+    <string name="maintenance_dialog_state_decrypting">ถอดรหัส...</string>
     <string name="maintenance_dialog_state_done">เสร็จแล้ว</string>
     <string name="maintenance_dialog_button_move">ย้าย</string>
     <string name="request_coins_activity_title">Dash ที่ต้องการ</string>
@@ -175,9 +175,9 @@
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">บน %s ที่ %s</string>
     <string name="transaction_row_rate_not_available">ที่ไม่สามารถใช้ประโยชน์ได้</string>
-    <string name="transaction_row_status_masternode_registration">การลงทะเบียนมาสเตอร์โหนด</string>
-    <string name="transaction_row_status_masternode_update_registrar">อัพเดตมาสเตอร์โหนด</string>
-    <string name="transaction_row_status_masternode_update_service">อัพเดตมาสเตอร์โหนด</string>
+    <string name="transaction_row_status_masternode_registration">การลงทะเบียน Masternode </string>
+    <string name="transaction_row_status_masternode_update_registrar">อัพเดต Masternode</string>
+    <string name="transaction_row_status_masternode_update_service">อัพเดต Masternode</string>
     <string name="transaction_row_status_masternode_revoke">การเพิกถอน Masternode</string>
     <string name="transaction_row_status_masternode_reward">ผลตอบแทนจากการลงทุน Masternode</string>
     <string name="transaction_row_status_mining_reward">ผลตอบแทนจากการขุด การขุด หมายถึง การแก้ โจทย์สมการทางคณิตศาสตร์โดยใช้เครื่องคอมพิวเตอร์ ประมวลผลเพื่อยืนยันธุรกรรมบนบล็อกเชน</string>
@@ -235,7 +235,7 @@
     <string name="encrypt_keys_dialog_password_strength_strong">แข็งแรง</string>
     <string name="encrypt_keys_dialog_show">แสดง PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">เข้ารหัส...</string>
-    <string name="encrypt_keys_dialog_state_decrypting">กำลังถอดรหัส...</string>
+    <string name="encrypt_keys_dialog_state_decrypting">ถอดรหัส...</string>
     <string name="encrypt_keys_dialog_state_done">เสร็จแล้ว</string>
     <string name="scan_camera_problem_dialog_title">เสียใจ</string>
     <string name="scan_camera_problem_dialog_message">กล้องถ่ายรูปมีปัญหา คุณอาจจะต้องรีสตาร์ทอุปกรณ์อีกครั้ง</string>
@@ -334,7 +334,7 @@
     <string name="appwidget_wallet_balance_title">ยอดคงเหลือ Dash</string>
 
     <!-- generic buttons -->
-    <string name="button_ok">ตกลง</string>
+    <string name="button_ok">โอเค</string>
     <string name="button_dismiss">ยกเลิก</string>
     <string name="button_cancel">ยกเลิก</string>
     <string name="button_help">ช่วยเหลือ</string>
@@ -376,7 +376,7 @@
     <string name="activity_security_view_recovery_phrase">ดูวลีกู้คืน</string>
     <string name="activity_security_advanced">ความปลอดภัยขั้นสูง</string>
     <string name="activity_security_biometric_auth">การยืนยันตัวตนโดยใช้การสแกนลายนิ้วมือ</string>
-    <string name="activity_security_hide_balance">ซ่อนยอดคงเหลืออัตโนมัติ</string>
+    <string name="activity_security_hide_balance">สมดุลอัตโนมัติ</string>
     <string name="reset_to_default">ตั้งค่าเป็นค่าเริ่มต้น</string>
 
     <string name="payment_protocol_default_error_title">การชำระเงินผิดพลาด</string>

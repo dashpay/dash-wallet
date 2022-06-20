@@ -19,8 +19,12 @@
     <string name="crowdnode_get_started_hint">Чтобы приступить к стейкингу, создайте аккаунт на CrowdNode или подключитесь к уже существующему</string>
     <string name="new_account">Новый аккаунт CrowdNode</string>
     <string name="account_create">Создать аккаунт</string>
+    <string name="account_create_response">Создать аккаунт, ответ</string>
+    <string name="accept_terms">Принять условия использования</string>
+    <string name="accept_terms_response">Принять условия использования, ответ</string>
     <string name="account_link">Привязать уже существующий аккаунт</string>
     <string name="crowdnode_login">Войти в CrowdNode</string>
+    <string name="crowdnode_signup">Подписаться на новости CrowdNode</string>
     <string name="crowdnode_link">Привязать уже существующий аккаунт CrowdNode</string>
     <string name="required_passphrase_backup">Необходимо создать резервную копию кодовой фразы Dash Wallet</string>
     <string name="backup_passphrase">Создать резервную копию кодовой фразы</string>
@@ -40,7 +44,7 @@
     <string name="crowdnode_account_ready">Ваш аккаунт на CrowdNode настроен и готов к использованию!</string>
     <string name="notify_when_done">Закрыть и уведомить о завершении</string>
     <string name="crowdnode_creating">Создаётся аккаунт на CrowdNode…</string>
-    <string name="accepting_terms">Принимаются условия использования…</string>
+    <string name="accepting_terms">Принимаются условия использования...</string>
     <string name="crowdnode_signup_error">Мы не смогли создать вам аккаунт на CrowdNode.</string>
     <string name="crowdnode_deposit_error">Мы не смогли внести средства на ваш аккаунт на CrowdNode.</string>
     <string name="crowdnode_withdraw_error">Мы не смогли вывести средства с вашего аккаунта на CrowdNode.</string>
@@ -59,11 +63,14 @@
     <string name="online_account">Онлайн аккаунт</string>
     <string name="online_account_create">Создать онлайн аккаунт</string>
     <string name="secure_online_account">Защитите свои сбережения</string>
+    <string name="crowdnode_signup_to_finish">Зарегистрируйтесь, чтобы завершить настройку аккаунта</string>
+    <string name="online_account_create_full">Создать онлайн-аккаунт CrowdNode</string>
+    <string name="online_account_email_privacy">Обратите внимание! Этот email не сохраняется в Dash Wallet, он всего лишь пересылается в Crowdnode</string>
     <string name="crowdnode_support">Поддержка CrowdNode</string>
     <string name="unlink_account">Отвязать аккаунт</string>
     <string name="online_account_title">Зачем нужен онлайн аккаунт?</string>
     <string name="crowdnode_online_synced">Синхронизирован с активным Dash Wallet</string>
-    <string name="crowdnode_in_process">В процессе…</string>
+    <string name="crowdnode_in_process">В процессе...</string>
     <string name="account_recovery">Восстановление аккаунта</string>
     <string name="crowdnode_recovery_info">В случае, если вы потеряете кодовую фразу, для восстановления доступа к средствам на CrowdNode можно воспользоваться другими методами.</string>
     <string name="transaction_history">История транзакций</string>
@@ -71,8 +78,8 @@
     <string name="payout_options">Варианты выплат</string>
     <string name="payout_options_details">Вы можете настроить, когда и каким образом получите своё вознаграждение.</string>
     <string name="crowdnode_balance">Баланс CrowdNode</string>
-    <string name="crowdnode_your_address_title">При интеграции с CrowdNode вы воспользовались этим адресом Dash</string>
-    <string name="chain_syncing">Блокчейн синхронизируется…</string>
+    <string name="crowdnode_your_address_title">Это адрес Dash, связанный с вашим аккаунтом CrowdNode</string>
+    <string name="chain_syncing">Блокчейн синхронизируется...</string>
     <string name="crowdnode_wait_for_sync">Дождитесь, пока блокчейн полностью синхронизируется, чтобы посмотреть историю транзакций. Для входа или регистрации посетите вебсайт CrowdNode.</string>
     <string name="crowdnode_open_website">Перейти на сайт CrowdNode</string>
     <string name="crowdnode_info_title">Станьте частью мастерноды Dash вместе с CrowdNode</string>
@@ -97,13 +104,20 @@
     <string name="scan_qr">Сканировать QR</string>
     <string name="qr_contains_request">Этот QR уже содержит запрос на оплату в размере %sDash</string>
     <string name="verification_required">Требуется верификация</string>
-    <string name="validating_address">Подтверждение адреса…</string>
+    <string name="validating_address">Подтверждение адреса...</string>
     <string name="crowdnode_address_validated">Ваш аккаунт на CrowdNode был подтверждён, но необходимо пройти верификацию.</string>
     <string name="crowdnode_address_confirmed">Ваш адрес CrowdNode был подтверждён.</string>
     <string name="crowdnode_bad_confirmation">Подтверждение отправлено с неверного основного адреса</string>
     <string name="crowdnode_online_account_details_title">Информация о вашем онлайн аккаунте</string>
     <string name="crowdnode_online_account_details_primary">Основной адрес Dash, который сейчас используется для аккаунта CrowdNode</string>
     <string name="crowdnode_online_account_details_api">Dash адрес, созданный для вашего аккаунта CrowdNode в Dash Wallet на этом устройстве</string>
-    <string name="crowdnode_reset_address">Сменить адрес</string>
+    <string name="crowdnode_primary_missing">В вашем аккаунте отсутствует основной адрес Dash. Пожалуйста, укажите его на вебсайте CrowdNode.</string>
+    <string name="crowdnode_wait_signed_email">Пожалуйста, подождите. Ваш email обрабатывается…</string>
+    <string name="cannot_send">Невозможно отправить.</string>
+    <string name="crowdnode_tx_set_title">Почему я вижу все эти транзакции?</string>
+    <string name="crowdnode_tx_set_explainer">Ваш аккаунт на CrowdNode был создан с помощью этих транзакций.</string>
+    <string name="shuffle_coins">Перемешать монеты</string>
+    <string name="positive_balance_required">Для этого в вашем Dash Wallet должен быть положительный баланс</string>
+    <string name="withdrawal_required_balance">Внесите не менее 0.0003 Dash в Dash Wallet, чтобы завершить вывод средств</string>
 
     </resources>

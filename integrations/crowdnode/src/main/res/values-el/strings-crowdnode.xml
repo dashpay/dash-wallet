@@ -39,8 +39,7 @@
     <string name="privacy_policy">Πολιτική απορρήτου</string>
     <string name="crowdnode_account_ready">Ο λογαριασμός σας στο CrowdNode έχει ρυθμιστεί και είναι έτοιμος για χρήση!</string>
     <string name="notify_when_done">Κλείσιμο και ειδοποίηση όταν τελειώσει</string>
-    <string name="crowdnode_creating">Ο λογαριασμός σας στο CrowdNode δημιουργείται…</string>
-    <string name="accepting_terms">Αποδοχή των όρων χρήσης…</string>
+    <string name="accepting_terms">Αποδοχή των όρων χρήσης...</string>
     <string name="crowdnode_signup_error">Δεν μπορέσαμε να δημιουργήσουμε το λογαριασμό σας στο CrowdNode.</string>
     <string name="crowdnode_deposit_error">Δεν μπορέσαμε να κάνουμε κατάθεση στο λογαριασμό σας στο CrowdNode.</string>
     <string name="crowdnode_withdraw_error">Δεν μπορέσαμε να κάνουμε ανάληψη από το λογαριασμό σας στο CrowdNode.</string>
@@ -58,12 +57,11 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
     <string name="online_account">Online λογαριασμός</string>
     <string name="online_account_create">Δημιουργία online λογαριασμού</string>
-    <string name="secure_online_account">Προστατέψτε τα κέρδη σας</string>
     <string name="crowdnode_support">Υποστήριξη CrowdNode</string>
     <string name="unlink_account">Αποσύνδεση λογαριασμού</string>
     <string name="online_account_title">Γιατί χρειάζεστε online λογαριασμό;</string>
     <string name="crowdnode_online_synced">Συγχρονισμένο με το τρέχον Dash Wallet</string>
-    <string name="crowdnode_in_process">Σε εξέλιξη…</string>
+    <string name="crowdnode_in_process">Σε εξέλιξη...</string>
     <string name="account_recovery">Ανάκτηση λογαριασμού</string>
     <string name="crowdnode_recovery_info">Εάν ποτέ χάσετε τη φράση πρόσβασης σας, μπορείτε να επαληθεύσετε τον εαυτό σας με άλλα μέσα για να ανακτήσετε την πρόσβαση στα κεφάλαια του CrowdNode σας.</string>
     <string name="transaction_history">Ιστορικό συναλλαγών</string>
@@ -71,8 +69,7 @@
     <string name="payout_options">Επιλογές πληρωμής</string>
     <string name="payout_options_details">Μπορείτε να αλλάξετε τον τρόπο και τον χρόνο καταβολής των κερδών της ανταμοιβής σας.</string>
     <string name="crowdnode_balance">Υπόλοιπο στο CrowdNode</string>
-    <string name="crowdnode_your_address_title">Εδώ είναι η διεύθυνση Dash που χρησιμοποιήσατε για την ενσωμάτωση με το CrowdNode</string>
-    <string name="chain_syncing">Το blockchain συγχρονίζεται…</string>
+    <string name="chain_syncing">Το blockchain συγχρονίζεται...</string>
     <string name="crowdnode_wait_for_sync">Περιμένετε μέχρι να συγχρονιστεί πλήρως το blockchain, ώστε να μπορέσουμε να επανεξετάσουμε το ιστορικό των συναλλαγών σας. Επισκεφθείτε τον ιστότοπο του CrowdNode για να συνδεθείτε ή να εγγραφείτε.</string>
     <string name="crowdnode_open_website">Μεταβείτε στον ιστότοπο του CrowdNode</string>
     <string name="crowdnode_info_title">Γίνετε μέλος ενός Dash Masternode με το CrowdNode</string>
@@ -97,13 +94,11 @@
     <string name="scan_qr">Σάρωση QR</string>
     <string name="qr_contains_request">Αυτό το QR περιέχει ήδη την αίτηση πληρωμής για %s Dash</string>
     <string name="verification_required">Απαιτείται επαλήθευση</string>
-    <string name="validating_address">Επικύρωση διεύθυνσης…</string>
+    <string name="validating_address">Επικύρωση διεύθυνσης...</string>
     <string name="crowdnode_address_validated">Η διεύθυνση CrowdNode έχει επικυρωθεί, αλλά απαιτείται επαλήθευση.</string>
     <string name="crowdnode_address_confirmed">Η διεύθυνση του CrowdNode σας έχει επιβεβαιωθεί.</string>
     <string name="crowdnode_bad_confirmation">Η επιβεβαίωση εστάλη από λανθασμένη κύρια διεύθυνση</string>
     <string name="crowdnode_online_account_details_title">Πληροφορίες σχετικά με τον online λογαριασμό σας</string>
     <string name="crowdnode_online_account_details_primary">Η κύρια διεύθυνση Dash που χρησιμοποιείτε επί του παρόντος για τον λογαριασμό σας στο CrowdNode</string>
     <string name="crowdnode_online_account_details_api">Η διεύθυνση Dash που έχει οριστεί για το λογαριασμό σας CrowdNode στο Dash Wallet σε αυτή τη συσκευή</string>
-    <string name="crowdnode_reset_address">Επαναφορά διεύθυνσης</string>
-
     </resources>

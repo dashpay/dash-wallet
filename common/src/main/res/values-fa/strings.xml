@@ -11,6 +11,7 @@
     <string name="buy_dash">خرید دش</string>
     <string name="copied">کپی شد</string>
     <string name="staking_title">سپرده‌گذاری</string>
+    <string name="error">خطا</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">گرنزی پاوند</string>
@@ -31,7 +32,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">دلار جمینای</string>
 
-    <!-- Generic Titles/Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">متوجه شدم!</string>
     <string name="network_unavailable_return">بازگشت به کیف‌ پول</string>
     <string name="button_continue">ادامه</string>
@@ -44,7 +45,6 @@
     <string name="button_okay">باشه</string>
     <string name="button_share">به اشتراک گذاری</string>
     <string name="verify">تائید</string>
-    <string name="error">خطا</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">جستجو</string>
@@ -54,4 +54,5 @@
     <string name="select_currency">واحد پول‌تان را انتخاب کنید</string>
     <string name="send_coins_error_dusty_send">مبلغ مورد نظر، بیش از حد کم است</string>
     <string name="send_coins_error_insufficient_money">موجودی ناکافی</string>
-</resources>
+
+    </resources>

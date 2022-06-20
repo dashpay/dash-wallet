@@ -64,7 +64,7 @@
     <string name="send_coins_fragment_amount_label">Montant à envoyer</string>
     <string name="send_coins_fragment_pin_label">Saisissez le code PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Des frais de réseau de %s seront appliqués.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Des frais prioritaires de %s seront appliqués. Si vous préférez des frais plus bas, n\'utilisez l\'option \"prioritaire\" que s\'il vous faut une confirmation la plus rapide possible.</string>
+    <string name="send_coins_fragment_hint_fee_priority">Des frais prioritaires de %s seront appliqués. Si vous préférez des frais plus bas, n\'utilisez l\'option "prioritaire" que s\'il vous faut une confirmation la plus rapide possible.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Le total des petits montants dans votre portefeuille ne forme pas une somme pouvant être envoyée.</string>
     <string name="send_coins_fragment_hint_replaying">Les paiements ne sont pas encore possibles car le portefeuille n\'est pas entièrement synchronisé avec le réseau</string>
     <string name="send_coins_fragment_direct_payment_enable">Envoyer le paiement directement au bénéficiaire.</string>
@@ -90,7 +90,7 @@
     <string name="send_coins_options_empty">Vider le portefeuille</string>
     <string name="sweep_wallet_activity_title">Importer une clé privée</string>
     <string name="sweep_wallet_fragment_intro">Vous vous apprêtez à récupérer entièrement un portefeuille papier ou un coupon. Ceci enverra tous les fonds de ce papier vers le portefeuille installé sur cet appareil. Quand la transaction sera confirmée, le papier ne contiendra plus de fonds, et il ne devra pas être réutilisé pour des raisons de sécurité.</string>
-    <string name="sweep_wallet_fragment_hint">Les portefeuilles papier sont habituellement utilisés pour le stockage \"à froid\". Certains distributeurs impriment les fonds sur le reçu papier plutôt que de les envoyer directement sur votre appareil mobile. Certaines personnes utilisent des portefeuilles papier préchargés pour transférer des fonds (ce n\'est pas recommandé).</string>
+    <string name="sweep_wallet_fragment_hint">Les portefeuilles papier sont habituellement utilisés pour le stockage "à froid". Certains distributeurs impriment les fonds sur le reçu papier plutôt que de les envoyer directement sur votre appareil mobile. Certaines personnes utilisent des portefeuilles papier préchargés pour transférer des fonds (ce n\'est pas recommandé).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Commencez en numérisant la clé privée d\'un portefeuille papier. Utilisez le bouton de l\'appareil photo.</string>
     <string name="sweep_wallet_fragment_encrypted">La clé privée est protégée par un mot de passe.</string>
     <string name="sweep_wallet_fragment_password">Mot de passe</string>
@@ -248,7 +248,7 @@
     <string name="input_parser_unverifyable_paymentrequest">Impossible de vérifier la demande de paiement :\n%s</string>
     <string name="input_parser_invalid_paymentrequest">Demande de paiement invalide :\n%s</string>
     <string name="input_parser_invalid_transaction">Transaction invalide :\n%s</string>
-    <string name="preferences_activity_title">Réglages</string>
+    <string name="preferences_activity_title">Paramètres</string>
     <string name="preferences_category_diagnostics">Diagnostics</string>
     <string name="preferences_category_labs">Labo</string>
     <string name="preferences_precision_title">Coupures et précision</string>
@@ -346,12 +346,12 @@
     <string name="button_copy">Copier</string>
     <string name="button_copy_request">Demande de copie</string>
     <string name="button_paste">Coller</string>
-    <string name="button_set_as_default">Définir comme valeur défaut</string>
-    <string name="button_request_coins">Demander dashs</string>
-    <string name="button_send_coins">Envoyer dashs</string>
+    <string name="button_set_as_default">Définir par défaut</string>
+    <string name="button_request_coins">Demander des dashs</string>
+    <string name="button_send_coins">Envoyer des dashs</string>
     <string name="button_pay">Envoyer</string>
     <string name="button_scan">Scanner</string>
-    <string name="button_settings">Réglages</string>
+    <string name="button_settings">Paramètres</string>
     <string name="action_show_qr">Afficher le QR-code</string>
     <string name="action_browse">Parcourir</string>
 

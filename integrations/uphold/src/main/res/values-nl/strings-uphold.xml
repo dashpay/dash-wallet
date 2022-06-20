@@ -13,17 +13,17 @@
     <string name="uphold_withdrawal_instructions">Voer het bedrag in om te verplaatsen</string>
     <string name="uphold_withdrawal_success_title">Succes</string>
     <string name="uphold_withdrawal_success_message">Je transactie is verstuurd en het bedrag zou binnen enkele minuten moeten verschijnen in je portemonnee. \n\nTransactie-id: %s</string>
-    <string name="uphold_otp_dialog_title">Voer hieronder je 2FA-code in</string>
-    <string name="uphold_transfer">Maak over</string>
+    <string name="uphold_otp_dialog_title">Voer hieronder uw 2FA code in</string>
+    <string name="uphold_transfer">Overdracht</string>
     <string name="uphold_see_on_uphold">Kijk bij Uphold</string>
     <string name="uphold_logout_title">Bij Uphold uitloggen</string>
-    <string name="uphold_logout">Log uit</string>
+    <string name="uphold_logout">Uitloggen</string>
     <string name="uphold_logout_explanation_text">Je dient ook nog uit te loggen bij Uphold website in je webbrowser.</string>
     <string name="uphold_go_to_website">Ga naar website</string>
     <string name="uphold_error">Uphold fout</string>
     <string name="uphold_error_not_logged_in">Dash Wallet is niet langer gekoppeld aan uw Uphold-rekening. Druk Link Uphold-rekening in het volgende scherm.</string>
     <string name="uphold_error_not_available">De service van Uphold is niet beschikbaar. Probeer het later opnieuw.</string>
-    <string name="uphold_error_report_issue">Meld dit probleem aan het Dash Wallet team met behulp van \"Probleem melden\" in het hoofdmenu.</string>
+    <string name="uphold_error_report_issue">Meld dit probleem aan het Dash Wallet team met behulp van "Probleem melden" in het hoofdmenu.</string>
 
     <string name="uphold_general_error_title">Fout</string>
     <string name="uphold_api_error_title">Uphold fout</string>
