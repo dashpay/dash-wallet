@@ -23,6 +23,7 @@ import android.content.SharedPreferences
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
@@ -120,18 +121,10 @@ class MainViewModel @Inject constructor(
         blockchainStateDao.observeState()
             .filterNotNull()
             .onEach { state ->
-                _isBlockchainSynced.postValue(state.isSynced())
-                _isBlockchainSyncFailed.postValue(state.syncFailed())
-
-                var percentage = state.percentageSync
-                if (state.replaying && state.percentageSync == 100) {
-                    //This is to prevent showing 100% when using the Rescan blockchain function.
-                    //The first few broadcasted blockchainStates are with percentage sync at 100%
-                    percentage = 0
-                }
-                _blockchainSyncPercentage.postValue(percentage)
+                updateSyncStatus(state)
+                updatePercentage(state)
             }
-            .launchIn(viewModelScope)
+            .launchIn(viewModelWorkerScope)
 
         walletData.observeBalance()
             .onEach(_balance::postValue)
@@ -214,5 +207,28 @@ class MainViewModel @Inject constructor(
             ).filter { it.transactions.any { tx -> filter.matches(tx) } }
             _transactions.postValue(wrappedTransactions.sortedWith(TransactionWrapperComparator()))
         }
+    }
+
+    private fun updateSyncStatus(state: BlockchainState) {
+        if (_isBlockchainSyncFailed.value != state.isSynced()) {
+            _isBlockchainSynced.postValue(state.isSynced())
+
+            if (state.replaying) {
+                _transactions.postValue(listOf())
+            }
+        }
+
+        _isBlockchainSyncFailed.postValue(state.syncFailed())
+    }
+
+    private fun updatePercentage(state: BlockchainState) {
+        var percentage = state.percentageSync
+
+        if (state.replaying && state.percentageSync == 100) {
+            //This is to prevent showing 100% when using the Rescan blockchain function.
+            //The first few broadcasted blockchainStates are with percentage sync at 100%
+            percentage = 0
+        }
+        _blockchainSyncPercentage.postValue(percentage)
     }
 }
