@@ -76,7 +76,7 @@ data class TransactionRowView(
             val value = tx.getValue(bag)
             val isInternal = TransactionUtils.isEntirelySelf(tx, bag)
             val isSent = value.signum() < 0
-            val showFee = isSent && tx.fee != null && !tx.fee.isZero
+            val removeFee = isSent && tx.fee != null && !tx.fee.isZero
 
             val icon = if (isInternal) {
                 R.drawable.ic_shuffle
@@ -104,7 +104,7 @@ data class TransactionRowView(
 
             return TransactionRowView(
                 tx.txId,
-                if (showFee) value.add(tx.fee) else value,
+                if (removeFee) value.add(tx.fee) else value,
                 tx.exchangeRate,
                 icon,
                 iconBackground,

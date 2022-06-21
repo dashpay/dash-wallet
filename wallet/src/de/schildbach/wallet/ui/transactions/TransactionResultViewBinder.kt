@@ -82,6 +82,9 @@ class TransactionResultViewBinder(
         TxResourceMapper()
 
     fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
+        val value = tx.getValue(wallet)
+        val isSent = value.signum() < 0
+
         val primaryStatus = resourceMapper.getTransactionTypeName(tx, wallet)
         val secondaryStatus = resourceMapper.getReceivedStatusString(tx, wallet.context)
         val errorStatus = resourceMapper.getErrorName(tx)
@@ -124,7 +127,7 @@ class TransactionResultViewBinder(
         val inputAddresses: List<Address>
         val outputAddresses: List<Address>
 
-        if (tx.getValue(wallet).signum() < 0) {
+        if (isSent) {
             inputAddresses = TransactionUtils.getFromAddressOfSent(tx)
             outputAddresses = if (TransactionUtils.isEntirelySelf(tx, wallet)) {
                 inputsLabel.setText(R.string.transaction_details_moved_from)
@@ -158,18 +161,16 @@ class TransactionResultViewBinder(
 
         dashAmount.setFormat(dashFormat)
         //For displaying purposes only
-        val amountSentOrReceived : Coin? = tx.getValue(wallet)?.let {
-            if (isFeeAvailable(tx.fee)) {
-                it.plus(tx.fee)
-            } else it
+        val amount = if (isSent && isFeeAvailable(tx.fee)) {
+            value.plus(tx.fee)
+        } else {
+            value
         }
 
-        amountSentOrReceived?.let {
-            if (it.isNegative) {
-                dashAmount.setAmount(it.negate())
-            } else {
-                dashAmount.setAmount(it)
-            }
+        if (amount.isNegative) {
+            dashAmount.setAmount(amount.negate())
+        } else {
+            dashAmount.setAmount(amount)
         }
 
         if (isFeeAvailable(tx.fee)) {
@@ -237,5 +238,4 @@ class TransactionResultViewBinder(
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {
         return transactionFee != null && transactionFee.isPositive
     }
-
 }

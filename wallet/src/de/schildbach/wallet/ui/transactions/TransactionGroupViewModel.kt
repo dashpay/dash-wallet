@@ -53,7 +53,7 @@ class TransactionGroupViewModel @Inject constructor(
         get() = _transactions
 
     fun init(transactionWrapper: TransactionWrapper) {
-        _exchangeRate.value = transactionWrapper.transactions.first().exchangeRate
+        _exchangeRate.value = transactionWrapper.transactions.last().exchangeRate
         refreshTransactions(transactionWrapper)
 
         walletData.observeTransactions()

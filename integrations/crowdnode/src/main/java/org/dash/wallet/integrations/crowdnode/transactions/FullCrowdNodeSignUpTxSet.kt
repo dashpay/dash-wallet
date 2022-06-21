@@ -83,9 +83,9 @@ open class FullCrowdNodeSignUpTxSet(
             val value = tx.getValue(bag)
             val isSent = value.signum() < 0
             val fee = tx.fee
-            val addFee = isSent && fee != null && !fee.isZero
+            val removeFee = isSent && fee != null && !fee.isZero
 
-            result = result.add(if (addFee) value.minus(fee) else value)
+            result = result.add(if (removeFee) value.plus(fee) else value)
         }
 
         return result
