@@ -208,7 +208,6 @@ class WalletActivityTest {
         }
         every { SweepWalletActivity.start(any(), any(), any()) } returns Unit
 
-        println("handlePaste $privateKey")
         walletActivity.handlePaste(privateKey)
         verify(exactly = 1) { SweepWalletActivity.start(any(), any(), any()) }
     }
