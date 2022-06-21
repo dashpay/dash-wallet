@@ -23,7 +23,7 @@ import org.bitcoinj.params.TestNet3Params
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeDepositTx
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeSignUpTx
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWithdrawalReceivedTx
-import org.dashj.bls.Utils
+import org.bitcoinj.core.Utils
 import org.junit.Before
 import org.junit.Test
 
