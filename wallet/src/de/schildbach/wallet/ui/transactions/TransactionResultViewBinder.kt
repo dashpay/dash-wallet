@@ -32,10 +32,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.script.ScriptException
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.transactions.TransactionUtils
-import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
 import org.dash.wallet.common.ui.CurrencyTextView
 
 /**
@@ -238,4 +238,19 @@ class TransactionResultViewBinder(
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {
         return transactionFee != null && transactionFee.isPositive
     }
+
+    private val Transaction.allOutputAddresses: List<Address>
+        get() {
+            val result = mutableListOf<Address>()
+
+            outputs.forEach {
+                try {
+                    val script = it.scriptPubKey
+                    result.add(script.getToAddress(this.params, true))
+                } catch (x: ScriptException) {
+                    // swallow
+                }
+            }
+            return result
+        }
 }

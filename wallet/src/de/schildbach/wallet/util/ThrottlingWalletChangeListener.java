@@ -30,7 +30,6 @@ import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener;
 import org.bitcoinj.wallet.listeners.WalletReorganizeEventListener;
 
 import android.os.Handler;
-import android.util.Log;
 
 /**
  * @author Andreas Schildbach

@@ -103,19 +103,4 @@ object TransactionUtils {
 
         return true
     }
-
-    val Transaction.allOutputAddresses: List<Address>
-        get() {
-            val result = mutableListOf<Address>()
-
-            outputs.forEach {
-                try {
-                    val script = it.scriptPubKey
-                    result.add(script.getToAddress(this.params, true))
-                } catch (x: ScriptException) {
-                    // swallow
-                }
-            }
-            return result
-        }
 }
