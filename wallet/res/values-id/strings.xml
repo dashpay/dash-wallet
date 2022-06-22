@@ -65,8 +65,6 @@
     <string name="send_coins_fragment_pin_label">Masukkan pin</string>
     <string name="send_coins_fragment_hint_fee_economic">Biaya jaringan %s akan dibayarkan.</string>
     <string name="send_coins_fragment_hint_fee_priority">Biaya prioritas %s akan dibayarkan. Jika Anda peduli dengan biaya rendah, gunakan \'prioritas\' hanya jika Anda perlu konfirmasi sesegera mungkin.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Dana tidak mencukupi</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Jumlah pembayaran kecil di dompet Anda tidak menambah nilai yang dapat dikirim.</string>
     <string name="send_coins_fragment_hint_replaying">Saat ini pembayaran tidak dimungkinkan karena dompet tidak sepenuhnya disinkronkan dengan jaringan</string>
     <string name="send_coins_fragment_direct_payment_enable">Kirim pembayaran langsung ke penerima pembayaran.</string>
@@ -303,6 +301,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Tambahkan dump dompet</string>
     <string name="report_issue_dialog_mail_intent_chooser">Kirim laporan dgn…</string>
     <string name="report_issue_dialog_mail_intent_failed">Gagal mengirim laporan.</string>
+    <string name="report_transaction_history_export">Ekspor</string>
+    <string name="report_transaction_history_title">Ekspor CSV</string>
+    <string name="report_transaction_history_not_synced_title">Ekspor CSV</string>
+    <string name="report_transaction_history_not_synced_message">Harap tunggu hingga dompet disinkronkan sepenuhnya sebelum mengekspor riwayat transaksi Anda.</string>
+    <string name="report_transaction_history_message">Riwayat transaksi lengkap akan diekspor.\n\nSemua pembayaran akan dianggap sebagai pengeluaran dan semua transaksi yang masuk akan menjadi pendapatan. Pemilik dompet ini bertanggung jawab untuk membuat penyesuaian dasar biaya dalam sistem pelaporan pajak yang mereka pilih.</string>
+    <string name="report_transaction_history_mail_intent_chooser">Kirim riwayat transaksi menggunakan…</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">Gagal mengirim riwayat transaksi.</string>
+
     <string name="about_title">Mengenai</string>
     <string name="about_version_title">versi</string>
     <string name="about_copyright_title">Hak cipta</string>
@@ -331,7 +337,6 @@
     <string name="button_ok">IYA</string>
     <string name="button_dismiss">Tolak</string>
     <string name="button_cancel">Batal</string>
-    <string name="button_retry">Coba lagi</string>
     <string name="button_help">Bantuan</string>
     <string name="button_add">Tambahkan</string>
     <string name="button_delete">Hapus</string>
@@ -341,7 +346,6 @@
     <string name="button_copy">Salin</string>
     <string name="button_copy_request">Salin permintaan</string>
     <string name="button_paste">Tempel</string>
-    <string name="button_share">Berbagi</string>
     <string name="button_set_as_default">Tetapkan sebagai standar</string>
     <string name="button_request_coins">Meminta Dash</string>
     <string name="button_send_coins">Kirim Dash</string>
@@ -385,5 +389,4 @@
     <string name="activity_buy_and_sell_dash_filter">Menyaring</string>
     <string name="clear_filter">Hapus Filter</string>
     <string name="select_currency">Pilih mata uang</string>
-
 </resources>

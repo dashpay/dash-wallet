@@ -20,5 +20,5 @@
 
     <solid android:color="?attr/backgroundColor" tools:color="@android:color/white"/>
     <corners android:radius="?attr/cornerRadius" tools:radius="10dp" />
-    <stroke android:color="?attr/strokeColor" android:width="2dp" tools:color="@android:color/white"/>
+    <stroke android:color="?attr/strokeColor" android:width="1dp" tools:color="@android:color/white"/>
 </shape>

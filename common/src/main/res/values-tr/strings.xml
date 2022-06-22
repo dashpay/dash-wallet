@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Generic titles/messages -->
     <string name="loading">Yükleniyor...</string>
     <string name="loading_error">Bir hata oluştu. Lütfen tekrar deneyin.</string>
+    <string name="please_wait_title">Lütfen bekleyin</string>
     <string name="dash_available">%1$s mevcut</string>
     <string name="network_unavailable_title">Ağ Kullanılamıyor</string>
     <string name="network_unavailable_check_connection">Lütfen ağ bağlantınızı kontrol edin</string>
     <string name="network_unavailable_balance_not_accurate">Bağlantının kesilmesi nedeniyle bakiye doğru olmayabilir</string>
+    <string name="buy_dash">Dash Al</string>
+    <string name="copied">Kopyalandı</string>
+    <string name="staking_title">Staking</string>
+    <string name="error">Hata</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Lirası</string>
     <!-- Local Currency List: JEP -->
@@ -26,11 +32,27 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Doları</string>
 
-    <!-- Generic Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Son Ver</string>
     <string name="network_unavailable_return">Cüzdan\'a Dön</string>
     <string name="button_continue">Devam</string>
+    <string name="button_close">Kapat</string>
+    <string name="button_retry">Tekrar dene</string>
+    <string name="button_send_report">Rapor Gönder</string>
+    <string name="button_info">bilgi</string>
+    <string name="button_copy_address">Adresi Kopyala</string>
+    <string name="button_understand">Anladım</string>
+    <string name="button_okay">Tamam</string>
+    <string name="button_share">Paylaş</string>
+    <string name="verify">Onayla</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Ara</string>
+    <string name="permission_allow">İzin ver</string>
+    <string name="permission_deny">Reddet</string>
     <string name="max">Maksimum</string>
     <string name="select_currency">Para Birimini Seçin</string>
-</resources>
+    <string name="send_coins_error_dusty_send">Bu miktar göndermek için çok düşüktür</string>
+    <string name="send_coins_error_insufficient_money">Yetersiz bakiye</string>
+
+    </resources>

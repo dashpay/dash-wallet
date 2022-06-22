@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">¡No se puede cargar la billetera!</string>
 
     <string name="set_pin_create_new_wallet">Crear una Nueva Billetera</string>
+    <string name="set_pin_upgrade_wallet">Actualizar billetera</string>
     <string name="set_pin_restore_wallet">Restaurar Billetera</string>
     <string name="set_pin_enter_pin">Ingresa el PIN antiguo</string>
     <string name="set_pin_set_pin">Establecer PIN</string>
@@ -15,6 +16,7 @@
     <string name="set_pin_decrypting">Desencriptando billetera</string>
     <string name="set_pin_verifying_pin">Verificando PIN</string>
     <string name="set_pin_message">Este PIN será requerido para desbloquear tu app cada vez que la utilices.</string>
+    <string name="set_pin_confirm_pin_incorrect">PIN incorrecto</string>
 
     <string name="home_available_balance">Saldo disponible</string>
     <string name="home_balance_hidden">Saldo oculto</string>
@@ -61,12 +63,12 @@
     <string name="scan_to_pay_error_dialog_title">Escanear para Enviar</string>
     <string name="scan_to_pay_error_dialog_message">Dirección de Dash o solicitud de URL no válida en el portapapeles:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Dirección de Dash o solicitud de URL no válida en el portapapeles</string>
+    <string name="pay_to_confirm_address">¿Es esta la dirección de Dash a la que deseas enviar el pago?</string>
 
     <string name="receive_title">Recibir</string>
     <string name="receive_enter_amount_message">Especificar la cantidad a recibir</string>
     <string name="receive_enter_amount_button">Especificar Monto</string>
     <string name="receive_share_button">Compartir</string>
-    <string name="receive_copied">Copiado</string>
 
     <string name="pay_title">Enviar</string>
     <string name="history_title">Historial</string>
@@ -116,7 +118,6 @@
     <string name="import_export_keys_dialog_password_phrase">La frase de recuperación va aquí.</string>
     <string name="preferences_report_issue_summary">Reúne información sobre tu problema y envía un email a los desarrolladores con tu reporte.</string>
     <string name="navigation_configuration">Configuración</string>
-    <string name="button_copy_address">Copiar dirección</string>
     <string name="request_coins_clipboard_address_msg">Dirección Dash copiada en el portapapeles</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" no es una palabra de la frase de recuperación</string>
@@ -145,19 +146,24 @@
     <string name="wallet_lock_try_again">Intente nuevamente en %1$d %2$s</string>
     <string name="wallet_lock_reset">Reiniciar</string>
     <string name="wallet_lock_wrong_pin">¡PIN incorrecto! %s</string>
+    <string name="wallet_last_attempt">Último intento de PIN</string>
+    <string name="wallet_last_attempt_message">Otro intento fallido requerirá mi frase de contraseña para recuperar mi billetera</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d intento restante</item>
+        <item quantity="many">%d intentos restantes</item>
         <item quantity="other">%d intentos restantes</item>
     </plurals>
 
     <plurals name="minute">
         <item quantity="one">minuto</item>
+        <item quantity="many">minutos</item>
         <item quantity="other">minutos</item>
     </plurals>
 
     <plurals name="hour">
         <item quantity="one">hora</item>
+        <item quantity="many">horas</item>
         <item quantity="other">horas</item>
     </plurals>
 
@@ -179,6 +185,13 @@
     <string name="notification_transactions_channel_description">Recibir alerta sobre transacciones entrantes</string>
     <string name="notification_synchronization_channel_name">Sincronización</string>
     <string name="notification_synchronization_channel_description">Muestra una notificación cuando la app está sincronizando con la red.</string>
+    <string name="notification_generic_channel_name">Notificaciones genéricas</string>
+    <string name="notification_generic_channel_description">Otros eventos de la billetera de Dash </string>
+    <string name="notification_push_channel_name">Notificaciones push</string>
+    <string name="notification_push_channel_description">Muestra notificaciones push enviadas por Dash</string>
+    <string name="notification_settings_title">Notificaciones</string>
+    <string name="notification_explainer_title">La billetera de Dash desea enviarte notificaciones</string>
+    <string name="notification_explainer_message">Las notificaciones pueden incluir alertas, sonidos e íconos distintivos. Estos se pueden configurar en la configuración del teléfono.</string>
 
     <string name="net_type_indicator" />
 
@@ -197,7 +210,6 @@
     <string name="preferences_enable_payment_request_title">Escanear para pagar con BIP70</string>
 
     <string name="verify_continue">Continuar</string>
-    <string name="verify">Verificar</string>
     <string name="verify_backup_wallet">Hacer Backup de Billetera</string>
     <string name="verify_show_recovery_phrase">Mostrar Frase de Recuperación</string>
     <string name="verify_secure_now">Asegurar Billetera Ahora</string>
@@ -257,9 +269,12 @@
     <string name="menu_contact_support_title">Contactar Soporte</string>
     <string name="menu_contact_support_subtitle">Reportar un problema</string>
     <string name="menu_explore_title">Explorar</string>
+    <string name="menu_explore_subtitle">Compra con DASH en más de 155,000 comerciantes</string>
+
     <string name="tools_address_book">Libreta de direcciones</string>
     <string name="tools_import_private_key">Barrer billetera de papel</string>
     <string name="tools_network_monitor">Monitor de Red</string>
+    <string name="tools_show_xpub">Extender llave publica</string>
 
     <string name="about_help_us_improve">Ayúdanos a mejorar tu experiencia</string>
     <string name="about_review_and_rate">Evaluar la app</string>
@@ -316,7 +331,6 @@
     <string name="welcome_screen_subtitle_3">Ten control completo y configura tu billetera de acuerdo a tus necesidades</string>
 
     <string name="sync_status_wait">Por favor espera hasta que se complete la sincronización</string>
-    <string name="sync_status_syncing_title">Sincronizando %1$d</string>
     <string name="sync_status_syncing_sub_title">con la blockchain de Dash</string>
     <string name="sync_status_unable_to_connect">No fue posible conectarse</string>
     <string name="sync_status_check_connection">Verifica tu conección</string>
@@ -325,7 +339,6 @@
 
     <string name="appwidget_wallet_not_ready">Configura tu billetera por favor</string>
 
-    <string name="payment_request_please_wait_title">Por favor espera</string>
     <string name="payment_request_please_wait_message">Conectando al servidor de pago</string>
     <string name="payment_request_unable_to_connect">No se puede conectar</string>
     <string name="payment_request_unable_to_send">No se puede enviar</string>
@@ -356,5 +369,13 @@
     <string name="wallet_encryption_error_message"> Hay un error en la creación de la billetera. Por favor reportar al centro de soporte.</string>
     <string name="wallet_not_encrypted_error_message"> Hay un error en su billetera.\n\nIf si ud no posee Dash en está billetera. Por favor desinstale y reinstale está app. Luego cree una nueva billetera \n\n si ud tiene se frase de recuperación, o archivo de respaldo, entonces desinstale esta app y reinstale nuevamente. \n\n de ser un caso diferentes, por favor reporte al centro de soporte  </string>
 
-
+    <string name="reset_wallet_title">¿Estás seguro de que quieres restablecer la billetera?</string>
+    <string name="reset_wallet_message">Si reinicias tu billetera, la única forma de acceder a ella es recuperar la billetera con la frase de recuperación.</string>
+    <string name="positive_reset_text">Sí, restablecer billetera</string>
+    <string name="launch_reset_wallet_title">Tienes saldo positivo</string>
+    <string name="launch_reset_wallet_message">Si restableces tu billetera, perderás todos tus fondos si no has realizado una copia de seguridad de tu frase de recuperación.</string>
+    <string name="continue_reset">Continuar</string>
+    <string name="launch_reset_wallet_extra_message">Haz una copia de seguridad de tu frase de recuperación</string>
+    <string name="start_reset_wallet_title">Puedes perder %s</string>
+    <string name="reset_wallet_text">Reiniciar billetera</string>
 </resources>

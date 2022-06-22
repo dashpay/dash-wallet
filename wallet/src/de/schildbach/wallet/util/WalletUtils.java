@@ -28,6 +28,9 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -432,24 +435,43 @@ public class WalletUtils {
         return null;
     }
 
+    public static Date getTransactionDate(Transaction tx) {
+        Date date = tx.getUpdateTime();
+        if (tx.getConfidence() != null) {
+            Date sentAtTime = tx.getConfidence().getSentAt();
+            if (sentAtTime != null && sentAtTime.compareTo(date) < 0)
+                date = sentAtTime;
+        }
+        return date;
+    }
+
     // This creates the TaxBit CSV format
     public static String getTransactionHistory(Wallet wallet) {
         Set<Transaction> txSet = wallet.getTransactions(false);
+        List<Transaction> txList = Arrays.asList(txSet.toArray(new Transaction[0]));
+
+        Collections.sort(txList, (o1, o2) -> {
+            Date tx1 = getTransactionDate(o1);
+            Date tx2 = getTransactionDate(o2);
+            return tx1.compareTo(tx2);
+        });
+
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Date and Time,Transaction Type,Sent Quantity,Sent Currency,Sending Source,Received Quantity,Received Currency,Receiving Destination,Fee,Fee Currency,Exchange Transaction ID,Blockchain Transaction Hash").append("\n");
         @SuppressLint("SimpleDateFormat")
         TimeZone tz = TimeZone.getTimeZone("UTC");
         DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
         format.setTimeZone(tz);
-        for (Transaction tx : txSet) {
+        for (Transaction tx : txList) {
             if (isEntirelySelf(tx, wallet))
                 continue;
             Coin value = tx.getValue(wallet);
 
             // Date and Time
-            stringBuilder.append(format.format(tx.getUpdateTime())).append(",");
+            Date time = getTransactionDate(tx);
+            stringBuilder.append(format.format(time)).append(",");
             // Transaction Type
-            stringBuilder.append(value.isNegative() ? "Sale" : "Income").append(",");
+            stringBuilder.append(value.isNegative() ? "Expense" : "Income").append(",");
             // Sent Quantity / Blank for incoming transactions
             if (value.isNegative()) {
                 stringBuilder.append(MonetaryFormat.BTC.noCode().format(value.negate()));
@@ -491,7 +513,7 @@ public class WalletUtils {
             stringBuilder.append(",");
 
             // Blockchain Transaction Hash
-            stringBuilder.append(tx.getTxId()).append(",");
+            stringBuilder.append(tx.getTxId());
 
             stringBuilder.append("\n");
         }

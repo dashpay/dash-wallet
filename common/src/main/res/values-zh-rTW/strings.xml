@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Generic titles/messages -->
     <string name="loading">載入中...</string>
     <string name="loading_error">發生錯誤。 請稍後再試。</string>
+    <string name="please_wait_title">請稍等</string>
     <string name="dash_available">%1$s 可用</string>
     <string name="network_unavailable_title">網絡不可用</string>
     <string name="network_unavailable_check_connection">請檢查您的網絡連接</string>
     <string name="network_unavailable_balance_not_accurate">由於連接中斷，餘額可能不准確</string>
+    <string name="buy_dash">購買達世幣</string>
+    <string name="copied">已複製</string>
+    <string name="staking_title">質押</string>
+    <string name="error">錯誤</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -26,11 +32,27 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">取消</string>
     <string name="network_unavailable_return">返回錢包</string>
     <string name="button_continue">繼續</string>
+    <string name="button_close">關閉</string>
+    <string name="button_retry">重試</string>
+    <string name="button_send_report">發送報告</string>
+    <string name="button_info">資訊</string>
+    <string name="button_copy_address">複製位址</string>
+    <string name="button_understand">我明白</string>
+    <string name="button_okay">好的</string>
+    <string name="button_share">分享</string>
+    <string name="verify">檢查</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">搜索</string>
+    <string name="permission_allow">允許</string>
+    <string name="permission_deny">拒絕</string>
     <string name="max">最大值</string>
     <string name="select_currency">選擇貨幣</string>
-</resources>
+    <string name="send_coins_error_dusty_send">這個金額太小，無法發送。</string>
+    <string name="send_coins_error_insufficient_money">餘額不足</string>
+
+    </resources>

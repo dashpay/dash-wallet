@@ -28,9 +28,17 @@
     <string name="uphold_general_error_title">ผิดพลาด</string>
     <string name="uphold_api_error_title">ข้อผิดพลาดจาก Uphold </string>
     <string name="uphold_api_error_identity">บัญชี Uphold ของคุณไม่ได้รับการตรวจสอบ เงินทุนจึงไม่สามารถถอนได้</string>
+    <string name="uphold_api_error_403_description">บัญชี  Uphold ของคุณได้รับการตั้งค่าสถานะสำหรับการตรวจสอบ.\n\n Uphold ได้ระงับบัญชีของคุณชั่วคราวและคุณจะไม่สามารถถอนเงินได้.\n\n%s </string>
+    <string name="uphold_api_error_403_generic">Uphold จะติดต่อกลับเพื่อช่วยให้คุณแก้ปัญหาสิ่งนี้ได้อย่างรวดเร็ว</string>
+    <string name="uphold_api_error_403_due_diligence">โปรดไปที่บัญชี Uphold ของคุณเพื่อตอบคำถามเกี่ยวกับตัวคุณ</string>
+    <string name="uphold_api_error_403_identity">โปรดไปที่บัญชี Uphold ของคุณเพื่อยืนยันตัวตนของคุณ</string>
+    <string name="uphold_api_error_403_proof_of_address">โปรดติดต่อ Upold เพื่ออัปเดตหลักฐานที่อยู่ของคุณ</string>
+
     <string name="uphold_api_error_400_description">กองทุน Uphold จะถูกล็อค 24 ชั่วโมง\n\n คุณจะมีเงินทุนที่เพียงพอสำหรับการถ่ายโอนนี้โดย %s</string>
     <string name="uphold_api_error_400_locked">กองทุนสนับสนุน (%1$s %2$s) ถูกล็อคไว้นานถึง 65 วัน \n\n คุณจะมีเงินทุนเพียงพอสำหรับการโอนนี้โดย %3$s</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">คุณไม่มีเงินทุนเพียงพอสำหรับการโอนนี้</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">จำนวนเงินในการโอนควรน้อยกว่า %s DASH</string>
+    <string name="uphold_api_error_400_greater_than_or_equal_to">จำนวนเงินในการโอนควรมากกว่า %s DASH</string>
     <string name="uphold_api_error_400_tx_validation">ไม่สามารถโอนได้มากเท่าจำนวนนั้นผ่านแอพนี้ (สูงสุด $3000)</string>
     <string name="uphold_api_error_400_password_reset">กองทุนสนับสนุนจะถูกล็อคเนื่องจากมีการเปลี่ยนรหัสผ่านล่าสุด \n\n คุณต้องรอจนถึง %s จึงจะทำการโอนได้อีกครั้ง </string>
     <string name="uphold_api_error_400_authentication_change">กองทุนสนับสนุนจะถูกล็อคเนื่องจากมีการเปลี่ยน authentication เมื่อเร็ว ๆ นี้ \n\n คุณต้องรอจนถึง %s จึงจะทำการโอนได้อีกครั้ง </string>
@@ -38,4 +46,5 @@
     <string name="uphold_api_error_400_invalid_beneficiary">ไม่สามารถโอนได้มากเท่าจำนวนนั้นผ่านแอพนี้ (สูงสุด $3000)\n\nโปรดใช้บัญชีของคุณเพื่อทำการโอน</string>
     <string name="uphold_api_error_400_required">ไม่สามารถโอนได้มากเท่าจำนวนนั้นผ่านแอพนี้ (สูงสุด $3000)\n\nโปรดใช้บัญชีของคุณเพื่อทำการโอน</string>
 
+    <string name="uphold_requirement_not_met_base_message">คุณไม่สามารถดำเนินการได้ในขณะนี้ %s</string>
 </resources>

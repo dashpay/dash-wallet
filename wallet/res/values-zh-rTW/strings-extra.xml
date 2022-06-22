@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">無法加載錢包!</string>
 
     <string name="set_pin_create_new_wallet">創建一個新錢包</string>
+    <string name="set_pin_upgrade_wallet">升級錢包</string>
     <string name="set_pin_restore_wallet">回復錢包</string>
     <string name="set_pin_enter_pin">輸入舊密碼</string>
     <string name="set_pin_set_pin">設置密碼</string>
@@ -15,6 +16,7 @@
     <string name="set_pin_decrypting">正在解密錢包</string>
     <string name="set_pin_verifying_pin">驗證密碼</string>
     <string name="set_pin_message">每次使用時，都需要使用此密碼來解鎖您的應用程式。</string>
+    <string name="set_pin_confirm_pin_incorrect">密碼不正確</string>
 
     <string name="home_available_balance">可用餘額</string>
     <string name="home_balance_hidden">餘額已隱藏</string>
@@ -61,12 +63,12 @@
     <string name="scan_to_pay_error_dialog_title">掃描發送</string>
     <string name="scan_to_pay_error_dialog_message">在剪貼板中不是有效的達世幣位址或URL請求:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">在剪貼板中不是有效的達世幣位址或URL請求。</string>
+    <string name="pay_to_confirm_address">這是您要發送付款的達世幣位址嗎?</string>
 
     <string name="receive_title">接收</string>
     <string name="receive_enter_amount_message">指定收款金額</string>
     <string name="receive_enter_amount_button">指定金額</string>
     <string name="receive_share_button">分享</string>
-    <string name="receive_copied">已複製</string>
 
     <string name="pay_title">付款</string>
     <string name="history_title">歷史</string>
@@ -116,7 +118,6 @@
     <string name="import_export_keys_dialog_password_phrase">恢復詞組在這裡。</string>
     <string name="preferences_report_issue_summary">收集有關您問題的信息，並將您的報告以電子郵件發方式發送給開發人員。</string>
     <string name="navigation_configuration">配置</string>
-    <string name="button_copy_address">複製位址</string>
     <string name="request_coins_clipboard_address_msg">達世幣位址複製到剪貼板</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">顯示</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" 不是恢復詞組的字詞</string>
@@ -145,6 +146,8 @@
     <string name="wallet_lock_try_again">請在 %1$d %2$s 後再試</string>
     <string name="wallet_lock_reset">重設</string>
     <string name="wallet_lock_wrong_pin">錯誤的 PIN碼! %s</string>
+    <string name="wallet_last_attempt">最後一次 PIN 嘗試</string>
+    <string name="wallet_last_attempt_message">再次失敗的話將需要我的恢復詞組來恢復我的錢包</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="other">剩餘%d 次嘗試機會</item>
@@ -176,6 +179,11 @@
     <string name="notification_transactions_channel_description">接收有關接收交易的警報。</string>
     <string name="notification_synchronization_channel_name">同步</string>
     <string name="notification_synchronization_channel_description">應用程序與網絡同步時顯示通知。</string>
+    <string name="notification_push_channel_name">推送通知</string>
+    <string name="notification_push_channel_description">顯示達世幣發送給您的推送通知</string>
+    <string name="notification_settings_title">通知</string>
+    <string name="notification_explainer_title">達世幣錢包想向您發送通知</string>
+    <string name="notification_explainer_message">通知可能包括警報、聲音和圖標標記。這些可以在電話設置中進行設置。</string>
 
     <string name="net_type_indicator" />
 
@@ -194,7 +202,6 @@
     <string name="preferences_enable_payment_request_title">BIP70 用於掃描付費</string>
 
     <string name="verify_continue">繼續</string>
-    <string name="verify">檢查</string>
     <string name="verify_backup_wallet">備用錢包</string>
     <string name="verify_show_recovery_phrase">顯示恢復詞組</string>
     <string name="verify_secure_now">立即確保錢包安全</string>
@@ -253,16 +260,24 @@
     <string name="menu_rescan_blockchain">重新掃瞄區塊鏈</string>
     <string name="menu_contact_support_title">聯繫支援服務</string>
     <string name="menu_contact_support_subtitle">報告問題</string>
+    <string name="menu_explore_title">瀏覽</string>
+    <string name="menu_explore_subtitle">在超過 155,000 家商家處使用達世幣購物</string>
+
     <string name="tools_address_book">地址簿</string>
     <string name="tools_import_private_key">導入私鑰</string>
     <string name="tools_network_monitor">網路監視器</string>
+    <string name="tools_show_xpub">擴展的公鑰</string>
 
     <string name="about_help_us_improve">幫助我們改善您的體驗</string>
     <string name="about_review_and_rate">對應用程序進行評價 &amp; 和評分</string>
     <string name="about_contact_support">聯繫支援服務</string>
     <string name="about_fork_disclaimer">這是一個從比特幣錢包分叉的開源應用程序</string>
+    <string name="about_copyright">版權所有 © 2022 Dash Core</string>
     <string name="about_license">GNU通用公共許可證 v3.0</string>
     <string name="about_version_name">達世幣錢包 %s</string>
+    <string name="about_last_explore_dash_sync">探索達世幣數據更新於: %1$s\n上次同步: %2$s</string>
+    <string name="about_last_explore_dash_update_error">無法獲取</string>
+    <string name="about_last_explore_dash_sync_never">從不</string>
 
     <string name="block">區塊</string>
     <string name="time">時間</string>
@@ -308,7 +323,6 @@
     <string name="welcome_screen_subtitle_3">能夠讓您完全控制並根據您的個人需要自定義錢包</string>
 
     <string name="sync_status_wait">請等待同步完成</string>
-    <string name="sync_status_syncing_title">同步中%1$d</string>
     <string name="sync_status_syncing_sub_title">與達世幣區塊鏈</string>
     <string name="sync_status_unable_to_connect">無法連接</string>
     <string name="sync_status_check_connection">Check your connection</string>
@@ -317,7 +331,6 @@
 
     <string name="appwidget_wallet_not_ready">請設置您的錢包</string>
 
-    <string name="payment_request_please_wait_title">請稍等</string>
     <string name="payment_request_please_wait_message">連接到支付服務器</string>
     <string name="payment_request_unable_to_connect">無法連接</string>
     <string name="payment_request_unable_to_send">無法發送</string>
@@ -342,4 +355,12 @@
     <string name="all_transactions">所有</string>
     <string name="received_transactions">己收到</string>
     <string name="sent_transactions">發送</string>
+    <string name="set_pin_error_missing_wallet_title">缺少錢包錯誤</string>
+    <string name="set_pin_error_missing_wallet_message">錢包不見了。請將此報告給支援平台。</string>
+    <string name="wallet_encryption_error_title">錢包創建錯誤</string>
+    <string name="wallet_encryption_error_message">創建錢包時出現問題。請將此報告給支援平台。</string>
+    <string name="wallet_not_encrypted_error_message">您的錢包有問題。\n\n如果您的錢包中沒有達世幣，請卸載並重新安裝此應用。然後創建一個新錢包。\n\n如果您有恢復詞組或備份文件，請卸載此應用並重新安裝。\n\n否則，請向支援平台報告。</string>
+
+    <string name="continue_reset">繼續</string>
+    <string name="reset_wallet_text">重置錢包</string>
 </resources>

@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <!-- Explore screen -->
+    <string name="explore_dash">Prozkoumejte Dash</string>
+    <string name="explore_title">Prozkoumat</string>
+    <string name="explore_subtitle">Nakupujte pomocí DASH snadno na více než 155 000 místech a u online obchodníků.</string>
+    <string name="explore_merchants_title">Kde nakupovat?</string>
+    <string name="explore_merchants_subtitle">Najděte obchodníky, kteří přijímají Dash.</string>
+    <string name="explore_atms_title">Bankomaty</string>
+    <string name="explore_atms_subtitle">Najděte, kde koupit nebo prodat DASH a další kryptoměny za hotovost.</string>
+    <string name="explore_staking_subtitle">Jednoduše Dash úročte a získejte pasivní příjem pomocí několika kliknutí.</string>
+
+    <!-- Search -->
+    <string name="explore_search_results">Výsledky vyhledávání</string>
+    <string name="explore_physical_merchant">Fyzický obchodník</string>
+    <string name="explore_online_merchant">Online</string>
+    <string name="explore_both_types_merchant">Online, Fyzický obchodník</string>
+    <string name="explore_multiple_locations">+ více míst</string>
+    <string name="explore_option_all">Vše</string>
+    <string name="explore_option_buy">Koupit</string>
+    <string name="explore_option_sell">Prodej</string>
+    <string name="explore_option_buy_sell">Nákup &amp; Prodej</string>
+    <string name="explore_where_to_spend">Kde nakupovat</string>
+    <string name="explore_atms">Bankomaty</string>
+    <string name="explore_all_states">Všechny státy</string>
+    <string name="explore_no_results">Žádné výsledky</string>
+    <string name="explore_all_merchants">Všichni obchodníci</string>
+    <string name="explore_in_radius">%1$s v %2$s</string>
+    <string name="explore_no_merchants">Žádní obchodníci</string>
+    <string name="explore_no_atms">Žádné bankomaty</string>
+    <string name="distance_miles">%s mil</string>
+    <string name="distance_kilometers">%s kilometrů</string>
+
+    <plurals name="explore_merchant_amount">
+        <item quantity="one">%d obchodník</item>
+        <item quantity="few">%d obchodníci</item>
+        <item quantity="many">%d obchodníků</item>
+        <item quantity="other">%d obchodníků</item>
+    </plurals>
+
+    <plurals name="explore_atm_amount">
+        <item quantity="one">%d bankomat</item>
+        <item quantity="few">%d bankomaty</item>
+        <item quantity="many">%d bankomatů</item>
+        <item quantity="other">%d bankomatů</item>
+    </plurals>
+
+    <!-- Details -->
+    <string name="explore_back_to_locations">Zpět na všechna místa</string>
+    <string name="explore_back_to_nearest">Zpět na nejbližší místo</string>
+    <string name="explore_select_location">Vybrat místo</string>
+    <string name="explore_pay_with_dash">Platba pomocí Dash</string>
+    <string name="explore_buy_gift_card">Nákup dárkového poukazu</string>
+    <string name="explore_buy_dash">Nákup Dash</string>
+    <string name="explore_sell_dash">Prodej Dash</string>
+    <string name="explore_show_all">Zobrazit všechna místa</string>
+    <string name="explore_atm_location_hint">Tento bankomat se nachází v</string>
+    <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=,%1$f,%2$f</string>
+
+    <!-- Filters -->
+    <string name="explore_filter">Filtr</string>
+    <string name="explore_filters">Filtry</string>
+    <string name="explore_apply_filter">Aplikovat</string>
+    <string name="explore_payment_method">Platební metoda</string>
+    <string name="explore_payment_dash">Dash</string>
+    <string name="explore_payment_gift_card">Dárkový poukaz</string>
+    <string name="explore_radius">Okruh</string>
+    <string name="explore_location">Místo</string>
+    <string name="explore_current_location">Aktuální poloha</string>
+    <string name="explore_location_settings">Nastavení aktuální polohy</string>
+    <string name="explore_reset_filters">Resetovat filtry</string>
+    <string name="explore_reset_all_filters">Resetovat všechny filtry</string>
+    <string name="explore_filtered_by">Filtrováno:</string>
+    <string name="explore_pay_gift_card">Platba dárkovým poukazem</string>
+    <string name="explore_sort_by">Řadit podle</string>
+
+    <string-array name="merchants_filter_options">
+        <item>Online</item>
+        <item>Nejbližší</item>
+        <item>Vše</item>
+    </string-array>
+
+    <string-array name="atms_filter_options">
+        <item>Vše</item>
+        <item>Nákup</item>
+        <item>Prodej</item>
+        <item>Nákup/Prodej</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_miles">
+        <item>1 míle</item>
+        <item>5 mil</item>
+        <item>20 mil</item>
+        <item>50 mil</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_kilometers">
+        <item>1 kilometr</item>
+        <item>5 kilometrů</item>
+        <item>20 kilometrů</item>
+        <item>50 kilometrů</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>Jméno</item>
+        <item>Vzdálenost</item>
+    </string-array>
+
+    <plurals name="radius_miles">
+        <item quantity="one">%d míle</item>
+        <item quantity="few">%d mil</item>
+        <item quantity="many">%d mil</item>
+        <item quantity="other">%d mil</item>
+    </plurals>
+
+    <plurals name="radius_kilometers">
+        <item quantity="one">%d kilometr</item>
+        <item quantity="few">%d kilometry</item>
+        <item quantity="many">%d kilometrů</item>
+        <item quantity="other">%d kilometrů</item>
+    </plurals>
+
+    <!-- Location Permission -->
+    <string name="explore_location_allowed">Povoleno</string>
+    <string name="explore_location_denied">Zakázáno</string>
+    <string name="explore_manager_permissions">Spravovat GPS oprávnění</string>
+    <string name="explore_location_request">Udělte GPS oprávnění, abychom mohli zobrazovat místa ve vašem okolí.</string>
+    <string name="explore_location_explainer">Vaše poloha se používá k zobrazení vaší pozice na mapě, obchodníků ve zvoleném okruhu a ke zlepšení výsledků vyhledávání.</string>
+    <string name="explore_merchant_location_explainer_title">Vyhledávání obchodníků funguje lépe se zapnutým určením polohy.</string>
+    <string name="explore_merchant_location_explainer_message">Vaše poloha se používá k zobrazení vaší pozice na mapě, obchodníků ve zvoleném okruhu a ke zlepšení výsledků vyhledávání.</string>
+    <string name="explore_atm_location_explainer_title">Vyhledávání bankomatů funguje lépe se zapnutým určením polohy.</string>
+    <string name="explore_atm_location_explainer_message">Vaše poloha se používá k zobrazení vaší pozice na mapě, bankomatů ve zvoleném okruhu a ke zlepšení výsledků vyhledávání.</string>
+
+    <!-- Info screens -->
+    <string name="explore_info_header_text">Máme 2 typy obchodníků</string>
+    <string name="accept_dash_text">Přijímá přímo DASH</string>
+    <string name="pay_with_dash_text">Platba pomocí DASH peněženky</string>
+    <string name="buy_gift_card_text">Nákup dárkových poukazů za Dash</string>
+    <string name="buy_gift_card_desc_text">Kupte si dárkové poukazy za Dash za přesnou částku vašeho nákupu.</string>
+    <string name="learn_more_text">Více informací</string>
+    <string name="continue_text">Pokračovat</string>
+    <string name="buy_card_header_text">Jak použít dárkový poukaz</string>
+    <string name="buy_card_desc_text">Ne všechny obchody přijímají přímo DASH, můžete si ale za Dash koupit dárkový poukaz.</string>
+    <string name="find_merchant_text">Najít obchodníka.</string>
+    <string name="buy_gift_card_with_dash_text">Koupit dárkový poukaz za Dash.</string>
+    <string name="redeem_gift_card_text">Uplatněte dárkový poukaz online během několika sekund nebo u pokladny.</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Probíhá synchronizace... Výsledky nemusí být kompletní.</string>
+    <string name="sync_in_progress_error">Probíhá synchronizace... Došlo k chybě.</string>
+    <string name="sync_in_progress_canceled">Synchronizace zrušena... Další pokus bude proveden později.</string>
+
+    <string name="sync_in_progress_file_not_found">Chyba sestavení: Databáze nenalezena!</string>
+    <string name="sync_in_progress_network_error">Synchronizace byla přerušena... Síť je offline nebo nedostupná</string>
+</resources>

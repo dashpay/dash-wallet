@@ -18,12 +18,12 @@
 package org.dash.wallet.features.exploredash.repository
 
 import android.content.Context
+import android.content.SharedPreferences
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
-import com.google.firebase.storage.ktx.storage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
@@ -38,54 +38,61 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 interface ExploreRepository {
+    val localTimestamp: Long
+    val lastSyncTimestamp: Long
     suspend fun getRemoteTimestamp(): Long
     fun getDatabaseInputStream(file: File): InputStream?
     fun getTimestamp(file: File): Long
     fun getUpdateFile(): File
-    var localTimestamp: Long
     suspend fun download()
     fun deleteOldDB(dbFile: File)
-    fun preloadFromAssets(dbUpdateFile: File)
-    fun finalizeUpdate(dbUpdateFile: File)
+    fun preloadFromAssetsInto(dbUpdateFile: File)
+    fun finalizeUpdate()
 }
 
 @Suppress("BlockingMethodInNonBlockingContext")
-class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context) :
-    ExploreRepository {
+class GCExploreDatabase @Inject constructor(
+    @ApplicationContext context: Context,
+    private val preferences: SharedPreferences,
+    private val auth: FirebaseAuth,
+    private val storage: FirebaseStorage
+) : ExploreRepository {
 
     companion object {
         const val DATA_FILE_NAME = "explore.db"
         const val DATA_TMP_FILE_NAME = "explore.tmp"
         private const val DB_ASSET_FILE_NAME = "explore/$DATA_FILE_NAME"
-
-        private const val SHARED_PREFS_NAME = "explore"
         private const val PREFS_LOCAL_DB_TIMESTAMP_KEY = "local_db_timestamp"
+        private const val LAST_SYNC_TIMESTAMP_KEY = "last_sync_timestamp"
 
         private val log = LoggerFactory.getLogger(GCExploreDatabase::class.java)
     }
-
-    private val auth = Firebase.auth
-    private val storage = Firebase.storage
 
     private var contextRef: WeakReference<Context> = WeakReference(context)
 
     private var remoteDataRef: StorageReference? = null
 
-    private val preferences = context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
-
     private var updateTimestampCache = -1L
 
     override var localTimestamp: Long
         get() = preferences.getLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, 0)
-        set(value) {
+        private set(value) {
             preferences.edit().apply {
                 putLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, value)
             }.apply()
         }
 
+    override var lastSyncTimestamp: Long
+        get() = preferences.getLong(LAST_SYNC_TIMESTAMP_KEY, 0)
+        private set(value) {
+            preferences.edit().apply {
+                putLong(LAST_SYNC_TIMESTAMP_KEY, value)
+            }.apply()
+        }
+
     override suspend fun getRemoteTimestamp(): Long {
-        ensureAuthenticated()
         val remoteDataInfo = try {
+            ensureAuthenticated()
             remoteDataRef = storage.reference.child(Constants.EXPLORE_GC_FILE_PATH)
             remoteDataRef!!.metadata.await()
         } catch (ex: Exception) {
@@ -110,6 +117,7 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
         val result = remoteDataRef!!.getFile(tmpFile).await()
         val totalTime = (currentTimeMillis() - startTime).toFloat() / 1000
         log.info("downloaded $remoteDataRef (${result.bytesTransferred} as $tmpFile [$totalTime s]")
+        lastSyncTimestamp = currentTimeMillis()
 
         val updateFile = File(cacheDir, DATA_FILE_NAME)
         val updateFileDelete = updateFile.delete()
@@ -145,7 +153,7 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
         }
     }
 
-    private fun extractComment(zipFile: ZipFile) : Array<String>{
+    private fun extractComment(zipFile: ZipFile) : Array<String> {
         return zipFile.comment.split("#".toRegex()).toTypedArray()
     }
 
@@ -160,8 +168,7 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
     override fun getDatabaseInputStream(file: File): InputStream? {
         val zipFile = ZipFile(file)
         val comment = extractComment(zipFile)
-        // use the current time instead of the file time (comment[0].toLong())
-        updateTimestampCache = currentTimeMillis()
+        updateTimestampCache = comment[0].toLong()
         val checksum = comment[1]
         log.info("package timestamp {}, checksum {}", updateTimestampCache, checksum)
         zipFile.setPassword(checksum.toCharArray())
@@ -193,7 +200,7 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
     }
 
     @Throws(IOException::class)
-    override fun preloadFromAssets(dbUpdateFile: File) {
+    override fun preloadFromAssetsInto(dbUpdateFile: File) {
         log.info("preloading explore db from assets ${dbUpdateFile.absolutePath}")
         try {
             contextRef.get()!!.assets.open(DB_ASSET_FILE_NAME).use { inputStream ->
@@ -206,11 +213,7 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
         }
     }
 
-    override fun finalizeUpdate(dbUpdateFile: File) {
-        if (!dbUpdateFile.delete()) {
-            log.error("unable to delete " + dbUpdateFile.absolutePath)
-        }
+    override fun finalizeUpdate() {
         localTimestamp = updateTimestampCache
-        log.info("successfully loaded new version of explode db")
     }
 }

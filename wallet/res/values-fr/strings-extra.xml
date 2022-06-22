@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">Impossible de charger le portefeuille !</string>
 
     <string name="set_pin_create_new_wallet">Créer un nouveau portefeuille</string>
+    <string name="set_pin_upgrade_wallet">Mise à jour du portefeuille</string>
     <string name="set_pin_restore_wallet">Restaurer le portefeuille</string>
     <string name="set_pin_enter_pin">Saisissez l\'ancien code PIN</string>
     <string name="set_pin_set_pin">Choisir un code PIN</string>
@@ -15,6 +16,7 @@
     <string name="set_pin_decrypting">Déchiffrement du portefeuille…</string>
     <string name="set_pin_verifying_pin">Vérification du code PIN</string>
     <string name="set_pin_message">Ce code PIN sera demandé pour déverrouiller votre app avant chaque utilisation.</string>
+    <string name="set_pin_confirm_pin_incorrect">Code PIN incorrect</string>
 
     <string name="home_available_balance">Solde disponible</string>
     <string name="home_balance_hidden">Solde caché</string>
@@ -61,12 +63,12 @@
     <string name="scan_to_pay_error_dialog_title">Scanner pour envoyer</string>
     <string name="scan_to_pay_error_dialog_message">Adresse Dash invalide, ou URL de requête dans le presse-papiers invalide :\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Le presse-papiers ne contient pas d\'adresse Dash valide ni d\'URL de requête valide.</string>
+    <string name="pay_to_confirm_address">Est-ce l\'adresse Dash à laquelle vous voulez envoyer un paiement ?</string>
 
     <string name="receive_title">Recevoir</string>
     <string name="receive_enter_amount_message">Indiquez le montant à recevoir</string>
     <string name="receive_enter_amount_button">Indiquez le montant</string>
     <string name="receive_share_button">Partager</string>
-    <string name="receive_copied">Copié</string>
 
     <string name="pay_title">Envoyer</string>
     <string name="history_title">Historique</string>
@@ -116,7 +118,6 @@
     <string name="import_export_keys_dialog_password_phrase">La phrase de récupération va ici.</string>
     <string name="preferences_report_issue_summary">Collectez informations de votre problème et email aux développeurs.</string>
     <string name="navigation_configuration">Configuration</string>
-    <string name="button_copy_address">Copiez addrese</string>
     <string name="request_coins_clipboard_address_msg">Adresse Dash copiée dans le presse-papiers</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Afficher </string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" n\'est pas un mot de phrase de récupération</string>
@@ -145,19 +146,24 @@
     <string name="wallet_lock_try_again">Veuillez réessayer dans %1$d %2$s</string>
     <string name="wallet_lock_reset">Réinitialiser</string>
     <string name="wallet_lock_wrong_pin">Mauvais code PIN ! %s</string>
+    <string name="wallet_last_attempt">Dernière tentative de code PIN</string>
+    <string name="wallet_last_attempt_message">Une autre tentative échouée entraînera une demande de ma phrase de passe pour restaurer mon portefeuille</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d tentative restante</item>
+        <item quantity="many">%d tentatives restantes</item>
         <item quantity="other">%d tentatives restantes</item>
     </plurals>
 
     <plurals name="minute">
         <item quantity="one">minute</item>
+        <item quantity="many">minutes</item>
         <item quantity="other">minutes</item>
     </plurals>
 
     <plurals name="hour">
         <item quantity="one">heure</item>
+        <item quantity="many">heures</item>
         <item quantity="other">heures</item>
     </plurals>
 
@@ -179,6 +185,13 @@
     <string name="notification_transactions_channel_description">Recevoir des alertes sur les transactions entrantes.</string>
     <string name="notification_synchronization_channel_name">Synchronisation</string>
     <string name="notification_synchronization_channel_description">Affiche une notification quand l\'application se synchronise au réseau.</string>
+    <string name="notification_generic_channel_name">Notifications génériques</string>
+    <string name="notification_generic_channel_description">Autres événements Dash Wallet</string>
+    <string name="notification_push_channel_name">Notifications</string>
+    <string name="notification_push_channel_description">Montre les notifications push envoyées à vous par Dash</string>
+    <string name="notification_settings_title">Notifications</string>
+    <string name="notification_explainer_title">Dash Wallet aimerait vous envoyer des notifications</string>
+    <string name="notification_explainer_message">Les notifications peuvent inclure des alertes, des sons et des icônes. Cela peut être configuré dans les réglages du smartphone.</string>
 
     <string name="net_type_indicator" />
 
@@ -197,7 +210,6 @@
     <string name="preferences_enable_payment_request_title">BIP70 pour scanner-pour-payer</string>
 
     <string name="verify_continue">Continuer</string>
-    <string name="verify">Vérifier</string>
     <string name="verify_backup_wallet">Sauvegarder le portefeuille</string>
     <string name="verify_show_recovery_phrase">Voir la phase de récupération</string>
     <string name="verify_secure_now">Sécuriser le portefeuille maintenant</string>
@@ -256,17 +268,24 @@
     <string name="menu_rescan_blockchain">Réanalyser la blockchain</string>
     <string name="menu_contact_support_title">Contacter le service d\'aide</string>
     <string name="menu_contact_support_subtitle">Signaler un problème</string>
+    <string name="menu_explore_title">Explorer</string>
+    <string name="menu_explore_subtitle">Achetez avec Dash chez plus de 155 000 vendeurs</string>
 
     <string name="tools_address_book">Carnet d\'adresses</string>
     <string name="tools_import_private_key">Importer une clé privée</string>
     <string name="tools_network_monitor">Surveillance du réseau</string>
+    <string name="tools_show_xpub">Clé privée étendue</string>
 
     <string name="about_help_us_improve">Aidez-nous à améliorer votre expérience</string>
     <string name="about_review_and_rate">Évaluer &amp; noter cette appli</string>
     <string name="about_contact_support">Contacter le service d\'aide</string>
     <string name="about_fork_disclaimer">Ceci est une application open source forkée de Bitcoin Wallet</string>
+    <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_dash_sync">Données Dash d\'explorations mises à jour à : %1$s\nDernière synchronisation : %2$s</string>
+    <string name="about_last_explore_dash_update_error">impossible d\'atteindre</string>
+    <string name="about_last_explore_dash_sync_never">jamais</string>
 
     <string name="block">Bloc</string>
     <string name="time">Heure</string>
@@ -312,7 +331,6 @@
     <string name="welcome_screen_subtitle_3">Gardez un contrôle complet et personnalisez votre portefeuille selon vos besoins</string>
 
     <string name="sync_status_wait">Veuillez attendre la fin de la synchronisation</string>
-    <string name="sync_status_syncing_title">Synchronisation %1$d</string>
     <string name="sync_status_syncing_sub_title">avec la blockchain Dash</string>
     <string name="sync_status_unable_to_connect">Impossible de se connecter</string>
     <string name="sync_status_check_connection">Vérifier votre connexion</string>
@@ -321,7 +339,6 @@
 
     <string name="appwidget_wallet_not_ready">Veuillez configurer votre portefeuille</string>
 
-    <string name="payment_request_please_wait_title">Veuillez patienter</string>
     <string name="payment_request_please_wait_message">Connexion au serveur de paiement…</string>
     <string name="payment_request_unable_to_connect">Impossible de se connecter</string>
     <string name="payment_request_unable_to_send">Impossible d\'envoyer</string>
@@ -346,4 +363,19 @@
     <string name="all_transactions">Tous</string>
     <string name="received_transactions">Reçu</string>
     <string name="sent_transactions">Envoyé</string>
+    <string name="set_pin_error_missing_wallet_title">Erreur de portefeuille manquant</string>
+    <string name="set_pin_error_missing_wallet_message">Le portefeuille est absent. Veuillez le signaler au service d\'assistance.</string>
+    <string name="wallet_encryption_error_title">Erreur de création de portefeuille</string>
+    <string name="wallet_encryption_error_message">Il y a un problème à la création du portefeuille. Veuillez le signaler au service d\'assistance.</string>
+    <string name="wallet_not_encrypted_error_message">Il y a un problème avec votre portefeuille.\n\nSi vous n\'avez pas de dashs dans ce portefeuille, alors désinstallez puis réinstallez cette application. Cela créera un nouveau portefeuille.\n\nSi vous avez une phrase de restauration ou un fichier de sauvegarde, désinstallez puis réinstallez cette application.\n\nDans les autres cas, veuillez signaler ce problème au service d\'assistance.</string>
+
+    <string name="reset_wallet_title">Voulez-vous vraiment réinitialiser ce portefeuille ?</string>
+    <string name="reset_wallet_message">Si vous réinitialisez votre portefeuille, le seul moyen de retrouver l\'accès est de restaurer le portefeuille avec la phrase de récupération.</string>
+    <string name="positive_reset_text">Oui, réinitialiser le portefeuille</string>
+    <string name="launch_reset_wallet_title">Vous avez un solde positif</string>
+    <string name="launch_reset_wallet_message">Si vous réinitialisez votre portefeuille, vous perdrez tous vos fonds si vous n\'avez pas sauvegardé votre phrase de récupération.</string>
+    <string name="continue_reset">Continuer</string>
+    <string name="launch_reset_wallet_extra_message">Sauvegarder votre phrase de récupération</string>
+    <string name="start_reset_wallet_title">Vous pouvez perdre %s</string>
+    <string name="reset_wallet_text">Réinitialiser le portefeuille</string>
 </resources>

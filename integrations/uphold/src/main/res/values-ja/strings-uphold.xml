@@ -32,6 +32,8 @@
     <string name="uphold_api_error_403_generic">Upholdは、連絡を取り合ってこの問題を迅速に分類します。</string>
     <string name="uphold_api_error_403_due_diligence">Upholdのアカウントにアクセスし、お客様に関するいくつかの質問にお答えください。</string>
     <string name="uphold_api_error_403_identity">Upholdのアカウントにアクセスし、本人確認を行ってください。</string>
+    <string name="uphold_api_error_403_proof_of_address">住所証明を更新する場合は、Upholdにご連絡ください。</string>
+
     <string name="uphold_api_error_400_description">Upholdの資金は24時間ロックされます。\n\n%sにこの送金のための十分な資金を入れておいてください。</string>
     <string name="uphold_api_error_400_locked">Upholdの資金(%1$s%2$s)は、最大65日間ロックされます。\n\n%3$sにこの送金のための十分な資金を入れておく必要があります。</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">この送金に必要な資金が不足しています</string>
@@ -44,4 +46,5 @@
     <string name="uphold_api_error_400_invalid_beneficiary">このアプリでは、(最大3000ドルまでしか)移動できません。\n\nUpholdのアカウントで送金してください。</string>
     <string name="uphold_api_error_400_required">このアプリでは、(最大3000ドルまでしか)移動できません。\n\nUpholdのアカウントで送金してください。</string>
 
+    <string name="uphold_requirement_not_met_base_message">現時点では、この操作を行うことはできません。%s</string>
 </resources>

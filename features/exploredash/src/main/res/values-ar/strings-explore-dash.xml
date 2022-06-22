@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <!-- Explore screen -->
+    <string name="explore_dash">اكتشف داش</string>
+    <string name="explore_title">اكتشف </string>
+    <string name="explore_subtitle">تسوق بسهولة باستخدام داش الخاص بك في أكثر من 155000 موقع وتاجر عبر الإنترنت</string>
+    <string name="explore_merchants_title">أين تنفق؟</string>
+    <string name="explore_merchants_subtitle">ابحث عن التجار الذين يقبلون داش كوسيلة للدفع.</string>
+    <string name="explore_atms_title">أجهزة الصراف الآلي</string>
+    <string name="explore_atms_subtitle">اكتشف مكان بيع أو شراء داش والعملات المشفرة الأخرى مقابل النقود.</string>
+    <string name="explore_staking_subtitle">قم بستاك داش بسهولة واكسب دخلًا سلبيًا ببضع نقرات بسيطة.</string>
+
+    <!-- Search -->
+    <string name="explore_search_results">نتائج البحث</string>
+    <string name="explore_physical_merchant">التاجر المادي</string>
+    <string name="explore_online_merchant">عبر الانترنت</string>
+    <string name="explore_both_types_merchant">عبر الإنترنت ، تاجر مادي</string>
+    <string name="explore_multiple_locations">+ مواقع متعددة</string>
+    <string name="explore_option_all">الكل</string>
+    <string name="explore_option_buy">شراء</string>
+    <string name="explore_option_sell">بيع</string>
+    <string name="explore_option_buy_sell">شراء &amp; بيع</string>
+    <string name="explore_where_to_spend">أين تنفق؟</string>
+    <string name="explore_atms">أجهزة الصراف الآلي</string>
+    <string name="explore_all_states">كل المقاطعات</string>
+    <string name="explore_no_results">لم يتم العثور على نتائج</string>
+    <string name="explore_all_merchants">كل التجار</string>
+    <string name="explore_in_radius">%1$s في %2$s</string>
+    <string name="explore_no_merchants">لا تجار</string>
+    <string name="explore_no_atms">لا توجد أجهزة صراف آلي</string>
+    <string name="distance_miles">%s اميال</string>
+    <string name="distance_kilometers">%s كيلومترات</string>
+
+    <plurals name="explore_merchant_amount">
+        <item quantity="zero">%d تجار</item>
+        <item quantity="one">%d تاجر</item>
+        <item quantity="two">%d تاجران</item>
+        <item quantity="few">%dتجار</item>
+        <item quantity="many">%dتجار</item>
+        <item quantity="other">%dتجار</item>
+    </plurals>
+
+    <plurals name="explore_atm_amount">
+        <item quantity="zero">%d أجهزة الصراف الآلي</item>
+        <item quantity="one">%d جهاز صراف آلي</item>
+        <item quantity="two">%d جهازان الصراف الآلي</item>
+        <item quantity="few">%dأجهزة الصراف الآلي</item>
+        <item quantity="many">%dأجهزة الصراف الآلي</item>
+        <item quantity="other">%d أجهزة الصراف الآلي</item>
+    </plurals>
+
+    <!-- Details -->
+    <string name="explore_back_to_locations">رجوع إلى جميع المواقع</string>
+    <string name="explore_back_to_nearest">العودة إلى أقرب موقع</string>
+    <string name="explore_select_location">اختر موقعا</string>
+    <string name="explore_pay_with_dash">الدفع مع داش</string>
+    <string name="explore_buy_gift_card">شراء بطاقة هدية</string>
+    <string name="explore_buy_dash">شراء داش</string>
+    <string name="explore_sell_dash">بيع داش</string>
+    <string name="explore_show_all">عرض كل المواقع</string>
+    <string name="explore_atm_location_hint">يقع جهاز الصراف الآلي هذا في</string>
+    <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
+
+    <!-- Filters -->
+    <string name="explore_filter">منقي</string>
+    <string name="explore_filters">عوامل التصفية</string>
+    <string name="explore_apply_filter">تطبيق</string>
+    <string name="explore_payment_method">طريقة الدفع</string>
+    <string name="explore_payment_dash">داش</string>
+    <string name="explore_payment_gift_card">كرت هدية</string>
+    <string name="explore_radius">القطر</string>
+    <string name="explore_location">الموقع</string>
+    <string name="explore_current_location">الموقع الحالي</string>
+    <string name="explore_location_settings">إعدادات الموقع الحالية</string>
+    <string name="explore_reset_filters">إعادة تعيين عوامل التصفية</string>
+    <string name="explore_reset_all_filters">إعادة تعيين كافة عوامل التصفية</string>
+    <string name="explore_filtered_by">تمت تصفيتها بواسطة:</string>
+    <string name="explore_pay_gift_card">ادفع ببطاقة الهدايا</string>
+    <string name="explore_sort_by">ترتيب حسب</string>
+
+    <string-array name="merchants_filter_options">
+        <item>عبر الانترنت</item>
+        <item>قريب</item>
+        <item>الكل</item>
+    </string-array>
+
+    <string-array name="atms_filter_options">
+        <item>الكل</item>
+        <item>شراء</item>
+        <item>بيع</item>
+        <item>شراء/بيع</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_miles">
+        <item>1 ميل</item>
+        <item>5 أميال</item>
+        <item>20 أميال</item>
+        <item>50 أميال</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_kilometers">
+        <item>كيلومتر واحد</item>
+        <item>5 كيلومترات</item>
+        <item>20 كيلومترات</item>
+        <item>50 كيلومترات</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>اسم</item>
+        <item>مسافة</item>
+    </string-array>
+
+    <plurals name="radius_miles">
+        <item quantity="zero">%dاميال</item>
+        <item quantity="one">%dميل</item>
+        <item quantity="two">%dاميال</item>
+        <item quantity="few">%dاميال</item>
+        <item quantity="many">%dاميال</item>
+        <item quantity="other">%d اميال</item>
+    </plurals>
+
+    <plurals name="radius_kilometers">
+        <item quantity="zero">%d كيلومتر</item>
+        <item quantity="one">%d كيلومتر</item>
+        <item quantity="two">%dكيلومتر</item>
+        <item quantity="few">%dكيلومترات</item>
+        <item quantity="many">%d كيلومترات</item>
+        <item quantity="other">%d كيلومترات</item>
+    </plurals>
+
+    <!-- Location Permission -->
+    <string name="explore_location_allowed">مسموح</string>
+    <string name="explore_location_denied">مرفوض</string>
+    <string name="explore_manager_permissions">إدارة إذن GPS</string>
+    <string name="explore_location_request">امنح أذونات GPS حتى نتمكن من إظهار المواقع القريبة منك.</string>
+    <string name="explore_location_explainer">يتم استخدام موقعك لإظهار موقعك على الخريطة والتجار في النطاق المحدد وتحسين نتائج البحث.</string>
+    <string name="explore_merchant_location_explainer_title">يعمل بحث التاجر بشكل أفضل مع تشغيل خدمات الموقع.</string>
+    <string name="explore_merchant_location_explainer_message">يتم استخدام موقعك لإظهار موقعك على الخريطة والتجار في النطاق المحدد وتحسين نتائج البحث.</string>
+    <string name="explore_atm_location_explainer_title">يعمل بحث أجهزة الصراف الآلي بشكل أفضل مع تشغيل خدمات الموقع.</string>
+    <string name="explore_atm_location_explainer_message">يتم استخدام موقعك لإظهار موقعك على الخريطة ، وأجهزة الصراف الآلي في النطاق المحدد وتحسين نتائج البحث.</string>
+
+    <!-- Info screens -->
+    <string name="explore_info_header_text">لدينا نوعان من التجار</string>
+    <string name="accept_dash_text">يقبل داش مباشرة</string>
+    <string name="pay_with_dash_text">ادفع باستخدام محفظة داش.</string>
+    <string name="buy_gift_card_text">شراء بطاقات الهدايا مع داش الخاص بك</string>
+    <string name="buy_gift_card_desc_text">اشترِ بطاقات هدايا مع داش الخاص بك بالمبلغ المحدد لعملية الشراء.</string>
+    <string name="learn_more_text">اعرف المزيد</string>
+    <string name="continue_text">استمر</string>
+    <string name="buy_card_header_text">كيفية استخدام بطاقة الهدايا</string>
+    <string name="buy_card_desc_text">لا تقبل جميع المتاجر داش مباشرةً ، ولكن يمكنك شراء بطاقة هدايا باستخدام داش.</string>
+    <string name="find_merchant_text">ابحث عن تاجر.</string>
+    <string name="buy_gift_card_with_dash_text">شراء بطاقة هدية مع داش.</string>
+    <string name="redeem_gift_card_text">استرد بطاقة الهدايا الخاصة بك عبر الإنترنت في غضون ثوانٍ أو عند الصراف.</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">المزامنة قيد التقدم ... قد لا تكون النتائج كاملة.</string>
+    <string name="sync_in_progress_error">المزامنة قيد التقدم ... حدث خطأ.</string>
+    <string name="sync_in_progress_canceled">تم إلغاء المزامنة ... سيتم إجراء محاولة أخرى لاحقًا.</string>
+
+    <string name="sync_in_progress_file_not_found">خطأ في الإنشاء: قاعدة البيانات غير موجودة!</string>
+    <string name="sync_in_progress_network_error">انقطعت المزامنة ... الشبكة غير متصلة بالإنترنت أو لا يمكن الوصول إليها</string>
+</resources>

@@ -330,7 +330,7 @@ public class EncryptKeysDialogFragment extends BaseDialogFragment {
                                     }
                                     badPasswordView.setVisibility(View.VISIBLE);
                                     attemptsRemainingTextView.setVisibility(View.VISIBLE);
-                                    attemptsRemainingTextView.setText(pinRetryController.getRemainingAttemptsMessage(getContext()));
+                                    attemptsRemainingTextView.setText(pinRetryController.getRemainingAttemptsMessage(getResources()));
 
                                     state = State.INPUT;
                                     oldPasswordView.requestFocus();

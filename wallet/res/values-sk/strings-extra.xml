@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">Peňaženku sa nepodarilo načítať!</string>
 
     <string name="set_pin_create_new_wallet">Vytvoriť novú peňaženku</string>
+    <string name="set_pin_upgrade_wallet">Inovovať Peňaženku</string>
     <string name="set_pin_restore_wallet">Obnoviť peňaženku</string>
     <string name="set_pin_enter_pin">Zadajte starý PIN</string>
     <string name="set_pin_set_pin">Nastaviť PIN</string>
@@ -15,6 +16,7 @@
     <string name="set_pin_decrypting">Dešifrovanie peňaženky</string>
     <string name="set_pin_verifying_pin">Overuje sa PIN</string>
     <string name="set_pin_message">Tento PIN bude potrebný na odomknutie aplikácie pri každom použití.</string>
+    <string name="set_pin_confirm_pin_incorrect">Nesprávny PIN</string>
 
     <string name="home_available_balance">Dostupný zostatok</string>
     <string name="home_balance_hidden">Zostatok skrytý</string>
@@ -61,12 +63,12 @@
     <string name="scan_to_pay_error_dialog_title">Skenovať a poslať</string>
     <string name="scan_to_pay_error_dialog_message">V schránke nie je platná Dash adresa, alebo URL požiadavka:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">V schránke nie je platná Dash adresa, alebo URL požiadavka.</string>
+    <string name="pay_to_confirm_address">Je toto Dash adresa, na ktorú chcete poslať platbu?</string>
 
     <string name="receive_title">Prijať</string>
     <string name="receive_enter_amount_message">Zadajte čiastku, ktorú chcete prijať</string>
     <string name="receive_enter_amount_button">Zadať množstvo</string>
     <string name="receive_share_button">Zdieľať</string>
-    <string name="receive_copied">Skopírované</string>
 
     <string name="pay_title">Poslať</string>
     <string name="history_title">História</string>
@@ -116,7 +118,6 @@
     <string name="import_export_keys_dialog_password_phrase">Fráza pre obnovenie patrí sem.</string>
     <string name="preferences_report_issue_summary">Zozbierať informácie o vašich problémoch a poslať report e-mailom vývojárom.</string>
     <string name="navigation_configuration">Konfigurácia</string>
-    <string name="button_copy_address">Kopírovať adresu</string>
     <string name="request_coins_clipboard_address_msg">Dash adresa skopírovaná do schránky</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Ukázať</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" nie je slovom obnovenia</string>
@@ -145,6 +146,8 @@
     <string name="wallet_lock_try_again">Skúste znova za %1$d %2$s</string>
     <string name="wallet_lock_reset">Reset</string>
     <string name="wallet_lock_wrong_pin">Chybný PIN! %s</string>
+    <string name="wallet_last_attempt">Posledný pokus pre PIN</string>
+    <string name="wallet_last_attempt_message">Ďalší neúspešný pokus bude vyžadovať moju prístupovú frázu na obnovenie mojej peňaženky</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">Zostáva %d pokus</item>
@@ -185,6 +188,13 @@
     <string name="notification_transactions_channel_description">Dostávať upozornenia o prichádzajúcich transakciách.</string>
     <string name="notification_synchronization_channel_name">Synchronizácia</string>
     <string name="notification_synchronization_channel_description">Zobrazí sa upozornenie, keď sa aplikácia synchronizuje so sieťou.</string>
+    <string name="notification_generic_channel_name">Všeobecné upozornenia</string>
+    <string name="notification_generic_channel_description">Ďalšie udalosti Dash Wallet</string>
+    <string name="notification_push_channel_name">Push notifikácie</string>
+    <string name="notification_push_channel_description">Zobrazuje push upozornenia, ktoré vám posiela Dash</string>
+    <string name="notification_settings_title">Oznámenia</string>
+    <string name="notification_explainer_title">Dash Wallet vám chce posielať upozornenia</string>
+    <string name="notification_explainer_message">Upozornenia môžu zahŕňať upozornenia, zvuky a odznaky ikon. Môžete ich nakonfigurovať v nastaveniach telefónu.</string>
 
     <string name="net_type_indicator" />
 
@@ -203,7 +213,6 @@
     <string name="preferences_enable_payment_request_title">BIP70 pre skenuj-a-plať</string>
 
     <string name="verify_continue">Pokračovať</string>
-    <string name="verify">Overiť</string>
     <string name="verify_backup_wallet">Zálohovať peňaženku</string>
     <string name="verify_show_recovery_phrase">Zobraziť frázu obnovenia</string>
     <string name="verify_secure_now">Zabezpečiť peňaženku teraz</string>
@@ -262,17 +271,24 @@
     <string name="menu_rescan_blockchain">Znova prehľadať blockchain</string>
     <string name="menu_contact_support_title">Kontaktovať Podporu</string>
     <string name="menu_contact_support_subtitle">Nahlásiť problém</string>
+    <string name="menu_explore_title">Preskúmať</string>
+    <string name="menu_explore_subtitle">Nakupujte s DASH u viac ako 155 000 obchodníkov</string>
 
     <string name="tools_address_book">Adresár</string>
     <string name="tools_import_private_key">Importovať privátny Kľúč</string>
     <string name="tools_network_monitor">Stav siete</string>
+    <string name="tools_show_xpub">Rozšírený verejný kľúč</string>
 
     <string name="about_help_us_improve">Pomôžte nám vylepšiť váš zážitok</string>
     <string name="about_review_and_rate">Ohodnotiť aplikáciu</string>
     <string name="about_contact_support">Kontaktovať Podporu</string>
     <string name="about_fork_disclaimer">Toto je aplikácia s otvoreným zdrojovým kódom vytvorená z bitcoin peňaženky</string>
+    <string name="about_copyright">Autorské práva © 2022 Dash Core</string>
     <string name="about_license">Všeobecná verejná licencia GNU v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_dash_sync">Preskúmajte údaje Dash aktualizované o: %1$s\nPosledná synchronizácia: %2$s</string>
+    <string name="about_last_explore_dash_update_error">nedá sa načítať</string>
+    <string name="about_last_explore_dash_sync_never">nikdy</string>
 
     <string name="block">Blok</string>
     <string name="time">Čas</string>
@@ -318,7 +334,6 @@
     <string name="welcome_screen_subtitle_3">Majte úplnú kontrolu a prispôsobte si vašu peňaženku podľa svojich potrieb</string>
 
     <string name="sync_status_wait">Počkajte na dokončenie synchronizácie</string>
-    <string name="sync_status_syncing_title">Synchronizuje sa %1$d</string>
     <string name="sync_status_syncing_sub_title">s Dash blockchainom</string>
     <string name="sync_status_unable_to_connect">Nedá sa pripojiť</string>
     <string name="sync_status_check_connection">Skontrolujte pripojenie</string>
@@ -327,7 +342,6 @@
 
     <string name="appwidget_wallet_not_ready">Nastavte si svoju peňaženku</string>
 
-    <string name="payment_request_please_wait_title">Prosím čakajte</string>
     <string name="payment_request_please_wait_message">Pripája sa k platobnému serveru</string>
     <string name="payment_request_unable_to_connect">Nedá sa pripojiť</string>
     <string name="payment_request_unable_to_send">Nedá sa poslať</string>
@@ -352,4 +366,19 @@
     <string name="all_transactions">Všetko</string>
     <string name="received_transactions">Prijté</string>
     <string name="sent_transactions">Poslané</string>
+    <string name="set_pin_error_missing_wallet_title">Chýbajúca peňaženka</string>
+    <string name="set_pin_error_missing_wallet_message">Chýbajúca peňaženka. Nahláste to prosím oddeleniu podpory.</string>
+    <string name="wallet_encryption_error_title">Chyba pri vytváraní peňaženky</string>
+    <string name="wallet_encryption_error_message">Pri vytváraní peňaženky sa vyskytol problém. Nahláste to prosím oddeleniu podpory.</string>
+    <string name="wallet_not_encrypted_error_message">Vyskytol sa problém s vašou peňaženkou.\n\nAk v tejto peňaženke nemáte Dash, odinštalujte a znova nainštalujte túto aplikáciu. Potom vytvorte novú peňaženku.\n\nAk máte frázu na obnovenie alebo záložný súbor, odinštalujte túto aplikáciu a znova ju nainštalujte.\n\nV opačnom prípade to nahláste oddeleniu podpory.</string>
+
+    <string name="reset_wallet_title">Naozaj chcete resetovať peňaženku?</string>
+    <string name="reset_wallet_message"> Ak resetujete svoju peňaženku, jediný spôsob, ako k nej získať prístup, je obnoviť peňaženku pomocou frázy na obnovenie.</string>
+    <string name="positive_reset_text">Áno, resetovať peňaženku</string>
+    <string name="launch_reset_wallet_title">Máte kladnú bilanciu</string>
+    <string name="launch_reset_wallet_message">Ak resetujete svoju peňaženku, stratíte všetky svoje prostriedky, ak ste si nezazálohovali vašu frázu na obnovenie.</string>
+    <string name="continue_reset">Pokračovať</string>
+    <string name="launch_reset_wallet_extra_message">Zálohujte si frázu na obnovenie</string>
+    <string name="start_reset_wallet_title">Môžete stratiť %s</string>
+    <string name="reset_wallet_text">Resetovať peňaženku</string>
 </resources>

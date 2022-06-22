@@ -26,11 +26,13 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.security.PinCodeRequestLauncher
 import de.schildbach.wallet.service.AppRestartService
 import de.schildbach.wallet.service.RestartService
+import de.schildbach.wallet.payments.SendCoinsTaskRunner
+import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
+import org.dash.wallet.common.services.NotificationService
+import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.LockScreenBroadcaster
-import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import javax.inject.Singleton
@@ -39,6 +41,11 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 abstract class AppModule {
     companion object {
+        @Provides
+        fun provideApplication(
+            @ApplicationContext context: Context
+        ): WalletApplication = context as WalletApplication
+
         @Singleton
         @Provides
         fun provideLockScreenBroadcaster(): LockScreenBroadcaster = LockScreenBroadcaster()
@@ -47,15 +54,6 @@ abstract class AppModule {
         fun provideClipboardManager(
             @ApplicationContext context: Context
         ) = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-
-        @Provides
-        fun provideWalletApplication(
-            @ApplicationContext context: Context
-        ) = context as WalletApplication
-
-        @Singleton
-        @Provides
-        fun provideRestartService(): RestartService = AppRestartService()
     }
 
     @Binds
@@ -64,7 +62,17 @@ abstract class AppModule {
     ): AnalyticsService
 
     @Binds
-    abstract fun bindSecurityModel(
-        pinCodeRequestLauncher: PinCodeRequestLauncher
-    ): SecurityModel
+    abstract fun bindSendPaymentService(
+        sendCoinsTaskRunner: SendCoinsTaskRunner
+    ): SendPaymentService
+
+    @Binds
+    abstract fun bindNotificationService(
+        notificationService: NotificationManagerWrapper
+    ): NotificationService
+
+    @Binds
+    abstract fun bindRestartService(
+        restartService: AppRestartService
+    ): RestartService
 }

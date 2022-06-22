@@ -32,6 +32,8 @@
     <string name="uphold_api_error_403_generic">Uphold neemt contact met je op om dit spoedig op te lossen.</string>
     <string name="uphold_api_error_403_due_diligence">Ga a.u.b. naar je Uphold-rekening om wat vragen over jezelf te beantwoorden.</string>
     <string name="uphold_api_error_403_identity">Ga a.u.b. naar je Uphold-rekening om je identiteit te verifiëren.</string>
+    <string name="uphold_api_error_403_proof_of_address">Neem contact op met Uphold om uw bewijs van adres bij te werken.</string>
+
     <string name="uphold_api_error_400_description">Overboekingen worden 24 uur lang geblokkeerd.\n\nU heeft met %svoldoende saldo voor deze overboeking.</string>
     <string name="uphold_api_error_400_locked">Uphold saldo (%1$s %2$s) worden maximaal 65 dagen geblokkeerd.\n\nEr is voldoende saldo voor deze overboeking over%3$s.</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">U heeft niet voldoende saldo voor deze overboeking</string>
@@ -44,4 +46,5 @@
     <string name="uphold_api_error_400_invalid_beneficiary">Kan niet zoveel overboeken met deze app (max $3000)\n\nGebruik je Uphold-rekening om de overboeking uit te voeren.</string>
     <string name="uphold_api_error_400_required">Kan niet zoveel overboeken met deze app (max $3000)\n\nGebruik je Uphold-rekening om de overboeking uit te voeren.</string>
 
+    <string name="uphold_requirement_not_met_base_message">Je kan deze bewerking op dit moment niet uitvoeren. %s</string>
 </resources>

@@ -65,8 +65,6 @@
     <string name="send_coins_fragment_pin_label">輸入 PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">將收取%s作為網絡費用。</string>
     <string name="send_coins_fragment_hint_fee_priority">將支付%s優先級的手續費。如果您希望支付較低的費用，則您只有在需要盡快確認時才使用“優先級”。</string>
-    <string name="send_coins_fragment_hint_dusty_send">這個金額太小，無法發送。</string>
-    <string name="send_coins_fragment_hint_insufficient_money">餘額不足</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">在你的錢包微小金額加起來不足以發送。</string>
     <string name="send_coins_fragment_hint_replaying">目前無法付款，因為錢包未與網絡完全同步</string>
     <string name="send_coins_fragment_direct_payment_enable">直接付款給收款人</string>
@@ -303,6 +301,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">附加錢包dump</string>
     <string name="report_issue_dialog_mail_intent_chooser">寄送報告…</string>
     <string name="report_issue_dialog_mail_intent_failed">寄送報告失敗。</string>
+    <string name="report_transaction_history_export">導出</string>
+    <string name="report_transaction_history_title">導出到CSV檔案</string>
+    <string name="report_transaction_history_not_synced_title">導出到CSV檔案</string>
+    <string name="report_transaction_history_not_synced_message">請等到錢包完全同步後再導出您的交易記錄。</string>
+    <string name="report_transaction_history_message">將導出完整的交易歷史記錄。\n\n所有付款都將被視為支出，所有滙入交易都將成為收入。此錢包的所有者負責在他們選擇的稅務報告系統中進行任何成本的基礎調整。</string>
+    <string name="report_transaction_history_mail_intent_chooser">使用…發送交易歷史</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">發送交易記錄失敗。</string>
+
     <string name="about_title">關於</string>
     <string name="about_version_title">版本</string>
     <string name="about_copyright_title">著作權</string>
@@ -331,7 +337,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">取消</string>
     <string name="button_cancel">取消</string>
-    <string name="button_retry">重試</string>
     <string name="button_help">幫助</string>
     <string name="button_add">新增</string>
     <string name="button_delete">刪除</string>
@@ -341,7 +346,6 @@
     <string name="button_copy">複製</string>
     <string name="button_copy_request">複製請求</string>
     <string name="button_paste">貼上</string>
-    <string name="button_share">分享</string>
     <string name="button_set_as_default">設為預設</string>
     <string name="button_request_coins">索取達世幣</string>
     <string name="button_send_coins">達世幣付款</string>
@@ -385,5 +389,4 @@
     <string name="activity_buy_and_sell_dash_filter">篩選</string>
     <string name="clear_filter">清除篩選</string>
     <string name="select_currency">選擇貨幣</string>
-
 </resources>

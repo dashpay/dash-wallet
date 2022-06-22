@@ -5,7 +5,7 @@
     android:id="@+id/wallet_transactions_group"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="de.schildbach.wallet.ui.WalletTransactionsFragment">
+    tools:context="de.schildbach.wallet.ui.main.WalletTransactionsFragment">
 
     <ProgressBar
         android:id="@+id/loading"

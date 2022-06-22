@@ -386,7 +386,7 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
     override fun onBackPressed() {
         if (isTransestionSuccessful) {
             val intent = Intent()
-            intent.setClassName(this, "de.schildbach.wallet.ui.WalletActivity")
+            intent.setClassName(this, "de.schildbach.wallet.ui.main.WalletActivity") // TODO: breaks if WalletActivity is moved, we should consider refactoring it somehow
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             startActivity(intent)
             finish()

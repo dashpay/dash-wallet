@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Generic titles/messages -->
     <string name="loading">Laden...</string>
     <string name="loading_error">Ein Fehler ist aufgetreten. Bitte versuche es später noch einmal.</string>
+    <string name="please_wait_title">Bitte warten</string>
     <string name="dash_available">%1$s verfügbar</string>
     <string name="network_unavailable_title">Netzwerk nicht verfügbar</string>
     <string name="network_unavailable_check_connection">Bitte überprüfe deine Netzwerksverbindung</string>
     <string name="network_unavailable_balance_not_accurate">Die Guthabensanzeige ist möglicherweise inakkurat, da keine Verbindung besteht</string>
+    <string name="buy_dash">Dash kaufen</string>
+    <string name="copied">Kopiert</string>
+    <string name="error">Fehler</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pfund</string>
     <!-- Local Currency List: JEP -->
@@ -26,11 +31,26 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Schließen</string>
     <string name="network_unavailable_return">Zur Wallet zurückkehren</string>
     <string name="button_continue">Fortfahren</string>
+    <string name="button_close">Schließen</string>
+    <string name="button_retry">Wiederholen</string>
+    <string name="button_info">Info</string>
+    <string name="button_copy_address">Adresse kopieren</string>
+    <string name="button_understand">Ich verstehe</string>
+    <string name="button_okay">OK</string>
+    <string name="button_share">Teilen</string>
+    <string name="verify">Verifizieren</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Suchen</string>
+    <string name="permission_allow">Erlauben</string>
+    <string name="permission_deny">Ablehnen</string>
     <string name="max">Max</string>
     <string name="select_currency">Währung auswählen</string>
-</resources>
+    <string name="send_coins_error_dusty_send">Der Betrag ist zu klein zum Senden</string>
+    <string name="send_coins_error_insufficient_money">Guthaben nicht ausreichend</string>
+
+    </resources>

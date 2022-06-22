@@ -16,17 +16,51 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import android.content.res.Resources
+import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.livedata.CheckPinLiveData
+import de.schildbach.wallet.ui.preference.PinRetryController
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
+import javax.inject.Inject
 
-open class CheckPinViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+open class CheckPinViewModel @Inject constructor(
+    walletData: WalletDataProvider,
+    private val configuration: Configuration,
+    private val pinRetryController: PinRetryController
+) : ViewModel() {
 
     val pin = StringBuilder()
+    internal val checkPinLiveData = CheckPinLiveData(walletData.wallet!!)
 
-    internal val checkPinLiveData = CheckPinLiveData(application)
+    val isWalletLocked: Boolean
+        get() = pinRetryController.isLocked
+
+    var pinLength: Int
+        get() = configuration.pinLength
+        set(value) {
+            configuration.pinLength = value
+        }
 
     open fun checkPin(pin: CharSequence) {
         checkPinLiveData.checkPin(pin.toString())
+    }
+
+    fun isLockedAfterAttempt(pin: String): Boolean {
+        return pinRetryController.failedAttempt(pin)
+    }
+
+    fun getLockedMessage(resources: Resources): String {
+        return pinRetryController.getWalletTemporaryLockedMessage(resources)
+    }
+
+    fun getRemainingAttemptsMessage(resources: Resources): String {
+        return pinRetryController.getRemainingAttemptsMessage(resources)
+    }
+
+    fun resetFailedPinAttempts() {
+        pinRetryController.clearPinFailPrefs()
     }
 }

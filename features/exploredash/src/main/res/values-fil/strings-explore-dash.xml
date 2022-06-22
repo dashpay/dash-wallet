@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <!-- Explore screen -->
+    <string name="explore_dash">Galugarin ang Dash</string>
+    <string name="explore_title">Galugarin</string>
+    <string name="explore_subtitle">Madaling mamili gamit ang iyong DASH sa mahigit 155,000 na lokasyon at mga online na merchant</string>
+    <string name="explore_merchants_title">Saan Gagastos?</string>
+    <string name="explore_merchants_subtitle">Maghanap ng mga merchant na tumatanggap ng Dash bilang bayad.</string>
+    <string name="explore_atms_title">Mga ATM</string>
+    <string name="explore_atms_subtitle">Hanapin kung saan bibili o magbenta ng DASH at iba pang cryptocurrencies para sa cash.</string>
+    <string name="explore_staking_subtitle">Madaling i-stake ang Dash at kumita ng passive income sa ilang simpleng pag-click.</string>
+
+    <!-- Search -->
+    <string name="explore_search_results">Mga Resulta ng Paghahanap</string>
+    <string name="explore_physical_merchant">Pisikal na Merchant</string>
+    <string name="explore_online_merchant">Online</string>
+    <string name="explore_both_types_merchant">Online, Pisikal na Merchant</string>
+    <string name="explore_multiple_locations">+ maramihang mga lokasyon</string>
+    <string name="explore_option_all">Lahat</string>
+    <string name="explore_option_buy">Bumili</string>
+    <string name="explore_option_sell">magbenta</string>
+    <string name="explore_option_buy_sell">Bumili ng &amp; Ibenta</string>
+    <string name="explore_where_to_spend">Saan Gagastos</string>
+    <string name="explore_atms">Mga ATM</string>
+    <string name="explore_all_states">Lahat ng estado</string>
+    <string name="explore_no_results">Walang nahanap na resulta</string>
+    <string name="explore_all_merchants">Lahat ng Merchant</string>
+    <string name="explore_in_radius">%1$s sa %2$s</string>
+    <string name="explore_no_merchants">Walang merchant</string>
+    <string name="explore_no_atms">Walang mga ATM</string>
+    <string name="distance_miles">%s milya</string>
+    <string name="distance_kilometers">%s kilometro</string>
+
+    <plurals name="explore_merchant_amount">
+        <item quantity="one">%d mga merchant</item>
+        <item quantity="other">%d mga merchant</item>
+    </plurals>
+
+    <plurals name="explore_atm_amount">
+        <item quantity="one">%d mga ATM</item>
+        <item quantity="other">%d mga ATM</item>
+    </plurals>
+
+    <!-- Details -->
+    <string name="explore_back_to_locations">Bumalik sa lahat ng lokasyon</string>
+    <string name="explore_back_to_nearest">Bumalik sa pinakamalapit na lokasyon</string>
+    <string name="explore_select_location">Pumili ng lokasyon</string>
+    <string name="explore_pay_with_dash">Magbayad gamit ang Dash</string>
+    <string name="explore_buy_gift_card">Bumili ng Gift Card</string>
+    <string name="explore_buy_dash">Bumili ng Dash</string>
+    <string name="explore_sell_dash">Ibenta ang Dash</string>
+    <string name="explore_show_all">Ipakita ang Lahat ng Lokasyon</string>
+    <string name="explore_atm_location_hint">Ang ATM na ito ay matatagpuan sa</string>
+    <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
+
+    <!-- Filters -->
+    <string name="explore_filter">Salain</string>
+    <string name="explore_filters">Mga filter</string>
+    <string name="explore_apply_filter">Mag-apply</string>
+    <string name="explore_payment_method">Paraan ng Pagbayad</string>
+    <string name="explore_payment_dash">Dash</string>
+    <string name="explore_payment_gift_card">Gift card</string>
+    <string name="explore_radius">Radius</string>
+    <string name="explore_location">Lokasyon</string>
+    <string name="explore_current_location">Kasalukuyang Lokasyon</string>
+    <string name="explore_location_settings">Mga Setting ng Kasalukuyang Lokasyon</string>
+    <string name="explore_reset_filters">I-reset ang mga filter</string>
+    <string name="explore_reset_all_filters">I-reset ang lahat ng mga filter</string>
+    <string name="explore_filtered_by">Na-filter ni:</string>
+    <string name="explore_pay_gift_card">Magbayad gamit ang gift card</string>
+    <string name="explore_sort_by">Pag-uri-uriin ayon</string>
+
+    <string-array name="merchants_filter_options">
+        <item>Online</item>
+        <item>Sa malapit</item>
+        <item>Lahat</item>
+    </string-array>
+
+    <string-array name="atms_filter_options">
+        <item>Lahat</item>
+        <item>Bumili</item>
+        <item>magbenta</item>
+        <item>Bili/Benta</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_miles">
+        <item>1 milya</item>
+        <item>5 milya</item>
+        <item>20 milya</item>
+        <item>50 milya</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_kilometers">
+        <item>1 kilometro</item>
+        <item>5 kilometro</item>
+        <item>20 kilometro</item>
+        <item>50 kilometro</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>Pangalan</item>
+        <item>Distansya</item>
+    </string-array>
+
+    <plurals name="radius_miles">
+        <item quantity="one">%d milya</item>
+        <item quantity="other">%d milya</item>
+    </plurals>
+
+    <plurals name="radius_kilometers">
+        <item quantity="one">%d kilometro</item>
+        <item quantity="other">%d kilometro</item>
+    </plurals>
+
+    <!-- Location Permission -->
+    <string name="explore_location_allowed">Pinapayagan</string>
+    <string name="explore_location_denied">Tinanggihan</string>
+    <string name="explore_manager_permissions">Pamahalaan ang Pahintulot sa GPS</string>
+    <string name="explore_location_request">Magbigay ng mga pahintulot sa GPS upang maipakita namin sa iyo ang mga lokasyong malapit sa iyo.</string>
+    <string name="explore_location_explainer">Ginagamit ang iyong lokasyon upang ipakita ang iyong posisyon sa mapa, mga mangangalakal sa napiling radius at pagbutihin ang mga resulta ng paghahanap.</string>
+    <string name="explore_merchant_location_explainer_title">Mas mahusay na gumagana ang paghahanap ng merchant kapag naka-on ang Mga Serbisyo sa Lokasyon.</string>
+    <string name="explore_merchant_location_explainer_message">Ginagamit ang iyong lokasyon upang ipakita ang iyong posisyon sa mapa, mga mangangalakal sa napiling radius at pagbutihin ang mga resulta ng paghahanap.</string>
+    <string name="explore_atm_location_explainer_title">Mas gumagana ang paghahanap sa ATM kapag naka-on ang Mga Serbisyo sa Lokasyon.</string>
+    <string name="explore_atm_location_explainer_message">Ginagamit ang iyong lokasyon upang ipakita ang iyong posisyon sa mapa, mga ATM sa napiling radius at pinabubuti ang mga resulta ng paghahanap.</string>
+
+    <!-- Info screens -->
+    <string name="explore_info_header_text">Mayroon kaming 2 uri ng merchant</string>
+    <string name="accept_dash_text">Direktang tumatanggap ng DASH</string>
+    <string name="pay_with_dash_text">Magbayad gamit ang DASH wallet.</string>
+    <string name="buy_gift_card_text">Bumili ng mga gift card gamit ang iyong Dash</string>
+    <string name="buy_gift_card_desc_text">Bumili ng mga gift card gamit ang iyong Dash para sa eksaktong halaga ng iyong binili.</string>
+    <string name="learn_more_text">Matuto pa</string>
+    <string name="continue_text">Ipagpatuloy</string>
+    <string name="buy_card_header_text">Paano Gumamit ng Gift Card</string>
+    <string name="buy_card_desc_text">Hindi lahat ng tindahan ay direktang tumatanggap ng DASH, ngunit maaari kang bumili ng gift card gamit ang iyong Dash.</string>
+    <string name="find_merchant_text">Maghanap ng merchant.</string>
+    <string name="buy_gift_card_with_dash_text">Bumili ng gift card gamit ang iyong Dash</string>
+    <string name="redeem_gift_card_text">I-redeem ang iyong gift card online sa loob ng ilang segundo o sa cashier.</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Kasalukuyang isinasagawa ang pag-sync... Maaaring hindi kumpleto ang mga resulta.</string>
+    <string name="sync_in_progress_error">Kasalukuyang isinasagawa ang pag-sync... Nagkaroon ng error.</string>
+    <string name="sync_in_progress_canceled">Kinansela ang pag-sync... Isa pang pagtatangka ang gagawin sa ibang pagkakataon.</string>
+
+    <string name="sync_in_progress_file_not_found">Error sa Pagbuo: Hindi nakita ang database!</string>
+    <string name="sync_in_progress_network_error">Naantala ang pag-sync... Ang network ay offline o hindi maabot</string>
+</resources>

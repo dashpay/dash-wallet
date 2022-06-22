@@ -30,6 +30,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
@@ -59,6 +60,7 @@ import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.FancyAlertDialog;
 import org.slf4j.Logger;
@@ -76,10 +78,11 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.DynamicFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.rates.ExchangeRatesViewModel;
+
 import org.dash.wallet.common.ui.BaseLockScreenFragment;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.TransactionResultActivity;
+import de.schildbach.wallet.ui.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -217,12 +220,12 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
 
         ExchangeRatesViewModel exchangeRatesViewModel = new ViewModelProvider(this)
                 .get(ExchangeRatesViewModel.class);
-        exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(getViewLifecycleOwner(),
-                exchangeRate -> {
-                    if (exchangeRate != null) {
-                        currentExchangeRate = exchangeRate;
-                    }
-                });
+        String code = config.getExchangeCurrencyCode();
+        exchangeRatesViewModel.getRate(code).observe(getViewLifecycleOwner(), exchangeRate -> {
+            if (exchangeRate != null) {
+                currentExchangeRate = exchangeRate;
+            }
+        });
 
         return view;
     }
@@ -579,7 +582,7 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
             log.info("Using exchange rate: " + sendRequest.exchangeRate.coinToFiat(Coin.COIN).toFriendlyString());
         }
 
-        new SendCoinsOfflineTask(walletToSweep, backgroundHandler) {
+        new SendCoinsOfflineTask(walletToSweep, application, backgroundHandler) {
             @Override
             protected void onSuccess(final Transaction transaction) {
                 sentTransaction = transaction;
@@ -594,6 +597,11 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
                 setState(State.FAILED);
 
                 showInsufficientMoneyDialog();
+            }
+
+            @Override
+            protected void onLeftoverBalanceError(@NonNull LeftoverBalanceException ex) {
+                // pass
             }
 
             @Override
@@ -627,7 +635,7 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
                 alertDialog = baseAlertDialogBuilder.buildAlertDialog();
                 alertDialog.show();
             }
-        }.sendCoinsOffline(sendRequest); // send asynchronously
+        }.sendCoinsOffline(sendRequest, false, false); // send asynchronously
     }
 
     private void showTransactionResult(Transaction sentTransaction) {

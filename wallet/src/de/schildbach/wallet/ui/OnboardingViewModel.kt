@@ -42,7 +42,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         walletApplication.initEnvironmentIfNeeded()
         val wallet = Wallet(Constants.NETWORK_PARAMETERS)
         log.info("successfully created new wallet")
-        walletApplication.wallet = wallet
+        walletApplication.setWallet(wallet)
         walletApplication.configuration.armBackupSeedReminder()
         finishCreateNewWalletAction.call(Unit)
     }
@@ -51,8 +51,8 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         log.info("upgrading previously created wallet from version 6 or before")
         viewModelScope.launch {
             // Does this wallet use BIP44
-            if (!walletApplication.isWalletUpgradedtoBIP44) {
-                walletApplication.wallet.addKeyChain(Constants.BIP44_PATH)
+            if (!walletApplication.isWalletUpgradedToBIP44) {
+                walletApplication.wallet!!.addKeyChain(Constants.BIP44_PATH)
             }
             walletApplication.configuration.armBackupSeedReminder()
 

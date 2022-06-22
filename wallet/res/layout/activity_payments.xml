@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
-    android:background="@color/bg_less_bright"
+    android:background="@color/background_primary_light"
     android:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.PaymentsActivity">
 
@@ -13,7 +13,7 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/dash_lighter_gray"
+        android:background="@color/background_primary_light"
         app:popupTheme="@style/ThemeOverlay.AppCompat.ActionBar"
         app:theme="@style/ThemeOverlay.AppCompat.ActionBar"
         app:titleTextColor="@color/dash_black" />
