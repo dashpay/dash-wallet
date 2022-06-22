@@ -32,7 +32,7 @@
         android:maxLines="2"
         android:minLines="2"
         android:textSize="11sp"
-        android:textColor="@color/gray_900"
+        android:textColor="@color/content_primary"
         tools:ignore="SmallSp"
         tools:text="Secure\nWallet Now" />
 

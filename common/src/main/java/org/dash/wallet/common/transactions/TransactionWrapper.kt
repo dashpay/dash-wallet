@@ -17,9 +17,12 @@
 
 package org.dash.wallet.common.transactions
 
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.TransactionBag
 
 interface TransactionWrapper {
     val transactions: Set<Transaction>
     fun tryInclude(tx: Transaction): Boolean
+    fun getValue(bag: TransactionBag): Coin
 }

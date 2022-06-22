@@ -63,6 +63,7 @@ import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.LinuxSecureRandom;
@@ -94,6 +95,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InvalidObjectException;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
@@ -118,6 +120,7 @@ import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
+import de.schildbach.wallet.transactions.TransactionWrapperHelper;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.transactions.WalletTransactionObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
@@ -128,12 +131,14 @@ import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
+import kotlinx.coroutines.ExperimentalCoroutinesApi;
 import kotlinx.coroutines.flow.Flow;
 
 /**
  * @author Andreas Schildbach
  */
 @HiltAndroidApp
+@ExperimentalCoroutinesApi
 public class WalletApplication extends BaseWalletApplication
         implements androidx.work.Configuration.Provider, AutoLogoutTimerHandler, WalletDataProvider {
     private static WalletApplication instance;
@@ -510,7 +515,12 @@ public class WalletApplication extends BaseWalletApplication
     }
 
     @Override
-    public Wallet getWalletData() {
+    @NonNull
+    public TransactionBag getTransactionBag() {
+        if (wallet == null) {
+            throw new IllegalStateException("Wallet is null");
+        }
+
         return wallet;
     }
 
@@ -998,39 +1008,12 @@ public class WalletApplication extends BaseWalletApplication
 
     @NonNull
     @Override
-    public Iterable<TransactionWrapper> wrapAllTransactions(@NonNull TransactionWrapper... wrappers) {
-        Set<Transaction> transactions = wallet.getTransactions(true);
-        ArrayList<TransactionWrapper> wrappedTransactions = new ArrayList<>();
-
-        for (Transaction transaction : transactions) {
-            TransactionWrapper anonWrapper = new TransactionWrapper() {
-                @Override
-                public boolean tryInclude(@NonNull Transaction tx) {
-                    return true;
-                }
-
-                @NonNull
-                @Override
-                public Set<Transaction> getTransactions() {
-                    return java.util.Collections.singleton(transaction);
-                }
-            };
-
-            if (wrappers.length > 0) {
-                for (TransactionWrapper wrapper : wrappers) {
-                    if (wrapper.tryInclude(transaction)) {
-                        wrappedTransactions.add(wrapper);
-                        break;
-                    }
-
-                    wrappedTransactions.add(anonWrapper);
-                }
-            } else {
-                wrappedTransactions.add(anonWrapper);
-            }
-        }
-
-        return wrappedTransactions;
+    public Collection<TransactionWrapper> wrapAllTransactions(@NonNull TransactionWrapper... wrappers) {
+        org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+        return TransactionWrapperHelper.INSTANCE.wrapTransactions(
+                wallet.getTransactions(true),
+                wrappers
+        );
     }
 
     // wallets from v5.17.5 and earlier do not have a BIP44 path
@@ -1043,7 +1026,6 @@ public class WalletApplication extends BaseWalletApplication
     public NetworkParameters getNetworkParameters() {
         return Constants.NETWORK_PARAMETERS;
     }
-
 
     @Override
     public void attachOnWalletWipedListener(@NonNull Function0<Unit> listener) {

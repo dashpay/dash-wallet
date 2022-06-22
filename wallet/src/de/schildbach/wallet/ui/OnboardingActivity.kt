@@ -38,6 +38,8 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.slf4j.LoggerFactory
@@ -49,8 +51,9 @@ private const val RESTORE_PHRASE_REQUEST_CODE = 2
 private const val RESTORE_FILE_REQUEST_CODE = 3
 private const val UPGRADE_NONENCRYPTED_FLOW_TUTORIAL_REQUEST_CODE = 4
 
-
+@FlowPreview
 @AndroidEntryPoint
+@ExperimentalCoroutinesApi
 class OnboardingActivity : RestoreFromFileActivity() {
 
     companion object {

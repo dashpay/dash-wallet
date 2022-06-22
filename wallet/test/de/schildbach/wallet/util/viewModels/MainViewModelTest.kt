@@ -20,13 +20,16 @@ package de.schildbach.wallet.util.viewModels
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import androidx.lifecycle.SavedStateHandle
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.TestCoroutineDispatcher
@@ -62,12 +65,14 @@ class MainCoroutineRule(
     }
 }
 
+@FlowPreview
 @ExperimentalCoroutinesApi
 class MainViewModelTest {
     private val configMock = mockk<Configuration>()
     private val blockChainStateMock = mockk<BlockchainStateDao>()
     private val exchangeRatesMock = mockk<ExchangeRatesProvider>()
     private val walletDataMock = mockk<WalletDataProvider>()
+    private val savedStateMock = mockk<SavedStateHandle>()
 
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
@@ -85,6 +90,9 @@ class MainViewModelTest {
         every { blockChainStateMock.observeState() } returns flow { BlockchainState() }
         every { exchangeRatesMock.observeExchangeRate(any()) } returns flow { ExchangeRate("USD", "100") }
         every { walletDataMock.observeBalance() } returns flow { Coin.COIN }
+
+        every { savedStateMock.get<TxDirection>(eq("tx_direction")) } returns TxDirection.ALL
+        every { savedStateMock.set<TxDirection>(any(), any()) } just runs
     }
 
     @Test
@@ -92,7 +100,10 @@ class MainViewModelTest {
         val clipboardManagerMock = mockk<ClipboardManager>()
         every { clipboardManagerMock.hasPrimaryClip() } returns false
 
-        val viewModel = spyk(MainViewModel(mockk(), clipboardManagerMock, configMock, blockChainStateMock, exchangeRatesMock, walletDataMock))
+        val viewModel = spyk(MainViewModel(
+            mockk(), clipboardManagerMock, configMock, blockChainStateMock,
+            exchangeRatesMock, walletDataMock, savedStateMock
+        ))
 
         val clipboardInput = viewModel.getClipboardInput()
         assertEquals("", clipboardInput)
@@ -108,7 +119,10 @@ class MainViewModelTest {
         every { clipboardManagerMock.hasPrimaryClip() } returns true
         every { clipboardManagerMock.primaryClip?.description } returns clipDescription
 
-        val viewModel = spyk(MainViewModel(mockk(), clipboardManagerMock, configMock, blockChainStateMock, exchangeRatesMock, walletDataMock))
+        val viewModel = spyk(MainViewModel(
+            mockk(), clipboardManagerMock, configMock, blockChainStateMock,
+            exchangeRatesMock, walletDataMock, savedStateMock
+        ))
 
         every { clipboardManagerMock.primaryClip?.getItemAt(0)?.uri?.toString() } returns mockUri
         every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST) } returns true
@@ -137,7 +151,10 @@ class MainViewModelTest {
     @Test
     fun observeBlockchainState_replaying_notSynced() {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
-        val viewModel = spyk(MainViewModel(mockk(), mockk(), configMock, blockChainStateMock, exchangeRatesMock, walletDataMock))
+        val viewModel = spyk(MainViewModel(
+            mockk(), mockk(), configMock, blockChainStateMock,
+            exchangeRatesMock, walletDataMock, savedStateMock
+        ))
 
         assertEquals(false, viewModel.isBlockchainSynced.value)
         assertEquals(false, viewModel.isBlockchainSyncFailed.value)
@@ -147,7 +164,10 @@ class MainViewModelTest {
     fun observeBlockchainState_progress100percent_synced() {
         val state = BlockchainState().apply { replaying = false; percentageSync = 100 }
         every { blockChainStateMock.observeState() } returns MutableStateFlow(state)
-        val viewModel = spyk(MainViewModel(mockk(), mockk(), configMock, blockChainStateMock, exchangeRatesMock, walletDataMock))
+        val viewModel = spyk(MainViewModel(
+            mockk(), mockk(), configMock, blockChainStateMock,
+            exchangeRatesMock, walletDataMock, savedStateMock
+        ))
 
         assertEquals(true, viewModel.isBlockchainSynced.value)
         assertEquals(false, viewModel.isBlockchainSyncFailed.value)

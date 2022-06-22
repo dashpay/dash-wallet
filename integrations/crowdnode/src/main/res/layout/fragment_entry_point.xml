@@ -19,7 +19,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary_light"
+    android:background="@color/background_primary"
     tools:context=".ui.entry_point.EntryPointFragment">
 
     <androidx.appcompat.widget.Toolbar
