@@ -33,6 +33,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.coroutines.test.resetMain
@@ -164,8 +165,10 @@ class MainViewModelTest {
             exchangeRatesMock, walletDataMock, savedStateMock
         ))
 
-        assertEquals(false, viewModel.isBlockchainSynced.value)
-        assertEquals(false, viewModel.isBlockchainSyncFailed.value)
+        runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
+            assertEquals(false, viewModel.isBlockchainSynced.value)
+            assertEquals(false, viewModel.isBlockchainSyncFailed.value)
+        }
     }
 
     @Test
@@ -177,7 +180,9 @@ class MainViewModelTest {
             exchangeRatesMock, walletDataMock, savedStateMock
         ))
 
-        assertEquals(true, viewModel.isBlockchainSynced.value)
-        assertEquals(false, viewModel.isBlockchainSyncFailed.value)
+        runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
+            assertEquals(true, viewModel.isBlockchainSynced.value)
+            assertEquals(false, viewModel.isBlockchainSyncFailed.value)
+        }
     }
 }
