@@ -82,7 +82,7 @@
             android:paddingVertical="10dp">
 
             <TextView
-                style="@style/Caption.SteelGray"
+                style="@style/Caption.Secondary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/dash_address"

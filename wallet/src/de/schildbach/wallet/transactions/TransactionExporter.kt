@@ -18,16 +18,14 @@ package de.schildbach.wallet.transactions
 
 import android.annotation.SuppressLint
 import de.schildbach.wallet.util.WalletUtils
-import de.schildbach.wallet.util.WalletUtils.isEntirelySelf
-import de.schildbach.wallet.util.value
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Context
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.transactions.TaxCategory
 import org.dash.wallet.common.transactions.TransactionMetadata
+import org.dash.wallet.common.transactions.TransactionUtils
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -78,7 +76,7 @@ abstract class TransactionExporter(
     }
 
     protected fun isInternal(tx: Transaction) : Boolean {
-        return isEntirelySelf(tx, wallet)
+        return TransactionUtils.isEntirelySelf(tx, wallet)
     }
 
     /**

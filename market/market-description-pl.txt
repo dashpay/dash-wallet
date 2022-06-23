@@ -14,7 +14,7 @@ Funkcje:
 * Płatności za pomocą jednego przycisku dla handlowców i stron internetowych akceptujących Dash
 * Zapłać szybko z użyciem biometrycznej autoryzacji
 • Wczytywanie portfeli papierowych (np. używanych jako cold storage).
-* 3rd party integrations to allow users to buy and sell Dash
+* Integracje stron trzecich, aby umożliwić użytkownikom kupowanie i sprzedawanie Dash
 * Prosta fraza odzyskiwania umożliwia odzyskanie środków w przypadku zagubienia lub zmiany urządzenia
 * Elastyczne ustawienia w celu spełnienia szeregu niestandardowych preferencji bezpieczeństwa
 * Bezpośredni klient sieci - nie ma serwerów, które można zhakować lub wyłączyć

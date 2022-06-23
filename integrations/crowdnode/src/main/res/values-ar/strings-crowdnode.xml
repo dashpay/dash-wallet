@@ -39,8 +39,7 @@
     <string name="privacy_policy">سياسة الخصوصية</string>
     <string name="crowdnode_account_ready">تم إعداد حساب CrowdNode الخاص بك وهو جاهز للاستخدام!</string>
     <string name="notify_when_done">أغلق وأبلغ عند الانتهاء</string>
-    <string name="crowdnode_creating">حساب CrowdNode الخاص بك قيد الإنشاء …</string>
-    <string name="accepting_terms">قبول شروط الاستخدام …</string>
+    <string name="accepting_terms">قبول شروط الاستخدام ...</string>
     <string name="crowdnode_signup_error">لم نتمكن من إنشاء حساب CrowdNode الخاص بك.</string>
     <string name="crowdnode_deposit_error">لم نتمكن من الإيداع في حساب CrowdNode الخاص بك.</string>
     <string name="crowdnode_withdraw_error">لم نتمكن من الانسحاب من حسابك في CrowdNode.</string>
@@ -58,7 +57,6 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
     <string name="online_account">حساب على الانترنت</string>
     <string name="online_account_create">إنشاء حساب على الإنترنت</string>
-    <string name="secure_online_account">حماية أرباحك</string>
     <string name="crowdnode_support">دعم CrowdNode</string>
     <string name="unlink_account">إلغاء ربط الحساب</string>
     <string name="online_account_title">لماذا تحتاج إلى حساب على الإنترنت؟</string>
@@ -71,8 +69,7 @@
     <string name="payout_options">خيارات الدفع</string>
     <string name="payout_options_details">يمكنك تغيير كيفية / وقت دفع أرباح المكافآت لك.</string>
     <string name="crowdnode_balance">التوازن على CrowdNode</string>
-    <string name="crowdnode_your_address_title">هذا هو عنوان داش الذي استخدمته في التكامل مع CrowdNode</string>
-    <string name="chain_syncing">السلسلة قيد المزامنة …</string>
+    <string name="chain_syncing">السلسلة قيد المزامنة ...</string>
     <string name="crowdnode_wait_for_sync">انتظر حتى تتم مزامنة السلسلة بالكامل ، حتى نتمكن من مراجعة سجل معاملاتك. قم بزيارة موقع CrowdNode لتسجيل الدخول أو التسجيل.</string>
     <string name="crowdnode_open_website">انتقل إلى موقع CrowdNode</string>
     <string name="crowdnode_info_title">كن جزءًا من Dash Masternode مع CrowdNode</string>
@@ -97,13 +94,11 @@
     <string name="scan_qr">مسح QR</string>
     <string name="qr_contains_request">يحتوي QR بالفعل على طلب دفع %s داش</string>
     <string name="verification_required">التحقق مطلوب</string>
-    <string name="validating_address">التحقق من صحة العنوان …</string>
+    <string name="validating_address">التحقق من صحة العنوان ...</string>
     <string name="crowdnode_address_validated">تم التحقق من صحة عنوان CrowdNode الخاص بك ، ولكن التحقق مطلوب.</string>
     <string name="crowdnode_address_confirmed">تم تأكيد عنوان CrowdNode الخاص بك.</string>
     <string name="crowdnode_bad_confirmation">تم إرسال التأكيد من عنوان أساسي خاطئ</string>
     <string name="crowdnode_online_account_details_title">معلومات حول حسابك على الإنترنت</string>
     <string name="crowdnode_online_account_details_primary">عنوان داش الأساسي الذي تستخدمه حاليًا لحساب CrowdNode الخاص بك</string>
     <string name="crowdnode_online_account_details_api">عنوان داش المخصص لحساب CrowdNode الخاص بك في محفظة داش على هذا الجهاز</string>
-    <string name="crowdnode_reset_address">إعادة تعيين العنوان</string>
-
     </resources>

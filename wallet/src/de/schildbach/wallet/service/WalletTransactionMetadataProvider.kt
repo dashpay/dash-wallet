@@ -16,14 +16,13 @@
 
 package de.schildbach.wallet.service
 
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.TransactionMetadataDao
-import de.schildbach.wallet.util.value
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.*
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TaxCategory
@@ -34,7 +33,7 @@ import javax.inject.Inject
 
 class WalletTransactionMetadataProvider @Inject constructor(
     private val transactionMetadataDao: TransactionMetadataDao,
-    private val walletApplication: WalletApplication
+    private val walletData: WalletDataProvider
 ) : TransactionMetadataProvider {
 
     companion object {
@@ -42,10 +41,10 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     private suspend fun insertTransactionMetadata(txId: Sha256Hash) {
-        val walletTx = walletApplication.wallet!!.getTransaction(txId)
-        Context.propagate(walletApplication.wallet!!.context)
+        val walletTx = walletData.wallet!!.getTransaction(txId)
+        Context.propagate(walletData.wallet!!.context)
         walletTx?.run {
-            val txValue = value ?: Coin.ZERO
+            val txValue = getValue(walletData.wallet!!) ?: Coin.ZERO
             val sentTime = confidence.sentAt?.time
             var updateTime = updateTime.time
             if (sentTime != null && sentTime < updateTime) {
@@ -85,30 +84,30 @@ class WalletTransactionMetadataProvider @Inject constructor(
         transactionMetadataDao.insert(transactionMetadata)
     }
 
-    override suspend fun setTransactionTaxCategory(txid: Sha256Hash, taxCategory: TaxCategory) {
-        updateAndInsertIfNotExist(txid) {
-            transactionMetadataDao.updateTaxCategory(txid, taxCategory)
+    override suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory) {
+        updateAndInsertIfNotExist(txId) {
+            transactionMetadataDao.updateTaxCategory(txId, taxCategory)
         }
     }
 
-    override suspend fun setTransactionType(txid: Sha256Hash, type: Int) {
+    override suspend fun setTransactionType(txId: Sha256Hash, type: Int) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun setTransactionExchangeRate(txid: Sha256Hash, exchangeRate: ExchangeRate) {
+    override suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun setTransactionMemo(txid: Sha256Hash, memo: String) {
+    override suspend fun setTransactionMemo(txId: Sha256Hash, memo: String) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getTransactionMetadata(txid: Sha256Hash): TransactionMetadata? {
-        val transactionMetadata = transactionMetadataDao.load(txid)
+    override suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata? {
+        val transactionMetadata = transactionMetadataDao.load(txId)
         if (transactionMetadata == null) {
-            insertTransactionMetadata(txid)
+            insertTransactionMetadata(txId)
         }
-        return transactionMetadataDao.load(txid)
+        return transactionMetadataDao.load(txId)
     }
 
     override suspend fun getAllTransactionMetadata(): List<TransactionMetadata> {
@@ -116,7 +115,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
 
-    override fun observeTransactionMetadata(txid: Sha256Hash): Flow<TransactionMetadata?> {
-        return transactionMetadataDao.observe(txid)
+    override fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?> {
+        return transactionMetadataDao.observe(txId)
     }
 }

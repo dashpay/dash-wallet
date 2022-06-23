@@ -19,12 +19,10 @@
             app:layout_constraintTop_toTopOf="parent">
             <TextView
                 android:id="@+id/select_currency_label"
-                style="@style/MontserratSemiBold"
+                style="@style/Subtitle2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/select_currency"
-                android:textColor="@color/gray_900"
-                android:textSize="15sp"
                 android:layout_marginLeft="15dp"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintBottom_toBottomOf="@+id/close_exchange_rate_btn"
@@ -103,7 +101,7 @@
             app:layout_constraintTop_toBottomOf="@id/top_container">
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_gravity="center_vertical"
                 android:layout_weight="1"
@@ -112,7 +110,7 @@
 
                 <EditText
                     android:id="@+id/search_exchange_rate_btn"
-                    style="@style/MontserratRegular"
+                    style="@style/Body2"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
@@ -127,9 +125,7 @@
                     android:paddingRight="8dp"
                     android:paddingBottom="12dp"
                     android:singleLine="true"
-                    android:textColor="@color/gray_900"
                     android:textColorHint="@color/steel_gray_300"
-                    android:textSize="15sp"
                     app:drawableLeftCompat="@drawable/ic_search_exchange_rates" />
 
                 <ImageView

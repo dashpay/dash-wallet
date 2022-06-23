@@ -214,7 +214,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         if (isEnabled) {
             binding.withdrawIcon.setImageResource(R.drawable.ic_left_right_arrows)
             binding.withdrawTitle.setTextColor(resources.getColor(R.color.content_primary, null))
-            binding.withdrawSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
+            binding.withdrawSubtitle.setTextColor(resources.getColor(R.color.content_secondary, null))
         } else {
             binding.withdrawIcon.setImageResource(R.drawable.ic_withdraw_disabled)
             binding.withdrawTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
@@ -229,7 +229,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         if (isEnabled) {
             binding.depositIcon.setImageResource(R.drawable.ic_deposit_enabled)
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_primary, null))
-            binding.depositSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
+            binding.depositSubtitle.setTextColor(resources.getColor(R.color.content_secondary, null))
         } else {
             binding.depositIcon.setImageResource(R.drawable.ic_deposit_disabled)
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_disabled, null))

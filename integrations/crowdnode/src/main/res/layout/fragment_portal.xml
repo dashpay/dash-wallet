@@ -143,7 +143,7 @@
 
                 <TextView
                     android:id="@+id/deposit_subtitle"
-                    style="@style/Caption.SteelGray"
+                    style="@style/Caption.Secondary"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -217,7 +217,7 @@
 
                 <TextView
                     android:id="@+id/withdraw_subtitle"
-                    style="@style/Caption.SteelGray"
+                    style="@style/Caption.Secondary"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -329,7 +329,7 @@
 
                 <TextView
                     android:id="@+id/online_account_status"
-                    style="@style/Caption.SteelGray"
+                    style="@style/Caption.Secondary"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"

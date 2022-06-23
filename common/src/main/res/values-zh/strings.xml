@@ -11,6 +11,9 @@
     <string name="buy_dash">购买Dash</string>
     <string name="copied">已复制</string>
     <string name="staking_title">质押</string>
+    <string name="email">邮箱</string>
+    <string name="email_placeholder">例 johndoe@mail.com</string>
+    <string name="error">错误</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey镑</string>
@@ -31,7 +34,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar稳定币</string>
 
-    <!-- Generic Titles/Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">忽略</string>
     <string name="network_unavailable_return">返回到钱包</string>
     <string name="button_continue">继续</string>
@@ -44,7 +47,6 @@
     <string name="button_okay">好的</string>
     <string name="button_share">分享</string>
     <string name="verify">验证</string>
-    <string name="error">错误</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">搜索</string>
@@ -54,4 +56,7 @@
     <string name="select_currency">选择货币</string>
     <string name="send_coins_error_dusty_send">该金额太小, 无法支付</string>
     <string name="send_coins_error_insufficient_money">资金不足</string>
+
+    <string name="empty_wallet_warning_title">看起来您正在清空Dash钱包</string>
+    <string name="empty_wallet_crowdnode_warning">请注意, 您需要增加余额至 0.0003 Dash才能够从CrowdNode账户中提币到此钱包.</string>
 </resources>

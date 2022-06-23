@@ -21,6 +21,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.transactions.TransactionMetadata
+import org.dash.wallet.common.transactions.TransactionUtils
 
 abstract class CSVExporter(
     wallet: Wallet,
@@ -52,7 +53,7 @@ abstract class CSVExporter(
 
         for (tx in sortedTransactions) {
             val columnData = arrayListOf<String>()
-            val shouldExclude = excludeInternal && WalletUtils.isEntirelySelf(tx, wallet)
+            val shouldExclude = excludeInternal && TransactionUtils.isEntirelySelf(tx, wallet)
             if (!shouldExclude) {
                 for (spec in dataSpec) {
                     columnData.add(spec.dataFunction(tx, metadataMap[tx.txId]))

@@ -47,15 +47,15 @@
     <string name="distance_kilometers">%s kilómetros</string>
 
     <plurals name="explore_merchant_amount">
-        <item quantity="one">%d comerciante</item>
-        <item quantity="many">%d comerciantes</item>
-        <item quantity="other">%d comerciantes</item>
+        <item quantity="one">%d comercio</item>
+        <item quantity="many">%d comercios</item>
+        <item quantity="other">%d comercios</item>
     </plurals>
 
     <plurals name="explore_atm_amount">
-        <item quantity="one">%d Cajero automático</item>
-        <item quantity="many">%d Cajeros automáticos</item>
-        <item quantity="other">%d Cajeros automáticos</item>
+        <item quantity="one">%d cajero automático</item>
+        <item quantity="many">%d cajeros automáticos</item>
+        <item quantity="other">%d cajeros automáticos</item>
     </plurals>
 
     <!-- Details -->

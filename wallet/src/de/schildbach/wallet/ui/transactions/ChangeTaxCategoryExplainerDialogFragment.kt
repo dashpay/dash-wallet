@@ -21,26 +21,31 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.TransactionResultViewBinder
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogChangeTaxCategoryExplainerBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.transactions.TransactionMetadata
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
+import javax.inject.Inject
 
 @AndroidEntryPoint
+@ExperimentalCoroutinesApi
 class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
 
     private val binding by viewBinding(DialogChangeTaxCategoryExplainerBinding::bind)
-    private val wallet by lazy { WalletApplication.getInstance().wallet }
-
     private val exampleTxId by lazy { arguments?.get(TX_ID) as? Sha256Hash }
+
+    @Inject
+    lateinit var walletData: WalletDataProvider
+    @Inject
+    lateinit var config: Configuration
 
     companion object {
 
@@ -74,20 +79,20 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
                 dismissAllowingStateLoss()
             }
 
-            val tx = wallet!!.getTransaction(exampleTxId)
-            val transactionResultViewBinder = TransactionResultViewBinder(transactionDetails)
-            tx?.apply {
-                transactionDetails.findViewById<ImageView>(R.id.transaction_close_btn).isVisible =
-                    false
-                transactionResultViewBinder.bind(this)
-                transactionResultViewBinder.setTransactionMetadata(
-                    TransactionMetadata(
-                        tx.txId,
-                        tx.updateTime.time,
-                        tx.getValue(wallet),
-                        TransactionCategory.fromTransaction(tx.type, tx.getValue(wallet))
+            walletData.wallet?.let { wallet ->
+                val tx = walletData.wallet!!.getTransaction(exampleTxId)
+                val transactionResultViewBinder = TransactionResultViewBinder(wallet, config.format.noCode(), transactionDetails)
+                tx?.apply {
+                    transactionResultViewBinder.bind(this)
+                    transactionResultViewBinder.setTransactionMetadata(
+                        TransactionMetadata(
+                            tx.txId,
+                            tx.updateTime.time,
+                            tx.getValue(wallet),
+                            TransactionCategory.fromTransaction(tx.type, tx.getValue(wallet))
+                        )
                     )
-                )
+                }
             }
         }
     }

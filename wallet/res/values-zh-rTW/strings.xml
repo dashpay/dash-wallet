@@ -25,7 +25,7 @@
     <string name="exchange_rates_fragment_balance">餘額</string>
     <string name="exchange_rates_fragment_source">價格由 %s 起</string>
     <string name="exchange_rates_options_search">搜尋匯率</string>
-    <string name="exchange_rates_context_set_as_default_title">設為預設</string>
+    <string name="exchange_rates_context_set_as_default_title">設為預設值</string>
     <string name="wallet_transactions_fragment_empty_text">沒有交易能夠顯示</string>
     <string name="wallet_transactions_row_warning_backup">恭喜你收到第一筆付款! 你是否已經備份好你的錢包來防止意外發生?</string>
     <string name="wallet_transactions_fragment_coinbase">已採礦</string>
@@ -78,7 +78,7 @@
     <string name="send_coins_fragment_insufficient_money_msg1">你少了 %s.</string>
     <string name="send_coins_fragment_insufficient_money_msg2">你打算發送所有的餘額嗎?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">清空錢包失敗</string>
-    <string name="send_coins_fragment_state_decrypting">正在解密…</string>
+    <string name="send_coins_fragment_state_decrypting">正在解密...</string>
     <string name="send_coins_preparation_msg">簽署中…</string>
     <string name="send_coins_sending_msg">付款中…</string>
     <string name="send_coins_sent_msg">已付款!</string>
@@ -156,7 +156,7 @@
     <string name="transaction_row_message_received_rbf">由於發件人使用了不安全的交易類型，此款項被延遲。</string>
     <string name="transaction_row_status_received">己收到</string>
     <string name="transaction_row_status_sent">發送</string>
-    <string name="transaction_row_status_sending">發送中</string>
+    <string name="transaction_row_status_sending">付款中</string>
     <string name="transaction_row_status_sent_internally">內部</string>
     <string name="transaction_row_status_processing">正在處理</string>
     <string name="transaction_row_status_confirming">確認中</string>

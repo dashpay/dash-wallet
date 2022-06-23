@@ -143,7 +143,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 if (amount > (maxValue.value ?: Coin.ZERO)) {
                     R.style.Caption_Red
                 } else {
-                    R.style.Caption_SteelGray
+                    R.style.Caption_Secondary
                 }
             )
         }
@@ -291,7 +291,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
     }
 
     private fun showBannerError() {
-        binding.messageBanner.setBackgroundColor(resources.getColor(R.color.red_300, null))
+        binding.messageBanner.setBackgroundColor(resources.getColor(R.color.content_warning, null))
         runWiggleAnimation(binding.messageBanner)
     }
 

@@ -38,7 +38,7 @@ import org.dash.wallet.common.Constants
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.databinding.DialogOptionPickerBinding
-import org.dash.wallet.common.ui.ListDividerDecorator
+import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.radio_group.IconSelectMode
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem

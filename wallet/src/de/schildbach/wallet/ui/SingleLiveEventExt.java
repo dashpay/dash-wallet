@@ -29,6 +29,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import kotlin.Deprecated;
+
 /**
  * <p>
  * A lifecycle-aware observable that sends only new updates after subscription, used for events like
@@ -43,6 +45,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Note that only one observer is going to be notified of changes.
  * </p>
  */
+@Deprecated(message = "Use org.dash.wallet.common.data.SingleLiveEvent")
 public class SingleLiveEventExt<T> extends MutableLiveData<T> {
     private final AtomicBoolean mPending = new AtomicBoolean(false);
 

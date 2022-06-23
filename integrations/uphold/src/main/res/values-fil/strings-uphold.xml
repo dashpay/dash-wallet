@@ -23,7 +23,7 @@
     <string name="uphold_error">Uphold Error</string>
     <string name="uphold_error_not_logged_in">Ang iyong dash wallet ay hindi na konektado sa iyong Uphold account.  Sa susunod na screen pindutin ang Link Uphold account</string>
     <string name="uphold_error_not_available">Ang serbisyo ng uphold ay hindi maaring gamitin. Subukan ulit mamaya.</string>
-    <string name="uphold_error_report_issue">Paki-report ang isyu ng Dash Wallet support team gamit ang \"Isumbong Isyu\" mula sa pangunahing menu. </string>
+    <string name="uphold_error_report_issue">Paki-report ang isyu ng Dash Wallet support team gamit ang "Isumbong Isyu" mula sa pangunahing menu. </string>
 
     <string name="uphold_general_error_title">Mali</string>
     <string name="uphold_api_error_title">Uphold Error</string>

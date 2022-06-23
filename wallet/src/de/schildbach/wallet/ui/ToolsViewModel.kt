@@ -30,13 +30,14 @@ import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.transactions.TransactionExporter
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.DeterministicKey
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
 class ToolsViewModel @Inject constructor(
-    private val walletApplication: WalletApplication,
+    private val walletData: WalletDataProvider,
     private val clipboardManager: ClipboardManager,
     private val transactionMetadataProvider: TransactionMetadataProvider,
     val blockchainStateDao: BlockchainStateDao
@@ -48,7 +49,7 @@ class ToolsViewModel @Inject constructor(
     val xpubWithCreationDate: String
 
     init {
-        val extendedKey: DeterministicKey = walletApplication.wallet!!.watchingKey
+        val extendedKey: DeterministicKey = walletData.wallet!!.watchingKey
         xpub = extendedKey.serializePubB58(Constants.NETWORK_PARAMETERS);
         xpubWithCreationDate = String.format(
             Locale.US,
@@ -78,7 +79,7 @@ class ToolsViewModel @Inject constructor(
                 mapOf()
             }
             transactionExporter.value = TaxBitExporter(
-                walletApplication.getWalletData()!!,
+                walletData.wallet!!,
                 map
             )
         }
