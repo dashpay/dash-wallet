@@ -42,7 +42,7 @@ import kotlin.time.ExperimentalTime
 @FlowPreview
 @ExperimentalTime
 @ExperimentalCoroutinesApi
-class CrowdNodeBlockchainApiTest {
+class CrowdNodeApiAggregatorTest {
     private val localConfig = mock<CrowdNodeConfig> {
         onBlocking { getPreference(CrowdNodeConfig.BACKGROUND_ERROR) } doReturn ""
     }
@@ -96,6 +96,9 @@ class CrowdNodeBlockchainApiTest {
         localConfig.stub {
             onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
         }
+        globalConfig.stub {
+            on { crowdNodePrimaryAddress } doReturn ""
+        }
         val mockFullSet = mock<FullCrowdNodeSignUpTxSet> {
             on { hasWelcomeToApiResponse } doReturn true
             on { accountAddress } doReturn Address.fromBase58(MainNetParams.get(), "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U")
@@ -124,6 +127,53 @@ class CrowdNodeBlockchainApiTest {
 
             assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
             verifyNoInteractions(webApi)
+        }
+    }
+
+    @Test
+    fun onlineStatusDone_restoredCorrectly() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn 6
+            }
+            val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock(), mock())
+            assertEquals(SignUpStatus.LinkedOnline, api.signUpStatus.value)
+            assertEquals(OnlineAccountStatus.Done, api.onlineAccountStatus.value)
+        }
+    }
+
+    @Test
+    // TODO: remove when there is no 7.5.0 in the wild
+    fun oldOnlineStatusDoneValue_restoredCorrectly() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn 4
+            }
+            val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock(), mock())
+            assertEquals(SignUpStatus.LinkedOnline, api.signUpStatus.value)
+            assertEquals(OnlineAccountStatus.Done, api.onlineAccountStatus.value)
+        }
+    }
+
+    @Test
+    fun onlineStatusCreating_restoredCorrectly() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn 4
+            }
+            globalConfig.stub {
+                on { crowdNodePrimaryAddress } doReturn ""
+            }
+            val mockFullSet = mock<FullCrowdNodeSignUpTxSet> {
+                on { hasWelcomeToApiResponse } doReturn true
+                on { accountAddress } doReturn Address.fromBase58(MainNetParams.get(), "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U")
+            }
+            blockchainApi.stub {
+                on { getFullSignUpTxSet() } doReturn mockFullSet
+            }
+            val api = CrowdNodeApiAggregator(webApi, blockchainApi, walletData, mock(), mock(), localConfig, globalConfig, mock(), mock())
+            assertEquals(SignUpStatus.Finished, api.signUpStatus.value)
+            assertEquals(OnlineAccountStatus.Creating, api.onlineAccountStatus.value)
         }
     }
 }
