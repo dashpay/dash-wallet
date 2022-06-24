@@ -307,7 +307,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                     val minimumWithdrawal = CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.MaxCode.code)
                     if (!afterWithdrawal) {
                         // balance changed, no need to retry anymore
-                        break;
+                        break
                     } else if (lastBalance - (currentBalance.data?.value?: 0L) >= minimumWithdrawal.value) {
                         // balance changed, no need to retry anymore
                         break
@@ -531,8 +531,17 @@ class CrowdNodeApiAggregator @Inject constructor(
                 responseScope.launch { checkIfAddressIsInUse(address) }
             }
             OnlineAccountStatus.Creating, OnlineAccountStatus.SigningUp -> {
-                // This should not happen - this method is reachable only for a linked account case
-                throw IllegalStateException("Creating state found in tryRestoreOnlineAccount")
+                if (status == OnlineAccountStatus.Creating && globalConfig.crowdNodePrimaryAddress.isNotEmpty()) {
+                    // The bug from 7.5.0 -> 7.5.1 upgrade scenario.
+                    // The actual state is Done, there is a linked account.
+                    // TODO: remove when there is no 7.5.0 in the wild
+                    log.info("found 7.5.0 -> 7.5.1 upgrade bug, resolving")
+                    changeOnlineStatus(OnlineAccountStatus.Done, save = true)
+                    log.info("found online account, status: ${OnlineAccountStatus.Done}, account: ${address.toBase58()}, primary: $primaryAddressStr")
+                } else {
+                    // This should not happen - this method is reachable only for a linked account case
+                    throw IllegalStateException("Invalid state found in tryRestoreLinkedOnlineAccount: $status")
+                }
             }
             else -> {
                 changeOnlineStatus(status, save = false)
