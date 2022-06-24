@@ -23,7 +23,7 @@
 
     <style name="TextHighlightBlueTheme">
         <item name="backgroundColor">@color/text_highlight_blue_bg</item>
-        <item name="strokeColor">@color/text_highlight_blue_bg</item>
+        <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">8dp</item>
     </style>
 

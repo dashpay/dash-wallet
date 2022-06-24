@@ -17,7 +17,9 @@
 
 package org.dash.wallet.integrations.crowdnode.model
 
-// Order matters
+// Order matters. If modifications are required,
+// it's better make this initializable with a value
+// that maps to the old order value (see ApiCode)
 enum class SignUpStatus {
     NotStarted,
     FundingWallet,
@@ -28,7 +30,9 @@ enum class SignUpStatus {
     LinkedOnline
 }
 
-// Order matters
+// Order matters. If modifications are required,
+// it's better make this initializable with a value
+// that maps to the old order value (see ApiCode)
 enum class OnlineAccountStatus {
     None,
     Linking,
