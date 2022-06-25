@@ -32,6 +32,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.database.sqlite.SQLiteException;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
@@ -708,7 +709,14 @@ public class WalletApplication extends BaseWalletApplication
 
     private void resetBlockchainSyncProgress() {
         Executors.newSingleThreadExecutor().execute(() -> {
-            BlockchainState blockchainState = blockchainStateDao.loadSync();
+            BlockchainState blockchainState;
+
+            try {
+                 blockchainState = blockchainStateDao.loadSync();
+            } catch (SQLiteException ex) {
+                blockchainState = null;
+            }
+
             if (blockchainState != null) {
                 blockchainState.setPercentageSync(0);
                 blockchainStateDao.save(blockchainState);
