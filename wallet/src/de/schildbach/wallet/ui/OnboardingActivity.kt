@@ -68,10 +68,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
     @Inject
     lateinit var analytics: AnalyticsService
 
-    override fun onStart() {
-        super.onStart()
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         walletApplication = (application as WalletApplication)
@@ -94,6 +90,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
         viewModel = ViewModelProvider(this)[OnboardingViewModel::class.java]
 
+        // TODO: we should decouple the logic from view interactions
+        // and move some of this to the viewModel, wrapping it in tests.
+        // The viewModel already has some related events
         if (walletApplication.walletFileExists()) {
             if (!walletApplication.wallet!!.isEncrypted) {
                 unencryptedFlow()
@@ -251,9 +250,5 @@ class OnboardingActivity : RestoreFromFileActivity() {
         } else if ((requestCode == SET_PIN_REQUEST_CODE || requestCode == RESTORE_PHRASE_REQUEST_CODE) && resultCode == Activity.RESULT_OK) {
             finish()
         }
-    }
-
-    fun getWalletApplication() : WalletApplication {
-        return walletApplication
     }
 }
