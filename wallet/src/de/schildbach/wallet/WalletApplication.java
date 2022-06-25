@@ -130,6 +130,7 @@ import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
 import kotlinx.coroutines.flow.Flow;
+import kotlinx.coroutines.flow.FlowKt;
 
 /**
  * @author Andreas Schildbach
@@ -972,12 +973,20 @@ public class WalletApplication extends BaseWalletApplication
     @NonNull
     @Override
     public Flow<Coin> observeBalance(@NonNull Wallet.BalanceType balanceType) {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+
         return new WalletBalanceObserver(wallet, balanceType).observe();
     }
 
     @NonNull
     @Override
     public Flow<Transaction> observeTransactions(@NonNull TransactionFilter... filters) {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+
         return new WalletTransactionObserver(wallet).observe(filters);
     }
 
