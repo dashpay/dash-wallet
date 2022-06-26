@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
-    android:background="@color/bg_less_bright"
+    android:background="@color/background_primary"
     android:orientation="vertical">
 
     <include
@@ -131,7 +131,7 @@
                             android:layout_height="15dp"
                             android:layout_gravity="center"
                             android:layout_marginTop="4dp"
-                            app:srcCompat="@drawable/ic_dash_d_white_bottom"
+                            app:srcCompat="@drawable/ic_dash_d_white"
                             app:tint="@color/colorPrimary" />
 
                         <TextView
@@ -239,7 +239,7 @@
                             android:layout_height="15dp"
                             android:layout_gravity="center"
                             android:layout_marginTop="4dp"
-                            app:srcCompat="@drawable/ic_dash_d_white_bottom"
+                            app:srcCompat="@drawable/ic_dash_d_white"
                             app:tint="@color/colorPrimary" />
 
                         <org.dash.wallet.common.ui.CurrencyTextView

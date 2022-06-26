@@ -58,7 +58,6 @@
     <string name="send_coins_fragment_pin_label">Unesite PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Mrežna provizija od %s će biti plaćena.</string>
     <string name="send_coins_fragment_hint_fee_priority">Prioritetna provizija od %s će biti plaćena. Ako vam je bitna mala provizija koristite "prioritet" samo ukoliko vam je bitno da dobijete potvrdu što pre.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Iznos je suviše mali da bi bio poslat</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Iznos zbira malih uplata u vašem novčaniku ne odgovara vrednosti koja se može poslati.</string>
     <string name="send_coins_fragment_direct_payment_enable">Pošalji uplatu primaocu direktno.</string>
     <string name="send_coins_fragment_direct_payment_ack">Direktno slanje vaše uplate je uspešno izvršeno.</string>
@@ -290,7 +289,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">Odbaci</string>
     <string name="button_cancel">Otkaži</string>
-    <string name="button_retry">Pokušaj opet</string>
     <string name="button_help">Pomoć</string>
     <string name="button_add">Dodaj</string>
     <string name="button_delete">Obriši</string>
@@ -299,7 +297,6 @@
     <string name="button_edit">Izmeni</string>
     <string name="button_copy">Kopiraj</string>
     <string name="button_paste">Nalepi</string>
-    <string name="button_share">Podeli</string>
     <string name="button_set_as_default">Postavi kao podrazumevano</string>
     <string name="button_request_coins">Zahtevaj Dash</string>
     <string name="button_send_coins">Pošalji Dash</string>

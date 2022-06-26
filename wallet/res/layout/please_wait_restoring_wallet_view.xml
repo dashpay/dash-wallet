@@ -5,7 +5,7 @@
     android:id="@+id/restoring_wallet_cover"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/dash_lighter_gray"
+    android:background="@color/background_primary"
     android:gravity="center_vertical"
     android:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.widget.PleaseWaitRestoringWalletView"

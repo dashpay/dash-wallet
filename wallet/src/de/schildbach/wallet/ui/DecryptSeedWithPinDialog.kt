@@ -2,12 +2,11 @@ package de.schildbach.wallet.ui
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
-import kotlinx.android.synthetic.main.fragment_enter_pin.*
 import org.bitcoinj.wallet.DeterministicSeed
 
 /**
@@ -17,7 +16,7 @@ import org.bitcoinj.wallet.DeterministicSeed
  * from CheckPinShared model but does not call the onCorrectPinCallback
  * event
  */
-
+@AndroidEntryPoint
 class DecryptSeedWithPinDialog : CheckPinDialog() {
 
     companion object {
@@ -30,8 +29,11 @@ class DecryptSeedWithPinDialog : CheckPinDialog() {
         @JvmStatic
         fun show(activity: AppCompatActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
             val checkPinDialog = DecryptSeedWithPinDialog()
-            if (PinRetryController.getInstance().isLocked) {
-                checkPinDialog.showLockedAlert(activity)
+            val controller = PinRetryController.getInstance()
+
+            if (controller.isLocked) {
+                val message = controller.getWalletTemporaryLockedMessage(activity.resources)
+                checkPinDialog.showLockedAlert(activity, message)
             } else {
                 val args = Bundle()
                 args.putInt(ARG_REQUEST_CODE, requestCode)
@@ -48,16 +50,19 @@ class DecryptSeedWithPinDialog : CheckPinDialog() {
 
     }
 
+    override val viewModel by viewModels<DecryptSeedViewModel>()
+    override val sharedModel by activityViewModels<DecryptSeedSharedModel>()
+
     override fun initViewModel() {
-        viewModel = ViewModelProvider(this)[DecryptSeedViewModel::class.java]
-        (viewModel as DecryptSeedViewModel).decryptSeedLiveData.observe(viewLifecycleOwner, Observer {
+        viewModel.decryptSeedLiveData.observe(viewLifecycleOwner) {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(it.data!!.second!!)
-                    if (pinRetryController.isLocked) {
-                        showLockedAlert(requireContext())
+                    viewModel.registerFailedAttempt(it.data!!.second!!)
+                    if (viewModel.isWalletLocked) {
+                        val message = viewModel.getLockedMessage(requireContext().resources)
+                        showLockedAlert(requireActivity(), message)
                         dismiss()
-                        return@Observer
+                        return@observe
                     }
                     setState(State.INVALID_PIN)
                 }
@@ -71,24 +76,20 @@ class DecryptSeedWithPinDialog : CheckPinDialog() {
                     // ignore
                 }
             }
-        })
+        }
     }
 
     private fun dismiss(seed: DeterministicSeed) {
-        if (pinRetryController.isLocked) {
+        if (viewModel.isWalletLocked) {
             return
         }
         val requestCode = requireArguments().getInt(ARG_REQUEST_CODE)
-        (sharedModel as DecryptSeedSharedModel).onDecryptSeedCallback.value = Pair(requestCode, seed)
-        pinRetryController.clearPinFailPrefs()
+        sharedModel.onDecryptSeedCallback.value = Pair(requestCode, seed)
+        viewModel.resetFailedPinAttempts()
         dismiss()
     }
 
-    override fun FragmentActivity.initSharedModel(activity: FragmentActivity) {
-        sharedModel = ViewModelProvider(activity)[DecryptSeedSharedModel::class.java]
-    }
-
     override fun onFingerprintSuccess(savedPass : String) {
-        (viewModel as DecryptSeedViewModel).checkPin(savedPass)
+        viewModel.checkPin(savedPass)
     }
 }

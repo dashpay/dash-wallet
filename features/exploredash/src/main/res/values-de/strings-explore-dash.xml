@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <!-- Explore screen -->
+    <string name="explore_dash">Explore Dash</string>
+    <string name="explore_title">Explore</string>
+    <string name="explore_subtitle">Bezahle einfach mit deinen DASH bei über 155000 Verkaufsstellen und Online-Händlern</string>
+    <string name="explore_merchants_title">Wo bezahlen?</string>
+    <string name="explore_merchants_subtitle">Finde Händler, die Dash als Zahlungsmethode akzeptieren.</string>
+    <string name="explore_atms_title">ATMs</string>
+    <string name="explore_atms_subtitle">Hier kannst du DASH und andere Kryptowährungen gegen Bargeld kaufen oder verkaufen.</string>
+    <!-- Search -->
+    <string name="explore_search_results">Suchergebnisse</string>
+    <string name="explore_physical_merchant">Physisches Geschäft</string>
+    <string name="explore_online_merchant">Online</string>
+    <string name="explore_both_types_merchant">Online, Physisches Geschäft</string>
+    <string name="explore_multiple_locations">+ mehrere Verkaufsstellen</string>
+    <string name="explore_option_all">Alles</string>
+    <string name="explore_option_buy">Kaufen</string>
+    <string name="explore_option_sell">Verkaufen</string>
+    <string name="explore_option_buy_sell">Kaufen &amp; Verkaufen</string>
+    <string name="explore_where_to_spend">Wo bezahlen</string>
+    <string name="explore_atms">ATMs</string>
+    <string name="explore_all_states">Alle Staaten</string>
+    <string name="explore_no_results">Kein Ergebniss gefunden</string>
+    <string name="explore_all_merchants">Alle Händler</string>
+    <string name="explore_in_radius">%1$s in %2$s</string>
+    <string name="explore_no_merchants">Keine Händler</string>
+    <string name="explore_no_atms">Keine ATMs</string>
+    <string name="distance_miles">%s Meilen</string>
+    <string name="distance_kilometers">%s Kilometer</string>
+
+    <plurals name="explore_merchant_amount">
+        <item quantity="one">%d Händler</item>
+        <item quantity="other">%d Händler</item>
+    </plurals>
+
+    <plurals name="explore_atm_amount">
+        <item quantity="one">%d ATM</item>
+        <item quantity="other">%d ATMs</item>
+    </plurals>
+
+    <!-- Details -->
+    <string name="explore_back_to_locations">Zurück zu allen Angaben</string>
+    <string name="explore_back_to_nearest">Zurück zur nächsten Stelle</string>
+    <string name="explore_select_location">Verkaufsort auswählen</string>
+    <string name="explore_pay_with_dash">Mit Dash bezahlen</string>
+    <string name="explore_buy_gift_card">Gutscheinkarte kaufen</string>
+    <string name="explore_buy_dash">Dash kaufen</string>
+    <string name="explore_sell_dash">Dash verkaufen</string>
+    <string name="explore_show_all">Alle Verkaufsstellen zeigen</string>
+    <string name="explore_atm_location_hint">Dieser ATM steht in der</string>
+    <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
+
+    <!-- Filters -->
+    <string name="explore_filter">Filter</string>
+    <string name="explore_filters">Filter</string>
+    <string name="explore_apply_filter">Anfragen</string>
+    <string name="explore_payment_method">Zahlungsmethode</string>
+    <string name="explore_payment_dash">Dash</string>
+    <string name="explore_payment_gift_card">Gutscheinkarte</string>
+    <string name="explore_radius">Radius</string>
+    <string name="explore_location">Ort</string>
+    <string name="explore_current_location">Aktueller Ort</string>
+    <string name="explore_location_settings">Aktuelle Ortseinstellung</string>
+    <string name="explore_reset_filters">Filter zurücksetzen</string>
+    <string name="explore_reset_all_filters">Alle Filter zurücksetzen</string>
+    <string name="explore_filtered_by">Gefiltert nach:</string>
+    <string name="explore_pay_gift_card">Mit Gutscheinkarte bezahlen</string>
+    <string name="explore_sort_by">Sortieren nach</string>
+
+    <string-array name="merchants_filter_options">
+        <item>Online</item>
+        <item>In der Nähe</item>
+        <item>Alles</item>
+    </string-array>
+
+    <string-array name="atms_filter_options">
+        <item>Alles</item>
+        <item>Kaufen</item>
+        <item>Verkaufen</item>
+        <item>Kaufen/Verkaufen</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_miles">
+        <item>1 Meile</item>
+        <item>5 Meilen</item>
+        <item>20 Meilen</item>
+        <item>50 Meilen</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_kilometers">
+        <item>1 Kilometer</item>
+        <item>5 Kilometer</item>
+        <item>20 Kilometer</item>
+        <item>50 Kilometer</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>Name</item>
+        <item>Entfernung</item>
+    </string-array>
+
+    <plurals name="radius_miles">
+        <item quantity="one">%d Meilen</item>
+        <item quantity="other">%d Meilen</item>
+    </plurals>
+
+    <plurals name="radius_kilometers">
+        <item quantity="one">%d Kilometer</item>
+        <item quantity="other">%d Kilometer</item>
+    </plurals>
+
+    <!-- Location Permission -->
+    <string name="explore_location_allowed">Erlaubt</string>
+    <string name="explore_location_denied">Abgelehnt</string>
+    <string name="explore_manager_permissions">GPS-Erlaubnis verwalten</string>
+    <string name="explore_location_request">Gib uns GPS-Berechtigungen, damit wir dir Standorte in deiner Nähe anzeigen können.</string>
+    <string name="explore_location_explainer">Dein aktueller Standort wird verwendet, um deine Position auf der Karte anzuzeigen, um Händler im gewählten Umkreis zu finden und um die Suchergebnisse zu verbessern.</string>
+    <string name="explore_merchant_location_explainer_title">Die Händlersuche funktioniert besser, wenn die Standortdienste aktiviert sind.</string>
+    <string name="explore_merchant_location_explainer_message">Dein aktueller Standort wird verwendet, um deine Position auf der Karte anzuzeigen, um Händler im gewählten Umkreis zu finden und um die Suchergebnisse zu verbessern.</string>
+    <string name="explore_atm_location_explainer_title">Die Suche nach ATMs funktioniert besser, wenn die Standortdienste aktiviert sind.</string>
+    <string name="explore_atm_location_explainer_message">Der Standort wird verwendet, um die Position auf der Karte und die Zahl der ATMs im gewählten Umkreis anzuzeigen und die Suchergebnisse zu verbessern.</string>
+
+    <!-- Info screens -->
+    <string name="explore_info_header_text">Wir haben 2 Arten von Händlern</string>
+    <string name="accept_dash_text">Akzeptiere DASH direkt</string>
+    <string name="pay_with_dash_text">Zahle mit der DASH Wallet</string>
+    <string name="buy_gift_card_text">Kaufe Gutscheinkarten mit Dash</string>
+    <string name="buy_gift_card_desc_text">Kaufe mit deinen Dash Geschenkkarten in Höhe des genauen Betrags deines Einkaufs.</string>
+    <string name="learn_more_text">Mehr erfahren</string>
+    <string name="continue_text">Fortfahren</string>
+    <string name="buy_card_header_text">Wie man eine Gutscheinkarte verwendet</string>
+    <string name="buy_card_desc_text">Nicht alle Geschäfte akzeptieren DASH direkt, aber du kannst mit deinen Dash auch einen Gutschein kaufen.</string>
+    <string name="find_merchant_text">Finde einen Händler.</string>
+    <string name="buy_gift_card_with_dash_text">Kaufe eine Gutscheinkarte mit Dash.</string>
+    <string name="redeem_gift_card_text">Die Geschenkkarte kann innerhalb von Sekunden online oder an der Kasse eingelöst werden.</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Die Synchronisierung läuft... Die Ergebnisse sind möglicherweise nicht vollständig.</string>
+    <string name="sync_in_progress_error">Die Synchronisierung läuft... Es gab einen Fehler.</string>
+    <string name="sync_in_progress_canceled">Synchronisierung abgebrochen... Zu einem späteren Zeitpunkt wird ein neuer Versuch unternommen.</string>
+
+    <string name="sync_in_progress_file_not_found">Build-Fehler: Datenbank nicht gefunden!</string>
+    <string name="sync_in_progress_network_error">Synchronisierung unterbrochen... Netzwerk offline oder nicht erreichbar</string>
+</resources>

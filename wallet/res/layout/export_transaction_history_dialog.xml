@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:scrollbars="none">
+
+    <LinearLayout style="@style/DialogContainer">
+
+        <TextView
+            android:id="@+id/report_issue_dialog_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/space_medium"
+            android:layout_marginTop="6dp"
+            style="@style/MontserratRegular.DB.12"/>
+
+        <EditText
+            android:id="@+id/report_issue_dialog_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+            android:layout_marginTop="@dimen/list_entry_padding_vertical"
+            android:hint="@string/report_issue_dialog_description"
+            android:inputType="text|textCapSentences|textMultiLine"
+            android:textSize="12sp"
+            android:textColor="@color/darkest_blue"
+            android:visibility="gone"
+            style="@style/MontserratRegular"/>
+
+        <de.schildbach.wallet.ui.widget.MontserratCheckBox
+            android:id="@+id/report_issue_dialog_collect_wallet_dump"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+            android:layout_marginTop="@dimen/list_entry_padding_vertical"
+            android:visibility="gone"
+            android:checked="true"
+            android:text="@string/report_issue_dialog_collect_wallet_dump"
+            style="@style/OldCheckBox"/>
+
+    </LinearLayout>
+
+</ScrollView>

@@ -30,5 +30,4 @@ fastlane/report.xml
 google-services.json
 output-metadata.json
 service.properties
-wallet/schemas/*/*.json
-wallet/assets/explore/*.bin
+wallet/assets/explore/*.db

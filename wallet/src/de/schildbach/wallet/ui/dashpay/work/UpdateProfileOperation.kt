@@ -4,7 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Application
 import androidx.work.*
 import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuard
 
 class UpdateProfileOperation(val application: Application) {
 

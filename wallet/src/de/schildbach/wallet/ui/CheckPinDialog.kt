@@ -22,30 +22,36 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
-import android.widget.Button
 import androidx.annotation.RequiresApi
 import androidx.core.os.CancellationSignal
+import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
-import de.schildbach.wallet.WalletApplication
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_enter_pin.*
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import de.schildbach.wallet_test.databinding.FragmentEnterPinBinding
+import kotlin.coroutines.resume
+import kotlinx.coroutines.suspendCancellableCoroutine
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
+import kotlin.coroutines.resumeWithException
 
-open class CheckPinDialog : DialogFragment() {
+@AndroidEntryPoint
+open class CheckPinDialog(
+    private val onSuccessOrDismiss: ((String?) -> Unit)?
+) : DialogFragment() {
 
     companion object {
 
@@ -55,12 +61,12 @@ open class CheckPinDialog : DialogFragment() {
         internal const val ARG_REQUEST_CODE = "arg_request_code"
         internal const val ARG_PIN_ONLY = "arg_pin_only"
 
-        @JvmStatic
-        fun show(activity: FragmentActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
-            val checkPinDialog = CheckPinDialog()
+        private fun showDialog(checkPinDialog: CheckPinDialog, activity: FragmentActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
+            val controller = PinRetryController.getInstance()
 
-            if (PinRetryController.getInstance().isLocked) {
-                checkPinDialog.showLockedAlert(activity)
+            if (controller.isLocked) {
+                val message = controller.getWalletTemporaryLockedMessage(activity.resources)
+                checkPinDialog.showLockedAlert(activity, message)
             } else {
                 val args = Bundle()
                 args.putInt(ARG_REQUEST_CODE, requestCode)
@@ -71,30 +77,50 @@ open class CheckPinDialog : DialogFragment() {
         }
 
         @JvmStatic
+        fun show(activity: FragmentActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
+            val checkPinDialog = CheckPinDialog()
+            showDialog(checkPinDialog, activity, requestCode, pinOnly)
+        }
+
+        @JvmStatic
         fun show(activity: FragmentActivity, requestCode: Int = 0) {
             show(activity, requestCode, false)
         }
+
+        suspend fun showAsync(activity: FragmentActivity, pinOnly: Boolean = false): String? {
+            return suspendCancellableCoroutine { coroutine ->
+                val checkPinDialog = CheckPinDialog { pin ->
+                    if (coroutine.isActive) {
+                        coroutine.resume(pin)
+                    }
+                }
+
+                try {
+                    showDialog(checkPinDialog, activity, 0, pinOnly)
+                } catch (ex: Exception) {
+                    if (coroutine.isActive) {
+                        coroutine.resumeWithException(ex)
+                    }
+                }
+            }
+        }
     }
 
+    private val binding by viewBinding(FragmentEnterPinBinding::bind)
+    protected open val sharedModel by activityViewModels<CheckPinSharedModel>()
+    protected open val viewModel by viewModels<CheckPinViewModel>()
     private lateinit var state: State
 
-    private val positiveButton by lazy { requireView().findViewById<Button>(R.id.positive_button) }
-    private val negativeButton by lazy { requireView().findViewById<Button>(R.id.negative_button) }
-
-    protected lateinit var viewModel: CheckPinViewModel
-    protected lateinit var sharedModel: CheckPinSharedModel
-
-    protected val pinRetryController = PinRetryController.getInstance()
     protected var fingerprintHelper: FingerprintHelper? = null
     private lateinit var fingerprintCancellationSignal: CancellationSignal
-
-    protected var pinLength = WalletApplication.getInstance().configuration.pinLength
 
     protected enum class State {
         ENTER_PIN,
         INVALID_PIN,
         DECRYPTING
     }
+
+    constructor(): this(null)
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
@@ -109,27 +135,28 @@ open class CheckPinDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initViewModel()
-        negativeButton.setText(R.string.button_cancel)
-        negativeButton.setOnClickListener {
+        binding.buttonBar.negativeButton.setText(R.string.button_cancel)
+        binding.buttonBar.negativeButton.setOnClickListener {
+            sharedModel.onCancelCallback.call()
             dismiss()
         }
-        positiveButton.setOnClickListener {
-            if (pin_preview.visibility == View.VISIBLE) {
+        binding.buttonBar.positiveButton.setOnClickListener {
+            if (binding.pinPreview.visibility == View.VISIBLE) {
                 fingerprintFlow(true)
             } else {
                 fingerprintFlow(false)
             }
         }
-        numeric_keyboard.isFunctionEnabled = false
-        numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
+        binding.numericKeyboard.isFunctionEnabled = false
+        binding.numericKeyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
             override fun onNumber(number: Int) {
-                if (viewModel.pin.length < pinLength) {
+                if (viewModel.pin.length < viewModel.pinLength) {
                     viewModel.pin.append(number)
-                    pin_preview.next()
+                    binding.pinPreview.next()
                 }
-                if (viewModel.pin.length == pinLength) {
-                    Handler().postDelayed({
+                if (viewModel.pin.length == viewModel.pinLength) {
+                    binding.pinPreview.postDelayed({
                         checkPin(viewModel.pin.toString())
                     }, 200)
                 }
@@ -138,7 +165,7 @@ open class CheckPinDialog : DialogFragment() {
             override fun onBack(longClick: Boolean) {
                 if (viewModel.pin.isNotEmpty()) {
                     viewModel.pin.deleteCharAt(viewModel.pin.length - 1)
-                    pin_preview.prev()
+                    binding.pinPreview.prev()
                 }
             }
 
@@ -146,14 +173,14 @@ open class CheckPinDialog : DialogFragment() {
 
             }
         }
-        pin_preview.setTextColor(R.color.dash_light_gray)
-        pin_preview.hideForgotPinAction()
+        binding.pinPreview.setTextColor(R.color.dash_light_gray)
+        binding.pinPreview.hideForgotPinAction()
         setState(State.ENTER_PIN)
 
         arguments?.getBoolean(ARG_PIN_ONLY, false).let {
             if (true == it) {
                 fingerprintFlow(!it)
-                positiveButton.isEnabled = false
+                binding.buttonBar.positiveButton.isEnabled = false
             } else initFingerprint()
         }
     }
@@ -167,15 +194,15 @@ open class CheckPinDialog : DialogFragment() {
         and actions
      */
     protected open fun initViewModel() {
-        viewModel = ViewModelProvider(this)[CheckPinViewModel::class.java]
-        viewModel.checkPinLiveData.observe(viewLifecycleOwner, Observer {
+        viewModel.checkPinLiveData.observe(viewLifecycleOwner) {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(it.data!!)
-                    if (pinRetryController.isLocked) {
-                        showLockedAlert(requireContext())
+                    viewModel.registerFailedAttempt(it.data!!)
+                    if (viewModel.isWalletLocked) {
+                        val message = viewModel.getLockedMessage(requireContext().resources)
+                        showLockedAlert(requireActivity(), message)
                         dismiss()
-                        return@Observer
+                        return@observe
                     }
                     setState(State.INVALID_PIN)
                 }
@@ -189,16 +216,17 @@ open class CheckPinDialog : DialogFragment() {
                     // ignore
                 }
             }
-        })
+        }
     }
 
     private fun dismiss(pin: String) {
-        if (pinRetryController.isLocked) {
+        if (viewModel.isWalletLocked) {
             return
         }
         val requestCode = requireArguments().getInt(ARG_REQUEST_CODE)
         sharedModel.onCorrectPinCallback.value = Pair(requestCode, pin)
-        pinRetryController.clearPinFailPrefs()
+        onSuccessOrDismiss?.invoke(pin)
+        viewModel.resetFailedPinAttempts()
         dismiss()
     }
 
@@ -210,48 +238,38 @@ open class CheckPinDialog : DialogFragment() {
         }
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        activity?.run {
-            initSharedModel(this)
-        } ?: throw IllegalStateException("Invalid Activity")
-    }
-
-    protected open fun FragmentActivity.initSharedModel(activity: FragmentActivity) {
-        sharedModel = ViewModelProvider(activity)[CheckPinSharedModel::class.java]
-    }
-
     protected fun setState(newState: State) {
         when (newState) {
             State.ENTER_PIN -> {
-                if (pinLength != PinPreviewView.DEFAULT_PIN_LENGTH) {
-                    pin_preview.mode = PinPreviewView.PinType.CUSTOM
+                if (viewModel.pinLength != PinPreviewView.DEFAULT_PIN_LENGTH) {
+                    binding.pinPreview.mode = PinPreviewView.PinType.CUSTOM
                 }
-                if (pin_progress_switcher.currentView.id == R.id.progress) {
-                    pin_progress_switcher.showPrevious()
+                if (binding.pinProgressSwitcher.currentView.id == R.id.progress) {
+                    binding.pinProgressSwitcher.showPrevious()
                 }
                 viewModel.pin.clear()
-                pin_preview.clear()
-                pin_preview.clearBadPin()
-                numeric_keyboard.isEnabled = true
+                binding.pinPreview.clear()
+                binding.pinPreview.clearBadPin()
+                binding.numericKeyboard.isEnabled = true
             }
             State.INVALID_PIN -> {
-                if (pin_progress_switcher.currentView.id == R.id.progress) {
-                    pin_progress_switcher.showPrevious()
+                if (binding.pinProgressSwitcher.currentView.id == R.id.progress) {
+                    binding.pinProgressSwitcher.showPrevious()
                 }
                 viewModel.pin.clear()
-                pin_preview.shake()
-                Handler().postDelayed({
-                    pin_preview.clear()
+                val pinPreview = binding.pinPreview
+                pinPreview.shake()
+                pinPreview.postDelayed({
+                    pinPreview.clear()
                 }, 200)
-                pin_preview.badPin(pinRetryController.getRemainingAttemptsMessage(context))
-                numeric_keyboard.isEnabled = true
+                pinPreview.badPin(viewModel.getRemainingAttemptsMessage(resources))
+                binding.numericKeyboard.isEnabled = true
             }
             State.DECRYPTING -> {
-                if (pin_progress_switcher.currentView.id != R.id.progress) {
-                    pin_progress_switcher.showNext()
+                if (binding.pinProgressSwitcher.currentView.id != R.id.progress) {
+                    binding.pinProgressSwitcher.showNext()
                 }
-                numeric_keyboard.isEnabled = false
+                binding.numericKeyboard.isEnabled = false
             }
         }
         state = newState
@@ -261,6 +279,7 @@ open class CheckPinDialog : DialogFragment() {
         if (::fingerprintCancellationSignal.isInitialized) {
             fingerprintCancellationSignal.cancel()
         }
+        onSuccessOrDismiss?.invoke(null)
         sharedModel.onCancelCallback.call()
         super.onDismiss(dialog)
     }
@@ -274,7 +293,7 @@ open class CheckPinDialog : DialogFragment() {
                     fingerprintFlow(true)
                     startFingerprintListener()
                 } else {
-                    positiveButton.visibility = View.GONE
+                    binding.buttonBar.positiveButton.visibility = View.GONE
                 }
             } else {
                 fingerprintHelper = null
@@ -284,12 +303,12 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     private fun fingerprintFlow(active: Boolean) {
-        fingerprint_view.visibility = if (active) View.VISIBLE else View.GONE
-        pin_preview.visibility = if (active) View.GONE else View.VISIBLE
-        numeric_keyboard.visibility = if (active) View.GONE else View.VISIBLE
-        message.setText(if (active) R.string.authenticate_fingerprint_message else R.string.authenticate_pin_message)
-        positiveButton.setText(if (active) R.string.authenticate_switch_to_pin else R.string.authenticate_switch_to_fingerprint)
-        positiveButton.visibility = if (active) View.VISIBLE else View.GONE
+        binding.fingerprintView.isVisible = active
+        binding.pinPreview.isVisible = !active
+        binding.numericKeyboard.isVisible = !active
+        binding.message.setText(if (active) R.string.authenticate_fingerprint_message else R.string.authenticate_pin_message)
+        binding.buttonBar.positiveButton.setText(if (active) R.string.authenticate_switch_to_pin else R.string.authenticate_switch_to_fingerprint)
+        binding.buttonBar.positiveButton.isVisible = active
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -308,13 +327,13 @@ open class CheckPinDialog : DialogFragment() {
             override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
                 log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
                 if (!canceled) {
-                    fingerprint_view.showError(exceededMaxAttempts)
+                    binding.fingerprintView.showError(exceededMaxAttempts)
                 }
             }
 
             override fun onHelp(helpCode: Int, helpString: String) {
                 log.info("fingerprint help (helpCode: $helpCode, helpString: $helpString")
-                fingerprint_view.showError(false)
+                binding.fingerprintView.showError(false)
             }
         })
     }
@@ -323,11 +342,12 @@ open class CheckPinDialog : DialogFragment() {
         dismiss(savedPass)
     }
 
-    protected open fun showLockedAlert(context: Context) {
-        BaseAlertDialogBuilder(context).apply {
-            title = context.getString(R.string.wallet_lock_wallet_disabled)
-            message = pinRetryController.getWalletTemporaryLockedMessage(context)
-            positiveText = context.getString(android.R.string.ok)
-        }.buildAlertDialog().show()
+    protected open fun showLockedAlert(activity: FragmentActivity, lockedTimeMessage: String) {
+        AdaptiveDialog.create(
+            null,
+            activity.getString(R.string.wallet_lock_wallet_disabled),
+            lockedTimeMessage,
+            activity.getString(android.R.string.ok)
+        ).show(activity)
     }
 }

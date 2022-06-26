@@ -29,7 +29,7 @@ import java.util.*
 
 class TransactionsLiveData(val walletApplication: WalletApplication = WalletApplication.getInstance()) : LiveData<List<Transaction>>() {
 
-    private val wallet = walletApplication.wallet
+    private val wallet = walletApplication.wallet!!
 
     companion object {
         private const val THROTTLE_MS = DateUtils.SECOND_IN_MILLIS

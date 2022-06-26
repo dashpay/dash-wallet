@@ -1,4 +1,4 @@
-主要说明
+﻿主要说明
 
 Dash钱包是Dash Core Group为DASH - 数字现金所提供, 并参考Android钱包设计而成的. DASH是数字货币的一种创新替代方案, 专为支付而设计.
 

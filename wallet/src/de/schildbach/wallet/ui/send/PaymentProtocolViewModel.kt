@@ -39,7 +39,8 @@ import org.slf4j.LoggerFactory
 class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewModel(application) {
 
     companion object {
-        val FAKE_FEE_FOR_EXCEPTIONS: Coin = ECONOMIC_FEE.multiply(261).divide(1000)
+        val FAKE_FEE_FOR_EXCEPTIONS: Coin =
+            org.dash.wallet.common.Constants.ECONOMIC_FEE.multiply(261).divide(1000)
     }
 
     private val log = LoggerFactory.getLogger(PaymentProtocolFragment::class.java)
@@ -126,12 +127,16 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
         signAndSendPayment(finalPaymentIntent!!, baseSendRequest!!.ensureMinRequiredFee)
     }
 
-    override fun signAndSendPayment(sendRequest: SendRequest, txAlreadyCompleted: Boolean) {
+    override fun signAndSendPayment(
+        sendRequest: SendRequest,
+        txAlreadyCompleted: Boolean,
+        checkBalanceConditions: Boolean
+    ) {
         if (finalPaymentIntent!!.hasPaymentUrl()) {
             wallet.completeTx(sendRequest)
             directPay(sendRequest)
         } else {
-            super.signAndSendPayment(sendRequest, txAlreadyCompleted)
+            super.signAndSendPayment(sendRequest, txAlreadyCompleted, checkBalanceConditions)
         }
     }
 
@@ -165,6 +170,9 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
     }
 
     fun commitAndBroadcast(sendRequest: SendRequest) {
-        super.signAndSendPayment(sendRequest, true)
+        super.signAndSendPayment(sendRequest,
+            txAlreadyCompleted = true,
+            checkBalanceConditions = true
+        )
     }
 }

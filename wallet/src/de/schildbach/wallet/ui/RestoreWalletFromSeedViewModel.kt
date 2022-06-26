@@ -43,7 +43,7 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
     fun restoreWalletFromSeed(words: MutableList<String>) {
         if (isSeedValid(words)) {
             val wallet = WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS)
-            walletApplication.wallet = wallet
+            walletApplication.setWallet(wallet)
             log.info("successfully restored wallet from seed")
             walletApplication.configuration.disarmBackupSeedReminder()
             walletApplication.configuration.isRestoringBackup = true

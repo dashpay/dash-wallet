@@ -24,7 +24,9 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
+import de.schildbach.wallet.ui.main.MainActivity
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.PinPreviewView
@@ -33,6 +35,7 @@ import kotlinx.android.synthetic.main.activity_app_update.*
 import org.dash.wallet.common.Configuration
 import java.util.concurrent.TimeUnit
 
+@AndroidEntryPoint
 class AppUpgradeActivity : AppCompatActivity() {
 
     companion object {
@@ -82,16 +85,16 @@ class AppUpgradeActivity : AppCompatActivity() {
         checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (_, pin) ->
             onCorrectPin(pin!!)
         })
-        checkPinSharedModel.onWalletEncryptedCallback.observe(this, Observer<String?> { pin ->
+        checkPinSharedModel.onWalletEncryptedCallback.observe(this) { pin ->
             if (pin == null) {
                 Toast.makeText(this, "Unable to encrypt wallet", Toast.LENGTH_LONG).show()
             } else {
                 onCorrectPin(pin)
             }
-        })
-        checkPinSharedModel.onCancelCallback.observe(this, Observer<Void> {
+        }
+        checkPinSharedModel.onCancelCallback.observe(this) {
             temporaryLockCheckRunnable.run()
-        })
+        }
         SetupPinDuringUpgradeDialog.show(this, 0)
     }
 
@@ -105,7 +108,7 @@ class AppUpgradeActivity : AppCompatActivity() {
         dash_logo.visibility = View.VISIBLE
         temporaryLockCheckHandler.postDelayed(temporaryLockCheckRunnable, temporaryLockCheckInterval)
         action_title.setText(R.string.wallet_lock_wallet_disabled)
-        action_subtitle.text = pinRetryController.getWalletTemporaryLockedMessage(this)
+        action_subtitle.text = pinRetryController.getWalletTemporaryLockedMessage(resources)
     }
 
     override fun finish() {

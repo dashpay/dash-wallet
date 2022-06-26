@@ -76,6 +76,14 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
             }
         }
 
+    var allowSpaceForMessage: Boolean = false
+        set(value) {
+            field = value
+            if (::binding.isInitialized) {
+                refreshSpaceForMessage(value)
+            }
+        }
+
     override fun getItemCount() = 1
 
     override fun getItemViewType(position: Int) = R.layout.search_header_view
@@ -142,6 +150,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         binding.searchSubtitle.text = subtitle
         binding.searchSubtitle.isVisible = subtitle.isNotEmpty()
         refreshControls(controlsVisible)
+        refreshSpaceForMessage(allowSpaceForMessage)
     }
 
     fun setFilterMode(mode: FilterMode) {
@@ -190,5 +199,9 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
     private fun refreshControls(visible: Boolean) {
         binding.searchPanel.visibility = if (visible) View.VISIBLE else View.INVISIBLE
         binding.titlePanel.visibility = if (visible) View.VISIBLE else View.INVISIBLE
+    }
+
+    private fun refreshSpaceForMessage(visible: Boolean) {
+        binding.offset.isVisible = visible
     }
 }

@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_less_bright"
+    android:background="@color/background_primary"
     android:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.SecurityActivity">
 
@@ -26,7 +26,8 @@
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 style="@style/MenuRow.Internal"
-                android:id="@+id/view_recovery_phrase">
+                android:id="@+id/view_recovery_phrase"
+                android:onClick="viewRecoveryPhrase">
 
                 <TextView
                     style="@style/MontserratMedium.MenuRowTitle.Internal"
@@ -48,7 +49,8 @@
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/change_pin"
-                style="@style/MenuRow.Internal">
+                style="@style/MenuRow.Internal"
+                android:onClick="changePin">
 
                 <TextView
                     style="@style/MontserratMedium.MenuRowTitle.Internal"
@@ -118,7 +120,8 @@
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/advanced_security"
-                style="@style/MenuRow.Internal">
+                style="@style/MenuRow.Internal"
+                android:onClick="openAdvancedSecurity">
 
                 <TextView
                     style="@style/MontserratMedium.MenuRowTitle.Internal"
@@ -166,7 +169,8 @@
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/reset_wallet"
-                style="@style/MenuRow.Internal">
+                style="@style/MenuRow.Internal"
+                android:onClick="resetWallet">
 
                 <TextView
                     style="@style/MontserratMedium.MenuRowTitle.Internal"

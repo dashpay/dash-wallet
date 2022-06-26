@@ -15,17 +15,15 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.switchMap
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityBaseData
 
-open class BaseProfileViewModel(application: Application) : AndroidViewModel(application) {
+open class BaseProfileViewModel(val walletApplication: WalletApplication) : ViewModel() {
 
-    val walletApplication = application as WalletApplication
     val platformRepo by lazy {
         PlatformRepo.getInstance()
     }

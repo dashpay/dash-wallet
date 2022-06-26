@@ -40,7 +40,8 @@ import android.content.Intent
 import android.app.Activity
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.ExchangeRatesFragment.*
+import de.schildbach.wallet.ui.rates.ExchangeRatesActivity
+import de.schildbach.wallet.ui.rates.ExchangeRatesFragment.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.analytics.AnalyticsService

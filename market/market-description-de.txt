@@ -1,4 +1,4 @@
-HAUPTBESCHREIBUNG
+﻿HAUPTBESCHREIBUNG
 
 Dash Wallet ist die wichtigste und von der Dash Core Group gewartete Android Wallet für Dash - Digital Cash - eine innovative Alternative zu Bitcoin, die sich auf Zahlungen konzentriert.
 

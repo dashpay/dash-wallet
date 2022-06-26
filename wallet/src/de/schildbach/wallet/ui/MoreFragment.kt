@@ -34,10 +34,11 @@ import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.dashpay.BottomNavFragment
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
-import de.schildbach.wallet.ui.explore.ExploreActivity
 import de.schildbach.wallet.ui.invite.CreateInviteViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
+import de.schildbach.wallet.ui.main.MainViewModel
+import de.schildbach.wallet.ui.main.WalletFragment
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import kotlinx.android.synthetic.main.fragment_updating_profile.*
@@ -54,10 +55,8 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MoreFragment : BottomNavFragment(R.layout.activity_more) {
-
-    private var blockchainState: BlockchainState? = null
     private val editProfileViewModel: EditProfileViewModel by viewModels()
-    private val mainActivityViewModel: MainActivityViewModel by activityViewModels()
+    private val mainActivityViewModel: MainViewModel by activityViewModels()
     private val createInviteViewModel: CreateInviteViewModel by viewModels()
     private var showInviteSection = false
 
@@ -135,10 +134,6 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     }
 
     private fun initViewModel() {
-        mainActivityViewModel.blockchainStateData.observe(viewLifecycleOwner) {
-            blockchainState = it
-        }
-
         // observe our profile
         editProfileViewModel.dashPayProfileData.observe(viewLifecycleOwner) { dashPayProfile ->
             if (dashPayProfile != null) {
@@ -157,8 +152,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
                     }
                     Status.ERROR -> {
                         edit_update_switcher.apply {
-                            val networkUnavailable = blockchainState?.impediments?.contains(BlockchainState.Impediment.NETWORK) == true
-                            if (networkUnavailable) {
+                            if (mainActivityViewModel.isNetworkUnavailable.value == true) {
                                 if (displayedChild != UPDATE_PROFILE_NETWORK_ERROR_VIEW) {
                                     displayedChild = UPDATE_PROFILE_NETWORK_ERROR_VIEW
                                 }

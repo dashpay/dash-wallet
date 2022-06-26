@@ -191,7 +191,6 @@
   <string name="button_ok">OK</string>
   <string name="button_dismiss">Zapri</string>
   <string name="button_cancel">Prekliči</string>
-  <string name="button_retry">Poskusi ponovno</string>
   <string name="button_help">Pomoč</string>
   <string name="button_add">Dodaj</string>
   <string name="button_delete">Odstrani</string>

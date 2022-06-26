@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">Lier un compte Liquid</string>
+    <string name="buy_dash_with_liquid_account">Acheter des dashs avec une carte bancaire</string>
+    <string name="liquid_logout">Se déconnecter</string>
+    <string name="liquid_logout_title">Se déconnecter de Liquid</string>
+    <string name="liquid_forced_logout">Le lien à votre compte Liquid a été rompu. Veuillez choisir “Lier un compte Liquid” dans l\'écran suivant.</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Échanger Dash avec d\'autres cryptomonnaies</string>
+    <string name="transfer_dash_to_and_from_account">Transférer des dashs vers ou depuis votre compte Liquid</string>
+
+    <string name="cryptocurrency">Cryptomonnaie</string>
+    <string name="credit_card">Carte bancaire</string>
+
+    <string name="buy">Acheter</string>
+    <string name="sell_dash">Vendre des dashs</string>
+    <string name="buy_sell_dash_">Acheter &amp; vendre des dashs</string>
+    <string name="button_cancel">Annuler</string>
+    <string name="choose_your_payment_method">Choisissez votre moyen de paiement</string>
+    <string name="crypto_support">Support crypto</string>
+    <string name="credit_card_support">Support carte bancaire</string>
+    <string name="okay">OK</string>
+    <string name="list_of_countries">Voir une liste de pays non supportés.</string>
+    <string name="buying_dash_not_supported_credit_cards">Acheter des dashs avec une carte bancaire n\'est pas possible dans certains pays.</string>
+    <string name="buying_dash_not_supported_crypto">Acheter des dashs avec des cryptomonnaies n\'est pas possible dans certains pays.</string>
+    <string name="buying_dash_success_message">Vous pouvez fermer cet écran, vos dashs seront envoyés dans votre portefeuille.</string>
+
+    <string name="confirm">Confirmer</string>
+    <string name="card_fees">Frais de carte</string>
+    <string name="conversion_rate">Taux de conversion</string>
+    <string name="network_fee">Frais de réseau</string>
+    <string name="total">Total</string>
+    <string name="connect">Se connecter</string>
+    <string name="connected">Connecté</string>
+    <string name="disconnected">Déconnecté</string>
+    <string name="buy_sell_dash">Acheter et vendre des dashs ou créer un nouveau compte</string>
+
+
+    <string name="transfer_to_liquid">Transférer vers Liquid</string>
+    <string name="transfer_from_liquid">Transférer depuis Liquid</string>
+    <string name="disconnect">Déconnecter</string>
+    <string name="select_crypto_currency">Choisir cryptomonnaie</string>
+    <string name="select_sell_currency">Choisir vendre monnaie</string>
+    <string name="select_buy_currency">Choisir acheter monnaie</string>
+    <string name="select_fiat_currency">Choisir monnaie fiduciaire</string>
+    <string name="show_payment_qr_code">Voir QR-code du paiement</string>
+    <string name="pay_with_btc_from_liquid">Payer en BTC depuis Liquid</string>
+    <string name="or">ou</string>
+
+    <string name="internet_connected">Veuillez vous connecter à Internet</string>
+    <string name="please_enter_amount">Veuillez saisir le montant</string>
+
+    <string name="choose_what_you_receive">Choisissez ce que vous recevez</string>
+    <string name="fiat_currency">Monnaie fiduciaire</string>
+
+    <string name="liquid">Liquid</string>
+    <string name="transfer">Transférer</string>
+    <string name="filter_by">Filtré par</string>
+</resources>

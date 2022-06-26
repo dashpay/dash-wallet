@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold</string>
+    <string name="uphold_buy_dash_activity_title">UpholdでDashを売買する</string>
+    <string name="uphold_buy_dash_with_uphold">UpholdアカウントでDashを購入する</string>
+    <string name="uphold_buy_dash_button">Dashを購入する</string>
+    <string name="uphold_transfer_to_this_wallet_button">UpholdからDashを移す</string>
+    <string name="uphold_link_account">Upholdアカウントをリンクさせる</string>
+    <string name="uphold_account_dash_balance">あなたのUpholdアカウント内のDash残高</string>
+    <string name="uphold_transfer_to_this_wallet">UpholdアカウントからこのウォレットにDashを移す</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">請求額から手数料が差し引かれます。</string>
+    <string name="uphold_withdrawal_instructions">送金額を入力する</string>
+    <string name="uphold_withdrawal_success_title">成功</string>
+    <string name="uphold_withdrawal_success_message">あなたのトランザクションは送信され、数分で送金額がウォレットに表示されます。\n\nトランザクションID： %s</string>
+    <string name="uphold_otp_dialog_title">下に2FAコードを入力してください</string>
+    <string name="uphold_transfer">移す</string>
+    <string name="uphold_see_on_uphold">Upholdで見る</string>
+    <string name="uphold_logout_title">Upholdからログアウトする</string>
+    <string name="uphold_logout">ログアウト</string>
+    <string name="uphold_logout_explanation_text">またブラウザーを使ってUpholdのウェブサイトからログアウトする必要もあります</string>
+    <string name="uphold_go_to_website">ウェブサイトへ行く</string>
+    <string name="uphold_error">Upholdのエラー</string>
+    <string name="uphold_error_not_logged_in">Dashウォレットは、あなたのUpholdアカウントにリンクされなくなりました。次の画面でUpholdアカウントのリンクをタップして下さい。</string>
+    <string name="uphold_error_not_available">Upholdサービスは利用できません。後でもう一度やり直してください。</string>
+    <string name="uphold_error_report_issue">メインメニューの「問題の報告」からこの問題をDashウォレットサポートチームに報告してください。</string>
+
+    <string name="uphold_general_error_title">エラー</string>
+    <string name="uphold_api_error_title">Upholdのエラー</string>
+    <string name="uphold_api_error_identity">お客様のUpholdアカウントはまだ認証されていません。資金を引き出せません。</string>
+    <string name="uphold_api_error_403_description">お客様のUpholdアカウントは、審査のためにフラグが立てられました。\n\nUpholdは一時的にお客様のアカウントを制限していますので、資金を引き出せません。\n\n%s</string>
+    <string name="uphold_api_error_403_generic">Upholdは、連絡を取り合ってこの問題を迅速に分類します。</string>
+    <string name="uphold_api_error_403_due_diligence">Upholdのアカウントにアクセスし、お客様に関するいくつかの質問にお答えください。</string>
+    <string name="uphold_api_error_403_identity">Upholdのアカウントにアクセスし、本人確認を行ってください。</string>
+    <string name="uphold_api_error_403_proof_of_address">住所証明を更新する場合は、Upholdにご連絡ください。</string>
+
+    <string name="uphold_api_error_400_description">Upholdの資金は24時間ロックされます。\n\n%sにこの送金のための十分な資金を入れておいてください。</string>
+    <string name="uphold_api_error_400_locked">Upholdの資金(%1$s%2$s)は、最大65日間ロックされます。\n\n%3$sにこの送金のための十分な資金を入れておく必要があります。</string>
+    <string name="uphold_api_error_400_tx_insufficentfunds">この送金に必要な資金が不足しています</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">移動金額は、%sDASH未満でなければなりません。</string>
+    <string name="uphold_api_error_400_greater_than_or_equal_to">移動金額は、%sDASH以上でなければなりません。</string>
+    <string name="uphold_api_error_400_tx_validation">このアプリでは、(最大3000ドルまでしか)移動できません。</string>
+    <string name="uphold_api_error_400_password_reset">近日中に行われたパスワード変更により、Upholdの資金がロックされています。資金移動ができるようになる%s前までお待ちください。</string>
+    <string name="uphold_api_error_400_authentication_change">近日中に行われた認証方法の変更により、Upholdの資金がロックされています。資金移動ができるようになる%s前までお待ちください。</string>
+
+    <string name="uphold_api_error_400_invalid_beneficiary">このアプリでは、(最大3000ドルまでしか)移動できません。\n\nUpholdのアカウントで送金してください。</string>
+    <string name="uphold_api_error_400_required">このアプリでは、(最大3000ドルまでしか)移動できません。\n\nUpholdのアカウントで送金してください。</string>
+
+    <string name="uphold_requirement_not_met_base_message">現時点では、この操作を行うことはできません。%s</string>
+</resources>

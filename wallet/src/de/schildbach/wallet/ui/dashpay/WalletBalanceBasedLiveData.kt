@@ -17,7 +17,7 @@ abstract class WalletBalanceBasedLiveData<T>(val walletApplication: WalletApplic
     private var listening = false
 
     private val wallet: Wallet
-        get() = walletApplication.wallet
+        get() = walletApplication.wallet!!
 
     private val walletChangeListener = object : ThrottlingWalletChangeListener(THROTTLE_MS) {
         override fun onThrottledWalletChanged() {

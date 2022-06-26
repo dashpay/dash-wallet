@@ -23,6 +23,7 @@
     <string name="explore_merchants_subtitle">Find merchants who accept Dash as payment.</string>
     <string name="explore_atms_title">ATMs</string>
     <string name="explore_atms_subtitle">Find where to buy or sell DASH and other cryptocurrencies for cash.</string>
+    <string name="explore_staking_subtitle">Easily stake Dash and earn passive income with a few simple clicks.</string>
 
     <!-- Search -->
     <string name="explore_search_results">Search results</string>
@@ -34,7 +35,6 @@
     <string name="explore_option_buy">Buy</string>
     <string name="explore_option_sell">Sell</string>
     <string name="explore_option_buy_sell">Buy &amp; Sell</string>
-    <string name="explore_menu_info">info</string>
     <string name="explore_where_to_spend">Where to Spend</string>
     <string name="explore_atms">ATMs</string>
     <string name="explore_all_states">All states</string>
@@ -158,4 +158,12 @@
     <string name="explore_test_dash_text_1">Test Dash is free and can be obtained from what is called a faucet.</string>
     <string name="explore_test_dash_text_2">Click on the button below to copy a Dash address from this wallet so you can get your test Dash..</string>
     <string name="explore_get_test_dash">Get Test Dash</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Sync in progress... Results may not be complete.</string>
+    <string name="sync_in_progress_error">Sync in progress... There was an error.</string>
+    <string name="sync_in_progress_canceled">Sync canceled... Another attempt will be made later.</string>
+
+    <string name="sync_in_progress_file_not_found">Build Error: Database not found!</string>
+    <string name="sync_in_progress_network_error">Sync interrupted... Network is offline or unreachable</string>
 </resources>

@@ -21,12 +21,12 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.telephony.TelephonyManager
-import android.util.Log
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
+import android.view.inputmethod.InputMethodManager
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -34,7 +34,6 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
@@ -42,17 +41,20 @@ import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
-import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
 import kotlinx.android.synthetic.main.activity_lock_screen_root.*
 import org.bitcoinj.wallet.Wallet.BalanceType
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.LockScreenBroadcaster
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -67,18 +69,17 @@ open class LockScreenActivity : SecureActivity() {
 
     @Inject lateinit var baseAlertDialogBuilder: BaseAlertDialogBuilder
     protected lateinit var alertDialog: AlertDialog
-
-    val walletApplication: WalletApplication = WalletApplication.getInstance()
-    private val configuration = walletApplication.configuration
-    private val autoLogout: AutoLogout = walletApplication.autoLogout
-    @Inject
-    lateinit var lockScreenBroadcaster: LockScreenBroadcaster
+    @Inject lateinit var walletApplication: WalletApplication
+    @Inject lateinit var walletData: WalletDataProvider
+    @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
+    @Inject lateinit var configuration: Configuration
+    private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
 
     private lateinit var checkPinViewModel: CheckPinViewModel
     private lateinit var enableFingerprintViewModel: EnableFingerprintDialog.SharedViewModel
-    private var pinLength = configuration.pinLength
+    private val pinLength by lazy { configuration.pinLength }
 
-    private val lockScreenDisplayed: Boolean
+    protected val lockScreenDisplayed: Boolean
         get() = root_view_switcher.displayedChild == 0
 
     private val temporaryLockCheckHandler = Handler()
@@ -108,18 +109,21 @@ open class LockScreenActivity : SecureActivity() {
         intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
     }
 
-    protected var isLocked: Boolean = autoLogout.shouldLogout()
+    protected var isLocked: Boolean = true
+    private val shouldShowBackupReminder
+        get() = configuration.remindBackupSeed && configuration.lastBackupSeedReminderMoreThan24hAgo()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (walletApplication.wallet == null) {
+        if (walletData.wallet == null) {
             finish()
             return
         }
 
         super.setContentView(R.layout.activity_lock_screen_root)
         setupKeyboardBottomMargin()
+        isLocked = autoLogout.shouldLogout()
 
         pinRetryController = PinRetryController.getInstance()
         initView()
@@ -139,7 +143,7 @@ open class LockScreenActivity : SecureActivity() {
 
     private val onLogoutListener = AutoLogout.OnLogoutListener {
         isLocked = true
-        Log.e(this::class.java.simpleName, "OnLogoutListener")
+        dismissKeyboard()
         setLockState(State.USE_DEFAULT)
         onLockScreenActivated()
     }
@@ -156,20 +160,22 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
-    private fun resetAutoLogoutTimer() {
-        autoLogout.resetTimerIfActive()
-    }
-
     protected open fun turnOffAutoLogout() {
         autoLogout.stopTimer()
     }
 
     protected open fun turnOnAutoLogout() {
-        autoLogout.startTimer()
+        if (!autoLogout.isTimerActive) {
+            autoLogout.startTimer()
+        }
+    }
+
+    private fun resetAutoLogoutTimer() {
+        autoLogout.resetTimerIfActive()
     }
 
     private fun setupBackupSeedReminder() {
-        val hasBalance = walletApplication.wallet.getBalance(BalanceType.ESTIMATED).isPositive
+        val hasBalance = walletData.wallet?.getBalance(BalanceType.ESTIMATED)?.isPositive ?: false
         if (hasBalance && configuration.lastBackupSeedTime == 0L) {
             configuration.setLastBackupSeedTime()
         }
@@ -216,7 +222,6 @@ open class LockScreenActivity : SecureActivity() {
 
         if (!keepUnlocked && configuration.autoLogoutEnabled && (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())) {
             isLocked = true
-            Log.e(this::class.java.simpleName, "Lock screen displayed")
             setLockState(State.USE_DEFAULT)
             autoLogout.setAppWentBackground(false)
             if (autoLogout.isTimerActive) {
@@ -225,8 +230,9 @@ open class LockScreenActivity : SecureActivity() {
             onLockScreenActivated()
         } else {
             root_view_switcher.displayedChild = 1
-            if (!keepUnlocked)
+            if (!keepUnlocked) {
                 autoLogout.maybeStartAutoLogoutTimer()
+            }
         }
 
         startBlockchainService()
@@ -285,7 +291,7 @@ open class LockScreenActivity : SecureActivity() {
 
     private fun initViewModel() {
         checkPinViewModel = ViewModelProvider(this)[CheckPinViewModel::class.java]
-        checkPinViewModel.checkPinLiveData.observe(this, Observer {
+        checkPinViewModel.checkPinLiveData.observe(this) {
             when (it.status) {
                 Status.ERROR -> {
                     pinRetryController.failedAttempt(it.data!!)
@@ -309,12 +315,12 @@ open class LockScreenActivity : SecureActivity() {
                     // ignore
                 }
             }
-        })
+        }
         enableFingerprintViewModel = ViewModelProvider(this)[EnableFingerprintDialog.SharedViewModel::class.java]
-        enableFingerprintViewModel.onCorrectPinCallback.observe(this, Observer {
+        enableFingerprintViewModel.onCorrectPinCallback.observe(this) {
             val pin = it.second
             onCorrectPin(pin)
-        })
+        }
     }
 
     private fun onCorrectPin(pin: String) {
@@ -333,6 +339,8 @@ open class LockScreenActivity : SecureActivity() {
         } else {
             root_view_switcher.displayedChild = 1
         }
+
+        onLockScreenDeactivated()
     }
 
     protected open fun onUnlocked() {
@@ -380,7 +388,19 @@ open class LockScreenActivity : SecureActivity() {
                 }
 
                 if (pinRetryController.failCount() > 0) {
-                    pin_preview.badPin(pinRetryController.getRemainingAttemptsMessage(this))
+                    pin_preview.badPin(pinRetryController.getRemainingAttemptsMessage(resources))
+                }
+
+                if (pinRetryController.remainingAttempts == 1) {
+                    val dialog = AdaptiveDialog.create(
+                        R.drawable.ic_info_red,
+                        getString(R.string.wallet_last_attempt),
+                        getString(R.string.wallet_last_attempt_message),
+                        "",
+                        getString(R.string.button_understand)
+                    )
+                    dialog.isCancelable = false
+                    dialog.show(this) { }
                 }
             }
             State.USE_FINGERPRINT -> {
@@ -405,7 +425,7 @@ open class LockScreenActivity : SecureActivity() {
                 temporaryLockCheckHandler.postDelayed(temporaryLockCheckRunnable, temporaryLockCheckInterval)
 
                 action_title.setText(R.string.wallet_lock_wallet_disabled)
-                action_subtitle.text = pinRetryController.getWalletTemporaryLockedMessage(this)
+                action_subtitle.text = pinRetryController.getWalletTemporaryLockedMessage(resources)
 
                 action_login_with_pin.visibility = View.GONE
                 action_login_with_fingerprint.visibility = View.GONE
@@ -516,9 +536,6 @@ open class LockScreenActivity : SecureActivity() {
         }.buildAlertDialog().show()
     }
 
-    private val shouldShowBackupReminder = configuration.remindBackupSeed
-            && configuration.lastBackupSeedReminderMoreThan24hAgo()
-
     override fun onBackPressed() {
         if (!lockScreenDisplayed) {
             super.onBackPressed()
@@ -526,24 +543,35 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     open fun onLockScreenActivated() {
-        Log.e(this::class.java.simpleName, "Closing dialog")
         if (this::alertDialog.isInitialized){
-            Log.e(this::class.java.simpleName, "Dialog is initialized")
             alertDialog.dismissDialog()
         }
+
         lockScreenBroadcaster.activatingLockScreen.call()
         dismissDialogFragments(supportFragmentManager)
     }
+
+    open fun onLockScreenDeactivated() { }
 
     private fun dismissDialogFragments(fragmentManager: FragmentManager) {
         fragmentManager.fragments
             .takeIf { it.isNotEmpty() }
             ?.forEach { fragment ->
-                if (fragment is DialogFragment) {
-                    fragment.dismissAllowingStateLoss()
-                } else if (fragment is NavHostFragment) {
-                    dismissDialogFragments(fragment.childFragmentManager)
+                // check to see if the activity is valid and fragment is added to its activity
+                if (fragment.activity != null && fragment.isAdded) {
+                    if (fragment is DialogFragment) {
+                        fragment.dismissAllowingStateLoss()
+                    } else if (fragment is NavHostFragment) {
+                        dismissDialogFragments(fragment.childFragmentManager)
+                    }
                 }
             }
+    }
+
+    private fun dismissKeyboard() {
+        val inputManager = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        currentFocus?.windowToken?.let { token ->
+            inputManager?.hideSoftInputFromWindow(token, 0)
+        }
     }
 }

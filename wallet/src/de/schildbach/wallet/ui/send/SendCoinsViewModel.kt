@@ -67,9 +67,13 @@ class SendCoinsViewModel @Inject constructor(
         super.signAndSendPayment(finalPaymentIntent!!, dryrunSendRequest!!.ensureMinRequiredFee, exchangeRate, basePaymentIntentValue.memo)
     }
 
-    override fun signAndSendPayment(sendRequest: SendRequest, txAlreadyCompleted: Boolean) {
+    override fun signAndSendPayment(
+        sendRequest: SendRequest,
+        txAlreadyCompleted: Boolean,
+        checkBalanceConditions: Boolean
+    ) {
         state.value = State.SIGNING
-        super.signAndSendPayment(sendRequest, false)
+        super.signAndSendPayment(sendRequest, false, checkBalanceConditions)
     }
 
     fun loadUserDataByUsername(username: String) = liveData(Dispatchers.IO) {

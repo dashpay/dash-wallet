@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <!-- Explore screen -->
+    <string name="explore_dash">Εξερευνήστε το Dash</string>
+    <string name="explore_title">Εξερευνήστε</string>
+    <string name="explore_subtitle">Πραγματοποιήστε εύκολα αγορές με τα DASH σας σε πάνω από 155.000 τοποθεσίες και διαδικτυακούς εμπόρους.</string>
+    <string name="explore_merchants_title">Πού να ξοδέψετε;</string>
+    <string name="explore_merchants_subtitle">Βρείτε εμπόρους που δέχονται το Dash ως πληρωμή</string>
+    <string name="explore_atms_title">ATM</string>
+    <string name="explore_atms_subtitle">Βρείτε πού μπορείτε να αγοράσετε ή να πουλήσετε DASH και άλλα κρυπτονομίσματα με μετρητά.</string>
+    <string name="explore_staking_subtitle">Κάντε εύκολα Stake το Dash και κερδίστε παθητικό εισόδημα με μερικά απλά κλικ.</string>
+
+    <!-- Search -->
+    <string name="explore_search_results">Αποτελέσματα αναζήτησης</string>
+    <string name="explore_physical_merchant">Φυσικός έμπορος</string>
+    <string name="explore_online_merchant">Online</string>
+    <string name="explore_both_types_merchant">Διαδικτυακός, φυσικός έμπορος</string>
+    <string name="explore_multiple_locations">+ πολλαπλές τοποθεσίες</string>
+    <string name="explore_option_all">Όλα</string>
+    <string name="explore_option_buy">Αγορά</string>
+    <string name="explore_option_sell">Πωλήστε</string>
+    <string name="explore_option_buy_sell">Αγορά &amp; Πώληση</string>
+    <string name="explore_where_to_spend">Πού να ξοδέψετε</string>
+    <string name="explore_atms">ATM</string>
+    <string name="explore_all_states">Όλες οι περιπτώσεις</string>
+    <string name="explore_no_results">Δεν βρέθηκαν αποτελέσματα</string>
+    <string name="explore_all_merchants">Όλοι οι έμποροι</string>
+    <string name="explore_in_radius">%1$s σε %2$s</string>
+    <string name="explore_no_merchants">Δεν υπάρχουν έμποροι</string>
+    <string name="explore_no_atms">Κανένα ATM</string>
+    <string name="distance_miles">%sμίλια</string>
+    <string name="distance_kilometers">%sχιλιόμετρα</string>
+
+    <plurals name="explore_merchant_amount">
+        <item quantity="one">%d έμπορος</item>
+        <item quantity="other">%dέμποροι</item>
+    </plurals>
+
+    <plurals name="explore_atm_amount">
+        <item quantity="one">%d ΑΤΜ</item>
+        <item quantity="other">%d ΑΤΜ</item>
+    </plurals>
+
+    <!-- Details -->
+    <string name="explore_back_to_locations">Επιστροφή σε όλες τις τοποθεσίες</string>
+    <string name="explore_back_to_nearest">Πίσω στην πλησιέστερη τοποθεσία</string>
+    <string name="explore_select_location">Επιλέξτε τοποθεσία</string>
+    <string name="explore_pay_with_dash">Πληρώστε με Dash</string>
+    <string name="explore_buy_gift_card">Αγοράστε μια δωροκάρτα</string>
+    <string name="explore_buy_dash">Αγορά Dash</string>
+    <string name="explore_sell_dash">Πώληση Dash</string>
+    <string name="explore_show_all">Εμφάνιση όλων των τοποθεσιών</string>
+    <string name="explore_atm_location_hint">Αυτό το ΑΤΜ βρίσκεται στο</string>
+    <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
+
+    <!-- Filters -->
+    <string name="explore_filter">Φίλτρο</string>
+    <string name="explore_filters">Φίλτρα</string>
+    <string name="explore_apply_filter">Εφαρμογή</string>
+    <string name="explore_payment_method">Μέθοδος πληρωμής</string>
+    <string name="explore_payment_dash">Dash</string>
+    <string name="explore_payment_gift_card">Δωροκάρτα</string>
+    <string name="explore_radius">Ακτίνα</string>
+    <string name="explore_location">Τοποθεσία</string>
+    <string name="explore_current_location">Τρέχουσα τοποθεσία</string>
+    <string name="explore_location_settings">Ρυθμίσεις τρέχουσας τοποθεσίας</string>
+    <string name="explore_reset_filters">Επαναφορά φίλτρων</string>
+    <string name="explore_reset_all_filters">Επαναφορά όλων των φίλτρων</string>
+    <string name="explore_filtered_by">Φιλτράρεται από:</string>
+    <string name="explore_pay_gift_card">Πληρώστε με δωροκάρτα</string>
+    <string name="explore_sort_by">Ταξινόμηση κατά</string>
+
+    <string-array name="merchants_filter_options">
+        <item>Online</item>
+        <item>Κοντινή τοποθεσία</item>
+        <item>Όλα</item>
+    </string-array>
+
+    <string-array name="atms_filter_options">
+        <item>Όλα</item>
+        <item>Αγορά</item>
+        <item>Πωλήστε</item>
+        <item>Αγορά/Πώληση</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_miles">
+        <item>1 μίλι</item>
+        <item>5 μίλια</item>
+        <item>20 μίλια</item>
+        <item>50 μίλια</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_kilometers">
+        <item>1 χιλιόμετρο</item>
+        <item>5 χιλιόμετρα</item>
+        <item>20 χιλιόμετρα</item>
+        <item>50 χιλιόμετρα</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>Όνομα</item>
+        <item>Απόσταση</item>
+    </string-array>
+
+    <plurals name="radius_miles">
+        <item quantity="one">%d μίλι</item>
+        <item quantity="other">%dμίλια</item>
+    </plurals>
+
+    <plurals name="radius_kilometers">
+        <item quantity="one">%dχιλιόμετρο</item>
+        <item quantity="other">%dχιλιόμετρα</item>
+    </plurals>
+
+    <!-- Location Permission -->
+    <string name="explore_location_allowed">Επιτρεπόμενο</string>
+    <string name="explore_location_denied">Απορρίφθηκε</string>
+    <string name="explore_manager_permissions">Διαχείριση άδειας GPS</string>
+    <string name="explore_location_request">Χορηγήστε δικαιώματα GPS ώστε να μπορούμε να σας δείξουμε τοποθεσίες κοντά σας.</string>
+    <string name="explore_location_explainer">Η τοποθεσία σας χρησιμοποιείται για να εμφανιστεί η θέση σας στο χάρτη, οι έμποροι στην επιλεγμένη ακτίνα και να βελτιωθούν τα αποτελέσματα αναζήτησης.</string>
+    <string name="explore_merchant_location_explainer_title">Η εμπορική αναζήτηση λειτουργεί καλύτερα με ενεργοποιημένες τις Υπηρεσίες τοποθεσίας.</string>
+    <string name="explore_merchant_location_explainer_message">Η τοποθεσία σας χρησιμοποιείται για να εμφανιστεί η θέση σας στο χάρτη, οι έμποροι στην επιλεγμένη ακτίνα και να βελτιωθούν τα αποτελέσματα αναζήτησης.</string>
+    <string name="explore_atm_location_explainer_title">Η αναζήτηση ΑΤΜ λειτουργεί καλύτερα με ενεργοποιημένες τις Υπηρεσίες τοποθεσίας.</string>
+    <string name="explore_atm_location_explainer_message">Η τοποθεσία σας χρησιμοποιείται για την εμφάνιση της θέσης σας στο χάρτη, των ΑΤΜ στην επιλεγμένη ακτίνα και τη βελτίωση των αποτελεσμάτων αναζήτησης.</string>
+
+    <!-- Info screens -->
+    <string name="explore_info_header_text">Έχουμε 2 τύπους εμπόρων</string>
+    <string name="accept_dash_text">Δέχεται απευθείας DASH</string>
+    <string name="pay_with_dash_text">Πληρώστε με το πορτοφόλι DASH.</string>
+    <string name="buy_gift_card_text">Αγοράστε δωροκάρτες με το Dash σας</string>
+    <string name="buy_gift_card_desc_text">Αγοράστε δωροκάρτες με το Dash σας για το ακριβές ποσό της αγοράς σας.</string>
+    <string name="learn_more_text">Μάθετε περισσότερα</string>
+    <string name="continue_text">Συνέχεια</string>
+    <string name="buy_card_header_text">Πώς να χρησιμοποιήσετε μια δωροκάρτα</string>
+    <string name="buy_card_desc_text">Δεν δέχονται όλα τα καταστήματα το DASH απευθείας, αλλά μπορείτε να αγοράσετε μια δωροκάρτα με το Dash σας.</string>
+    <string name="find_merchant_text">Βρείτε έναν έμπορο.</string>
+    <string name="buy_gift_card_with_dash_text">Αγοράστε μια δωροκάρτα με Dash.</string>
+    <string name="redeem_gift_card_text">Εξαργυρώστε τη δωροκάρτα σας online μέσα σε λίγα δευτερόλεπτα ή σε ταμείο.</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Συγχρονισμός σε εξέλιξη... Τα αποτελέσματα μπορεί να μην είναι πλήρη.</string>
+    <string name="sync_in_progress_error">Συγχρονισμός σε εξέλιξη... Υπήρξε ένα σφάλμα.</string>
+    <string name="sync_in_progress_canceled">Ο συγχρονισμός ακυρώθηκε... Θα γίνει νέα προσπάθεια αργότερα.</string>
+
+    <string name="sync_in_progress_file_not_found">Σφάλμα Build: Η βάση δεδομένων δεν βρέθηκε!</string>
+    <string name="sync_in_progress_network_error">Ο συγχρονισμός διακόπηκε... Το δίκτυο είναι εκτός σύνδεσης ή μη προσβάσιμο</string>
+</resources>

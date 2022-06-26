@@ -15,7 +15,6 @@
  */
 package de.schildbach.wallet.ui.invite
 
-import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Environment
@@ -31,7 +30,7 @@ import de.schildbach.wallet.data.Invitation
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
-import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
@@ -47,14 +46,14 @@ import javax.inject.Inject
 
 @HiltViewModel
 open class InvitationFragmentViewModel @Inject constructor(
-    application: Application,
+    application: WalletApplication,
     private val analytics: AnalyticsService
 ) : BaseProfileViewModel(application) {
     private val log = LoggerFactory.getLogger(InvitationFragmentViewModel::class.java)
 
-    private val pubkeyHash = walletApplication.wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
+    private val pubkeyHash = walletApplication.wallet!!.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
 
-    private val inviteId = Address.fromPubKeyHash(walletApplication.wallet.params, pubkeyHash).toBase58()
+    private val inviteId = Address.fromPubKeyHash(walletApplication.wallet!!.params, pubkeyHash).toBase58()
 
     val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, inviteId)
 
@@ -138,8 +137,8 @@ open class InvitationFragmentViewModel @Inject constructor(
         get() = invitationLiveData.value!!
 
     val invitationLinkData = liveData(Dispatchers.IO) {
-        val tx = walletApplication.wallet.getTransaction(invitation.txid)
-        val cftx = walletApplication.wallet.getCreditFundingTransaction(tx)
+        val tx = walletApplication.wallet!!.getTransaction(invitation.txid)
+        val cftx = walletApplication.wallet!!.getCreditFundingTransaction(tx)
 
         val wallet = WalletApplication.getInstance().wallet!!
         val password = SecurityGuard().retrievePassword()

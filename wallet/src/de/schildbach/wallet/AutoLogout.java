@@ -79,8 +79,10 @@ public class AutoLogout {
     }
 
     public void startTimer() {
-        lockTimerClock.postDelayed(timerTask, LOCK_TIMER_TICK_MS);
-        timerActive = true;
+        if (!timerActive) {
+            lockTimerClock.postDelayed(timerTask, LOCK_TIMER_TICK_MS);
+            timerActive = true;
+        }
     }
 
     private final Runnable timerTask = new Runnable() {

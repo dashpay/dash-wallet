@@ -44,6 +44,7 @@ import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.SearchResult
@@ -84,7 +85,7 @@ class ExploreMapFragment : SupportMapFragment() {
 
     @Inject
     lateinit var userLocationState: UserLocationStateInt
-
+    private var cameraMovementReason: Int = -1
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -96,16 +97,16 @@ class ExploreMapFragment : SupportMapFragment() {
             showMap()
             googleMap?.let { map ->
                 map.setOnCameraIdleListener {
-                    val bounds = map.projection.visibleRegion.latLngBounds
-                    viewModel.searchBounds = GeoBounds(
-                        bounds.northeast.latitude,
-                        bounds.northeast.longitude,
-                        bounds.southwest.latitude,
-                        bounds.southwest.longitude,
-                        bounds.center.latitude,
-                        bounds.center.longitude,
-                        map.cameraPosition.zoom
-                    )
+                    viewModel.searchBounds = getGeoBounds(map)
+                    if (cameraMovementReason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE){
+                        viewModel.triggerPanAndZoomEvents(map.cameraPosition.zoom, getGeoBounds(map))
+                    }
+                    viewModel.previousZoomLevel = map.cameraPosition.zoom
+                    viewModel.previousCameraGeoBounds = getGeoBounds(map)
+                }
+
+                map.setOnCameraMoveStartedListener { reason ->
+                    cameraMovementReason = reason
                 }
             }
         }
@@ -229,6 +230,11 @@ class ExploreMapFragment : SupportMapFragment() {
         if (isGooglePlayServicesAvailable()) {
             markerCollection = MarkerManager(googleMap).newCollection()
             markerCollection?.setOnMarkerClickListener { marker ->
+                if (viewModel.exploreTopic == ExploreTopic.Merchants){
+                    viewModel.logEvent(AnalyticsConstants.ExploreDash.SELECT_MERCHANT_MARKER)
+                } else {
+                    viewModel.logEvent(AnalyticsConstants.ExploreDash.SELECT_ATM_MARKER)
+                }
                 viewModel.onMapMarkerSelected(marker.tag as Int)
                 true
             }
@@ -302,7 +308,7 @@ class ExploreMapFragment : SupportMapFragment() {
         currentLocationCircle = googleMap?.addCircle(CircleOptions().apply {
             center(mCurrentUserLocation)
             radius(currentAccuracy)
-            fillColor(resources.getColor(R.color.bg_accuracy_circle, null))
+            fillColor(resources.getColor(R.color.background_accuracy_circle, null))
             strokeColor(Color.TRANSPARENT)
         })
     }
@@ -353,6 +359,8 @@ class ExploreMapFragment : SupportMapFragment() {
             val radiusBounds = getRadiusBounds(mCurrentUserLocation, radius)
             map.moveCamera(radiusBounds)
             lastFocusedUserLocation = mCurrentUserLocation
+            viewModel.previousZoomLevel = map.cameraPosition.zoom
+            viewModel.previousCameraGeoBounds = getGeoBounds(map)
         }
     }
 
@@ -486,5 +494,17 @@ class ExploreMapFragment : SupportMapFragment() {
         canvas?.width?.let { drawable.setBounds(0, 0, it, canvas.height) }
         canvas?.let { drawable.draw(it) }
         return bitmap
+    }
+
+    private fun getGeoBounds(map: GoogleMap): GeoBounds {
+        val bounds = map.projection.visibleRegion.latLngBounds
+        return GeoBounds(
+                bounds.northeast.latitude,
+                bounds.northeast.longitude,
+                bounds.southwest.latitude,
+                bounds.southwest.longitude,
+                bounds.center.latitude,
+                bounds.center.longitude,
+                map.cameraPosition.zoom)
     }
 }

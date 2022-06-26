@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Generic titles/messages -->
     <string name="loading">Загрузка…</string>
     <string name="loading_error">Произошла ошибка. Попробуйте ещё раз позже.</string>
+    <string name="please_wait_title">Пожалуйста, подождите</string>
     <string name="dash_available">%1$s доступно</string>
     <string name="network_unavailable_title">Сеть недоступна</string>
     <string name="network_unavailable_check_connection">Пожалуйста, проверьте ваше подключение к сети</string>
     <string name="network_unavailable_balance_not_accurate">Из-за потери соединения баланс может отображаться некорректно</string>
+    <string name="buy_dash">Купить Dash</string>
+    <string name="copied">Скопировано</string>
+    <string name="staking_title">Стейкинг</string>
+    <string name="email">Почта</string>
+    <string name="email_placeholder">например, johndoe@mail.com</string>
+    <string name="error">Ошибка</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Гернсийский фунт</string>
     <!-- Local Currency List: JEP -->
@@ -26,11 +34,29 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Отклонить</string>
     <string name="network_unavailable_return">Вернуться в кошелёк</string>
     <string name="button_continue">Продолжить</string>
+    <string name="button_close">Закрыть</string>
+    <string name="button_retry">Повторить</string>
+    <string name="button_send_report">Отправить отчёт</string>
+    <string name="button_info">информация</string>
+    <string name="button_copy_address">Скопировать адрес</string>
+    <string name="button_understand">Я понимаю</string>
+    <string name="button_okay">Да</string>
+    <string name="button_share">Поделиться</string>
+    <string name="verify">Подтвердить</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Поиск</string>
+    <string name="permission_allow">Разрешить</string>
+    <string name="permission_deny">Отказаться</string>
     <string name="max">Макс</string>
     <string name="select_currency">Выберите валюту</string>
+    <string name="send_coins_error_dusty_send">Сумма слишком мала для отправки</string>
+    <string name="send_coins_error_insufficient_money">Недостаточно средств</string>
+
+    <string name="empty_wallet_warning_title">Похоже, вы выводите средства из Dash Wallet</string>
+    <string name="empty_wallet_crowdnode_warning">Помните, что вы не сможете вывести средства из CrowdNode на этот кошелёк, пока на балансе не будет хотя бы 0.0003 Dash.</string>
 </resources>

@@ -20,12 +20,13 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.Process
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuard
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.crypto.KeyCrypterException
@@ -34,22 +35,19 @@ import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.bouncycastle.crypto.params.KeyParameter
-import org.slf4j.LoggerFactory
+import org.dash.wallet.common.Constants
+import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 
 open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(application) {
-
-    companion object {
-        val ECONOMIC_FEE: Coin = Coin.valueOf(1000)
-        private val log = LoggerFactory.getLogger(SendCoinsBaseViewModel::class.java)
-    }
-
     enum class SendCoinsOfflineStatus {
         SENDING,
         SUCCESS,
         INSUFFICIENT_MONEY,
         INVALID_ENCRYPTION_KEY,
         EMPTY_WALLET_FAILED,
-        FAILURE
+        FAILURE,
+        CANCELED
     }
 
     val walletApplication = application as WalletApplication
@@ -82,7 +80,7 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
         val sendRequest = paymentIntent.toSendRequest()
         sendRequest.coinSelector = ZeroConfCoinSelector.get()
         sendRequest.useInstantSend = false
-        sendRequest.feePerKb = ECONOMIC_FEE
+        sendRequest.feePerKb = Constants.ECONOMIC_FEE
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
         sendRequest.signInputs = signInputs
 
@@ -132,9 +130,13 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
         }.deriveKey(wallet, securityGuard.retrievePassword())
     }
 
-    protected open fun signAndSendPayment(sendRequest: SendRequest, txAlreadyCompleted: Boolean = false) {
+    protected open fun signAndSendPayment(
+        sendRequest: SendRequest,
+        txAlreadyCompleted: Boolean = false,
+        checkBalanceConditions: Boolean = true
+    ) {
 
-        object : SendCoinsOfflineTask(wallet, backgroundHandler) {
+        object : SendCoinsOfflineTask(wallet, walletApplication, backgroundHandler) {
 
             override fun onSuccess(transaction: Transaction) {
                 walletApplication.broadcastTransaction(transaction)
@@ -144,6 +146,21 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
 
             override fun onInsufficientMoney(missing: Coin) {
                 onSendCoinsOffline.value = Pair(SendCoinsOfflineStatus.INSUFFICIENT_MONEY, missing)
+            }
+
+            override fun onLeftoverBalanceError(ex: LeftoverBalanceException) {
+                // TODO: this viewModel should not handle UI actions like a dialog.
+                // Move this to a more appropriate place once the sending flow is
+                // more straightforward to support a clear retry logic.
+                (walletApplication.currentActivity as? FragmentActivity)?.let {
+                    MinimumBalanceDialog().show(it) { result ->
+                        if (result == true) {
+                            signAndSendPayment(sendRequest, txAlreadyCompleted, false)
+                        } else {
+                            onSendCoinsOffline.value = Pair(SendCoinsOfflineStatus.CANCELED, null)
+                        }
+                    }
+                }
             }
 
             override fun onInvalidEncryptionKey() {
@@ -158,7 +175,7 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
                 onSendCoinsOffline.value = Pair(SendCoinsOfflineStatus.FAILURE, exception)
             }
 
-        }.sendCoinsOffline(sendRequest, txAlreadyCompleted) // send asynchronously
+        }.sendCoinsOffline(sendRequest, txAlreadyCompleted, checkBalanceConditions) // send asynchronously
     }
 
     override fun onCleared() {

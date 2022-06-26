@@ -3,7 +3,9 @@ package de.schildbach.wallet.rates
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.AppDatabase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.slf4j.LoggerFactory
@@ -112,8 +114,10 @@ class ExchangeRatesRepository private constructor(): ExchangeRatesProvider {
     }
 
     // This will return null if not found
-    fun getExchangeRate(currencyCode: String): ExchangeRate? {
-        return exchangeRatesDao.getExchangeRateForCurrency(currencyCode)
+    override suspend fun getExchangeRate(currencyCode: String): ExchangeRate? {
+        return withContext(Dispatchers.IO) {
+            exchangeRatesDao.getExchangeRateForCurrency(currencyCode)
+        }
     }
 
     override fun observeExchangeRates(): Flow<List<ExchangeRate>> {

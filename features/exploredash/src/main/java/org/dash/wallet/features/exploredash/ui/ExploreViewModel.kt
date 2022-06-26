@@ -17,17 +17,27 @@
 
 package org.dash.wallet.features.exploredash.ui
 
+import android.content.Context
 import androidx.annotation.VisibleForTesting
+import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
+import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.Status
+import org.dash.wallet.common.livedata.ConnectionLiveData
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
+import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.extensions.Const
@@ -42,7 +52,7 @@ enum class ExploreTopic {
 }
 
 enum class NavigationRequest {
-    SendDash, ReceiveDash, None
+    SendDash, ReceiveDash, Staking
 }
 
 enum class FilterMode {
@@ -67,8 +77,11 @@ data class FilterOptions(
 @FlowPreview
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val exploreData: ExploreDataSource,
-    private val locationProvider: UserLocationStateInt
+    private val locationProvider: UserLocationStateInt,
+    private val syncStatusService: DataSyncStatusService,
+    private val analyticsService: AnalyticsService
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -82,13 +95,12 @@ class ExploreViewModel @Inject constructor(
 
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
-
+    var isDialogDismissedOnCancel = false
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
     val recenterMapCallback = SingleLiveEvent<Unit>()
     private var boundedFilterJob: Job? = null
     private var pagingFilterJob: Job? = null
     private var allMerchantLocationsJob: Job? = null
-
     val isMetric = Locale.getDefault().isMetric
 
     private val _searchQuery = MutableStateFlow("")
@@ -97,7 +109,8 @@ class ExploreViewModel @Inject constructor(
 
     var exploreTopic = ExploreTopic.Merchants
         private set
-
+    var previousCameraGeoBounds = GeoBounds.noBounds
+    var previousZoomLevel:  Float = -1.0f
     private var lastResolvedAddress: GeoBounds? = null
     private var _currentUserLocation: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
     val currentUserLocation = _currentUserLocation.asLiveData()
@@ -441,6 +454,10 @@ class ExploreViewModel @Inject constructor(
         navigationCallback.postValue(NavigationRequest.ReceiveDash)
     }
 
+    fun openStaking() {
+        navigationCallback.postValue(NavigationRequest.Staking)
+    }
+
     fun backFromMerchantLocation() {
         if (screenState.value == ScreenState.Details) {
             _screenState.postValue(ScreenState.MerchantLocations)
@@ -645,5 +662,186 @@ class ExploreViewModel @Inject constructor(
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     internal fun setPhysicalResults(results: List<SearchResult>) {
         _physicalSearchResults.value = results
+    }
+
+    var syncStatus: LiveData<Resource<Double>> = MediatorLiveData<Resource<Double>>().apply {
+        // combine connectivity, sync status and if the last error was observed
+        val connectivityLiveData = ConnectionLiveData(context)
+        val syncStatusLiveData = syncStatusService.getSyncProgressFlow().asLiveData()
+        val observedLastErrorLiveData = syncStatusService.hasObservedLastError().asLiveData()
+
+        fun setSyncStatus(isOnline: Boolean, progress: Resource<Double>, observedLastError: Boolean) {
+            value = when {
+                progress.exception != null -> {
+                    if (!observedLastError) {
+                        progress
+                    } else {
+                        Resource.success(100.0) // hide errors if already observed
+                    }
+                }
+                progress.status == Status.LOADING && !isOnline -> {
+                    if(!observedLastError) {
+                        Resource.error(FirebaseNetworkException("network is offline"))
+                    } else {
+                        Resource.success(100.0) // hide errors if already observed
+                    }
+                }
+                else -> progress
+            }
+        }
+        addSource(observedLastErrorLiveData) { hasObservedLastError ->
+            if (connectivityLiveData.value != null && syncStatusLiveData.value != null) {
+                setSyncStatus(connectivityLiveData.value!!, syncStatusLiveData.value!!, hasObservedLastError)
+            }
+        }
+        addSource(syncStatusLiveData) { progress ->
+            if (connectivityLiveData.value != null && observedLastErrorLiveData.value != null) {
+                setSyncStatus(connectivityLiveData.value!!, progress, observedLastErrorLiveData.value!!)
+            }
+        }
+        addSource(connectivityLiveData) { isOnline ->
+            if (syncStatusLiveData.value != null && observedLastErrorLiveData.value != null) {
+                setSyncStatus(isOnline, syncStatusLiveData.value!!, observedLastErrorLiveData.value!!)
+            }
+        }
+    }
+
+    fun setObservedLastError() {
+        viewModelScope.launch {
+            syncStatusService.setObservedLastError()
+        }
+    }
+
+    fun triggerPanAndZoomEvents(currentZoomLevel: Float, currentGeoBounds: GeoBounds){
+        when {
+            hasZoomLevelChanged(currentZoomLevel) -> {
+                if (exploreTopic == ExploreTopic.Merchants){
+                    logEvent(AnalyticsConstants.ExploreDash.ZOOM_MERCHANT_MAP)
+                } else {
+                    logEvent(AnalyticsConstants.ExploreDash.ZOOM_ATM_MAP)
+                }
+            }
+            hasCameraCenterChanged(currentGeoBounds) -> {
+                if (exploreTopic == ExploreTopic.Merchants){
+                    logEvent(AnalyticsConstants.ExploreDash.PAN_MERCHANT_MAP)
+                } else {
+                    logEvent(AnalyticsConstants.ExploreDash.PAN_ATM_MAP)
+                }
+            }
+        }
+    }
+    private fun hasZoomLevelChanged(currentZoomLevel: Float): Boolean =
+        previousZoomLevel != currentZoomLevel
+
+    private fun hasCameraCenterChanged(currentCenterPosition: GeoBounds): Boolean =
+        locationProvider.distanceBetweenCenters(previousCameraGeoBounds, currentCenterPosition) != 0.0
+
+    fun trackFilterEvents(
+        dashPaymentOn: Boolean,
+        giftCardPaymentOn: Boolean) {
+        if (dashPaymentOn){
+            if (exploreTopic == ExploreTopic.Merchants){
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_DASH)
+            } else {
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECT_DASH)
+            }
+        }
+
+        if (giftCardPaymentOn){
+            if (exploreTopic == ExploreTopic.Merchants){
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_GIFT_CARD)
+            } else {
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECT_GIFT_CARD)
+            }
+        }
+
+        if (sortByDistance == ExploreViewModel.DEFAULT_SORT_BY_DISTANCE){
+            if (exploreTopic == ExploreTopic.Merchants){
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SORT_BY_DISTANCE)
+            } else {
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SORT_BY_DISTANCE)
+            }
+        } else {
+            if (exploreTopic == ExploreTopic.Merchants){
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SORT_BY_NAME)
+            } else {
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SORT_BY_NAME)
+            }
+        }
+
+        if ( _selectedTerritory.value.isEmpty()){
+            if (exploreTopic == ExploreTopic.Merchants){
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_CURRENT_LOCATION)
+            } else {
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_CURRENT_LOCATION)
+            }
+        } else {
+            if (exploreTopic == ExploreTopic.Merchants){
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECTED_LOCATION)
+            } else {
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECTED_LOCATION)
+            }
+        }
+
+        logEvent(
+            when(_selectedRadiusOption.value){
+                1 -> {
+                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.ExploreDash.FILTER_MERCHANT_ONE_MILE
+                    else AnalyticsConstants.ExploreDash.FILTER_ATM_ONE_MILE
+                }
+                5 -> {
+                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.ExploreDash.FILTER_MERCHANT_FIVE_MILE
+                    else AnalyticsConstants.ExploreDash.FILTER_ATM_FIVE_MILE
+                }
+                50 -> {
+                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.ExploreDash.FILTER_MERCHANT_FIFTY_MILE
+                    else AnalyticsConstants.ExploreDash.FILTER_ATM_FIFTY_MILE
+                }
+                else -> {
+                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.ExploreDash.FILTER_MERCHANT_TWENTY_MILE
+                    else AnalyticsConstants.ExploreDash.FILTER_ATM_TWENTY_MILE
+                }
+            }
+        )
+
+        if (_isLocationEnabled.value == true){
+            if (exploreTopic == ExploreTopic.Merchants){
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_LOCATION_ALLOWED)
+            } else {
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_LOCATION_ALLOWED)
+            }
+        } else {
+            if (exploreTopic == ExploreTopic.Merchants){
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_LOCATION_DENIED)
+            } else {
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_LOCATION_DENIED)
+            }
+        }
+
+        if (exploreTopic == ExploreTopic.Merchants){
+            logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_APPLY_ACTION)
+        } else {
+            logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_APPLY_ACTION)
+        }
+    }
+
+    fun trackDismissEvent() {
+        if (isDialogDismissedOnCancel){
+            if (exploreTopic == ExploreTopic.Merchants){
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_CANCEL_ACTION)
+            } else {
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_CANCEL_ACTION)
+            }
+        } else {
+            if (exploreTopic == ExploreTopic.Merchants){
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SWIPE_ACTION)
+            } else {
+                logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SWIPE_ACTION)
+            }
+        }
+    }
+
+    fun logEvent(event: String){
+        analyticsService.logEvent(event, bundleOf())
     }
 }

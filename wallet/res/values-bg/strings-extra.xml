@@ -15,7 +15,6 @@
     <string name="set_pin_decrypting">Декриптиране на портфейла</string>
     <string name="set_pin_verifying_pin">Потвърждаване на ПИН</string>
     <string name="set_pin_message">Този ПИН ще бъде необходим за отключване на приложението ви всеки път, когато го използвате.</string>
-
     <string name="home_available_balance">Наличен баланс</string>
     <string name="home_balance_hidden">Скрит баланс</string>
     <string name="home_balance_show_hint">Докоснете, за да покажете баланса</string>
@@ -60,12 +59,10 @@
     <string name="scan_to_pay_error_dialog_title">Сканиране за изпращане</string>
     <string name="scan_to_pay_error_dialog_message">Не валиден Dash адреса или URL заявка в клипборда:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Не валиден Dash адреса или URL заявка в клипборда.</string>
-
     <string name="receive_title">Получаване</string>
     <string name="receive_enter_amount_message">Посочете  сумата за получаване</string>
     <string name="receive_enter_amount_button">Сума за получаване</string>
     <string name="receive_share_button">Сподели</string>
-    <string name="receive_copied">Копирано</string>
 
     <string name="pay_title">Изпрати</string>
     <string name="history_title">История</string>
@@ -112,7 +109,6 @@
     <string name="import_export_keys_dialog_password_phrase">Фразата за възстановяване отива тук.</string>
     <string name="preferences_report_issue_summary">Съберете информацията за проблема си и я изпратете  до разработчиците.</string>
     <string name="navigation_configuration">Конфигурация</string>
-    <string name="button_copy_address">Копирай адрес</string>
     <string name="request_coins_clipboard_address_msg">Dash е копиран в клипборда</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Покажи</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" не е фраза за възстановяване</string>
@@ -141,7 +137,6 @@
     <string name="wallet_lock_try_again">Опитай отново след %1$d %2$s</string>
     <string name="wallet_lock_reset">Нулиране</string>
     <string name="wallet_lock_wrong_pin">Грешен ПИН! %s</string>
-
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d оставащи опита</item>
         <item quantity="other">%d оставащи опита</item>
@@ -175,7 +170,6 @@
     <string name="notification_transactions_channel_description">Получаване на известия при входящи транзакции.</string>
     <string name="notification_synchronization_channel_name">Синхронизация</string>
     <string name="notification_synchronization_channel_description">Показване на известие, когато приложението е синхронизирано с мрежата.</string>
-
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Използвайте пръстов отпечатък за отключване.</string>
@@ -193,7 +187,6 @@
     <string name="preferences_enable_payment_request_title">BIP70 за сканиране и плащане</string>
 
     <string name="verify_continue">Продължи</string>
-    <string name="verify">Провери</string>
     <string name="verify_backup_wallet">Архивиране на портфейла</string>
     <string name="verify_show_recovery_phrase">Покажи фраза за възстановяване</string>
     <string name="verify_secure_now">Подсигури портфейл сега</string>
@@ -245,6 +238,7 @@
     <string name="tools_address_book">Адресна книга</string>
     <string name="tools_import_private_key">Импортиране на частен ключ.</string>
     <string name="tools_network_monitor">Наблюдение на мрежата</string>
+    <string name="tools_show_xpub">Разширен публичен ключ</string>
 
     <string name="about_help_us_improve">Помогнете ни да подобрим вашето преживяване</string>
     <string name="about_review_and_rate">Ревю &amp; Оценка на приложението</string>
@@ -252,7 +246,6 @@
     <string name="about_fork_disclaimer">Това е приложение с отворен код, разклонено от Bitcoin Wallet</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-
     <string name="block">Блок</string>
     <string name="time">Време</string>
     <string name="hash">Хеш</string>
@@ -305,7 +298,6 @@
 
     <string name="appwidget_wallet_not_ready">Моля, настройте вашият портфейл</string>
 
-    <string name="payment_request_please_wait_title">Моля изчакайте</string>
     <string name="payment_request_please_wait_message">Свързване към сървъра за разплащане</string>
     <string name="payment_request_unable_to_connect">Не може да се свърже</string>
     <string name="payment_request_unable_to_send">Не може да се изпрати</string>
@@ -321,4 +313,6 @@
     <string name="all_transactions">Всички</string>
     <string name="received_transactions">Получени</string>
     <string name="sent_transactions">Изпратено</string>
+    <string name="continue_reset">Продължи</string>
+    <string name="reset_wallet_text">Нулиране на портфейл</string>
 </resources>

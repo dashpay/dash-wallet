@@ -39,7 +39,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntentForRestore
-import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import de.schildbach.wallet.util.canAffordIdentityCreation
 import io.grpc.StatusRuntimeException
@@ -149,7 +149,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     suspend fun init() {
         blockchainIdentityDataDao.load()?.let {
-            blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet)
+            blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet!!)
             platformRepoInstance.initializeStateRepository()
             platformSyncJob = GlobalScope.launch {
                 log.info("Starting the platform sync job")
@@ -486,7 +486,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val hasSentInvites = invitationsDao.count() > 0
         val blockchainIdentityData = blockchainIdentityDataDao.load()
         val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.NONE
-        val canAffordIdentityCreation = walletApplication.wallet.canAffordIdentityCreation()
+        val canAffordIdentityCreation = walletApplication.wallet!!.canAffordIdentityCreation()
         return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || !hasSentInvites)
     }
 
@@ -538,7 +538,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     @Throws(Exception::class)
     suspend fun sendContactRequest(toUserId: String): DashPayContactRequest {
-        if (walletApplication.wallet.isEncrypted) {
+        if (walletApplication.wallet!!.isEncrypted) {
             // always create a SecurityGuard when it is required
             val securityGuard = SecurityGuard()
             val password = securityGuard.retrievePassword()
@@ -563,8 +563,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         // add our receiving from this contact keychain if it doesn't exist
         val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
 
-        if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
-            Context.propagate(walletApplication.wallet.context)
+        if (!walletApplication.wallet!!.hasReceivingKeyChain(contact)) {
+            Context.propagate(walletApplication.wallet!!.context)
             blockchainIdentity.addPaymentKeyChainFromContact(potentialContactIdentity, cr, encryptionKey)
 
             // update bloom filters now on main thread
@@ -635,7 +635,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         withContext(Dispatchers.IO) {
             val wallet = walletApplication.wallet
             // this will initialize any missing key chains
-            wallet.initializeAuthenticationKeyChains(seed, keyParameter)
+            wallet!!.initializeAuthenticationKeyChains(seed, keyParameter)
         }
     }
 
@@ -644,7 +644,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
-            Context.propagate(walletApplication.wallet.context)
+            Context.propagate(walletApplication.wallet!!.context)
             val cftx = blockchainIdentity.createCreditFundingTransaction(Coin.CENT, keyParameter)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
         }
@@ -656,7 +656,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun obtainCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, invite: InvitationLinkData) {
         withContext(Dispatchers.IO) {
-            Context.propagate(walletApplication.wallet.context)
+            Context.propagate(walletApplication.wallet!!.context)
             var cftxData = platform.client.getTransaction(invite.cftx)
             //TODO: remove when iOS uses big endian
             if (cftxData == null)
@@ -682,7 +682,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun registerIdentityAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
-            Context.getOrCreate(walletApplication.wallet.params)
+            Context.getOrCreate(walletApplication.wallet!!.params)
             for (i in 0 until 3) {
                 try {
                     val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_IDENTITY_CREATE)
@@ -992,11 +992,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private fun checkAndAddSentRequest(userId: String, contactRequest: ContactRequest, encryptionKey: KeyParameter? = null): Boolean {
         val contact = EvolutionContact(userId, contactRequest.toUserId.toString())
         try {
-            if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
+            if (!walletApplication.wallet!!.hasReceivingKeyChain(contact)) {
                 log.info("adding accepted/send request to wallet: ${contactRequest.toUserId}")
                 val contactIdentity = platform.identities.get(contactRequest.toUserId)
                 var myEncryptionKey = encryptionKey
-                if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
+                if (encryptionKey == null && walletApplication.wallet!!.isEncrypted) {
                     val password = try {
                         // always create a SecurityGuard when it is required
                         val securityGuard = SecurityGuard()
@@ -1026,11 +1026,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         // add the sending to contact keychain if it doesn't exist
         val contact = EvolutionContact(userId, 0, contactRequest.ownerId.toString(), contactRequest.accountReference)
         try {
-            if (!walletApplication.wallet.hasSendingKeyChain(contact)) {
+            if (!walletApplication.wallet!!.hasSendingKeyChain(contact)) {
                 log.info("adding received request: ${contactRequest.ownerId} to wallet")
                 val contactIdentity = platform.identities.get(contactRequest.ownerId)
                 var myEncryptionKey = encryptionKey
-                if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
+                if (encryptionKey == null && walletApplication.wallet!!.isEncrypted) {
                     val password = try {
                         // always create a SecurityGuard when it is required
                         val securityGuard = SecurityGuard()
@@ -1094,7 +1094,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val userIdList = HashSet<String>()
             val watch = Stopwatch.createStarted()
             var addedContact = false
-            Context.propagate(walletApplication.wallet.context)
+            Context.propagate(walletApplication.wallet!!.context)
 
             var lastContactRequestTime = if (dashPayContactRequestDao.countAllRequests() > 0) {
                 val lastTimeStamp = dashPayContactRequestDao.getLastTimestamp()
@@ -1511,7 +1511,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
-        val blockchainIdentityKeyChain = walletApplication.wallet.blockchainIdentityKeyChain
+        val blockchainIdentityKeyChain = walletApplication.wallet!!.blockchainIdentityKeyChain
                 ?: return null
         val fundingKey = blockchainIdentityKeyChain.watchingKey
         return try {
@@ -1552,7 +1552,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             : CreditFundingTransaction {
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
-        Context.propagate(walletApplication.wallet.context)
+        Context.propagate(walletApplication.wallet!!.context)
         val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter)
         val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
                 System.currentTimeMillis())
@@ -1722,9 +1722,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         if (this::blockchainIdentity.isInitialized) {
             GlobalScope.launch(Dispatchers.IO) {
                 //Context.getOrCreate(platform.params)
-                val isInvite = walletApplication.wallet.invitationFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
-                val isTopup = walletApplication.wallet.blockchainIdentityTopupKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
-                val isIdentity = walletApplication.wallet.blockchainIdentityFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
+                val isInvite = walletApplication.wallet!!.invitationFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
+                val isTopup = walletApplication.wallet!!.blockchainIdentityTopupKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
+                val isIdentity = walletApplication.wallet!!.blockchainIdentityFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
                 val identityId = cftx.creditBurnIdentityIdentifier.toStringBase58();
                 if (isInvite && !isTopup && !isIdentity && invitationsDao.loadByUserId(identityId) == null) {
                     // this is not in our database

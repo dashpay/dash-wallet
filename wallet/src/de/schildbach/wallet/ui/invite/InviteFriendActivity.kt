@@ -51,7 +51,7 @@ class InviteFriendActivity : LockScreenActivity() {
         }
 
         fun startOrError(activity: FragmentActivity, startedByHistory: Boolean = false) {
-            if (WalletApplication.getInstance().wallet.canAffordIdentityCreation()) {
+            if (WalletApplication.getInstance().wallet!!.canAffordIdentityCreation()) {
                 activity.startActivity(createIntent(activity, startedByHistory))
             } else {
                 val title = activity.getString(R.string.invitation_cant_afford_title)

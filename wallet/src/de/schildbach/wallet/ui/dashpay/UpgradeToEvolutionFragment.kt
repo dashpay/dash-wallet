@@ -24,7 +24,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.CreateUsernameActivity
-import de.schildbach.wallet.ui.MainActivityViewModel
+import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_upgrade_to_evolution.*
 
@@ -38,7 +38,7 @@ class UpgradeToEvolutionFragment : Fragment(R.layout.fragment_upgrade_to_evoluti
         }
     }
 
-    private lateinit var mainActivityViewModel: MainActivityViewModel
+    private lateinit var mainActivityViewModel: MainViewModel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -58,7 +58,7 @@ class UpgradeToEvolutionFragment : Fragment(R.layout.fragment_upgrade_to_evoluti
     }
 
     private fun initViewModel() {
-        mainActivityViewModel = ViewModelProvider(requireActivity())[MainActivityViewModel::class.java]
+        mainActivityViewModel = ViewModelProvider(requireActivity())[MainViewModel::class.java]
         mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner, Observer {
             upgradeBtn.isEnabled = it
             balance_requirement_disclaimer.visibility = if (it) View.GONE else View.VISIBLE

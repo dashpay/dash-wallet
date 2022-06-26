@@ -176,6 +176,12 @@ public final class PaymentIntent implements Parcelable {
     @Nullable
     public final String payeeUsername;
 
+    public boolean shouldConfirmAddress = false;
+
+    public void setShouldConfirmAddress(boolean confirm) {
+        shouldConfirmAddress = confirm;
+    }
+
     private static final Logger log = LoggerFactory.getLogger(PaymentIntent.class);
 
     public PaymentIntent(@Nullable final Standard standard, @Nullable final String payeeName,

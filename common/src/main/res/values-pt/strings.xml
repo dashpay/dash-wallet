@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Generic titles/messages -->
     <string name="loading">Carregando…</string>
     <string name="loading_error">Ocorreu um erro. Por favor, tente novamente mais tarde.</string>
+    <string name="please_wait_title">Espere por favor</string>
     <string name="dash_available">%1$s disponível</string>
     <string name="network_unavailable_title">A rede não está disponível</string>
     <string name="network_unavailable_check_connection">Por favor, verifique sua conexão de rede</string>
     <string name="network_unavailable_balance_not_accurate">O saldo pode não ser preciso devido à perda de conexão</string>
+    <string name="buy_dash">Comprar Dash</string>
+    <string name="copied">Copiado</string>
+    <string name="staking_title">Staking</string>
+    <string name="error">Erro</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Libra Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -26,11 +32,27 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dólar</string>
 
-    <!-- Generic Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Dispensar</string>
     <string name="network_unavailable_return">Voltar para a carteira</string>
     <string name="button_continue">Continuar</string>
+    <string name="button_close">Fechar</string>
+    <string name="button_retry">Tentar novamente</string>
+    <string name="button_send_report">Enviar Relatório</string>
+    <string name="button_info">informação</string>
+    <string name="button_copy_address">Copiar endereço</string>
+    <string name="button_understand">Eu entendo</string>
+    <string name="button_okay">Okay</string>
+    <string name="button_share">Compartilhar</string>
+    <string name="verify">Verificar</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Buscar</string>
+    <string name="permission_allow">Permitir</string>
+    <string name="permission_deny">Negar</string>
     <string name="max">Máximo</string>
     <string name="select_currency">Selecione a moeda</string>
-</resources>
+    <string name="send_coins_error_dusty_send">O valor é muito baixo para ser enviado</string>
+    <string name="send_coins_error_insufficient_money">Fundos insuficientes</string>
+
+    </resources>

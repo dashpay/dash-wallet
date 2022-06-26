@@ -65,8 +65,6 @@
     <string name="send_coins_fragment_pin_label">PIN Girin</string>
     <string name="send_coins_fragment_hint_fee_economic">%s tutarında bir ağ ücreti ödenecektir.</string>
     <string name="send_coins_fragment_hint_fee_priority">%s tutarında bir öncelik ücreti ödenecektir. Eğer düşük ücretler sizin için önemliyse, \'öncelikli\' seçeneğini sadece mümkün olduğunca hızlı bir şekilde onaya ihtiyacınız olduğu durumlarda kullanın.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Bu miktar göndermek için çok düşüktür</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Yetersiz bakiye</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Cüzdanınıza gelen küçük ödemelerin toplamı göndermek için yetersiz kalıyor.</string>
     <string name="send_coins_fragment_hint_replaying">Cüzdanınız ağ ile senkronize olmadığından şuan ödeme yapabilmeniz mümkün değil.</string>
     <string name="send_coins_fragment_direct_payment_enable">Ödemeyi doğrudan alıcıya gönder.</string>
@@ -303,6 +301,14 @@
     <string name="report_issue_dialog_collect_wallet_dump">Cüzdan dökümünü ilave et</string>
     <string name="report_issue_dialog_mail_intent_chooser">Raporu şununla gönder…</string>
     <string name="report_issue_dialog_mail_intent_failed">Rapor gönderimi başarısız.</string>
+    <string name="report_transaction_history_export">Dışa Aktar</string>
+    <string name="report_transaction_history_title">CSV Dışa Aktarma</string>
+    <string name="report_transaction_history_not_synced_title">CSV Dışa Aktarma</string>
+    <string name="report_transaction_history_not_synced_message">İşlem geçmişinizi dışa aktarmadan önce lütfen cüzdanın tamamen senkronize edilmesini bekleyin.</string>
+    <string name="report_transaction_history_message">Tam işlem geçmişi dışa aktarılacaktır.\n\nTüm ödemeler gider olarak kabul edilecek ve gelen tüm işlemler gelir olacaktır. Bu cüzdanın sahibi, seçtikleri vergi raporlama sisteminde herhangi bir maliyet esaslı ayarlama yapmaktan sorumludur.</string>
+    <string name="report_transaction_history_mail_intent_chooser">Şunu kullanarak işlem geçmişini gönder…</string>
+    <string name="report_transaction_history_dialog_mail_intent_failed">İşlem geçmişi gönderilemedi.</string>
+
     <string name="about_title">Hakkında</string>
     <string name="about_version_title">Sürüm</string>
     <string name="about_copyright_title">Telif Hakkı</string>
@@ -331,7 +337,6 @@
     <string name="button_ok">TAMAM</string>
     <string name="button_dismiss">Son Ver</string>
     <string name="button_cancel">İptal et</string>
-    <string name="button_retry">Tekrar dene</string>
     <string name="button_help">Yardım</string>
     <string name="button_add">Ekle</string>
     <string name="button_delete">Sil</string>
@@ -341,7 +346,6 @@
     <string name="button_copy">Kopyala</string>
     <string name="button_copy_request">Talebi kopyala</string>
     <string name="button_paste">Yapıştır</string>
-    <string name="button_share">Paylaş</string>
     <string name="button_set_as_default">Varsayılan olarak ayarla</string>
     <string name="button_request_coins">Dash Talep Et</string>
     <string name="button_send_coins">Dash Gönder</string>
@@ -385,5 +389,4 @@
     <string name="activity_buy_and_sell_dash_filter">Filtre</string>
     <string name="clear_filter">Filtreyi sıfırla</string>
     <string name="select_currency">Para Birimini Seçin</string>
-
 </resources>

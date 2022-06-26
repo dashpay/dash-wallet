@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:animateLayoutChanges="true"
-    android:background="@color/bg_less_bright"
+    android:background="@color/background_primary"
     android:orientation="vertical"
     tools:parentTag="android.widget.LinearLayout"
     tools:context="de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane">
@@ -30,7 +30,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:background="@color/bg_less_bright" />
+                android:background="@color/background_primary" />
 
         </LinearLayout>
 
@@ -88,7 +88,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:background="@color/bg_less_bright" />
+                android:background="@color/background_primary" />
 
         </LinearLayout>
 

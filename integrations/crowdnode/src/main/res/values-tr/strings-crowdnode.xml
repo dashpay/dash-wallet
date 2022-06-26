@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="crowdnode_get_started">CrowdNode\'a başlayın</string>
+    <string name="crowdnode_get_started_hint">Stake etmeye başlamak için CrowdNode\'da bir hesap oluşturun veya mevcut bir hesaba bağlanın.</string>
+    <string name="new_account">Yeni CrowdNode Hesabı</string>
+    <string name="account_create">Hesab Oluştur</string>
+    <string name="account_link">Mevcut Hesabı Bağla</string>
+    <string name="crowdnode_login">CrowdNode\'da oturum açın</string>
+    <string name="crowdnode_link">Mevcut CrowdNode Hesabını Bağla</string>
+    <string name="required_passphrase_backup">Dash Cüzdan\'da parolanızı yedeklemeniz gerekir</string>
+    <string name="backup_passphrase">Parolayı Yedekle</string>
+    <string name="required_dash_amount">Dash Cüzdanınızda en az %s Dash\'e ihtiyacınız var</string>
+    <string name="crowdnode_new_account_warning_1">CrowdNode, bu adresi hesap kimliğiniz olarak kullanır. Bu adresle ilişkili parolayı kaybederseniz, bu cüzdandaki ve CrowdNode hesabınızdaki paranıza erişiminizi kaybedersiniz.</string>
+    <string name="crowdnode_new_account_warning_2">Bu cüzdan adresinin sahibi olduğunuzu doğrulamak için CrowdNode\'a ve CrowdNode\'dan çok küçük miktarlarda Dash gönderilecektir.</string>
+    <string name="crowdnode_link_account_description">Bu cihazdan CrowdNode\'a yapılan tüm gönderiler, aşağıdaki Dash adresi ile gerçekleştirilecektir.</string>
+    <string name="dash_address">Dash Adresi</string>
+    <string name="primary_dash_address">Birincil Dash Adresi</string>
+    <string name="crowdnode_secure_wallet">CrowdNode hesabı oluşturmak için parolanızı yedekleyin</string>
+    <string name="crowdnode_secure_wallet_explainer">Bu cüzdan için parolanızı kaybederseniz ve bu cihazı kaybederseniz veya Dash Cüzdanını kaldırırsanız, CrowdNode\'daki fonlarınıza ve bu cüzdandaki fonlara erişiminizi kaybedersiniz.</string>
+    <string name="insufficient_funds">Devam etmek için yeterli paranız yok.</string>
+    <string name="crowdnode_minimum_dash">CrowdNode doğrulamasına devam etmek için en az %s Dash\'iniz olmalıdır.</string>
+    <string name="crowdnode_agree_to_terms">CrowdNode %1$s ve %2$s\'yi kabul ediyorum</string>
+    <string name="terms_of_use">Kullanım Şartları</string>
+    <string name="privacy_policy">Gizlilik Politikası</string>
+    <string name="crowdnode_account_ready">CrowdNode hesabınız kuruldu ve kullanıma hazır!</string>
+    <string name="notify_when_done">Kapat ve bittiğinde haber ver</string>
+    <string name="accepting_terms">Kullanım şartlarını kabul etmek…</string>
+    <string name="crowdnode_signup_error">CrowdNode hesabınızı oluşturamadık.</string>
+    <string name="crowdnode_deposit_error">CrowdNode hesabınıza para yatıramadık.</string>
+    <string name="crowdnode_withdraw_error">CrowdNode hesabınızdan para çekemedik.</string>
+    <string name="crowdnode_transfer_error">CrowdNode işleminiz başarısız oldu.</string>
+    <string name="crowdnode_deposit_received">CrowdNode\'a yaptığınız ödeme alındı.</string>
+    <string name="deposit">Para Yatır</string>
+    <string name="deposit_sent">Para yatırma işleminiz gönderildi</string>
+    <string name="deposit_sent_message">Bakiyenizin güncellenmesi birkaç dakika sürebilir.</string>
+    <string name="crowdnode_deposit_from_wallet">DashWallet ➝ CrowdNode</string>
+    <string name="from_wallet">Dash Cüzdanından</string>
+    <string name="from_crowdnode">CrowdNode\'dan</string>
+    <string name="withdraw">Para Çek</string>
+    <string name="withdrawal_requested">Para çekme isteği gönderildi</string>
+    <string name="withdrawal_requested_message">Paranızın yatması birkaç dakika sürebilir.</string>
+    <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
+    <string name="online_account">Çevrimiçi Hesap</string>
+    <string name="online_account_create">Çevrimiçi Hesap Oluştur</string>
+    <string name="crowdnode_support">CrowdNode Desteği</string>
+    <string name="unlink_account">Hesabın Bağlantısını Kaldır</string>
+    <string name="online_account_title">Neden çevrimiçi bir hesaba ihtiyacınız var?</string>
+    <string name="crowdnode_online_synced">Mevcut Dash Cüzdanı ile senkronize edildi</string>
+    <string name="crowdnode_in_process">İşlemde…</string>
+    <string name="account_recovery">Hesap Kurtarma</string>
+    <string name="crowdnode_recovery_info">Parolanızı kaybederseniz, CrowdNode fonlarınıza yeniden erişim kazanmak için kimliğinizi çeşitli yollarla doğrulayabilirsiniz.</string>
+    <string name="transaction_history">İşlem Geçmişi</string>
+    <string name="see_staking_details">Para yatırma, çekme ve ödüllerinizin detaylı bilgileri görebilirsiniz.</string>
+    <string name="payout_options">Ödeme Seçenekleri</string>
+    <string name="payout_options_details">Ödüllerinizin nasıl ve ne zaman ödeneceğini değiştirebilirsiniz.</string>
+    <string name="crowdnode_balance">CrowdNode\'daki Bakiye</string>
+    <string name="chain_syncing">Zincir senkronize ediliyor…</string>
+    <string name="crowdnode_wait_for_sync">Zincir tamamen senkronize olana kadar bekleyin, böylece işlem geçmişinizi gözden geçirebiliriz. Giriş yapmak veya kaydolmak için CrowdNode web sitesini ziyaret edin.</string>
+    <string name="crowdnode_open_website">CrowdNode web sitesine gidin</string>
+    <string name="crowdnode_info_title">CrowdNode ile Dash Masternode\'un parçası olun</string>
+    <string name="introducing_staking">Staking\'e Giriş</string>
+    <string name="crowdnode_staking_info">0,5 Dash gibi küçük bir miktar ile Dash Masternode\'da para yatırma işlemlerinden ödüller kazanın.</string>
+    <string name="instant_rewards">Anında Ödül Kazanın</string>
+    <string name="daily_rewards_info">Günlük ödül payınızı alın.</string>
+    <string name="crowdnode_sending_to">CrowdNode hesabına gönderme</string>
+    <string name="wallet_sending_to">Bu cihazdaki Dash Cüzdan\'ına gönderiliyor</string>
+    <string name="available_balance">Bakiye: %s</string>
+    <string name="crowdnode_minimum_deposit">Kazanmaya başlamak için en az %s yatırın</string>
+    <string name="crowdnode_minimum_deposit_difference">Kazanmaya başlamak için %s yatırın</string>
+    <string name="crowdnode_first_deposit">İlk depozito %s\'den fazla olmalıdır</string>
+    <string name="crowdnode_staking_info_title">Staking nasıl çalışır?</string>
+    <string name="crowdnode_staking_info_message">CrowdNode hesabınızda %s\'den fazla varsa kazanmaya başlarsınız</string>
+    <string name="crowdnode_verify_api_address">API Dash adresinizi doğrulayın</string>
+    <string name="crowdnode_how_to_verify">API Dash adresinizi nasıl onaylarsınız?</string>
+    <string name="crowdnode_how_to_verify_description1">Şu anda CrowdNode hesabınız için kullandığınız birincil Dash adresinizden %s Dash gönderin</string>
+    <string name="crowdnode_how_to_verify_description2">bu cihazdaki Dash Cüzdanından CrowdNode hesabınız için belirlenen Dash adresine</string>
+    <string name="crowdnode_how_to_verify_description3">Bu işlemi otomatik olarak algılayacağız ve aynı tutarı CrowdNode hesabınıza aktaracağız. Bundan sonra, bu cihazda Dash Cüzdan\'dan para yatırma ve çekme işlemi yapabileceksiniz.</string>
+    <string name="button_show_qr">QR Göster</string>
+    <string name="scan_qr">QR Tara</string>
+    <string name="qr_contains_request">Bu QR, %s Dash için ödeme talebini zaten içeriyor</string>
+    <string name="verification_required">Doğrulama Gerekli</string>
+    <string name="validating_address">Adres doğrulanıyor…</string>
+    <string name="crowdnode_address_validated">CrowdNode adresiniz onaylandı, ancak doğrulama gerekiyor.</string>
+    <string name="crowdnode_address_confirmed">CrowdNode adresiniz onaylandı.</string>
+    <string name="crowdnode_bad_confirmation">Yanlış bir birincil adresten gönderilen onay</string>
+    <string name="crowdnode_online_account_details_title">Çevrimiçi hesabınızla ilgili bilgiler</string>
+    <string name="crowdnode_online_account_details_primary">Şu anda CrowdNode hesabınız için kullandığınız birincil Dash adresiniz</string>
+    <string name="crowdnode_online_account_details_api">Bu cihazdaki Dash Cüzdanında CrowdNode hesabınız için belirlenmiş Dash adresi</string>
+    </resources>

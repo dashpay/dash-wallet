@@ -1,0 +1,46 @@
+<!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="50dp"
+    android:height="50dp"
+    android:viewportWidth="50"
+    android:viewportHeight="50">
+  <path
+      android:pathData="M24.5,24.5m-25,0a25,25 0,1 1,50 0a25,25 0,1 1,-50 0"
+      android:strokeLineJoin="miter"
+      android:strokeWidth="0"
+      android:fillColor="#FFEFED"
+      android:fillType="nonZero"
+      android:strokeColor="#00000000"
+      android:strokeLineCap="butt"/>
+  <path
+      android:pathData="M24.9907,40C27.0464,40 28.9783,39.6097 30.7864,38.829C32.5944,38.0483 34.1888,36.9641 35.5697,35.5762C36.9505,34.1883 38.034,32.5898 38.8204,30.7807C39.6068,28.9715 40,27.0446 40,25C40,22.9554 39.6068,21.0285 38.8204,19.2193C38.034,17.4102 36.9474,15.8116 35.5603,14.4238C34.1734,13.0359 32.5758,11.9517 30.7678,11.171C28.9598,10.3903 27.0279,10 24.9721,10C22.9288,10 21.0031,10.3903 19.1951,11.171C17.387,11.9517 15.7957,13.0359 14.421,14.4238C13.0464,15.8116 11.9659,17.4102 11.1796,19.2193C10.3932,21.0285 10,22.9554 10,25C10,27.0446 10.3932,28.9715 11.1796,30.7807C11.9659,32.5898 13.0495,34.1883 14.4303,35.5762C15.8111,36.9641 17.4056,38.0483 19.2136,38.829C21.0217,39.6097 22.9474,40 24.9907,40Z"
+      android:strokeLineJoin="miter"
+      android:strokeWidth="1"
+      android:fillColor="#FA9269"
+      android:fillType="nonZero"
+      android:strokeColor="#00000000"
+      android:strokeLineCap="butt"/>
+  <path
+      android:pathData="M18.0063,19.6656L21.6843,16.1154C21.9196,15.8799 22.1797,15.7622 22.4645,15.7622C22.7865,15.7622 23.0497,15.8644 23.254,16.0689C23.4583,16.2734 23.5605,16.5367 23.5605,16.8589C23.5605,17.1687 23.4552,17.4227 23.2447,17.6209L21.7958,19.0336L21.3686,19.4053L21.9258,19.3868L31.2138,19.3868C31.5234,19.3868 31.7834,19.4921 31.9939,19.7027C32.2044,19.9134 32.3097,20.1798 32.3097,20.502C32.3097,20.8118 32.2044,21.072 31.9939,21.2827C31.7834,21.4933 31.5234,21.5986 31.2138,21.5986L21.9073,21.5986L21.35,21.5615L21.7958,21.9518L23.2447,23.3644C23.4552,23.5751 23.5605,23.8291 23.5605,24.1265C23.5605,24.4487 23.4583,24.7089 23.254,24.9072C23.0497,25.1055 22.7865,25.2046 22.4645,25.2046C22.2045,25.2046 21.9444,25.1055 21.6843,24.9072L18.0063,21.3198C17.7834,21.0968 17.672,20.8211 17.672,20.4927C17.672,20.1643 17.7834,19.8886 18.0063,19.6656ZM31.9568,30.3533L28.2788,33.9406C28.0187,34.1637 27.7586,34.2752 27.4986,34.2752C27.1766,34.2752 26.9134,34.173 26.7091,33.9685C26.5048,33.7641 26.4026,33.5008 26.4026,33.1786C26.4026,32.8936 26.5141,32.6395 26.737,32.4165L28.1859,31.0039L28.6317,30.6321L28.0373,30.6507L18.7494,30.6507C18.4398,30.6507 18.1828,30.5485 17.9785,30.344C17.7741,30.1395 17.672,29.8762 17.672,29.554C17.672,29.2319 17.7741,28.9655 17.9785,28.7548C18.1828,28.5441 18.4398,28.4388 18.7494,28.4388L28.0559,28.4388L28.6317,28.476L28.1859,28.0856L26.6998,26.673C26.5017,26.4499 26.4026,26.1959 26.4026,25.9109C26.4026,25.5887 26.5048,25.3285 26.7091,25.1302C26.9134,24.932 27.1766,24.8328 27.4986,24.8328C27.7834,24.8328 28.0435,24.9382 28.2788,25.1488L31.9568,28.7362C32.1797,28.9592 32.2942,29.2257 32.3004,29.5355C32.3066,29.8453 32.1921,30.1179 31.9568,30.3533Z"
+      android:strokeLineJoin="miter"
+      android:strokeWidth="1"
+      android:fillColor="#FFFFFF"
+      android:fillType="nonZero"
+      android:strokeColor="#00000000"
+      android:strokeLineCap="butt"/>
+</vector>

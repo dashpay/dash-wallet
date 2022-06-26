@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <!-- Explore screen -->
+    <string name="explore_dash">Jelajahi Dash</string>
+    <string name="explore_title">Jelajahi</string>
+    <string name="explore_subtitle">Berbelanja dengan mudah dengan DASH di lebih dari 155.000 lokasi dan pedagang online</string>
+    <string name="explore_merchants_title">Dimana harus Belanja?</string>
+    <string name="explore_merchants_subtitle">Temukan pedagang yang menerima Dash sebagai pembayaran.</string>
+    <string name="explore_atms_title">ATM</string>
+    <string name="explore_atms_subtitle">Temukan tempat untuk membeli atau menjual DASH dan mata uang kripto lainnya secara tunai.</string>
+    <string name="explore_staking_subtitle">Stake Dash dengan mudah dan dapatkan penghasilan pasif dengan beberapa klik yang mudah.</string>
+
+    <!-- Search -->
+    <string name="explore_search_results">Hasil pencarian</string>
+    <string name="explore_physical_merchant">Pedagang Fisik</string>
+    <string name="explore_online_merchant">Online</string>
+    <string name="explore_both_types_merchant">Online, Pedagang Fisik</string>
+    <string name="explore_multiple_locations">+ beberapa lokasi</string>
+    <string name="explore_option_all">Semua</string>
+    <string name="explore_option_buy">Beli</string>
+    <string name="explore_option_sell">Jual</string>
+    <string name="explore_option_buy_sell">Beli &amp; Jual</string>
+    <string name="explore_where_to_spend">Dimana harus Belanja</string>
+    <string name="explore_atms">ATM</string>
+    <string name="explore_all_states">Semua negara bagian</string>
+    <string name="explore_no_results">Tidak ada hasil yang ditemukan</string>
+    <string name="explore_all_merchants">Semua Toko</string>
+    <string name="explore_in_radius">%1$s di %2$s</string>
+    <string name="explore_no_merchants">Tidak ada Pedagang</string>
+    <string name="explore_no_atms">Tidak ada ATM</string>
+    <string name="distance_miles">%smil</string>
+    <string name="distance_kilometers">%s kilometer</string>
+
+    <plurals name="explore_merchant_amount">
+        <item quantity="other">%dtoko</item>
+    </plurals>
+
+    <plurals name="explore_atm_amount">
+        <item quantity="other">%d ATM</item>
+    </plurals>
+
+    <!-- Details -->
+    <string name="explore_back_to_locations">Kembali ke semua lokasi</string>
+    <string name="explore_back_to_nearest">Kembali ke lokasi terdekat</string>
+    <string name="explore_select_location">Pilih Lokasi</string>
+    <string name="explore_pay_with_dash">Bayar dengan Dash</string>
+    <string name="explore_buy_gift_card">Beli Kartu Hadiah</string>
+    <string name="explore_buy_dash">Beli Dash</string>
+    <string name="explore_sell_dash">Jual Dash</string>
+    <string name="explore_show_all">Tampilkan Semua Lokasi</string>
+    <string name="explore_atm_location_hint">ATM ini terletak di</string>
+    <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
+
+    <!-- Filters -->
+    <string name="explore_filter">Menyaring</string>
+    <string name="explore_filters">Menyaring</string>
+    <string name="explore_apply_filter">Terapkan</string>
+    <string name="explore_payment_method">Metode Pembayaran</string>
+    <string name="explore_payment_dash">Dash</string>
+    <string name="explore_payment_gift_card">Kartu Hadiah</string>
+    <string name="explore_radius">Radius</string>
+    <string name="explore_location">Lokasi</string>
+    <string name="explore_current_location">Lokasi Saat ini</string>
+    <string name="explore_location_settings">Pengaturan Lokasi Saat ini</string>
+    <string name="explore_reset_filters">Setel Ulang Filter</string>
+    <string name="explore_reset_all_filters">Setel Ulang Semua Filter</string>
+    <string name="explore_filtered_by">Difilter oleh:</string>
+    <string name="explore_pay_gift_card">Bayar dengan kartu hadiah</string>
+    <string name="explore_sort_by">Urutkan dengan</string>
+
+    <string-array name="merchants_filter_options">
+        <item>Online</item>
+        <item>Terdekat</item>
+        <item>Semua</item>
+    </string-array>
+
+    <string-array name="atms_filter_options">
+        <item>Semua</item>
+        <item>Beli</item>
+        <item>Jual</item>
+        <item>Beli/Jual</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_miles">
+        <item>1 mil</item>
+        <item>5 mil</item>
+        <item>20 mil</item>
+        <item>50 mil</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_kilometers">
+        <item>1 kilometer</item>
+        <item>5 kilometer</item>
+        <item>20 kilometer</item>
+        <item>50 kilometer</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>Nama</item>
+        <item>Jarak</item>
+    </string-array>
+
+    <plurals name="radius_miles">
+        <item quantity="other">%d mil</item>
+    </plurals>
+
+    <plurals name="radius_kilometers">
+        <item quantity="other">%d kilometer</item>
+    </plurals>
+
+    <!-- Location Permission -->
+    <string name="explore_location_allowed">Diizinkan</string>
+    <string name="explore_location_denied">Ditolak</string>
+    <string name="explore_manager_permissions">Kelola Izin GPS</string>
+    <string name="explore_location_request">Berikan izin GPS sehingga kami dapat menunjukkan lokasi di dekat Anda.</string>
+    <string name="explore_location_explainer">Lokasi Anda digunakan untuk menunjukkan posisi Anda di peta, pedagang di radius yang dipilih, dan meningkatkan hasil pencarian.</string>
+    <string name="explore_merchant_location_explainer_title">Pencarian pedagang bekerja lebih baik dengan Layanan Lokasi diaktifkan.</string>
+    <string name="explore_merchant_location_explainer_message">Lokasi Anda digunakan untuk menunjukkan posisi Anda di peta, pedagang di radius yang dipilih, dan meningkatkan hasil pencarian.</string>
+    <string name="explore_atm_location_explainer_title">Pencarian ATM bekerja lebih baik dengan Layanan Lokasi dihidupkan.</string>
+    <string name="explore_atm_location_explainer_message">Lokasi Anda digunakan untuk menunjukkan posisi Anda di peta, ATM dalam radius yang dipilih dan meningkatkan hasil pencarian.</string>
+
+    <!-- Info screens -->
+    <string name="explore_info_header_text">Kami memiliki 2 jenis pedagang</string>
+    <string name="accept_dash_text">Menerima DASH secara langsung</string>
+    <string name="pay_with_dash_text">Bayar dengan dompet DASH.</string>
+    <string name="buy_gift_card_text">Beli kartu hadiah dengan Dash Anda</string>
+    <string name="buy_gift_card_desc_text">Beli kartu hadiah dengan Dash untuk jumlah yang tepat dari pembelian Anda.</string>
+    <string name="learn_more_text">Pelajari lebih lanjut</string>
+    <string name="continue_text">Teruskan</string>
+    <string name="buy_card_header_text">Cara Menggunakan Kartu Hadiah</string>
+    <string name="buy_card_desc_text">Tidak semua toko menerima DASH secara langsung, tetapi Anda dapat membeli kartu hadiah dengan Dash.</string>
+    <string name="find_merchant_text">Cari pedagang.</string>
+    <string name="buy_gift_card_with_dash_text">Beli kartu hadiah dengan Dash.</string>
+    <string name="redeem_gift_card_text">Tukarkan kartu hadiah Anda secara online dalam hitungan detik atau di kasir.</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Sinkronisasi sedang berlangsung... Hasil mungkin tidak lengkap.</string>
+    <string name="sync_in_progress_error">Sinkronisasi sedang berlangsung... Terjadi kesalahan.</string>
+    <string name="sync_in_progress_canceled">Sinkronisasi dibatalkan... Upaya lain akan dilakukan nanti.</string>
+
+    <string name="sync_in_progress_file_not_found">Kesalahan Pembuatan: Basis data tidak ditemukan!</string>
+    <string name="sync_in_progress_network_error">Sinkronisasi terputus... Jaringan sedang offline atau tidak dapat dijangkau</string>
+</resources>

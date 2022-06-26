@@ -38,16 +38,16 @@ source_lang = en
 type = ANDROID
 
 [dash-mobile-wallets.strings-uphold]
-file_filter = uphold-integration/src/main/res/values-<lang>/strings-uphold.xml
+file_filter = integrations/uphold/src/main/res/values-<lang>/strings-uphold.xml
 lang_map = sl_SI:sl, zh_TW:zh-rTW
-source_file = uphold-integration/src/main/res/values/strings-uphold.xml
+source_file = integrations/uphold/src/main/res/values/strings-uphold.xml
 source_lang = en
 type = ANDROID
 
 [dash-mobile-wallets.strings-liquid]
-file_filter = liquid-integration/src/main/res/values-<lang>/strings-liquid.xml
+file_filter = integrations/liquid/src/main/res/values-<lang>/strings-liquid.xml
 lang_map = sl_SI:sl, zh_TW:zh-rTW
-source_file = liquid-integration/src/main/res/values/strings-liquid.xml
+source_file = integrations/liquid/src/main/res/values/strings-liquid.xml
 source_lang = en
 type = ANDROID
 
@@ -55,5 +55,12 @@ type = ANDROID
 file_filter = features/exploredash/src/main/res/values-<lang>/strings-explore-dash.xml
 lang_map = sl_SI:sl, zh_TW:zh-rTW
 source_file = features/exploredash/src/main/res/values/strings-explore-dash.xml
+source_lang = en
+type = ANDROID
+
+[dash-mobile-wallets.strings-crowdnode]
+file_filter = integrations/crowdnode/src/main/res/values-<lang>/strings-crowdnode.xml
+lang_map = sl_SI:sl, zh_TW:zh-rTW
+source_file = integrations/crowdnode/src/main/res/values/strings-crowdnode.xml
 source_lang = en
 type = ANDROID

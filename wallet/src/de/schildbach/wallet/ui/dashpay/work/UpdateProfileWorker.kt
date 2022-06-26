@@ -16,7 +16,7 @@ import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
-import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuard
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -25,7 +25,6 @@ import java.io.File
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.*
-import javax.inject.Inject
 
 @HiltWorker
 class UpdateProfileWorker @AssistedInject constructor(

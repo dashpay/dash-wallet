@@ -17,11 +17,11 @@
 
 package org.dash.wallet.features.exploredash.ui.dialogs
 
+import android.content.DialogInterface
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -46,9 +46,9 @@ import javax.inject.Inject
 @FlowPreview
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
-class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
+class FiltersDialog: OffsetDialogFragment() {
     override val background: Int
-        get() = R.drawable.gray_background_rounded
+        get() = R.drawable.primary_background_rounded
 
     private val radiusOptions = listOf(1, 5, 20, 50)
     private var selectedRadiusOption: Int = ExploreViewModel.DEFAULT_RADIUS_OPTION
@@ -120,6 +120,10 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
 
         binding.resetFiltersBtn.setOnClickListener {
             resetFilters()
+        }
+        binding.collapseButton.setOnClickListener {
+            viewModel.isDialogDismissedOnCancel = true
+            dismiss()
         }
     }
 
@@ -211,14 +215,12 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
          binding.locationLabel.isVisible = true
          binding.locationBtn.isVisible = true
 
-         binding.locationName.text = if (territory.isEmpty()) {
-            if (viewModel.isLocationEnabled.value == true) {
-                getString(R.string.explore_current_location)
-            } else {
-                getString(R.string.explore_all_states)
-            }
-         } else {
-             territory
+         binding.locationName.text = territory.ifEmpty {
+             if (viewModel.isLocationEnabled.value == true) {
+                 getString(R.string.explore_current_location)
+             } else {
+                 getString(R.string.explore_all_states)
+             }
          }
 
          selectedTerritory = territory
@@ -297,6 +299,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
 
             viewModel.paymentMethodFilter = paymentFilter
         }
+        viewModel.trackFilterEvents(dashPaymentOn, giftCardPaymentOn)
     }
 
     private fun checkResetButton() {
@@ -341,5 +344,10 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         sortByOptionsAdapter?.selectedIndex = if (sortByDistance) 1 else 0
 
         binding.resetFiltersBtn.isEnabled = false
+    }
+
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+        viewModel.trackDismissEvent()
     }
 }

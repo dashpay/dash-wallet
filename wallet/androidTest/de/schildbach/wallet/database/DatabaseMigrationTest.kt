@@ -24,9 +24,8 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.data.AppDatabaseMigrations.Companion.migration2To3
+import de.schildbach.wallet.data.AppDatabaseMigrations.Companion.migration8To10
 import kotlinx.coroutines.runBlocking
-import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,7 +40,7 @@ open class DatabaseMigrationTest {
         private const val EXCHANGE_RATE = "31438.8212"
     }
 
-    private val migrations = arrayOf(migration2To3)
+    private val migrations = arrayOf(migration8To10)
 
     @Rule
     @JvmField
@@ -55,7 +54,7 @@ open class DatabaseMigrationTest {
     @Throws(IOException::class)
     fun migrateAll() {
         // Create db and fill with data
-        testHelper.createDatabase(TEST_DB_NAME, 2).apply {
+        testHelper.createDatabase(TEST_DB_NAME, 8).apply {
             var values = ContentValues()
             values.put("id", 1)
             values.put("bestChainDate", 1633356847000)
@@ -83,19 +82,6 @@ open class DatabaseMigrationTest {
 
         // Check that data is valid
         runBlocking {
-            val merchant = Merchant().apply {
-                id = 5
-                name = "Merchant 5"
-                active = true
-                addDate = "2021-09-12T15:26:00.000Z"
-                address1 = "Address1 5"
-                type = "physical"
-            }
-            db.merchantDao().save(listOf(merchant))
-
-            val savedMerchant = db.merchantDao().getMerchant(5)
-            assert(savedMerchant!!.name == merchant.name)
-
             val savedBlockchainState = db.blockchainStateDao().loadSync()
             assert(savedBlockchainState!!.bestChainHeight == BLOCKCHAIN_HEIGHT)
 

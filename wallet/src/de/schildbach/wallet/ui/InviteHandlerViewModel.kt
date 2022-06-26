@@ -16,19 +16,24 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
+import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
-class InviteHandlerViewModel(application: Application) : BaseProfileViewModel(application) {
+@HiltViewModel
+class InviteHandlerViewModel @Inject constructor(
+    application: WalletApplication
+) : BaseProfileViewModel(application) {
 
     private val log = LoggerFactory.getLogger(InviteHandlerViewModel::class.java)
 

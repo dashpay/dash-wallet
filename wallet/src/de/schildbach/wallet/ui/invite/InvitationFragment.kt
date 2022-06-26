@@ -83,6 +83,6 @@ abstract class InvitationFragment(fragmentResId: Int) : Fragment(fragmentResId) 
     protected fun copyInvitationLink(shortLink: String?) {
         val clipboardManager = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboardManager.setPrimaryClip(ClipData.newPlainText(getString(R.string.invitation_share_title), shortLink))
-        Toast(context).toast(R.string.receive_copied)
+        Toast(context).toast(R.string.copied)
     }
 }
