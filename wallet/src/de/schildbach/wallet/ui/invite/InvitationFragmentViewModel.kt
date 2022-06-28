@@ -31,6 +31,7 @@ import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
@@ -47,8 +48,10 @@ import javax.inject.Inject
 @HiltViewModel
 open class InvitationFragmentViewModel @Inject constructor(
     application: WalletApplication,
-    private val analytics: AnalyticsService
-) : BaseProfileViewModel(application) {
+    private val analytics: AnalyticsService,
+    appDatabase: AppDatabase,
+    private val platformRepo: PlatformRepo
+) : BaseProfileViewModel(application, appDatabase) {
     private val log = LoggerFactory.getLogger(InvitationFragmentViewModel::class.java)
 
     private val pubkeyHash = walletApplication.wallet!!.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash

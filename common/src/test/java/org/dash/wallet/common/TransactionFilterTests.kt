@@ -22,7 +22,6 @@ import org.bitcoinj.core.*
 import org.bitcoinj.params.TestNet3Params
 import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
 import org.dash.wallet.common.transactions.CoinsToAddressTxFilter
-import org.dashj.bls.Utils
 import org.junit.Test
 
 class TransactionFilterTests {

@@ -30,6 +30,7 @@ import com.google.api.services.drive.Drive
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
@@ -67,8 +68,9 @@ import kotlin.coroutines.suspendCoroutine
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
     application: WalletApplication,
-    private val analytics: AnalyticsService
-) : BaseProfileViewModel(application) {
+    private val analytics: AnalyticsService,
+    appDatabase: AppDatabase
+) : BaseProfileViewModel(application, appDatabase) {
 
     enum class ProfilePictureStorageService {
         GOOGLE_DRIVE, IMGUR

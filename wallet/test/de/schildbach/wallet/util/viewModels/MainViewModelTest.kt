@@ -19,9 +19,15 @@ package de.schildbach.wallet.util.viewModels
 
 import android.content.ClipDescription
 import android.content.ClipboardManager
+import android.os.Looper
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import androidx.lifecycle.MutableLiveData
+import androidx.work.WorkManager
+import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
@@ -64,10 +70,33 @@ class MainCoroutineRule(
 
 @ExperimentalCoroutinesApi
 class MainViewModelTest {
-    private val configMock = mockk<Configuration>()
+    private val configMock = mockk<Configuration> {
+        every { exchangeCurrencyCode } returns "USD"
+        every { format } returns MonetaryFormat()
+        every { hideBalance } returns false
+        every { registerOnSharedPreferenceChangeListener(any()) } just runs
+        every { areNotificationsDisabled() } returns false
+    }
     private val blockChainStateMock = mockk<BlockchainStateDao>()
     private val exchangeRatesMock = mockk<ExchangeRatesProvider>()
     private val walletDataMock = mockk<WalletDataProvider>()
+    private val walletApp = mockk<WalletApplication> {
+        every { applicationContext } returns mockk()
+    }
+    private val appDatabaseMock = mockk<AppDatabase> {
+        every { blockchainIdentityDataDaoAsync() } returns mockk {
+            every { loadBase() } returns MutableLiveData(null)
+        }
+        every { dashPayProfileDaoAsync() } returns mockk {
+            every { loadByUserIdDistinct(any()) } returns MutableLiveData(null)
+        }
+        every { invitationsDaoAsync() } returns mockk {
+            every { loadAll() } returns MutableLiveData(listOf())
+        }
+    }
+    private val workManagerMock = mockk<WorkManager> {
+        every { getWorkInfosByTagLiveData(any()) } returns MutableLiveData(listOf())
+    }
 
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
@@ -77,14 +106,20 @@ class MainViewModelTest {
 
     @Before
     fun setup() {
-        every { configMock.exchangeCurrencyCode } returns "USD"
-        every { configMock.format } returns MonetaryFormat()
-        every { configMock.hideBalance } returns false
-        every { configMock.registerOnSharedPreferenceChangeListener(any()) } just runs
-
         every { blockChainStateMock.observeState() } returns flow { BlockchainState() }
         every { exchangeRatesMock.observeExchangeRate(any()) } returns flow { ExchangeRate("USD", "100") }
         every { walletDataMock.observeBalance() } returns flow { Coin.COIN }
+
+        mockkStatic(WalletApplication::class)
+        every { WalletApplication.getInstance() } returns mockk {
+            every { mainLooper } returns Looper.getMainLooper()
+        }
+
+        mockkObject(PlatformRepo.Companion)
+        every { PlatformRepo.Companion.getInstance() } returns mockk()
+
+        mockkStatic(WorkManager::class)
+        every { WorkManager.getInstance(any()) } returns workManagerMock
     }
 
     @Test
@@ -92,7 +127,10 @@ class MainViewModelTest {
         val clipboardManagerMock = mockk<ClipboardManager>()
         every { clipboardManagerMock.hasPrimaryClip() } returns false
 
-        val viewModel = spyk(MainViewModel(mockk(), clipboardManagerMock, configMock, blockChainStateMock, exchangeRatesMock, walletDataMock))
+        val viewModel = spyk(MainViewModel(
+            mockk(), clipboardManagerMock, configMock, blockChainStateMock,
+            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk()
+        ))
 
         val clipboardInput = viewModel.getClipboardInput()
         assertEquals("", clipboardInput)
@@ -108,7 +146,10 @@ class MainViewModelTest {
         every { clipboardManagerMock.hasPrimaryClip() } returns true
         every { clipboardManagerMock.primaryClip?.description } returns clipDescription
 
-        val viewModel = spyk(MainViewModel(mockk(), clipboardManagerMock, configMock, blockChainStateMock, exchangeRatesMock, walletDataMock))
+        val viewModel = spyk(MainViewModel(
+            mockk(), clipboardManagerMock, configMock, blockChainStateMock,
+            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk()
+        ))
 
         every { clipboardManagerMock.primaryClip?.getItemAt(0)?.uri?.toString() } returns mockUri
         every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST) } returns true
@@ -137,8 +178,10 @@ class MainViewModelTest {
     @Test
     fun observeBlockchainState_replaying_notSynced() {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
-        val viewModel = spyk(MainViewModel(mockk(), mockk(), configMock, blockChainStateMock, exchangeRatesMock, walletDataMock))
-
+        val viewModel = spyk(MainViewModel(
+            mockk(), mockk(), configMock, blockChainStateMock,
+            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk()
+        ))
         assertEquals(false, viewModel.isBlockchainSynced.value)
         assertEquals(false, viewModel.isBlockchainSyncFailed.value)
     }
@@ -147,7 +190,10 @@ class MainViewModelTest {
     fun observeBlockchainState_progress100percent_synced() {
         val state = BlockchainState().apply { replaying = false; percentageSync = 100 }
         every { blockChainStateMock.observeState() } returns MutableStateFlow(state)
-        val viewModel = spyk(MainViewModel(mockk(), mockk(), configMock, blockChainStateMock, exchangeRatesMock, walletDataMock))
+        val viewModel = spyk(MainViewModel(
+            mockk(), mockk(), configMock, blockChainStateMock,
+            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk()
+        ))
 
         assertEquals(true, viewModel.isBlockchainSynced.value)
         assertEquals(false, viewModel.isBlockchainSyncFailed.value)

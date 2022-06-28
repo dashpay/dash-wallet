@@ -391,6 +391,10 @@ android {
     buildFeatures {
         viewBinding true
     }
+    testOptions {
+        unitTests.includeAndroidResources  = true
+        unitTests.returnDefaultValues = true
+    }
 }
 
 apply from: file("../gradle/google-services.gradle")

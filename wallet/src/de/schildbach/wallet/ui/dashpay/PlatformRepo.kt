@@ -90,6 +90,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         private val platformRepoInstance = PlatformRepo(WalletApplication.getInstance())
 
         @JvmStatic
+        @Deprecated("Inject instead")
         fun getInstance(): PlatformRepo {
             return platformRepoInstance
         }

@@ -128,6 +128,7 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
+import kotlin.Deprecated;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
 import kotlinx.coroutines.flow.Flow;
@@ -986,6 +987,7 @@ public class WalletApplication extends BaseWalletApplication
                 .build();
     }
 
+    @Deprecated(message = "Inject instead")
     public static WalletApplication getInstance() {
         return instance;
     }

@@ -62,8 +62,10 @@ class MainViewModel @Inject constructor(
     blockchainStateDao: BlockchainStateDao,
     exchangeRatesProvider: ExchangeRatesProvider,
     private val walletData: WalletDataProvider,
-    walletApplication: WalletApplication
-) : BaseProfileViewModel(walletApplication) {
+    walletApplication: WalletApplication,
+    appDatabase: AppDatabase,
+    val platformRepo: PlatformRepo
+) : BaseProfileViewModel(walletApplication, appDatabase) {
     companion object {
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
@@ -115,7 +117,7 @@ class MainViewModel @Inject constructor(
        }
    }
 
-    val inviteHistory = AppDatabase.getAppDatabase().invitationsDaoAsync().loadAll()
+    val inviteHistory = appDatabase.invitationsDaoAsync().loadAll()
     val canAffordIdentityCreationLiveData = CanAffordIdentityCreationLiveData(walletApplication)
 
     val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
@@ -139,7 +141,7 @@ class MainViewModel @Inject constructor(
     val goBackAndStartActivityEvent = SingleLiveEvent<Class<*>>()
     val showCreateUsernameEvent = SingleLiveEventExt<Unit>()
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
-    val seriousErrorLiveData = SeriousErrorLiveData(PlatformRepo.getInstance())
+    val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
     var processingSeriousError = false
 
     val notificationCountData =
@@ -195,7 +197,7 @@ class MainViewModel @Inject constructor(
         // don't query alerts if notifications are disabled
         if (config.areNotificationsDisabled()) {
             val lastSeenNotification = config.lastSeenNotificationTime
-            AppDatabase.getAppDatabase().userAlertDaoAsync()
+            appDatabase.userAlertDaoAsync()
                 .load(lastSeenNotification).observeForever { userAlert: UserAlert? ->
                     if (userAlert != null) {
                         forceUpdateNotificationCount()

@@ -31,8 +31,9 @@ import javax.inject.Inject
 @HiltViewModel
 class CreateInviteViewModel @Inject constructor(
     application: WalletApplication,
-    private val analytics: AnalyticsService
-) : BaseProfileViewModel(application) {
+    private val analytics: AnalyticsService,
+    appDatabase: AppDatabase
+) : BaseProfileViewModel(application, appDatabase) {
 
     val blockchainStateData = AppDatabase.getAppDatabase().blockchainStateDao().load()
     val blockchainState: BlockchainState?

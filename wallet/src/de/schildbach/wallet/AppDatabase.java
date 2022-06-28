@@ -28,6 +28,7 @@ import de.schildbach.wallet.data.UserAlertDaoAsync;
 import de.schildbach.wallet.data.BlockchainStateRoomConverters;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 import de.schildbach.wallet.ui.dashpay.UserAlert;
+import kotlin.Deprecated;
 
 /**
  * @author Samuel Barbosa
@@ -70,6 +71,7 @@ public abstract class AppDatabase extends RoomDatabase {
 
     public abstract UserAlertDaoAsync userAlertDaoAsync();
 
+    @Deprecated(message = "Inject instead")
     public static AppDatabase getAppDatabase() {
         if (instance == null) {
             instance = Room.databaseBuilder(WalletApplication.getInstance(),
