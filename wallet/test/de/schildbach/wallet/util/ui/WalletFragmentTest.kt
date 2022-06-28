@@ -37,6 +37,10 @@ import org.dash.wallet.common.WalletDataProvider
 import org.junit.Ignore
 
 @Ignore
+// TODO: testing fragments is harder than activities because the fragment has to be attached.
+// It's almost possible with Roboelectric and HiltTestApplication, but various
+// .getInstance() calls on WalletApplication and PlatformRepo are preventing it from getting there.
+// We should keep replacing those with injections and restore this test at some point.
 class WalletFragmentTest {
     @Rule
     @JvmField
