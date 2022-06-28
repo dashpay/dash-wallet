@@ -8,7 +8,12 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <include layout="@layout/home_content" />
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/fragment_container"
+            android:name="de.schildbach.wallet.ui.main.WalletFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:tag="wallet_fragment" />
 
     </de.schildbach.wallet.ui.widget.GlobalFooterView>
 

@@ -118,10 +118,8 @@ import kotlinx.coroutines.FlowPreview;
 @ExperimentalCoroutinesApi
 public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
-        NavigationView.OnNavigationItemSelectedListener,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
-        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
-        SharedPreferences.OnSharedPreferenceChangeListener {
+        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
 
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
@@ -175,32 +173,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         handleIntent(getIntent());
 
-        initView();
-
         //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
         if (savedInstanceState == null) {
             //Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
         }
-
-        View appBar = findViewById(R.id.app_bar);
-        CoordinatorLayout.LayoutParams params = (CoordinatorLayout.LayoutParams) appBar.getLayoutParams();
-        if (params.getBehavior() == null) {
-            params.setBehavior(new AppBarLayout.Behavior());
-        }
-        AppBarLayout.Behavior behaviour = (AppBarLayout.Behavior) params.getBehavior();
-        behaviour.setDragCallback(new AppBarLayout.Behavior.DragCallback() {
-            @Override
-            public boolean canDrag(@NonNull AppBarLayout appBarLayout) {
-                WalletTransactionsFragment walletTransactionsFragment = (WalletTransactionsFragment)
-                        getSupportFragmentManager().findFragmentById(R.id.wallet_transactions_fragment);
-                return walletTransactionsFragment != null && !walletTransactionsFragment.isHistoryEmpty();
-            }
-        });
-
-        viewModel.getTransactions().observe(this, txs -> refreshShortcutBar());
-        viewModel.isBlockchainSynced().observe(this, isSynced -> updateSyncState());
-        viewModel.isBlockchainSyncFailed().observe(this, isSynced -> updateSyncState());
     }
 
     @Override
@@ -212,65 +189,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
     }
 
-    private void initView() {
-        initShortcutActions();
-    }
-
-    private void initShortcutActions() {
-        shortcutsPane = findViewById(R.id.shortcuts_pane);
-        shortcutsPane.setOnShortcutClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (v == shortcutsPane.getSecureNowButton()) {
-                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SECURE_WALLET);
-                    handleBackupWalletToSeed();
-                } else if (v == shortcutsPane.getScanToPayButton()) {
-                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SCAN_TO_PAY);
-                    handleScan(v);
-                } else if (v == shortcutsPane.getBuySellButton()) {
-                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL);
-                    startUpholdActivity();
-                } else if (v == shortcutsPane.getPayToAddressButton()) {
-                    handlePayToAddress();
-                } else if (v == shortcutsPane.getReceiveButton()) {
-                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE);
-                    startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_RECEIVE));
-                } else if (v == shortcutsPane.getImportPrivateKey()) {
-                    SweepWalletActivity.start(WalletActivity.this, true);
-                }
-                else if (v == shortcutsPane.getExplore()) {
-                    startActivity(new Intent(WalletActivity.this, ExploreActivity.class));
-                }
-            }
-        });
-        refreshShortcutBar();
-    }
-
-    private void refreshShortcutBar() {
-        showHideSecureAction();
-        refreshIfUserHasBalance();
-    }
-
-    private void showHideSecureAction() {
-        shortcutsPane.showSecureNow(config.getRemindBackupSeed());
-    }
-
-    private void refreshIfUserHasBalance() {
-        Coin balance = wallet.getBalance(Wallet.BalanceType.ESTIMATED);
-        shortcutsPane.userHasBalance(balance.value>0);
-    }
-
-
     @Override
     protected void onResume() {
         super.onResume();
 
-        config.registerOnSharedPreferenceChangeListener(this);
         checkLowStorageAlert();
         checkWalletEncryptionDialog();
         detectUserCountry();
         showBackupWalletDialogIfNeeded();
-        refreshShortcutBar();
     }
 
     private void showBackupWalletDialogIfNeeded() {
@@ -283,8 +209,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     protected void onPause() {
         handler.removeCallbacksAndMessages(null);
-        config.unregisterOnSharedPreferenceChangeListener(this);
-
         super.onPause();
     }
 
@@ -463,26 +387,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private void handleReportIssue() {
         alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this, application).buildAlertDialog();
         alertDialog.show();
-    }
-
-    private void handlePayToAddress() {
-        viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SEND_TO_ADDRESS);
-        String input = viewModel.getClipboardInput();
-        handlePaste(input);
-    }
-
-    public void handlePaste(String input) {
-        if (!input.isEmpty()) {
-            handleString(input, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message);
-        } else {
-            AdaptiveDialog.create(
-                    R.drawable.ic_info_red,
-                    getString(R.string.shortcut_pay_to_address),
-                    getString(R.string.scan_to_pay_error_dialog_message_no_data),
-                    getString(R.string.button_close),
-                    null
-            ).show(this, reportIssue -> Unit.INSTANCE);
-        }
     }
 
     private void enableFingerprint() {
@@ -763,31 +667,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         return super.onContextItemSelected(item);
     }
 
-    @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
-        int id = item.getItemId();
-
-        if (id == R.id.nav_home) {
-
-        } else if (id == R.id.nav_address_book) {
-            AddressBookActivity.start(this);
-        } else if (id == R.id.nav_exchenge_rates) {
-            startActivity(new Intent(this, ExchangeRatesActivity.class));
-        } else if (id == R.id.nav_paper_wallet) {
-            SweepWalletActivity.start(this, true);
-        } else if (id == R.id.nav_network_monitor) {
-            startActivity(new Intent(this, NetworkMonitorActivity.class));
-        } else if (id == R.id.nav_settings) {
-            startActivity(new Intent(this, PreferenceActivity.class));
-        } else if (id == R.id.nav_disconnect) {
-            handleDisconnect();
-        } else if (id == R.id.nav_report_issue) {
-            handleReportIssue();
-        }
-        return true;
-    }
-
     private void startUpholdActivity() {
         startActivity(BuyAndSellLiquidUpholdActivity.Companion.createIntent(this));
     }
@@ -837,22 +716,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     public void onNewKeyChainEncrypted() {
 
-    }
-
-    private void updateSyncState() {
-        Boolean isSyncFailed = viewModel.isBlockchainSyncFailed().getValue();
-
-        if (isSyncFailed != null && isSyncFailed) {
-            findViewById(R.id.sync_error_pane).setVisibility(View.VISIBLE);
-            return;
-        }
-
-        updateSyncPaneVisibility(R.id.sync_error_pane, false);
-        Boolean isSynced = viewModel.isBlockchainSynced().getValue();
-
-        if(isSynced != null && isSynced) {
-            refreshShortcutBar();
-        }
     }
 
     /**
@@ -1040,12 +903,5 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         dialog.show(this, result -> Unit.INSTANCE);
         config.setShowNotificationsExplainer(false);
-    }
-
-    @Override
-    public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
-        if (Configuration.PREFS_KEY_REMIND_BACKUP.equals(key) || Configuration.PREFS_KEY_REMIND_BACKUP_SEED.equals(key)) {
-            refreshShortcutBar();
-        }
     }
 }
