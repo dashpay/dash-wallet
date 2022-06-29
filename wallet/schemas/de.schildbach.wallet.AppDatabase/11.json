@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 11,
-    "identityHash": "72542834dc65de042a7b899f254c7af5",
+    "identityHash": "d38e40798885331e7ba0b601088d0f65",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -153,12 +153,45 @@
         },
         "indices": [],
         "foreignKeys": []
+      },
+      {
+        "tableName": "address_metadata",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`address` TEXT NOT NULL, `isInput` INTEGER NOT NULL, `taxCategory` TEXT NOT NULL, PRIMARY KEY(`address`, `isInput`))",
+        "fields": [
+          {
+            "fieldPath": "address",
+            "columnName": "address",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isInput",
+            "columnName": "isInput",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "taxCategory",
+            "columnName": "taxCategory",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "address",
+            "isInput"
+          ],
+          "autoGenerate": false
+        },
+        "indices": [],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '72542834dc65de042a7b899f254c7af5')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd38e40798885331e7ba0b601088d0f65')"
     ]
   }
 }
