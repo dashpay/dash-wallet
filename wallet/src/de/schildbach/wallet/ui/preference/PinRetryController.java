@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet_test.R;
+import kotlin.Deprecated;
 
 import static java.lang.Math.pow;
 
@@ -36,6 +37,7 @@ public class PinRetryController {
 
     private final static PinRetryController sInstance = new PinRetryController();
 
+    @Deprecated(message = "See if can be injected instead")
     public static PinRetryController getInstance() {
         return sInstance;
     }

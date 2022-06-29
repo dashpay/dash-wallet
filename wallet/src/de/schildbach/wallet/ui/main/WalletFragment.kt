@@ -21,6 +21,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -32,6 +33,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.InputParser.StringInputParser
+import de.schildbach.wallet.ui.explore.ExploreActivity
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.send.SweepWalletActivity
@@ -54,12 +56,22 @@ import org.slf4j.LoggerFactory
 class WalletFragment : Fragment(R.layout.home_content) {
 
     companion object {
-        private const val REQUEST_CODE_SCAN = 0
         private val log = LoggerFactory.getLogger(WalletFragment::class.java)
     }
 
     private val viewModel: MainViewModel by activityViewModels()
     private val binding by viewBinding(HomeContentBinding::bind)
+
+    private val scanLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val intent = result.data
+
+        if (result.resultCode == Activity.RESULT_OK && intent != null) {
+            val input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
+            input?.let { handleString(input, R.string.button_scan, R.string.input_parser_cannot_classify) }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -108,15 +120,13 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 }
                 binding.shortcutsPane.receiveButton -> {
                     viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE)
-//                    (requireActivity() as OnSelectPaymentTabListener).onSelectPaymentTab(
-//                        PaymentsFragment.ACTIVE_TAB_RECEIVE
-//                    )
+                    startActivity(PaymentsActivity.createIntent(requireContext(), PaymentsActivity.ACTIVE_TAB_RECEIVE))
                 }
                 binding.shortcutsPane.importPrivateKey -> {
                     SweepWalletActivity.start(requireContext(), true)
                 }
                 binding.shortcutsPane.explore -> {
-                    (requireActivity() as OnSelectPaymentTabListener).onSelectExploreTab()
+                    startActivity(Intent(requireContext(), ExploreActivity::class.java))
                 }
             }
         }
@@ -130,12 +140,12 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun showHideSecureAction() {
-//        binding.shortcutsPane.isPassphraseVerified = viewModel.isPassphraseVerified
+        binding.shortcutsPane.isPassphraseVerified = viewModel.isPassphraseVerified
     }
 
     private fun refreshIfUserHasBalance() {
         val balance: Coin = viewModel.balance.value ?: Coin.ZERO
-//        binding.shortcutsPane.userHasBalance = balance.isPositive
+        binding.shortcutsPane.userHasBalance = balance.isPositive
     }
 
     private fun updateSyncState() {
@@ -158,14 +168,21 @@ class WalletFragment : Fragment(R.layout.home_content) {
         val checkPinSharedModel = ViewModelProvider(requireActivity())[CheckPinSharedModel::class.java]
         checkPinSharedModel.onCorrectPinCallback.observe(viewLifecycleOwner) { data ->
             if (data?.second != null) {
-                startVerifySeedActivity(data.second!!)
+                startVerifySeedActivity(data.second)
             }
         }
         CheckPinDialog.show(requireActivity(), 0)
     }
 
     private fun handleScan(clickView: View?) {
-        ScanActivity.startForResult(requireActivity(), clickView, REQUEST_CODE_SCAN)
+        if (clickView != null) {
+            val options = ScanActivity.getLaunchOptions(activity, clickView)
+            val intent = ScanActivity.getTransitionIntent(activity, clickView)
+            scanLauncher.launch(intent, options)
+        } else {
+            val intent = ScanActivity.getIntent(activity)
+            scanLauncher.launch(intent)
+        }
     }
 
     private fun startVerifySeedActivity(pin: String) {
@@ -197,7 +214,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
     }
 
-
     private fun handleString(input: String, errorDialogTitleResId: Int, cannotClassifyCustomMessageResId: Int) {
         object : StringInputParser(input, true) {
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
@@ -224,7 +240,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
             @Throws(VerificationException::class)
             override fun handleDirectTransaction(tx: Transaction) {
-//                viewModel.processDirectTransaction(tx)
+                viewModel.processDirectTransaction(tx)
             }
 
             override fun error(x: Exception?, messageResId: Int, vararg messageArgs: Any) {
@@ -248,22 +264,5 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 error(null, cannotClassifyCustomMessageResId, input)
             }
         }.parse()
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
-        super.onActivityResult(requestCode, resultCode, intent)
-        if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
-            if (intent != null) {
-                val input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)!!
-                handleString(input, R.string.button_scan, R.string.input_parser_cannot_classify)
-            }
-        } else {
-            super.onActivityResult(requestCode, resultCode, intent)
-        }
-    }
-
-    interface OnSelectPaymentTabListener {
-        fun onSelectPaymentTab(mode: Int)
-        fun onSelectExploreTab()
     }
 }

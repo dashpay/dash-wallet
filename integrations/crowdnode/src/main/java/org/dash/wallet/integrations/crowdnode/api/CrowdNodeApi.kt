@@ -23,7 +23,6 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.google.common.math.LongMath.pow
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -50,6 +49,7 @@ import java.net.URLEncoder
 import java.util.concurrent.Executors
 import javax.inject.Inject
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
@@ -298,7 +298,7 @@ class CrowdNodeApiAggregator @Inject constructor(
 
             for (i in 0..retries) {
                 if (i != 0) {
-                    delay(pow(5, i).seconds)
+                    delay(5.0.pow(i).seconds)
                 }
 
                 currentBalance = resolveBalance()
@@ -307,7 +307,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                     val minimumWithdrawal = CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.MaxCode.code)
                     if (!afterWithdrawal) {
                         // balance changed, no need to retry anymore
-                        break;
+                        break
                     } else if (lastBalance - (currentBalance.data?.value?: 0L) >= minimumWithdrawal.value) {
                         // balance changed, no need to retry anymore
                         break

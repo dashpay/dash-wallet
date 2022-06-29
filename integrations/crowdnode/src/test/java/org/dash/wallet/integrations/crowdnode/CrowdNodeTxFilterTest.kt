@@ -21,7 +21,6 @@ import junit.framework.TestCase.*
 import org.bitcoinj.core.*
 import org.bitcoinj.params.TestNet3Params
 import org.dash.wallet.integrations.crowdnode.transactions.*
-import org.dashj.bls.Utils
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
