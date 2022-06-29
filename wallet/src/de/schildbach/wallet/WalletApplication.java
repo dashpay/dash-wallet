@@ -80,6 +80,7 @@ import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.transactions.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
+import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
@@ -179,6 +180,9 @@ public class WalletApplication extends BaseWalletApplication
     BlockchainStateDao blockchainStateDao;
     @Inject
     CrowdNodeConfig crowdNodeConfig;
+
+    @Inject
+    TransactionMetadataProvider transactionMetadataProvider;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -923,6 +927,8 @@ public class WalletApplication extends BaseWalletApplication
         if (walletBackupFile.exists()) {
             walletBackupFile.delete();
         }
+        // clear data on wallet reset
+        transactionMetadataProvider.clear();
         // wallet must be null for the OnboardingActivity flow
         wallet = null;
     }

@@ -51,7 +51,7 @@ enum class TransactionCategory(val value: Long) {
             return values().find { it.value == value } ?: Invalid
         }
 
-        fun fromTransaction(type: Transaction.Type, value: Coin): TransactionCategory {
+        fun fromTransaction(type: Transaction.Type, value: Coin, isInternal: Boolean): TransactionCategory {
             return when (type) {
                 Transaction.Type.TRANSACTION_COINBASE -> MiningReward
                 Transaction.Type.TRANSACTION_PROVIDER_REGISTER -> MasternodeRegister
@@ -59,10 +59,10 @@ enum class TransactionCategory(val value: Long) {
                 Transaction.Type.TRANSACTION_PROVIDER_UPDATE_SERVICE -> MasternodeUpdateService
                 Transaction.Type.TRANSACTION_PROVIDER_UPDATE_REVOKE -> MasternodeUpdateRevoke
                 else -> {
-                    if (value.isPositive) {
-                        Received
-                    } else {
-                        Sent
+                    when {
+                        value.isPositive -> Received
+                        isInternal -> Internal
+                        else -> Sent
                     }
                 }
             }

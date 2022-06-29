@@ -16,7 +16,6 @@
 
 package de.schildbach.wallet.data
 
-import androidx.lifecycle.LiveData
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash

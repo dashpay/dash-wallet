@@ -18,6 +18,7 @@ package org.dash.wallet.common.services
 
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.transactions.TaxCategory
 import org.dash.wallet.common.transactions.TransactionMetadata
@@ -30,8 +31,32 @@ interface TransactionMetadataProvider {
     suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate)
     suspend fun setTransactionMemo(txId: Sha256Hash, memo: String)
 
+    /**
+     * Checks for missing data in the metadata cache vs the Transaction and ensures that both
+     * are the same.
+     *
+     * @param tx The transaction to sync with the transaction metadata cache
+     */
+    fun syncTransaction(tx: Transaction)
+
     suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata?
     fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?>
 
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
+
+    // Address methods
+    suspend fun markAddressWithTaxCategory(
+        address: String,
+        sendTo: Boolean,
+        taxCategory: TaxCategory
+    )
+
+    suspend fun maybeMarkAddressWithTaxCategory(
+        address: String,
+        sendTo: Boolean,
+        taxCategory: TaxCategory
+    )
+
+    // Reset methods
+    fun clear();
 }
