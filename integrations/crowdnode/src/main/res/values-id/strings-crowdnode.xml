@@ -39,7 +39,6 @@
     <string name="privacy_policy">Kebijakan pribadi</string>
     <string name="crowdnode_account_ready">Akun CrowdNode Anda sudah disiapkan dan siap digunakan!</string>
     <string name="notify_when_done">Tutup dan beri tahu jika sudah selesai</string>
-    <string name="crowdnode_creating">Akun CrowdNode Anda sedang membuat…</string>
     <string name="accepting_terms">Menerima persyaratan penggunaan…</string>
     <string name="crowdnode_signup_error">Kami tidak dapat membuat akun CrowdNode Anda.</string>
     <string name="crowdnode_deposit_error">Kami tidak dapat melakukan deposit ke akun CrowdNode Anda.</string>
@@ -58,7 +57,6 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
     <string name="online_account">Akun Online</string>
     <string name="online_account_create">Buat Akun Online</string>
-    <string name="secure_online_account">Lindungi penghasilan Anda</string>
     <string name="crowdnode_support">Dukungan CrowdNode</string>
     <string name="unlink_account">Putuskan Tautan Akun</string>
     <string name="online_account_title">Mengapa Anda membutuhkan akun online?</string>
@@ -71,7 +69,6 @@
     <string name="payout_options">Opsi Pembayaran</string>
     <string name="payout_options_details">Anda dapat mengubah bagaimana / kapan penghasilan hadiah Anda dibayarkan kepada Anda.</string>
     <string name="crowdnode_balance">Saldo di CrowdNode</string>
-    <string name="crowdnode_your_address_title">Ini adalah alamat Dash yang Anda gunakan dalam integrasi dengan CrowdNode</string>
     <string name="chain_syncing">Rantai sedang menyinkronkan…</string>
     <string name="crowdnode_wait_for_sync">Tunggu hingga rantai disinkronkan sepenuhnya, sehingga kami dapat meninjau riwayat transaksi Anda. Kunjungi situs web CrowdNode untuk masuk atau mendaftar.</string>
     <string name="crowdnode_open_website">Buka situs web CrowdNode</string>
@@ -104,6 +101,4 @@
     <string name="crowdnode_online_account_details_title">Informasi tentang akun online Anda</string>
     <string name="crowdnode_online_account_details_primary">Alamat Dash utama Anda yang saat ini  digunakan untuk akun CrowdNode Anda</string>
     <string name="crowdnode_online_account_details_api">Alamat dash yang ditujukan untuk akun CrowdNode Anda di Dompet Dash di perangkat ini</string>
-    <string name="crowdnode_reset_address">Setel Ulang Alamat</string>
-
     </resources>

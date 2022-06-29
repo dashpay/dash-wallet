@@ -24,14 +24,14 @@ import org.dash.wallet.common.transactions.TransactionMetadata
 
 interface TransactionMetadataProvider {
     suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata)
-    suspend fun importTransactionMetadata(txid: Sha256Hash)
-    suspend fun setTransactionTaxCategory(txid: Sha256Hash, taxCategory: TaxCategory)
-    suspend fun setTransactionType(txid: Sha256Hash, type: Int)
-    suspend fun setTransactionExchangeRate(txid: Sha256Hash, exchangeRate: ExchangeRate)
-    suspend fun setTransactionMemo(txid: Sha256Hash, memo: String)
+    suspend fun importTransactionMetadata(txId: Sha256Hash)
+    suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory)
+    suspend fun setTransactionType(txId: Sha256Hash, type: Int)
+    suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate)
+    suspend fun setTransactionMemo(txId: Sha256Hash, memo: String)
 
-    suspend fun getTransactionMetadata(txid: Sha256Hash): TransactionMetadata?
-    fun observeTransactionMetadata(txid: Sha256Hash): Flow<TransactionMetadata?>
+    suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata?
+    fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?>
 
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 }

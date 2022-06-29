@@ -41,7 +41,8 @@ open class CoinsToAddressTxFilter(
             ) {
                 fromAddresses = tx.inputs.mapNotNull {
                     it.outpoint.connectedOutput?.scriptPubKey?.getToAddress(networkParameters)
-                }
+                }.distinct()
+
                 return true
             }
         }

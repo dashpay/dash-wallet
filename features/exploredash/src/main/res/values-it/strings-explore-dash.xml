@@ -47,13 +47,13 @@
     <string name="distance_kilometers">%s chilometri</string>
 
     <plurals name="explore_merchant_amount">
-        <item quantity="one"> %d commercianti</item>
-        <item quantity="many">%d commercianti</item>
-        <item quantity="other">%d commercianti</item>
+        <item quantity="one">%d commercianti</item>
+        <item quantity="many">%d </item>
+        <item quantity="other">%d </item>
     </plurals>
 
     <plurals name="explore_atm_amount">
-        <item quantity="one">%d ATMs</item>
+        <item quantity="one">%d ATM</item>
         <item quantity="many">%d ATMs</item>
         <item quantity="other">%d ATMs</item>
     </plurals>
@@ -126,9 +126,9 @@
     </plurals>
 
     <plurals name="radius_kilometers">
-        <item quantity="one">%d kilometri</item>
-        <item quantity="many">%d kilometri</item>
-        <item quantity="other">%d kilometri</item>
+        <item quantity="one">%d chilometro</item>
+        <item quantity="many">%d chilometro</item>
+        <item quantity="other">%d chilometro</item>
     </plurals>
 
     <!-- Location Permission -->

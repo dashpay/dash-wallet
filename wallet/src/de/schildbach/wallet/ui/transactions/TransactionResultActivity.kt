@@ -1,20 +1,21 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2019 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.transactions
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -25,12 +26,16 @@ import android.view.View
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.AbstractWalletActivity
+import de.schildbach.wallet.ui.ReportIssueDialogBuilder
+import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity.ACTION_SEND_FROM_WALLET_URI
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -39,6 +44,8 @@ import org.slf4j.LoggerFactory
 /**
  * @author Samuel Barbosa
  */
+@FlowPreview
+@ExperimentalCoroutinesApi
 class TransactionResultActivity : AbstractWalletActivity() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
@@ -74,7 +81,6 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
     private val viewModel: TransactionResultViewModel by viewModels()
 
-    @OptIn(FlowPreview::class)
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,12 +91,19 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
         setContentView(R.layout.activity_successful_transaction)
 
-        val transactionResultViewBinder = TransactionResultViewBinder(container)
-        val tx = WalletApplication.getInstance().wallet!!.getTransaction(txId)
+        val transactionResultViewBinder = TransactionResultViewBinder(
+            walletData.wallet!!,
+            configuration.format.noCode(),
+            container
+        )
+
+        viewModel.init(txId)
+        val tx = viewModel.transaction
+
         if (tx != null) {
             val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
             val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
-            transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy, false)
+            transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
             open_explorer_card.setOnClickListener { viewOnExplorer(tx) }
             tax_category_layout.setOnClickListener { viewOnTaxCategory()}
             transaction_close_btn.setOnClickListener {
@@ -99,9 +112,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
             report_issue_card.setOnClickListener {
                 showReportIssue()
             }
-            close_btn.setOnClickListener { onTransactionDetailsDismiss() }
 
-            viewModel.setTransaction(tx)
             viewModel.transactionMetadata.observe(this) {
                 if(it != null) {
                     transactionResultViewBinder.setTransactionMetadata(it)

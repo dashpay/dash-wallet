@@ -5,8 +5,8 @@
     android:id="@+id/home_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary_light"
-        tools:ignore="ContentDescription">
+    android:background="@color/background_primary"
+    tools:ignore="ContentDescription">
 
     <fragment
         android:id="@+id/wallet_transactions_fragment"
@@ -49,7 +49,7 @@
                         android:id="@+id/sync_status_pane_parent"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@color/background_primary_light"
+                        android:background="@color/background_primary"
                         android:orientation="vertical"
                         android:paddingStart="16dp"
                         android:paddingTop="58dp"

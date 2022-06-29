@@ -82,7 +82,7 @@
     <string name="payments_tab_pay_label">Ipadala</string>
     <string name="payments_tab_receive_label">Tumanggap</string>
     <string name="payments_pay_by_qr_title">Pinadala ni</string>
-    <string name="payments_pay_by_qr_sub_title">Nag- i scan ang  QR code</string>
+    <string name="payments_pay_by_qr_sub_title">Scanning QR code</string>
     <string name="payments_pay_to_clipboard_title">Ipadala sa kinopyang address</string>
     <string name="payments_pay_to_clipboard_sub_title">Walang address na nakopya</string>
 
@@ -109,7 +109,7 @@
     <string name="wallet_options_disconnect">Idiskonekta</string>
 
     <string name="network_monitor_masternodes_title">Masternodes</string>
-    <string name="export_keys_dialog_title_to_seed">Ipakita ang recovery phrase</string>
+    <string name="export_keys_dialog_title_to_seed">Ipakita ang parirala ng muling pagbawi</string>
     <string name="import_keys_dialog_title_from_seed">Manumbalik sa dating kalagayan mula sa parirala ng muling pagbawi</string>
     <string name="backup_to_seed_wallet_dialog_message">Ito ang iyong parirala ng muling pagbawi. Pakisulat sa ibaba.</string>
     <string name="backup_wallet_to_seed_dialog_warning">WAG hayaang may makakita ng iyong parirala ng muling pagbawi dahil maaari nilang magastos ang iyong Dash.</string>
@@ -148,6 +148,21 @@
     <string name="wallet_lock_wrong_pin">Maling PIN! %s</string>
     <string name="wallet_last_attempt">Huling pagsubok sa PIN</string>
     <string name="wallet_last_attempt_message">Ang isa pang nabigong pagtatangka ay mangangailangan ng aking passphrase upang mabawi ang aking wallet</string>
+
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%d subok nalang ang nalalabi</item>
+        <item quantity="other">%d subok nalang ang nalalabi</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">minuto</item>
+        <item quantity="other">minuto</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">oras</item>
+        <item quantity="other">oras</item>
+    </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">I-upgrade</string>
     <string name="encrypt_new_key_chain_dialog_title">I-upgrade ang iyong pitaka</string>
@@ -219,7 +234,7 @@
     <string name="view_seed_title">Recovery phrase</string>
     <string name="transaction_result_view_on_explorer">Tingnan sa block explorer</string>
     <string name="transaction_result_paid_successfully">Matagumpay na naipadala</string>
-    <string name="transaction_result_sent_to">Ipadala kay</string>
+    <string name="transaction_result_sent_to">Pinadala kay</string>
     <string name="transaction_date_and_time">Petsa</string>
     <string name="transaction_close">Sarado</string>
     <string name="transaction_details_amount_received">Halagang natanggap</string>
@@ -288,7 +303,7 @@
     <string name="five_minute">5 minuto</string>
     <string name="one_hour">1 oras</string>
     <string name="biometric_limit">Biometric Limit</string>
-    <string name="spending_confirmation_hint_zero">Ang PIN ay laging kailangan sa pagbabayad.</string>
+    <string name="spending_confirmation_hint_zero">Ang PIN ay laging kailangan sa pagbabayadb</string>
     <string name="spending_confirmation_hint_above_zero">Maari kang magkumpirma gamit ang Biometric Authentication sa mga bayarin sa ibaba</string>
 
     <string name="security_none">Wala</string>

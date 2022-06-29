@@ -1,15 +1,41 @@
-package de.schildbach.wallet.util;
+/*
+ * Copyright 2019 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.ui.transactions;
+
+import android.text.format.DateUtils;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.StringRes;
 
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.RejectedTransactionException;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.transactions.TransactionUtils;
 
 import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
-public class TransactionUtil {
+public class TxResourceMapper {
 
     /**
      *
@@ -17,7 +43,8 @@ public class TransactionUtil {
      * @param wallet the wallet that contains the transaction
      * @return resource id of the string that holds the name of the transaction type
      */
-    public static int getTransactionTypeName(Transaction tx, Wallet wallet) {
+    @StringRes
+    public int getTransactionTypeName(@NonNull Transaction tx, @NonNull TransactionBag wallet) {
         int typeId;
         if(tx.getValue(wallet).signum() <= 0) {
             switch(tx.getType()) {
@@ -37,7 +64,7 @@ public class TransactionUtil {
                     TransactionConfidence confidence = tx.getConfidence();
                     if (confidence.hasErrors())
                         typeId = R.string.transaction_row_status_error_sending;
-                    else if (WalletUtils.isEntirelySelf(tx, wallet))
+                    else if (TransactionUtils.INSTANCE.isEntirelySelf(tx, wallet))
                         typeId = R.string.transaction_row_status_sent_internally;
                     else if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING ||
                             (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING &&
@@ -62,7 +89,8 @@ public class TransactionUtil {
      * @param tx the transaction in question
      * @return the string id of the type of error or -1 no error name is known
      */
-    public static int getErrorName(Transaction tx) {
+    @StringRes
+    public int getErrorName(@NonNull Transaction tx) {
         TransactionConfidence confidence = tx.getConfidence();
         int errorNameId = -1;
         if(confidence != null) {
@@ -112,17 +140,15 @@ public class TransactionUtil {
     }
 
     /**
-     *
-     * @param tx
-     * @param wallet
      * @return the secondary status or -1 if there is none
      */
-    public static int getReceivedStatusString(Transaction tx, Wallet wallet) {
+    @StringRes
+    public int getReceivedStatusString(Transaction tx, @NonNull Context context) {
         TransactionConfidence confidence = tx.getConfidence();
         int statusId = -1;
         if (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) {
             int confirmations = confidence.getDepthInBlocks();
-            boolean isChainLocked = wallet.getContext().chainLockHandler.getBestChainLockBlockHeight() >= confidence.getDepthInBlocks();
+            boolean isChainLocked = context.chainLockHandler.getBestChainLockBlockHeight() >= confidence.getDepthInBlocks();
 
             // process coinbase transactions (Mining Rewards) before other BUILDING transactions
             if (tx.isCoinBase()) {
@@ -154,6 +180,10 @@ public class TransactionUtil {
         return statusId;
     }
 
+    public int getDateTimeFormat() {
+        return DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_MONTH | DateUtils.FORMAT_SHOW_TIME;
+    }
+
     /**
      * The Sending status is a transaction that has not been sent or has been sent
      * but there haven't been any peers announcing it nor does it have a verified
@@ -163,7 +193,7 @@ public class TransactionUtil {
      * @param wallet the wallet to which the transaction belongs
      * @return true if the transaction is in a Sending status
      */
-    public static boolean isSending(Transaction tx, Wallet wallet) {
+    public boolean isSending(Transaction tx, Wallet wallet) {
         Coin value = tx.getValue(wallet);
         TransactionConfidence confidence = tx.getConfidence();
         return (value.isNegative() || value.isZero()) && tx.getType() == Transaction.Type.TRANSACTION_NORMAL &&

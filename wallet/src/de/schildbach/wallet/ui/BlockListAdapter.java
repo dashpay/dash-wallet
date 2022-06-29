@@ -32,6 +32,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.transactions.TransactionUtils;
 import org.dash.wallet.common.ui.CurrencyTextView;
 
 import de.schildbach.wallet.Constants;
@@ -238,12 +239,12 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
 
         final Coin value = tx.getValue(wallet);
         final boolean sent = value.signum() < 0;
-        final boolean self = WalletUtils.isEntirelySelf(tx, wallet);
+        final boolean self = TransactionUtils.INSTANCE.isEntirelySelf(tx, wallet);
         final Address address;
         if (sent)
-            address = WalletUtils.getToAddressOfSent(tx, wallet).get(0);
+            address = TransactionUtils.INSTANCE.getToAddressOfSent(tx, wallet).get(0);
         else
-            address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
+            address = TransactionUtils.INSTANCE.getWalletAddressOfReceived(tx, wallet);
 
         // receiving or sending
         final TextView rowFromTo = (TextView) row.findViewById(R.id.block_row_transaction_fromto);

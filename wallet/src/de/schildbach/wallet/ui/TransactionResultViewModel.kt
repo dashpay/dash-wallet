@@ -18,10 +18,14 @@ package de.schildbach.wallet.ui
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.util.isOutgoing
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.transactions.TaxCategory
 import org.dash.wallet.common.transactions.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -30,52 +34,67 @@ import javax.inject.Inject
 
 @FlowPreview
 @HiltViewModel
-class TransactionResultViewModel @Inject constructor(var transactionMetadataProvider: TransactionMetadataProvider) : ViewModel() {
+class TransactionResultViewModel @Inject constructor(
+    private val transactionMetadataProvider: TransactionMetadataProvider,
+    private val walletData: WalletDataProvider,
+    configuration: Configuration
+) : ViewModel() {
 
     companion object {
         val log = LoggerFactory.getLogger(TransactionResultViewModel::class.java)
     }
 
-    private lateinit var transaction: Transaction
+    val dashFormat: MonetaryFormat = configuration.format.noCode()
+
+    val wallet: Wallet?
+        get() = walletData.wallet
+
+    var transaction: Transaction? = null
+        private set
 
     private val _transactionMetadata: MutableStateFlow<TransactionMetadata?> = MutableStateFlow(null)
     val transactionMetadata
         get() = _transactionMetadata.asLiveData()
 
-    fun setTransaction(transaction: Transaction) {
-        this.transaction = transaction
-        monitorTransactionMetadata()
+    fun init(txId: Sha256Hash?) {
+        txId?.let {
+            this.transaction = walletData.wallet!!.getTransaction(txId)
+            this.transaction?.let {
+                monitorTransactionMetadata(it.txId)
+            }
+        }
     }
 
-    private fun monitorTransactionMetadata() {
+    private fun monitorTransactionMetadata(txId: Sha256Hash) {
         viewModelScope.launch(Dispatchers.IO) {
-            transactionMetadataProvider.importTransactionMetadata(transaction.txId)
-            transactionMetadataProvider.observeTransactionMetadata(transaction.txId).collect {
+            transactionMetadataProvider.importTransactionMetadata(txId)
+            transactionMetadataProvider.observeTransactionMetadata(txId).collect {
                 _transactionMetadata.value = it
             }
         }
     }
 
     fun toggleTaxCategory() {
+        transaction?.let { tx ->
+            val metadata = _transactionMetadata.value  // can be null if there is no metadata in the table
 
-        val metadata = _transactionMetadata.value  // can be null if there is no metadata in the table
+            var currentTaxCategory = metadata?.taxCategory // can be null if user never specified a value
 
-        var currentTaxCategory = metadata?.taxCategory // can be null if user never specified a value
-
-        if (currentTaxCategory == null) {
-            currentTaxCategory = TaxCategory.getDefault(
-                metadata?.value?.isPositive ?: !transaction.isOutgoing(),
-                metadata?.isTransfer ?: false
-            )
+            if (currentTaxCategory == null) {
+                val isOutgoing = tx.getValue(walletData.transactionBag).signum() < 0
+                currentTaxCategory = TaxCategory.getDefault(
+                    metadata?.value?.isPositive ?: !isOutgoing,
+                    metadata?.isTransfer ?: false
+                )
+            }
+            // toggle the tax category and save
+            val newTaxCategory = currentTaxCategory.toggle()
+            viewModelScope.launch(Dispatchers.IO) {
+                transactionMetadataProvider.setTransactionTaxCategory(
+                    tx.txId,
+                    newTaxCategory
+                )
+            }
         }
-        // toggle the tax category and save
-        val newTaxCategory = currentTaxCategory.toggle()
-        viewModelScope.launch(Dispatchers.IO) {
-            transactionMetadataProvider.setTransactionTaxCategory(
-                transaction.txId,
-                newTaxCategory
-            )
-        }
-
     }
 }

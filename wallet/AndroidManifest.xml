@@ -312,7 +312,7 @@
             android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.TransactionResultActivity"
+            android:name="de.schildbach.wallet.ui.transactions.TransactionResultActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme" />
 

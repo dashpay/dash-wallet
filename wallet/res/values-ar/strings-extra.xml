@@ -53,7 +53,7 @@
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">مسح للإرسال</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
-    <string name="lock_enter_pin">أدخل الرمز السري</string>
+    <string name="lock_enter_pin">أدخل الرقم السري</string>
     <string name="lock_unlock_with_fingerprint">استخدم بصمتك للفتح</string>
 
     <string name="perm_lock_info">المحفظة مقفلة بشكل دائم</string>
@@ -148,6 +148,33 @@
     <string name="wallet_lock_wrong_pin">رقم سري خاطئ %s</string>
     <string name="wallet_last_attempt">آخر محاولة رقم التعريف الشخصي</string>
     <string name="wallet_last_attempt_message">ستتطلب المحاولة الفاشلة الأخرى عبارة المرور الخاصة بي لاستعادة محفظتي</string>
+
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="zero">%dالمحاولات المتبقية</item>
+        <item quantity="one">%dالمحاولات المتبقية</item>
+        <item quantity="two">%dالمحاولات المتبقية</item>
+        <item quantity="few">%dالمحاولات المتبقية</item>
+        <item quantity="many">%dالمحاولات المتبقية</item>
+        <item quantity="other">%dالمحاولات المتبقية</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="zero">دقائق</item>
+        <item quantity="one">دقائق</item>
+        <item quantity="two">دقائق</item>
+        <item quantity="few">دقائق</item>
+        <item quantity="many">دقائق</item>
+        <item quantity="other">دقائق</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="zero">ساعات</item>
+        <item quantity="one">ساعات</item>
+        <item quantity="two">ساعات</item>
+        <item quantity="few">ساعات</item>
+        <item quantity="many">ساعات</item>
+        <item quantity="other">ساعات</item>
+    </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">ترقية</string>
     <string name="encrypt_new_key_chain_dialog_title">ترقية محفظتك</string>
@@ -276,7 +303,7 @@
     <string name="scan_private_key_intro_1">أنت على وشك مسح الأموال من محفظة أوراق داش.</string>
     <string name="scan_private_key_intro_2">سيؤدي هذا إلى نقل جميع العملات المعدنية من تلك المحفظة إلى محفظتك على هذا الجهاز.</string>
     <string name="scan_private_key_intro_3">عندما يتم تأكيد المعاملة ، ستكون المحفظة الأخرى عديمة القيمة ويجب عدم إعادة استخدامها لأسباب تتعلق بالسلامة.</string>
-    <string name="confirm">تأكيد</string>
+    <string name="confirm">تأكد</string>
 
     <string name="advanced_security_security_level">مستوى الأمان</string>
     <string name="auto_logout">تسجيل الخروج التلقائي</string>
