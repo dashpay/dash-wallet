@@ -23,18 +23,20 @@ import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.style.ImageSpan
 import android.view.MenuItem
+import androidx.activity.viewModels
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.res.ResourcesCompat
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.send.ConfirmTransactionDialog
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.ui.TransactionMetadataViewModel
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
 import org.dash.wallet.integration.uphold.data.UpholdConstants
@@ -43,6 +45,7 @@ import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper
 import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper.OnTransferListener
 import org.dash.wallet.common.util.openCustomTab
 import java.math.BigDecimal
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class UpholdTransferActivity : InteractionAwareActivity() {
@@ -63,6 +66,8 @@ class UpholdTransferActivity : InteractionAwareActivity() {
     }
 
     private lateinit var enterAmountSharedViewModel: EnterAmountSharedViewModel
+    @Inject lateinit var walletDataProvider: WalletDataProvider
+    private val transactionMetadataViewModel: TransactionMetadataViewModel by viewModels()
     private lateinit var balance: Coin
     private lateinit var withdrawalDialog: UpholdWithdrawalHelper
 
@@ -86,7 +91,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
 
         title = intent.getStringExtra(EXTRA_TITLE)
 
-        enterAmountSharedViewModel = ViewModelProviders.of(this).get(EnterAmountSharedViewModel::class.java)
+        enterAmountSharedViewModel = ViewModelProvider(this).get(EnterAmountSharedViewModel::class.java)
         enterAmountSharedViewModel.buttonTextData.call(R.string.uphold_transfer)
 
         val balanceStr = intent.getStringExtra(EXTRA_MAX_AMOUNT)
@@ -127,16 +132,14 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         enterAmountSharedViewModel.dashAmountData.observe(this) {
             enterAmountSharedViewModel.buttonEnabledData.setValue(it.isPositive)
         }
-        val confirmTransactionSharedViewModel: SingleActionSharedViewModel = ViewModelProviders.of(this).get(SingleActionSharedViewModel::class.java)
+        val confirmTransactionSharedViewModel: SingleActionSharedViewModel = ViewModelProvider(this).get(SingleActionSharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this) {
             withdrawalDialog.commitTransaction(this)
         }
     }
 
     private fun showPaymentConfirmation(amount: Coin) {
-
-        val application = application as WalletApplication
-        val receiveAddress = application.wallet!!.freshReceiveAddress()
+        val receiveAddress = walletDataProvider.freshReceiveAddress()
 
         withdrawalDialog = UpholdWithdrawalHelper(BigDecimal(balance.toPlainString()), object : OnTransferListener {
             override fun onConfirm(transaction: UpholdTransaction) {
@@ -155,6 +158,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
             }
 
             override fun onTransfer() {
+                transactionMetadataViewModel.markAddressAsTransferInAsync(receiveAddress.toBase58())
                 finish()
             }
 
