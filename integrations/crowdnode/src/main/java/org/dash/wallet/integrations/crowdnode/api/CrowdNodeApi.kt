@@ -36,7 +36,9 @@ import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NotificationService
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.transactions.TaxCategory
 import org.dash.wallet.common.util.TickerFlow
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.model.*
@@ -90,6 +92,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     private val config: CrowdNodeConfig,
     private val globalConfig: Configuration,
     private val securityFunctions: ISecurityFunctions,
+    private val transactionMetadataProvider: TransactionMetadataProvider,
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {
     companion object {
@@ -491,7 +494,11 @@ class CrowdNodeApiAggregator @Inject constructor(
         fullSignUpSet?.let { set ->
             accountAddress = set.accountAddress
             requireNotNull(accountAddress) { "Restored signup tx set but address is null" }
-            configScope.launch { globalConfig.crowdNodeAccountAddress = accountAddress!!.toBase58() }
+            configScope.launch {
+                globalConfig.crowdNodeAccountAddress = accountAddress!!.toBase58()
+                transactionMetadataProvider.maybeMarkAddressWithTaxCategory(accountAddress!!.toBase58(), false, TaxCategory.TransferIn)
+                transactionMetadataProvider.maybeMarkAddressWithTaxCategory(accountAddress!!.toBase58(), true, TaxCategory.TransferOut)
+            }
 
             if (set.hasWelcomeToApiResponse) {
                 log.info("found finished sign up, account: ${set.accountAddress?.toBase58() ?: "null"}")
@@ -581,6 +588,8 @@ class CrowdNodeApiAggregator @Inject constructor(
                 accountAddress = address
                 globalConfig.crowdNodeAccountAddress = address.toBase58()
                 globalConfig.crowdNodePrimaryAddress = primary.toBase58()
+                transactionMetadataProvider.maybeMarkAddressWithTaxCategory(address.toBase58(), false, TaxCategory.TransferIn)
+                transactionMetadataProvider.maybeMarkAddressWithTaxCategory(address.toBase58(), true, TaxCategory.TransferOut)
                 changeOnlineStatus(OnlineAccountStatus.Validating)
             }
         }
