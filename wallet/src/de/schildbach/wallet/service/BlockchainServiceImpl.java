@@ -82,6 +82,7 @@ import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.NotificationService;
+import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.transactions.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionUtils;
@@ -116,7 +117,6 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
-import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
@@ -130,7 +130,6 @@ import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
-import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
@@ -148,6 +147,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject CrowdNodeConfig crowdNodeConfig;
     @Inject BlockchainStateDao blockchainStateDao;
     @Inject ExchangeRatesDao exchangeRatesDao;
+    @Inject TransactionMetadataProvider transactionMetadataProvider;
 
     private BlockStore blockStore;
     private File blockChainFile;
@@ -248,6 +248,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
             final boolean isRestoringBackup = application.getConfiguration().isRestoringBackup();
 
+            transactionMetadataProvider.syncTransaction(tx);
+
             handler.post(() -> {
                 final boolean isReceived = amount.signum() > 0;
                 final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
@@ -274,6 +276,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         public void onCoinsSent(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
+            transactionMetadataProvider.syncTransaction(tx);
             updateAppWidget();
         }
 
