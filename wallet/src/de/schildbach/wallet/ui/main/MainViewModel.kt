@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.main
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
+import androidx.annotation.VisibleForTesting
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -62,7 +63,8 @@ class MainViewModel @Inject constructor(
     }
 
     private val workerJob = SupervisorJob()
-    private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
+    @VisibleForTesting
+    val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
     private val listener: SharedPreferences.OnSharedPreferenceChangeListener
     private val currencyCode = MutableStateFlow(config.exchangeCurrencyCode)
