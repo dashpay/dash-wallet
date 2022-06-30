@@ -188,7 +188,12 @@ class WalletTransactionMetadataProvider @Inject constructor(
      * obtains the default tax category for transfers
      */
     private suspend fun getDefaultTaxCategory(txId: Sha256Hash): TaxCategory? {
-        var taxCategory: TaxCategory? = null
+        val addressMetadata = getAddressMetadata(txId)
+        return addressMetadata?.taxCategory
+    }
+
+    private suspend fun getAddressMetadata(txId: Sha256Hash): AddressMetadata? {
+        var addressMetadata: AddressMetadata? = null
         val tx = walletData.wallet!!.getTransaction(txId)
         tx?.run {
             if (tx.getValue(walletData.wallet!!).isNegative) {
@@ -205,10 +210,10 @@ class WalletTransactionMetadataProvider @Inject constructor(
                             else -> null // there shouldn't be other output types on our tx's
                         }
                         if (address != null) {
-                            val addressMetadata =
+                            val metadata =
                                 addressMetadataDao.loadSender(address.toBase58())
-                            if (addressMetadata != null) {
-                                taxCategory = addressMetadata.taxCategory
+                            if (metadata != null) {
+                                addressMetadata = metadata
                                 break
                             }
                         }
@@ -231,17 +236,17 @@ class WalletTransactionMetadataProvider @Inject constructor(
                         else -> null // for now ignore OP_RETURN (DashPay Expense?)
                     }
                     if (address != null) {
-                        val addressMetadata =
+                        val metadata =
                             addressMetadataDao.loadRecipient(address.toBase58())
-                        if (addressMetadata != null) {
-                            taxCategory = addressMetadata.taxCategory
+                        if (metadata != null) {
+                            addressMetadata = metadata
                             break;
                         }
                     }
                 }
             }
         }
-        return taxCategory
+        return addressMetadata
     }
 
     override suspend fun getAllTransactionMetadata(): List<TransactionMetadata> {
