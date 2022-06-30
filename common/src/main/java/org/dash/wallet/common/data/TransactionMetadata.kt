@@ -24,7 +24,7 @@ import org.dash.wallet.common.transactions.TransactionCategory
 
 @Entity(tableName = "transaction_metadata")
 data class TransactionMetadata(
-    @PrimaryKey var txid: Sha256Hash,
+    @PrimaryKey var txId: Sha256Hash,
     var timestamp: Long,
     var value: Coin,
     var type: TransactionCategory,

@@ -92,7 +92,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
 
         transactionResultViewBinder.bind(tx)
         viewModel.transactionMetadata.observe(this) { metadata ->
-            if(metadata != null && tx.txId == metadata.txid) {
+            if(metadata != null && tx.txId == metadata.txId) {
                 transactionResultViewBinder.setTransactionMetadata(metadata)
             }
         }

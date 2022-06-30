@@ -7,8 +7,8 @@ import androidx.room.TypeConverters;
 
 import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.common.data.RoomConverters;
-import org.dash.wallet.common.transactions.AddressMetadata;
-import org.dash.wallet.common.transactions.TransactionMetadata;
+import org.dash.wallet.common.data.AddressMetadata;
+import org.dash.wallet.common.data.TransactionMetadata;
 
 import de.schildbach.wallet.data.AddressMetadataDao;
 import de.schildbach.wallet.data.AppDatabaseMigrations;

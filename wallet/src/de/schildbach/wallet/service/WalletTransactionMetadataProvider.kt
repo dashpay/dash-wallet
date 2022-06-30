@@ -256,7 +256,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         for (metadata in metadataList) {
             if (metadata.taxCategory == null) {
                 // if there is no user specified tax category, then look at address_metadata
-                val taxCategory = getDefaultTaxCategory(metadata.txid)
+                val taxCategory = getDefaultTaxCategory(metadata.txId)
 
                 if (taxCategory != null) {
                     metadata.taxCategory = taxCategory

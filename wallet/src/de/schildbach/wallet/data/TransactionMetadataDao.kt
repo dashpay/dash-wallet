@@ -33,14 +33,14 @@ interface TransactionMetadataDao {
     @Query("SELECT * FROM transaction_metadata")
     suspend fun load(): List<TransactionMetadata>
 
-    @Query("SELECT COUNT(1) FROM transaction_metadata WHERE txid = :txid;")
-    suspend fun exists(txid: Sha256Hash): Boolean
+    @Query("SELECT COUNT(1) FROM transaction_metadata WHERE txid = :txId;")
+    suspend fun exists(txId: Sha256Hash): Boolean
 
-    @Query("SELECT * FROM transaction_metadata WHERE txid = :txid")
-    suspend fun load(txid: Sha256Hash): TransactionMetadata?
+    @Query("SELECT * FROM transaction_metadata WHERE txid = :txId")
+    suspend fun load(txId: Sha256Hash): TransactionMetadata?
 
-    @Query("SELECT * FROM transaction_metadata WHERE txid = :txid")
-    fun observe(txid: Sha256Hash): Flow<TransactionMetadata?>
+    @Query("SELECT * FROM transaction_metadata WHERE txid = :txId")
+    fun observe(txId: Sha256Hash): Flow<TransactionMetadata?>
 
     @Query("SELECT * FROM transaction_metadata WHERE timestamp <= :end and timestamp >= :start")
     fun observeByTimestampRange(start: Long, end: Long): Flow<List<TransactionMetadata>>
