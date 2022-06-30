@@ -16,7 +16,9 @@
 
 package org.dash.wallet.common.services
 
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.ExchangeRate
@@ -55,7 +57,17 @@ interface TransactionMetadataProvider {
         address: String,
         sendTo: Boolean,
         taxCategory: TaxCategory
-    )
+    ): Boolean
+
+    fun markAddressAsync(address: String, sendTo: Boolean, taxCategory: TaxCategory)
+
+    fun markAddressAsTransferOutAsync(address: String) {
+        markAddressAsync(address, true, TaxCategory.TransferOut)
+    }
+
+    fun markAddressAsTransferInAsync(address: String) {
+        markAddressAsync(address, false, TaxCategory.TransferIn)
+    }
 
     // Reset methods
     fun clear();

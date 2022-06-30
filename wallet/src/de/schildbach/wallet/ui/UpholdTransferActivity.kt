@@ -36,7 +36,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.ui.TransactionMetadataViewModel
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
 import org.dash.wallet.integration.uphold.data.UpholdConstants
@@ -67,7 +67,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
 
     private lateinit var enterAmountSharedViewModel: EnterAmountSharedViewModel
     @Inject lateinit var walletDataProvider: WalletDataProvider
-    private val transactionMetadataViewModel: TransactionMetadataViewModel by viewModels()
+    @Inject lateinit var transactionMetadataProvider: TransactionMetadataProvider
     private lateinit var balance: Coin
     private lateinit var withdrawalDialog: UpholdWithdrawalHelper
 
@@ -158,7 +158,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
             }
 
             override fun onTransfer() {
-                transactionMetadataViewModel.markAddressAsTransferInAsync(receiveAddress.toBase58())
+                transactionMetadataProvider.markAddressAsTransferInAsync(receiveAddress.toBase58())
                 finish()
             }
 
