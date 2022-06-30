@@ -38,7 +38,8 @@ interface TransactionMetadataProvider {
      *
      * @param tx The transaction to sync with the transaction metadata cache
      */
-    fun syncTransaction(tx: Transaction)
+    suspend fun syncTransaction(tx: Transaction)
+    fun syncTransactionBlocking(tx: Transaction)
 
     suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata?
     fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?>

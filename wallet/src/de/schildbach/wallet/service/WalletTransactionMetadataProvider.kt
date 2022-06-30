@@ -113,7 +113,9 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     override suspend fun setTransactionMemo(txId: Sha256Hash, memo: String) {
-        TODO("Not yet implemented")
+        updateAndInsertIfNotExist(txId) {
+            transactionMetadataDao.updateMemo(txId, memo)
+        }
     }
 
     override suspend fun setTransactionService(txId: Sha256Hash, service: String) {
@@ -122,52 +124,55 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override fun syncTransaction(tx: Transaction) {
-        syncScope.launch {
-            log.info("sync transaction metadata: ${tx.txId}")
-            val metadata = transactionMetadataDao.load(tx.txId)
-            if (metadata != null) {
-                // it does exist.  Check what is missing in the table vs the transaction
-                log.info("sync transaction metadata exists: ${tx.txId}")
-                // sync exchange rates
-                if (metadata.rate != null && tx.exchangeRate == null) {
-                    tx.exchangeRate = org.bitcoinj.utils.ExchangeRate(
-                        Fiat.parseFiat(
-                            metadata.currencyCode,
-                            metadata.rate
-                        )
-                    )
-                } else if (metadata.rate == null && tx.exchangeRate != null) {
-                    val exchangeRate = tx.exchangeRate!!
-                    setTransactionExchangeRate(
-                        tx.txId,
-                        ExchangeRate(
-                            exchangeRate.fiat.currencyCode,
-                            exchangeRate.fiat.value.toString()
-                        )
-                    )
-                }
+    override fun syncTransactionBlocking(tx: Transaction) {
+        runBlocking {
+            syncTransaction(tx)
+        }
+    }
 
-                // sync transaction memo
-                if (metadata.memo.isNotBlank() && tx.memo == null) {
-                    tx.memo = metadata.memo
-                } else if (metadata.memo.isBlank() && tx.memo != null) {
-                    setTransactionMemo(tx.txId, tx.memo!!)
-                }
-
-                // sync service name
-                if (metadata.service == null) {
-                    val addressMetadata = getAddressMetadata(tx.txId)
-                    if(addressMetadata?.service != null) {
-                        setTransactionService(tx.txId, addressMetadata.service)
-                    }
-                }
-            } else {
-                // it does not exist, so import everything from the transaction
-                log.info("sync transaction metadata not exists: ${tx.txId}")
-                insertTransactionMetadata(tx.txId)
+    override suspend fun syncTransaction(tx: Transaction) {
+        log.info("sync transaction metadata: ${tx.txId}")
+        val metadata = transactionMetadataDao.load(tx.txId)
+        if (metadata != null) {
+            // it does exist.  Check what is missing in the table vs the transaction
+            log.info("sync transaction metadata exists: ${tx.txId}")
+            val exchangeRate = tx.exchangeRate
+            // sync exchange rates
+            if (metadata.rate != null && tx.exchangeRate == null) {
+                tx.exchangeRate = org.bitcoinj.utils.ExchangeRate(
+                    Fiat.parseFiat(
+                        metadata.currencyCode,
+                        metadata.rate
+                    )
+                )
+            } else if (metadata.rate == null && exchangeRate != null) {
+                setTransactionExchangeRate(
+                    tx.txId,
+                    ExchangeRate(
+                        exchangeRate.fiat.currencyCode,
+                        exchangeRate.fiat.value.toString()
+                    )
+                )
             }
 
+            // sync transaction memo
+            if (metadata.memo.isNotBlank() && tx.memo == null) {
+                tx.memo = metadata.memo
+            } else if (metadata.memo.isBlank() && tx.memo != null) {
+                setTransactionMemo(tx.txId, tx.memo!!)
+            }
+
+            // sync service name
+            if (metadata.service == null) {
+                val addressMetadata = getAddressMetadata(tx.txId)
+                if (addressMetadata?.service != null) {
+                    setTransactionService(tx.txId, addressMetadata.service)
+                }
+            }
+        } else {
+            // it does not exist, so import everything from the transaction
+            log.info("sync transaction metadata not exists: ${tx.txId}")
+            insertTransactionMetadata(tx.txId)
         }
     }
 

@@ -158,6 +158,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private final Handler handler = new Handler();
     private final Handler delayHandler = new Handler();
+    private final Handler metadataHandler = new Handler();
     private WakeLock wakeLock;
 
     private PeerConnectivityListener peerConnectivityListener;
@@ -207,6 +208,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private CrowdNodeAPIConfirmationHandler apiConfirmationHandler;
 
+    void handleMetadata(Transaction tx) {
+        metadataHandler.post(() -> {
+            transactionMetadataProvider.syncTransactionBlocking(tx);
+        });
+    }
+
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
 
@@ -248,8 +255,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
             final boolean isRestoringBackup = application.getConfiguration().isRestoringBackup();
 
-            transactionMetadataProvider.syncTransaction(tx);
-
             handler.post(() -> {
                 final boolean isReceived = amount.signum() > 0;
                 final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
@@ -269,6 +274,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     }
                 }
             });
+
+            handleMetadata(tx);
             updateAppWidget();
         }
 
@@ -276,7 +283,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         public void onCoinsSent(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
-            transactionMetadataProvider.syncTransaction(tx);
+            handleMetadata(tx);
             updateAppWidget();
         }
 
