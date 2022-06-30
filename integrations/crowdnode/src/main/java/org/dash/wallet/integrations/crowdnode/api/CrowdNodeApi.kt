@@ -38,7 +38,7 @@ import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.transactions.TaxCategory
+import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.util.TickerFlow
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.model.*

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.transactions
+package org.dash.wallet.common.data
 
 enum class TaxCategory(val value: Int) {
     Income(0),

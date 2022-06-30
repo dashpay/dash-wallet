@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.common.transactions
+package org.dash.wallet.common.data
 
 import androidx.room.Entity
 
@@ -21,7 +21,8 @@ import androidx.room.Entity
 data class AddressMetadata(
     var address: String,
     var isInput: Boolean,
-    var taxCategory: TaxCategory
+    var taxCategory: TaxCategory,
+    var service: String
 ) {
 
 }

@@ -18,7 +18,7 @@ package de.schildbach.wallet.transactions
 
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.transactions.TransactionMetadata
+import org.dash.wallet.common.data.TransactionMetadata
 
 /**
  * Exports in the TaxBit CSV format

@@ -16,14 +16,12 @@
 
 package org.dash.wallet.common.services
 
-import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.ExchangeRate
-import org.dash.wallet.common.transactions.TaxCategory
-import org.dash.wallet.common.transactions.TransactionMetadata
+import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.data.TransactionMetadata
 
 interface TransactionMetadataProvider {
     suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata)

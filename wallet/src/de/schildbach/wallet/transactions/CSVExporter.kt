@@ -16,11 +16,10 @@
 
 package de.schildbach.wallet.transactions
 
-import de.schildbach.wallet.util.WalletUtils
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.transactions.TransactionMetadata
+import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
 
 abstract class CSVExporter(

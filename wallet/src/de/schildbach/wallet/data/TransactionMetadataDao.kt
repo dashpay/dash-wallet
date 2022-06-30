@@ -19,8 +19,8 @@ package de.schildbach.wallet.data
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.transactions.TaxCategory
-import org.dash.wallet.common.transactions.TransactionMetadata
+import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.data.TransactionMetadata
 
 /**
  * @author Eric Britten

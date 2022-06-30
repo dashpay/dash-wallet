@@ -19,16 +19,16 @@ package de.schildbach.wallet.data
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.transactions.AddressMetadata
-import org.dash.wallet.common.transactions.TaxCategory
+import org.dash.wallet.common.data.AddressMetadata
+import org.dash.wallet.common.data.TaxCategory
 
 /**
  * @author Eric Britten
  */
 @Dao
 interface AddressMetadataDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(addressMetadata: AddressMetadata)
+    //@Insert(onConflict = OnConflictStrategy.REPLACE)
+    //suspend fun insert(addressMetadata: AddressMetadata)
 
     @Query("SELECT * FROM address_metadata")
     suspend fun load(): List<AddressMetadata>
@@ -42,8 +42,8 @@ interface AddressMetadataDao {
     @Query("SELECT * FROM address_metadata WHERE address = :address AND isInput = 1")
     suspend fun loadSender(address: String): AddressMetadata?
 
-    @Query("INSERT into address_metadata (address, isInput, taxCategory) VALUES (:address, :isInput, :taxCategory)")
-    suspend fun markAddress(address: String, isInput: Boolean, taxCategory: TaxCategory)
+    @Query("INSERT into address_metadata (address, isInput, taxCategory, service) VALUES (:address, :isInput, :taxCategory, :service)")
+    suspend fun markAddress(address: String, isInput: Boolean, taxCategory: TaxCategory, service: String)
 
     @Query("SELECT * FROM address_metadata WHERE address = :address")
     fun observe(address: Sha256Hash): Flow<AddressMetadata?>

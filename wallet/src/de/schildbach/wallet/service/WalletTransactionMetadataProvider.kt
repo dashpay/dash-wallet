@@ -31,9 +31,9 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.*
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.transactions.TaxCategory
+import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.transactions.TransactionCategory
-import org.dash.wallet.common.transactions.TransactionMetadata
+import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors

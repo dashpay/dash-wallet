@@ -19,13 +19,12 @@ package de.schildbach.wallet.transactions
 import de.schildbach.wallet.Constants.HEX
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.crypto.DeterministicKey
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.script.Script
 import org.bitcoinj.wallet.*
-import org.dash.wallet.common.transactions.TaxCategory
+import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.transactions.TransactionCategory
-import org.dash.wallet.common.transactions.TransactionMetadata
+import org.dash.wallet.common.data.TransactionMetadata
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
