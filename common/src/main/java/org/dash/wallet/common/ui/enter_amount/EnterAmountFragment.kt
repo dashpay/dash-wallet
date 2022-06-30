@@ -119,8 +119,12 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
             viewModel._amount.value = it
         }
 
-        viewModel.selectedExchangeRate.observe(viewLifecycleOwner) {
-            binding.amountView.exchangeRate = ExchangeRate(Coin.COIN, it.fiat)
+        viewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->
+            binding.amountView.exchangeRate = if (rate != null) {
+                ExchangeRate(Coin.COIN, rate.fiat)
+            } else {
+                null
+            }
         }
 
         viewModel.canContinue.observe(viewLifecycleOwner) {
