@@ -186,6 +186,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 signUpStatus.value = SignUpStatus.SigningUp
                 val signUpResponseTx = blockchainApi.makeSignUpRequest(accountAddress)
                 log.info("signUpResponseTx id: ${signUpResponseTx.txId}")
+                markAccountAddressWithTaxCategory()
             }
 
             signUpStatus.value = SignUpStatus.AcceptingTerms
@@ -310,7 +311,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                     val minimumWithdrawal = CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.MaxCode.code)
                     if (!afterWithdrawal) {
                         // balance changed, no need to retry anymore
-                        break;
+                        break
                     } else if (lastBalance - (currentBalance.data?.value?: 0L) >= minimumWithdrawal.value) {
                         // balance changed, no need to retry anymore
                         break
@@ -496,8 +497,7 @@ class CrowdNodeApiAggregator @Inject constructor(
             requireNotNull(accountAddress) { "Restored signup tx set but address is null" }
             configScope.launch {
                 globalConfig.crowdNodeAccountAddress = accountAddress!!.toBase58()
-                transactionMetadataProvider.maybeMarkAddressWithTaxCategory(accountAddress!!.toBase58(), false, TaxCategory.TransferIn)
-                transactionMetadataProvider.maybeMarkAddressWithTaxCategory(accountAddress!!.toBase58(), true, TaxCategory.TransferOut)
+                markAccountAddressWithTaxCategory()
             }
 
             if (set.hasWelcomeToApiResponse) {
@@ -516,6 +516,19 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
 
         return false
+    }
+
+    private suspend fun markAccountAddressWithTaxCategory() {
+        transactionMetadataProvider.maybeMarkAddressWithTaxCategory(
+            accountAddress!!.toBase58(),
+            false,
+            TaxCategory.TransferIn
+        )
+        transactionMetadataProvider.maybeMarkAddressWithTaxCategory(
+            accountAddress!!.toBase58(),
+            true,
+            TaxCategory.TransferOut
+        )
     }
 
     private fun tryRestoreLinkedOnlineAccount(address: Address) {
@@ -588,8 +601,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 accountAddress = address
                 globalConfig.crowdNodeAccountAddress = address.toBase58()
                 globalConfig.crowdNodePrimaryAddress = primary.toBase58()
-                transactionMetadataProvider.maybeMarkAddressWithTaxCategory(address.toBase58(), false, TaxCategory.TransferIn)
-                transactionMetadataProvider.maybeMarkAddressWithTaxCategory(address.toBase58(), true, TaxCategory.TransferOut)
+                markAccountAddressWithTaxCategory()
                 changeOnlineStatus(OnlineAccountStatus.Validating)
             }
         }

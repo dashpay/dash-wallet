@@ -24,11 +24,9 @@ import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
-import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.transactions.ExactOutputsSelector
 import org.dash.wallet.common.transactions.LockedTransaction
-import org.dash.wallet.common.transactions.TaxCategory
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.transactions.*
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
@@ -39,7 +37,6 @@ import kotlin.jvm.Throws
 open class CrowdNodeBlockchainApi @Inject constructor(
     private val paymentService: SendPaymentService,
     private val walletDataProvider: WalletDataProvider,
-    private val transactionMetadataProvider: TransactionMetadataProvider
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(CrowdNodeBlockchainApi::class.java)
@@ -68,8 +65,6 @@ open class CrowdNodeBlockchainApi @Inject constructor(
             throw CrowdNodeException("SignUp request returned an error")
         }
 
-        transactionMetadataProvider.markAddressWithTaxCategory(accountAddress.toBase58(), true, TaxCategory.TransferOut)
-        transactionMetadataProvider.markAddressWithTaxCategory(accountAddress.toBase58(), false, TaxCategory.TransferIn)
         return tx
     }
 
