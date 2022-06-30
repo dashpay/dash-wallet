@@ -136,6 +136,7 @@ import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
 import kotlinx.coroutines.ExperimentalCoroutinesApi;
 import kotlinx.coroutines.flow.Flow;
+import kotlinx.coroutines.flow.FlowKt;
 
 /**
  * @author Andreas Schildbach
@@ -1032,6 +1033,9 @@ public class WalletApplication extends BaseWalletApplication
     @NonNull
     @Override
     public Flow<Transaction> observeMostRecentTransaction() {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
         return new WalletMostRecentTransactionsObserver(wallet).observe();
     }
 
