@@ -50,7 +50,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     private val syncScope = CoroutineScope(
-        Executors.newCachedThreadPool().asCoroutineDispatcher()
+        Executors.newFixedThreadPool(5).asCoroutineDispatcher()
     )
 
     private suspend fun insertTransactionMetadata(txId: Sha256Hash) {
@@ -189,12 +189,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                                     walletData.networkParameters,
                                     ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
                                 )
-                            ScriptPattern.isP2SH(output.scriptPubKey) ->
-                                Address.fromScriptHash(
-                                    walletData.networkParameters,
-                                    ScriptPattern.extractHashFromP2SH(output.scriptPubKey)
-                                )
-                            else -> null // there shouldn't be other outputs on our tx's
+                            else -> null // there shouldn't be other output types on our tx's
                         }
                         if (address != null) {
                             val addressMetadata =
@@ -273,9 +268,18 @@ class WalletTransactionMetadataProvider @Inject constructor(
         address: String,
         sendTo: Boolean,
         taxCategory: TaxCategory
-    ) {
-        if (!addressMetadataDao.exists(address, sendTo)) {
+    ): Boolean {
+        return if (!addressMetadataDao.exists(address, sendTo)) {
             addressMetadataDao.markAddress(address, sendTo, taxCategory)
+            true
+        } else {
+            false
+        }
+    }
+
+    override fun markAddressAsync(address: String, sendTo: Boolean, taxCategory: TaxCategory) {
+        syncScope.launch(Dispatchers.IO) {
+            markAddressWithTaxCategory(address, sendTo, taxCategory)
         }
     }
 
