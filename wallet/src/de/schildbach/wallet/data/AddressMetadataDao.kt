@@ -27,12 +27,6 @@ import org.dash.wallet.common.data.TaxCategory
  */
 @Dao
 interface AddressMetadataDao {
-    //@Insert(onConflict = OnConflictStrategy.REPLACE)
-    //suspend fun insert(addressMetadata: AddressMetadata)
-
-    @Query("SELECT * FROM address_metadata")
-    suspend fun load(): List<AddressMetadata>
-
     @Query("SELECT COUNT(1) FROM address_metadata WHERE address = :address AND isInput = :isInput;")
     suspend fun exists(address: String, isInput: Boolean): Boolean
 

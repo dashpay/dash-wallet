@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 11,
-    "identityHash": "d38e40798885331e7ba0b601088d0f65",
+    "identityHash": "15580f6f241acc8a2f82e4975dcb031c",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -94,11 +94,11 @@
       },
       {
         "tableName": "transaction_metadata",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`txid` BLOB NOT NULL, `timestamp` INTEGER NOT NULL, `value` INTEGER NOT NULL, `type` TEXT NOT NULL, `taxCategory` TEXT, `currencyCode` TEXT, `rate` TEXT, `memo` TEXT NOT NULL, PRIMARY KEY(`txid`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`txId` BLOB NOT NULL, `timestamp` INTEGER NOT NULL, `value` INTEGER NOT NULL, `type` TEXT NOT NULL, `taxCategory` TEXT, `currencyCode` TEXT, `rate` TEXT, `memo` TEXT NOT NULL, `service` TEXT, PRIMARY KEY(`txId`))",
         "fields": [
           {
-            "fieldPath": "txid",
-            "columnName": "txid",
+            "fieldPath": "txId",
+            "columnName": "txId",
             "affinity": "BLOB",
             "notNull": true
           },
@@ -143,11 +143,17 @@
             "columnName": "memo",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "service",
+            "columnName": "service",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {
           "columnNames": [
-            "txid"
+            "txId"
           ],
           "autoGenerate": false
         },
@@ -156,7 +162,7 @@
       },
       {
         "tableName": "address_metadata",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`address` TEXT NOT NULL, `isInput` INTEGER NOT NULL, `taxCategory` TEXT NOT NULL, PRIMARY KEY(`address`, `isInput`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`address` TEXT NOT NULL, `isInput` INTEGER NOT NULL, `taxCategory` TEXT NOT NULL, `service` TEXT NOT NULL, PRIMARY KEY(`address`, `isInput`))",
         "fields": [
           {
             "fieldPath": "address",
@@ -175,6 +181,12 @@
             "columnName": "taxCategory",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "service",
+            "columnName": "service",
+            "affinity": "TEXT",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -191,7 +203,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd38e40798885331e7ba0b601088d0f65')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '15580f6f241acc8a2f82e4975dcb031c')"
     ]
   }
 }
