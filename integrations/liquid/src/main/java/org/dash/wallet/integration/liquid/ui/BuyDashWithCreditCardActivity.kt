@@ -16,7 +16,6 @@ import android.view.MenuItem
 import android.view.View
 import android.webkit.*
 import android.widget.Toast
-import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
@@ -27,6 +26,7 @@ import com.google.gson.annotations.SerializedName
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
@@ -487,7 +487,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
                                 // liquid: EventData::{"event":"step_transition","data":{"new_step":"success","old_step":"verifying","formPercent":100,"meta":{"transaction_id":"5b573089-1089-4b81-b626-41f2bae4fcbb","session_id":"3936771f-d3b9-4b0f-9334-1948282d362e","status":"PROCESSING","funding_settlement":{"settlement_instruction_id":"951359e1-f5f7-4ae4-be3e-52fc22a28344","transaction_id":"5b573089-1089-4b81-b626-41f2bae4fcbb","currency":"USD","direction":"FUNDING","method":"CARD_PAYMENT","quantity":"11.90","status":"READY","expires":{"unix_ms":1624047426828,"iso8601":"2021-06-18T20:17:06.828Z","ttl_ms":20000},"input_parameters":{"card_token":"tok_7rzjqrhaxzqexit3zqcqqiofuy","card_last4":"6887","card_network":"visa"},"result_parameters":{"card_receipt":"act_nhimctayonpkjo4vaiqx4q5hca"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/settlement/951359e1-f5f7-4ae4-be3e-52fc22a28344"},"capture_iframe":{"href":"https://partners.liquid.com/api/v1/method/card/951359e1-f5f7-4ae4-be3e-52fc22a28344"}}},"payout_settlement":{"settlement_instruction_id":"17954a9f-672d-4e7e-993d-499bdfd6d71c","transaction_id":"5b573089-1089-4b81-b626-41f2bae4fcbb","currency":"DASH","direction":"PAYOUT","method":"BLOCKCHAIN_TRANSFER","quantity":"0.0640","status":"READY","expires":{"unix_ms":1624047424897,"iso8601":"2021-06-18T20:17:04.897Z","ttl_ms":20000},"input_parameters":{"wallet_address":"XbVUUvtUUunEY971YoXUbrkejtkU7oXfHA"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/settlement/17954a9f-672d-4e7e-993d-499bdfd6d71c"}}},"quote":{"quote_id":"01F8GCETR40AQC3PQ0TNBFR0NE","status":"DEALABLE"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/transaction/5b573089-1089-4b81-b626-41f2bae4fcbb"}}}}}
                                 "success" -> {
                                     log.info("liquid: buy dash transaction successful")
-                                    transactionMetadataProvider.markAddressAsTransferInAsync(walletAddress)
+                                    transactionMetadataProvider.markAddressAsTransferInAsync(walletAddress, ServiceName.Liquid)
                                     onUserInteraction()
                                     widgetState = "success"
                                     logProcessingDuration("success")

@@ -45,8 +45,14 @@ interface TransactionMetadataDao {
     @Query("SELECT * FROM transaction_metadata WHERE timestamp <= :end and timestamp >= :start")
     fun observeByTimestampRange(start: Long, end: Long): Flow<List<TransactionMetadata>>
 
-    @Query("UPDATE transaction_metadata SET taxCategory = :taxCategory WHERE txid = :txid")
-    suspend fun updateTaxCategory(txid: Sha256Hash, taxCategory: TaxCategory)
+    @Query("UPDATE transaction_metadata SET taxCategory = :taxCategory WHERE txid = :txId")
+    suspend fun updateTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory)
+
+    @Query("UPDATE transaction_metadata SET memo = :memo WHERE txid = :txId")
+    suspend fun updateMemo(txId: Sha256Hash, memo: String)
+
+    @Query("UPDATE transaction_metadata SET service = :service WHERE txid = :txId")
+    suspend fun updateService(txId: Sha256Hash, service: String)
 
     @Query("DELETE FROM transaction_metadata")
     suspend fun clear()

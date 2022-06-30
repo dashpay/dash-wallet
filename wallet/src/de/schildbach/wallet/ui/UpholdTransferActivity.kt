@@ -36,6 +36,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
@@ -158,7 +159,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
             }
 
             override fun onTransfer() {
-                transactionMetadataProvider.markAddressAsTransferInAsync(receiveAddress.toBase58())
+                transactionMetadataProvider.markAddressAsTransferInAsync(receiveAddress.toBase58(), ServiceName.Uphold)
                 finish()
             }
 

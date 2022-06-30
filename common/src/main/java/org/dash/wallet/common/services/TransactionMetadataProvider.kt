@@ -30,6 +30,7 @@ interface TransactionMetadataProvider {
     suspend fun setTransactionType(txId: Sha256Hash, type: Int)
     suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate)
     suspend fun setTransactionMemo(txId: Sha256Hash, memo: String)
+    suspend fun setTransactionService(txId: Sha256Hash, service: String)
 
     /**
      * Checks for missing data in the metadata cache vs the Transaction and ensures that both
@@ -48,23 +49,25 @@ interface TransactionMetadataProvider {
     suspend fun markAddressWithTaxCategory(
         address: String,
         sendTo: Boolean,
-        taxCategory: TaxCategory
+        taxCategory: TaxCategory,
+        service: String
     )
 
     suspend fun maybeMarkAddressWithTaxCategory(
         address: String,
         sendTo: Boolean,
-        taxCategory: TaxCategory
+        taxCategory: TaxCategory,
+        service: String
     ): Boolean
 
-    fun markAddressAsync(address: String, sendTo: Boolean, taxCategory: TaxCategory)
+    fun markAddressAsync(address: String, sendTo: Boolean, taxCategory: TaxCategory, service: String)
 
-    fun markAddressAsTransferOutAsync(address: String) {
-        markAddressAsync(address, true, TaxCategory.TransferOut)
+    fun markAddressAsTransferOutAsync(address: String, service: String) {
+        markAddressAsync(address, true, TaxCategory.TransferOut, service)
     }
 
-    fun markAddressAsTransferInAsync(address: String) {
-        markAddressAsync(address, false, TaxCategory.TransferIn)
+    fun markAddressAsTransferInAsync(address: String, service: String) {
+        markAddressAsync(address, false, TaxCategory.TransferIn, service)
     }
 
     // Reset methods

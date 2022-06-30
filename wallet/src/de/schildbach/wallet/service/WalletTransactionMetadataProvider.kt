@@ -116,7 +116,12 @@ class WalletTransactionMetadataProvider @Inject constructor(
         TODO("Not yet implemented")
     }
 
-    // should this be running in a separate thread each time, or the same as the caller?
+    override suspend fun setTransactionService(txId: Sha256Hash, service: String) {
+        updateAndInsertIfNotExist(txId) {
+            transactionMetadataDao.updateService(txId, service)
+        }
+    }
+
     override fun syncTransaction(tx: Transaction) {
         syncScope.launch {
             log.info("sync transaction metadata: ${tx.txId}")
@@ -148,6 +153,14 @@ class WalletTransactionMetadataProvider @Inject constructor(
                     tx.memo = metadata.memo
                 } else if (metadata.memo.isBlank() && tx.memo != null) {
                     setTransactionMemo(tx.txId, tx.memo!!)
+                }
+
+                // sync service name
+                if (metadata.service == null) {
+                    val addressMetadata = getAddressMetadata(tx.txId)
+                    if(addressMetadata?.service != null) {
+                        setTransactionService(tx.txId, addressMetadata.service)
+                    }
                 }
             } else {
                 // it does not exist, so import everything from the transaction
@@ -251,7 +264,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override suspend fun markAddressWithTaxCategory(
         address: String,
         sendTo: Boolean,
-        taxCategory: TaxCategory
+        taxCategory: TaxCategory,
+        service: String
     ) {
         // check to see if this address has been used before
         // if it has been used before, that means the same address was used more than once
@@ -261,25 +275,31 @@ class WalletTransactionMetadataProvider @Inject constructor(
             log.info("address $address/$sendTo was already added")
         }
 
-        addressMetadataDao.markAddress(address, sendTo, taxCategory)
+        addressMetadataDao.markAddress(address, sendTo, taxCategory, service)
     }
 
     override suspend fun maybeMarkAddressWithTaxCategory(
         address: String,
         sendTo: Boolean,
-        taxCategory: TaxCategory
+        taxCategory: TaxCategory,
+        service: String
     ): Boolean {
         return if (!addressMetadataDao.exists(address, sendTo)) {
-            addressMetadataDao.markAddress(address, sendTo, taxCategory)
+            addressMetadataDao.markAddress(address, sendTo, taxCategory, service)
             true
         } else {
             false
         }
     }
 
-    override fun markAddressAsync(address: String, sendTo: Boolean, taxCategory: TaxCategory) {
+    override fun markAddressAsync(
+        address: String,
+        sendTo: Boolean,
+        taxCategory: TaxCategory,
+        service: String
+    ) {
         syncScope.launch(Dispatchers.IO) {
-            markAddressWithTaxCategory(address, sendTo, taxCategory)
+            markAddressWithTaxCategory(address, sendTo, taxCategory, service)
         }
     }
 

@@ -33,6 +33,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NotificationService
@@ -522,12 +523,14 @@ class CrowdNodeApiAggregator @Inject constructor(
         transactionMetadataProvider.maybeMarkAddressWithTaxCategory(
             accountAddress!!.toBase58(),
             false,
-            TaxCategory.TransferIn
+            TaxCategory.TransferIn,
+            ServiceName.CrowdNode
         )
         transactionMetadataProvider.maybeMarkAddressWithTaxCategory(
             accountAddress!!.toBase58(),
             true,
-            TaxCategory.TransferOut
+            TaxCategory.TransferOut,
+            ServiceName.CrowdNode
         )
     }
 
