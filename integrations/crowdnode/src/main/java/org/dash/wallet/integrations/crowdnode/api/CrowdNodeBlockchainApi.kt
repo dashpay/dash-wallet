@@ -171,7 +171,8 @@ open class CrowdNodeBlockchainApi @Inject constructor(
             CrowdNodeConstants.getCrowdNodeAddress(params),
             CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT,
             selector,
-            true
+            emptyWallet = true,
+            checkBalanceConditions = false
         )
         log.info("Re-sent the confirmation tx: ${resentTx.txId}")
 

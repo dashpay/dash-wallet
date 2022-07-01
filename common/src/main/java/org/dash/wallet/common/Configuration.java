@@ -497,7 +497,7 @@ public class Configuration {
     }
 
     public boolean getShowNotificationsExplainer() {
-        return prefs.getBoolean(PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER, false);
+        return prefs.getBoolean(PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER, true);
     }
 
     public void setShowNotificationsExplainer(boolean needToShow) {
