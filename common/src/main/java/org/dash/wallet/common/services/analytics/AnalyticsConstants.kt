@@ -99,7 +99,7 @@ object AnalyticsConstants {
         const val SEND_RECEIVE_BUTTON = "home_send_receive_button"
     }
 
-    object ExploreDash {
+    object Explore {
         const val WHERE_TO_SPEND = "explore__where_to_spend"
         const val PORTAL_ATM = "explore__atms"
         const val LEARN_MORE = "explore_info_learn_more"
