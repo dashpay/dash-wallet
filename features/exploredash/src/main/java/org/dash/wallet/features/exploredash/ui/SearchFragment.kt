@@ -462,7 +462,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.itemDetails.setOnReceiveDashClicked { viewModel.receiveDash() }
         binding.itemDetails.setOnBackButtonClicked {
             viewModel.backFromMerchantLocation()
-            viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_FROM_ALL_LOCATIONS)
         }
         binding.itemDetails.setOnShowAllLocationsClicked {
             viewModel.selectedItem.value?.let { merchant ->

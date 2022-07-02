@@ -468,6 +468,7 @@ class ExploreViewModel @Inject constructor(
         val openedLocation = nearestLocation
 
         if (screenState.value == ScreenState.MerchantLocations && openedLocation is Merchant) {
+            logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_FROM_ALL_LOCATIONS)
             openMerchantDetails(openedLocation, true)
         }
     }
