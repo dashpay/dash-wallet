@@ -142,8 +142,6 @@ object AnalyticsConstants {
         const val FILTER_MERCHANT_CANCEL_ACTION = "explore_filter_merch_cancel_action"
         const val FILTER_MERCHANT_SWIPE_ACTION = "explore_filter_merch_swipe_action"
 
-        const val FILTER_ATM_SELECT_DASH = "explore_filter_atm_select_dash"
-        const val FILTER_ATM_SELECT_GIFT_CARD = "explore_filter_atm_select_gift_card"
         const val FILTER_ATM_SORT_BY_NAME = "explore_filter_atm_sort_by_name"
         const val FILTER_ATM_SORT_BY_DISTANCE = "explore_filter_atm_sort_by_distance"
         const val FILTER_ATM_CURRENT_LOCATION = "explore_filter_atm_current_location"

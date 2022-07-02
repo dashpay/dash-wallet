@@ -736,26 +736,18 @@ class ExploreViewModel @Inject constructor(
     private fun hasCameraCenterChanged(currentCenterPosition: GeoBounds): Boolean =
         locationProvider.distanceBetweenCenters(previousCameraGeoBounds, currentCenterPosition) != 0.0
 
-    fun trackFilterEvents(
-        dashPaymentOn: Boolean,
-        giftCardPaymentOn: Boolean) {
-        if (dashPaymentOn){
-            if (exploreTopic == ExploreTopic.Merchants){
+    fun trackFilterEvents(dashPaymentOn: Boolean, giftCardPaymentOn: Boolean) {
+        if (exploreTopic == ExploreTopic.Merchants) {
+            if (dashPaymentOn) {
                 logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_DASH)
-            } else {
-                logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECT_DASH)
             }
-        }
 
-        if (giftCardPaymentOn){
-            if (exploreTopic == ExploreTopic.Merchants){
+            if (giftCardPaymentOn) {
                 logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_GIFT_CARD)
-            } else {
-                logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECT_GIFT_CARD)
             }
         }
 
-        if (sortByDistance == ExploreViewModel.DEFAULT_SORT_BY_DISTANCE){
+        if (sortByDistance == DEFAULT_SORT_BY_DISTANCE){
             if (exploreTopic == ExploreTopic.Merchants){
                 logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SORT_BY_DISTANCE)
             } else {
@@ -841,7 +833,7 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun logEvent(event: String){
+    fun logEvent(event: String) {
         analyticsService.logEvent(event, bundleOf())
     }
 }
