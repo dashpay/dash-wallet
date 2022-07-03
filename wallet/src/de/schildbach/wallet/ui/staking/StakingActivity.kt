@@ -126,8 +126,11 @@ class StakingActivity : LockScreenActivity() {
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.nav_crowdnode)
 
+        viewModel.recheckState()
+        val status = viewModel.signUpStatus
+
         navGraph.startDestination =
-            when (viewModel.signUpStatus) {
+            when (status) {
                 SignUpStatus.LinkedOnline, SignUpStatus.Finished -> R.id.crowdNodePortalFragment
                 SignUpStatus.NotStarted -> {
                     val isInfoShown = runBlocking { viewModel.getIsInfoShown() }
