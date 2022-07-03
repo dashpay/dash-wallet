@@ -17,12 +17,7 @@
 
 package de.schildbach.wallet.ui;
 
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.net.Uri;
-
-import androidx.appcompat.app.AlertDialog;
 
 import com.google.common.hash.Hashing;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -46,7 +41,6 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.protocols.payments.PaymentSession;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,16 +52,15 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.AddressUtil;
 import de.schildbach.wallet.util.Io;
-import de.schildbach.wallet.util.Qr;
+import org.dash.wallet.common.util.Qr;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -120,9 +113,10 @@ public abstract class InputParser {
 
                     handlePaymentIntent(PaymentIntent.fromBitcoinUri(bitcoinUri));
                 } catch (final BitcoinURIParseException x) {
-                    log.info("got invalid bitcoin uri: '" + input + "'", x);
-
-                    error(x, R.string.input_parser_invalid_bitcoin_uri, input);
+                    if (!tryFindAnyMatch(input)) {
+                        log.info("got invalid bitcoin uri: '" + input + "'", x);
+                        error(x, R.string.input_parser_invalid_bitcoin_uri, input);
+                    }
                 }
             } else if (PATTERN_BITCOIN_ADDRESS.matcher(input).matches()) {
                 try {
@@ -180,9 +174,32 @@ public abstract class InputParser {
 
                     error(x, R.string.input_parser_invalid_transaction, x.getMessage());
                 }
-            } else {
+            } else if (!tryFindAnyMatch(input)) {
                 cannotClassify(input);
             }
+        }
+
+        private boolean tryFindAnyMatch(String input) {
+            Matcher matcher = PATTERN_BITCOIN_ADDRESS.matcher(input);
+
+            if (matcher.find() && matcher.group(0) != null) {
+                try {
+                    String addressStr = matcher.group(0);
+                    assert addressStr != null;
+                    final Address address = Address.fromString(Constants.NETWORK_PARAMETERS, addressStr);
+                    PaymentIntent intent = PaymentIntent.fromAddress(address, null);
+                    intent.setShouldConfirmAddress(true);
+
+                    handlePaymentIntent(intent);
+                } catch (final AddressFormatException x) {
+                    log.info("got invalid address", x);
+                    error(x, R.string.input_parser_invalid_address);
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
@@ -428,27 +445,6 @@ public abstract class InputParser {
         log.info("cannot classify: '{}'", input);
 
         error(null, R.string.input_parser_cannot_classify, input);
-    }
-
-    public static void dialog(final Context context,
-                              @Nullable final OnClickListener dismissListener,
-                              final int titleResId,
-                              final int messageResId, final Object... messageArgs) {
-        dialog(context, dismissListener, titleResId, context.getString(messageResId, messageArgs));
-    }
-
-    public static void dialog(final Context context,
-                              @Nullable final OnClickListener dismissListener,
-                              final int titleResId,
-                              String message) {
-        final BaseAlertDialogBuilder inputParserAlertDialogBuilder = new BaseAlertDialogBuilder(context);
-        if (titleResId != 0){
-            inputParserAlertDialogBuilder.setTitle(context.getString(titleResId));
-        }
-        inputParserAlertDialogBuilder.setMessage(message);
-        final AlertDialog alertDialog = inputParserAlertDialogBuilder.buildAlertDialog();
-        alertDialog.setButton(DialogInterface.BUTTON_NEUTRAL, context.getString(R.string.button_dismiss), dismissListener);
-        alertDialog.show();
     }
 
     private static final Pattern PATTERN_BITCOIN_ADDRESS = Pattern

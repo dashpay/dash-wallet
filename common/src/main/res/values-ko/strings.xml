@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Generic titles/messages -->
     <string name="loading">로딩중...</string>
     <string name="loading_error">오류가 발생했습니다. 나중에 다시 시도하십시오.</string>
+    <string name="please_wait_title">기다려주십시오</string>
     <string name="dash_available">%1$s 이용 가능</string>
     <string name="network_unavailable_title">네트워크를 이용할 수 없음</string>
     <string name="network_unavailable_check_connection">네트워크 연결을 확인하세요</string>
     <string name="network_unavailable_balance_not_accurate">연결이 끊어져 잔고가 정확하지 않을 수 있습니다</string>
+    <string name="buy_dash">대시 매수</string>
+    <string name="copied">복사됨</string>
+    <string name="staking_title">스테이킹</string>
+    <string name="error">오류</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">건지섬 파운드</string>
     <!-- Local Currency List: JEP -->
@@ -26,11 +32,27 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">제미니 파운드</string>
 
-    <!-- Generic Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">닫기</string>
     <string name="network_unavailable_return">지갑으로 돌아가기</string>
     <string name="button_continue">계속</string>
+    <string name="button_close">닫기</string>
+    <string name="button_retry">재시도</string>
+    <string name="button_send_report">보고 전송하기</string>
+    <string name="button_info">정보</string>
+    <string name="button_copy_address">주소 복사하기</string>
+    <string name="button_understand">이해합니다</string>
+    <string name="button_okay">알겠습니다</string>
+    <string name="button_share">공유</string>
+    <string name="verify">인증하기</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">검색</string>
+    <string name="permission_allow">허용</string>
+    <string name="permission_deny">거부</string>
     <string name="max">최대</string>
     <string name="select_currency">통화 선택</string>
-</resources>
+    <string name="send_coins_error_dusty_send">송금액이 너무 적어 전송할 수 없습니다</string>
+    <string name="send_coins_error_insufficient_money">잔액 부족</string>
+
+    </resources>

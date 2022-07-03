@@ -1,4 +1,4 @@
-MÔ TẢ CHÍNH
+﻿MAIN DESCRIPTION
 
 Ví Dash Wallet là ví tham khảo trên Android được duy trì bởi Dash Core Group cho tiền số Dash - một giải pháp sáng tạo để thay thế cho Bitcoin được thiêt kế đặc biệt cho mục đích làm phương tiện thanh toán.
 

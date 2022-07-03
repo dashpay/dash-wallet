@@ -16,7 +16,6 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.annotation.SuppressLint
-import android.app.Application
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Environment
@@ -31,6 +30,7 @@ import com.google.api.services.drive.Drive
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
@@ -46,6 +46,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -66,9 +67,10 @@ import kotlin.coroutines.suspendCoroutine
 
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
-    application: Application,
-    private val analytics: AnalyticsService
-) : BaseProfileViewModel(application) {
+    application: WalletApplication,
+    private val analytics: AnalyticsService,
+    appDatabase: AppDatabase
+) : BaseProfileViewModel(application, appDatabase) {
 
     enum class ProfilePictureStorageService {
         GOOGLE_DRIVE, IMGUR
@@ -186,7 +188,7 @@ class EditProfileViewModel @Inject constructor(
             }
 
             override fun onResponse(call: Call, response: Response) {
-                val responseBody = response.body()
+                val responseBody = response.body
                 if (responseBody != null) {
                     if (!tmpPictureFile.exists()) {
                         tmpPictureFile.createNewFile()
@@ -205,7 +207,7 @@ class EditProfileViewModel @Inject constructor(
                         result.postValue(Resource.error(e, null))
                     }
                 } else {
-                    result.postValue(Resource.error("error: ${response.code()}", null))
+                    result.postValue(Resource.error("error: ${response.code}", null))
                 }
             }
         })
@@ -271,7 +273,7 @@ class EditProfileViewModel @Inject constructor(
                     uploadProfilePictureCall = client.newCall(deleteRequest)
                     val deleteResponse = uploadProfilePictureCall!!.execute()
                     if (!deleteResponse.isSuccessful) {
-                        profilePictureUploadLiveData.postValue(Resource.error(deleteResponse.message()))
+                        profilePictureUploadLiveData.postValue(Resource.error(deleteResponse.message))
                         // if we cannot delete it, the cause is probably because the IMGUR_CLIENT_* values
                         // are not specified
                         // for now, clear the delete hash to allow the next upload operation to succeed
@@ -303,7 +305,7 @@ class EditProfileViewModel @Inject constructor(
                 return@launch
             }
 
-            val imageBodyPart = RequestBody.create(MediaType.parse("image/*jpg"), avatarBytes)
+            val imageBodyPart = RequestBody.create("image/*jpg".toMediaTypeOrNull(), avatarBytes)
             val requestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
                     .addFormDataPart("image", "profile.jpg", imageBodyPart).build()
 
@@ -312,7 +314,7 @@ class EditProfileViewModel @Inject constructor(
             try {
                 uploadProfilePictureCall = client.newCall(uploadRequest)
                 val response = uploadProfilePictureCall!!.execute()
-                val responseBody = response.body()
+                val responseBody = response.body
                 if (responseBody != null && response.isSuccessful) {
                     val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
                     val jsonAdapter = moshi.adapter(ImgurUploadResponse::class.java)
@@ -322,17 +324,17 @@ class EditProfileViewModel @Inject constructor(
                         config.imgurDeleteHash = imgurUploadResponse.data.deletehash
                         val avatarUrl = imgurUploadResponse.data.link
                         Log.d("AvatarUrl", avatarUrl)
-                        log.info("imgur: upload successful (${response.code()})")
+                        log.info("imgur: upload successful (${response.code})")
                         profilePictureUploadLiveData.postValue(Resource.success(avatarUrl))
                     } else {
                         log.error("imgur: upload failed: response invalid")
-                        profilePictureUploadLiveData.postValue(Resource.error(response.message()))
-                        analytics.logError(Exception(response.message()), "Failed to upload profile picture: ImgUr")
+                        profilePictureUploadLiveData.postValue(Resource.error(response.message))
+                        analytics.logError(Exception(response.message), "Failed to upload profile picture: ImgUr")
                     }
                 } else {
-                    log.error("imgur: upload failed (${response.code()}): ${response.message()}")
-                    analytics.logError(Exception(response.message()), "Failed to upload profile picture: ImgUr")
-                    profilePictureUploadLiveData.postValue(Resource.error(response.message()))
+                    log.error("imgur: upload failed (${response.code}): ${response.message}")
+                    analytics.logError(Exception(response.message), "Failed to upload profile picture: ImgUr")
+                    profilePictureUploadLiveData.postValue(Resource.error(response.message))
                 }
             } catch (e: Exception) {
                 var canceled = false

@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">ウォレットをロードできません</string>
 
     <string name="set_pin_create_new_wallet">新しいウォレットを作成する</string>
+    <string name="set_pin_upgrade_wallet">ウォレットをアップグレードする</string>
     <string name="set_pin_restore_wallet">ウォレットを復元する</string>
     <string name="set_pin_enter_pin">古いPINを入力してください</string>
     <string name="set_pin_set_pin">PINを設定する</string>
@@ -62,12 +63,12 @@
     <string name="scan_to_pay_error_dialog_title">スキャンして送金する</string>
     <string name="scan_to_pay_error_dialog_message">クリップボードのDashアドレスやURLリクエストは無効です:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">クリップボードのDashアドレスやURLリクエストは無効です</string>
+    <string name="pay_to_confirm_address">支払先のDashアドレスはこちらでしょうか。</string>
 
     <string name="receive_title">入金</string>
     <string name="receive_enter_amount_message">受け取る金額を指定してください</string>
     <string name="receive_enter_amount_button">金額を指定する</string>
     <string name="receive_share_button">共有</string>
-    <string name="receive_copied">コピーされた</string>
 
     <string name="pay_title">送金</string>
     <string name="history_title">履歴</string>
@@ -117,7 +118,6 @@
     <string name="import_export_keys_dialog_password_phrase">ここに復元フレーズを入力</string>
     <string name="preferences_report_issue_summary">問題に関する情報を収集し、開発者へメールで報告する。</string>
     <string name="navigation_configuration">設定</string>
-    <string name="button_copy_address">アドレスをコピーする</string>
     <string name="request_coins_clipboard_address_msg">Dashアドレスがクリップボードにコピーされました</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">表示</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" は復元フレーズのワードではありません</string>
@@ -146,6 +146,8 @@
     <string name="wallet_lock_try_again">もう一度 %1$d %2$sにてお試しください。</string>
     <string name="wallet_lock_reset">リセット</string>
     <string name="wallet_lock_wrong_pin">PINコードが間違っています! %s</string>
+    <string name="wallet_last_attempt">PINの最終試行</string>
+    <string name="wallet_last_attempt_message">もう一回失敗すると、ウォレットを復元するのにパスフレーズが必要になります。</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="other">あと%d 回試みることができます。</item>
@@ -177,6 +179,13 @@
     <string name="notification_transactions_channel_description">着金時にアラートを受信する。</string>
     <string name="notification_synchronization_channel_name">同期</string>
     <string name="notification_synchronization_channel_description">アプリがネットワークと同期している時に通知を表示する。</string>
+    <string name="notification_generic_channel_name">各種通知</string>
+    <string name="notification_generic_channel_description">その他のDash Walletのイベント</string>
+    <string name="notification_push_channel_name">プッシュ通知</string>
+    <string name="notification_push_channel_description">Dashから送られてくるプッシュ通知を表示する</string>
+    <string name="notification_settings_title">通知</string>
+    <string name="notification_explainer_title">Dash Walletから通知をお送りします。</string>
+    <string name="notification_explainer_message">通知には、アラート、サウンド、アイコンバッジが含まれる場合があります。これらは、端末の設定で設定することができます。</string>
 
     <string name="net_type_indicator" />
 
@@ -195,7 +204,6 @@
     <string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
 
     <string name="verify_continue">続ける</string>
-    <string name="verify">検証する</string>
     <string name="verify_backup_wallet">ウォレットをバックアップする</string>
     <string name="verify_show_recovery_phrase">復元フレーズを表示する</string>
     <string name="verify_secure_now">ウォレットをすぐに安全な状態にする</string>
@@ -265,6 +273,7 @@
     <string name="tools_address_book">アドレスブック</string>
     <string name="tools_import_private_key">秘密鍵をインポート</string>
     <string name="tools_network_monitor">ネットワークモニター</string>
+    <string name="tools_show_xpub">拡張公開鍵</string>
 
     <string name="about_help_us_improve">品質を向上させるためにご協力ください</string>
     <string name="about_review_and_rate">レビュー &amp; アプリを評価する</string>
@@ -323,7 +332,6 @@
     <string name="welcome_screen_subtitle_3">自分のウォレットを完全に制御していて、ニーズに基づいてカスタマイズする</string>
 
     <string name="sync_status_wait">同期が完了するまでお待ちください</string>
-    <string name="sync_status_syncing_title">%1$dを同期していません</string>
     <string name="sync_status_syncing_sub_title">Dashのブロックチェーンで</string>
     <string name="sync_status_unable_to_connect">接続できません</string>
     <string name="sync_status_check_connection">接続を確認してください</string>
@@ -332,7 +340,6 @@
 
     <string name="appwidget_wallet_not_ready">あなたのウォレットをセットアップしてください</string>
 
-    <string name="payment_request_please_wait_title">お待ちください</string>
     <string name="payment_request_please_wait_message">支払い元に接続中</string>
     <string name="payment_request_unable_to_connect">接続できません</string>
     <string name="payment_request_unable_to_send">送金できません</string>
@@ -363,5 +370,13 @@
     <string name="wallet_encryption_error_message">ウォレットの作成に問題があります。この問題をサポートデスクにご報告ください。</string>
     <string name="wallet_not_encrypted_error_message">お客様のウォレットに問題があります。\n\nこのウォレットにDashがない場合、このアプリをアンインストールして再インストールしてください。その後、新しいウォレットを作成してください。\n\nリカバリーフレーズやバックアップファイルがある場合は、本アプリをアンインストール後、再インストールしてください。\n\nそれ以外の場合は、この問題をサポートデスクにご報告ください。</string>
 
-
+    <string name="reset_wallet_title">本当にウォレットをリセットしますか。</string>
+    <string name="reset_wallet_message">ウォレットをリセットした場合、リカバリーフレーズを使ってウォレットをリカバリーすることでしか再利用できません。</string>
+    <string name="positive_reset_text">はい、ウォレットをリセットします</string>
+    <string name="launch_reset_wallet_title">残高が残っています。</string>
+    <string name="launch_reset_wallet_message">ウォレットをリセットすると、リカバリーフレーズをバックアップしていない限り、すべての資金を失うことになります。</string>
+    <string name="continue_reset">続ける</string>
+    <string name="launch_reset_wallet_extra_message">リカバリーフレーズをバックアップする</string>
+    <string name="start_reset_wallet_title">%sを失う可能性があります。</string>
+    <string name="reset_wallet_text">ウォレットをリセットする</string>
 </resources>

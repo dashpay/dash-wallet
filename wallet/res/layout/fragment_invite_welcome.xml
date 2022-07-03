@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
-    android:background="@color/bg_less_bright"
+    android:background="@color/background_primary"
     android:orientation="vertical">
 
     <include
@@ -15,7 +15,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="@color/dash_lighter_gray">
+        android:background="@color/background_primary">
 
         <TextView
             android:layout_width="wrap_content"

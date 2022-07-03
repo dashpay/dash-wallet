@@ -46,7 +46,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:padding="16dp"
-            android:text="@string/payment_request_please_wait_title"
+            android:text="@string/please_wait_title"
             android:textColor="@color/dash_white"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"

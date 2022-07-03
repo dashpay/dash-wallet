@@ -41,6 +41,7 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
 @AndroidEntryPoint
 class DashPayUserActivity : LockScreenActivity(),
@@ -56,7 +57,7 @@ class DashPayUserActivity : LockScreenActivity(),
     }
     private val notificationsAdapter: NotificationsAdapter by lazy {
         NotificationsAdapter(this,
-                WalletApplication.getInstance().wallet, false, this,
+                WalletApplication.getInstance().wallet!!, false, this,
                 this, this, true, showContactHistoryDisclaimer)
     }
 
@@ -239,7 +240,19 @@ class DashPayUserActivity : LockScreenActivity(),
 
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
-                    dialog(this@DashPayUserActivity, null, errorDialogTitleResId, messageResId, *messageArgs)
+                    val dialog = AdaptiveDialog.create(
+                        R.drawable.ic_info_red,
+                        getString(errorDialogTitleResId),
+                        if (messageArgs.isNotEmpty()) {
+                            getString(messageResId, messageArgs)
+                        } else {
+                            getString(messageResId)
+                        },
+                        getString(R.string.button_close),
+                        null
+                    )
+                    dialog.isMessageSelectable = true
+                    dialog.show(this@DashPayUserActivity)
                 }
             }
 

@@ -20,7 +20,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_explore"
+    android:background="@color/background_explore"
     tools:context="de.schildbach.wallet.ui.explore.ExploreFragment">
 
     <ImageView
@@ -81,13 +81,62 @@
                 android:orientation="vertical">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
-                    android:id="@+id/merchants_btn"
+                    android:id="@+id/faucet_btn"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
                     android:paddingTop="21dp"
+                    android:paddingEnd="15dp"
+                    android:paddingBottom="12dp">
+
+                    <ImageView
+                        android:id="@+id/faucet_icon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:src="@drawable/ic_faucet"
+                        app:layout_constraintEnd_toStartOf="@id/faucet_title"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/faucet_title"
+                        style="@style/Subtitle2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="63dp"
+                        android:text="@string/explore_get_test_dash"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/faucet_subtitle"
+                        style="@style/Caption.SteelGray"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/explore_test_dash_text_1"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="@+id/faucet_title"
+                        app:layout_constraintTop_toBottomOf="@+id/faucet_title" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="63dp"
+                    android:background="@color/divider_color" />
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/merchants_btn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingTop="12dp"
                     android:paddingEnd="15dp"
                     android:paddingBottom="12dp">
 
@@ -146,7 +195,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:src="@drawable/ic_cash"
+                        android:src="@drawable/ic_atm"
                         app:layout_constraintEnd_toStartOf="@id/atms_title"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
@@ -180,7 +229,7 @@
                     android:background="@color/divider_color" />
 
                 <androidx.constraintlayout.widget.ConstraintLayout
-                    android:id="@+id/faucet_btn"
+                    android:id="@+id/staking_btn"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="?attr/selectableItemBackground"
@@ -191,35 +240,35 @@
                     android:paddingBottom="22dp">
 
                     <ImageView
-                        android:id="@+id/faucet_icon"
+                        android:id="@+id/staking_icon"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:src="@drawable/ic_faucet"
-                        app:layout_constraintEnd_toStartOf="@id/faucet_title"
+                        android:src="@drawable/ic_deposit"
+                        app:layout_constraintEnd_toStartOf="@id/staking_title"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 
                     <TextView
-                        android:id="@+id/faucet_title"
+                        android:id="@+id/staking_title"
                         style="@style/Subtitle2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="63dp"
-                        android:text="@string/explore_get_test_dash"
+                        android:text="@string/staking_title"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 
                     <TextView
-                        android:id="@+id/faucet_subtitle"
+                        android:id="@+id/staking_subtitle"
                         style="@style/Caption.SteelGray"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="@string/explore_test_dash_text_1"
+                        android:text="@string/explore_staking_subtitle"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="@+id/faucet_title"
-                        app:layout_constraintTop_toBottomOf="@+id/faucet_title" />
+                        app:layout_constraintStart_toStartOf="@+id/staking_title"
+                        app:layout_constraintTop_toBottomOf="@+id/staking_title" />
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>

@@ -58,7 +58,6 @@
     <string name="send_coins_fragment_pin_label">Introdu codul PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">O taxă de rețea de %s va fi plătită.</string>
     <string name="send_coins_fragment_hint_fee_priority">O taxă de prioritate de %s va fi plătită. Dacă vrei taxe reduse, utilizează "prioritate" numai dacă ai nevoie de confirmare cât mai curând posibil.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Fonduri nesuficiente</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Suma plăților minuscule din portofel tău nu reprezintă o valoare care poate fi trimisă.</string>
     <string name="send_coins_fragment_direct_payment_enable">Trimite plata direct beneficiarului.</string>
     <string name="send_coins_fragment_direct_payment_ack">Plata ta directă a fost trimisă cu succes. </string>
@@ -295,7 +294,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">Renunță</string>
     <string name="button_cancel">Anulează</string>
-    <string name="button_retry">Încearcă din nou</string>
     <string name="button_help">Ajutor</string>
     <string name="button_add">Adaugă</string>
     <string name="button_delete">Şterge</string>
@@ -305,7 +303,6 @@
     <string name="button_copy">Copiază</string>
     <string name="button_copy_request">Copiază cererea</string>
     <string name="button_paste">Lipește</string>
-    <string name="button_share">Distribuie</string>
     <string name="button_set_as_default">Setează ca si default</string>
     <string name="button_request_coins">Cere Dash</string>
     <string name="button_send_coins">Trimite Dash</string>

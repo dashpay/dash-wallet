@@ -103,7 +103,7 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 			final int position = 1;
 			pager.setCurrentItem(position);
 			pager.setPageMargin(2);
-			pager.setPageMarginDrawable(R.color.bg_less_bright);
+			pager.setPageMarginDrawable(R.color.background_primary);
 
 			tabs.setupWithViewPager(pager);
 			for (int i = 0; i < tabs.getTabCount(); i++) {

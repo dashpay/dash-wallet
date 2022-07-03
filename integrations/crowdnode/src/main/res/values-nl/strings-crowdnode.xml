@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="crowdnode_get_started">Aan de slag met CrowdNode</string>
+    <string name="crowdnode_get_started_hint">Om te beginnen met staking, maak een account aan op CrowdNode of maak verbinding met een bestaande.</string>
+    <string name="new_account">Nieuw account CrowdNode</string>
+    <string name="account_create">Maak account aan</string>
+    <string name="account_create_response">Account reactie maken</string>
+    <string name="accept_terms">Voorwaarden accepteren</string>
+    <string name="accept_terms_response">Reactie op voorwaarden accepteren</string>
+    <string name="account_link">Link bestaand account</string>
+    <string name="crowdnode_login">Log in op CrowdNode</string>
+    <string name="crowdnode_signup">Aanmelden bij CrowdNode</string>
+    <string name="crowdnode_link">Link bestaand account CrowdNode</string>
+    <string name="required_passphrase_backup">U moet een back-up maken van uw wachtwoordzin in de Dash portemonnee</string>
+    <string name="backup_passphrase">Back-up wachtwoordzin</string>
+    <string name="required_dash_amount">Je hebt minimaal %s Dash nodig in je Dash portemonnee</string>
+    <string name="crowdnode_new_account_warning_1">CrowdNode gebruikt dit adres als account-ID. Je verliest de toegang tot je geld in deze portemonnee alsmode je CrowdNode account als je de wachtwoordzin verliest die aan dit adres is gekoppeld.</string>
+    <string name="crowdnode_new_account_warning_2">Er worden zeer kleine hoeveelheden Dash van en naar CrowdNode verzonden om te verifiëren dat je de eigenaar bent van dit adres in de  portemonnee.</string>
+    <string name="crowdnode_link_account_description">Alle overboekingen van en naar CrowdNode vanaf dit apparaat worden uitgevoerd met het onderstaande Dash adres.</string>
+    <string name="dash_address">Dashadres</string>
+    <string name="primary_dash_address">Primair Dashadres</string>
+    <string name="crowdnode_secure_wallet">Maak een back-up van je wachtwoordzin om een CrowdNode account aan te maken</string>
+    <string name="crowdnode_secure_wallet_explainer">Als je de wachtwoordzin voor deze portemonnee verliest, dit apparaat verliest of de Dash portemonnee app verwijdert, verliest je de toegang tot je geld op CrowdNode en ook het geld in deze portemonnee.</string>
+    <string name="insufficient_funds">Je hebt onvoldoende geld om door te gaan.</string>
+    <string name="crowdnode_minimum_dash">je moet minimaal %s Dash hebben om door te gaan met de CrowdNode verificatie.</string>
+    <string name="crowdnode_agree_to_terms">Ik ga akkoord met CrowdNode %1$s en %2$s</string>
+    <string name="terms_of_use">Gebruiksvoorwaarden</string>
+    <string name="privacy_policy">Privacybeleid</string>
+    <string name="crowdnode_account_ready">Je CrowdNode account is ingesteld en klaar voor gebruik!</string>
+    <string name="notify_when_done">Sluiten en melden wanneer het klaar is</string>
+    <string name="crowdnode_creating">Je CrowdNode account wordt aangemaakt...</string>
+    <string name="accepting_terms">Gebruiksvoorwaarden accepteren...</string>
+    <string name="crowdnode_signup_error">We kunnen je CrowdNode account niet aanmaken.</string>
+    <string name="crowdnode_deposit_error">We konden geen storting doen op je CrowdNode account.</string>
+    <string name="crowdnode_withdraw_error">We konden niet opnemen uit je CrowdNode account.</string>
+    <string name="crowdnode_transfer_error">Je CrowdNode overboeking is mislukt.</string>
+    <string name="crowdnode_deposit_received">Je storting op CrowdNode is ontvangen.</string>
+    <string name="deposit">Stort</string>
+    <string name="deposit_sent">Storting is verzonden</string>
+    <string name="deposit_sent_message">Het kan even duren voordat je saldo is bijgewerkt.</string>
+    <string name="crowdnode_deposit_from_wallet">Dashportemonnee ➝ CrowdNode</string>
+    <string name="from_wallet">van Dash portemonnee</string>
+    <string name="from_crowdnode">van CrowdNode</string>
+    <string name="withdraw">Neem op</string>
+    <string name="withdrawal_requested">Opname is aangevraagd</string>
+    <string name="withdrawal_requested_message">Het kan even duren voordat de fondsen binnen komen.</string>
+    <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
+    <string name="online_account">Online account</string>
+    <string name="online_account_create">Maak online account aan</string>
+    <string name="secure_online_account">Bescherm uw spaargeld</string>
+    <string name="crowdnode_signup_to_finish">Meld je aan om het instellen van je account te voltooien</string>
+    <string name="online_account_create_full">Maak een online CrowdNode account aan</string>
+    <string name="online_account_email_privacy">Houd er rekening mee dat de e-mail niet wordt opgeslagen door de Dash Portemonnee en alleen maar wordt verzonden naar Crowdnode</string>
+    <string name="crowdnode_support">CrowdNode ondersteuning</string>
+    <string name="unlink_account">Unlink account</string>
+    <string name="online_account_title">Waarom heb je een online account nodig?</string>
+    <string name="crowdnode_online_synced">Gesynchroniseerd met huidige Dash portemonnee</string>
+    <string name="crowdnode_in_process">Bezig....</string>
+    <string name="account_recovery">Accountherstel</string>
+    <string name="crowdnode_recovery_info">Als je ooit de wachtwoordzin kwijtraakt, kan je op andere manieren verifiëren om weer toegang te krijgen tot CrowdNode.</string>
+    <string name="transaction_history">Transactiegeschiedenis</string>
+    <string name="see_staking_details">Je kunt gedetailleerde informatie zien over uw stortingen, opnames en inkomsten.</string>
+    <string name="payout_options">Uitbetaalopties</string>
+    <string name="payout_options_details">Je kunt wijzigen hoe en wanneer inkomsten aan worden uitbetaald.</string>
+    <string name="crowdnode_balance">Saldo op CrowdNode</string>
+    <string name="crowdnode_your_address_title">Dit is het Dash adres dat is gekoppeld aan je CrowdNode account</string>
+    <string name="chain_syncing">De blockchain wordt gesynchroniseerd...</string>
+    <string name="crowdnode_wait_for_sync">Wacht tot de blockchain volledig is gesynchroniseerd, zodat we de transactiegeschiedenis kunnen bekijken. Bezoek de CrowdNode website om in te loggen of aan te melden.</string>
+    <string name="crowdnode_open_website">Ga naar de website van CrowdNode</string>
+    <string name="crowdnode_info_title">Word onderdeel van een Dash Masternode met CrowdNode</string>
+    <string name="introducing_staking">Introductie van staking</string>
+    <string name="crowdnode_staking_info">Ontvang beloningen van deposito\'s in Dash Masternodes vanaf slechts 0,5 Dash.</string>
+    <string name="instant_rewards">Ontvang direct beloningen</string>
+    <string name="daily_rewards_info">Ontvang dagelijks jouw deel van de beloning.</string>
+    <string name="crowdnode_sending_to">Wordt verzonden naar CrowdNode account</string>
+    <string name="wallet_sending_to">Verzenden naar Dash portemonnee op dit apparaat</string>
+    <string name="available_balance">Saldo: %s</string>
+    <string name="crowdnode_minimum_deposit">Stort minimaal %s om te beginnen met verdienen</string>
+    <string name="crowdnode_minimum_deposit_difference">Stort %s om te beginnen met verdienen</string>
+    <string name="crowdnode_first_deposit">Eerste storting moet meer zijn dan %s</string>
+    <string name="crowdnode_staking_info_title">Hoe staking werkt</string>
+    <string name="crowdnode_staking_info_message">Je begint te verdienen als je CrowdNode account meer heeft dan %s</string>
+    <string name="crowdnode_verify_api_address">Verifieer je API Dash adres</string>
+    <string name="crowdnode_how_to_verify">Hoe je het API Dash adres kunt bevestigen</string>
+    <string name="crowdnode_how_to_verify_description1">Stuur %s Dash vanaf het primaire Dash adres dat je momenteel gebruikt voor je CrowdNode account</string>
+    <string name="crowdnode_how_to_verify_description2">naar het Dash adres dat is toegewezen aan je CrowdNode account in de Dash portemonnee op dit apparaat</string>
+    <string name="crowdnode_how_to_verify_description3">We zullen deze transactie automatisch detecteren en hetzelfde bedrag overboeken naar je CrowdNode account. Daarna kan je op dit apparaat geld storten en opnemen in de Dash portemonnee.</string>
+    <string name="button_show_qr">Toon QR</string>
+    <string name="scan_qr">Scan QR</string>
+    <string name="qr_contains_request">Deze QR bevat al het betalingsverzoek voor %s Dash</string>
+    <string name="verification_required">Verificatie vereist</string>
+    <string name="validating_address">Adres valideren…</string>
+    <string name="crowdnode_address_validated">Je CrowdNode adres is gevalideerd, maar verificatie is vereist.</string>
+    <string name="crowdnode_address_confirmed">Je CrowdNode adres is bevestigd.</string>
+    <string name="crowdnode_bad_confirmation">Bevestiging verzonden vanaf een verkeerd primair adres</string>
+    <string name="crowdnode_online_account_details_title">Informatie over je online account</string>
+    <string name="crowdnode_online_account_details_primary">Het primaire Dash adres dat je momenteel gebruikt voor je CrowdNode account</string>
+    <string name="crowdnode_online_account_details_api">Het Dash adres dat is aangewezen voor je CrowdNode account in de portemonnee op dit apparaat</string>
+    <string name="crowdnode_primary_missing">Het primaire Dash adres ontbreekt in je account. Specificeer het op de CrowdNode website.</string>
+    <string name="crowdnode_wait_signed_email">Wacht tot de e-mail is verwerkt...</string>
+    <string name="cannot_send">Kan niet verzenden.</string>
+    <string name="crowdnode_tx_set_title">Waarom zie ik al deze transacties?</string>
+    <string name="crowdnode_tx_set_explainer">Je CrowdNode account is gemaakt met behulp van deze transacties.</string>
+    <string name="shuffle_coins">Munten schudden</string>
+    <string name="positive_balance_required">Je zou een positief saldo moeten hebben in de Dash portemonnee</string>
+    <string name="withdrawal_required_balance">Stort minimaal 0,0003 Dash in je Dash portemonnee om een opname te voltooien</string>
+
+    </resources>

@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">Kan portemonnee niet laden!</string>
 
     <string name="set_pin_create_new_wallet">Maak een nieuwe portemonnee aan</string>
+    <string name="set_pin_upgrade_wallet">Upgrade portemonnee</string>
     <string name="set_pin_restore_wallet">Herstel portemonnee</string>
     <string name="set_pin_enter_pin">Voer oude PIN in</string>
     <string name="set_pin_set_pin">Stel PIN in</string>
@@ -15,6 +16,8 @@
     <string name="set_pin_decrypting">Ontgrendelen van portemonnee</string>
     <string name="set_pin_verifying_pin">Verifieer pin</string>
     <string name="set_pin_message">Deze PIN is vereist om je app elke keer te ontgrendelen wanneer je deze gebruikt.</string>
+    <string name="set_pin_confirm_pin_incorrect">Onjuiste PIN</string>
+
     <string name="home_available_balance">Beschikbaar saldo</string>
     <string name="home_balance_hidden">Saldo verborgen</string>
     <string name="home_balance_show_hint">Tik om saldo te zien</string>
@@ -60,12 +63,12 @@
     <string name="scan_to_pay_error_dialog_title">Scan om te verzenden</string>
     <string name="scan_to_pay_error_dialog_message">Geen geldig Dash adres of URL verzoek op klembord:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Geen geldig Dash adres of URL verzoek op klembord.</string>
+    <string name="pay_to_confirm_address">Is dit het Dash adres waarnaar je de betaling wilt sturen?</string>
 
     <string name="receive_title">Ontvangen</string>
     <string name="receive_enter_amount_message">Specificeer het te ontvangen bedrag</string>
     <string name="receive_enter_amount_button">Specificeer bedrag</string>
     <string name="receive_share_button">Delen</string>
-    <string name="receive_copied">Gekopieerd</string>
 
     <string name="pay_title">Verzenden</string>
     <string name="history_title">Geschiedenis</string>
@@ -115,7 +118,6 @@
     <string name="import_export_keys_dialog_password_phrase">Voer hier je herstelzin in.</string>
     <string name="preferences_report_issue_summary">Vergaar informatie over je probleem en verstuur via e-mail een melding aan de ontwikkelaars.</string>
     <string name="navigation_configuration">Configuratie</string>
-    <string name="button_copy_address">Kopieer adres</string>
     <string name="request_coins_clipboard_address_msg">Dash-adres is gekopieerd naar het klembord</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Toon</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" is geen herstelzinwoord</string>
@@ -144,6 +146,8 @@
     <string name="wallet_lock_try_again">Probeer nogmaals over %1$d %2$s</string>
     <string name="wallet_lock_reset">Reset</string>
     <string name="wallet_lock_wrong_pin">Verkeerde pin! %s</string>
+    <string name="wallet_last_attempt">Laatste PIN poging</string>
+    <string name="wallet_last_attempt_message">Nog een mislukte poging vereist mijn wachtwoordzin om mijn portemonnee te herstellen</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d resterende poging</item>
@@ -178,6 +182,13 @@
     <string name="notification_transactions_channel_description">Ontvang notificaties over binnenkomende transacties.</string>
     <string name="notification_synchronization_channel_name">Synchronisatie</string>
     <string name="notification_synchronization_channel_description">Toont een notificatie als de app met het netwerk aan het synchroniseren is.</string>
+    <string name="notification_generic_channel_name">Algemene meldingen</string>
+    <string name="notification_generic_channel_description">Andere Dashportemonnee-evenementen</string>
+    <string name="notification_push_channel_name">Push notificaties</string>
+    <string name="notification_push_channel_description">Toont push meldingen die door Dash naar je zijn verzonden</string>
+    <string name="notification_settings_title">Notificaties</string>
+    <string name="notification_explainer_title">Dash Wallet wil je graag meldingen sturen</string>
+    <string name="notification_explainer_message">Meldingen kunnen waarschuwingen, geluiden en pictogrambadges bevatten. Deze kunnen worden geconfigureerd in de telefooninstellingen.</string>
 
     <string name="net_type_indicator" />
 
@@ -196,7 +207,6 @@
     <string name="preferences_enable_payment_request_title">BIP70 voor scan-to-pay</string>
 
     <string name="verify_continue">Doorgaan</string>
-    <string name="verify">Verifiëren</string>
     <string name="verify_backup_wallet">Back-up portemonnee</string>
     <string name="verify_show_recovery_phrase">Toon herstelzin</string>
     <string name="verify_secure_now">Beveilig portemonnee nu</string>
@@ -261,13 +271,18 @@
     <string name="tools_address_book">Adresboek</string>
     <string name="tools_import_private_key">Importeer persoonlijke sleutel</string>
     <string name="tools_network_monitor">Netwerk monitor</string>
+    <string name="tools_show_xpub">Uitgebreide publieke sleutel</string>
 
     <string name="about_help_us_improve">Help ons je ervaring te verbeteren</string>
     <string name="about_review_and_rate">Schrijf een recensie &amp; Beoordeel de app</string>
     <string name="about_contact_support">Neem contact op</string>
     <string name="about_fork_disclaimer">Dit is een open source app afgesplitst van de Bitcoin portemonnee</string>
+    <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash portemonnee%s</string>
+    <string name="about_last_explore_dash_sync">Explore Dash gegevens bijgewerkt op: %1$s \nLaatste synchronisatie: %2$s</string>
+    <string name="about_last_explore_dash_update_error">kan niet ophalen</string>
+    <string name="about_last_explore_dash_sync_never">nooit</string>
 
     <string name="block">Block</string>
     <string name="time">Tijd</string>
@@ -313,7 +328,6 @@
     <string name="welcome_screen_subtitle_3">Heb volledige controle en pas je portemonnee aan op basis van je behoeften</string>
 
     <string name="sync_status_wait">Wacht a.u.b. tot de synchronisatie is voltooid</string>
-    <string name="sync_status_syncing_title">Aan het synchroniseren %1$d</string>
     <string name="sync_status_syncing_sub_title">met Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Kan geen verbinding maken</string>
     <string name="sync_status_check_connection">Controleer je verbinding</string>
@@ -322,7 +336,6 @@
 
     <string name="appwidget_wallet_not_ready">Stel a.u.b. je portemonnee in</string>
 
-    <string name="payment_request_please_wait_title">Even wachten a.u.b.</string>
     <string name="payment_request_please_wait_message">Verbinding maken met betalingsserver</string>
     <string name="payment_request_unable_to_connect">Kan geen verbinding maken</string>
     <string name="payment_request_unable_to_send">Verzenden niet mogelijk</string>
@@ -347,4 +360,19 @@
     <string name="all_transactions">Alles</string>
     <string name="received_transactions">Ontvangen</string>
     <string name="sent_transactions">Verzonden</string>
+    <string name="set_pin_error_missing_wallet_title">Fout missende portemonnee</string>
+    <string name="set_pin_error_missing_wallet_message">De portemonnee is zoek. Meld dit bij de Support Desk.</string>
+    <string name="wallet_encryption_error_title">Fout bij aanmaken portemonnee</string>
+    <string name="wallet_encryption_error_message">Er is een probleem opgetreden bij het maken van de portemonnee. Meld dit bij de Support Desk.</string>
+    <string name="wallet_not_encrypted_error_message">Er is een probleem met je portemonnee.\n\nAls je geen Dash in deze portemonnee hebt, verwijder dan deze app en installeer hem opnieuw. Maak vervolgens een nieuwe portemonnee.\n\nAls je een herstelzin of een back-upbestand hebt, verwijder dan deze app en installeer hem opnieuw.\n\nAnders meld je dit bij de Support Desk.</string>
+
+    <string name="reset_wallet_title">Weet je zeker dat je je portemonnee wil resetten?</string>
+    <string name="reset_wallet_message">Als je je portemonnee reset is de enige manier om er nog toegang tot te krijgen is om die te herstellen met de herstelzin.</string>
+    <string name="positive_reset_text">Ja, reset portemonnee</string>
+    <string name="launch_reset_wallet_title">Je hebt een positief saldo</string>
+    <string name="launch_reset_wallet_message">Als je je portemonnee reset raak je al je fondsen kwijt als je niet je herstelzin niet hebt geback-upt.</string>
+    <string name="continue_reset">Doorgaan</string>
+    <string name="launch_reset_wallet_extra_message">Back-up je herstelzin</string>
+    <string name="start_reset_wallet_title">Je kan %s kwijtraken</string>
+    <string name="reset_wallet_text">Portemonnee resetten</string>
 </resources>

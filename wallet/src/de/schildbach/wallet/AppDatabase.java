@@ -9,6 +9,8 @@ import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.BlockchainIdentityDataDaoAsync;
 import de.schildbach.wallet.data.BlockchainIdentityDataDao;
 import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.RoomConverters;
+
 import de.schildbach.wallet.data.AppDatabaseMigrations;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
@@ -21,15 +23,26 @@ import de.schildbach.wallet.data.DashPayProfileDao;
 import de.schildbach.wallet.data.Invitation;
 import de.schildbach.wallet.data.InvitationsDao;
 import de.schildbach.wallet.data.InvitationsDaoAsync;
-import de.schildbach.wallet.data.RoomConverters;
 import de.schildbach.wallet.data.UserAlertDao;
 import de.schildbach.wallet.data.UserAlertDaoAsync;
+import de.schildbach.wallet.data.BlockchainStateRoomConverters;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 import de.schildbach.wallet.ui.dashpay.UserAlert;
+import kotlin.Deprecated;
 
-@Database(entities = {ExchangeRate.class, BlockchainState.class, BlockchainIdentityData.class,
-        DashPayProfile.class, DashPayContactRequest.class, UserAlert.class, Invitation.class}, version = 16)
-@TypeConverters({RoomConverters.class})
+/**
+ * @author Samuel Barbosa
+ */
+@Database(entities = {
+        ExchangeRate.class,
+        BlockchainState.class,
+        BlockchainIdentityData.class,
+        DashPayProfile.class,
+        DashPayContactRequest.class,
+        UserAlert.class,
+        Invitation.class
+}, version = 16)
+@TypeConverters({RoomConverters.class, BlockchainStateRoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
     private static AppDatabase instance;
@@ -58,6 +71,7 @@ public abstract class AppDatabase extends RoomDatabase {
 
     public abstract UserAlertDaoAsync userAlertDaoAsync();
 
+    @Deprecated(message = "Inject instead")
     public static AppDatabase getAppDatabase() {
         if (instance == null) {
             instance = Room.databaseBuilder(WalletApplication.getInstance(),

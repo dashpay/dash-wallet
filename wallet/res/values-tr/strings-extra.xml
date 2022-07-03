@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">Cüzdanı yükleme başarısız!</string>
 
     <string name="set_pin_create_new_wallet">Yeni Cüzdan Oluştur</string>
+    <string name="set_pin_upgrade_wallet">Cüzdanı Yükselt</string>
     <string name="set_pin_restore_wallet">Cüzdanı Geri Yükle</string>
     <string name="set_pin_enter_pin">Eski PİN\'i girin</string>
     <string name="set_pin_set_pin">PİN Oluştur</string>
@@ -15,6 +16,7 @@
     <string name="set_pin_decrypting">Cüzdan şifresi çözülüyor</string>
     <string name="set_pin_verifying_pin">PİN Doğrulanıyor</string>
     <string name="set_pin_message">Bu PİN uygulamanın açılması için her zaman gerekecektir.</string>
+    <string name="set_pin_confirm_pin_incorrect">Hatalı PIN</string>
 
     <string name="home_available_balance">Mevcut bakiye</string>
     <string name="home_balance_hidden">Bakiye gizlendi</string>
@@ -61,12 +63,12 @@
     <string name="scan_to_pay_error_dialog_title">Göndermek için Tara</string>
     <string name="scan_to_pay_error_dialog_message">Panodaki Dash Adresi veya URL isteği geçerli değil:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Panodaki Dash Adresi veya URL isteği geçerli değil.</string>
+    <string name="pay_to_confirm_address">Bu, ödeme göndermek istediğiniz Dash adresi mi?</string>
 
     <string name="receive_title">Al</string>
     <string name="receive_enter_amount_message">Alınacak tutarı belirtin</string>
     <string name="receive_enter_amount_button">Tutarı Belirleyin</string>
     <string name="receive_share_button">Paylaş</string>
-    <string name="receive_copied">Kopyalandı</string>
 
     <string name="pay_title">Gönder</string>
     <string name="history_title">Geçmiş</string>
@@ -116,7 +118,6 @@
     <string name="import_export_keys_dialog_password_phrase">Kurtarma sözcük grubunuz buraya.</string>
     <string name="preferences_report_issue_summary">Sorununuz ile ilgili bilgi toplayın ve raporunuzu geliştiricilere e-posta yolu ile gönderin.</string>
     <string name="navigation_configuration">Yapılandırma</string>
-    <string name="button_copy_address">Adresi Kopyala</string>
     <string name="request_coins_clipboard_address_msg">Dash adresi panoya kopyalandı</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Göster</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" kurtarma cümlesi kelimesi değil</string>
@@ -145,6 +146,8 @@
     <string name="wallet_lock_try_again">%1$d %2$s içinde tekrar dene</string>
     <string name="wallet_lock_reset">Yeniden Başlat</string>
     <string name="wallet_lock_wrong_pin">Yanlış PIN! %s</string>
+    <string name="wallet_last_attempt">Son PIN denemesi</string>
+    <string name="wallet_last_attempt_message">Başka bir başarısız girişim, cüzdanımı kurtarmak için parolamı gerektirecek</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d deneme hakkı kaldı</item>
@@ -179,6 +182,13 @@
     <string name="notification_transactions_channel_description">Yaklaşan işlemlerle ilgili uyarı al.</string>
     <string name="notification_synchronization_channel_name">Eşleştirme</string>
     <string name="notification_synchronization_channel_description">Uygulama ağ ile eşleşirken bir bildirim gösterir.</string>
+    <string name="notification_generic_channel_name">Genel bildirimler</string>
+    <string name="notification_generic_channel_description">Diğer Dash Cüzdan etkinlikleri</string>
+    <string name="notification_push_channel_name">Push bildirimleri</string>
+    <string name="notification_push_channel_description">Dash tarafından size gönderilen push bildirimlerini gösterir</string>
+    <string name="notification_settings_title">Bildirimler</string>
+    <string name="notification_explainer_title">Dash Cüzdanı size bildirim göndermek istiyor</string>
+    <string name="notification_explainer_message">Bildirimler, uyarıları, sesleri ve simge rozetlerini içerebilir. Bunlar telefon Ayarlarında yapılandırılabilir.</string>
 
     <string name="net_type_indicator" />
 
@@ -197,7 +207,6 @@
     <string name="preferences_enable_payment_request_title">ödemeyi-tara için BIP70</string>
 
     <string name="verify_continue">Devam</string>
-    <string name="verify">Onayla</string>
     <string name="verify_backup_wallet">Cüzdanı Yedekle</string>
     <string name="verify_show_recovery_phrase">Kurtarma Sözcük Grubunu Göster</string>
     <string name="verify_secure_now">Şimdi Cüzdanını Korumaya Al</string>
@@ -256,17 +265,24 @@
     <string name="menu_rescan_blockchain">Blok Zincirini Tekrar Tara</string>
     <string name="menu_contact_support_title">Destekle İletişime Geçin</string>
     <string name="menu_contact_support_subtitle">Sorun rapor et</string>
+    <string name="menu_explore_title">Keşfet</string>
+    <string name="menu_explore_subtitle">155.000\'den fazla satıcıda DASH ile alışveriş yapın</string>
 
     <string name="tools_address_book">Adres Rehberi</string>
     <string name="tools_import_private_key">Özel anahtar içeri al</string>
     <string name="tools_network_monitor">Ağ monitörü</string>
+    <string name="tools_show_xpub">Genişletilmiş Genel Anahtar</string>
 
     <string name="about_help_us_improve">Deneyiminizi geliştirmemize yardımcı olun</string>
     <string name="about_review_and_rate">Uygulamamızı değerlendirip &amp; Puanlayın</string>
     <string name="about_contact_support">Destekle İletişime Geçin</string>
     <string name="about_fork_disclaimer">Bu uygulama açık kaynak kodlu bir Bitcoin çatallanmasıdır</string>
+    <string name="about_copyright">Telif Hakkı © 2022 Dash Core</string>
     <string name="about_license">GNU Genel Kamu Lisansı v3.0</string>
     <string name="about_version_name">Dash Cüzdanı %s</string>
+    <string name="about_last_explore_dash_sync">Dash verilerini keşfedin: %1$s\nSon senkronizasyon: %2$s</string>
+    <string name="about_last_explore_dash_update_error">getirilemiyor</string>
+    <string name="about_last_explore_dash_sync_never">asla</string>
 
     <string name="block">Blok</string>
     <string name="time">Zaman</string>
@@ -312,7 +328,6 @@
     <string name="welcome_screen_subtitle_3">Tam kontrol sahibi olun ve cüzdanınızı ihtiyacınıza göre özelleştirin</string>
 
     <string name="sync_status_wait">Lütfen senkronizasyonun tamamlanmasını bekleyin</string>
-    <string name="sync_status_syncing_title">Senkronize ediliyor %1$d</string>
     <string name="sync_status_syncing_sub_title">Dash blok zinciri ile</string>
     <string name="sync_status_unable_to_connect">Bağlanılamıyor</string>
     <string name="sync_status_check_connection">Bağlantınızı kontrol edin</string>
@@ -321,7 +336,6 @@
 
     <string name="appwidget_wallet_not_ready">Lütfen cüzdanınızı kurun</string>
 
-    <string name="payment_request_please_wait_title">Lütfen bekleyin</string>
     <string name="payment_request_please_wait_message">Ödeme Sunucusuna Bağlanıyor</string>
     <string name="payment_request_unable_to_connect">Bağlanılamıyor</string>
     <string name="payment_request_unable_to_send">Gönderilemiyor</string>
@@ -346,4 +360,19 @@
     <string name="all_transactions">Hepsi</string>
     <string name="received_transactions">Alınan</string>
     <string name="sent_transactions">Gönderilen</string>
+    <string name="set_pin_error_missing_wallet_title">Eksik Cüzdan Hatası</string>
+    <string name="set_pin_error_missing_wallet_message">Cüzdan kayıp. Lütfen bunu Destek Masasına bildirin.</string>
+    <string name="wallet_encryption_error_title">Cüzdan Oluşturma Hatası</string>
+    <string name="wallet_encryption_error_message">Cüzdan oluşturulurken bir sorun oluştu. Lütfen bunu Destek Masasına bildirin.</string>
+    <string name="wallet_not_encrypted_error_message">Cüzdanınızla ilgili bir sorun var.\n\nBu cüzdanda Dash yoksa, bu uygulamayı kaldırıp yeniden yükleyin. Ardından yeni bir cüzdan oluşturun.\n\nBir kurtarma ifadeniz veya bir yedekleme dosyanız varsa, bu uygulamayı kaldırın ve yeniden yükleyin.\n\nAksi takdirde, lütfen bunu Destek Masasına bildirin.</string>
+
+    <string name="reset_wallet_title">Cüzdanı sıfırlamak istediğinizden emin misiniz?</string>
+    <string name="reset_wallet_message">Cüzdanınızı sıfırlarsanız, ona erişmenin tek yolu, kurtarma ifadesiyle cüzdanı kurtarmaktır.</string>
+    <string name="positive_reset_text">Evet, Cüzdanı Sıfırla</string>
+    <string name="launch_reset_wallet_title">Pozitif bir bakiyeniz var</string>
+    <string name="launch_reset_wallet_message">Cüzdanınızı sıfırlarsanız, kurtarma ifadenizi yedeklemediyseniz tüm paranızı kaybedersiniz.</string>
+    <string name="continue_reset">Devam</string>
+    <string name="launch_reset_wallet_extra_message">Kurtarma ifadenizi yedekleyin</string>
+    <string name="start_reset_wallet_title">%s kaybedebilirsiniz</string>
+    <string name="reset_wallet_text">Cüzdanı Sıfırla</string>
 </resources>

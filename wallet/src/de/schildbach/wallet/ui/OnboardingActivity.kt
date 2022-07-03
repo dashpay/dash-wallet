@@ -27,6 +27,7 @@ import android.text.TextUtils
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -34,14 +35,15 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.backup.RestoreFromFileActivity
+import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.preference.PinRetryController
-import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
 import org.dash.wallet.common.data.OnboardingState
 import kotlinx.android.synthetic.main.activity_onboarding_invalid_wallet.*
+import de.schildbach.wallet.security.SecurityGuard
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.slf4j.LoggerFactory
@@ -51,6 +53,8 @@ private const val REGULAR_FLOW_TUTORIAL_REQUEST_CODE = 0
 const val SET_PIN_REQUEST_CODE = 1
 private const val RESTORE_PHRASE_REQUEST_CODE = 2
 private const val RESTORE_FILE_REQUEST_CODE = 3
+private const val UPGRADE_NONENCRYPTED_FLOW_TUTORIAL_REQUEST_CODE = 4
+
 
 @AndroidEntryPoint
 class OnboardingActivity : RestoreFromFileActivity() {
@@ -71,12 +75,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
     }
 
-    private lateinit var viewModel: OnboardingViewModel
+    private val viewModel: OnboardingViewModel by viewModels()
 
     private lateinit var walletApplication: WalletApplication
-
-    @Inject
-    lateinit var analytics: AnalyticsService
 
     override fun onStart() {
         super.onStart()
@@ -94,35 +95,32 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 finish()
             }
             wipe_wallet.setOnClickListener {
-                ResetWalletDialog.newInstance(analytics).show(supportFragmentManager, "reset_wallet_dialog")
+                ResetWalletDialog.newInstance(viewModel.analytics).show(supportFragmentManager, "reset_wallet_dialog")
             }
             return
-        } else if (walletApplication.isWalletUpgradedtoBIP44 && !walletApplication.wallet.isEncrypted) {
-            unencryptedFlow()
         }
 
         setContentView(R.layout.activity_onboarding)
         slogan.setPadding(slogan.paddingLeft, slogan.paddingTop, slogan.paddingRight, getStatusBarHeightPx())
 
-        walletApplication = (application as WalletApplication)
         OnboardingState.init(walletApplication.configuration)
         OnboardingState.clear()
 
         if (walletApplication.walletFileExists()) {
-            if (walletApplication.isWalletUpgradedtoBIP44) {
-                if (walletApplication.wallet.isEncrypted) {
+            if (!walletApplication.wallet!!.isEncrypted) {
+                unencryptedFlow()
+            } else {
+                if (walletApplication.isWalletUpgradedToBIP44) {
                     regularFlow()
                 } else {
-                    unencryptedFlow()
+                    upgradeToBIP44Flow()
                 }
-            } else {
-                upgradeToBIP44Flow()
             }
         } else {
             if (walletApplication.wallet == null) {
                 onboarding()
             } else {
-                if (walletApplication.wallet.isEncrypted) {
+                if (walletApplication.wallet!!.isEncrypted) {
                     walletApplication.fullInitialization()
                     regularFlow()
                 } else {
@@ -137,23 +135,21 @@ class OnboardingActivity : RestoreFromFileActivity() {
     // This is due to a wallet being created in an invalid way
     // such that the wallet is not encrypted
     private fun unencryptedFlow() {
-        log.info("the wallet is not encrypted")
-        analytics.logError(
-            Exception("the wallet is not encrypted / OnboardingActivity"),
-            "no other details are available without the user submitting a report"
-        )
-
-        setContentView(R.layout.activity_onboarding_invalid_wallet)
-        hideSlogan()
-
-        unencrypted_close_app.setOnClickListener {
-            finish()
+        log.info("the wallet is not encrypted -- the wallet will be upgraded")
+        if (walletApplication.configuration.v7TutorialCompleted) {
+            upgradeUnencryptedWallet()
+        } else {
+            startActivityForResult(Intent(this, WelcomeActivity::class.java),
+                UPGRADE_NONENCRYPTED_FLOW_TUTORIAL_REQUEST_CODE)
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
         }
-        unencrypted_contact_support.setOnClickListener {
-            ReportIssueDialogBuilder.createReportIssueDialog(
-                this@OnboardingActivity, walletApplication
-            ).buildAlertDialog().show()
+    }
+
+    private fun upgradeUnencryptedWallet() {
+        viewModel.finishUnecryptedWalletUpgradeAction.observe(this) {
+            startActivityForResult(SetPinActivity.createIntent(application, R.string.set_pin_upgrade_wallet, upgradingWallet = true), SET_PIN_REQUEST_CODE)
         }
+        viewModel.upgradeUnencryptedWallet()
     }
 
     private fun upgradeToBIP44Flow() {
@@ -217,7 +213,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     @SuppressLint("StringFormatInvalid")
     private fun initViewModel() {
-        viewModel = ViewModelProvider(this).get(OnboardingViewModel::class.java)
         viewModel.showToastAction.observe(this, Observer {
             Toast.makeText(this, it, Toast.LENGTH_LONG).show()
         })
@@ -241,6 +236,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
         viewModel.startActivityAction.observe(this, Observer {
             startActivity(it)
         })
+        viewModel.finishCreateNewWalletAction.observe(this) {
+            startActivityForResult(SetPinActivity.createIntent(application, R.string.set_pin_create_new_wallet), SET_PIN_REQUEST_CODE)
+        }
     }
 
     private fun showButtonsDelayed() {
@@ -273,6 +271,10 @@ class OnboardingActivity : RestoreFromFileActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REGULAR_FLOW_TUTORIAL_REQUEST_CODE) {
             upgradeOrStartMainActivity()
+        } else if (requestCode == UPGRADE_NONENCRYPTED_FLOW_TUTORIAL_REQUEST_CODE) {
+            upgradeUnencryptedWallet()
+        } else if ((requestCode == SET_PIN_REQUEST_CODE || requestCode == RESTORE_PHRASE_REQUEST_CODE) && resultCode == Activity.RESULT_OK) {
+            finish()
         }
     }
 

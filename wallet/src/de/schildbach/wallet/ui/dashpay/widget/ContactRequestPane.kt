@@ -34,7 +34,7 @@ class ContactRequestPane(context: Context, attrs: AttributeSet) : LinearLayout(c
 
     init {
         orientation = VERTICAL
-        setBackgroundColor(ResourcesCompat.getColor(resources, R.color.bg_less_bright, null))
+        setBackgroundColor(ResourcesCompat.getColor(resources, R.color.background_primary, null))
         applySendState()
 
         binding.payButton.setOnClickListener {

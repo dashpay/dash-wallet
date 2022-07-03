@@ -40,7 +40,7 @@
     <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/price"
         style="@style/MontserratRegular"
-        android:textColor="@color/gray_400"
+        android:textColor="@color/steel_gray_400"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginLeft="10dp"
@@ -57,7 +57,7 @@
         style="@style/MontserratMedium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/gray_400"
+        android:textColor="@color/steel_gray_400"
         android:textSize="13sp"
         app:layout_constraintEnd_toStartOf="@+id/checkbox"
         android:layout_marginEnd="10dp"
@@ -81,7 +81,7 @@
         tools:visibility="visible"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
-        android:background="@color/gray_white"
+        android:background="@color/gray_200"
         />
 
     <androidx.constraintlayout.widget.Guideline

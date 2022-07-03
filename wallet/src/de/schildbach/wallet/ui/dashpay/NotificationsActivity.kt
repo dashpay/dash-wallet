@@ -83,7 +83,7 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
 
         lastSeenNotificationTime = walletApplication.configuration.lastSeenNotificationTime
 
-        notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet,
+        notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet!!,
                 true, this, this, this)
 
         if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {

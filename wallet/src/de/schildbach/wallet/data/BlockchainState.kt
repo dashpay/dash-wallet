@@ -51,5 +51,4 @@ data class BlockchainState(var bestChainDate: Date?,
     fun isSynced(): Boolean {
         return !replaying && percentageSync == 100 && !syncFailed()
     }
-
 }

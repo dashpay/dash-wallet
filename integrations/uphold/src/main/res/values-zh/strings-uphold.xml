@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold</string>
+    <string name="uphold_buy_dash_activity_title">通过Uphold 买/卖Dash</string>
+    <string name="uphold_buy_dash_with_uphold">通过Uphold账户购买Dash</string>
+    <string name="uphold_buy_dash_button">购买Dash</string>
+    <string name="uphold_transfer_to_this_wallet_button">从Uphold进行转账</string>
+    <string name="uphold_link_account">关联Uphold账号</string>
+    <string name="uphold_account_dash_balance">您Uphold账户Dash余额为</string>
+    <string name="uphold_transfer_to_this_wallet">将Dash从您的Uphold账户转账到本钱包</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">手续费将从申请数额中扣除.</string>
+    <string name="uphold_withdrawal_instructions">输入转账数额</string>
+    <string name="uphold_withdrawal_success_title">成功</string>
+    <string name="uphold_withdrawal_success_message">您的交易已发送, 金额将几分钟内在您的钱包中显示.\n\n交易 id: %s</string>
+    <string name="uphold_otp_dialog_title">下方输入您的2次验证码</string>
+    <string name="uphold_transfer">转账</string>
+    <string name="uphold_see_on_uphold">在Uphold中浏览</string>
+    <string name="uphold_logout_title">从Uphold退出</string>
+    <string name="uphold_logout">退出</string>
+    <string name="uphold_logout_explanation_text">您同样需要使用浏览器从Uphold网站退出</string>
+    <string name="uphold_go_to_website">进入网站</string>
+    <string name="uphold_error">Uphold错误</string>
+    <string name="uphold_error_not_logged_in">Dash Wallet与您的Uphold账户已解除关联. 在下一个界面点击关联Uphold账户.</string>
+    <string name="uphold_error_not_available">Uphold服务不可用. 请稍后再试.</string>
+    <string name="uphold_error_report_issue">请使用主目录的报告问题, 将此问题发送给Dash Wallet支持团队.</string>
+
+    <string name="uphold_general_error_title">错误</string>
+    <string name="uphold_api_error_title">Uphold错误</string>
+    <string name="uphold_api_error_identity">您的Uphold账户还未被验证. 无法提取资金.</string>
+    <string name="uphold_api_error_403_description">您的Uphold账户已被标记为待审核.\n\nUphold已暂时限制您的账户, 您将无法提现.\n\n%s</string>
+    <string name="uphold_api_error_403_generic">Uphold将与您联系以帮助您快速解决问题.</string>
+    <string name="uphold_api_error_403_due_diligence">请前往您的Uphold账户回答几个关于您的问题.</string>
+    <string name="uphold_api_error_403_identity">请前往您的Uphold账户来验证您的身份.</string>
+    <string name="uphold_api_error_403_proof_of_address">请联系Uphold来更新您的地址证明.</string>
+
+    <string name="uphold_api_error_400_description">Uphold资金被锁定24个小时.\n\n您将于%s拥有足够资金进行此转账.</string>
+    <string name="uphold_api_error_400_locked">Uphold资金 (%1$s %2$s) 已被锁定最多65天.\n\n您将在%3$s后才有足够的资金用于此次转账.</string>
+    <string name="uphold_api_error_400_tx_insufficentfunds">您没有足够的资金进行此次转账.</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">转账金额应小于%sDASH.</string>
+    <string name="uphold_api_error_400_greater_than_or_equal_to">转账金额应超过%sDASH.</string>
+    <string name="uphold_api_error_400_tx_validation">此应用无法转账这么多资金 (最多 $3000)</string>
+    <string name="uphold_api_error_400_password_reset">由于近期更改了密码, Uphold账户被锁定.\n\n您必须等到%s后才能转账资金.</string>
+    <string name="uphold_api_error_400_authentication_change">由于近期更改了身份验证方式, Uphold账户被锁定.\n\n您必须等到%s后才能转账资金.</string>
+
+    <string name="uphold_api_error_400_invalid_beneficiary">此应用无法转账这么多资金 (最多 $3000)\n\n请使用您的Uphold账户进行转账.</string>
+    <string name="uphold_api_error_400_required">此应用无法转账这么多资金 (最多 $3000)\n\n请使用您的Uphold账户进行转账.</string>
+
+    <string name="uphold_requirement_not_met_base_message">您当前无法执行此操作. %s</string>
+</resources>

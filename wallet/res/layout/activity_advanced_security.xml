@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_less_bright"
+    android:background="@color/background_primary"
     android:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.AdvancedSecurityActivity">
 
@@ -104,7 +104,7 @@
                         android:id="@+id/auto_logout_separator"
                         style="@style/HorizontalLine"
                         android:layout_width="match_parent"
-                        android:background="@color/bg_less_bright"
+                        android:background="@color/background_primary"
                         app:layout_constraintTop_toTopOf="parent" />
 
                     <TextView
@@ -229,7 +229,7 @@
                         android:id="@+id/spending_confirmation_separator"
                         style="@style/HorizontalLine"
                         android:layout_width="match_parent"
-                        android:background="@color/bg_less_bright"
+                        android:background="@color/background_primary"
                         app:layout_constraintTop_toTopOf="parent" />
 
                     <TextView

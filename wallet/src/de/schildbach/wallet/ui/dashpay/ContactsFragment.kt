@@ -49,6 +49,7 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 
@@ -398,9 +399,21 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root),
 
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
-                    dialog(context, null, errorDialogTitleResId, messageResId, *messageArgs)
+                    val dialog = AdaptiveDialog.create(
+                        R.drawable.ic_info_red,
+                        getString(errorDialogTitleResId),
+                        if (messageArgs.isNotEmpty()) {
+                            getString(messageResId, messageArgs)
+                        } else {
+                            getString(messageResId)
+                        },
+                        getString(R.string.button_close),
+                        null
+                    )
+                    dialog.isMessageSelectable = true
+                    dialog.show(requireActivity())
                 } else {
-
+                    // pass
                 }
             }
 

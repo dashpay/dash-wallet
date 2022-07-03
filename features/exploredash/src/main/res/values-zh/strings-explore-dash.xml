@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <!-- Explore screen -->
+    <string name="explore_dash">探索Dash</string>
+    <string name="explore_title">探索</string>
+    <string name="explore_subtitle">使用您的Dash在超过155,000个地点和在线商户轻松购物</string>
+    <string name="explore_merchants_title">在哪里消费?</string>
+    <string name="explore_merchants_subtitle">查找接受Dash支付方式的商户.</string>
+    <string name="explore_atms_title">自动提款机</string>
+    <string name="explore_atms_subtitle">查找在哪里购买或出售Dash和其他加密货币以换取现金.</string>
+    <string name="explore_staking_subtitle">只需点击几下, 即可轻松质押Dash并赚取被动收益.</string>
+
+    <!-- Search -->
+    <string name="explore_search_results">搜索结果</string>
+    <string name="explore_physical_merchant">实体商户</string>
+    <string name="explore_online_merchant">线上</string>
+    <string name="explore_both_types_merchant">线上, 实体商家</string>
+    <string name="explore_multiple_locations">+ 多个位置</string>
+    <string name="explore_option_all">所有</string>
+    <string name="explore_option_buy">购买</string>
+    <string name="explore_option_sell">出售</string>
+    <string name="explore_option_buy_sell">购买 &amp; 出售</string>
+    <string name="explore_where_to_spend">在哪里消费</string>
+    <string name="explore_atms">自动提款机</string>
+    <string name="explore_all_states">所有州</string>
+    <string name="explore_no_results">未找到结果</string>
+    <string name="explore_all_merchants">所有商户</string>
+    <string name="explore_in_radius">%1$s 在 %2$s</string>
+    <string name="explore_no_merchants">没有商户</string>
+    <string name="explore_no_atms">没有自动提款机</string>
+    <string name="distance_miles">%s 英里</string>
+    <string name="distance_kilometers">%s 公里</string>
+
+    <plurals name="explore_merchant_amount">
+        <item quantity="other">%d 商户</item>
+    </plurals>
+
+    <plurals name="explore_atm_amount">
+        <item quantity="other">%d 自动提款机</item>
+    </plurals>
+
+    <!-- Details -->
+    <string name="explore_back_to_locations">返回到所有位置</string>
+    <string name="explore_back_to_nearest">返回到最近的位置</string>
+    <string name="explore_select_location">选择位置</string>
+    <string name="explore_pay_with_dash">用Dash支付</string>
+    <string name="explore_buy_gift_card">购买礼品卡</string>
+    <string name="explore_buy_dash">购买Dash</string>
+    <string name="explore_sell_dash">出售Dash</string>
+    <string name="explore_show_all">显示所有位置</string>
+    <string name="explore_atm_location_hint">该自动贩卖机位于</string>
+    <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
+
+    <!-- Filters -->
+    <string name="explore_filter">过滤</string>
+    <string name="explore_filters">过滤器</string>
+    <string name="explore_apply_filter">应用</string>
+    <string name="explore_payment_method">支付方式</string>
+    <string name="explore_payment_dash">Dash</string>
+    <string name="explore_payment_gift_card">礼品卡</string>
+    <string name="explore_radius">半径</string>
+    <string name="explore_location">位置</string>
+    <string name="explore_current_location">当前位置</string>
+    <string name="explore_location_settings">当前位置设置</string>
+    <string name="explore_reset_filters">重置过滤器</string>
+    <string name="explore_reset_all_filters">重置所有过滤器</string>
+    <string name="explore_filtered_by">筛选条件:</string>
+    <string name="explore_pay_gift_card">使用礼品卡付款</string>
+    <string name="explore_sort_by">排序方式</string>
+
+    <string-array name="merchants_filter_options">
+        <item>线上</item>
+        <item>附近的</item>
+        <item>所有</item>
+    </string-array>
+
+    <string-array name="atms_filter_options">
+        <item>所有</item>
+        <item>购买</item>
+        <item>出售</item>
+        <item>购买/出售</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_miles">
+        <item>1 英里</item>
+        <item>5 英里</item>
+        <item>20 英里</item>
+        <item>50 英里</item>
+    </string-array>
+
+    <string-array name="radius_filter_options_kilometers">
+        <item>1 公里</item>
+        <item>5 公里</item>
+        <item>20 公里</item>
+        <item>50 公里</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>名称</item>
+        <item>距离</item>
+    </string-array>
+
+    <plurals name="radius_miles">
+        <item quantity="other">%d 英里</item>
+    </plurals>
+
+    <plurals name="radius_kilometers">
+        <item quantity="other">%d 公里</item>
+    </plurals>
+
+    <!-- Location Permission -->
+    <string name="explore_location_allowed">允许</string>
+    <string name="explore_location_denied">拒绝</string>
+    <string name="explore_manager_permissions">管理 GPS 权限</string>
+    <string name="explore_location_request">授予 GPS权限, 以便我们能向您显示您附近的位置.</string>
+    <string name="explore_location_explainer">您的位置用于显示您在地图上的位置, 所选半径内的商户以及优化搜索结果.</string>
+    <string name="explore_merchant_location_explainer_title">开启位置服务能获得更好的商户搜索效果.</string>
+    <string name="explore_merchant_location_explainer_message">您的位置用于显示您在地图上的位置, 所选半径内的商户以及优化搜索结果.</string>
+    <string name="explore_atm_location_explainer_title">开启位置服务能获得更好的ATM搜索效果.</string>
+    <string name="explore_atm_location_explainer_message">您的位置用于显示您在地图上的位置, 所选半径内的自动提款机以及优化搜索结果.</string>
+
+    <!-- Info screens -->
+    <string name="explore_info_header_text">我们有2种类型的商户</string>
+    <string name="accept_dash_text">直接接受Dash</string>
+    <string name="pay_with_dash_text">使用Dash钱包付款.</string>
+    <string name="buy_gift_card_text">使用Dash购买礼品卡</string>
+    <string name="buy_gift_card_desc_text">使用Dash购买与您购物金额相等的礼品卡.</string>
+    <string name="learn_more_text">了解更多</string>
+    <string name="continue_text">继续</string>
+    <string name="buy_card_header_text">如何使用礼品卡</string>
+    <string name="buy_card_desc_text">并非所有商店都直接接受Dash支付, 但您可以使用Dash购买礼品卡.</string>
+    <string name="find_merchant_text">查找商户.</string>
+    <string name="buy_gift_card_with_dash_text">使用Dash购买礼品卡.</string>
+    <string name="redeem_gift_card_text">在线上或收银台几秒内兑换您的礼品卡.</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">同步中... 结果可能不完整.</string>
+    <string name="sync_in_progress_error">同步中... 出现一个错误.</string>
+    <string name="sync_in_progress_canceled">同步已取消... 稍后将进行另一次尝试.</string>
+
+    <string name="sync_in_progress_file_not_found">构建错误: 未找到数据库!</string>
+    <string name="sync_in_progress_network_error">同步中断... 网络未连接或无法访问</string>
+</resources>

@@ -24,7 +24,6 @@ open class BaseLockScreenFragment(@LayoutRes contentLayoutId: Int): Fragment(con
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         lockScreenBroadcaster.activatingLockScreen.observe(this) {
-            Log.e(this::class.java.simpleName, "Lock screen observed")
             if (this::alertDialog.isInitialized) {
                 alertDialog.dismissDialog()
             }

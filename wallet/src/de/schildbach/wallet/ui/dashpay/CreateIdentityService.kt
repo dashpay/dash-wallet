@@ -17,8 +17,8 @@ import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainIdentityData.CreationState
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
-import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DecryptSeedTask
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import de.schildbach.wallet_test.R
@@ -313,7 +313,7 @@ class CreateIdentityService : LifecycleService() {
 
         platformRepo.resetIdentityCreationStateError(blockchainIdentityData)
 
-        val wallet = walletApplication.wallet
+        val wallet = walletApplication.wallet!!
         val password = securityGuard.retrievePassword()
 
 
@@ -359,7 +359,7 @@ class CreateIdentityService : LifecycleService() {
             if(isRetry) {
                 val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
                 if (existingIdentity != null) {
-                    platformRepo.recoverIdentityAsync(blockchainIdentity, walletApplication.wallet.blockchainIdentityKeyChain.watchingKey.pubKey)
+                    platformRepo.recoverIdentityAsync(blockchainIdentity, walletApplication.wallet!!.blockchainIdentityKeyChain.watchingKey.pubKey)
                 }
             } else {
                 platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
@@ -438,7 +438,7 @@ class CreateIdentityService : LifecycleService() {
 
         platformRepo.resetIdentityCreationStateError(blockchainIdentityData)
 
-        val wallet = walletApplication.wallet
+        val wallet = walletApplication.wallet!!
         val password = securityGuard.retrievePassword()
 
 
@@ -485,7 +485,7 @@ class CreateIdentityService : LifecycleService() {
                 if(isRetry) {
                     val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
                     if (existingIdentity != null) {
-                        platformRepo.recoverIdentityAsync(blockchainIdentity, walletApplication.wallet.blockchainIdentityKeyChain.watchingKey.pubKey)
+                        platformRepo.recoverIdentityAsync(blockchainIdentity, walletApplication.wallet!!.blockchainIdentityKeyChain.watchingKey.pubKey)
                     }
                 } else {
                     platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
@@ -589,7 +589,7 @@ class CreateIdentityService : LifecycleService() {
         val emptyProfile = DashPayProfile(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!)
         platformRepo.updateDashPayProfile(emptyProfile)
 
-        addInviteUserAlert(walletApplication.wallet)
+        addInviteUserAlert(walletApplication.wallet!!)
 
         PlatformRepo.getInstance().init()
 
@@ -627,7 +627,7 @@ class CreateIdentityService : LifecycleService() {
         // use an "empty" state for each
         blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null, null, true)
 
-        val cftxs = walletApplication.wallet.creditFundingTransactions
+        val cftxs = walletApplication.wallet!!.creditFundingTransactions
 
         val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { it.creditBurnIdentityIdentifier.bytes!!.contentEquals(identity) }
 
@@ -651,7 +651,7 @@ class CreateIdentityService : LifecycleService() {
             }
         }
 
-        val wallet = walletApplication.wallet
+        val wallet = walletApplication.wallet!!
         val password = securityGuard.retrievePassword()
 
         val encryptionKey = deriveKey(backgroundHandler, wallet, password)
@@ -676,7 +676,7 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.recoverIdentityAsync(blockchainIdentity, creditFundingTransaction!!)
         } else {
             platformRepo.recoverIdentityAsync(blockchainIdentity,
-                    walletApplication.wallet.blockchainIdentityKeyChain.watchingKey.pubKeyHash)
+                    walletApplication.wallet!!.blockchainIdentityKeyChain.watchingKey.pubKeyHash)
         }
         platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
@@ -705,7 +705,7 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
         platformRepo.updateSyncStatus(PreBlockStage.GetProfile)
 
-        addInviteUserAlert(walletApplication.wallet)
+        addInviteUserAlert(walletApplication.wallet!!)
 
         // We are finished recovering
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)

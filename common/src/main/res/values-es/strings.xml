@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Generic titles/messages -->
     <string name="loading">Cargando…</string>
     <string name="loading_error">Ocurrió un error. Por favor, intenta nuevamente más tarde.</string>
+    <string name="please_wait_title">Por favor espera</string>
     <string name="dash_available">%1$s disponible</string>
     <string name="network_unavailable_title">Red no disponible</string>
     <string name="network_unavailable_check_connection">Comprueba tu conexión de red</string>
     <string name="network_unavailable_balance_not_accurate">Es posible que el saldo no sea exacto debido a la pérdida de conexión</string>
+    <string name="buy_dash">Comprar Dash</string>
+    <string name="copied">Copiado</string>
+    <string name="staking_title">Staking</string>
+    <string name="email">Email</string>
+    <string name="email_placeholder">por ejemplo,  johndoe@mail.com</string>
+    <string name="error">Error</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Libra de Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -26,10 +34,19 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Rechazar</string>
     <string name="network_unavailable_return">Regresar a la billetera</string>
     <string name="button_continue">Continuar</string>
+    <string name="button_close">Cerrar</string>
+    <string name="button_retry">Reintentar</string>
+    <string name="button_send_report">Enviar reporte</string>
+    <string name="button_info">Información</string>
+    <string name="button_copy_address">Copiar dirección</string>
+    <string name="button_understand">Yo entiendo</string>
+    <string name="button_okay">¡Listo!</string>
+    <string name="button_share">Compartir</string>
+    <string name="verify">Verificar</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Buscar</string>
@@ -37,4 +54,9 @@
     <string name="permission_deny">Denigar</string>
     <string name="max">Máximo</string>
     <string name="select_currency">Selecciona el tipo de moneda</string>
+    <string name="send_coins_error_dusty_send">La cantidad es demasiado pequeña para ser enviada</string>
+    <string name="send_coins_error_insufficient_money">Fondos insuficientes</string>
+
+    <string name="empty_wallet_warning_title">Parece que estás vaciando tu billetera de Dash </string>
+    <string name="empty_wallet_crowdnode_warning">Ten en cuenta que no podrás retirar tus fondos de CrowdNode a esta billetera hasta que aumentes tu saldo a 0.0003 Dash.</string>
 </resources>

@@ -23,9 +23,10 @@ import android.graphics.drawable.Animatable
 import android.os.Bundle
 import android.view.View
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.main.MainActivity
+
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -109,14 +110,28 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
         setContentView(R.layout.activity_successful_transaction)
 
-        val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
+        val tx = WalletApplication.getInstance().wallet!!.getTransaction(txId)
 
-        val tx = WalletApplication.getInstance().wallet.getTransaction(txId)
+        if (tx != null) {
+            val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
+            val userId = initializeIdentity(tx, blockchainIdentity)
 
+            if (blockchainIdentity == null || userId == null) {
+                finishInitialization(tx, null)
+            }
+        } else {
+            log.error("Transaction not found. TxId:", txId)
+            finish()
+            return
+        }
+    }
+
+    private fun initializeIdentity(tx: Transaction, blockchainIdentity: BlockchainIdentity?): String? {
         var profile: DashPayProfile?
         var userId: String? = null
+
         if (blockchainIdentity != null) {
-            userId = blockchainIdentity.getContactForTransaction(tx!!)
+            userId = blockchainIdentity.getContactForTransaction(tx)
             if (userId != null) {
                 AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(userId).observe(this) {
                     if (it != null) {
@@ -127,47 +142,52 @@ class TransactionResultActivity : AbstractWalletActivity() {
             }
         }
 
-        if (blockchainIdentity == null || userId == null)
-            finishInitialization(tx!!, null)
+        return userId
     }
 
     private fun finishInitialization(tx: Transaction, dashPayProfile: DashPayProfile?) {
         this.transaction = tx
-        transactionResultViewBinder = TransactionResultViewBinder(container, dashPayProfile, true)
-        val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
-        val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
-        transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
+        initiateTransactionBinder(tx, dashPayProfile)
         val mainThreadExecutor = ContextCompat.getMainExecutor(walletApplication)
         tx.confidence.addEventListener(mainThreadExecutor, transactionResultViewBinder)
-        view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
-        transaction_close_btn.setOnClickListener {
-            when {
-                intent.action == Intent.ACTION_VIEW ||
-                        intent.action == ACTION_SEND_FROM_WALLET_URI -> {
-                    finish()
-                }
-                userData != null -> {
-                    finish()
-                    startActivity(DashPayUserActivity.createIntent(this@TransactionResultActivity,
-                            userData!!, userData != null))
-                }
-                intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
-                    startActivity(MainActivity.createIntent(this))
-                }
-                else -> {
-                    startActivity(MainActivity.createIntent(this))
-                }
-            }
-        }
-
-        check_icon.postDelayed({
-            check_icon.visibility = View.VISIBLE
-            (check_icon.drawable as Animatable).start()
-        }, 400)
     }
 
     private fun viewOnExplorer(tx: Transaction) {
         WalletUtils.viewOnBlockExplorer(this, tx.purpose, tx.txId.toString())
     }
 
+    private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
+        transactionResultViewBinder = TransactionResultViewBinder(container, dashPayProfile, true)
+        val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
+        val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
+        transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
+        transaction_close_btn.setOnClickListener {
+            onTransactionDetailsDismiss()
+        }
+        view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
+        check_icon.postDelayed({
+            check_icon.visibility = View.VISIBLE
+            (check_icon.drawable as Animatable).start()
+        }, 400)
+    }
+
+    private fun onTransactionDetailsDismiss() {
+        when {
+            intent.action == Intent.ACTION_VIEW ||
+                    intent.action == ACTION_SEND_FROM_WALLET_URI -> {
+                finish()
+            }
+            userData != null -> {
+                finish()
+                startActivity(DashPayUserActivity.createIntent(this@TransactionResultActivity,
+                    userData!!, userData != null))
+            }
+            intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
+                startActivity(MainActivity.createIntent(this))
+            }
+            else -> {
+                startActivity(MainActivity.createIntent(this))
+            }
+        }
+    }
 }

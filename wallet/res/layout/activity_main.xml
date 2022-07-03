@@ -26,7 +26,7 @@
 
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/fragment_container"
-            android:name="de.schildbach.wallet.ui.WalletFragment"
+            android:name="de.schildbach.wallet.ui.main.WalletFragment"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:tag="wallet_fragment"
@@ -41,7 +41,7 @@
         android:id="@+id/restoring_wallet_cover"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/dash_lighter_gray"
+        android:background="@color/background_primary"
         android:visibility="gone" />
 
 </de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout>

@@ -19,7 +19,7 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.view.View
 import androidx.annotation.LayoutRes
-import de.schildbach.wallet.ui.MainActivity
+import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout
 import kotlinx.android.synthetic.main.activity_main.*
 import org.dash.wallet.common.ui.BaseLockScreenFragment

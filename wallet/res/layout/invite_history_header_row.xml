@@ -7,7 +7,7 @@
     android:layout_marginStart="15dp"
     android:layout_marginEnd="15dp"
     android:layout_marginBottom="3dp"
-    android:background="@color/dash_lighter_gray">
+    android:background="@color/background_primary">
 
     <TextView
         android:id="@+id/contacts_my_contacts"
@@ -39,7 +39,7 @@
             android:layout_height="wrap_content"
             android:fontFamily="@font/montserrat_medium"
             android:text=""
-            android:textColor="@color/dash_lighter_gray"
+            android:textColor="@color/background_primary"
             android:textSize="12sp"
             tools:text="All" />
 

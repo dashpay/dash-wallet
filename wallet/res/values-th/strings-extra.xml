@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">ไม่สามารถเข้าถึงกระเป๋าสตางค์</string>
 
     <string name="set_pin_create_new_wallet">สร้างกระเป๋าสตางค์ใหม่</string>
+    <string name="set_pin_upgrade_wallet">อัพเกรดกระเป๋าเงิน</string>
     <string name="set_pin_restore_wallet">การกู้คืนกระเป๋าสตางค์</string>
     <string name="set_pin_enter_pin">ใส่รหัสเก่า</string>
     <string name="set_pin_set_pin">ตั้งค่า PIN</string>
@@ -15,6 +16,7 @@
     <string name="set_pin_decrypting">ถอดรหัสกระเป๋าสตางค์</string>
     <string name="set_pin_verifying_pin">กำลังตรวจสอบเลขรหัสส่วนตัว</string>
     <string name="set_pin_message">ต้องใช้ PIN นี้เพื่อปลดล็อคแอพของคุณทุกครั้งที่ใช้</string>
+    <string name="set_pin_confirm_pin_incorrect">PIN ไม่ถูกต้อง</string>
 
     <string name="home_available_balance">ยอดเงินคงเหลือ</string>
     <string name="home_balance_hidden">ยอดคงเหลือถูกซ่อน</string>
@@ -61,12 +63,12 @@
     <string name="scan_to_pay_error_dialog_title">สแกนเพื่อส่ง</string>
     <string name="scan_to_pay_error_dialog_message">ที่อยู่ของ Dash ไม่ถูกต้อง หรือคำขอ URL ในคลิปบอร์ด:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">ที่อยู่ของ Dash ไม่ถูกต้อง หรือคำขอ URL ในคลิปบอร์ด</string>
+    <string name="pay_to_confirm_address">นี่คือที่อยู่ Dash ที่คุณต้องการส่งการชำระเงินหรือไม่?</string>
 
     <string name="receive_title">ได้รับ</string>
     <string name="receive_enter_amount_message">ระบุจำนวนที่ได้รับ</string>
     <string name="receive_enter_amount_button">ระบุจำนวน</string>
     <string name="receive_share_button">แบ่งปัน</string>
-    <string name="receive_copied">คัดลอก</string>
 
     <string name="pay_title">ส่ง</string>
     <string name="history_title">ประวัติ</string>
@@ -116,7 +118,6 @@
     <string name="import_export_keys_dialog_password_phrase">วลีกู้คืนไปที่นี่</string>
     <string name="preferences_report_issue_summary">รวบรวมข้อมูลเกี่ยวกับปัญหาของคุณและส่งอีเมลรายงานของคุณไปยังนักพัฒนาซอฟต์แวร์</string>
     <string name="navigation_configuration">องค์ประกอบ</string>
-    <string name="button_copy_address">คัดลอกที่อยู่</string>
     <string name="request_coins_clipboard_address_msg">คัดลอกที่อยู่ Dash ไปยัง คลิปบอร์ด</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">แสดง</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">%sไม่ใช่วลีกู้คืน</string>
@@ -145,6 +146,8 @@
     <string name="wallet_lock_try_again">ลองอีกครั้ง ใน %1$d%2$s</string>
     <string name="wallet_lock_reset">ตั้งค่า</string>
     <string name="wallet_lock_wrong_pin">รหัสผิด %s</string>
+    <string name="wallet_last_attempt">ใส่ PIN ได้ครั้งสุดท้าย</string>
+    <string name="wallet_last_attempt_message">หากความพยายามล้มเหลวอีกครั้งจะต้องใช้ข้อความรหัสผ่านของฉันในการกู้คืนกระเป๋าเงินของฉัน</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="other">พยายามได้อีก %d</item>
@@ -176,6 +179,11 @@
     <string name="notification_transactions_channel_description">รับการแจ้งเตือนเกี่ยวกับการทำธุรกรรมที่เข้ามา</string>
     <string name="notification_synchronization_channel_name">ซิงโครไนซ์</string>
     <string name="notification_synchronization_channel_description">แสดงการแจ้งเตือนเมื่อแอพพลิเคชั่นกำลังซิงโครไนซ์กับเครือข่าย</string>
+    <string name="notification_push_channel_name">การแจ้งเตือน</string>
+    <string name="notification_push_channel_description">แสดงการแจ้งเตือนที่ส่งถึงคุณโดย Dash</string>
+    <string name="notification_settings_title">การแจ้งเตือน</string>
+    <string name="notification_explainer_title">กระเป๋าเงิน Dash ต้องการส่งการแจ้งเตือนถึงคุณ</string>
+    <string name="notification_explainer_message">การแจ้งเตือนอาจรวมถึงการแจ้งเตือนเสียงและป้ายไอคอนสิ่งเหล่านี้สามารถกำหนดค่าได้ในการตั้งค่าโทรศัพท์</string>
 
     <string name="net_type_indicator" />
 
@@ -194,7 +202,6 @@
     <string name="preferences_enable_payment_request_title">BIP70 สำหรับสแกนเพื่อจ่าย</string>
 
     <string name="verify_continue">ดำเนินการต่อ</string>
-    <string name="verify">ตรวจสอบ</string>
     <string name="verify_backup_wallet">กระเป๋าสตางค์สำรอง</string>
     <string name="verify_show_recovery_phrase">แสดงวลีกู้คืน</string>
     <string name="verify_secure_now">ทำให้กระเป๋าสตางค์ปลอดภัยตอนนี้</string>
@@ -253,17 +260,24 @@
     <string name="menu_rescan_blockchain">สแกน blockchain อีกครั้ง</string>
     <string name="menu_contact_support_title">ติดต่อฝ่ายสนับสนุน</string>
     <string name="menu_contact_support_subtitle">รายงานปัญหา</string>
+    <string name="menu_explore_title">สำรวจ </string>
+    <string name="menu_explore_subtitle">ซื้อสินค้าด้วย Dash ที่มีร้านค้ามากกว่า 155,000 ร้าน</string>
 
     <string name="tools_address_book">สมุดที่อยู่</string>
     <string name="tools_import_private_key">นำเข้าคีย์ส่วนตัว</string>
     <string name="tools_network_monitor">จอภาพเครือข่าย</string>
+    <string name="tools_show_xpub">ขยาย Public key</string>
 
     <string name="about_help_us_improve">ช่วยเราเพื่อพัฒนาประการณ์ของคุณ</string>
     <string name="about_review_and_rate">วิจารณ์และให้คะแนนแอพพลิเคชั่นนี้</string>
     <string name="about_contact_support">ติดต่อฝ่ายสนับสนุน</string>
     <string name="about_fork_disclaimer">นี่คือซอฟต์แวร์โอเพนซอร์ซแอพพลิเคชั่นที่แยกสาขาออกมาจากกระเป๋าสตางค์บิทคอยน์</string>
+    <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">สัญญาอนุญาตให้ใช้ซอฟต์แวร์ หรือไลเซนส์ แบบหนึ่ง ซึ่งสงวนลิขสิทธิ์ของซอฟต์แวร์นั้น แต่อนุญาตให้บุคคลใดๆทำซ้ำ เผยแพร่ และ/หรือดัดแปลงซอฟต์แวร์นั้นได้อย่างถูกต้องตามกฎหมาย และโดยเสรี เวอร์ชั่น3.0</string>
     <string name="about_version_name">กระเป๋าสตางค์ Dash%s</string>
+    <string name="about_last_explore_dash_sync">สำรวจข้อมูล DASH ที่อัปเดตได้ที่: %1$s\nอัพเดตล่าสุด: %2$s</string>
+    <string name="about_last_explore_dash_update_error">ไม่สามารถดึงข้อมูลได้</string>
+    <string name="about_last_explore_dash_sync_never">ไม่เคย</string>
 
     <string name="block">บล็อก</string>
     <string name="time">เวลา</string>
@@ -309,7 +323,6 @@
     <string name="welcome_screen_subtitle_3">มีการควบคุมที่สมบูรณ์และกำหนดกระเป๋าสตางค์ของคุณตามความต้องการของคุณ</string>
 
     <string name="sync_status_wait">โปรดรอจนกว่าการซิงค์จะเสร็จสมบูรณ์</string>
-    <string name="sync_status_syncing_title">กำลังซิงค์ %1$d</string>
     <string name="sync_status_syncing_sub_title">กับ Dash Blockchain</string>
     <string name="sync_status_unable_to_connect">ไม่สามารถเชื่อมต่อ</string>
     <string name="sync_status_check_connection">ตรวจสอบการเชื่อมต่อ</string>
@@ -318,7 +331,6 @@
 
     <string name="appwidget_wallet_not_ready">กรุณาตั้งค่ากระเป๋าสตางค์ของคุณ</string>
 
-    <string name="payment_request_please_wait_title">กรุณารอสักครู่</string>
     <string name="payment_request_please_wait_message">กำลังเชื่อมต่อกับเซิร์ฟเวอร์การชำระเงิน</string>
     <string name="payment_request_unable_to_connect">ไม่สามารถเชื่อมต่อ</string>
     <string name="payment_request_unable_to_send">ไม่สามารถส่งออก</string>
@@ -343,4 +355,12 @@
     <string name="all_transactions">ทั้งหมด</string>
     <string name="received_transactions">ได้รับ</string>
     <string name="sent_transactions">ส่ง</string>
+    <string name="set_pin_error_missing_wallet_title">ขาดข้อผิดพลาดของกระเป๋าเงิน</string>
+    <string name="set_pin_error_missing_wallet_message">กระเป๋าเงินหายโปรดรายงานสิ่งนี้ไปยังแผนกซัพพอร์ต</string>
+    <string name="wallet_encryption_error_title">ข้อผิดพลาดในการสร้างกระเป๋าเงิน</string>
+    <string name="wallet_encryption_error_message">มีปัญหาในการสร้างกระเป๋าเงินโปรดรายงานสิ่งนี้ไปยังแผนกซัพพอร์ต</string>
+    <string name="wallet_not_encrypted_error_message">มีปัญหาเกิดขึ้นกับกระเป๋าเงินของคุณ.\n\nIf คุณไม่มี  Dash ในกระเป๋าเงินนี้ ถอนการติดตั้งและติดตั้งแอพนี้ใหม่จากนั้นสร้างกระเป๋าเงินใหม่.\n\nIf คุณมีวลีการกู้คืนหรือไฟล์สำรองข้อมูลจากนั้นถอนการติดตั้งแอพนี้และติดตั้งใหม่.\n\nOtherwise โปรดรายงานสิ่งนี้ไปยังแผนกซัพพอร์ต</string>
+
+    <string name="continue_reset">ดำเนินการต่อ</string>
+    <string name="reset_wallet_text">รีเซ็ตกระเป๋าสตางค์</string>
 </resources>

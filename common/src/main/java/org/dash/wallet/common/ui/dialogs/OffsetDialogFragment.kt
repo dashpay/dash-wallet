@@ -19,7 +19,6 @@ package org.dash.wallet.common.ui.dialogs
 
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.DrawableRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -29,13 +28,13 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
-open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
+open class OffsetDialogFragment : BottomSheetDialogFragment() {
     companion object {
         private const val FULLSCREEN_DIFF = 80
     }
 
     protected open val forceExpand: Boolean = false
-    @DrawableRes protected open val background: Int = R.drawable.white_background_rounded
+    @DrawableRes protected open val background: Int = R.drawable.offset_dialog_background
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -45,14 +44,10 @@ open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
             val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
             bottomSheet?.let {
                 bottomSheet.setBackgroundResource(background)
+
                 val displayHeight = requireContext().resources.displayMetrics.heightPixels
-
-                val rootLayout = view.findViewById<T>(R.id.root_layout)
-                    ?: throw NoSuchElementException("Offset dialog root must have 'root_layout' id")
-
                 val height = if (forceExpand) displayHeight - FULLSCREEN_DIFF else bottomSheet.height
-                rootLayout.layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT, height)
+                view.layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, height)
 
                 val coordinatorLayout = bottomSheet.parent as CoordinatorLayout
                 val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
@@ -76,9 +71,11 @@ open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
                 coordinatorLayout.parent.requestLayout()
             }
         }
-        view.findViewById<View>(R.id.collapse_button).setOnClickListener {
+
+        view.findViewById<View?>(R.id.collapse_button)?.setOnClickListener {
             dismiss()
         }
+
         dialog?.window?.callback = UserInteractionAwareCallback(dialog?.window?.callback, requireActivity())
     }
 }

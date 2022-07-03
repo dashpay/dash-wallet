@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Generic titles/messages -->
     <string name="loading">Memuat...</string>
     <string name="loading_error">Terjadi kesalahan. Silakan coba lagi nanti.</string>
+    <string name="please_wait_title">Silahkan tunggu</string>
     <string name="dash_available">%1$stersedia </string>
     <string name="network_unavailable_title">Jaringan tak tersedia</string>
     <string name="network_unavailable_check_connection">Silakan periksa koneksi jaringan Anda</string>
     <string name="network_unavailable_balance_not_accurate">Saldo mungkin tidak akurat karena koneksi terputus</string>
+    <string name="buy_dash">Beli Dash</string>
+    <string name="copied">Disalin</string>
+    <string name="staking_title">Staking</string>
+    <string name="error">Kesalahan</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Pound Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -26,11 +32,27 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Tolak</string>
     <string name="network_unavailable_return">Kembali ke dompet</string>
     <string name="button_continue">Teruskan</string>
+    <string name="button_close">Tutup</string>
+    <string name="button_retry">Coba lagi</string>
+    <string name="button_send_report">Kirim Laporan</string>
+    <string name="button_info">info</string>
+    <string name="button_copy_address">Salin alamat</string>
+    <string name="button_understand">Saya Mengerti</string>
+    <string name="button_okay">Oke</string>
+    <string name="button_share">Berbagi</string>
+    <string name="verify">Memeriksa</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Cari</string>
+    <string name="permission_allow">Izinkan</string>
+    <string name="permission_deny">Tolak</string>
     <string name="max">Max</string>
     <string name="select_currency">Pilih mata uang</string>
-</resources>
+    <string name="send_coins_error_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
+    <string name="send_coins_error_insufficient_money">Dana tidak mencukupi</string>
+
+    </resources>

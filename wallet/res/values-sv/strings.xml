@@ -61,8 +61,8 @@
 	<string name="send_coins_fragment_receiving_address_complex">Komplex\nadress</string>
 	<string name="send_coins_fragment_pending">(%s väntar på bekräftelse)</string>
 	<string name="send_coins_fragment_amount_label">Belopp att skicka</string>
-	<string name="send_coins_fragment_hint_dusty_send">Summan är för låg för att kunna skickas.</string>
-	<string name="send_coins_fragment_hint_insufficient_money">Du saknar tillräckliga medel. Det fattas %s</string>
+	<string name="send_coins_error_dusty_send">Summan är för låg för att kunna skickas.</string>
+	<string name="send_coins_error_insufficient_money">Du saknar tillräckliga medel. Det fattas %s</string>
 	<string name="send_coins_fragment_hint_empty_wallet_failed">Det sammanlagda värdet av betalningarna i din wallet räcker inte för att kunna skickas.</string>
 	<string name="send_coins_fragment_direct_payment_enable">Skicka betalning direkt till betalningsmottagaren.</string>
 	<string name="send_coins_fragment_direct_payment_ack">Din betalning har skickats direkt.</string>
@@ -263,7 +263,6 @@
 	<string name="button_ok">OK</string>
 	<string name="button_dismiss">Avsluta</string>
 	<string name="button_cancel">Avbryt</string>
-	<string name="button_retry">Försök igen</string>
 	<string name="button_help">Hjälp</string>
 	<string name="button_add">Lägg till</string>
 	<string name="button_delete">Ta bort</string>

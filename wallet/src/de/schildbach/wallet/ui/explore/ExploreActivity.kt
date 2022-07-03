@@ -30,11 +30,15 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.BaseMenuActivity
 import de.schildbach.wallet.ui.PaymentsFragment
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.features.exploredash.ui.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.NavigationRequest
 
 @AndroidEntryPoint
+@FlowPreview
+@ExperimentalCoroutinesApi
 class ExploreActivity : BaseMenuActivity() {
     companion object {
         private const val TOPIC_KEY = "type"
@@ -76,7 +80,7 @@ class ExploreActivity : BaseMenuActivity() {
                         PaymentsFragment.ARGS_ACTIVE_TAB to PaymentsFragment.ACTIVE_TAB_RECEIVE
                     ), animationOptions)
                 }
-                else -> {}
+                else -> { }
             }
         }
     }

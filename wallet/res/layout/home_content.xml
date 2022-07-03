@@ -10,7 +10,7 @@
         android:id="@+id/home_content"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:background="@color/dash_lighter_gray"
+        android:background="@color/background_primary"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="ContentDescription">
@@ -33,7 +33,7 @@
 
                     <androidx.fragment.app.FragmentContainerView
                         android:id="@+id/wallet_balance_fragment"
-                        android:name="de.schildbach.wallet.ui.HeaderBalanceFragment"
+                        android:name="de.schildbach.wallet.ui.main.HeaderBalanceFragment"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_horizontal"
@@ -48,7 +48,7 @@
                         android:id="@+id/sync_status_pane_parent"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@color/dash_lighter_gray"
+                        android:background="@color/background_primary"
                         android:orientation="vertical"
                         android:paddingStart="16dp"
                         android:paddingTop="58dp"
@@ -100,7 +100,7 @@
 
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/wallet_transactions_fragment"
-            android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
+            android:name="de.schildbach.wallet.ui.main.WalletTransactionsFragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:tag="wallet_transactions_fragment"

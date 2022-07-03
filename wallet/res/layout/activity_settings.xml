@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
-    android:background="@color/bg_less_bright"
+    android:background="@color/background_primary"
     android:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.SettingsActivity">
 
@@ -66,7 +66,7 @@
         style="@style/MenuRow.Internal">
 
         <TextView
-            android:id="@+id/buy_dash_title"
+            android:id="@+id/about_title"
             style="@style/MontserratMedium.MenuRowTitle.Internal"
             android:text="@string/about_title"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -82,4 +82,23 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/notifications"
+        style="@style/MenuRow.Internal">
+
+        <TextView
+            android:id="@+id/notifications_title"
+            style="@style/MontserratMedium.MenuRowTitle.Internal"
+            android:text="@string/notification_settings_title"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            style="@style/MenuRowArrow"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_menu_row_arrow" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </LinearLayout>

@@ -15,24 +15,21 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.switchMap
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityBaseData
 
-open class BaseProfileViewModel(application: Application) : AndroidViewModel(application) {
-
-    val walletApplication = application as WalletApplication
-    val platformRepo by lazy {
-        PlatformRepo.getInstance()
-    }
+open class BaseProfileViewModel(
+    val walletApplication: WalletApplication,
+    val appDatabase: AppDatabase
+) : ViewModel() {
 
     // blockchainIdentityData is observed instead of using PlatformRepo.getBlockchainIdentity()
     // since neither PlatformRepo nor blockchainIdentity is initialized when there is no username
-    val blockchainIdentityData = AppDatabase.getAppDatabase()
+    val blockchainIdentityData = appDatabase
             .blockchainIdentityDataDaoAsync().loadBase()
     val blockchainIdentity: BlockchainIdentityBaseData?
         get() = blockchainIdentityData.value
@@ -42,7 +39,7 @@ open class BaseProfileViewModel(application: Application) : AndroidViewModel(app
 
     val dashPayProfileData = blockchainIdentityData.switchMap {
         if (it?.userId != null) {
-            AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(it.userId)
+            appDatabase.dashPayProfileDaoAsync().loadByUserIdDistinct(it.userId)
         } else {
             MutableLiveData()   //empty
         }

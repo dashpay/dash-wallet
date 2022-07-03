@@ -14,7 +14,7 @@
     </style>
 
     <style name="LockScreenActivity.Child.Theme" parent="SplashActivity.Theme">
-        <item name="android:windowBackground">@color/bg_less_bright</item>
+        <item name="android:windowBackground">@color/background_primary</item>
     </style>
 
     <style name="My.Theme.ChildActivity" parent="@style/My.Theme.NoActionBar">
@@ -222,7 +222,7 @@
         <item name="secondaryColor">@android:color/white</item>
     </style>
 
-    <style name="VerifySeedTextViewBackground" parent="WhiteBackground">
+    <style name="VerifySeedTextViewBackground" parent="SecondaryBackground">
         <item name="cornerRadius">8dp</item>
     </style>
 </resources>

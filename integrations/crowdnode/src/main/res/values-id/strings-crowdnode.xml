@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="crowdnode_get_started">Mulai menggunakan CrowdNode</string>
+    <string name="crowdnode_get_started_hint">Untuk memulai staking, buat akun di CrowdNode atau hubungkan ke akun yang sudah ada.</string>
+    <string name="new_account">Akun CrowdNode Baru</string>
+    <string name="account_create">Buat Akun</string>
+    <string name="account_link">Hubungkan Akun yang Sudah Ada</string>
+    <string name="crowdnode_login">Masuk ke CrowdNode</string>
+    <string name="crowdnode_link">Tautkan Akun CrowdNode yang Ada</string>
+    <string name="required_passphrase_backup">Anda harus mencadangkan frasa sandi Anda di Dash Wallet</string>
+    <string name="backup_passphrase">Cadangkan Frasa Sandi</string>
+    <string name="required_dash_amount">Anda membutuhkan setidaknya %s Dash di Dompet Dash  Anda</string>
+    <string name="crowdnode_new_account_warning_1">CrowdNode menggunakan alamat ini sebagai ID akun Anda. Anda akan kehilangan akses ke dana Anda dalam dompet ini dan akun CrowdNode jika Anda kehilangan frasa sandi yang terkait dengan alamat ini.</string>
+    <string name="crowdnode_new_account_warning_2">Jumlah Dash yang sangat kecil akan dikirim ke dan dari CrowdNode untuk memverifikasi bahwa Anda adalah pemilik alamat dompet ini.</string>
+    <string name="crowdnode_link_account_description">Semua transfer ke dan dari CrowdNode dari perangkat ini akan dilakukan dengan alamat Dash di bawah dari perangkat ini.</string>
+    <string name="dash_address">Alamat Dash</string>
+    <string name="primary_dash_address">Alamat Dash Utama</string>
+    <string name="crowdnode_secure_wallet">Cadangkan frasa sandi Anda untuk membuat akun CrowdNode</string>
+    <string name="crowdnode_secure_wallet_explainer">Jika Anda kehilangan frasa sandi untuk dompet ini dan kehilangan perangkat ini atau mencopot Dash Wallet, Anda akan kehilangan akses ke dana Anda di CrowdNode dan dana di dalam dompet ini.</string>
+    <string name="insufficient_funds">Anda tidak memiliki cukup dana untuk melanjutkan.</string>
+    <string name="crowdnode_minimum_dash">Anda harus memiliki setidaknya %s Dash untuk melanjutkan verifikasi CrowdNode.</string>
+    <string name="crowdnode_agree_to_terms">Saya setuju dengan CrowdNode %1$s dan %2$s</string>
+    <string name="terms_of_use">Syarat Penggunaan</string>
+    <string name="privacy_policy">Kebijakan pribadi</string>
+    <string name="crowdnode_account_ready">Akun CrowdNode Anda sudah disiapkan dan siap digunakan!</string>
+    <string name="notify_when_done">Tutup dan beri tahu jika sudah selesai</string>
+    <string name="accepting_terms">Menerima persyaratan penggunaan…</string>
+    <string name="crowdnode_signup_error">Kami tidak dapat membuat akun CrowdNode Anda.</string>
+    <string name="crowdnode_deposit_error">Kami tidak dapat melakukan deposit ke akun CrowdNode Anda.</string>
+    <string name="crowdnode_withdraw_error">Kami tidak dapat menarik dana dari akun CrowdNode Anda.</string>
+    <string name="crowdnode_transfer_error">Transfer CrowdNode Anda tidak berhasil.</string>
+    <string name="crowdnode_deposit_received">Setoran Anda ke CrowdNode diterima.</string>
+    <string name="deposit">Setoran</string>
+    <string name="deposit_sent">Setoran terkirim</string>
+    <string name="deposit_sent_message">Diperlukan waktu satu menit untuk memperbarui saldo Anda.</string>
+    <string name="crowdnode_deposit_from_wallet">DashWallet ➝ CrowdNode</string>
+    <string name="from_wallet">dari Wallet Dash</string>
+    <string name="from_crowdnode">dari CrowdNode</string>
+    <string name="withdraw">Tarik</string>
+    <string name="withdrawal_requested">Penarikan diminta</string>
+    <string name="withdrawal_requested_message">Mungkin butuh satu menit agar dana Anda tiba.</string>
+    <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
+    <string name="online_account">Akun Online</string>
+    <string name="online_account_create">Buat Akun Online</string>
+    <string name="crowdnode_support">Dukungan CrowdNode</string>
+    <string name="unlink_account">Putuskan Tautan Akun</string>
+    <string name="online_account_title">Mengapa Anda membutuhkan akun online?</string>
+    <string name="crowdnode_online_synced">Disinkronkan dengan Dompet Dash saat ini</string>
+    <string name="crowdnode_in_process">Dalam proses…</string>
+    <string name="account_recovery">Pemulihan Akun</string>
+    <string name="crowdnode_recovery_info">Jika Anda kehilangan frasa sandi, Anda dapat memverifikasi diri dengan cara lain untuk mendapatkan kembali akses ke dana CrowdNode Anda.</string>
+    <string name="transaction_history">Riwayat Transaksi</string>
+    <string name="see_staking_details">Anda dapat melihat informasi terperinci tentang setoran, penarikan, dan hadiah penghasilan Anda.</string>
+    <string name="payout_options">Opsi Pembayaran</string>
+    <string name="payout_options_details">Anda dapat mengubah bagaimana / kapan penghasilan hadiah Anda dibayarkan kepada Anda.</string>
+    <string name="crowdnode_balance">Saldo di CrowdNode</string>
+    <string name="chain_syncing">Rantai sedang menyinkronkan…</string>
+    <string name="crowdnode_wait_for_sync">Tunggu hingga rantai disinkronkan sepenuhnya, sehingga kami dapat meninjau riwayat transaksi Anda. Kunjungi situs web CrowdNode untuk masuk atau mendaftar.</string>
+    <string name="crowdnode_open_website">Buka situs web CrowdNode</string>
+    <string name="crowdnode_info_title">Menjadi bagian dari Masternode Dash dengan CrowdNode</string>
+    <string name="introducing_staking">Memperkenalkan Staking</string>
+    <string name="crowdnode_staking_info">Dapatkan hadiah dari deposit di Dash Masternodes hanya dengan 0,5 Dash.</string>
+    <string name="instant_rewards">Dapatkan Hadiah Instan</string>
+    <string name="daily_rewards_info">Terima bagian hadiah Anda setiap hari.</string>
+    <string name="crowdnode_sending_to">Mengirim ke akun CrowdNode</string>
+    <string name="wallet_sending_to">Mengirim ke Dompet Dash di perangkat ini</string>
+    <string name="available_balance">Saldo: %s</string>
+    <string name="crowdnode_minimum_deposit">Setor setidaknya %s untuk mulai menghasilkan</string>
+    <string name="crowdnode_minimum_deposit_difference">Setor %s untuk mulai menghasilkan</string>
+    <string name="crowdnode_first_deposit">Setoran pertama harus lebih dari %s</string>
+    <string name="crowdnode_staking_info_title">Cara kerja staking</string>
+    <string name="crowdnode_staking_info_message">Anda mulai menghasilkan jika akun CrowdNode Anda memiliki lebih dari %s</string>
+    <string name="crowdnode_verify_api_address">Verifikasi alamat API Dash Anda</string>
+    <string name="crowdnode_how_to_verify">Bagaimana cara mengonfirmasi API alamat Dash Anda</string>
+    <string name="crowdnode_how_to_verify_description1">Kirim %s Dash dari alamat Dash utama Anda yang saat ini Anda gunakan untuk akun CrowdNode</string>
+    <string name="crowdnode_how_to_verify_description2">ke alamat Dash yang ditunjuk untuk akun CrowdNode Anda di Dash Wallet pada perangkat ini</string>
+    <string name="crowdnode_how_to_verify_description3">Kami akan secara otomatis mendeteksi transaksi ini dan mentransfer jumlah yang sama ke akun CrowdNode Anda. Setelah itu Anda akan dapat melakukan penyetoran dan penarikan di Dash Wallet pada perangkat ini.</string>
+    <string name="button_show_qr">Tunjukkan QR</string>
+    <string name="scan_qr">Pindai QR</string>
+    <string name="qr_contains_request">QR ini sudah berisi permintaan pembayaran untuk %s Dash</string>
+    <string name="verification_required">Verifikasi Diperlukan</string>
+    <string name="validating_address">Memvalidasi alamat…</string>
+    <string name="crowdnode_address_validated">Alamat CrowdNode Anda telah divalidasi, tetapi verifikasi diperlukan.</string>
+    <string name="crowdnode_address_confirmed">Alamat CrowdNode Anda telah dikonfirmasi.</string>
+    <string name="crowdnode_bad_confirmation">Konfirmasi dikirim dari alamat utama yang salah</string>
+    <string name="crowdnode_online_account_details_title">Informasi tentang akun online Anda</string>
+    <string name="crowdnode_online_account_details_primary">Alamat Dash utama Anda yang saat ini  digunakan untuk akun CrowdNode Anda</string>
+    <string name="crowdnode_online_account_details_api">Alamat dash yang ditujukan untuk akun CrowdNode Anda di Dompet Dash di perangkat ini</string>
+    </resources>

@@ -49,7 +49,7 @@
 
     <TextView
         android:id="@+id/item_type"
-        style="@style/Body2.Gray400"
+        style="@style/Body2.SteelGray400"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"

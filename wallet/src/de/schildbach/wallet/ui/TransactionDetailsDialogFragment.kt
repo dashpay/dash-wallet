@@ -10,7 +10,6 @@ import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import androidx.fragment.app.DialogFragment
-import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
@@ -18,6 +17,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.dash.wallet.common.UserInteractionAwareCallback
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_details_dialog.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
 import org.bitcoinj.core.Sha256Hash
@@ -32,7 +32,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
     private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }
-    private var tx: Transaction? = null
+    private var transaction: Transaction? = null
     private val wallet by lazy { WalletApplication.getInstance().wallet }
     private lateinit var transactionResultViewBinder: TransactionResultViewBinder
 
@@ -53,43 +53,26 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        tx = wallet.getTransaction(txId)
-        val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
+        val tx = wallet!!.getTransaction(txId)
 
-        var profile: DashPayProfile?
-        var userId: String? = null
-        if (blockchainIdentity != null) {
-            userId = blockchainIdentity.getContactForTransaction(tx!!)
-            if (userId != null) {
-                AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(userId).observe(viewLifecycleOwner) {
-                    if (it != null) {
-                        profile = it
-                        finishInitialization(profile)
-                    }
-                }
-            }
-        }
-
-        if (blockchainIdentity == null || userId == null)
-            finishInitialization(null)
-
-        view_on_explorer.setOnClickListener { viewOnBlockExplorer() }
-        transaction_close_btn.setOnClickListener { dismissAnimation() }
-
-        dialog?.window!!.callback = UserInteractionAwareCallback(dialog?.window!!.callback, requireActivity())
-    }
-
-    private fun finishInitialization(dashPayProfile: DashPayProfile?) {
-        transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container, dashPayProfile, false)
         if (tx != null) {
-            transactionResultViewBinder.bind(tx!!)
-            tx!!.confidence.addEventListener(transactionResultViewBinder)
+            val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
+            val userId = initializeIdentity(tx, blockchainIdentity)
+
+            if (blockchainIdentity == null || userId == null) {
+                finishInitialization(tx, null)
+            }
         } else {
             log.error("Transaction not found. TxId:", txId)
-            dismissAllowingStateLoss()
+            dismiss()
             return
         }
-        showAnimation()
+    }
+
+    private fun finishInitialization(tx: Transaction, dashPayProfile: DashPayProfile?) {
+        this.transaction = tx
+        initiateTransactionBinder(tx, dashPayProfile)
+        tx.confidence.addEventListener(transactionResultViewBinder)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -107,6 +90,34 @@ class TransactionDetailsDialogFragment : DialogFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.transaction_details_dialog, container, false)
+    }
+
+    private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
+        transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container, dashPayProfile, true)
+        transactionResultViewBinder.bind(tx)
+        view_on_explorer.setOnClickListener { viewOnBlockExplorer() }
+        transaction_close_btn.setOnClickListener { dismissAnimation() }
+        dialog?.window!!.callback = UserInteractionAwareCallback(dialog?.window!!.callback, requireActivity())
+        showAnimation()
+    }
+
+    private fun initializeIdentity(tx: Transaction, blockchainIdentity: BlockchainIdentity?): String? {
+        var profile: DashPayProfile?
+        var userId: String? = null
+
+        if (blockchainIdentity != null) {
+            userId = blockchainIdentity.getContactForTransaction(tx)
+            if (userId != null) {
+                AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(userId).observe(this) {
+                    if (it != null) {
+                        profile = it
+                        finishInitialization(tx, profile)
+                    }
+                }
+            }
+        }
+
+        return userId
     }
 
     private fun showAnimation() {
@@ -139,17 +150,15 @@ class TransactionDetailsDialogFragment : DialogFragment() {
 
     private fun viewOnBlockExplorer() {
         imitateUserInteraction()
-        if (tx != null) {
-            WalletUtils.viewOnBlockExplorer(activity, tx!!.purpose, tx!!.txId.toString())
+        transaction?.let {
+            WalletUtils.viewOnBlockExplorer(activity, it.purpose, it.txId.toString())
         }
     }
 
 
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
-        if (tx != null) {
-            tx!!.confidence.removeEventListener(transactionResultViewBinder)
-        }
+        transaction?.confidence?.removeEventListener(transactionResultViewBinder)
     }
 
     private fun imitateUserInteraction() {

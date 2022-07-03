@@ -199,7 +199,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="96dp"
                     android:layout_gravity="center_horizontal"
-                    android:background="@color/bg_less_bright"
+                    android:background="@color/background_primary"
                     android:scaleType="fitCenter" />
 
             </FrameLayout>
