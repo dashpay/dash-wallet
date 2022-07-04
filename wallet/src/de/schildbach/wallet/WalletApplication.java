@@ -32,6 +32,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.database.sqlite.SQLiteException;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
@@ -129,10 +130,12 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
+import kotlin.Deprecated;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
 import kotlinx.coroutines.ExperimentalCoroutinesApi;
 import kotlinx.coroutines.flow.Flow;
+import kotlinx.coroutines.flow.FlowKt;
 
 /**
  * @author Andreas Schildbach
@@ -505,6 +508,7 @@ public class WalletApplication extends BaseWalletApplication
         log.setLevel(Level.INFO);
     }
 
+    @Deprecated(message = "Inject Configuration instead")
     public Configuration getConfiguration() {
         return config;
     }
@@ -718,7 +722,14 @@ public class WalletApplication extends BaseWalletApplication
 
     private void resetBlockchainSyncProgress() {
         Executors.newSingleThreadExecutor().execute(() -> {
-            BlockchainState blockchainState = blockchainStateDao.loadSync();
+            BlockchainState blockchainState;
+
+            try {
+                 blockchainState = blockchainStateDao.loadSync();
+            } catch (SQLiteException ex) {
+                blockchainState = null;
+            }
+
             if (blockchainState != null) {
                 blockchainState.setPercentageSync(0);
                 blockchainStateDao.save(blockchainState);
@@ -936,6 +947,7 @@ public class WalletApplication extends BaseWalletApplication
                 .build();
     }
 
+    @Deprecated(message = "Inject instead")
     public static WalletApplication getInstance() {
         return instance;
     }
@@ -974,12 +986,20 @@ public class WalletApplication extends BaseWalletApplication
     @NonNull
     @Override
     public Flow<Coin> observeBalance(@NonNull Wallet.BalanceType balanceType) {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+
         return new WalletBalanceObserver(wallet, balanceType).observe();
     }
 
     @NonNull
     @Override
     public Flow<Transaction> observeTransactions(@NonNull TransactionFilter... filters) {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+
         return new WalletTransactionObserver(wallet).observe(filters);
     }
 

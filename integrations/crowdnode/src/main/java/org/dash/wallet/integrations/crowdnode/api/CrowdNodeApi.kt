@@ -23,7 +23,6 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.google.common.math.LongMath.pow
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -50,6 +49,7 @@ import java.net.URLEncoder
 import java.util.concurrent.Executors
 import javax.inject.Inject
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
@@ -298,7 +298,7 @@ class CrowdNodeApiAggregator @Inject constructor(
 
             for (i in 0..retries) {
                 if (i != 0) {
-                    delay(pow(5, i).seconds)
+                    delay(5.0.pow(i).seconds)
                 }
 
                 currentBalance = resolveBalance()
@@ -307,7 +307,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                     val minimumWithdrawal = CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.MaxCode.code)
                     if (!afterWithdrawal) {
                         // balance changed, no need to retry anymore
-                        break;
+                        break
                     } else if (lastBalance - (currentBalance.data?.value?: 0L) >= minimumWithdrawal.value) {
                         // balance changed, no need to retry anymore
                         break
@@ -531,8 +531,17 @@ class CrowdNodeApiAggregator @Inject constructor(
                 responseScope.launch { checkIfAddressIsInUse(address) }
             }
             OnlineAccountStatus.Creating, OnlineAccountStatus.SigningUp -> {
-                // This should not happen - this method is reachable only for a linked account case
-                throw IllegalStateException("Creating state found in tryRestoreOnlineAccount")
+                if (status == OnlineAccountStatus.Creating && globalConfig.crowdNodePrimaryAddress.isNotEmpty()) {
+                    // The bug from 7.5.0 -> 7.5.1 upgrade scenario.
+                    // The actual state is Done, there is a linked account.
+                    // TODO: remove when there is no 7.5.0 in the wild
+                    log.info("found 7.5.0 -> 7.5.1 upgrade bug, resolving")
+                    changeOnlineStatus(OnlineAccountStatus.Done, save = true)
+                    log.info("found online account, status: ${OnlineAccountStatus.Done}, account: ${address.toBase58()}, primary: $primaryAddressStr")
+                } else {
+                    // This should not happen - this method is reachable only for a linked account case
+                    throw IllegalStateException("Invalid state found in tryRestoreLinkedOnlineAccount: $status")
+                }
             }
             else -> {
                 changeOnlineStatus(status, save = false)

@@ -122,11 +122,15 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         }
 
         amountViewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->
-            binding.toolbarSubtitle.text = getString(
-                R.string.exchange_rate_template,
-                Coin.COIN.toPlainString(),
-                GenericUtils.fiatToString(rate.fiat)
-            )
+            binding.toolbarSubtitle.text = if (rate != null) {
+                getString(
+                    R.string.exchange_rate_template,
+                    Coin.COIN.toPlainString(),
+                    GenericUtils.fiatToString(rate.fiat)
+                )
+            } else {
+                ""
+            }
         }
 
         amountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) {

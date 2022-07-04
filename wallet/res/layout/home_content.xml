@@ -8,11 +8,12 @@
     android:background="@color/background_primary"
     tools:ignore="ContentDescription">
 
-    <fragment
+    <androidx.fragment.app.FragmentContainerView
         android:id="@+id/wallet_transactions_fragment"
         android:name="de.schildbach.wallet.ui.main.WalletTransactionsFragment"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:tag="wallet_transactions_fragment"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         tools:layout="@layout/wallet_transactions_fragment" />
 

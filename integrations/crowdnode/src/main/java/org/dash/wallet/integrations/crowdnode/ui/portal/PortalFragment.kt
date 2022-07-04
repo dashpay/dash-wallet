@@ -27,6 +27,7 @@ import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -319,7 +320,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
 
     private fun showConfirmationDialog() {
         viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_VERIFY)
-        ConfirmationDialog().show(parentFragmentManager, "confirmation_dialog")
+
+        if (requireActivity().lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            ConfirmationDialog().show(parentFragmentManager, "confirmation_dialog")
+        }
     }
 
     private fun getErrorMessage(exception: Exception): String {

@@ -31,6 +31,7 @@ import de.schildbach.wallet.transactions.TxDirectionFilter
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -105,6 +106,9 @@ class MainViewModel @Inject constructor(
     private val _hideBalance = MutableLiveData<Boolean>()
     val hideBalance: LiveData<Boolean>
         get() = _hideBalance
+
+    val isPassphraseVerified: Boolean
+        get() = !config.remindBackupSeed
 
     init {
         _hideBalance.value = config.hideBalance
@@ -195,6 +199,10 @@ class MainViewModel @Inject constructor(
         analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
             "filter_value" to directionParameter
         ))
+    }
+
+    fun processDirectTransaction(tx: Transaction) {
+        walletData.processDirectTransaction(tx)
     }
 
     override fun onCleared() {

@@ -249,10 +249,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             final boolean isRestoringBackup = application.getConfiguration().isRestoringBackup();
 
             handler.post(() -> {
-                final boolean isReceived = amount.signum() > 0;
                 final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
 
-                if (isReceived && !isReplayedTx) {
+                if (!isReplayedTx) {
                     if (depositReceivedResponse.matches(tx)) {
                         notificationService.showNotification(
                                 "deposit_received",
@@ -262,7 +261,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         );
                     } else if (apiConfirmationHandler != null && apiConfirmationHandler.matches(tx)) {
                         apiConfirmationHandler.handle(tx);
-                    } else if (passFilters(tx)) {
+                    } else if (passFilters(tx, wallet)) {
                         notifyCoinsReceived(address, amount, tx.getExchangeRate());
                     }
                 }
@@ -277,7 +276,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             updateAppWidget();
         }
 
-        private Boolean passFilters(final Transaction tx) {
+        private Boolean passFilters(final Transaction tx, final Wallet wallet) {
+            Coin amount = tx.getValue(wallet);
+            final boolean isReceived = amount.signum() > 0;
+
+            if (!isReceived) {
+                return false;
+            }
+
             boolean passFilters = false;
 
             for (TransactionFilter filter: crowdnodeFilters) {
