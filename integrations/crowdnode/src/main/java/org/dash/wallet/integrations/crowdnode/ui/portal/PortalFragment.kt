@@ -392,7 +392,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
                 getString(R.string.buy_dash)
             ).show(requireActivity()) {
                 if (it == true) {
+                    viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_WITHDRAW_BUY)
                     viewModel.buyDash()
+                } else {
+                    viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_WITHDRAW_CANCEL)
                 }
             }
         }

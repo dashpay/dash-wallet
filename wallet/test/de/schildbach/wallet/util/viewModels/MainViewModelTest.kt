@@ -171,6 +171,7 @@ class MainViewModelTest {
             mockk(), mockk(), configMock, blockChainStateMock,
             exchangeRatesMock, walletDataMock, savedStateMock
         ))
+
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
             assertEquals(true, viewModel.isBlockchainSynced.value)
             assertEquals(false, viewModel.isBlockchainSyncFailed.value)
