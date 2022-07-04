@@ -26,7 +26,7 @@ import de.schildbach.wallet.rates.ExchangeRatesDao;
         BlockchainState.class,
         TransactionMetadata.class,
         AddressMetadata.class
-    }, version = 11)
+    }, version = 11) // if increasing version, we need migrations to preserve tx/addr metadata
 @TypeConverters({RoomConverters.class, BlockchainStateRoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
