@@ -600,6 +600,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     CrashReporter.saveBackgroundTrace(new RuntimeException(message), application.packageInfo());
                 }
 
+                wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
+
                 log.info("starting peergroup");
                 peerGroup = new PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain);
                 if (resetMNListsOnPeerGroupStart) {
@@ -924,8 +926,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         config.registerOnSharedPreferenceChangeListener(sharedPrefsChangeListener);
 
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
-
-        wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
 
         peerDiscoveryList.add(dnsDiscovery);
         updateAppWidget();
