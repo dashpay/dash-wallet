@@ -23,6 +23,7 @@ import android.os.Bundle
 import android.view.MenuItem
 import android.webkit.*
 import androidx.appcompat.widget.Toolbar
+import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.integration.liquid.databinding.ActivityLoginWebviewBinding
@@ -66,8 +67,8 @@ class CoinBaseWebClientActivity : InteractionAwareActivity() {
         WebStorage.getInstance().deleteAllData()
 
         val loginUrl =
-            "https://www.coinbase.com/oauth/authorize?client_id=1ca2946d789bf6d986f26df03f4a52a8c6f1" +
-                "fe80e469eb1d3477e7c90768559a&redirect_uri=https://coin.base.test/callback&response_type" +
+            "https://www.coinbase.com/oauth/authorize?client_id=${BuildConfig.COINBASE_CLIENT_ID}" +
+               "&redirect_uri=authhub://oauth-callback&response_type" +
                 "=code&scope=wallet:accounts:read,wallet:user:read,wallet:payment-methods:read," +
                 "wallet:buys:read,wallet:buys:create,wallet:transactions:transfer," +
                 "wallet:sells:create,wallet:sells:read," +
@@ -102,9 +103,9 @@ class CoinBaseWebClientActivity : InteractionAwareActivity() {
         override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
             val uri = Uri.parse(url)
             val host = uri.host
-            if (Uri.parse(url).host == "coin.base.test") {
+            if (Uri.parse(url).host == "oauth-callback") {
                 // This is my web site, so do not override; let my WebView load the page
-                val code = uri.getQueryParameter("code")?.let {
+               uri.getQueryParameter("code")?.let {
                     // viewModel.setLoginToken(it)
                     setActivityResult(it)
                 }

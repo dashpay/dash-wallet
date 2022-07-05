@@ -79,6 +79,7 @@ import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.transactions.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
+import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
@@ -345,6 +346,8 @@ public class WalletApplication extends BaseWalletApplication
             createNotificationChannels();
         }
         initUphold();
+        CoinBaseClientConstants.CLIENT_ID= BuildConfig.COINBASE_CLIENT_ID;
+        CoinBaseClientConstants.CLIENT_SECRET = BuildConfig.COINBASE_CLIENT_SECRET;
     }
 
     private void initUphold() {
