@@ -109,7 +109,15 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     override suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate) {
-        TODO("Not yet implemented")
+        if (exchangeRate.rate != null) {
+            updateAndInsertIfNotExist(txId) {
+                transactionMetadataDao.updateExchangeRate(
+                    txId,
+                    exchangeRate.currencyCode,
+                    exchangeRate.rate!!
+                )
+            }
+        }
     }
 
     override suspend fun setTransactionMemo(txId: Sha256Hash, memo: String) {
@@ -146,12 +154,10 @@ class WalletTransactionMetadataProvider @Inject constructor(
                     )
                 )
             } else if (metadata.rate == null && exchangeRate != null) {
-                setTransactionExchangeRate(
+                transactionMetadataDao.updateExchangeRate(
                     tx.txId,
-                    ExchangeRate(
-                        exchangeRate.fiat.currencyCode,
-                        exchangeRate.fiat.value.toString()
-                    )
+                    exchangeRate.fiat.currencyCode,
+                    exchangeRate.fiat.value.toString()
                 )
             }
 

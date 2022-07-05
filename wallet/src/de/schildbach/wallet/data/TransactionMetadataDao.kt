@@ -51,6 +51,9 @@ interface TransactionMetadataDao {
     @Query("UPDATE transaction_metadata SET memo = :memo WHERE txid = :txId")
     suspend fun updateMemo(txId: Sha256Hash, memo: String)
 
+    @Query("UPDATE transaction_metadata SET currencyCode = :currencyCode WHERE rate = :rate")
+    suspend fun updateExchangeRate(txId: Sha256Hash, currencyCode: String, rate: String)
+
     @Query("UPDATE transaction_metadata SET service = :service WHERE txid = :txId")
     suspend fun updateService(txId: Sha256Hash, service: String)
 
