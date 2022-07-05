@@ -24,7 +24,6 @@ import android.text.format.DateUtils;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
 
-import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.NetworkParameters;
@@ -138,7 +137,11 @@ public final class Constants {
         /** Filename of the block checkpoints file. */
         public static final String CHECKPOINTS_FILENAME = "checkpoints" + FILENAME_NETWORK_SUFFIX + ".txt";
 
+        /** Filename of the bootstrap masternode list diff file. */
         public static final String MNLIST_BOOTSTRAP_FILENAME = "mnlistdiff" + FILENAME_NETWORK_SUFFIX + ".dat";
+
+        /** Filename of the bootstrap qrinfo file. */
+        public static final String QRINFO_BOOTSTRAP_FILENAME = "qrinfo" + FILENAME_NETWORK_SUFFIX + ".dat";
 
         /** Filename of the fees files. */
         public static final String FEES_FILENAME = "fees" + FILENAME_NETWORK_SUFFIX + ".txt";
