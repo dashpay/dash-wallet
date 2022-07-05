@@ -36,17 +36,17 @@ import kotlin.jvm.Throws
 
 open class CrowdNodeBlockchainApi @Inject constructor(
     private val paymentService: SendPaymentService,
-    private val walletDataProvider: WalletDataProvider
+    private val walletData: WalletDataProvider
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(CrowdNodeBlockchainApi::class.java)
     }
 
-    private val params = walletDataProvider.networkParameters
+    private val params = walletData.networkParameters
 
     suspend fun topUpAddress(accountAddress: Address, amount: Coin, emptyWallet: Boolean = false): Transaction {
         val topUpTx = paymentService.sendCoins(accountAddress, amount, null, emptyWallet)
-        return walletDataProvider.observeTransactions(LockedTransaction(topUpTx.txId)).first()
+        return walletData.observeTransactions(LockedTransaction(topUpTx.txId)).first()
     }
 
     suspend fun makeSignUpRequest(accountAddress: Address): Transaction {
@@ -56,8 +56,9 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         val signUpTx = paymentService.sendCoins(crowdNodeAddress, requestValue, selector)
         log.info("signUpTx id: ${signUpTx.txId}")
         val errorResponse = CrowdNodeErrorResponse(params, requestValue)
-        val tx = walletDataProvider.observeTransactions(
+        val tx = walletData.observeTransactions(
             CrowdNodeAcceptTermsResponse(params),
+            PossibleAcceptTermsResponse(walletData.transactionBag, accountAddress),
             errorResponse
         ).first()
 
@@ -75,8 +76,9 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         val acceptTx = paymentService.sendCoins(crowdNodeAddress, requestValue, selector)
         log.info("acceptTx id: ${acceptTx.txId}")
         val errorResponse = CrowdNodeErrorResponse(params, requestValue)
-        val tx = walletDataProvider.observeTransactions(
+        val tx = walletData.observeTransactions(
             CrowdNodeWelcomeToApiResponse(params),
+            PossibleWelcomeResponse(walletData.transactionBag, accountAddress),
             errorResponse
         ).first()
 
@@ -102,7 +104,7 @@ open class CrowdNodeBlockchainApi @Inject constructor(
 
     suspend fun waitForDepositResponse(amount: Coin): Transaction {
         val errorResponse = CrowdNodeErrorResponse(params, amount)
-        val tx = walletDataProvider.observeTransactions(
+        val tx = walletData.observeTransactions(
             CrowdNodeDepositReceivedResponse(params),
             errorResponse
         ).first()
@@ -128,7 +130,7 @@ open class CrowdNodeBlockchainApi @Inject constructor(
     suspend fun waitForWithdrawalResponse(requestValue: Coin): Transaction {
         val errorResponse = CrowdNodeErrorResponse(params, requestValue)
         val deniedResponse = CrowdNodeWithdrawalDeniedResponse(params)
-        val tx = walletDataProvider.observeTransactions(
+        val tx = walletData.observeTransactions(
             CrowdNodeWithdrawalQueueResponse(params),
             deniedResponse,
             errorResponse
@@ -143,22 +145,22 @@ open class CrowdNodeBlockchainApi @Inject constructor(
     }
 
     fun getDeposits(accountAddress: Address): Collection<Transaction> {
-        return walletDataProvider.getTransactions(CrowdNodeDepositTx(accountAddress))
+        return walletData.getTransactions(CrowdNodeDepositTx(accountAddress))
     }
 
     fun getDepositConfirmations(): Collection<Transaction> {
-        return walletDataProvider.getTransactions(CrowdNodeDepositReceivedResponse(params))
+        return walletData.getTransactions(CrowdNodeDepositReceivedResponse(params))
     }
 
     suspend fun waitForApiAddressConfirmation(accountAddress: Address): Transaction {
         val filter = CrowdNodeAPIConfirmationTx(accountAddress)
-        return walletDataProvider.getTransactions(filter).firstOrNull()
-            ?: walletDataProvider.observeTransactions(filter).first()
+        return walletData.getTransactions(filter).firstOrNull()
+            ?: walletData.observeTransactions(filter).first()
     }
 
     open fun getFullSignUpTxSet(): FullCrowdNodeSignUpTxSet? {
-        val wrappedTransactions = walletDataProvider.wrapAllTransactions(
-            FullCrowdNodeSignUpTxSet(params, walletDataProvider.transactionBag)
+        val wrappedTransactions = walletData.wrapAllTransactions(
+            FullCrowdNodeSignUpTxSet(params, walletData.transactionBag)
         )
         return wrappedTransactions.firstOrNull { it is FullCrowdNodeSignUpTxSet } as? FullCrowdNodeSignUpTxSet
     }
@@ -177,7 +179,7 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         log.info("Re-sent the confirmation tx: ${resentTx.txId}")
 
         val errorResponse = CrowdNodeErrorResponse(params, resentTx.outputs.first().value)
-        val tx = walletDataProvider.observeTransactions(
+        val tx = walletData.observeTransactions(
             CrowdNodeDepositReceivedResponse(params),
             errorResponse
         ).first()
@@ -189,7 +191,7 @@ open class CrowdNodeBlockchainApi @Inject constructor(
 
     suspend fun waitForWithdrawalReceived(): Transaction {
         val filter = CrowdNodeWithdrawalReceivedTx(params)
-        return walletDataProvider.getTransactions(filter).firstOrNull()
-            ?: walletDataProvider.observeTransactions(filter).first()
+        return walletData.getTransactions(filter).firstOrNull()
+            ?: walletData.observeTransactions(filter).first()
     }
 }

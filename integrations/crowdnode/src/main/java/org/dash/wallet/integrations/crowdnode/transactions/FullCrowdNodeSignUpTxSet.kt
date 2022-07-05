@@ -32,20 +32,54 @@ open class FullCrowdNodeSignUpTxSet(
         signUpFilter,
         CrowdNodeAcceptTermsResponse(networkParams),
         CrowdNodeAcceptTermsTx(networkParams),
-        CrowdNodeWelcomeToApiResponse(networkParams)
+        CrowdNodeWelcomeToApiResponse(networkParams),
+        PossibleAcceptTermsResponse(bag, null),
+        PossibleWelcomeResponse(bag, null)
     )
 
     private val matchedFilters = mutableListOf<TransactionFilter>()
     override val transactions = sortedSetOf(TransactionComparator())
 
     open val hasAcceptTermsResponse: Boolean
-        get() = matchedFilters.any { it is CrowdNodeAcceptTermsResponse }
+        get() = matchedFilters.any {
+            it is CrowdNodeAcceptTermsResponse ||
+                    (it is PossibleAcceptTermsResponse && didSignUpFromAddress(it.toAddress))
+        }
 
     open val hasWelcomeToApiResponse: Boolean
-        get() = matchedFilters.any { it is CrowdNodeWelcomeToApiResponse }
+        get() = matchedFilters.any {
+            it is CrowdNodeWelcomeToApiResponse ||
+                    (it is PossibleWelcomeResponse && didSignUpFromAddress(it.toAddress))
+        }
 
     open val accountAddress: Address?
-        get() = (matchedFilters.firstOrNull { it is CrowdNodeSignUpTx } as? CrowdNodeSignUpTx)?.fromAddresses?.first()
+        get() {
+            matchedFilters.firstOrNull { it is CrowdNodeWelcomeToApiResponse }?.let {
+                return (it as CrowdNodeWelcomeToApiResponse).toAddress
+            }
+
+            matchedFilters.firstOrNull { it is PossibleWelcomeResponse }?.let { welcomeTx ->
+                val toAddress = (welcomeTx as PossibleWelcomeResponse).toAddress
+
+                if (didSignUpFromAddress(toAddress)) {
+                    return toAddress
+                }
+            }
+
+            matchedFilters.firstOrNull { it is CrowdNodeAcceptTermsResponse }?.let {
+                return (it as CrowdNodeAcceptTermsResponse).toAddress
+            }
+
+            matchedFilters.firstOrNull { it is PossibleAcceptTermsResponse }?.let { acceptTx ->
+                val toAddress = (acceptTx as PossibleAcceptTermsResponse).toAddress
+
+                if (didSignUpFromAddress(toAddress)) {
+                    return toAddress
+                }
+            }
+
+            return (matchedFilters.firstOrNull { it is CrowdNodeSignUpTx } as? CrowdNodeSignUpTx)?.fromAddresses?.first()
+        }
 
     override fun tryInclude(tx: Transaction): Boolean {
         if (transactions.any { it.txId == tx.txId }) {
@@ -89,5 +123,14 @@ open class FullCrowdNodeSignUpTxSet(
         }
 
         return result
+    }
+
+    private fun didSignUpFromAddress(toAddress: Address?): Boolean {
+        if (toAddress == null) {
+            return false
+        }
+
+        val signUpTxs = matchedFilters.filterIsInstance<CrowdNodeSignUpTx>()
+        return signUpTxs.any { it.fromAddresses.first() == toAddress }
     }
 }

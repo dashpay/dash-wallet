@@ -27,6 +27,7 @@ import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.stub
 
 class CrowdNodeTxFilterTest {
     private val networkParams = TestNet3Params.get()
@@ -163,5 +164,55 @@ class CrowdNodeTxFilterTest {
         topUpTx.outputs[1].markAsSpent(spentByTx.inputs[0])
 
         assertTrue("TopUp Tx does not match", filter.matches(topUpTx))
+    }
+
+    @Test
+    fun pleaseAcceptTermsTxFilter_correctMatch() {
+        val txData = "02000000042607763cf6eceb2478060ead38fbb3151b7676b6a243e78b58c420a4ad99cb05010000006a47304402201f95f3a194bd51c521adcd46173d3d5c9bd2dd148004dd1da72e686fd6d946e4022020e34d85cd817aff0663b133915ca2eda5ecd5d5a93fba33f2e9644f1d1513a3012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffffe27ecbb210e98a5d2dba6e3bfa0732b8f6371155c3f8bd0420027d2eb3d24a7d010000006b483045022100c7d5c710ebdf8a2526389347823c3de83b3da498eeac5d1e9001e2e86f4cd0d002200e91ee98abc4f5fb5a78e8e80ed6fd17697a706e7118f87e545d8fdad65a845b012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffff70a65da4b8d4438058c2e8f36811577cdb244d33c7973644386259135e3635a3010000006b483045022100d1c279574bdb0a4c72b6a11247f2945746b50f3a847c9c6925f0badfa8f5827a0220059884f1e9099fcfbb4966cced355e764ddf18bc60a3e03a3804c0c9b20618a4012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffff4605e08cc9758029e89705c41872f063854684b5abf2020e56aca53f161b3fea000000006b483045022100f5afc8c1e722b25532b0a3561f0c37cf80bcd288a40fa0ced53d9a137f06dbc8022067c8ad28484b4a504f74cc7ad754ab4b87f0fbb46a4725e915b625eb000be8fd012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffff02224e0000000000001976a914b889fb3449a36530c85d9689c4773c5cd1ba223388ac51844c8c060000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888acb1f80a00"
+        val tx = Transaction(networkParams, Utils.HEX.decode(txData))
+        val connectedTxData = "0100000001fc44931460fcb2a3b366f4b967fb4bde573667c6bcee2eaae198e3c8ed1faff5000000006b483045022100832d93353b7651d8bcf38d9d450de4234e9dc3bd243199ab06fa775cc9096c9502200f7d574aaa4b52ac254aeaf372efa7833f245acefb4e9ae2b81a1faeffcd9016012103f5ca44dde27d2a4219ad6e66617ef2bfbeb11021e761e835021e781505650915ffffffff02204e0200000000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888ac9d6c0b00000000001976a914b889fb3449a36530c85d9689c4773c5cd1ba223388ac00000000"
+        val connectedTx = Transaction(networkParams, Utils.HEX.decode(connectedTxData))
+        tx.inputs[3].connect(connectedTx.outputs[0])
+
+        val filter = CrowdNodeAcceptTermsResponse(networkParams)
+        assertTrue("Transaction doesn't match", filter.matches(tx))
+        assertEquals("Wrong TO address", "yd9CUc7wvATUS3GfdmcAhRZhG7719jhNf9", filter.toAddress?.toBase58())
+
+        assertFalse("Tx matches but should not", filter.matches(acceptTermsRequestTx))
+    }
+
+    @Test
+    fun welcomeToApiTxFilter_correctMatch() {
+        val filter = CrowdNodeWelcomeToApiResponse(networkParams)
+        assertTrue("Transaction doesn't match", filter.matches(welcomeResponseTx))
+        assertEquals("Wrong TO address", "yihMSMoesHX1JhbntTiV5Nptf5NLrmFMCu", filter.toAddress?.toBase58())
+
+        assertFalse("Tx matches but should not", filter.matches(acceptTermsRequestTx))
+    }
+
+    @Test
+    fun possibleWelcomeAndAcceptTermsFilters_correctMatch() {
+        val bagMock = mock<TransactionBag> {
+            on { isPubKeyHashMine(any(), any()) } doReturn true
+        }
+
+        val possibleAcceptFilter = PossibleAcceptTermsResponse(bagMock, Address.fromBase58(networkParams, "yVQr2XQ6eWduZmyQgPfQiBA3uwvPaRWpxo"))
+        var txData = "0200000002c67bbdfacfb02f7729ec60c47b85e20f898871b3b96c5f344180b08e189f9250010000006a47304402200d74f07333ad9bb5fa813ddc9e0082b6cdd8893e7e9ed6fcbf596c9ed238dede02206f5a875334990d29ae8ae3c15f2256f5f236d9ae9e2e10135afc36bfc624b466012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffff4749fa6a4c09d2f6091a7cb191c6d2533986e0517991cc68af5ae42ca66e7bf9000000006a47304402207009df8e1e8ad59f44e6dc84c6e99677454d42491907d8d993bc1d1bc3da2ef8022050c09ea66986d61ec813263b71c3dc7df327b24c2c3b9c528b719326cce298e8012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffff02224e0000000000001976a91463be8f527ae6e7c9ce4148bdfda835074062db2288aca025d9be170000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888acab7c0b00"
+        val acceptTx = Transaction(networkParams, Utils.HEX.decode(txData))
+        assertTrue("Transaction doesn't match", possibleAcceptFilter.matches(acceptTx))
+        assertFalse("Tx matches but should not", possibleAcceptFilter.matches(acceptTermsRequestTx))
+
+        txData = "0200000001b7407f1686f90c705dee1266c60e4174812f3f771b4eb09522591b7e7e284c38010000006a4730440220081ba8f1eaaee49d8e4e7dabac4e222e91cf2125d99ab2f1d6922362f1827e2b0220547d9b0c6d1938172ebbb1dc337f8bfe8425c8cd3238f055f6c48201847b4300012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffff02244e0000000000001976a91463be8f527ae6e7c9ce4148bdfda835074062db2288acbe1e7ce8190000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888acb17d0b00"
+        val welcomeTx = Transaction(networkParams, Utils.HEX.decode(txData))
+        val possibleWelcomeFilter = PossibleWelcomeResponse(bagMock, Address.fromBase58(networkParams, "yVQr2XQ6eWduZmyQgPfQiBA3uwvPaRWpxo"))
+        assertTrue("Transaction doesn't match", possibleWelcomeFilter.matches(welcomeTx))
+        assertFalse("Tx matches but should not", possibleWelcomeFilter.matches(signUpRequestTx))
+
+        bagMock.stub {
+            on { isPubKeyHashMine(any(), any()) } doReturn false
+        }
+
+        assertFalse("Tx matches but should not", possibleAcceptFilter.matches(acceptTx))
+        assertFalse("Tx matches but should not", possibleWelcomeFilter.matches(welcomeTx))
     }
 }
