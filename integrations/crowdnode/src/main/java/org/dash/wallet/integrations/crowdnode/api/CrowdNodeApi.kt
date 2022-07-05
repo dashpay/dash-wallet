@@ -65,6 +65,7 @@ interface CrowdNodeApi {
     var notificationIntent: Intent?
     var showNotificationOnResult: Boolean
 
+    fun restoreStatus()
     fun persistentSignUp(accountAddress: Address)
     suspend fun signUp(accountAddress: Address)
     suspend fun deposit(amount: Coin, emptyWallet: Boolean, checkBalanceConditions: Boolean): Boolean
@@ -450,7 +451,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         config.clearAll()
     }
 
-    private fun restoreStatus() {
+    override fun restoreStatus() {
         if (signUpStatus.value == SignUpStatus.NotStarted) {
             log.info("restoring CrowdNode status")
 
