@@ -29,6 +29,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
@@ -40,6 +41,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.TickerFlow
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.model.*
+import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeAcceptTermsResponse
+import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWelcomeToApiResponse
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
@@ -183,11 +186,13 @@ class CrowdNodeApiAggregator @Inject constructor(
                 signUpStatus.value = SignUpStatus.SigningUp
                 val signUpResponseTx = blockchainApi.makeSignUpRequest(accountAddress)
                 log.info("signUpResponseTx id: ${signUpResponseTx.txId}")
+                checkIfSignUpConfirmed(signUpResponseTx)
             }
 
             signUpStatus.value = SignUpStatus.AcceptingTerms
             val acceptTermsResponseTx = blockchainApi.acceptTerms(accountAddress)
             log.info("acceptTermsResponseTx id: ${acceptTermsResponseTx.txId}")
+            checkIfAcceptTermsConfirmed(acceptTermsResponseTx)
 
             signUpStatus.value = SignUpStatus.Finished
             log.info("CrowdNode sign up finished")
@@ -203,6 +208,59 @@ class CrowdNodeApiAggregator @Inject constructor(
             config.setPreference(CrowdNodeConfig.BACKGROUND_ERROR, ex.message ?: "")
             notifyIfNeeded(appContext.getString(R.string.crowdnode_signup_error), "crowdnode_error")
         }
+    }
+
+    private suspend fun checkIfSignUpConfirmed(tx: Transaction) {
+        if (CrowdNodeAcceptTermsResponse(params).matches(tx)) {
+            return
+        }
+
+        log.info("The response to SignUp is missing sender address, confirming with GetFunds")
+
+        if (fromCrowdNode(tx) == false) {
+            log.info("Not confirmed")
+            val signUpResponseTx = blockchainApi.waitForSignUpResponse()
+            log.info("new signUpResponseTx id: ${signUpResponseTx.txId}")
+        }
+    }
+
+    private suspend fun checkIfAcceptTermsConfirmed(tx: Transaction) {
+        if (CrowdNodeWelcomeToApiResponse(params).matches(tx)) {
+            return
+        }
+
+        log.info("The response to AcceptTerms is missing sender address, confirming with GetFunds")
+
+        if (fromCrowdNode(tx) == false) {
+            log.info("Not confirmed")
+            val acceptTermsResponseTx = blockchainApi.waitForAcceptTermsResponse()
+            log.info("new signUpResponseTx id: ${acceptTermsResponseTx.txId}")
+        }
+    }
+
+    private suspend fun fromCrowdNode(tx: Transaction): Boolean? {
+        try {
+            val result = webApi.getTransactions(accountAddress!!.toBase58())
+
+            if (result.isSuccessful && result.body() != null) {
+                if (result.body()!!.all { it.txId != tx.txId.toString() }) {
+                    return false
+                }
+            } else {
+                return null
+            }
+        } catch (ex: Exception) {
+            log.error("Error in getTransactions: $ex")
+
+            if (ex !is IOException) {
+                analyticsService.logError(ex)
+            }
+
+            // Fallback to simple detection if a network or other error
+            return null
+        }
+
+        return true
     }
 
     override suspend fun deposit(

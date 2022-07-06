@@ -144,6 +144,33 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         return tx
     }
 
+    suspend fun waitForSignUpResponse(): Transaction {
+        val acceptFilter = CrowdNodeAcceptTermsResponse(params)
+        val errorFilter = CrowdNodeErrorResponse(params, CrowdNodeSignUpTx.SIGNUP_REQUEST_CODE)
+        val tx = walletData.getTransactions(acceptFilter, errorFilter).firstOrNull() ?:
+            walletData.observeTransactions(acceptFilter, errorFilter).first()
+
+        if (errorFilter.matches(tx)) {
+            throw CrowdNodeException("SignUp request returned an error")
+        }
+
+        return tx
+    }
+
+    suspend fun waitForAcceptTermsResponse(): Transaction {
+        val welcomeFilter = CrowdNodeWelcomeToApiResponse(params)
+        val errorFilter = CrowdNodeErrorResponse(params, CrowdNodeAcceptTermsTx.ACCEPT_TERMS_REQUEST_CODE)
+
+        val tx = walletData.getTransactions(welcomeFilter, errorFilter).firstOrNull() ?:
+            walletData.observeTransactions(welcomeFilter, errorFilter).first()
+
+        if (errorFilter.matches(tx)) {
+            throw CrowdNodeException("AcceptTerms request returned an error")
+        }
+
+        return tx
+    }
+
     fun getDeposits(accountAddress: Address): Collection<Transaction> {
         return walletData.getTransactions(CrowdNodeDepositTx(accountAddress))
     }
