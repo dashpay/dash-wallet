@@ -41,6 +41,7 @@ class ShortcutButton : LinearLayout {
     }
 
     private var marginsSet = false
+    var shouldAppear: Boolean = true
 
     init {
         inflate(context, R.layout.shortcut_button, this)

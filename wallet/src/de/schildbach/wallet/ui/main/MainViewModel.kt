@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.main
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
+import androidx.annotation.VisibleForTesting
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,6 +31,7 @@ import de.schildbach.wallet.transactions.TxDirectionFilter
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -61,7 +63,8 @@ class MainViewModel @Inject constructor(
     }
 
     private val workerJob = SupervisorJob()
-    private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
+    @VisibleForTesting
+    val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
     private val listener: SharedPreferences.OnSharedPreferenceChangeListener
     private val currencyCode = MutableStateFlow(config.exchangeCurrencyCode)
@@ -103,6 +106,9 @@ class MainViewModel @Inject constructor(
     private val _hideBalance = MutableLiveData<Boolean>()
     val hideBalance: LiveData<Boolean>
         get() = _hideBalance
+
+    val isPassphraseVerified: Boolean
+        get() = !config.remindBackupSeed
 
     init {
         _hideBalance.value = config.hideBalance
@@ -193,6 +199,10 @@ class MainViewModel @Inject constructor(
         analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
             "filter_value" to directionParameter
         ))
+    }
+
+    fun processDirectTransaction(tx: Transaction) {
+        walletData.processDirectTransaction(tx)
     }
 
     override fun onCleared() {

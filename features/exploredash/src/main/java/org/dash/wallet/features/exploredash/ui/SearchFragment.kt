@@ -90,6 +90,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         get() = viewModel.exploreTopic == ExploreTopic.ATMs ||
                 viewModel.filterMode.value == FilterMode.Nearby
 
+    private val isMerchantTopic
+        get() = viewModel.exploreTopic == ExploreTopic.Merchants
+
     private val permissionRequestLauncher = registerPermissionLauncher { isGranted ->
         if (isGranted) {
             viewModel.monitorUserLocation()
@@ -110,10 +113,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         hideKeyboard()
 
         if (item is Merchant) {
-            analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELECT_MERCHANT_LOCATION, bundleOf())
+            analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_MERCHANT_LOCATION, bundleOf())
             viewModel.openMerchantDetails(item, true)
         } else if (item is Atm) {
-            analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELECT_ATM_LOCATION, bundleOf())
+            analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_ATM_LOCATION, bundleOf())
             viewModel.openAtmDetails(item)
         }
     }
@@ -155,7 +158,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.menu_info) {
                 if (args.type == ExploreTopic.Merchants){
-                    analyticsService.logEvent(AnalyticsConstants.ExploreDash.INFO_EXPLORE_MERCHANT, bundleOf())
+                    analyticsService.logEvent(AnalyticsConstants.Explore.INFO_EXPLORE_MERCHANT, bundleOf())
                 }
                 safeNavigate(SearchFragmentDirections.exploreToInfo())
             }
@@ -312,16 +315,16 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         searchHeaderAdapter.setOnFilterOptionChosen { mode ->
             if (topic == ExploreTopic.Merchants){
                 when(mode){
-                    FilterMode.Online ->  analyticsService.logEvent(AnalyticsConstants.ExploreDash.ONLINE_MERCHANTS, bundleOf())
-                    FilterMode.Nearby ->  analyticsService.logEvent(AnalyticsConstants.ExploreDash.NEARBY_MERCHANTS, bundleOf())
-                    else -> analyticsService.logEvent(AnalyticsConstants.ExploreDash.ALL_MERCHANTS, bundleOf())
+                    FilterMode.Online ->  analyticsService.logEvent(AnalyticsConstants.Explore.ONLINE_MERCHANTS, bundleOf())
+                    FilterMode.Nearby ->  analyticsService.logEvent(AnalyticsConstants.Explore.NEARBY_MERCHANTS, bundleOf())
+                    else -> analyticsService.logEvent(AnalyticsConstants.Explore.ALL_MERCHANTS, bundleOf())
                 }
             } else {
                 when(mode){
-                    FilterMode.Buy -> analyticsService.logEvent(AnalyticsConstants.ExploreDash.BUY_ATM, bundleOf())
-                    FilterMode.Sell -> analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELL_ATM, bundleOf())
-                    FilterMode.BuySell -> analyticsService.logEvent(AnalyticsConstants.ExploreDash.BUY_SELL_ATM, bundleOf())
-                    else -> analyticsService.logEvent(AnalyticsConstants.ExploreDash.ALL_ATM, bundleOf())
+                    FilterMode.Buy -> analyticsService.logEvent(AnalyticsConstants.Explore.BUY_ATM, bundleOf())
+                    FilterMode.Sell -> analyticsService.logEvent(AnalyticsConstants.Explore.SELL_ATM, bundleOf())
+                    FilterMode.BuySell -> analyticsService.logEvent(AnalyticsConstants.Explore.BUY_SELL_ATM, bundleOf())
+                    else -> analyticsService.logEvent(AnalyticsConstants.Explore.ALL_ATM, bundleOf())
                 }
             }
             viewModel.setFilterMode(mode)
@@ -329,18 +332,18 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         searchHeaderAdapter.setOnFilterButtonClicked {
             if (topic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANTS_TOP, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_TOP, bundleOf())
             } else {
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_TOP, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_TOP, bundleOf())
             }
             openFilters()
         }
 
         binding.filterPanel.setOnClickListener {
             if (topic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANTS_BOTTOM, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_BOTTOM, bundleOf())
             } else {
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_BOTTOM, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_BOTTOM, bundleOf())
             }
             openFilters()
         }
@@ -409,8 +412,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.upButton.setOnClickListener {
             binding.searchResults.scrollToPosition(0)
-            if (isMerchant()){
-                viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_SCROLL_UP)
+            if (isMerchantTopic) {
+                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_SCROLL_UP)
             }
         }
 
@@ -455,20 +458,18 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun setupItemDetails() {
         binding.itemDetails.setOnSendDashClicked { isPayingWithDash ->
             if (isPayingWithDash){
-                viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_PAY_WITH_DASH)
+                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
             }
             viewModel.sendDash()
         }
         binding.itemDetails.setOnReceiveDashClicked { viewModel.receiveDash() }
         binding.itemDetails.setOnBackButtonClicked {
             viewModel.backFromMerchantLocation()
-            viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_FROM_ALL_LOCATIONS)
         }
         binding.itemDetails.setOnShowAllLocationsClicked {
             viewModel.selectedItem.value?.let { merchant ->
                 if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
                     viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
-                    viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_SHOW_ALL_LOCATIONS)
                 }
             }
         }
@@ -482,21 +483,21 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
         binding.itemDetails.setOnNavigationButtonClicked {
-            if (isMerchant()){
-                viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_NAVIGATION)
+            if (isMerchantTopic) {
+                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_NAVIGATION)
             }
         }
         binding.itemDetails.setOnDialPhoneButtonClicked {
-            if (isMerchant()){
-                viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_DIAL_PHONE_CALL)
+            if (isMerchantTopic) {
+                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
             }
         }
         binding.itemDetails.setOnOpenWebsiteButtonClicked {
-            if (isMerchant()){
-                viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_OPEN_WEBSITE)
+            if (isMerchantTopic) {
+                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
             }
         }
-        binding.itemDetails.setOnBuyGiftCardButtonClicked { viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BUY_GIFT_CARD) }
+        binding.itemDetails.setOnBuyGiftCardButtonClicked { viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BUY_GIFT_CARD) }
     }
 
     private fun setupScreenTransitions() {
@@ -562,8 +563,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.toolbar.setNavigationOnClickListener {
             hardBackAction.invoke()
-            if (isMerchant()){
-                viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_TOP)
+            if (isMerchantTopic) {
+                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BACK_TOP)
             }
         }
 
@@ -572,8 +573,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     hardBackAction.invoke()
-                    if (isMerchant()){
-                        viewModel.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_BOTTOM)
+                    if (isMerchantTopic) {
+                        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BACK_BOTTOM)
                     }
                 }
             })
@@ -841,6 +842,4 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             else -> BottomSheetBehavior.STATE_EXPANDED
         }
     }
-
-    private fun isMerchant(): Boolean = args.type == ExploreTopic.Merchants
 }

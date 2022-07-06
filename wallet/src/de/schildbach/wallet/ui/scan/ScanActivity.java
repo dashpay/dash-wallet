@@ -79,7 +79,9 @@ import android.view.ViewAnimationUtils;
 import android.view.WindowManager;
 import android.view.animation.AccelerateInterpolator;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.ActivityOptionsCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -99,23 +101,34 @@ public final class ScanActivity extends AbstractWalletActivity
 
     public static void startForResult(final Activity activity, @Nullable final View clickView, final int requestCode) {
         if (clickView != null) {
-            final int[] clickViewLocation = new int[2];
-            clickView.getLocationOnScreen(clickViewLocation);
-            final Intent intent = new Intent(activity, ScanActivity.class);
-            intent.putExtra(ScanActivity.INTENT_EXTRA_SCENE_TRANSITION_X,
-                    (int) (clickViewLocation[0] + clickView.getWidth() / 2));
-            intent.putExtra(ScanActivity.INTENT_EXTRA_SCENE_TRANSITION_Y,
-                    (int) (clickViewLocation[1] + clickView.getHeight() / 2));
-            final ActivityOptions options = ActivityOptions.makeSceneTransitionAnimation(activity, clickView,
-                    "transition");
+            ActivityOptionsCompat options = getLaunchOptions(activity, clickView);
+            Intent intent = getTransitionIntent(activity, clickView);
             activity.startActivityForResult(intent, requestCode, options.toBundle());
         } else {
-            startForResult(activity, requestCode);
+            Intent intent = getIntent(activity);
+            activity.startActivityForResult(intent, requestCode);
         }
     }
 
-    public static void startForResult(final Activity activity, final int resultCode) {
-        activity.startActivityForResult(new Intent(activity, ScanActivity.class), resultCode);
+    public static Intent getIntent(final Activity activity) {
+        return new Intent(activity, ScanActivity.class);
+    }
+
+    public static Intent getTransitionIntent(final Activity activity, @NonNull final View clickView) {
+        final Intent intent = new Intent(activity, ScanActivity.class);
+
+        final int[] clickViewLocation = new int[2];
+        clickView.getLocationOnScreen(clickViewLocation);
+        intent.putExtra(ScanActivity.INTENT_EXTRA_SCENE_TRANSITION_X,
+                clickViewLocation[0] + clickView.getWidth() / 2);
+        intent.putExtra(ScanActivity.INTENT_EXTRA_SCENE_TRANSITION_Y,
+                clickViewLocation[1] + clickView.getHeight() / 2);
+
+        return intent;
+    }
+
+    public static ActivityOptionsCompat getLaunchOptions(final Activity activity, @NonNull final View clickView) {
+        return ActivityOptionsCompat.makeSceneTransitionAnimation(activity, clickView, "transition");
     }
 
     public static void startForResult(final Fragment fragment, final Activity activity, final int resultCode) {

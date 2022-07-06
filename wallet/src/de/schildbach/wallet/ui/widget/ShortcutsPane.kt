@@ -26,9 +26,8 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.LinearLayout
 import androidx.core.view.children
-import androidx.core.view.isGone
-import androidx.core.view.isVisible
 import de.schildbach.wallet_test.R
+import kotlin.math.min
 
 class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs), View.OnClickListener {
 
@@ -85,14 +84,38 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
     }
 
     private var isSmallScreen = resources.displayMetrics.densityDpi <= DisplayMetrics.DENSITY_MEDIUM
-    private val secondaryItems = mutableListOf<ShortcutButton>()
-
-    private var showSecureNow: Boolean = true
-    private var userHasBalance: Boolean = false
-    private var showJoinDashPay: Boolean = true
-    private var showPayToContact: Boolean = true
-
     private var onShortcutClickListener: OnClickListener? = null
+
+    private val shortcuts = listOf(
+        secureNowButton,
+        scanToPayButton,
+        payToAddressButton,
+        buySellButton,
+        receiveButton,
+        explore
+    )
+
+    var isPassphraseVerified: Boolean = true
+        set(value) {
+            secureNowButton.shouldAppear = !value
+
+            if (field != value) {
+                field = value
+                refresh()
+            }
+        }
+
+    var userHasBalance: Boolean = true
+        set(value) {
+            scanToPayButton.shouldAppear = value
+            buySellButton.shouldAppear = !value
+            payToAddressButton.shouldAppear = value
+
+            if (field != value) {
+                field = value
+                refresh()
+            }
+        }
 
     init {
         setBackgroundResource(R.drawable.white_background_rounded)
@@ -100,7 +123,6 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_HORIZONTAL
         if (isInEditMode) {
-            setup()
             refresh()
         }
         val onPreDrawListener = object : ViewTreeObserver.OnPreDrawListener {
@@ -108,7 +130,6 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
                 viewTreeObserver.removeOnPreDrawListener(this)
                 val sizeRation = width.toFloat() / height.toFloat()
                 isSmallScreen = (sizeRation < 3.3)
-                setup()
                 refresh()
                 return false
             }
@@ -116,80 +137,29 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
         viewTreeObserver.addOnPreDrawListener(onPreDrawListener)
     }
 
-    fun setup() {
-        addShortcut(secureNowButton)
-        secondaryItems.add(scanToPayButton)
-
-        secondaryItems.add(receiveButton)
-
-        secondaryItems.add(payToAddressButton)
-
-        secondaryItems.add(buySellButton)
-        secondaryItems.forEach {
-            addShortcut(it)
-        }
-        if (!isSmallScreen) {
-            addShortcut(explore)
-        }
-    }
-
     private fun refresh() {
-        val displayed = mutableSetOf<ShortcutButton>()
-
-        secureNowButton.isVisible = showSecureNow
-        if (secureNowButton.isVisible) {
-            displayed.add(secureNowButton)
-        }
-
-        scanToPayButton.isVisible = userHasBalance
-        if (scanToPayButton.isVisible) {
-            displayed.add(scanToPayButton)
-        }
-
-        displayed.add(receiveButton)
-
-        buySellButton.isVisible = !userHasBalance
-        payToAddressButton.isVisible = userHasBalance
-        if (userHasBalance) {
-            displayed.add(payToAddressButton)
-        } else {
-            displayed.add(buySellButton)
-        }
-
-        explore.isGone = userHasBalance && showSecureNow
-        if (!isSmallScreen) {
-            if (explore.isVisible) {
-                displayed.add(explore)
+        var slotsLeft = if (isSmallScreen) 3 else 4
+        shortcuts.forEach { btn ->
+            if (btn.shouldAppear && slotsLeft > 0) {
+                addShortcut(btn)
+                slotsLeft--
+            } else {
+                removeShortcut(btn)
             }
         }
     }
 
-    fun showSecureNow(showSecureNow: Boolean) {
-        this.showSecureNow = showSecureNow
-        refresh()
-    }
-
-    fun userHasBalance(userHasBalance: Boolean) {
-        if (this.userHasBalance != userHasBalance) {
-            this.userHasBalance = userHasBalance
-            refresh()
+    private fun addShortcut(shortcut: ShortcutButton) {
+        if (!children.contains(shortcut)) {
+            val index = min(childCount, shortcuts.indexOf(shortcut))
+            val layoutParams = ViewGroup.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT)
+            addView(shortcut, index, layoutParams)
         }
     }
 
-    fun showJoinDashPay(showJoinDashPay: Boolean) {
-        this.showJoinDashPay = showJoinDashPay
-        refresh()
-    }
-
-    fun showPayToContact(showPayToContact: Boolean) {
-        this.showPayToContact = showPayToContact
-        refresh()
-    }
-
-    private fun addShortcut(shortcut: ShortcutButton, index: Int = -1) {
-        if (!children.contains(shortcut)) {
-            val layoutParams = ViewGroup.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT)
-            addView(shortcut, index, layoutParams)
+    private fun removeShortcut(shortcut: ShortcutButton) {
+        if (children.contains(shortcut)) {
+            removeView(shortcut)
         }
     }
 
