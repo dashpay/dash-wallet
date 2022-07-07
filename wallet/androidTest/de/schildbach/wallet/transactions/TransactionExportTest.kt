@@ -25,6 +25,7 @@ import org.bitcoinj.wallet.*
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.transactions.TransactionUtils
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
