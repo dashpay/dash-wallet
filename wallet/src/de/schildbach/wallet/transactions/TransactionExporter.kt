@@ -23,8 +23,8 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.transactions.TaxCategory
-import org.dash.wallet.common.transactions.TransactionMetadata
+import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
 import java.text.DateFormat
 import java.text.SimpleDateFormat

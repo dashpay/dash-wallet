@@ -33,10 +33,13 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NotificationService
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.util.TickerFlow
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.model.*
@@ -90,6 +93,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     private val config: CrowdNodeConfig,
     private val globalConfig: Configuration,
     private val securityFunctions: ISecurityFunctions,
+    private val transactionMetadataProvider: TransactionMetadataProvider,
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {
     companion object {
@@ -183,6 +187,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 signUpStatus.value = SignUpStatus.SigningUp
                 val signUpResponseTx = blockchainApi.makeSignUpRequest(accountAddress)
                 log.info("signUpResponseTx id: ${signUpResponseTx.txId}")
+                markAccountAddressWithTaxCategory()
             }
 
             signUpStatus.value = SignUpStatus.AcceptingTerms
@@ -307,7 +312,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                     val minimumWithdrawal = CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.MaxCode.code)
                     if (!afterWithdrawal) {
                         // balance changed, no need to retry anymore
-                        break;
+                        break
                     } else if (lastBalance - (currentBalance.data?.value?: 0L) >= minimumWithdrawal.value) {
                         // balance changed, no need to retry anymore
                         break
@@ -491,7 +496,10 @@ class CrowdNodeApiAggregator @Inject constructor(
         fullSignUpSet?.let { set ->
             accountAddress = set.accountAddress
             requireNotNull(accountAddress) { "Restored signup tx set but address is null" }
-            configScope.launch { globalConfig.crowdNodeAccountAddress = accountAddress!!.toBase58() }
+            configScope.launch {
+                globalConfig.crowdNodeAccountAddress = accountAddress!!.toBase58()
+                markAccountAddressWithTaxCategory()
+            }
 
             if (set.hasWelcomeToApiResponse) {
                 log.info("found finished sign up, account: ${set.accountAddress?.toBase58() ?: "null"}")
@@ -509,6 +517,21 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
 
         return false
+    }
+
+    private suspend fun markAccountAddressWithTaxCategory() {
+        transactionMetadataProvider.maybeMarkAddressWithTaxCategory(
+            accountAddress!!.toBase58(),
+            false,
+            TaxCategory.TransferIn,
+            ServiceName.CrowdNode
+        )
+        transactionMetadataProvider.maybeMarkAddressWithTaxCategory(
+            accountAddress!!.toBase58(),
+            true,
+            TaxCategory.TransferOut,
+            ServiceName.CrowdNode
+        )
     }
 
     private fun tryRestoreLinkedOnlineAccount(address: Address) {
@@ -581,6 +604,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 accountAddress = address
                 globalConfig.crowdNodeAccountAddress = address.toBase58()
                 globalConfig.crowdNodePrimaryAddress = primary.toBase58()
+                markAccountAddressWithTaxCategory()
                 changeOnlineStatus(OnlineAccountStatus.Validating)
             }
         }

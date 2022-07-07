@@ -13,24 +13,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.common.transactions
+package org.dash.wallet.common.data
 
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.transactions.TransactionCategory
 
 @Entity(tableName = "transaction_metadata")
 data class TransactionMetadata(
-    @PrimaryKey var txid: Sha256Hash,
+    @PrimaryKey var txId: Sha256Hash,
     var timestamp: Long,
     var value: Coin,
     var type: TransactionCategory,
     var taxCategory: TaxCategory? = null,
     var currencyCode: String? = null,
     var rate: String? = null,
-    var memo: String = ""
+    var memo: String = "",
+    var service: String? = null
 ) {
     @Ignore
     val canToggle = type.canToggle

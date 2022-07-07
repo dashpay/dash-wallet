@@ -18,9 +18,10 @@ package org.dash.wallet.common.services
 
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.ExchangeRate
-import org.dash.wallet.common.transactions.TaxCategory
-import org.dash.wallet.common.transactions.TransactionMetadata
+import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.data.TransactionMetadata
 
 interface TransactionMetadataProvider {
     suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata)
@@ -29,9 +30,47 @@ interface TransactionMetadataProvider {
     suspend fun setTransactionType(txId: Sha256Hash, type: Int)
     suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate)
     suspend fun setTransactionMemo(txId: Sha256Hash, memo: String)
+    suspend fun setTransactionService(txId: Sha256Hash, service: String)
+
+    /**
+     * Checks for missing data in the metadata cache vs the Transaction and ensures that both
+     * are the same.
+     *
+     * @param tx The transaction to sync with the transaction metadata cache
+     */
+    suspend fun syncTransaction(tx: Transaction)
+    fun syncTransactionBlocking(tx: Transaction)
 
     suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata?
     fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?>
 
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
+
+    // Address methods
+    suspend fun markAddressWithTaxCategory(
+        address: String,
+        sendTo: Boolean,
+        taxCategory: TaxCategory,
+        service: String
+    )
+
+    suspend fun maybeMarkAddressWithTaxCategory(
+        address: String,
+        sendTo: Boolean,
+        taxCategory: TaxCategory,
+        service: String
+    ): Boolean
+
+    fun markAddressAsync(address: String, sendTo: Boolean, taxCategory: TaxCategory, service: String)
+
+    fun markAddressAsTransferOutAsync(address: String, service: String) {
+        markAddressAsync(address, true, TaxCategory.TransferOut, service)
+    }
+
+    fun markAddressAsTransferInAsync(address: String, service: String) {
+        markAddressAsync(address, false, TaxCategory.TransferIn, service)
+    }
+
+    // Reset methods
+    fun clear();
 }

@@ -36,7 +36,7 @@ import kotlin.jvm.Throws
 
 open class CrowdNodeBlockchainApi @Inject constructor(
     private val paymentService: SendPaymentService,
-    private val walletDataProvider: WalletDataProvider
+    private val walletDataProvider: WalletDataProvider,
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(CrowdNodeBlockchainApi::class.java)

@@ -74,7 +74,7 @@ class ToolsViewModel @Inject constructor(
             val list = transactionMetadataProvider.getAllTransactionMetadata()
 
             val map = if (list.isNotEmpty()) {
-                list.associateBy({ it.txid }, { it })
+                list.associateBy({ it.txId }, { it })
             } else {
                 mapOf()
             }

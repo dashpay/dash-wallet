@@ -80,6 +80,7 @@ import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.transactions.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
+import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
@@ -135,6 +136,7 @@ import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
 import kotlinx.coroutines.ExperimentalCoroutinesApi;
 import kotlinx.coroutines.flow.Flow;
+import kotlinx.coroutines.flow.FlowKt;
 
 /**
  * @author Andreas Schildbach
@@ -179,6 +181,9 @@ public class WalletApplication extends BaseWalletApplication
     BlockchainStateDao blockchainStateDao;
     @Inject
     CrowdNodeConfig crowdNodeConfig;
+
+    @Inject
+    TransactionMetadataProvider transactionMetadataProvider;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -923,6 +928,8 @@ public class WalletApplication extends BaseWalletApplication
         if (walletBackupFile.exists()) {
             walletBackupFile.delete();
         }
+        // clear data on wallet reset
+        transactionMetadataProvider.clear();
         // wallet must be null for the OnboardingActivity flow
         wallet = null;
     }
@@ -1026,6 +1033,9 @@ public class WalletApplication extends BaseWalletApplication
     @NonNull
     @Override
     public Flow<Transaction> observeMostRecentTransaction() {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
         return new WalletMostRecentTransactionsObserver(wallet).observe();
     }
 

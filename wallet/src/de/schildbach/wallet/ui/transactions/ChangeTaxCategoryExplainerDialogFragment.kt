@@ -20,8 +20,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import androidx.core.view.isVisible
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogChangeTaxCategoryExplainerBinding
@@ -30,7 +28,8 @@ import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.transactions.TransactionCategory
-import org.dash.wallet.common.transactions.TransactionMetadata
+import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
@@ -89,7 +88,7 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
                             tx.txId,
                             tx.updateTime.time,
                             tx.getValue(wallet),
-                            TransactionCategory.fromTransaction(tx.type, tx.getValue(wallet))
+                            TransactionCategory.fromTransaction(tx.type, tx.getValue(wallet), isEntirelySelf(tx, wallet))
                         )
                     )
                 }

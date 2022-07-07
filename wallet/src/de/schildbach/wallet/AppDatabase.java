@@ -7,8 +7,10 @@ import androidx.room.TypeConverters;
 
 import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.common.data.RoomConverters;
-import org.dash.wallet.common.transactions.TransactionMetadata;
+import org.dash.wallet.common.data.AddressMetadata;
+import org.dash.wallet.common.data.TransactionMetadata;
 
+import de.schildbach.wallet.data.AddressMetadataDao;
 import de.schildbach.wallet.data.AppDatabaseMigrations;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
@@ -22,8 +24,9 @@ import de.schildbach.wallet.rates.ExchangeRatesDao;
 @Database(entities = {
         ExchangeRate.class,
         BlockchainState.class,
-        TransactionMetadata.class
-    }, version = 11)
+        TransactionMetadata.class,
+        AddressMetadata.class
+    }, version = 11) // if increasing version, we need migrations to preserve tx/addr metadata
 @TypeConverters({RoomConverters.class, BlockchainStateRoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
@@ -32,6 +35,7 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract ExchangeRatesDao exchangeRatesDao();
     public abstract BlockchainStateDao blockchainStateDao();
     public abstract TransactionMetadataDao transactionMetadataDao();
+    public abstract AddressMetadataDao addressMetadataDao();
 
     public static AppDatabase getAppDatabase() {
         if (instance == null) {
