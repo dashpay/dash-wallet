@@ -69,7 +69,7 @@ class TransactionExportTest {
                 tx.txId,
                 tx.updateTime?.time ?: System.currentTimeMillis(),
                 tx.outputSum,
-                TransactionCategory.fromTransaction(tx.type, tx.outputSum),
+                TransactionCategory.fromTransaction(tx.type, tx.outputSum, TransactionUtils.isEntirelySelf(tx, wallet)),
                 TaxCategory.TransferIn
             )
         )
