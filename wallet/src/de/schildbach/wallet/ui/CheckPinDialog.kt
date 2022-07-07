@@ -248,6 +248,10 @@ open class CheckPinDialog(
                 binding.pinPreview.clear()
                 binding.pinPreview.clearBadPin()
                 binding.numericKeyboard.isEnabled = true
+                if (viewModel.getFailCount() > 0) {
+                    binding.pinPreview.badPin(viewModel.getRemainingAttemptsMessage(resources))
+                }
+                warnLastAttempt()
             }
             State.INVALID_PIN -> {
                 if (binding.pinProgressSwitcher.currentView.id == R.id.progress) {
@@ -261,6 +265,8 @@ open class CheckPinDialog(
                 }, 200)
                 pinPreview.badPin(viewModel.getRemainingAttemptsMessage(resources))
                 binding.numericKeyboard.isEnabled = true
+
+                warnLastAttempt()
             }
             State.DECRYPTING -> {
                 if (binding.pinProgressSwitcher.currentView.id != R.id.progress) {
@@ -270,6 +276,20 @@ open class CheckPinDialog(
             }
         }
         state = newState
+    }
+
+    private fun warnLastAttempt() {
+        if (viewModel.getRemainingAttempts() == 1) {
+            val dialog = AdaptiveDialog.create(
+                R.drawable.ic_info_red,
+                getString(R.string.wallet_last_attempt),
+                getString(R.string.wallet_last_attempt_message),
+                "",
+                getString(R.string.button_understand)
+            )
+            dialog.isCancelable = false
+            dialog.show(activity!!) { }
+        }
     }
 
     override fun onDismiss(dialog: DialogInterface) {

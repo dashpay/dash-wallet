@@ -284,6 +284,7 @@ class SetPinActivity : InteractionAwareActivity() {
                 if (newState == State.INVALID_PIN) {
                     pinPreviewView.shake()
                 }
+                warnLastAttempt()
             }
             State.SET_PIN -> {
                 pinPreviewView.mode = PinPreviewView.PinType.STANDARD
@@ -348,6 +349,20 @@ class SetPinActivity : InteractionAwareActivity() {
             }
         }
         state = newState
+    }
+
+    private fun warnLastAttempt() {
+        if (pinRetryController.remainingAttempts == 1) {
+            val dialog = AdaptiveDialog.create(
+                R.drawable.ic_info_red,
+                getString(R.string.wallet_last_attempt),
+                getString(R.string.wallet_last_attempt_message),
+                "",
+                getString(R.string.button_understand)
+            )
+            dialog.isCancelable = false
+            dialog.show(this) { }
+        }
     }
 
     private fun initViewModel() {

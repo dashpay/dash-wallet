@@ -83,11 +83,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/pin_preview_textview_padding"
-        android:gravity="center_horizontal"
+        android:gravity="start"
         android:text="@string/private_key_bad_password"
         android:textColor="@color/dash_white"
         android:textSize="14sp"
         android:visibility="gone"
-        tools:visibility="visible" />
+        tools:visibility="visible"
+        tools:text="Wrong PIN! 4 attempts remaining"/>
 
 </merge>
