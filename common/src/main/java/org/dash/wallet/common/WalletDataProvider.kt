@@ -17,7 +17,6 @@
 
 package org.dash.wallet.common
 
-import android.app.Activity
 import androidx.lifecycle.LiveData
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.*

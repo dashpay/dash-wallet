@@ -1,4 +1,8 @@
 Dash Wallet
+v7.5.2
+* Fix CrowdNode issues
+* New UI for the transaction list and transaction details
+
 v7.5.1
 * Fix CrowdNode issues
 * Add link CrowdNode account
