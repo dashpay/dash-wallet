@@ -222,9 +222,11 @@ public class WalletApplication extends BaseWalletApplication
             protected void onStartedAny(boolean isTheFirstOne, Activity activity) {
                 super.onStartedAny(isTheFirstOne, activity);
                 // force restart if the app was updated
+                // this ensures that v6.x or previous will go through the PIN upgrade process
                 if (!BuildConfig.DEBUG && myPackageReplaced) {
+                    log.info("restarting app due to upgrade");
                     myPackageReplaced = false;
-                    restartService.performRestart(activity, true);
+                    restartService.performRestart(activity, true, true);
                 }
             }
 

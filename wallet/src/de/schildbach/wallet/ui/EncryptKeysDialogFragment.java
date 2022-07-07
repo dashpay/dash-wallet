@@ -325,7 +325,7 @@ public class EncryptKeysDialogFragment extends BaseDialogFragment {
                                 } catch (final KeyCrypterException x) {
                                     log.info("wallet decryption failed: " + x.getMessage());
                                     if(pinRetryController.failedAttempt(oldPassword)) {
-                                        restartService.performRestart(getActivity(), true);
+                                        restartService.performRestart(getActivity(), true, false);
                                         dismiss();
                                     }
                                     badPasswordView.setVisibility(View.VISIBLE);
