@@ -37,7 +37,7 @@ open class CoinsReceivedTxFilter(
                 toAddress = script.getToAddress(tx.params)
             }
 
-                return true
+            return true
         }
 
         return false
