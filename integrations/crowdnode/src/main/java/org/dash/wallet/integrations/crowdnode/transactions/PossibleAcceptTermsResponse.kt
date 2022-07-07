@@ -29,7 +29,16 @@ class PossibleAcceptTermsResponse(
     bag,
     CrowdNodeAcceptTermsResponse.ACCEPT_TERMS_RESPONSE_CODE
 ) {
+    var transaction: Transaction? = null
+        private set
+
     override fun matches(tx: Transaction): Boolean {
-        return super.matches(tx) && (accountAddress == null || super.toAddress == accountAddress)
+        val matches = super.matches(tx) && (accountAddress == null || super.toAddress == accountAddress)
+
+        if (matches) {
+            transaction = tx
+        }
+
+        return matches
     }
 }

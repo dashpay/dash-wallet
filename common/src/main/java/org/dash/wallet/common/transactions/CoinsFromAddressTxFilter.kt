@@ -37,9 +37,10 @@ open class CoinsFromAddressTxFilter(
         for (input in tx.inputs) {
             input.outpoint.connectedOutput?.let { connectedOutput ->
                 val script = connectedOutput.scriptPubKey
+                val fff = script.getToAddress(networkParameters)
 
                 if ((ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-                    script.getToAddress(networkParameters) == fromAddress
+                    fff == fromAddress
                 ) {
                     val output = tx.outputs.firstOrNull { it.value == actualValue }
                     output?.run {

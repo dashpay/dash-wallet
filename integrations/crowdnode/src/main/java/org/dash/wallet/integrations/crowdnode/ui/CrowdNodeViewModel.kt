@@ -177,7 +177,7 @@ class CrowdNodeViewModel @Inject constructor(
         navigationCallback.postValue(NavigationRequest.SendReport)
     }
 
-    fun recheckState() {
+    suspend fun recheckState() {
         crowdNodeApi.restoreStatus()
     }
 

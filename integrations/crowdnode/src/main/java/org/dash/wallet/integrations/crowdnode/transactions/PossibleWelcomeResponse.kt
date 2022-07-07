@@ -29,7 +29,16 @@ class PossibleWelcomeResponse(
     bag,
     CrowdNodeWelcomeToApiResponse.WELCOME_TO_API_RESPONSE_CODE
 ) {
+    var transaction: Transaction? = null
+        private set
+
     override fun matches(tx: Transaction): Boolean {
-        return super.matches(tx) && (accountAddress == null || super.toAddress == accountAddress)
+        val matches =  super.matches(tx) && (accountAddress == null || super.toAddress == accountAddress)
+
+        if (matches) {
+            transaction = tx
+        }
+
+        return matches
     }
 }
