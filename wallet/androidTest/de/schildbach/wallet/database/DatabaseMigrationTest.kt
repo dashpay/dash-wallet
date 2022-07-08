@@ -19,12 +19,12 @@ package de.schildbach.wallet.database
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
+import androidx.room.migration.Migration
 import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.data.AppDatabaseMigrations.Companion.migration8To10
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
@@ -36,11 +36,10 @@ import java.io.IOException
 open class DatabaseMigrationTest {
     companion object {
         private const val TEST_DB_NAME = "test_database"
-        private const val BLOCKCHAIN_HEIGHT = 587680
         private const val EXCHANGE_RATE = "31438.8212"
     }
 
-    private val migrations = arrayOf(migration8To10)
+    private val migrations = arrayOf<Migration>()
 
     @Rule
     @JvmField
@@ -54,19 +53,8 @@ open class DatabaseMigrationTest {
     @Throws(IOException::class)
     fun migrateAll() {
         // Create db and fill with data
-        testHelper.createDatabase(TEST_DB_NAME, 8).apply {
-            var values = ContentValues()
-            values.put("id", 1)
-            values.put("bestChainDate", 1633356847000)
-            values.put("bestChainHeight", BLOCKCHAIN_HEIGHT)
-            values.put("replaying", 0)
-            values.put("impediments", "")
-            values.put("chainlockHeight", 0)
-            values.put("mnlistHeight", 587091)
-            values.put("percentageSync", 100)
-            this.insert("blockchain_state", SQLiteDatabase.CONFLICT_REPLACE, values)
-
-            values = ContentValues()
+        testHelper.createDatabase(TEST_DB_NAME, 1).apply {
+            val values = ContentValues()
             values.put("currencyCode", "ARS")
             values.put("rate", EXCHANGE_RATE)
             this.insert("exchange_rates", SQLiteDatabase.CONFLICT_REPLACE, values)
@@ -78,15 +66,14 @@ open class DatabaseMigrationTest {
         val db = Room.databaseBuilder(
             InstrumentationRegistry.getInstrumentation().targetContext,
             AppDatabase::class.java, TEST_DB_NAME
-        ).addMigrations(*migrations).build()
+        ).addMigrations(*migrations)
+            .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+            .build()
 
-        // Check that data is valid
+        // Check that no data is preserved, which should be the case from 1 to 11
         runBlocking {
-            val savedBlockchainState = db.blockchainStateDao().loadSync()
-            assert(savedBlockchainState!!.bestChainHeight == BLOCKCHAIN_HEIGHT)
-
             val savedRate = db.exchangeRatesDao().getRateSync("ARS")
-            assert(savedRate.rate == EXCHANGE_RATE)
+            assert(savedRate == null)
         }
 
         db.close()
