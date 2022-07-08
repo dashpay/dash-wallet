@@ -118,6 +118,6 @@
         <item name="backgroundColor">@color/background_secondary</item>
         <item name="strokeColor">@color/background_secondary</item>
         <item name="rippleColor">@color/button_ripple_color</item>
-        <item name="cornerRadius">10dp</item>
+        <item name="cornerRadius">12dp</item>
     </style>
 </resources>
