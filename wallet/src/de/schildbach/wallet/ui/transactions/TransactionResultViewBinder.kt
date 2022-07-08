@@ -161,16 +161,10 @@ class TransactionResultViewBinder(
 
         dashAmount.setFormat(dashFormat)
         //For displaying purposes only
-        val amount = if (isSent && isFeeAvailable(tx.fee)) {
-            value.plus(tx.fee)
+        if (value.isNegative) {
+            dashAmount.setAmount(value.negate())
         } else {
-            value
-        }
-
-        if (amount.isNegative) {
-            dashAmount.setAmount(amount.negate())
-        } else {
-            dashAmount.setAmount(amount)
+            dashAmount.setAmount(value)
         }
 
         if (isFeeAvailable(tx.fee)) {
@@ -221,7 +215,7 @@ class TransactionResultViewBinder(
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
                 transactionAmountSignal.text = "-"
-                transactionAmountSignal.isVisible = !TransactionUtils.isEntirelySelf(tx, wallet)
+                transactionAmountSignal.isVisible = true
             } else {
                 checkIcon.setImageResource(R.drawable.ic_transaction_received)
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.system_green))
