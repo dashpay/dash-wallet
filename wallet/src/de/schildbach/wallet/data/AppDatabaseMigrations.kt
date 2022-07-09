@@ -21,27 +21,14 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 class AppDatabaseMigrations {
     companion object {
-        // v7.4.1 to 7.4.5 (version 8) held Explore Dash Data in these tables
-        // In v7.4.6 (version 9), Explore Dash data was moved to a different DB,
-        // but the migration to drop these tables was set at 3 to 9 which did not work.
         @JvmStatic
-        val migration8To10 = object : Migration(8, 10) {
+        val migration11To12 = object : Migration(11, 12) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("DROP TABLE IF EXISTS `merchant`")
-                database.execSQL("DROP TABLE IF EXISTS `atm`")
-                database.execSQL("DROP TABLE IF EXISTS `merchant_fts`")
-                database.execSQL("DROP TABLE IF EXISTS `atm_fts`")
-            }
-        }
-
-        // v7.4.6 (version 9) still had Explore Dash Data in this DB
-        @JvmStatic
-        val migration9To10 = object : Migration(9, 10) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("DROP TABLE IF EXISTS `merchant`")
-                database.execSQL("DROP TABLE IF EXISTS `atm`")
-                database.execSQL("DROP TABLE IF EXISTS `merchant_fts`")
-                database.execSQL("DROP TABLE IF EXISTS `atm_fts`")
+                database.execSQL("CREATE TABLE `invitation_table` (`userId` TEXT NOT NULL, `txid` BLOB NOT NULL, `createdAt` INTEGER NOT NULL, `memo` TEXT NOT NULL, `sentAt` INTEGER NOT NULL, `acceptedAt` INTEGER NOT NULL, `shortDynamicLink` TEXT, `dynamicLink` TEXT, PRIMARY KEY(`userId`))")
+                database.execSQL("CREATE TABLE `user_alerts` (`stringResId` INTEGER NOT NULL, `iconResId` INTEGER NOT NULL, `dismissed` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`stringResId`))")
+                database.execSQL("CREATE TABLE `dashpay_contact_request` (`userId` TEXT NOT NULL, `toUserId` TEXT NOT NULL, `accountReference` INTEGER NOT NULL, `encryptedPublicKey` BLOB NOT NULL, `senderKeyIndex` INTEGER NOT NULL, `recipientKeyIndex` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `encryptedAccountLabel` BLOB, `autoAcceptProof` BLOB, PRIMARY KEY(`userId`, `toUserId`, `accountReference`))")
+                database.execSQL("CREATE TABLE `dashpay_profile` (`userId` TEXT NOT NULL, `username` TEXT NOT NULL, `displayName` TEXT NOT NULL, `publicMessage` TEXT NOT NULL, `avatarUrl` TEXT NOT NULL, `avatarHash` BLOB, `avatarFingerprint` BLOB, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`userId`))")
+                database.execSQL("CREATE TABLE `blockchain_identity` (`creationState` INTEGER NOT NULL, `creationStateErrorMessage` TEXT, `username` TEXT, `userId` TEXT, `restoring` INTEGER NOT NULL, `identity` BLOB, `creditFundingTxId` BLOB, `usingInvite` INTEGER NOT NULL, `invite` TEXT, `preorderSalt` BLOB, `registrationStatus` INTEGER, `usernameStatus` INTEGER, `creditBalance` INTEGER, `activeKeyCount` INTEGER, `totalKeyCount` INTEGER, `keysCreated` INTEGER, `currentMainKeyIndex` INTEGER, `currentMainKeyType` INTEGER, `id` INTEGER NOT NULL, PRIMARY KEY(`id`))")
             }
         }
     }
