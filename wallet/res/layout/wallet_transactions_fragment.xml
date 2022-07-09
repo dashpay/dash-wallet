@@ -34,15 +34,14 @@
             android:orientation="horizontal"
             android:paddingStart="16dp"
             android:paddingLeft="16dp"
-            android:paddingTop="8dp"
             android:paddingEnd="16dp"
-            android:paddingRight="16dp"
-            android:paddingBottom="8dp">
+            android:paddingRight="8dp">
 
             <ImageView
                 android:id="@+id/transaction_filter_btn"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:padding="8dp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -68,7 +67,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
-                android:layout_marginEnd="16dp"
+                android:layout_marginEnd="8dp"
                 android:layout_weight="1"
                 android:textColor="@android:color/black"
                 android:textSize="16sp"
@@ -88,7 +87,5 @@
             android:scrollbars="vertical"
             tools:itemCount="5"
             tools:listitem="@layout/transaction_row"/>
-
     </LinearLayout>
-
 </FrameLayout>

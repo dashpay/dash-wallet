@@ -18,7 +18,7 @@
     <TextView
         android:id="@+id/local_currency_name"
         style="@style/MontserratSemiBold"
-        android:textColor="@color/gray_900"
+        android:textColor="@color/content_primary"
         android:layout_width="0dp"
         app:layout_constraintWidth_default="percent"
         app:layout_constraintWidth_percent="0.5"

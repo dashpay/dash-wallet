@@ -31,6 +31,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
@@ -207,11 +208,17 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
     }
 
     fun show(activity: FragmentActivity, onResult: ((Boolean?) -> Unit)? = null) {
-        onResultListener = onResult
-        show(activity.supportFragmentManager, "adaptive_dialog")
+        if (activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            onResultListener = onResult
+            show(activity.supportFragmentManager, "adaptive_dialog")
+        }
     }
 
     suspend fun showAsync(activity: FragmentActivity): Boolean? {
+        if (!activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            return null
+        }
+
         return suspendCancellableCoroutine { coroutine ->
             val onSuccess: (Boolean?) -> Unit = { result ->
                 if (coroutine.isActive) {

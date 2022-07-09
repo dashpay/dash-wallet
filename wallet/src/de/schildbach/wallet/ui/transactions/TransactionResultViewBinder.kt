@@ -1,20 +1,21 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2019 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.transactions
 
 import android.text.format.DateUtils
 import android.view.LayoutInflater
@@ -23,19 +24,29 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
 import org.dash.wallet.common.ui.CurrencyTextView
 
 /**
  * @author Samuel Barbosa
  */
-class TransactionResultViewBinder(private val containerView: View) {
-
+@ExperimentalCoroutinesApi
+class TransactionResultViewBinder(
+    private val wallet: Wallet,
+    private val dashFormat: MonetaryFormat,
+    private val containerView: View
+) {
     private val ctx by lazy { containerView.context }
     private val checkIcon by lazy { containerView.findViewById<ImageView>(R.id.check_icon) }
     private val transactionAmountSignal by lazy { containerView.findViewById<TextView>(R.id.transaction_amount_signal) }
@@ -45,18 +56,13 @@ class TransactionResultViewBinder(private val containerView: View) {
     private val transactionFee by lazy { containerView.findViewById<CurrencyTextView>(R.id.transaction_fee) }
     private val fiatValue by lazy { containerView.findViewById<CurrencyTextView>(R.id.fiat_value) }
     private val date by lazy { containerView.findViewById<TextView>(R.id.transaction_date_and_time) }
-    private val statusContainer by lazy { containerView.findViewById<View>(R.id.status_layout) }
-    private val primaryStatusTxt by lazy { containerView.findViewById<TextView>(R.id.transaction_primary_status) }
-    private val secondaryStatusTxt by lazy { containerView.findViewById<TextView>(R.id.transaction_secondary_status) }
     private val inputsLabel by lazy { containerView.findViewById<TextView>(R.id.input_addresses_label) }
     private val inputsContainer by lazy { containerView.findViewById<View>(R.id.inputs_container) }
-    private val inputsContainerWrapper by lazy { containerView.findViewById<View>(R.id.inputs_container_content) }
     private val inputsAddressesContainer by lazy {
         containerView.findViewById<ViewGroup>(R.id.transaction_input_addresses_container)
     }
     private val outputsLabel by lazy { containerView.findViewById<TextView>(R.id.output_addresses_label) }
     private val outputsContainer by lazy { containerView.findViewById<View>(R.id.outputs_container) }
-    private val outputsContainerWrapper by lazy { containerView.findViewById<View>(R.id.outputs_container_content) }
     private val outputsAddressesContainer by lazy {
         containerView.findViewById<ViewGroup>(R.id.transaction_output_addresses_container)
     }
@@ -65,13 +71,23 @@ class TransactionResultViewBinder(private val containerView: View) {
     private val paymentMemoContainer by lazy { containerView.findViewById<View>(R.id.payment_memo_container) }
     private val payeeSecuredByContainer by lazy { containerView.findViewById<View>(R.id.payee_verified_by_container) }
     private val payeeSecuredBy by lazy { containerView.findViewById<TextView>(R.id.payee_secured_by) }
+    private val errorContainer by lazy { containerView.findViewById<View>(R.id.error_container) }
+    private val errorDescription by lazy { containerView.findViewById<TextView>(R.id.error_description) }
+
+    private val reportIssueContainer by lazy { containerView.findViewById<View>(R.id.report_issue_card) }
+    private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
+    private val explorerContainer by lazy { containerView.findViewById<View>(R.id.open_explorer_card) }
+
+    private val resourceMapper =
+        TxResourceMapper()
 
     fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
-        val noCodeFormat = WalletApplication.getInstance().configuration.format.noCode()
-        val wallet = WalletApplication.getInstance().wallet
-        val primaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet)
-        val secondaryStatus = TransactionUtil.getReceivedStatusString(tx, wallet)
-        val errorStatus = TransactionUtil.getErrorName(tx)
+        val value = tx.getValue(wallet)
+        val isSent = value.signum() < 0
+
+        val primaryStatus = resourceMapper.getTransactionTypeName(tx, wallet)
+        val secondaryStatus = resourceMapper.getReceivedStatusString(tx, wallet.context)
+        val errorStatus = resourceMapper.getErrorName(tx)
         var primaryStatusStr = if (tx.type != Transaction.Type.TRANSACTION_NORMAL || tx.isCoinBase) {
             ctx.getString(primaryStatus)
         } else {
@@ -95,7 +111,6 @@ class TransactionResultViewBinder(private val containerView: View) {
             payeeSecuredByContainer.visibility = View.VISIBLE
             outputsContainer.visibility = View.GONE
             inputsContainer.visibility = View.GONE
-            statusContainer.visibility = View.GONE
             this.paymentMemoContainer.setOnClickListener {
                 outputsContainer.visibility = if (outputsContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
                 inputsContainer.visibility = outputsContainer.visibility
@@ -103,7 +118,7 @@ class TransactionResultViewBinder(private val containerView: View) {
         }
 
         // handle sending
-        if (TransactionUtil.isSending(tx, wallet)) {
+        if (resourceMapper.isSending(tx, wallet)) {
             primaryStatusStr = ctx.getString(R.string.transaction_row_status_sending)
             secondaryStatusStr = ""
         }
@@ -112,31 +127,31 @@ class TransactionResultViewBinder(private val containerView: View) {
         val inputAddresses: List<Address>
         val outputAddresses: List<Address>
 
-        if (tx.isOutgoing()) {
-            inputAddresses = WalletUtils.getFromAddressOfSent(tx, wallet)
-            outputAddresses = if (tx.isEntirelySelf) {
+        if (isSent) {
+            inputAddresses = TransactionUtils.getFromAddressOfSent(tx)
+            outputAddresses = if (TransactionUtils.isEntirelySelf(tx, wallet)) {
                 inputsLabel.setText(R.string.transaction_details_moved_from)
                 outputsLabel.setText(R.string.transaction_details_moved_internally_to)
                 tx.allOutputAddresses
             } else {
                 outputsLabel.setText(R.string.transaction_details_sent_to)
-                WalletUtils.getToAddressOfSent(tx, wallet)
+                TransactionUtils.getToAddressOfSent(tx, wallet)
             }
         } else {
             inputAddresses = arrayListOf()
-            outputAddresses = WalletUtils.getToAddressOfReceived(tx, wallet)
+            outputAddresses = TransactionUtils.getToAddressOfReceived(tx, wallet)
             outputsLabel.setText(R.string.transaction_details_received_at)
         }
 
         val inflater = LayoutInflater.from(containerView.context)
-        inputsContainerWrapper.visibility = if (inputAddresses.isEmpty()) View.GONE else View.VISIBLE
+        inputsContainer.visibility = if (inputAddresses.isEmpty()) View.GONE else View.VISIBLE
         inputAddresses.forEach {
             val addressView = inflater.inflate(R.layout.transaction_result_address_row,
                     inputsAddressesContainer, false) as TextView
             addressView.text = it.toBase58()
             inputsAddressesContainer.addView(addressView)
         }
-        outputsContainerWrapper.visibility = if (outputAddresses.isEmpty()) View.GONE else View.VISIBLE
+        outputsContainer.visibility = if (outputAddresses.isEmpty()) View.GONE else View.VISIBLE
         outputAddresses.forEach {
             val addressView = inflater.inflate(R.layout.transaction_result_address_row,
                     outputsAddressesContainer, false) as TextView
@@ -144,74 +159,77 @@ class TransactionResultViewBinder(private val containerView: View) {
             outputsAddressesContainer.addView(addressView)
         }
 
-        dashAmount.setFormat(noCodeFormat)
+        dashAmount.setFormat(dashFormat)
         //For displaying purposes only
-        if (tx.value!!.isNegative) {
-            dashAmount.setAmount(tx.value!!.negate())
+        if (value.isNegative) {
+            dashAmount.setAmount(value.negate())
         } else {
-            dashAmount.setAmount(tx.value)
+            dashAmount.setAmount(value)
         }
 
-        transactionFee.setFormat(noCodeFormat)
-        transactionFee.setAmount(tx.fee)
+        if (isFeeAvailable(tx.fee)) {
+            transactionFee.setFormat(dashFormat)
+            transactionFee.setAmount(tx.fee)
+        }
 
         date.text = DateUtils.formatDateTime(containerView.context, tx.updateTime.time,
                 DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME)
 
         val exchangeRate = tx.exchangeRate
         if (exchangeRate != null) {
-            fiatValue.setFiatAmount(tx.value, exchangeRate, Constants.LOCAL_FORMAT,
-                    exchangeRate?.fiat?.currencySymbol)
+            fiatValue.setFiatAmount(tx.getValue(wallet), exchangeRate, Constants.LOCAL_FORMAT,
+                    exchangeRate.fiat?.currencySymbol)
         } else {
-            fiatValue.setText(R.string.transaction_row_rate_not_available)
+            fiatValue.isVisible = false
         }
 
-        // transaction status
-        if (errorStatusStr.isNotEmpty()) {
-            //set colors to red
-            val errorColor = ContextCompat.getColor(ctx, R.color.fg_error)
-            primaryStatusTxt.setTextColor(errorColor)
-            secondaryStatusTxt.setTextColor(errorColor)
-            primaryStatusTxt.text = ctx.getString(R.string.transaction_row_status_error_sending)
-            secondaryStatusTxt.text = errorStatusStr
-        } else {
-            if (primaryStatusStr.isNotEmpty()) {
-                primaryStatusTxt.text = primaryStatusStr
-            } else {
-                primaryStatusTxt.visibility = View.GONE
-            }
-            if (secondaryStatusStr.isNotEmpty()) {
-                secondaryStatusTxt.text = secondaryStatusStr
-            } else {
-                secondaryStatusTxt.visibility = View.GONE
-            }
-        }
-
-        setTransactionDirection(tx)
+        setTransactionDirection(tx, wallet, errorStatusStr)
     }
 
-    private fun setTransactionDirection(tx: Transaction) {
-        val dashAmountTextColor: Int
-        if (tx.isOutgoing()) {
-            checkIcon.setImageResource(R.drawable.ic_transaction_sent)
-            transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
+    private fun setTransactionDirection(
+        tx: Transaction,
+        wallet: Wallet,
+        errorStatusStr: String
+    ) {
+        if (errorStatusStr.isNotEmpty()){
+            errorContainer.isVisible = true
+            reportIssueContainer.isVisible = true
+            outputsContainer.isVisible = false
+            inputsContainer.isVisible = false
+            feeRow.isVisible = false
+            dateContainer.isVisible = false
+            explorerContainer.isVisible = false
+            checkIcon.setImageResource(R.drawable.ic_transaction_failed)
+            transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.content_warning))
+            transactionTitle.text = ctx.getText(R.string.transaction_failed_details)
+            errorDescription.text = errorStatusStr
             transactionAmountSignal.text = "-"
-            dashAmountTextColor = ContextCompat.getColor(ctx, android.R.color.black)
         } else {
-            checkIcon.setImageResource(R.drawable.ic_transaction_received)
-            transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
-            transactionAmountSignal.text = "+"
-            dashAmountTextColor = ContextCompat.getColor(ctx, R.color.colorPrimary)
+            if (tx.getValue(wallet).signum() < 0) {
+                checkIcon.setImageResource(if (TransactionUtils.isEntirelySelf(tx, wallet)) {
+                    R.drawable.ic_shuffle
+                } else {
+                    R.drawable.ic_transaction_sent
+                })
+
+                transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
+                transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
+                transactionAmountSignal.text = "-"
+                transactionAmountSignal.isVisible = true
+            } else {
+                checkIcon.setImageResource(R.drawable.ic_transaction_received)
+                transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.system_green))
+                transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
+                transactionAmountSignal.isVisible = true
+                transactionAmountSignal.text = "+"
+            }
+            checkIcon.isVisible = true
         }
 
-        feeRow.visibility = if (tx.fee != null && tx.fee.isPositive) View.VISIBLE else View.GONE
-
-        transactionAmountSignal.setTextColor(dashAmountTextColor)
-        dashAmountSymbol.setColorFilter(dashAmountTextColor)
-        dashAmount.setTextColor(dashAmountTextColor)
-
-        checkIcon.visibility = View.VISIBLE
-        transactionAmountSignal.visibility = View.VISIBLE
+        feeRow.visibility = if (isFeeAvailable(tx.fee)) View.VISIBLE else View.GONE
     }
 
+    private fun isFeeAvailable(transactionFee: Coin?): Boolean {
+        return transactionFee != null && transactionFee.isPositive
+    }
 }

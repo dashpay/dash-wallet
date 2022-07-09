@@ -78,7 +78,7 @@
         app:layout_constraintTop_toBottomOf="@id/accept_dash_label"
         android:layout_marginTop="2dp"
         android:paddingTop="2dp"
-        style="@style/Body2.SteelGray"
+        style="@style/Body2.Secondary"
         android:text="@string/pay_with_dash_text"
         />
 
@@ -124,7 +124,7 @@
         app:layout_constraintTop_toBottomOf="@id/buy_gift_card_label"
         android:layout_marginTop="2dp"
         android:paddingTop="2dp"
-        style="@style/Body2.SteelGray"
+        style="@style/Body2.Secondary"
         android:text="@string/buy_gift_card_desc_text"
         />
 

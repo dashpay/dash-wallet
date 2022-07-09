@@ -8,10 +8,6 @@
         <!--item name="android:statusBarColor">@android:color/transparent</item-->
     </style>
 
-    <style name="My.Theme.NoStatusBar" parent="My.Theme.NoActionBar">
-        <item name="android:windowTranslucentStatus">true</item>
-    </style>
-
     <style name="My.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
         <item name="android:elevation">0dp</item>
         <item name="elevation">0dp</item>
