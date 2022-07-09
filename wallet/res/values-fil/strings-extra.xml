@@ -149,6 +149,21 @@
     <string name="wallet_last_attempt">Huling pagsubok sa PIN</string>
     <string name="wallet_last_attempt_message">Ang isa pang nabigong pagtatangka ay mangangailangan ng aking passphrase upang mabawi ang aking wallet</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%d subok nalang ang nalalabi</item>
+        <item quantity="other">%d subok nalang ang nalalabi</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">minuto</item>
+        <item quantity="other">minuto</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">oras</item>
+        <item quantity="other">oras</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">I-upgrade</string>
     <string name="encrypt_new_key_chain_dialog_title">I-upgrade ang iyong pitaka</string>
     <string name="encrypt_new_key_chain_dialog_message">Ang iyong pitaka ay ma-uupgrade upang masuportahan ang importing at exporting sa maraming apps.</string>

@@ -30,6 +30,7 @@ import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_payment_protocol.*
 import kotlinx.android.synthetic.main.view_payment_request_details.*

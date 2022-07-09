@@ -42,7 +42,7 @@
 
     <TextView
         android:id="@+id/dialog_message"
-        style="@style/Caption.Gray600"
+        style="@style/Caption.Secondary"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="10dp"

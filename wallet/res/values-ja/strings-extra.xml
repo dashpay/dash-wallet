@@ -149,6 +149,18 @@
     <string name="wallet_last_attempt">PINの最終試行</string>
     <string name="wallet_last_attempt_message">もう一回失敗すると、ウォレットを復元するのにパスフレーズが必要になります。</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="other">あと%d 回試みることができます。</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="other">分</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="other">時間</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">アップグレード</string>
     <string name="encrypt_new_key_chain_dialog_title">あなたのウォレットをアップグレードします。</string>
     <string name="encrypt_new_key_chain_dialog_message">あなたのウォレットはより多くのアプリにインポートとエクスポートをサポートするようにアップグレードされます。</string>
@@ -167,6 +179,8 @@
     <string name="notification_transactions_channel_description">着金時にアラートを受信する。</string>
     <string name="notification_synchronization_channel_name">同期</string>
     <string name="notification_synchronization_channel_description">アプリがネットワークと同期している時に通知を表示する。</string>
+    <string name="notification_generic_channel_name">各種通知</string>
+    <string name="notification_generic_channel_description">その他のDash Walletのイベント</string>
     <string name="notification_push_channel_name">プッシュ通知</string>
     <string name="notification_push_channel_description">Dashから送られてくるプッシュ通知を表示する</string>
     <string name="notification_settings_title">通知</string>
@@ -356,6 +370,13 @@
     <string name="wallet_encryption_error_message">ウォレットの作成に問題があります。この問題をサポートデスクにご報告ください。</string>
     <string name="wallet_not_encrypted_error_message">お客様のウォレットに問題があります。\n\nこのウォレットにDashがない場合、このアプリをアンインストールして再インストールしてください。その後、新しいウォレットを作成してください。\n\nリカバリーフレーズやバックアップファイルがある場合は、本アプリをアンインストール後、再インストールしてください。\n\nそれ以外の場合は、この問題をサポートデスクにご報告ください。</string>
 
+    <string name="reset_wallet_title">本当にウォレットをリセットしますか。</string>
+    <string name="reset_wallet_message">ウォレットをリセットした場合、リカバリーフレーズを使ってウォレットをリカバリーすることでしか再利用できません。</string>
+    <string name="positive_reset_text">はい、ウォレットをリセットします</string>
+    <string name="launch_reset_wallet_title">残高が残っています。</string>
+    <string name="launch_reset_wallet_message">ウォレットをリセットすると、リカバリーフレーズをバックアップしていない限り、すべての資金を失うことになります。</string>
     <string name="continue_reset">続ける</string>
+    <string name="launch_reset_wallet_extra_message">リカバリーフレーズをバックアップする</string>
+    <string name="start_reset_wallet_title">%sを失う可能性があります。</string>
     <string name="reset_wallet_text">ウォレットをリセットする</string>
 </resources>

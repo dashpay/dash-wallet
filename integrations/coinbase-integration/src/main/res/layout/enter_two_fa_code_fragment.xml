@@ -89,7 +89,7 @@
         app:layout_constraintTop_toBottomOf="@id/enter_code_field"
         android:layout_marginTop="10dp"
         android:text="@string/enter_code_details"
-        style="@style/Caption.DarkSteelGray700"
+        style="@style/Caption.Secondary"
         />
 
     <ImageView
@@ -111,7 +111,7 @@
         app:layout_constraintBottom_toBottomOf="@id/incorrect_code_icon"
         android:layout_marginLeft="6dp"
         android:text="@string/two_fa_code_incorrect"
-        style="@style/Caption.Red300"
+        style="@style/Caption.Red"
         />
 
     <androidx.constraintlayout.widget.Group

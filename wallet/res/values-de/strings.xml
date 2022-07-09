@@ -347,7 +347,7 @@
     <string name="button_copy">Kopieren</string>
     <string name="button_copy_request">Anfrage kopieren</string>
     <string name="button_paste">Einfügen</string>
-    <string name="button_set_as_default">Als Standard festsetzen</string>
+    <string name="button_set_as_default">Als Standard setzen</string>
     <string name="button_request_coins">Dash anfordern</string>
     <string name="button_send_coins">Dash senden</string>
     <string name="button_pay">Senden</string>

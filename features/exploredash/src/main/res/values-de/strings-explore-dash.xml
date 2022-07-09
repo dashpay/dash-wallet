@@ -44,6 +44,16 @@
     <string name="distance_miles">%s Meilen</string>
     <string name="distance_kilometers">%s Kilometer</string>
 
+    <plurals name="explore_merchant_amount">
+        <item quantity="one">%d Händler</item>
+        <item quantity="other">%d Händler</item>
+    </plurals>
+
+    <plurals name="explore_atm_amount">
+        <item quantity="one">%d ATM</item>
+        <item quantity="other">%d ATMs</item>
+    </plurals>
+
     <!-- Details -->
     <string name="explore_back_to_locations">Zurück zu allen Angaben</string>
     <string name="explore_back_to_nearest">Zurück zur nächsten Stelle</string>
@@ -105,6 +115,16 @@
         <item>Entfernung</item>
     </string-array>
 
+    <plurals name="radius_miles">
+        <item quantity="one">%d Meilen</item>
+        <item quantity="other">%d Meilen</item>
+    </plurals>
+
+    <plurals name="radius_kilometers">
+        <item quantity="one">%d Kilometer</item>
+        <item quantity="other">%d Kilometer</item>
+    </plurals>
+
     <!-- Location Permission -->
     <string name="explore_location_allowed">Erlaubt</string>
     <string name="explore_location_denied">Abgelehnt</string>
@@ -117,7 +137,7 @@
     <string name="explore_atm_location_explainer_message">Der Standort wird verwendet, um die Position auf der Karte und die Zahl der ATMs im gewählten Umkreis anzuzeigen und die Suchergebnisse zu verbessern.</string>
 
     <!-- Info screens -->
-    <string name="explore_info_header_text">Wir haben zwei Arten von Händlern</string>
+    <string name="explore_info_header_text">Wir haben 2 Arten von Händlern</string>
     <string name="accept_dash_text">Akzeptiere DASH direkt</string>
     <string name="pay_with_dash_text">Zahle mit der DASH Wallet</string>
     <string name="buy_gift_card_text">Kaufe Gutscheinkarten mit Dash</string>

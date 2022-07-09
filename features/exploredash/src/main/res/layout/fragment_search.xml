@@ -174,7 +174,7 @@
 
                 <Button
                     android:id="@+id/reset_filters_btn"
-                    style="@style/Button.Tertiary.Small.Red300"
+                    style="@style/Button.Tertiary.Small.Red"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
@@ -243,7 +243,7 @@
             android:theme="@style/UpButtonBackground"
             android:layout_gravity="end"
             android:visibility="gone"
-            tools:background="@color/gray_900_0.7"
+            tools:background="@color/dash_black_0.7"
             tools:visibility="visible" />
 
         <FrameLayout

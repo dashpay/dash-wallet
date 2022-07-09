@@ -335,7 +335,7 @@
     <string name="button_copy">Sao chép</string>
     <string name="button_copy_request">Chép yêu cầu</string>
     <string name="button_paste">Dán</string>
-    <string name="button_set_as_default">Đặt làm ngầm định</string>
+    <string name="button_set_as_default">Đặt làm mặc định</string>
     <string name="button_request_coins">Yêu cầu Dash</string>
     <string name="button_send_coins">Gửi Dash</string>
     <string name="button_pay">Gửi</string>

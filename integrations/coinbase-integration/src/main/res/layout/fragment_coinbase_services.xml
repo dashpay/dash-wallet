@@ -18,7 +18,7 @@
 
     <TextView
         android:id="@+id/title"
-        style="@style/Caption.SteelGray400"
+        style="@style/Caption.Secondary"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
@@ -71,7 +71,7 @@
 
     <TextView
         android:id="@+id/last_known_balance"
-        style="@style/Overline.Red300"
+        style="@style/Overline.Red"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/last_known_balance"
@@ -117,7 +117,7 @@
 
         <TextView
             android:id="@+id/buy_dash_subtitle"
-            style="@style/Caption.SteelGray"
+            style="@style/Caption.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
@@ -172,7 +172,7 @@
 
         <TextView
             android:id="@+id/convert_dash_subtitle"
-            style="@style/Caption.SteelGray"
+            style="@style/Caption.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
@@ -227,7 +227,7 @@
 
         <TextView
             android:id="@+id/transfer_dash_subtitle"
-            style="@style/Caption.SteelGray"
+            style="@style/Caption.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"

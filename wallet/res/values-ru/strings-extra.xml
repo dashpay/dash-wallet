@@ -149,6 +149,27 @@
     <string name="wallet_last_attempt">Последняя попытка ввести PIN</string>
     <string name="wallet_last_attempt_message">После ещё одной неудачной попытки для восстановления кошелька потребуется фраза восстановления</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">Осталось попыток: %d</item>
+        <item quantity="few">Осталось попыток: %d</item>
+        <item quantity="many">Осталось попыток: %d</item>
+        <item quantity="other">Осталось попыток: %d</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">мин</item>
+        <item quantity="few">мин</item>
+        <item quantity="many">мин</item>
+        <item quantity="other">минуты</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">ч</item>
+        <item quantity="few">ч</item>
+        <item quantity="many">ч</item>
+        <item quantity="other">часы</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">Обновление</string>
     <string name="encrypt_new_key_chain_dialog_title">Обновление Вашего кошелька</string>
     <string name="encrypt_new_key_chain_dialog_message">Ваш кошелёк получит обновление, чтобы поддерживать обмен данными с другими приложениями.</string>
@@ -167,6 +188,8 @@
     <string name="notification_transactions_channel_description">Получать оповещения о входящих транзакциях.</string>
     <string name="notification_synchronization_channel_name"> Синхронизация</string>
     <string name="notification_synchronization_channel_description">Показывает уведомление, когда приложение синхронизируется с сетью.</string>
+    <string name="notification_generic_channel_name">Общие уведомления</string>
+    <string name="notification_generic_channel_description">Прочие события Dash Wallet</string>
     <string name="notification_push_channel_name">Пуш-уведомления</string>
     <string name="notification_push_channel_description">Показывать пуш-уведомления от Dash</string>
     <string name="notification_settings_title">Уведомления</string>
@@ -349,6 +372,13 @@
     <string name="wallet_encryption_error_message">При создании кошелька возникла проблема. Пожалуйста, обратитесь в Службу поддержки.</string>
     <string name="wallet_not_encrypted_error_message">С вашим кошельком возникла проблема.\n\nЕсли в вашем кошельке нет Dash, тогда удалите и установите это приложение заново. Затем создайте новый кошелёк.\n\nЕсли у вас есть фраза восстановления или резервная копия, тогда удалите это приложение и установите его заново.\n\nВ иных случаях обратитесь в Службу поддержки.</string>
 
+    <string name="reset_wallet_title">Вы уверены, что хотите сбросить кошелёк?</string>
+    <string name="reset_wallet_message">Если вы переустановите кошелёк, то сможете восстановить доступ к нему только с помощью фразы восстановления.</string>
+    <string name="positive_reset_text">Да, сбросить кошелёк</string>
+    <string name="launch_reset_wallet_title">У вас есть средства на счете</string>
+    <string name="launch_reset_wallet_message">При сбросе кошелька вы потеряете все эти средства, если не сохранили фразу восстановления.</string>
     <string name="continue_reset">Продолжить</string>
+    <string name="launch_reset_wallet_extra_message">Сохранить фразу восстановления</string>
+    <string name="start_reset_wallet_title">Вы можете потерять %s</string>
     <string name="reset_wallet_text">Сбросить кошелек</string>
 </resources>

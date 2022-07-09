@@ -20,7 +20,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/gray_background"
+    android:background="@color/background_primary"
     android:orientation="vertical"
     tools:context="org.dash.wallet.common.ui.dialogs.AdaptiveDialog"
     tools:ignore="ContentDescription">
@@ -206,7 +206,7 @@
 
         <TextView
             android:id="@+id/change_withdrawal_limit_label"
-            style="@style/Caption.SteelGray700"
+            style="@style/Caption.Secondary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="20dp"

@@ -118,7 +118,7 @@
     <string name="import_export_keys_dialog_password_phrase">恢復詞組在這裡。</string>
     <string name="preferences_report_issue_summary">收集有關您問題的信息，並將您的報告以電子郵件發方式發送給開發人員。</string>
     <string name="navigation_configuration">配置</string>
-    <string name="request_coins_clipboard_address_msg">達世幣位址已經複製到剪貼簿</string>
+    <string name="request_coins_clipboard_address_msg">達世幣位址複製到剪貼板</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">顯示</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" 不是恢復詞組的字詞</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">恢復詞組必須包含 12 個字</string>
@@ -148,6 +148,18 @@
     <string name="wallet_lock_wrong_pin">錯誤的 PIN碼! %s</string>
     <string name="wallet_last_attempt">最後一次 PIN 嘗試</string>
     <string name="wallet_last_attempt_message">再次失敗的話將需要我的恢復詞組來恢復我的錢包</string>
+
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="other">剩餘%d 次嘗試機會</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="other">分鐘</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="other">小時</item>
+    </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">升級</string>
     <string name="encrypt_new_key_chain_dialog_title">升級你的錢包</string>

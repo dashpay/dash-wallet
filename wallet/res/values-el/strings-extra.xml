@@ -149,6 +149,21 @@
     <string name="wallet_last_attempt">Τελευταία προσπάθεια για PIN</string>
     <string name="wallet_last_attempt_message">Μια άλλη αποτυχημένη προσπάθεια και θα χρειαστεί η συνθηματική μου φράση για να ανακτήσω το πορτοφόλι μου</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%d προσπάθεια απομένει</item>
+        <item quantity="other">%d προσπάθειες απομένουν </item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">λεπτό</item>
+        <item quantity="other">λεπτά</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">ώρα</item>
+        <item quantity="other">ώρες</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">Αναβάθμιση</string>
     <string name="encrypt_new_key_chain_dialog_title">Αναβαθμίστε το πορτοφόλι σας</string>
     <string name="encrypt_new_key_chain_dialog_message">το πορτοφόλι σας θα αναβαθμιστεί για να υποστηρίζει την εισαγωγή από και την εξαγωγή σε περισσότερες εφαρμογές.</string>

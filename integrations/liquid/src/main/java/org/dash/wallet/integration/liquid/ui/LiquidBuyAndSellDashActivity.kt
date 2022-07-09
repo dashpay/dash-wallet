@@ -146,10 +146,10 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity(), FancyAlertDialo
                  intent.putExtra("extra_max_amount", "17")
                  startActivityForResult(intent, 101)*/
                 getUserLiquidAccountAddress()
-                    /*val walletDataProvider = application as WalletDataProvider
+                    /*
                 val address = Address.fromBase58(MainNetParams.get(), "yTgh4Z1RrMXbJrbkbS7Lgk8NEZERJigMsy")
                 val amount = Coin.CENT
-                walletDataProvider.startSendCoinsForResult(this, 1234, address, amount)*/
+                sendPaymentService.sendCoins(this, 1234, address, amount)*/
             }
 
         }
@@ -370,10 +370,10 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity(), FancyAlertDialo
                     if (payloadObject.length() != 0) {
                         payloadObject.getString("send_to_btc_address")
                     }
-                    /*val walletDataProvider = application as WalletDataProvider
+                    /*
                     val address = Address.fromBase58(MainNetParams.get(), payloadObject.getString("send_to_btc_address"))
                     val amount = Coin.CENT
-                    walletDataProvider.startSendCoinsForResult(this@LiquidBuyAndSellDashActivity, 1234, address, amount)*/
+                    SendPaymentService.sendCoins(this@LiquidBuyAndSellDashActivity, 1234, address, amount)*/
                 }
 
                 override fun onError(e: Exception?) {

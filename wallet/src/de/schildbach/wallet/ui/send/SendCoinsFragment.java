@@ -37,6 +37,7 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.fragment.app.DialogFragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
@@ -72,7 +73,7 @@ import org.dash.wallet.common.ui.BaseLockScreenFragment;
 import de.schildbach.wallet.ui.CheckPinDialog;
 import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
-import de.schildbach.wallet.ui.TransactionResultActivity;
+import de.schildbach.wallet.ui.transactions.TransactionResultActivity;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 

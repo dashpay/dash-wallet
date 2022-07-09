@@ -20,7 +20,7 @@
     android:layout_height="wrap_content">
 
     <TextView
-        style="@style/Caption.SteelGray"
+        style="@style/Caption.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/sending_to"

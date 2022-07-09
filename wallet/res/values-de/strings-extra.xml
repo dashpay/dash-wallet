@@ -63,7 +63,9 @@
     <string name="scan_to_pay_error_dialog_title">Zum Senden scannen</string>
     <string name="scan_to_pay_error_dialog_message">Keine gültige Dash-Adresse oder URL-Anfrage im Zwischenspeicher:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Keine gültige Dash-Adresse oder URL-Anfrage im Zwischenspeicher.</string>
-    <string name="receive_title">Empfange</string>
+    <string name="pay_to_confirm_address">Handelt es sich hierbei um die Dash-Adresse, an die die Zahlung erfolgen soll?</string>
+
+    <string name="receive_title">Empfangen</string>
     <string name="receive_enter_amount_message">Zu empfangenen Betrag festsetzen</string>
     <string name="receive_enter_amount_button">Betrag festsetzen</string>
     <string name="receive_share_button">Teilen</string>
@@ -116,7 +118,7 @@
     <string name="import_export_keys_dialog_password_phrase">Hier bitte die Wiederherstellungsphrase eingeben.</string>
     <string name="preferences_report_issue_summary">Informationen über das Problem sammeln und an die Entwickler weiterleiten.</string>
     <string name="navigation_configuration">Konfiguration</string>
-    <string name="request_coins_clipboard_address_msg">Dash Adresse wurde in die Zwischenablage kopiert</string>
+    <string name="request_coins_clipboard_address_msg">Dash-Adresse in die Zwischenablage kopiert</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Zeigen</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" ist kein Wort aus der Wiederherstellungs-Wortfolge</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Wiederherstellungs-Wortfolge muss 12 Wörter haben</string>
@@ -144,6 +146,24 @@
     <string name="wallet_lock_try_again">Versuches es wieder in %1$d %2$s</string>
     <string name="wallet_lock_reset">Zurücksetzen</string>
     <string name="wallet_lock_wrong_pin">Falscher PIN! %s</string>
+    <string name="wallet_last_attempt">Letzter PIN-Versuch</string>
+    <string name="wallet_last_attempt_message">Nach einem weiteren Fehlversuch wird meine Passphrase benötigt, um meine Wallet wiederherzustellen.</string>
+
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%d Versuch verbleibend</item>
+        <item quantity="other">%d Versuche verbleiben</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">Minute</item>
+        <item quantity="other">Minuten</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">Stunde</item>
+        <item quantity="other">Stunden</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">Upgrade</string>
     <string name="encrypt_new_key_chain_dialog_title">Wallet aktualisieren</string>
     <string name="encrypt_new_key_chain_dialog_message">Deine Wallet wird aktualisiert, damit sie den Import und Export zu mehr Apps unterstützt.</string>
@@ -162,7 +182,12 @@
     <string name="notification_transactions_channel_description">Benachrichtigungen zu eingehenden Transaktionen erhalten.</string>
     <string name="notification_synchronization_channel_name">Synchronisierung</string>
     <string name="notification_synchronization_channel_description">Eine Benachrichtigung anzeigen, wenn die App sich mit dem Netzwerk synchronisiert.</string>
+    <string name="notification_push_channel_name">Push-Benachrichtigungen</string>
+    <string name="notification_push_channel_description">Zeigt Push-Benachrichtigungen an, die dir von Dash gesendet wurden</string>
     <string name="notification_settings_title">Benachrichtigungen</string>
+    <string name="notification_explainer_title">Dash Wallet möchte dir Benachrichtigungen schicken</string>
+    <string name="notification_explainer_message">Die Benachrichtigungen umfassen Warnungen, Töne und Symbolabzeichen. Diese können in den Telefoneinstellungen konfiguriert werden.</string>
+
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Fingerabdruck zum Entsperren verwenden.</string>
@@ -239,6 +264,8 @@
     <string name="menu_contact_support_title">Support kontaktieren</string>
     <string name="menu_contact_support_subtitle">Ein Problem melden</string>
     <string name="menu_explore_title">Explore</string>
+    <string name="menu_explore_subtitle">Bei über 155.000 Händlern mit DASH einkaufen</string>
+
     <string name="tools_address_book">Adressbuch</string>
     <string name="tools_import_private_key">Privaten Schlüssel importieren</string>
     <string name="tools_network_monitor">Netzwerk-Monitor</string>
@@ -248,8 +275,13 @@
     <string name="about_review_and_rate">Rezensiere &amp; bewerte die App</string>
     <string name="about_contact_support">Support kontaktieren</string>
     <string name="about_fork_disclaimer">Dies ist eine Open Source App, die von der Bitcoin Wallet geforked wurde</string>
+    <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_dash_sync">Entdecke die aktualisierten Dash-Daten unter: %1$s\nLast sync: %2$s</string>
+    <string name="about_last_explore_dash_update_error">nicht abrufbar</string>
+    <string name="about_last_explore_dash_sync_never">nie</string>
+
     <string name="block">Block</string>
     <string name="time">Zeit</string>
     <string name="hash">Hash</string>
@@ -326,6 +358,12 @@
     <string name="all_transactions">Alles</string>
     <string name="received_transactions">Erhalten</string>
     <string name="sent_transactions">Gesendet</string>
+    <string name="set_pin_error_missing_wallet_title">Fehlende Wallet Fehler</string>
+    <string name="set_pin_error_missing_wallet_message">Die Wallet ist nicht vorhanden. Bitte melde dies dem Support Desk.</string>
+    <string name="wallet_encryption_error_title">Fehler bei der Wallet-Erstellung</string>
+    <string name="wallet_encryption_error_message">Es gibt ein Problem bei der Erstellung der Wallet. Bitte melde dies an den Support Desk.</string>
+    <string name="wallet_not_encrypted_error_message">Es liegt ein Problem mit deiner Wallet vor.\n\nWenn du kein Dash in dieser Wallet hast, dann deinstalliere die App und installiere sie neu. Anschließend erstellst du eine neue Wallet.\n\nWenn du eine Wiederherstellungsphrase oder eine Sicherungsdatei hast, deinstalliere diese App und installiere sie neu.\n\nAnsonsten melde dies bitte dem Support Desk.</string>
+
     <string name="continue_reset">Fortfahren</string>
     <string name="reset_wallet_text">Wallet zurücksetzen</string>
 </resources>

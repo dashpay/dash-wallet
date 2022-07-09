@@ -118,7 +118,7 @@
     <string name="import_export_keys_dialog_password_phrase">Sem vložte frázi pro obnovení.</string>
     <string name="preferences_report_issue_summary">Získat a odeslat informace o problému vývojářům.</string>
     <string name="navigation_configuration">Konfigurace</string>
-    <string name="request_coins_clipboard_address_msg">Adresa zkopírována do schránky</string>
+    <string name="request_coins_clipboard_address_msg">Dash adresa zkopírována do schránky</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Zobrazit</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" není slovo z fráze pro obnovení</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Fráze pro obnovení musí mít 12 slov</string>
@@ -148,6 +148,27 @@
     <string name="wallet_lock_wrong_pin">Špatný PIN! %s</string>
     <string name="wallet_last_attempt">Poslední pokus o PIN</string>
     <string name="wallet_last_attempt_message">Po dalším neúspěšném pokusu bude vyžadována fráze pro obnovení peněženky.</string>
+
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">Zbývá %d pokus.</item>
+        <item quantity="few">Zbývá %d pokusů.</item>
+        <item quantity="many">Zbývá %d pokusů.</item>
+        <item quantity="other">Zbývá %d pokusů.</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">minuta</item>
+        <item quantity="few">minut</item>
+        <item quantity="many">minut</item>
+        <item quantity="other">minut</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">hodina</item>
+        <item quantity="few">hodin</item>
+        <item quantity="many">hodin</item>
+        <item quantity="other">hodin</item>
+    </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">Aktualizace</string>
     <string name="encrypt_new_key_chain_dialog_title">Aktualizovat peněženku</string>

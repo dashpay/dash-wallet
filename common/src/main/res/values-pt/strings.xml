@@ -11,6 +11,7 @@
     <string name="buy_dash">Comprar Dash</string>
     <string name="copied">Copiado</string>
     <string name="staking_title">Staking</string>
+    <string name="error">Erro</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Libra Guernsey</string>
@@ -31,7 +32,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dólar</string>
 
-    <!-- Generic Titles/Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Dispensar</string>
     <string name="network_unavailable_return">Voltar para a carteira</string>
     <string name="button_continue">Continuar</string>
@@ -44,7 +45,6 @@
     <string name="button_okay">Okay</string>
     <string name="button_share">Compartilhar</string>
     <string name="verify">Verificar</string>
-    <string name="error">Erro</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Buscar</string>
@@ -54,4 +54,5 @@
     <string name="select_currency">Selecione a moeda</string>
     <string name="send_coins_error_dusty_send">O valor é muito baixo para ser enviado</string>
     <string name="send_coins_error_insufficient_money">Fundos insuficientes</string>
-</resources>
+
+    </resources>

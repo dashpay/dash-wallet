@@ -118,7 +118,7 @@
     <string name="import_export_keys_dialog_password_phrase">Miejsce na frazę odzyskiwania portfela.</string>
     <string name="preferences_report_issue_summary">Zbierz informacje dotyczące twojego problemu i wyślij je do deweloperów.</string>
     <string name="navigation_configuration">Konfiguracja</string>
-    <string name="request_coins_clipboard_address_msg">Adres Dash został skopiowany do schowka.</string>
+    <string name="request_coins_clipboard_address_msg">Adres Dash został skopiowany do schowka</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Pokaż</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" nie jest jednym ze słów frazy odzyskiwania danych</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Fraza odzysku danych musi zawierać 12 słów</string>
@@ -149,6 +149,27 @@
     <string name="wallet_last_attempt">Ostatnia próba wpisania PIN</string>
     <string name="wallet_last_attempt_message">Kolejna nieudana próba sprawi, że portfel zostanie zablookowany i będziesz potrzebował/a listę słów aby odzyskać dostęp do portfela. </string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">pozostała %d próba</item>
+        <item quantity="few">pozostały %d próby</item>
+        <item quantity="many">pozostało %d prób</item>
+        <item quantity="other">pozostało %d prób</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">minuta</item>
+        <item quantity="few">minuty</item>
+        <item quantity="many">minut</item>
+        <item quantity="other">minut</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">godzina</item>
+        <item quantity="few">godziny</item>
+        <item quantity="many">godzin</item>
+        <item quantity="other">godzin</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">Aktualizuj</string>
     <string name="encrypt_new_key_chain_dialog_title">Aktualizuj swój portfel</string>
     <string name="encrypt_new_key_chain_dialog_message">Twój portfel zostanie zaktualizowany aby umożliwić importowanie z oraz eksportowanie do nowych aplikacji.</string>
@@ -167,6 +188,8 @@
     <string name="notification_transactions_channel_description">Otrzymuj powiadomienia o nadchodzących transakcjach.</string>
     <string name="notification_synchronization_channel_name">Synchronizacja</string>
     <string name="notification_synchronization_channel_description">Wyświetla powiadomienie, gdy aplikacja synchronizuje się z siecią.</string>
+    <string name="notification_generic_channel_name">Powiadomienia ogólne</string>
+    <string name="notification_generic_channel_description">Inne wydarzenia związane z portfelem Dash</string>
     <string name="notification_push_channel_name">Powiadomienia Push</string>
     <string name="notification_push_channel_description">Pokazuj powiadomienia wysyłane do ciebie przez Dash</string>
     <string name="notification_settings_title">Powiadomienia</string>
@@ -189,8 +212,8 @@
     <string name="preferences_enable_payment_request_summary">Użyj protokołu płatności dla płatności inicjowanych kodem QR</string>
     <string name="preferences_enable_payment_request_title">BIP70 dla scan-by-zapłacić</string>
 
-    <string name="verify_continue">Dalej</string>
-    <string name="verify_backup_wallet">Kopia zapasowa portfela</string>
+    <string name="verify_continue">Kontynuuj</string>
+    <string name="verify_backup_wallet">Utwórz Kopie Zapasową Portfela</string>
     <string name="verify_show_recovery_phrase">Pokaż Frazy Odzyskiwania Portfela</string>
     <string name="verify_secure_now">Zabezpiecz Portfel Teraz</string>
     <string name="verify_it_is_important">To ważne!</string>
@@ -349,6 +372,13 @@
     <string name="wallet_encryption_error_message">Występił problem z tworzeniem portfela. Skontaktuj się z pomocą techniczną Dash</string>
     <string name="wallet_not_encrypted_error_message">Wystąpił problem z twoim portfelem.\n\n Jeśli nie masz żadnych DASHy w tym portfelu, odinstaluj i zainstaluj go ponownie. Następnie stwórz nowy portfel.\n\n Jeśli masz listę słów do odzyskiwania porfela, lub plik kopii zapasowej, odinstaluj ten portfel i zainstaluj go ponownie. W przeciwnym wypadku zgłoś się do pomocy technicznej Dash. </string>
 
+    <string name="reset_wallet_title">Czy na pewno chcesz zresetować portfel?</string>
+    <string name="reset_wallet_message">Jeśli zresetujesz portfel, jedynym sposobem uzyskania do niego dostępu jest odzyskanie portfela za pomocą frazy odzyskiwania.</string>
+    <string name="positive_reset_text">Tak, zresetuj portfel</string>
+    <string name="launch_reset_wallet_title">Masz dodani balans na portfelu</string>
+    <string name="launch_reset_wallet_message">Jeśli zresetujesz portfel, stracisz wszystkie środki, jeśli nie wykonałeś kopii zapasowej frazy odzyskiwania.</string>
     <string name="continue_reset">Dalej</string>
+    <string name="launch_reset_wallet_extra_message">Dokonaj kopii zapasowej fraz odzyskiwania</string>
+    <string name="start_reset_wallet_title">Możesz stracić %s</string>
     <string name="reset_wallet_text">Resetuj portfel</string>
 </resources>

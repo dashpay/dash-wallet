@@ -27,9 +27,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
-import de.schildbach.wallet.ui.send.ConfirmTransactionLauncher
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
-import org.dash.wallet.common.services.*
+import de.schildbach.wallet.ui.send.ConfirmTransactionLauncher
+import org.dash.wallet.common.services.ConfirmTransactionService
+import org.dash.wallet.common.services.NotificationService
+import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import javax.inject.Singleton

@@ -68,7 +68,7 @@
     <string name="receive_title">Ontvang</string>
     <string name="receive_enter_amount_message">Specificeer het te ontvangen bedrag</string>
     <string name="receive_enter_amount_button">Specificeer bedrag</string>
-    <string name="receive_share_button">Deel</string>
+    <string name="receive_share_button">Delen</string>
 
     <string name="pay_title">Verstuur</string>
     <string name="history_title">Geschiedenis</string>
@@ -118,7 +118,7 @@
     <string name="import_export_keys_dialog_password_phrase">Voer hier je herstelzin in.</string>
     <string name="preferences_report_issue_summary">Vergaar informatie over je probleem en verstuur via e-mail een melding aan de ontwikkelaars.</string>
     <string name="navigation_configuration">Configuratie</string>
-    <string name="request_coins_clipboard_address_msg">Dashadres is gekopieerd naar klembord</string>
+    <string name="request_coins_clipboard_address_msg">Dash-adres is gekopieerd naar het klembord</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Toon</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" is geen herstelzinwoord</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Herstelzin moet 12 woorden hebben</string>

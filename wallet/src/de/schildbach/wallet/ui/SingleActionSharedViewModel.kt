@@ -22,6 +22,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import org.dash.wallet.common.data.SingleLiveEvent
 import javax.inject.Inject
 
+// TODO: get rid of this and use the callback for reporting result
 @HiltViewModel
 class SingleActionSharedViewModel @Inject constructor() : ViewModel() {
 

@@ -118,7 +118,7 @@
     <string name="import_export_keys_dialog_password_phrase">La frase de recuperación va aquí.</string>
     <string name="preferences_report_issue_summary">Reúne información sobre tu problema y envía un email a los desarrolladores con tu reporte.</string>
     <string name="navigation_configuration">Configuración</string>
-    <string name="request_coins_clipboard_address_msg">Dirección de Dash copiada al portapapeles</string>
+    <string name="request_coins_clipboard_address_msg">Dirección Dash copiada en el portapapeles</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" no es una palabra de la frase de recuperación</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">La frase de recuperación debe contener 12 palabras</string>
@@ -149,6 +149,24 @@
     <string name="wallet_last_attempt">Último intento de PIN</string>
     <string name="wallet_last_attempt_message">Otro intento fallido requerirá mi frase de contraseña para recuperar mi billetera</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%d intento restante</item>
+        <item quantity="many">%d intentos restantes</item>
+        <item quantity="other">%d intentos restantes</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">minuto</item>
+        <item quantity="many">minutos</item>
+        <item quantity="other">minutos</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">hora</item>
+        <item quantity="many">horas</item>
+        <item quantity="other">horas</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">Actualizar</string>
     <string name="encrypt_new_key_chain_dialog_title">Actualiza tu billetera</string>
     <string name="encrypt_new_key_chain_dialog_message">Tu billetera será actualizada para admitir la importación y exportación a otras aplicaciones.</string>
@@ -167,6 +185,8 @@
     <string name="notification_transactions_channel_description">Recibir alerta sobre transacciones entrantes</string>
     <string name="notification_synchronization_channel_name">Sincronización</string>
     <string name="notification_synchronization_channel_description">Muestra una notificación cuando la app está sincronizando con la red.</string>
+    <string name="notification_generic_channel_name">Notificaciones genéricas</string>
+    <string name="notification_generic_channel_description">Otros eventos de la billetera de Dash </string>
     <string name="notification_push_channel_name">Notificaciones push</string>
     <string name="notification_push_channel_description">Muestra notificaciones push enviadas por Dash</string>
     <string name="notification_settings_title">Notificaciones</string>
@@ -190,7 +210,7 @@
     <string name="preferences_enable_payment_request_title">Escanear para pagar con BIP70</string>
 
     <string name="verify_continue">Continuar</string>
-    <string name="verify_backup_wallet">Hacer backup de billetera</string>
+    <string name="verify_backup_wallet">Hacer Backup de Billetera</string>
     <string name="verify_show_recovery_phrase">Mostrar Frase de Recuperación</string>
     <string name="verify_secure_now">Asegurar Billetera Ahora</string>
     <string name="verify_it_is_important">Es importante</string>
@@ -349,6 +369,13 @@
     <string name="wallet_encryption_error_message"> Hay un error en la creación de la billetera. Por favor reportar al centro de soporte.</string>
     <string name="wallet_not_encrypted_error_message"> Hay un error en su billetera.\n\nIf si ud no posee Dash en está billetera. Por favor desinstale y reinstale está app. Luego cree una nueva billetera \n\n si ud tiene se frase de recuperación, o archivo de respaldo, entonces desinstale esta app y reinstale nuevamente. \n\n de ser un caso diferentes, por favor reporte al centro de soporte  </string>
 
+    <string name="reset_wallet_title">¿Estás seguro de que quieres restablecer la billetera?</string>
+    <string name="reset_wallet_message">Si reinicias tu billetera, la única forma de acceder a ella es recuperar la billetera con la frase de recuperación.</string>
+    <string name="positive_reset_text">Sí, restablecer billetera</string>
+    <string name="launch_reset_wallet_title">Tienes saldo positivo</string>
+    <string name="launch_reset_wallet_message">Si restableces tu billetera, perderás todos tus fondos si no has realizado una copia de seguridad de tu frase de recuperación.</string>
     <string name="continue_reset">Continuar</string>
+    <string name="launch_reset_wallet_extra_message">Haz una copia de seguridad de tu frase de recuperación</string>
+    <string name="start_reset_wallet_title">Puedes perder %s</string>
     <string name="reset_wallet_text">Reiniciar billetera</string>
 </resources>

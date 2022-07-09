@@ -22,25 +22,22 @@ import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.viewModels
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialog
+import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
-import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogConfirmTransactionBinding
-import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 @AndroidEntryPoint
-class ConfirmTransactionDialog(private val onTransactionConfirmed: ((Boolean) -> Unit)? = null) : BaseBottomSheetDialogFragment() {
+class ConfirmTransactionDialog(
+    private val onTransactionConfirmed: ((Boolean) -> Unit)? = null
+) : OffsetDialogFragment() {
 
     companion object {
         private val TAG = ConfirmTransactionDialog::class.java.simpleName
@@ -108,8 +105,9 @@ class ConfirmTransactionDialog(private val onTransactionConfirmed: ((Boolean) ->
         }
     }
 
-    private val sharedViewModel by viewModels<SingleActionSharedViewModel>()
     private val binding by viewBinding(DialogConfirmTransactionBinding::bind)
+    private val sharedViewModel by activityViewModels<SingleActionSharedViewModel>()
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_confirm_transaction, container, false)
     }
@@ -149,15 +147,6 @@ class ConfirmTransactionDialog(private val onTransactionConfirmed: ((Boolean) ->
             sharedViewModel.clickConfirmButtonEvent.call()
             onTransactionConfirmed?.invoke(true)
             dismiss()
-        }
-        dialog?.setOnShowListener { dialog ->
-            // apply wrap_content height
-            val d = dialog as BottomSheetDialog
-            val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
-            val coordinatorLayout = bottomSheet!!.parent as CoordinatorLayout
-            val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
-            bottomSheetBehavior.peekHeight = bottomSheet.height
-            coordinatorLayout.parent.requestLayout()
         }
     }
 }

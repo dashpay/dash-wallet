@@ -110,7 +110,7 @@
         style="@style/Caption"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/red_300"
+        android:background="@color/system_red"
         android:gravity="center"
         android:textAlignment="gravity"
         android:paddingVertical="8dp"

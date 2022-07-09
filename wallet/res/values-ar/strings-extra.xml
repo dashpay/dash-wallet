@@ -149,6 +149,33 @@
     <string name="wallet_last_attempt">آخر محاولة رقم التعريف الشخصي</string>
     <string name="wallet_last_attempt_message">ستتطلب المحاولة الفاشلة الأخرى عبارة المرور الخاصة بي لاستعادة محفظتي</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="zero">%dالمحاولات المتبقية</item>
+        <item quantity="one">%dالمحاولات المتبقية</item>
+        <item quantity="two">%dالمحاولات المتبقية</item>
+        <item quantity="few">%dالمحاولات المتبقية</item>
+        <item quantity="many">%dالمحاولات المتبقية</item>
+        <item quantity="other">%dالمحاولات المتبقية</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="zero">دقائق</item>
+        <item quantity="one">دقائق</item>
+        <item quantity="two">دقائق</item>
+        <item quantity="few">دقائق</item>
+        <item quantity="many">دقائق</item>
+        <item quantity="other">دقائق</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="zero">ساعات</item>
+        <item quantity="one">ساعات</item>
+        <item quantity="two">ساعات</item>
+        <item quantity="few">ساعات</item>
+        <item quantity="many">ساعات</item>
+        <item quantity="other">ساعات</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">ترقية</string>
     <string name="encrypt_new_key_chain_dialog_title">ترقية محفظتك</string>
     <string name="encrypt_new_key_chain_dialog_message">ستتم تحديث محفظتك لدعم الاستيراد والتصدير إلى المزيد من التطبيقات.</string>

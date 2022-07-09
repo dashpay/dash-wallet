@@ -109,7 +109,7 @@
     <string name="import_export_keys_dialog_password_phrase">Фразата за възстановяване отива тук.</string>
     <string name="preferences_report_issue_summary">Съберете информацията за проблема си и я изпратете  до разработчиците.</string>
     <string name="navigation_configuration">Конфигурация</string>
-    <string name="request_coins_clipboard_address_msg">Dash адреса е копиран в клипборда</string>
+    <string name="request_coins_clipboard_address_msg">Dash е копиран в клипборда</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Покажи</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" не е фраза за възстановяване</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Фразата за възстановяване трябва да има 12 думи</string>
@@ -137,6 +137,21 @@
     <string name="wallet_lock_try_again">Опитай отново след %1$d %2$s</string>
     <string name="wallet_lock_reset">Нулиране</string>
     <string name="wallet_lock_wrong_pin">Грешен ПИН! %s</string>
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%d оставащи опита</item>
+        <item quantity="other">%d оставащи опита</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">минута</item>
+        <item quantity="other">минути</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">час</item>
+        <item quantity="other">часа</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">Надграждане</string>
     <string name="encrypt_new_key_chain_dialog_title">Надгради своят портфейл</string>
     <string name="encrypt_new_key_chain_dialog_message">Вашият портфейл ще бъде надграден, за да поддържа импортирането и експортирането в още приложения.</string>

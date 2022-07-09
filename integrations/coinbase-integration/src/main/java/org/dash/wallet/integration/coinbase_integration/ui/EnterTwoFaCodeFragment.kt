@@ -75,7 +75,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
         }
 
         viewModel.twoFaErrorState.observe(viewLifecycleOwner){
-            binding.enterCodeField.background = resources.getRoundedBackground(org.dash.wallet.common.R.style.TransparentRedBackground)
+            binding.enterCodeField.background = resources.getRoundedBackground(org.dash.wallet.common.R.style.InputErrorBackground)
             binding.incorrectCodeGroup.isVisible = true
             binding.enterCodeDetails.isVisible = false
         }

@@ -149,6 +149,18 @@
     <string name="wallet_last_attempt">ใส่ PIN ได้ครั้งสุดท้าย</string>
     <string name="wallet_last_attempt_message">หากความพยายามล้มเหลวอีกครั้งจะต้องใช้ข้อความรหัสผ่านของฉันในการกู้คืนกระเป๋าเงินของฉัน</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="other">พยายามได้อีก %d</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="other">นาที</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="other">ชั่วโมง</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">อัพเกรด</string>
     <string name="encrypt_new_key_chain_dialog_title">อัพเกรดกระเป๋าสตางค์ของคุณ</string>
     <string name="encrypt_new_key_chain_dialog_message">กระเป๋าสตางค์ของคุณจะได้รับการอัพเกรดเพื่อรองรับการนำเข้าและส่งออกไปยังแอพพลิเคชันอื่น ๆ</string>

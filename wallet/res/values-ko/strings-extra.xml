@@ -149,6 +149,18 @@
     <string name="wallet_last_attempt">지난 핀 시도 내역</string>
     <string name="wallet_last_attempt_message">다시 실패하는 경우 암호 문구로 지갑을 복구해야 합니다</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="other">%d 회의 시도가 남았습니다</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="other">분</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="other">시간</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">업그레이드</string>
     <string name="encrypt_new_key_chain_dialog_title">지갑 업그레이드 하기</string>
     <string name="encrypt_new_key_chain_dialog_message">지갑이 더 많은 어플 가져오기 및 내보내기 기능을 지원하기 위하여 업그레이드를 진행할 예정입니다.</string>

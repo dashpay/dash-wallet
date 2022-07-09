@@ -346,7 +346,7 @@
     <string name="button_copy">Копировать</string>
     <string name="button_copy_request">Скопировать запрос</string>
     <string name="button_paste">Вставить</string>
-    <string name="button_set_as_default">Включено по умолчанию</string>
+    <string name="button_set_as_default">Установить по умолчанию</string>
     <string name="button_request_coins">Получить Dash</string>
     <string name="button_send_coins">Отправить Dash</string>
     <string name="button_pay">Отправить</string>

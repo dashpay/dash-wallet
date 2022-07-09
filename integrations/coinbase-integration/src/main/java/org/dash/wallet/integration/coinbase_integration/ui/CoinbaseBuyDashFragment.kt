@@ -84,11 +84,13 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
         }
 
         amountViewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->
-            binding.toolbarSubtitle.text = getString(
-                R.string.exchange_rate_template,
-                Coin.COIN.toPlainString(),
-                GenericUtils.fiatToString(rate.fiat)
-            )
+            rate?.let {
+                binding.toolbarSubtitle.text = getString(
+                    R.string.exchange_rate_template,
+                    Coin.COIN.toPlainString(),
+                    GenericUtils.fiatToString(rate.fiat)
+                )
+            }
         }
 
         amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->

@@ -149,6 +149,24 @@
     <string name="wallet_last_attempt">Ultimo tentativo di PIN</string>
     <string name="wallet_last_attempt_message">Un altro tentativo fallito richiederà la passphrase per recuperare il portafoglio</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%dtentativi rimanenti</item>
+        <item quantity="many">%d tentativi rimanenti</item>
+        <item quantity="other">%d tentativi rimanenti</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">minuti</item>
+        <item quantity="many">minuti</item>
+        <item quantity="other">minuti</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">ore</item>
+        <item quantity="many">ore</item>
+        <item quantity="other">ore</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">Aggiorna </string>
     <string name="encrypt_new_key_chain_dialog_title">Aggiorna il tuo portafoglio</string>
     <string name="encrypt_new_key_chain_dialog_message">Il tuo portafoglio verrà aggiornato per supportare l\'importazione e l\'esportazione verso più app.</string>
@@ -166,7 +184,9 @@
     <string name="notification_transactions_channel_name">Transazioni</string>
     <string name="notification_transactions_channel_description">Ricevi avvisi per le transazioni in entrata.</string>
     <string name="notification_synchronization_channel_name">Sincronizzazione</string>
-    <string name="notification_synchronization_channel_description">Notifica quando la \"app\" è sincronizzata con la rete.</string>
+    <string name="notification_synchronization_channel_description">Notifica quando la "app" è sincronizzata con la rete.</string>
+    <string name="notification_generic_channel_name">Notifiche generiche</string>
+    <string name="notification_generic_channel_description">Altri eventi Dash Wallet</string>
     <string name="notification_push_channel_name">Notifiche Push</string>
     <string name="notification_push_channel_description">Mostra le notifiche push inviate da Dash</string>
     <string name="notification_settings_title">Notifiche</string>
@@ -349,6 +369,13 @@
     <string name="wallet_encryption_error_message">Si è verificato un problema durante la creazione del portafoglio. Si prega di segnalarlo al Support Desk.</string>
     <string name="wallet_not_encrypted_error_message">Si è verificato un problema con il tuo portafoglio.\n\nSe non hai Dash in questo portafoglio, disinstalla e reinstalla questa app. Quindi crea un nuovo portafoglio.\n\nSe hai una frase di ripristino o un file di backup, disinstalla questa app e reinstallala.\n\nAltrimenti, segnalalo al Support Desk.</string>
 
+    <string name="reset_wallet_title">Sei sicuro di voler resettare il wallet?</string>
+    <string name="reset_wallet_message">Resettando il tuo wallet, l\'unico modo per accedervi successivamente è con l\'utilizzo della frase di ripristino.</string>
+    <string name="positive_reset_text">Sì, Resetta il wallet</string>
+    <string name="launch_reset_wallet_title">Hai un saldo positivo</string>
+    <string name="launch_reset_wallet_message">Resettando il wallet perderai tutti i tuoi fondi se non hai eseguito il backup della tua frase di recupero.</string>
     <string name="continue_reset">Continua</string>
+    <string name="launch_reset_wallet_extra_message">Eseguire il backup della frase di recupero</string>
+    <string name="start_reset_wallet_title">Potresti perdere %s</string>
     <string name="reset_wallet_text">Resetta portafoglio</string>
 </resources>

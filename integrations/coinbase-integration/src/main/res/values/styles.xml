@@ -16,8 +16,14 @@
   -->
 <resources>
     <style name="TextPlaceholderBackground">
-        <item name="backgroundColor">@color/steel_gray_50</item>
-        <item name="strokeColor">@color/steel_gray_50</item>
+        <item name="backgroundColor">@color/background_primary</item>
+        <item name="strokeColor">@color/background_primary</item>
         <item name="cornerRadius">6dp</item>
+    </style>
+
+    <style name="BlueStrokeColorWhiteBackground">
+        <item name="backgroundColor">@color/background_secondary</item>
+        <item name="strokeColor">@color/dash_blue</item>
+        <item name="cornerRadius">10dp</item>
     </style>
 </resources>

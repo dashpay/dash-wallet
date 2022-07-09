@@ -47,7 +47,7 @@
     <string name="distance_kilometers">%sχιλιόμετρα</string>
 
     <plurals name="explore_merchant_amount">
-        <item quantity="one">%d έμπορος.</item>
+        <item quantity="one">%d έμπορος</item>
         <item quantity="other">%dέμποροι</item>
     </plurals>
 
@@ -119,12 +119,12 @@
 
     <plurals name="radius_miles">
         <item quantity="one">%d μίλι</item>
-        <item quantity="other">%d μίλια</item>
+        <item quantity="other">%dμίλια</item>
     </plurals>
 
     <plurals name="radius_kilometers">
-        <item quantity="one">%d χιλιόμετρο</item>
-        <item quantity="other">%d χιλιόμετρα</item>
+        <item quantity="one">%dχιλιόμετρο</item>
+        <item quantity="other">%dχιλιόμετρα</item>
     </plurals>
 
     <!-- Location Permission -->

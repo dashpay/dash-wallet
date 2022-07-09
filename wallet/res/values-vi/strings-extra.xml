@@ -138,6 +138,18 @@
     <string name="wallet_lock_try_again">Thử lại trong %1$d%2$s</string>
     <string name="wallet_lock_reset">Thiết lập lại</string>
     <string name="wallet_lock_wrong_pin">Sai mã PIN! %s</string>
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="other">%dlần còn có thể thử lại</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="other">phút</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="other">giờ</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">Nâng cấp</string>
     <string name="encrypt_new_key_chain_dialog_title">Nâng cấp ví</string>
     <string name="encrypt_new_key_chain_dialog_message">Ví của bạn sẽ được nâng cấp để hỗ trợ việc đưa dữ liệu vào hoặc xuất dữ liệu ra cho các app khác.</string>

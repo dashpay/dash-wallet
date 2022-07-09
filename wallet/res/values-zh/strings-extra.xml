@@ -118,7 +118,7 @@
     <string name="import_export_keys_dialog_password_phrase">这里是您的助记词.</string>
     <string name="preferences_report_issue_summary">请描述您所遇到的问题并通过邮箱给开发者发送报告.</string>
     <string name="navigation_configuration">恭喜</string>
-    <string name="request_coins_clipboard_address_msg">Dash地址已复制到剪切板</string>
+    <string name="request_coins_clipboard_address_msg">Dash地址已复制</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">显示</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" 不是一个助记词</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">助记词必须包括 12 个词</string>

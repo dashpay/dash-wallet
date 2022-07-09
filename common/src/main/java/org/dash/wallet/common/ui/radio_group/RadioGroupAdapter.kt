@@ -28,13 +28,10 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import coil.transform.CircleCropTransformation
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.request.RequestOptions
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.RadiobuttonRowBinding
 import org.dash.wallet.common.ui.getRoundedBackground
-import org.dash.wallet.common.ui.ListDividerDecorator
+import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 
 class RadioGroupAdapter(
     defaultSelectedIndex: Int = 0,
@@ -96,7 +93,7 @@ class RadioButtonViewHolder(
 
         binding.title.text = option.title
         binding.title.setTextColor(resources.getColorStateList(
-            if (option.iconSelectMode == IconSelectMode.Encircle) R.color.gray_900 else R.color.radiobutton_text_color,
+            if (option.iconSelectMode == IconSelectMode.Encircle) R.color.content_primary else R.color.radiobutton_text_color,
             null
         ))
 

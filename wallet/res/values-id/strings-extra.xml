@@ -149,6 +149,18 @@
     <string name="wallet_last_attempt">Upaya PIN terakhir</string>
     <string name="wallet_last_attempt_message">Upaya lain yang gagal akan membutuhkan frasa sandi saya untuk memulihkan dompet</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="other">%d upaya tersisa </item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="other">menit</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="other">jam</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">Tingkatkan</string>
     <string name="encrypt_new_key_chain_dialog_title">Tingkatkan dompet anda</string>
     <string name="encrypt_new_key_chain_dialog_message">Dompet Anda akan ditingkatkan untuk mendukung pengimporan dan mengekspor ke lebih banyak aplikasi.</string>

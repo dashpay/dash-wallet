@@ -149,6 +149,24 @@
     <string name="wallet_last_attempt">Última tentativa de PIN</string>
     <string name="wallet_last_attempt_message">Outra tentativa fracassada exigirá minha frase de recuperação para recuperar minha carteira</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%d tentativa restante</item>
+        <item quantity="many">%d tentativas restantes</item>
+        <item quantity="other">%d tentativas restantes</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">minuto</item>
+        <item quantity="many">minutos</item>
+        <item quantity="other">minutos</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">hora</item>
+        <item quantity="many">horas</item>
+        <item quantity="other">horas</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">Atualizar</string>
     <string name="encrypt_new_key_chain_dialog_title">Atualize sua carteira</string>
     <string name="encrypt_new_key_chain_dialog_message">Sua carteira será atualizada para suportar importação e exportação para mais aplicativos.</string>

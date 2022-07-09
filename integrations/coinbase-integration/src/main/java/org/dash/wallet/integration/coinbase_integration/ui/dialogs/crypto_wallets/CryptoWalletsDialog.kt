@@ -23,7 +23,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
@@ -40,8 +39,8 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.databinding.DialogOptionPickerBinding
-import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
+import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.radio_group.IconSelectMode
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem

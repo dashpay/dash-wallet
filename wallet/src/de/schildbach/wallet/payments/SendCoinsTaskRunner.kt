@@ -16,20 +16,18 @@
  */
 package de.schildbach.wallet.payments
 
-import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import androidx.annotation.VisibleForTesting
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.wallet.CoinSelector
-import org.bitcoinj.wallet.SendRequest
-import org.bitcoinj.wallet.Wallet
-import org.bitcoinj.wallet.ZeroConfCoinSelector
+import org.bitcoinj.wallet.*
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
@@ -37,7 +35,9 @@ import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.slf4j.LoggerFactory
 import java.security.GeneralSecurityException
 import javax.inject.Inject
+import kotlin.jvm.Throws
 
+@ExperimentalCoroutinesApi
 class SendCoinsTaskRunner @Inject constructor(
     private val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,

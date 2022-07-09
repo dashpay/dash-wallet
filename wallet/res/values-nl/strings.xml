@@ -346,8 +346,8 @@
     <string name="button_copy">Kopieer</string>
     <string name="button_copy_request">Kopieer verzoek</string>
     <string name="button_paste">Plakken</string>
-    <string name="button_set_as_default">Stel in als standaard</string>
-    <string name="button_request_coins">Verzoek Dash</string>
+    <string name="button_set_as_default">Kies als standaard</string>
+    <string name="button_request_coins">Dash verzoeken</string>
     <string name="button_send_coins">Dash versturen</string>
     <string name="button_pay">Verstuur</string>
     <string name="button_scan">Scan</string>

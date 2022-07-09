@@ -87,6 +87,13 @@ dependencies {
     //noinspection GradleDependency
     implementation 'com.google.zxing:core:3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
 
+    // UI
+    implementation 'com.google.android.material:material:1.4.0'
+    implementation "androidx.browser:browser:$browserVersion"
+    implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
+    //noinspection GradleDependency
+    implementation 'com.google.zxing:core:3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
+
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
     kapt "com.google.dagger:hilt-compiler:$hiltVersion"

@@ -48,8 +48,7 @@ import javax.inject.Inject
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class FiltersDialog: OffsetDialogFragment() {
-    override val background: Int
-        get() = R.drawable.primary_background_rounded
+    override val backgroundStyle = R.style.PrimaryBackground
 
     private val radiusOptions = listOf(1, 5, 20, 50)
     private var selectedRadiusOption: Int = ExploreViewModel.DEFAULT_RADIUS_OPTION

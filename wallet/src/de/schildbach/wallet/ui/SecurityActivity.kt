@@ -26,12 +26,14 @@ import android.widget.CompoundButton
 import androidx.activity.viewModels
 import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_security.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.DeterministicSeed
 import org.dash.wallet.common.BuildConfig

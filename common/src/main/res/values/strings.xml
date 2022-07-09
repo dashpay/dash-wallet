@@ -16,8 +16,6 @@
     <string name="email">Email</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Error</string>
-    <string name="select_a_service_to_buy_and_sell_Dash"> Select a service to buy and sell Dash.</string>
-    <string name="select_currency">Select Currency</string>
     <string name="select_a_coin">Select a coin</string>
 
     <!-- Local Currency List: GGP -->
@@ -39,7 +37,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Dismiss</string>
     <string name="network_unavailable_return">Return to Wallet</string>
     <string name="button_continue">Continue</string>
@@ -67,6 +65,7 @@
     <string name="dash_wallet_name">Dash Wallet</string>
     <string name="from">from</string>
     <string name="to">to</string>
+    <string name="select_currency">Select Currency</string>
     <string name="exchange_rate_template" translatable="false">%1$s DASH = %2$s</string>
     <string name="send_coins_error_dusty_send">The amount is too small to send</string>
     <string name="send_coins_error_insufficient_money">Insufficient funds</string>

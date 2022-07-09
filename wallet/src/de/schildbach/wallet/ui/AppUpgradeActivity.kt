@@ -92,7 +92,6 @@ class AppUpgradeActivity : AppCompatActivity() {
                 onCorrectPin(pin)
             }
         }
-
         checkPinSharedModel.onCancelCallback.observe(this) {
             temporaryLockCheckRunnable.run()
         }

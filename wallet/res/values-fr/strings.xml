@@ -64,7 +64,7 @@
     <string name="send_coins_fragment_amount_label">Montant à envoyer</string>
     <string name="send_coins_fragment_pin_label">Saisissez le code PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Des frais de réseau de %s seront appliqués.</string>
-    <string name="send_coins_fragment_hint_fee_priority">Des frais prioritaires de %s seront appliqués. Si vous préférez des frais plus bas, n\'utilisez l\'option \"prioritaire\" que s\'il vous faut une confirmation la plus rapide possible.</string>
+    <string name="send_coins_fragment_hint_fee_priority">Des frais prioritaires de %s seront appliqués. Si vous préférez des frais plus bas, n\'utilisez l\'option "prioritaire" que s\'il vous faut une confirmation la plus rapide possible.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Le total des petits montants dans votre portefeuille ne forme pas une somme pouvant être envoyée.</string>
     <string name="send_coins_fragment_hint_replaying">Les paiements ne sont pas encore possibles car le portefeuille n\'est pas entièrement synchronisé avec le réseau</string>
     <string name="send_coins_fragment_direct_payment_enable">Envoyer le paiement directement au bénéficiaire.</string>
@@ -346,9 +346,9 @@
     <string name="button_copy">Copier</string>
     <string name="button_copy_request">Demande de copie</string>
     <string name="button_paste">Coller</string>
-    <string name="button_set_as_default">Définir comme valeur défaut</string>
-    <string name="button_request_coins">Demander dashs</string>
-    <string name="button_send_coins">Envoyer dashs</string>
+    <string name="button_set_as_default">Définir par défaut</string>
+    <string name="button_request_coins">Demander des dashs</string>
+    <string name="button_send_coins">Envoyer des dashs</string>
     <string name="button_pay">Envoyer</string>
     <string name="button_scan">Scanner</string>
     <string name="button_settings">Réglages</string>

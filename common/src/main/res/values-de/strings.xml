@@ -10,6 +10,8 @@
     <string name="network_unavailable_balance_not_accurate">Die Guthabensanzeige ist möglicherweise inakkurat, da keine Verbindung besteht</string>
     <string name="buy_dash">Dash kaufen</string>
     <string name="copied">Kopiert</string>
+    <string name="error">Fehler</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pfund</string>
     <!-- Local Currency List: JEP -->
@@ -29,7 +31,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Titles/Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Schließen</string>
     <string name="network_unavailable_return">Zur Wallet zurückkehren</string>
     <string name="button_continue">Fortfahren</string>
@@ -41,7 +43,6 @@
     <string name="button_okay">OK</string>
     <string name="button_share">Teilen</string>
     <string name="verify">Verifizieren</string>
-    <string name="error">Fehler</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Suchen</string>
@@ -51,4 +52,5 @@
     <string name="select_currency">Währung auswählen</string>
     <string name="send_coins_error_dusty_send">Der Betrag ist zu klein zum Senden</string>
     <string name="send_coins_error_insufficient_money">Guthaben nicht ausreichend</string>
-</resources>
+
+    </resources>

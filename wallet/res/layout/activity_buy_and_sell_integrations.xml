@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary_light"
+    android:background="@color/background_primary"
     android:fitsSystemWindows="true"
     tools:context="de.schildbach.wallet.ui.BuyAndSellIntegrationsActivity">
 
@@ -34,14 +34,13 @@
                 android:layout_height="match_parent"
                 android:orientation="vertical">
 
-
                 <androidx.appcompat.widget.Toolbar
                     android:id="@+id/toolbar"
                     android:layout_width="match_parent"
                     android:layout_height="?attr/actionBarSize"
                     app:contentInsetStart="0dp"
                     app:layout_collapseMode="pin"
-                    app:navigationIcon="@drawable/ic_arrow_back"
+                    app:navigationIcon="@drawable/ic_arrow_back_white"
                     app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
                     app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
 
@@ -56,13 +55,13 @@
                     android:textSize="24sp" />
 
                 <TextView
-                    android:id="@+id/select_a_service_to_buy_and_sell_Dash"
+                    android:id="@+id/select_a_service_to_buy_and_sell_dash"
                     style="@style/Body2.White"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="15dp"
                     android:layout_marginTop="10dp"
-                    android:text="@string/select_a_service_to_buy_and_sell_Dash"
+                    android:text="@string/select_a_service_to_buy_and_sell_dash"
                     android:textSize="14sp" />
             </LinearLayout>
         </com.google.android.material.appbar.CollapsingToolbarLayout>
@@ -77,10 +76,10 @@
         android:orientation="vertical"
         android:paddingTop="40dp"
         android:paddingBottom="4dp"
-        app:layout_anchor="@id/select_a_service_to_buy_and_sell_Dash"
+        app:layout_anchor="@id/select_a_service_to_buy_and_sell_dash"
         app:layout_anchorGravity="bottom"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/select_a_service_to_buy_and_sell_Dash">
+        app:layout_constraintTop_toBottomOf="@+id/select_a_service_to_buy_and_sell_dash">
        
         <LinearLayout
             android:layout_width="match_parent"

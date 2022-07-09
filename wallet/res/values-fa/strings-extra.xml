@@ -151,6 +151,21 @@
     <string name="wallet_last_attempt">آخرین امکان وارد کردن رمز</string>
     <string name="wallet_last_attempt_message">اگر یک بار دیگر، رمز به صورت اشتباه وارد شود، باید از عبارت‌ورودی برای بازگرداندن کیف پول استفاده کنید</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%d بار دیگر می‌توانید تلاش کنید</item>
+        <item quantity="other">%d بار دیگر می‌توانید تلاش کنید</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">دقیقه</item>
+        <item quantity="other">دقیقه</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">ساعت</item>
+        <item quantity="other">ساعت</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">به‌روزرسانی</string>
     <string name="encrypt_new_key_chain_dialog_title">کیف پول‌تان را به‌روزرسانی کنید</string>
     <string name="encrypt_new_key_chain_dialog_message">به‌روزرسانی کیف پول با هدف افزایش قابلیت دریافت و ارسال به اپلیکیشن‌های بیشتر صورت می‌گیرد.</string>

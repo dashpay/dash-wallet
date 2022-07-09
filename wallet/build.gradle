@@ -177,8 +177,8 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 30
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70500
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "7.5.0"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70521
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "7.5.2"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true

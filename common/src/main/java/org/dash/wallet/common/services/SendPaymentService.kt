@@ -22,6 +22,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.CoinSelector
+import kotlin.jvm.Throws
 
 class LeftoverBalanceException(missing: Coin, message: String): InsufficientMoneyException(missing, message)
 
