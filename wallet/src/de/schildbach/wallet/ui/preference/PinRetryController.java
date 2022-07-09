@@ -28,7 +28,7 @@ public class PinRetryController {
     private final static String PREFS_FAILED_PINS = "failed_pins";
     private final static int RETRY_FAIL_TOLERANCE = 3;
     private final static int POW_LOCK_TIME_BASE = 6;
-    private final static int FAIL_LIMIT = 3;
+    private final static int FAIL_LIMIT = 8;
     private final static long ONE_MINUTE_MILLIS = TimeUnit.MINUTES.toMillis(1);
 
     private static final Logger log = LoggerFactory.getLogger(PinRetryController.class);
