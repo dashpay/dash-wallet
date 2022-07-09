@@ -75,6 +75,7 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
+import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.transactions.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
@@ -177,6 +178,9 @@ public class WalletApplication extends BaseWalletApplication
     BlockchainStateDao blockchainStateDao;
     @Inject
     CrowdNodeConfig crowdNodeConfig;
+
+    @Inject
+    TransactionMetadataProvider transactionMetadataProvider;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -960,10 +964,10 @@ public class WalletApplication extends BaseWalletApplication
             @Override
             public void run() {
                 PlatformRepo.getInstance().clearDatabase(true);
-                ProcessPhoenix.triggerRebirth(WalletApplication.this);
             }
         });
-
+        // clear data on wallet reset
+        transactionMetadataProvider.clear();
         // wallet must be null for the OnboardingActivity flow
         wallet = null;
     }
