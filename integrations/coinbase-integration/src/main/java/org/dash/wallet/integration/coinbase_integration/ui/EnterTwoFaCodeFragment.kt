@@ -22,6 +22,7 @@ import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
 import android.os.Bundle
+import android.view.ContextMenu
 import android.view.View
 import android.widget.Toast
 import androidx.activity.addCallback
@@ -89,6 +90,15 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
 //        }
     }
 
+
+    override fun onCreateContextMenu(
+        menu: ContextMenu,
+        v: View,
+        menuInfo: ContextMenu.ContextMenuInfo?
+    ) {
+
+    }
+
     private fun openCoinbaseHelp() {
         val helpUrl = "https://help.coinbase.com/en/contact-us"
         try {
@@ -154,7 +164,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
     }
 
     private fun applyNewValue(value: String) {
-        binding.enterCodeField.text = value
+        binding.enterCodeField.setText( value)
         binding.verifyBtn.isEnabled = value.isNotEmpty()
     }
 
