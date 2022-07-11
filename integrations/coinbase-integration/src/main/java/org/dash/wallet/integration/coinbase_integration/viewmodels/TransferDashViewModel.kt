@@ -28,6 +28,7 @@ import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToW
 import org.dash.wallet.integration.coinbase_integration.model.TransactionType
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.slf4j.LoggerFactory
 import java.util.*
 import javax.inject.Inject
 
@@ -41,7 +42,7 @@ class TransferDashViewModel @Inject constructor(
     var exchangeRates: ExchangeRatesProvider,
     var networkState: NetworkStateInt
 ) : ConnectivityViewModel(networkState) {
-
+    private val log = LoggerFactory.getLogger(TransferDashViewModel::class.java)
     private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
     val observeLoadingState: LiveData<Boolean>
         get() = _loadingState
@@ -75,14 +76,19 @@ class TransferDashViewModel @Inject constructor(
 
     private fun getWithdrawalLimitOnCoinbase() = viewModelScope.launch(Dispatchers.Main){
         _loadingState.value = true
+        log.info(" open loading for getWithdrawalLimitOnCoinbase")
+
         when (val response = coinBaseRepository.getWithdrawalLimit()){
             is ResponseResource.Success -> {
                 val withdrawalLimit = response.value
                 exchangeRate = getCurrencyExchangeRate(withdrawalLimit.currency)
                 getUserData()
+                log.info(" hide loading for getWithdrawalLimitOnCoinbase")
             }
             is ResponseResource.Failure -> {
                 // todo: still lacking the use-case when withdrawal limit could not be fetched
+                _loadingState.value = false
+                log.info(" hide loading for getWithdrawalLimitOnCoinbase error")
             }
         }
     }
@@ -119,6 +125,7 @@ class TransferDashViewModel @Inject constructor(
 
     fun createAddressForAccount() = viewModelScope.launch(Dispatchers.Main){
         _loadingState.value = true
+        log.info(" show loading for createAddressForAccount ")
         when(val result = coinBaseRepository.createAddress()){
             is ResponseResource.Success -> {
                 if (result.value.isEmpty()){
@@ -127,10 +134,12 @@ class TransferDashViewModel @Inject constructor(
                     observeCoinbaseAddressState.value = result.value
                 }
                 _loadingState.value = false
+                log.info(" hide loading for createAddressForAccount ")
             }
             is ResponseResource.Failure -> {
                 _loadingState.value = false
                 onAddressCreationFailedCallback.call()
+                log.info(" hide loading for createAddressForAccount error")
             }
         }
     }
@@ -184,10 +193,12 @@ class TransferDashViewModel @Inject constructor(
                         _userAccountDataWithExchangeRate.value = userData
                     }
                     _loadingState.value = false
+                    log.info(" hide loading for getUserData ")
                 }
 
                 is ResponseResource.Failure -> {
                     _loadingState.value = false
+                    log.info(" hide loading for getUserData ")
                     onFetchUserDataOnCoinbaseFailedCallback.call()
                 }
             }

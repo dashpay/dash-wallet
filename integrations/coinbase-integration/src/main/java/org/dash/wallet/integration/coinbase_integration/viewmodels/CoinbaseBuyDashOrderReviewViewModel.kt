@@ -29,6 +29,7 @@ import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.slf4j.LoggerFactory
 import java.util.*
 import javax.inject.Inject
 
@@ -39,6 +40,8 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     val networkState: NetworkStateInt
 ) : ConnectivityViewModel(networkState) {
+    private val log = LoggerFactory.getLogger(CoinbaseBuyDashOrderReviewViewModel::class.java)
+
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
@@ -55,6 +58,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
 
     fun commitBuyOrder(params: String) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
+        log.info(" open loading for commitBuyOrder")
         when (val result = coinBaseRepository.commitBuyOrder(params)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
@@ -74,6 +78,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
+                log.info(" hide loading for commitBuyOrder error ")
                 val error = result.errorBody?.string()
                 if (error.isNullOrEmpty()) {
                     commitBuyOrderFailureState.call()

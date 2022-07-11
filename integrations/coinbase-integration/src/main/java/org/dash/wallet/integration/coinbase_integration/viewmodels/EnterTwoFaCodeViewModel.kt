@@ -31,6 +31,7 @@ import org.dash.wallet.integration.coinbase_integration.model.CoinbaseErrorRespo
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import javax.inject.Inject
 
@@ -38,7 +39,7 @@ import javax.inject.Inject
 class EnterTwoFaCodeViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt
 ) : ViewModel() {
-
+    private val log = LoggerFactory.getLogger(EnterTwoFaCodeViewModel::class.java)
     private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
     val loadingState: LiveData<Boolean>
         get() = _loadingState
@@ -60,8 +61,10 @@ class EnterTwoFaCodeViewModel @Inject constructor(
                 is ResponseResource.Success -> {
                     _loadingState.value = false
                     if (result.value == null) {
+                        log.error("TransactionState error result.value = null")
                         _transactionState.value = TransactionState(false)
                     } else {
+                        log.error("TransactionState true")
                         _transactionState.value = TransactionState(true)
                     }
                 }
@@ -73,17 +76,21 @@ class EnterTwoFaCodeViewModel @Inject constructor(
                         if (result.errorCode == 400 || result.errorCode == 402 || result.errorCode == 429) {
                             error?.let { errorMsg ->
                                 val errorContent = CoinbaseErrorResponse.getErrorMessage(errorMsg)
+                                 log.error("TransactionState $errorMsg ")
                                 if (errorContent?.id.equals(ERROR_ID_INVALID_REQUEST, true)
                                     && errorContent?.message?.contains(ERROR_MSG_INVALID_REQUEST) == true){
                                     twoFaErrorState.call()
                                 } else {
+
                                     _transactionState.value = TransactionState(false, errorContent?.message)
                                 }
                             }
                         } else {
+                            log.error("TransactionState success")
                             _transactionState.value = TransactionState(false, null)
                         }
                     } catch (e: IOException) {
+                        log.error("TransactionState ${ e.printStackTrace()} ")
                         _transactionState.value = TransactionState(false, null)
                     }
                 }
