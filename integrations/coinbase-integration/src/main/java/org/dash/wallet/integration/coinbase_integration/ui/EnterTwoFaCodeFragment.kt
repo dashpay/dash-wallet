@@ -90,15 +90,6 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
         }
     }
 
-
-    override fun onCreateContextMenu(
-        menu: ContextMenu,
-        v: View,
-        menuInfo: ContextMenu.ContextMenuInfo?
-    ) {
-
-    }
-
     private fun openCoinbaseHelp() {
         val helpUrl = "https://help.coinbase.com/en/contact-us"
         try {
