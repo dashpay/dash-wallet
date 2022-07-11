@@ -66,27 +66,23 @@
 
     <TextView
         android:id="@+id/forgot_pin"
-        style="@style/MontserratSemiBold"
+        style="@style/Overline.SemiBold.White"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="12dp"
         android:background="@drawable/selectable_background_light"
         android:padding="@dimen/pin_preview_textview_padding"
-        android:text="@string/forgot_pin_title"
-        android:textColor="@color/dash_white"
-        android:textSize="12sp" />
+        android:text="@string/forgot_pin_title" />
 
     <TextView
         android:id="@+id/bad_pin"
-        style="@style/MontserratSemiBold"
+        style="@style/Subtitle2.White"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/pin_preview_textview_padding"
         android:gravity="center_horizontal"
         android:text="@string/private_key_bad_password"
-        android:textColor="@color/dash_white"
-        android:textSize="14sp"
         android:visibility="gone"
         tools:visibility="visible" />
 

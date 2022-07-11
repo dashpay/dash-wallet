@@ -104,7 +104,7 @@
 
         <TextView
             android:id="@+id/location_hint"
-            style="@style/Caption.SteelGray400"
+            style="@style/Caption.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="@string/explore_atm_location_hint"
@@ -138,7 +138,7 @@
 
         <TextView
             android:id="@+id/item_type"
-            style="@style/Body2.SteelGray400"
+            style="@style/Body2.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"

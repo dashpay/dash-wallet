@@ -40,7 +40,7 @@
         android:orientation="vertical">
 
         <TextView
-            style="@style/Headline5.Bold"
+            style="@style/Headline5"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="3dp"

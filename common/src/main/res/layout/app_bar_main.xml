@@ -41,7 +41,7 @@
             android:layout_height="wrap_content"
             tools:text="Synchronizing with network. 3 months behind."
             android:textColor="@color/white"
-            app:fontFamily="@font/montserrat_regular"
+            app:fontFamily="@font/inter_regular"
             android:textSize="12sp" />
 
     </RelativeLayout>

@@ -21,24 +21,21 @@
             android:src="@drawable/ic_fingerprint" />
 
         <TextView
-            style="@style/MontserratMedium.DB.18"
+            style="@style/Body2.Medium.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/touch_fingerprint_sensor"
-            android:textColor="@color/dash_gray" />
-
+            android:text="@string/touch_fingerprint_sensor" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/fingerprint_text"
-        style="@style/MontserratMedium.DB.12"
+        style="@style/Overline.Medium.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:layout_marginLeft="12dp"
         android:layout_marginTop="12dp"
         android:text="@string/unlock_with_fingerprint"
-        android:textColor="@color/dash_gray"
         android:visibility="gone"
         tools:visibility="visible" />
 

@@ -49,7 +49,8 @@
 
                 <RelativeLayout
                     android:id="@+id/liquid_container"
-                    style="@style/DashButton.White.NoDisabled"
+                    android:background="@drawable/rounded_background"
+                    android:theme="@style/SecondaryBackground"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="20dp"
@@ -58,7 +59,7 @@
 
                     <TextView
                         android:id="@+id/liquid_connected"
-                        style="@style/MontserratRegular"
+                        style="@style/Overline.Secondary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_alignParentRight="true"
@@ -68,8 +69,6 @@
                         android:drawablePadding="5dp"
                         android:text="@string/connected"
                         android:textAllCaps="true"
-                        android:textColor="@color/dash_gray"
-                        android:textSize="12sp"
                         android:visibility="visible" />
 
                     <LinearLayout
@@ -174,7 +173,7 @@
 
                     <LinearLayout
                         android:id="@+id/buy_dash"
-                        style="@style/DashButton.White"
+                        style="@style/Button.Primary.Large.White"
                         android:layout_width="0dp"
                         android:layout_height="100dp"
                         android:layout_weight="1"
@@ -190,21 +189,19 @@
                         <TextView
 
                             android:id="@+id/message"
-                            style="@style/MontserratMedium"
+                            style="@style/Overline.Medium"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center_horizontal"
                             android:layout_marginTop="10dp"
                             android:gravity="center_horizontal"
-                            android:text="@string/buy_dash"
-                            android:textColor="@color/black"
-                            android:textSize="12sp" />
+                            android:text="@string/buy_dash" />
 
                     </LinearLayout>
 
                     <LinearLayout
                         android:id="@+id/sell_dash"
-                        style="@style/DashButton.White"
+                        style="@style/Button.Primary.Large.White"
                         android:layout_width="0dp"
                         android:layout_height="100dp"
                         android:layout_marginLeft="10dp"
@@ -231,15 +228,13 @@
 
 
                         <TextView
-                            style="@style/MontserratMedium"
+                            style="@style/Overline.Medium"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center_horizontal"
                             android:layout_marginTop="10dp"
                             android:gravity="center_horizontal"
-                            android:text="@string/sell_dash"
-                            android:textColor="@color/black"
-                            android:textSize="12sp" />
+                            android:text="@string/sell_dash" />
 
                     </LinearLayout>
 
@@ -259,7 +254,7 @@
 
                     <LinearLayout
                         android:id="@+id/llTransferToLiquid"
-                        style="@style/DashButton.White"
+                        style="@style/Button.Primary.Large.White"
                         android:layout_width="0dp"
                         android:layout_height="100dp"
                         android:layout_weight="1"
@@ -275,21 +270,19 @@
                             android:background="@drawable/ic_transferto" />
 
                         <TextView
-                            style="@style/MontserratMedium"
+                            style="@style/Overline.Medium"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center_horizontal"
                             android:layout_marginTop="10dp"
                             android:gravity="center_horizontal"
-                            android:text="@string/transfer_to_liquid"
-                            android:textColor="@color/black"
-                            android:textSize="12sp" />
+                            android:text="@string/transfer_to_liquid" />
 
                     </LinearLayout>
 
                     <LinearLayout
                         android:id="@+id/llTransferFromLiquid"
-                        style="@style/DashButton.White"
+                        style="@style/Button.Primary.Large.White"
                         android:layout_width="0dp"
                         android:layout_height="100dp"
                         android:layout_marginLeft="10dp"
@@ -306,15 +299,13 @@
                             android:background="@drawable/ic_transferfrom" />
 
                         <TextView
-                            style="@style/MontserratMedium"
+                            style="@style/Overline.Medium"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center_horizontal"
                             android:layout_marginTop="10dp"
                             android:gravity="center_horizontal"
-                            android:text="@string/transfer_from_liquid"
-                            android:textColor="@color/black"
-                            android:textSize="12sp" />
+                            android:text="@string/transfer_from_liquid" />
 
                     </LinearLayout>
                 </LinearLayout>
@@ -341,14 +332,12 @@
                 app:srcCompat="@drawable/ic_disconnect" />
 
             <TextView
-                style="@style/MontserratMedium"
+                style="@style/Body2.Medium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:layout_marginLeft="10dp"
-                android:text="@string/disconnect"
-                android:textColor="@color/black"
-                android:textSize="14sp" />
+                android:text="@string/disconnect" />
 
         </LinearLayout>
     </RelativeLayout>

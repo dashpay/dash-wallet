@@ -32,8 +32,8 @@ class InputWrapper(context: Context, attrs: AttributeSet): TextInputLayout(conte
     init {
         setBackgroundResource(R.drawable.input)
         isExpandedHintEnabled = false
-        defaultHintTextColor = resources.getColorStateList(R.color.extra_dark_gray, null)
-        setHintTextAppearance(R.style.Caption_ExtraDarkGray)
+        defaultHintTextColor = resources.getColorStateList(R.color.content_secondary, null)
+        setHintTextAppearance(R.style.Caption_Secondary)
 
         if (isHintEnabled) {
             setPadding(0, resources.getDimensionPixelOffset(R.dimen.input_vertical_padding), 0, 0)

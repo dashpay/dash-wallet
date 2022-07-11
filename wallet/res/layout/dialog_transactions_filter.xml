@@ -28,12 +28,12 @@
 
         <TextView
             android:gravity="center"
-            style="@style/MontserratRegular"
+            style="@style/Body1.Tertiary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="@string/all_transactions"
-            android:textSize="16sp" />
+            android:textAlignment="gravity"
+            android:text="@string/all_transactions" />
 
     </LinearLayout>
 
@@ -54,12 +54,12 @@
 
         <TextView
             android:gravity="center"
-            style="@style/MontserratRegular"
+            style="@style/Body1.Tertiary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="@string/received_transactions"
-            android:textSize="16sp" />
+            android:textAlignment="gravity"
+            android:text="@string/received_transactions" />
 
     </LinearLayout>
 
@@ -80,12 +80,12 @@
 
         <TextView
             android:gravity="center"
-            style="@style/MontserratRegular"
+            style="@style/Body1.Tertiary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="@string/sent_transactions"
-            android:textSize="16sp" />
+            android:textAlignment="gravity"
+            android:text="@string/sent_transactions" />
 
     </LinearLayout>
 

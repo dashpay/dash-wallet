@@ -9,7 +9,7 @@ import kotlinx.android.synthetic.main.lock_screen_button.view.*
 import org.dash.wallet.common.R
 
 
-class LockScreenButton(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs, R.style.DashButton_White) {
+class LockScreenButton(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs, R.style.Button_Primary_Large_White) {
 
     init {
         inflate(context, R.layout.lock_screen_button, this)

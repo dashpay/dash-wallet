@@ -3,17 +3,17 @@
     <font
         app:fontStyle="normal"
         app:fontWeight="100"
-        app:font="@font/montserrat_medium" />
+        app:font="@font/inter_regular" />
     <font
         app:fontStyle="normal"
         app:fontWeight="400"
-        app:font="@font/montserrat_medium" />
+        app:font="@font/inter_medium" />
     <font
         app:fontStyle="normal"
         app:fontWeight="700"
-        app:font="@font/montserrat_semibold" />
+        app:font="@font/inter_semibold" />
     <font
         app:fontStyle="normal"
         app:fontWeight="900"
-        app:font="@font/montserrat_bold" />
+        app:font="@font/inter_bold" />
 </font-family>

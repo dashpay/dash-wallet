@@ -42,7 +42,7 @@
 
     <TextView
         android:id="@+id/explore_title"
-        style="@style/Headline3.Bold.White"
+        style="@style/Headline3.White"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="28dp"
@@ -111,7 +111,7 @@
 
                     <TextView
                         android:id="@+id/merchants_title"
-                        style="@style/Body2.Medium"
+                        style="@style/Subtitle2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="67dp"
@@ -154,7 +154,7 @@
 
                     <TextView
                         android:id="@+id/atms_title"
-                        style="@style/Body2.Medium"
+                        style="@style/Subtitle2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="67dp"
@@ -197,7 +197,7 @@
 
                     <TextView
                         android:id="@+id/staking_title"
-                        style="@style/Body2.Medium"
+                        style="@style/Subtitle2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
