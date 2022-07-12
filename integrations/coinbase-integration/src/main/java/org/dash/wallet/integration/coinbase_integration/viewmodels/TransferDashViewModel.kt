@@ -138,17 +138,17 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
-    fun sendDash(dashValue: Coin) = viewModelScope.launch(Dispatchers.Main) {
+    fun sendDash(dashValue: Coin,isEmptyWallet:Boolean) = viewModelScope.launch(Dispatchers.Main) {
         _loadingState.value = true
         _sendDashToCoinbaseState.value = withContext(Dispatchers.IO){
-            checkTransaction(dashValue)
+            checkTransaction(dashValue,isEmptyWallet)
         } ?: SendDashResponseState.UnknownFailureState
         _loadingState.value = false
     }
 
-    private suspend fun checkTransaction(coin: Coin): SendDashResponseState{
+    private suspend fun checkTransaction(coin: Coin,isEmptyWallet:Boolean): SendDashResponseState{
         return try {
-            val transaction = sendPaymentService.sendCoins(dashAddress, coin)
+            val transaction = sendPaymentService.sendCoins(dashAddress, coin, emptyWallet = isEmptyWallet)
             SendDashResponseState.SuccessState(transaction.isPending)
         } catch (e: InsufficientMoneyException){
             e.printStackTrace()

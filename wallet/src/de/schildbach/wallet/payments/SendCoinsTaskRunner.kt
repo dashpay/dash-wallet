@@ -95,7 +95,7 @@ class SendCoinsTaskRunner @Inject constructor(
             e.printStackTrace()
         }
 
-        val txFee = sendRequest.tx.fee
+        val txFee:Coin? = sendRequest.tx.fee
 
         val amountToSend = if (sendRequest.emptyWallet){
             amount.minus(txFee)
@@ -103,13 +103,13 @@ class SendCoinsTaskRunner @Inject constructor(
             amount
         }
 
-        val totalAmount = if (sendRequest.emptyWallet){
+        val totalAmount = if (sendRequest.emptyWallet||txFee==null){
             amount.toPlainString()
         } else {
-            amount.add(txFee).toPlainString()
+                amount.add(txFee).toPlainString()
         }
 
-        return SendPaymentService.TransactionDetails(txFee.toPlainString(), amountToSend, totalAmount)
+        return SendPaymentService.TransactionDetails(txFee?.toPlainString()?:"", amountToSend, totalAmount)
     }
 
     @VisibleForTesting
