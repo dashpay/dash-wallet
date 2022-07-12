@@ -120,8 +120,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
     }
 
     fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
-       // return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
-        return false
+        return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
     }
 
     private val withdrawalLimitInDash: Double
