@@ -85,9 +85,6 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
             openCoinbaseHelp()
         }
 
-        lockScreenBroadcaster.activatingLockScreen.observe(viewLifecycleOwner){
-            findNavController().popBackStack(R.id.coinbaseServicesFragment, false)
-        }
     }
 
     private fun openCoinbaseHelp() {

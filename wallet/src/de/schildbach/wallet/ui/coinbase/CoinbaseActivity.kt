@@ -18,6 +18,8 @@
 package de.schildbach.wallet.ui.coinbase
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.navigation.NavController
+import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.BaseMenuActivity
 import de.schildbach.wallet_test.R
@@ -30,14 +32,35 @@ class CoinbaseActivity : BaseMenuActivity() {
     private val viewModel: CoinbaseActivityViewModel by viewModels()
     @Inject
     lateinit var broadcaster: CloseCoinbasePortalBroadcaster
+    private lateinit var navController: NavController
+
     override fun getLayoutId(): Int {
         return R.layout.activity_coinbase
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+         navController = setNavigationGraph()
+
         broadcaster.closeCoinbasePortal.observe(this){
             finish()
+        }
+    }
+
+    private  fun setNavigationGraph(): NavController {
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_coinbase_fragment) as NavHostFragment
+        val navController = navHostFragment.navController
+        val navGraph = navController.navInflater.inflate(R.navigation.nav_coinbase)
+
+        navController.graph = navGraph
+
+        return navController
+    }
+
+    override fun onLockScreenActivated() {
+        if (navController.currentDestination?.id == R.id.enterTwoFaCodeFragment) {
+            navController.popBackStack(org.dash.wallet.integration.coinbase_integration.R.id.coinbaseServicesFragment, false)
         }
     }
 }
