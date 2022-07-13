@@ -350,7 +350,10 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
         }
 
         viewModel.coinbaseBalance.observe(this){ balance ->
-            viewModel.showRowBalance(BuyAndSellDashServicesModel.ServiceType.COINBASE, currentExchangeRate, balance)
+            balance?.let {
+                viewModel.showRowBalance(BuyAndSellDashServicesModel.ServiceType.COINBASE, currentExchangeRate, it)
+            }
+
         }
     }
 
