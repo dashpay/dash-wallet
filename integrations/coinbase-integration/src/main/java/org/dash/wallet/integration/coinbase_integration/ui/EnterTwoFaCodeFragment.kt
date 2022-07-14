@@ -22,6 +22,7 @@ import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
 import android.os.Bundle
+import android.view.ContextMenu
 import android.view.View
 import android.widget.Toast
 import androidx.activity.addCallback
@@ -84,9 +85,6 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
             openCoinbaseHelp()
         }
 
-        lockScreenBroadcaster.activatingLockScreen.observe(viewLifecycleOwner){
-            findNavController().popBackStack(R.id.coinbaseServicesFragment, false)
-        }
     }
 
     private fun openCoinbaseHelp() {
@@ -154,7 +152,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
     }
 
     private fun applyNewValue(value: String) {
-        binding.enterCodeField.text = value
+        binding.enterCodeField.setText( value)
         binding.verifyBtn.isEnabled = value.isNotEmpty()
     }
 

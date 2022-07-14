@@ -213,16 +213,18 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             val fiatVal = enterAmountToTransferViewModel.getFiat(dashValue.toPlainString())
             val amountFiat = dashFormat.format(fiatVal).toString()
             val fiatSymbol = GenericUtils.currencySymbol(fiatVal.currencyCode)
+            val isEmptyWallet= enterAmountToTransferViewModel.isMaxAmountSelected &&
+                    binding.transferView.walletToCoinbase
 
             lifecycleScope.launch {
-                val details = transactionDetails.estimateNetworkFee(transferDashViewModel.dashAddress, dashValue)
+                val details = transactionDetails.estimateNetworkFee(transferDashViewModel.dashAddress, dashValue,emptyWallet = isEmptyWallet)
                 val amountStr = details.amountToSend.toPlainString()
 
                 val isTransactionConfirmed = confirmTransactionLauncher.showTransactionDetailsPreview(
                     requireActivity(), address, amountStr, amountFiat, fiatSymbol, details.fee,
                     details.totalAmount, null, null, null)
                 if (isTransactionConfirmed){
-                    transferDashViewModel.sendDash(dashValue)
+                    transferDashViewModel.sendDash(dashValue,isEmptyWallet)
                 }
             }
         }

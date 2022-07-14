@@ -73,7 +73,7 @@ class CoinBaseWebClientActivity : InteractionAwareActivity() {
                 "wallet:buys:read,wallet:buys:create,wallet:transactions:transfer," +
                 "wallet:sells:create,wallet:sells:read," +
                 "wallet:transactions:request,wallet:transactions:read,wallet:trades:create," +
-                "wallet:supported-assets:read,wallet:transactions:send," + "wallet:addresses:read" + "&meta[send_limit_amount]=1" +
+                "wallet:supported-assets:read,wallet:transactions:send," + "wallet:addresses:read,wallet:addresses:create" + "&meta[send_limit_amount]=1" +
                 "&meta[send_limit_currency]=USD" +
                 "&meta[send_limit_period]=month" +
                 "&account=all"

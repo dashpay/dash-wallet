@@ -62,12 +62,13 @@
         android:layout_marginHorizontal="4dp"
         />
 
-    <TextView
+    <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/enter_code_field"
         android:layout_width="0dp"
         android:layout_height="46dp"
         app:layout_constraintTop_toBottomOf="@id/need_help"
         android:layout_marginTop="25dp"
+        android:textIsSelectable="true"
         app:layout_constraintStart_toStartOf="@id/left_guide_line"
         app:layout_constraintEnd_toEndOf="@id/right_guide_line"
         android:background="@drawable/rounded_background"
@@ -76,6 +77,7 @@
         android:textCursorDrawable="@color/dash_blue"
         android:hint="@string/coinbase_fa_code_hint"
         android:paddingLeft="15dp"
+        android:focusable="false"
         android:gravity="center_vertical"
         android:textColorHint="@color/content_disabled"
         />
