@@ -57,13 +57,13 @@
                         android:layout_marginTop="8dp">
 
                         <LinearLayout
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical">
 
                             <de.schildbach.wallet.ui.widget.PinPreviewView
                                 android:id="@+id/pin_preview"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="start"
                                 android:layout_marginStart="12dp"

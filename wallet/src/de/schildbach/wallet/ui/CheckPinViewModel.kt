@@ -63,4 +63,12 @@ open class CheckPinViewModel @Inject constructor(
     fun resetFailedPinAttempts() {
         pinRetryController.clearPinFailPrefs()
     }
+
+    fun getRemainingAttempts(): Int {
+        return pinRetryController.remainingAttempts
+    }
+
+    fun getFailCount(): Int {
+        return pinRetryController.failCount()
+    }
 }
