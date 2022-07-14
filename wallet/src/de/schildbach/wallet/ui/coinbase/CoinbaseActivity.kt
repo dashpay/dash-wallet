@@ -48,14 +48,10 @@ class CoinbaseActivity : BaseMenuActivity() {
         }
     }
 
-    private  fun setNavigationGraph(): NavController {
-        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_coinbase_fragment) as NavHostFragment
-        val navController = navHostFragment.navController
-        val navGraph = navController.navInflater.inflate(R.navigation.nav_coinbase)
-
-        navController.graph = navGraph
-
-        return navController
+    private fun setNavigationGraph(): NavController {
+        val navHostFragment =
+            supportFragmentManager.findFragmentById(R.id.nav_host_coinbase_fragment) as NavHostFragment
+        return navHostFragment.navController
     }
 
     override fun onLockScreenActivated() {
