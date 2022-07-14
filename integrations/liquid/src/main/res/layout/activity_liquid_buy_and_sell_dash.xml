@@ -179,6 +179,7 @@
                         android:layout_weight="1"
                         android:clipToPadding="false"
                         android:gravity="center"
+                        android:elevation="1dp"
                         android:orientation="vertical">
 
                         <ImageView
@@ -210,6 +211,7 @@
                         android:gravity="center"
                         android:orientation="vertical"
                         android:visibility="invisible"
+                        android:elevation="1dp"
                         tools:visibility="visible">
 
 
@@ -262,6 +264,7 @@
                         android:gravity="center"
                         android:orientation="vertical"
                         android:visibility="gone"
+                        android:elevation="1dp"
                         tools:visibility="visible">
 
                         <ImageView
@@ -291,6 +294,7 @@
                         android:gravity="center"
                         android:orientation="vertical"
                         android:visibility="gone"
+                        android:elevation="1dp"
                         tools:visibility="visible">
 
                         <ImageView

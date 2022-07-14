@@ -18,10 +18,11 @@
 
     <TextView
         android:id="@+id/payment_support"
-        style="@style/Subtitle1"
+        style="@style/Body1.Medium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
+        android:textAlignment="gravity"
         android:layout_marginTop="31dp"
         android:layout_marginEnd="10dp"
         android:layout_marginStart="10dp"
@@ -37,6 +38,7 @@
         android:layout_marginEnd="20dp"
         android:layout_marginStart="20dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:text="@string/buying_dash_not_supported_credit_cards" />
 
     <TextView
@@ -48,6 +50,7 @@
         android:layout_marginEnd="20dp"
         android:layout_marginStart="20dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:text="@string/list_of_countries" />
 
     <Button

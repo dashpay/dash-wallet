@@ -18,7 +18,7 @@
 
         <TextView
             android:id="@+id/uphold_logout"
-            style="@style/Body2.Medium"
+            style="@style/Body2.Medium.White"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_gravity="end"
