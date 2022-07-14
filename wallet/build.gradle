@@ -213,12 +213,6 @@ android {
             keyAlias "androiddebugkey"
             keyPassword "android"
         }
-        release {
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
-            storePassword 'android'
-            storeFile file('/Users/hadia/Desktop/debug')
-        }
     }
 
     buildTypes {
