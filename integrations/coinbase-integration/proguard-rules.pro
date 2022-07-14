@@ -21,17 +21,9 @@
 #-renamesourcefileattribute SourceFile
 
 -keepattributes Exceptions, InnerClasses
--keep class org.dash.wallet.integration.uphold.** {
-    public protected private *;
-}
--keep class org.dash.wallet.integration.liquid.** {
-    public protected private *;
-}
 -keep class org.dash.wallet.integration.coinbase_integration.** {
     public protected private *;
 }
--keep interface org.dash.wallet.integration.uphold.** {*;}
--keep interface org.dash.wallet.integration.liquid.** {*;}
 -keep interface org.dash.wallet.integration.coinbase_integration.** {*;}
 
 

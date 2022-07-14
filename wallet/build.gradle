@@ -216,9 +216,6 @@ android {
     }
 
     buildTypes {
-        release {
-            signingConfig signingConfigs.release
-        }
         all {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg'
