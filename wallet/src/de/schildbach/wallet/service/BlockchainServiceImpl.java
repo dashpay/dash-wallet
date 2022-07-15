@@ -886,7 +886,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         try {
             bootStrapStream = getAssets().open(Constants.Files.MNLIST_BOOTSTRAP_FILENAME);
-            SimplifiedMasternodeListManager.setBootStrapStream(bootStrapStream, null, SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION);
+            SimplifiedMasternodeListManager.setBootStrapStream(bootStrapStream);
         } catch (IOException x) {
             log.info("cannot load the boot strap stream.  " + x.getMessage());
         }
