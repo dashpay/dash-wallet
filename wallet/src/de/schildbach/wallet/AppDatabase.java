@@ -48,7 +48,7 @@ import kotlin.Deprecated;
         DashPayContactRequest.class,
         UserAlert.class,
         Invitation.class
-}, version = 12)
+}, version = 17)
 @TypeConverters({RoomConverters.class, BlockchainStateRoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
@@ -86,9 +86,10 @@ public abstract class AppDatabase extends RoomDatabase {
             instance = Room.databaseBuilder(WalletApplication.getInstance(),
                     AppDatabase.class, "dash-wallet-database")
                     .addMigrations(
-                            AppDatabaseMigrations.getMigration11To12()
+                            AppDatabaseMigrations.getMigration11To17(),
+                            AppDatabaseMigrations.getMigration16To17()
                     )
-                    .fallbackToDestructiveMigration().build();
+                    .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7, 8, 9, 10).build();
         }
         return instance;
     }
