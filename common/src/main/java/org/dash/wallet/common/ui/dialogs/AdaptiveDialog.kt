@@ -40,6 +40,8 @@ import kotlin.coroutines.resumeWithException
 
 open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
 
+    constructor() : this(R.layout.dialog_simple)
+
     companion object {
         const val ICON_RES_ARG = "icon_res"
         const val TITLE_ARG = "title"
@@ -135,8 +137,6 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
 
     protected var onResultListener: ((Boolean?) -> Unit)? = null
     var isMessageSelectable = false
-
-    constructor() : this(R.layout.dialog_simple)
 
     override fun onCreateView(
         inflater: LayoutInflater,
