@@ -56,7 +56,6 @@ import androidx.work.WorkManager;
 import androidx.work.WorkRequest;
 
 import com.google.common.base.Stopwatch;
-import com.jakewharton.processphoenix.ProcessPhoenix;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
@@ -122,6 +121,7 @@ import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
 import de.schildbach.wallet.transactions.TransactionWrapperHelper;
+import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.transactions.WalletTransactionObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
@@ -175,6 +175,8 @@ public class WalletApplication extends BaseWalletApplication
     private AutoLogout autoLogout;
 
     @Inject
+    RestartService restartService;
+    @Inject
     HiltWorkerFactory workerFactory;
     @Inject
     BlockchainStateDao blockchainStateDao;
@@ -225,12 +227,14 @@ public class WalletApplication extends BaseWalletApplication
             }
 
             @Override
-            protected void onStartedAny(boolean isTheFirstOne) {
-                super.onStartedAny(isTheFirstOne);
+            protected void onStartedAny(boolean isTheFirstOne, Activity activity) {
+                super.onStartedAny(isTheFirstOne, activity);
                 // force restart if the app was updated
+                // this ensures that v6.x or previous will go through the PIN upgrade process
                 if (!BuildConfig.DEBUG && myPackageReplaced) {
+                    log.info("restarting app due to upgrade");
                     myPackageReplaced = false;
-                    ProcessPhoenix.triggerRebirth(WalletApplication.this);
+                    restartService.performRestart(activity, true, true);
                 }
             }
 

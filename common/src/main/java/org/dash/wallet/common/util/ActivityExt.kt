@@ -18,8 +18,10 @@
 package org.dash.wallet.common.util
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.content.Intent
 import android.net.Uri
+import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
 import org.dash.wallet.common.R
@@ -35,4 +37,9 @@ fun Activity.openCustomTab(url: String) {
         intent.data = Uri.parse(url)
         startActivity(intent)
     }
+}
+
+fun AppCompatActivity.getMainTask(): ActivityManager.AppTask {
+    val activityManager = getSystemService(AppCompatActivity.ACTIVITY_SERVICE) as ActivityManager
+    return activityManager.appTasks.last()
 }

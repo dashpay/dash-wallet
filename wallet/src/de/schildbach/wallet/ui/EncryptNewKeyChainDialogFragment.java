@@ -19,7 +19,11 @@ import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
 import org.bouncycastle.crypto.params.KeyParameter;
 
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.ui.send.DecryptSeedTask;
 import de.schildbach.wallet.ui.send.DeriveKeyTask;
 import de.schildbach.wallet.util.ParcelableChainPath;
@@ -28,11 +32,12 @@ import de.schildbach.wallet_test.R;
 /**
  * Created by Hash Engineering on 4/5/2018.
  */
-
+@AndroidEntryPoint
 public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment {
 
     private static final String FRAGMENT_TAG = EncryptNewKeyChainDialogFragment.class.getName();
     private static final String ARGS_PATH = "chain_path";
+    @Inject RestartService restartService;
 
     public static void show(FragmentManager fm, ImmutableList<ChildNumber> path) {
         EncryptNewKeyChainDialogFragment dialogFragment = new EncryptNewKeyChainDialogFragment();
@@ -109,7 +114,10 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                 unlockButton.setEnabled(true);
                 unlockButton.setText(getText(R.string.wallet_lock_unlock));
                 pinView.setEnabled(true);
-                pinRetryController.failedAttempt(password);
+                if(pinRetryController.failedAttempt(password)) {
+                    restartService.performRestart(getActivity(), true, false);
+                    dismiss();
+                }
                 badPinView.setText(getString(R.string.wallet_lock_wrong_pin,
                         pinRetryController.getRemainingAttemptsMessage(getResources())));
                 badPinView.setVisibility(View.VISIBLE);
