@@ -40,7 +40,7 @@ import kotlin.coroutines.resumeWithException
 
 open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
 
-    constructor() : this(R.layout.dialog_simple)
+    constructor() : this(R.layout.dialog_adaptive)
 
     companion object {
         const val ICON_RES_ARG = "icon_res"
