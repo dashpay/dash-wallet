@@ -16,7 +16,6 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.ProgressDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -44,6 +43,7 @@ import org.dash.wallet.common.Constants.*
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
@@ -61,6 +61,7 @@ import org.json.JSONObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
+import javax.inject.Inject
 import kotlin.concurrent.schedule
 
 @ExperimentalCoroutinesApi
@@ -68,17 +69,21 @@ import kotlin.concurrent.schedule
 class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
 
     private var liquidClient: LiquidClient? = null
-    private var loadingDialog: ProgressDialog? = null
-    private lateinit var application: WalletApplication
-    private lateinit var config: Configuration
+    private var loadingDialog: AdaptiveDialog? = null
     private var currentExchangeRate: ExchangeRate? = null
+
+    @Inject
+    lateinit var application: WalletApplication
+    @Inject
+    lateinit var config: Configuration
+    @Inject
+    lateinit var analytics: AnalyticsService
 
     private lateinit var binding: ActivityBuyAndSellIntegrationsBinding
     private val viewModel by viewModels<BuyAndSellViewModel>()
     private val liquidViewModel by viewModels<LiquidViewModel>()
-    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
     private val buyAndSellDashServicesAdapter: BuyAndSellDashServicesAdapter by lazy {
-        BuyAndSellDashServicesAdapter(config){ model ->
+        BuyAndSellDashServicesAdapter(config) { model ->
             when (model.serviceType) {
                 BuyAndSellDashServicesModel.ServiceType.LIQUID -> onLiquidItemClicked()
                 BuyAndSellDashServicesModel.ServiceType.UPHOLD -> onUpHoldItemClicked()
@@ -101,8 +106,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
 
-        application = WalletApplication.getInstance()
-        config = application.configuration
         liquidClient = LiquidClient.getInstance()
         val actionBar = supportActionBar
         actionBar?.apply {
@@ -111,12 +114,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
         }
 
         title = ""
-
-        loadingDialog = ProgressDialog(this)
-        loadingDialog!!.isIndeterminate = true
-        loadingDialog!!.setCancelable(false)
-        loadingDialog!!.setMessage(getString(org.dash.wallet.integration.liquid.R.string.loading))
-
+        loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
         initViewModel()
         // do we need this here?
         // setLoginStatus(isNetworkOnline)
@@ -131,11 +129,12 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
         if (!LiquidConstants.hasValidCredentials() || !UpholdConstants.hasValidCredentials()) {
             binding.keysMissingError.isVisible = true
         }
+        binding.dashServicesList.itemAnimator = null
         binding.dashServicesList.adapter = buyAndSellDashServicesAdapter
 
         viewModel.showLoading.observe(this){ showDialog ->
-            if (showDialog) loadingDialog?.show()
-            else loadingDialog?.dismiss()
+            if (showDialog) loadingDialog?.show(this)
+            else if (loadingDialog?.isAdded == true) loadingDialog?.dismiss()
         }
     }
 
@@ -217,7 +216,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
             if (it != null) {
                 when (it.status) {
                     Status.LOADING -> {
-                        loadingDialog?.show()
+                        loadingDialog?.show(this)
                     }
                     Status.SUCCESS -> {
                         if (!isFinishing) {
@@ -265,7 +264,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
             if (it != null) {
                 when (it.status) {
                     Status.LOADING -> {
-                       loadingDialog?.show()
+                       loadingDialog?.show(this)
                     }
                     Status.SUCCESS -> {
                         if (!isFinishing) {

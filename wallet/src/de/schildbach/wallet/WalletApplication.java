@@ -45,6 +45,7 @@ import android.webkit.CookieManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.hilt.work.HiltWorkerFactory;
@@ -97,7 +98,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InvalidObjectException;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
@@ -1067,7 +1067,7 @@ public class WalletApplication extends BaseWalletApplication
 
     @Override
     public void checkSendingConditions(
-            @NonNull Address address,
+            @Nullable Address address,
             @NonNull Coin amount
     ) throws LeftoverBalanceException {
         new CrowdNodeBalanceCondition().check(
