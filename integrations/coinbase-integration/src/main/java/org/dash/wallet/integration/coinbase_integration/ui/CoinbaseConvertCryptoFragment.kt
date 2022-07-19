@@ -38,6 +38,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.livedata.EventObserver
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
@@ -47,6 +48,7 @@ import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccoun
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
 import org.dash.wallet.integration.coinbase_integration.model.getCoinBaseExchangeRateConversion
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.ConvertViewFragment
+import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.ServiceWallet
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapValueErrorType
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.crypto_wallets.CryptoWalletsDialog
@@ -118,39 +120,8 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             selectedCoinBaseAccount = account
         }
 
-        convertViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
-            val swapValueErrorType = convertViewModel.checkEnteredAmountValue()
-            if (swapValueErrorType == SwapValueErrorType.NOError) {
-                if (!pair.first && convertViewModel.dashToCrypto.value == true) {
-                    pair.second?.first?.let { fait ->
-                        if ((viewModel.userPreference.lastCoinbaseBalance?.toDouble() ?: 0.0) <fait.toPlainString().toDouble()) {
-                            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                                R.string.we_didnt_find_any_assets,
-                                image = R.drawable.ic_info_red,
-                                positiveButtonText = R.string.buy_crypto_on_coinbase,
-                                negativeButtonText = R.string.close
-                            )
-                            safeNavigate(
-                                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                                    placeBuyOrderError
-                                )
-                            )
-                        }
-                    }
-                } else {
-                    if (pair.second?.second != null && viewModel.isInputGreaterThanLimit(pair.second?.second!!)) {
-                        showSwapValueErrorView(SwapValueErrorType.UnAuthorizedValue)
-                    } else {
-                        selectedCoinBaseAccount?.let {
-                            pair.second?.first?.let { fait ->
-                                viewModel.swapTrade(fait, it, pair.first)
-                            }
-                        }
-                    }
-                }
-            } else {
-                showSwapValueErrorView(swapValueErrorType)
-            }
+        convertViewModel.onContinueEvent.observe(viewLifecycleOwner) { request ->
+            proceedWithSwap(request)
         }
 
         binding.authLimitBanner.warningLimitInfo.setOnClickListener {
@@ -302,6 +273,41 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         monitorNetworkChanges()
     }
 
+    private fun proceedWithSwap(request: SwapRequest, checkSendingConditions: Boolean = true) {
+        val swapValueErrorType = convertViewModel.checkEnteredAmountValue(checkSendingConditions)
+        if (swapValueErrorType == SwapValueErrorType.NOError) {
+            if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {
+                request.fiatAmount?.let { fait ->
+                    if ((viewModel.userPreference.lastCoinbaseBalance?.toDouble() ?: 0.0) <fait.toPlainString().toDouble()) {
+                        val placeBuyOrderError = CoinbaseGenericErrorUIModel(
+                            R.string.we_didnt_find_any_assets,
+                            image = R.drawable.ic_info_red,
+                            positiveButtonText = R.string.buy_crypto_on_coinbase,
+                            negativeButtonText = R.string.close
+                        )
+                        safeNavigate(
+                            CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                                placeBuyOrderError
+                            )
+                        )
+                    }
+                }
+            } else {
+                if (request.amount != null && viewModel.isInputGreaterThanLimit(request.amount)) {
+                    showSwapValueErrorView(SwapValueErrorType.UnAuthorizedValue)
+                } else {
+                    selectedCoinBaseAccount?.let {
+                        request.fiatAmount?.let { fait ->
+                            viewModel.swapTrade(fait, it, request.dashToCrypto)
+                        }
+                    }
+                }
+            }
+        } else {
+            showSwapValueErrorView(swapValueErrorType)
+        }
+    }
+
     private fun setGuidelinePercent(isErrorHidden: Boolean) {
         val guideLine = binding.amountViewGuide
         val params = guideLine.layoutParams as ConstraintLayout.LayoutParams
@@ -320,13 +326,24 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         when (swapValueErrorType) {
             SwapValueErrorType.LessThanMin -> setMinAmountErrorMessage()
             SwapValueErrorType.MoreThanMax -> setMaxAmountError()
-            SwapValueErrorType.NO_ENOUGH_BALANCE -> setNoEnoughBalanceError()
+            SwapValueErrorType.NotEnoughBalance -> setNoEnoughBalanceError()
+            SwapValueErrorType.SendingConditionsUnmet -> showMinimumBalanceWarning()
         }
     }
 
     @SuppressLint("SetTextI18n")
     private fun setNoEnoughBalanceError() {
         binding.limitDesc.setText(R.string.you_dont_have_enough_balance)
+    }
+
+    private fun showMinimumBalanceWarning() {
+        MinimumBalanceDialog().show(requireActivity()) { isOkToContinue ->
+            val request = convertViewModel.onContinueEvent.value
+
+            if (isOkToContinue == true && request != null) {
+                proceedWithSwap(request, false)
+            }
+        }
     }
 
     @SuppressLint("SetTextI18n")

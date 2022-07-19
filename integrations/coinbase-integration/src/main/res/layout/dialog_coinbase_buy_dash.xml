@@ -33,7 +33,7 @@
 
     <TextView
         android:id="@+id/coinbase_buy_dialog_message"
-        style="@style/Caption"
+        style="@style/Body2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="36dp"

@@ -36,9 +36,10 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.ISecurityFunctions
-import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.ui.*
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
@@ -64,10 +65,9 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private val enterAmountToTransferViewModel by activityViewModels<EnterAmountToTransferViewModel>()
     private val transferDashViewModel by activityViewModels<TransferDashViewModel>()
     private val binding by viewBinding(TransferDashFragmentBinding::bind)
-    private var loadingDialog: FancyAlertDialog? = null
+    private var loadingDialog: AdaptiveDialog? = null
     @Inject lateinit var securityFunctions: ISecurityFunctions
     @Inject lateinit var confirmTransactionLauncher: ConfirmTransactionService
-    @Inject lateinit var transactionDetails: SendPaymentService
     private var dashValue: Coin = Coin.ZERO
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(2).optionalDecimals()
@@ -198,7 +198,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             hideBanners()
         }
 
-        binding.authLimitBanner.warningLimitInfo.setOnClickListener {
+        binding.authLimitBanner.root.setOnClickListener {
             AdaptiveDialog.custom(
                 R.layout.dialog_withdrawal_limit_info,
                 null,
@@ -217,14 +217,17 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                     binding.transferView.walletToCoinbase
 
             lifecycleScope.launch {
-                val details = transactionDetails.estimateNetworkFee(transferDashViewModel.dashAddress, dashValue,emptyWallet = isEmptyWallet)
+                val details = transferDashViewModel.estimateNetworkFee(dashValue, emptyWallet = isEmptyWallet)
                 val amountStr = details.amountToSend.toPlainString()
 
                 val isTransactionConfirmed = confirmTransactionLauncher.showTransactionDetailsPreview(
                     requireActivity(), address, amountStr, amountFiat, fiatSymbol, details.fee,
                     details.totalAmount, null, null, null)
-                if (isTransactionConfirmed){
-                    transferDashViewModel.sendDash(dashValue,isEmptyWallet)
+
+                if (isTransactionConfirmed) {
+                    AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
+                        handleSend(dashValue, isEmptyWallet)
+                    }
                 }
             }
         }
@@ -263,6 +266,22 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             )
             safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(failure))
         }
+    }
+
+    private suspend fun handleSend(value: Coin, isEmptyWallet: Boolean): Boolean {
+        try {
+            transferDashViewModel.sendDash(value, isEmptyWallet, true)
+            return true
+        } catch (ex: LeftoverBalanceException) {
+            val result = MinimumBalanceDialog().showAsync(requireActivity())
+
+            if (result == true) {
+                transferDashViewModel.sendDash(value, isEmptyWallet, false)
+                return true
+            }
+        }
+
+        return false
     }
 
     private fun handleBackButtonPress(){
@@ -326,7 +345,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
         }
-        loadingDialog = FancyAlertDialog.newProgress(R.string.loading, 0)
+        loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
         loadingDialog?.show(parentFragmentManager, "progress")
     }
 

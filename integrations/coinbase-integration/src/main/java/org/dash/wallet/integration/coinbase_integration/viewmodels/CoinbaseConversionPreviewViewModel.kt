@@ -107,7 +107,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                     if (message.isNullOrEmpty()) {
                         commitSwapTradeFailureState.call()
                     } else {
-                        commitSwapTradeFailureState.value = message
+                        commitSwapTradeFailureState.value = message ?: ""
                     }
                 }
             }
@@ -141,7 +141,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                 is ResponseResource.Failure -> {
                     _showLoading.value = false
 
-                    val error = result.errorBody?.string()
+                    val error = result.errorBody?.string() // TODO: this is a blocking call in main thread. Better to switch contexts
                     if (error.isNullOrEmpty()) {
                         swapTradeFailureState.call()
                     } else {
@@ -162,20 +162,17 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     }
 
 
-    private fun sellDashToCoinBase(coin: Coin) = viewModelScope.launch(Dispatchers.Main) {
+    private suspend fun sellDashToCoinBase(coin: Coin) {
         _showLoading.value = true
 
         when (val result = coinBaseRepository.createAddress()) {
             is ResponseResource.Success -> {
-                if (result.value?.isEmpty() == true) {
+                if (result.value.isEmpty()) {
                     _showLoading.value = false
                     getUserAccountAddressFailedCallback.call()
                 } else {
-                    result.value?.let {
-                        sendDashToCoinbase(coin, it)
-                        sellSwapSuccessState.call()
-                        _showLoading.value = false
-                    }
+                    sendDashToCoinbase(coin, result.value)
+                    sellSwapSuccessState.call()
                     _showLoading.value = false
                 }
             }
@@ -189,7 +186,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     private suspend fun sendDashToCoinbase(coin: Coin, addressInfo: String): Boolean {
         val address = Address.fromString(walletDataProvider.networkParameters, addressInfo.trim { it <= ' ' })
         return try {
-            val transaction = sendPaymentService.sendCoins(address, coin)
+            val transaction = sendPaymentService.sendCoins(address, coin, checkBalanceConditions = false)
             transaction.isPending
         } catch (x: InsufficientMoneyException) {
             onInsufficientMoneyCallback.call()
