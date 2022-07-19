@@ -86,9 +86,6 @@
             android:id="@+id/orderReviewToFeeInfo"
             app:destination="@id/coinbaseFeeInfoDialog" />
         <action
-            android:id="@+id/confirmCancelBuyDashTransaction"
-            app:destination="@id/cancelTransactionDialog" />
-        <action
             android:id="@+id/coinbaseBuyDashOrderReviewToError"
             app:destination="@id/coinbaseErrorDialog" />
         <action
@@ -122,11 +119,6 @@
         tools:layout="@layout/dialog_coinbase_fee_info"
         />
     <dialog
-        android:id="@+id/cancelTransactionDialog"
-        android:name="org.dash.wallet.integration.coinbase_integration.ui.dialogs.CancelTransactionDialog"
-        android:label="cancel_pending_transaction"
-        tools:layout="@layout/dialog_cancel_transaction" />
-    <dialog
         android:id="@+id/coinbaseErrorDialog"
         android:name="org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseErrorDialog"
         android:label="coinbase_generic_error_dialog"
@@ -145,9 +137,6 @@
         <action
             android:id="@+id/orderReviewToFeeInfo"
             app:destination="@id/coinbaseFeeInfoDialog" />
-        <action
-            android:id="@+id/confirmCancelBuyDashTransaction"
-            app:destination="@id/cancelTransactionDialog" />
         <action
             android:id="@+id/coinbaseBuyDashOrderReviewToError"
             app:destination="@id/coinbaseErrorDialog" />

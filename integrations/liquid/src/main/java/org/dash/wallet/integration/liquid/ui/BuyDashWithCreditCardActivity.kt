@@ -47,7 +47,7 @@ import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.NetworkUnavailableFragmentViewModel
@@ -59,6 +59,7 @@ import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.dash.wallet.integration.liquid.model.UIEvent
 import org.dash.wallet.integration.liquid.model.WidgetResponse
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 import kotlin.math.pow
 
 
@@ -135,7 +136,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     // Used for Firebase events
     private var widgetState: String = ""
     private var processingStartTime = 0L
-    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
+    @Inject lateinit var analytics: AnalyticsService
 
     private lateinit var viewBinding: ActivityWebviewQuickExchangeBinding
     private val viewModel by viewModels<ConnectivityViewModel>()

@@ -30,7 +30,6 @@ import androidx.fragment.app.FragmentManager
 import dagger.hilt.android.internal.managers.ViewComponentManager
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.ViewPaymentMethodBinding
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.getRoundedRippleBackground
 import org.dash.wallet.common.ui.radio_group.IconSelectMode
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
@@ -38,8 +37,8 @@ import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
 
 class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayout(context, attrs) {
     private val binding = ViewPaymentMethodBinding.inflate(LayoutInflater.from(context), this)
-    private var onPaymentMethodSelected: (() -> Unit)? = null
-    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
+    private var onPaymentMethodChanged: ((PaymentMethod) -> Unit)? = null
+    private var onClickListener: OnClickListener? = null
 
     var paymentMethods: List<PaymentMethod> = listOf()
         set(value) {
@@ -51,7 +50,9 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
         set(value) {
             if (field != value) {
                 field = value
-                setDisplayedInfo(paymentMethods[value])
+                val method = paymentMethods[value]
+                setDisplayedInfo(method)
+                onPaymentMethodChanged?.invoke(method)
             }
         }
 
@@ -61,7 +62,9 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
         val paddingEnd = resources.getDimensionPixelOffset(R.dimen.payment_method_padding_end)
         updatePadding(left=paddingStart, right=paddingEnd)
 
-        setOnClickListener {
+        super.setOnClickListener {
+            onClickListener?.onClick(it)
+
             val itemList = paymentMethods.map { method ->
                 val name = if (method.name.isEmpty() && method.paymentMethodType == PaymentMethodType.Card) {
                     context.getString(R.string.debit_credit_card)
@@ -93,11 +96,18 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
                     showSearch = false
                 ) { _, index, dialog ->
                     dialog.dismiss()
-                    onPaymentMethodSelected?.invoke()
                     selectedMethodIndex = index
                 }.show(fragmentManager, "payment_method")
             }
         }
+    }
+
+    fun setOnPaymentMethodChanged(listener: (PaymentMethod) -> Unit) {
+        onPaymentMethodChanged = listener
+    }
+
+    override fun setOnClickListener(listener: OnClickListener?) {
+        onClickListener = listener
     }
 
     private fun setDisplayedInfo(paymentMethod: PaymentMethod) {
@@ -135,9 +145,5 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
             is ViewComponentManager.FragmentContextWrapper -> getFragmentManager(context.baseContext)
             else -> null
         }
-    }
-
-    fun setOnPaymentMethodSelected(listener: () -> Unit){
-        onPaymentMethodSelected = listener
     }
 }

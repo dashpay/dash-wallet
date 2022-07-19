@@ -41,11 +41,11 @@ class CryptoConvertItem @JvmOverloads constructor(
 ) : ConstraintLayout(context, attrs, defStyleAttr) {
     private val binding = ItemCyrptoConvertBinding.inflate(LayoutInflater.from(context), this)
 
-    var convertItemClickListener: ConvertItemClickListener? = null
+    private var convertItemClickListener: (() -> Unit)? = null
     init {
         obtainStyledAttributes(context, attrs, defStyleAttr)
         binding.itemConvertCl.setOnClickListener {
-            convertItemClickListener?.onConvertItemClickListener()
+            convertItemClickListener?.invoke()
         }
     }
 
@@ -116,8 +116,8 @@ class CryptoConvertItem @JvmOverloads constructor(
         binding.convertFromDashIcon.setImageDrawable(cryptoCurrencyIcon)
     }
 
-    interface ConvertItemClickListener {
-        fun onConvertItemClickListener()
+    fun setConvertItemClickListener(listener: () -> Unit) {
+        convertItemClickListener = listener
     }
 
     fun setIconConstraint(){

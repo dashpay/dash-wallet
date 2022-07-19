@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@color/background_secondary">
 
     <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/coinbase_buy_dialog_icon"

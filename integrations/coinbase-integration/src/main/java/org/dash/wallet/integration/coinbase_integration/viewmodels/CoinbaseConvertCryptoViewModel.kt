@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
+import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +32,8 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
@@ -46,7 +49,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     val userPreference: Configuration,
     private val walletDataProvider: WalletDataProvider,
     var exchangeRates: ExchangeRatesProvider,
-    var networkState: NetworkStateInt
+    var networkState: NetworkStateInt,
+    private val analyticsService: AnalyticsService
 ) : ConnectivityViewModel(networkState) {
     private val _userAccountsInfo: MutableLiveData<List<CoinBaseUserAccountDataUIModel>> = MutableLiveData()
 
@@ -164,6 +168,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     }
 
     fun getUserWalletAccounts(dashToCrypt: Boolean) {
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SELECT_COIN, bundleOf())
+
         val userAccountsWithBalanceList =
             if (dashToCrypt) {
                 _userAccountsInfo.value?.filter {
@@ -180,6 +186,10 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         } else {
             _userAccountsWithBalance.value = Event(userAccountsWithBalanceList)
         }
+    }
+
+    fun logEvent(eventName: String) {
+        analyticsService.logEvent(eventName, bundleOf())
     }
 
     private fun isValidCoinBaseAccount(

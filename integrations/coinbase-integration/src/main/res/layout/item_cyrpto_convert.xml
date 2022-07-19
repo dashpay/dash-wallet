@@ -32,7 +32,7 @@
 
         <TextView
             android:id="@+id/select_the_coin_title"
-            style="@style/Subtitle2"
+            style="@style/Body2.Medium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingStart="10dp"
