@@ -28,6 +28,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
+            android:textAlignment="gravity"
             android:layout_marginTop="10dp"
             android:text="@string/buy_dash" />
 
@@ -37,6 +38,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:gravity="center_horizontal"
+            android:textAlignment="gravity"
             android:text="@string/choose_your_payment_method" />
 
         <FrameLayout
