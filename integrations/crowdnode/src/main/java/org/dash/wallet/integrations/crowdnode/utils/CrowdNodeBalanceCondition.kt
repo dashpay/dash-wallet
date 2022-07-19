@@ -25,15 +25,15 @@ import org.dash.wallet.common.services.LeftoverBalanceException
 class CrowdNodeBalanceCondition {
     fun check(
         walletBalance: Coin,
-        address: Address,
+        address: Address?,
         amount: Coin,
         crowdNodeConfig: CrowdNodeConfig
     ) {
         runBlocking { // TODO: remove runBlocking when this class is used from Kotlin code only
             val crowdNodeBalance = crowdNodeConfig.getPreference(CrowdNodeConfig.LAST_BALANCE) ?: 0
-            val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(address.parameters)
+            val crowdNodeAddress = address?.let { CrowdNodeConstants.getCrowdNodeAddress(address.parameters) }
 
-            if (crowdNodeBalance <= 0 && address != crowdNodeAddress) {
+            if (crowdNodeBalance <= 0 && (address == null || address != crowdNodeAddress)) {
                 // If we're sending somewhere else and CrowdNode balance is 0,
                 // no need to check impediments
                 return@runBlocking

@@ -41,6 +41,7 @@ import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentConvertCurrencyBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
+import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -79,9 +80,10 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 viewModel.enteredConvertAmount,
                 binding.currencyOptions.pickedOption
             )?.let {
-                viewModel.onContinueEvent.value = Pair(
-                    viewModel.dashToCrypto.value ?: false,//dash -> coinbase
-                    it
+                viewModel.onContinueEvent.value = SwapRequest(
+                    viewModel.dashToCrypto.value ?: false,//dash -> coinbase,
+                    it.second,
+                    it.first
                 )
             }
         }

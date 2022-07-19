@@ -17,6 +17,7 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.util.GenericUtils
@@ -118,7 +119,7 @@ class TransferDashViewModel @Inject constructor(
         return config.spendingConfirmationEnabled
     }
 
-    fun createAddressForAccount() = viewModelScope.launch(Dispatchers.Main){
+    fun createAddressForAccount() = viewModelScope.launch {
         _loadingState.value = true
         when(val result = coinBaseRepository.createAddress()){
             is ResponseResource.Success -> {
@@ -138,19 +139,29 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
-    fun sendDash(dashValue: Coin,isEmptyWallet:Boolean) = viewModelScope.launch(Dispatchers.Main) {
-        _loadingState.value = true
-        _sendDashToCoinbaseState.value = withContext(Dispatchers.IO){
-            checkTransaction(dashValue,isEmptyWallet)
-        } ?: SendDashResponseState.UnknownFailureState
-        _loadingState.value = false
+    suspend fun sendDash(dashValue: Coin, isEmptyWallet: Boolean, checkConditions: Boolean) {
+        _sendDashToCoinbaseState.value = checkTransaction(dashValue, isEmptyWallet, checkConditions)
     }
 
-    private suspend fun checkTransaction(coin: Coin,isEmptyWallet:Boolean): SendDashResponseState{
+    suspend fun estimateNetworkFee(value: Coin, emptyWallet: Boolean): SendPaymentService.TransactionDetails {
+        return sendPaymentService.estimateNetworkFee(dashAddress, value, emptyWallet)
+    }
+
+    private suspend fun checkTransaction(
+        coin: Coin,
+        isEmptyWallet: Boolean,
+        checkConditions: Boolean
+    ): SendDashResponseState{
         return try {
-            val transaction = sendPaymentService.sendCoins(dashAddress, coin, emptyWallet = isEmptyWallet)
+            val transaction = sendPaymentService.sendCoins(
+                dashAddress, coin,
+                emptyWallet = isEmptyWallet,
+                checkBalanceConditions = checkConditions
+            )
             SendDashResponseState.SuccessState(transaction.isPending)
-        } catch (e: InsufficientMoneyException){
+        } catch(e: LeftoverBalanceException) {
+            throw e
+        } catch (e: InsufficientMoneyException) {
             e.printStackTrace()
             SendDashResponseState.InsufficientMoneyState
         } catch (e: Exception){
@@ -177,7 +188,7 @@ class TransferDashViewModel @Inject constructor(
     }
 
     private fun getUserData(){
-        viewModelScope.launch(Dispatchers.Main){
+        viewModelScope.launch {
             when(val response = coinBaseRepository.getExchangeRateFromCoinbase()){
                 is ResponseResource.Success -> {
                     val userData = response.value

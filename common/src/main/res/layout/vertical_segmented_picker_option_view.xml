@@ -31,6 +31,7 @@
         android:layout_marginVertical="2dp"
         android:layout_marginHorizontal="3dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:background="@drawable/bg_vertical_segment_rounded"
         tools:text="Option 1" />
 </FrameLayout>

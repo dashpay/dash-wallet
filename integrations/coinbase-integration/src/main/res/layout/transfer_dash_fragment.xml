@@ -98,7 +98,7 @@
 
     <TextView
         android:id="@+id/dash_wallet_limit_banner"
-        style="@style/Caption"
+        style="@style/Caption.White"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/system_red"
@@ -106,8 +106,6 @@
         android:textAlignment="gravity"
         android:paddingVertical="8dp"
         android:text="@string/dash_wallet_limit_description"
-        android:textColor="@color/dash_white"
-        android:textSize="12sp"
         android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@id/toolbar" />
 

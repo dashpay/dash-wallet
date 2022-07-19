@@ -133,7 +133,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
                 to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
             )
             setSpan(
-                context?.resources?.getColor(R.color.gray_900)
+                context?.resources?.getColor(R.color.content_primary)
                     ?.let { ForegroundColorSpan(it) },
                 from,
                 to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE

@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -33,8 +32,10 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
+import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapValueErrorType
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -61,7 +62,7 @@ class ConvertViewViewModel @Inject constructor(
     var minAllowedSwapAmount: String = "2"
 
     var maxForDashWalletAmount: String = "0"
-    val onContinueEvent = SingleLiveEvent<Pair<Boolean, Pair<Fiat?, Coin?>?>>()
+    val onContinueEvent = SingleLiveEvent<SwapRequest>()
 
     var minAllowedSwapDashCoin: Coin = Coin.ZERO
     private var maxForDashCoinBaseAccount: Coin = Coin.ZERO
@@ -180,7 +181,7 @@ class ConvertViewViewModel @Inject constructor(
     }
 
 
-    fun checkEnteredAmountValue(): SwapValueErrorType {
+    fun checkEnteredAmountValue(checkSendingConditions: Boolean): SwapValueErrorType {
         val coin = try {
             if (dashToCrypto.value == true) {
                 Coin.parseCoin(maxForDashWalletAmount)
@@ -195,10 +196,13 @@ class ConvertViewViewModel @Inject constructor(
             return when {
                 it.isZero -> SwapValueErrorType.NOError
                 (it == minAllowedSwapDashCoin || it.isGreaterThan(minAllowedSwapDashCoin)) &&
-                    coin.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.NO_ENOUGH_BALANCE
+                    coin.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.NotEnoughBalance
                 it.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.LessThanMin
                 it.isGreaterThan(coin) -> SwapValueErrorType.MoreThanMax.apply {
                     amount = maxCoinBaseAccountAmount
+                }
+                checkSendingConditions && !doesMeetSendingConditions(it) -> {
+                    SwapValueErrorType.SendingConditionsUnmet
                 }
                 else -> SwapValueErrorType.NOError
             }
@@ -227,6 +231,20 @@ class ConvertViewViewModel @Inject constructor(
 
         maxForDashWalletAmount = dashFormat.minDecimals(0)
             .optionalDecimals(0, 8).format(balance).toString()
+    }
+
+    private fun doesMeetSendingConditions(value: Coin): Boolean {
+        if (dashToCrypto.value != true) {
+            // No need to check
+            return true
+        }
+
+        return try {
+            walletDataProvider.checkSendingConditions(null, value)
+            true
+        } catch (ex: LeftoverBalanceException) {
+            false
+        }
     }
 
     override fun onCleared() {

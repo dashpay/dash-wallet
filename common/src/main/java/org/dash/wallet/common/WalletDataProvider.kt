@@ -62,5 +62,5 @@ interface WalletDataProvider {
     fun processDirectTransaction(tx: Transaction)
 
     @Throws(LeftoverBalanceException::class)
-    fun checkSendingConditions(address: Address, amount: Coin)
+    fun checkSendingConditions(address: Address?, amount: Coin)
 }
