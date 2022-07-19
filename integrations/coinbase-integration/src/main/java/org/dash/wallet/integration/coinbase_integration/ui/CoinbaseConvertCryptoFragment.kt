@@ -138,7 +138,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                         }
                     }
                 } else {
-                    if (pair.second?.second != null && viewModel.isInputGreaterThanLimit(pair.second?.second!!)) {
+                    if (pair.second?.second != null && viewModel.isInputGreaterThanLimit(pair.second?.second!!)&& convertViewModel.dashToCrypto.value == false) {
                         showSwapValueErrorView(SwapValueErrorType.UnAuthorizedValue)
                     } else {
                         selectedCoinBaseAccount?.let {
