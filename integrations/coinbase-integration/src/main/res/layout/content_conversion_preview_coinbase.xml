@@ -66,7 +66,7 @@
 
     <TextView
         android:id="@+id/input_account_hint_label"
-        style="@style/Caption.SteelGray700"
+        style="@style/Caption.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
@@ -86,7 +86,7 @@
 
     <TextView
         android:id="@+id/you_receive_label"
-        style="@style/Caption.SteelGray700"
+        style="@style/Caption.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
@@ -142,7 +142,7 @@
 
     <TextView
         android:id="@+id/output_account_hint_label"
-        style="@style/Caption.SteelGray700"
+        style="@style/Caption.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
@@ -162,7 +162,7 @@
 
     <TextView
         android:id="@+id/purchase_label"
-        style="@style/Caption.SteelGray700"
+        style="@style/Caption.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="46dp"
         android:gravity="center_vertical"
@@ -201,7 +201,7 @@
 
         <TextView
             android:id="@+id/coinbase_fee_label"
-            style="@style/Caption.SteelGray700"
+            style="@style/Caption.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="46dp"
             android:textAllCaps="true"
@@ -243,7 +243,7 @@
 
     <TextView
         android:id="@+id/total_label"
-        style="@style/Caption.SteelGray700"
+        style="@style/Caption.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="46dp"
         android:gravity="center_vertical"

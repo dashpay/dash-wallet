@@ -13,7 +13,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/space_medium"
             android:layout_marginTop="6dp"
-            style="@style/MontserratRegular.DB.12"/>
+            style="@style/Overline"/>
 
         <EditText
             android:id="@+id/report_issue_dialog_description"
@@ -23,11 +23,9 @@
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
             android:hint="@string/report_issue_dialog_description"
             android:inputType="text|textCapSentences|textMultiLine"
-            android:textSize="12sp"
-            android:textColor="@color/darkest_blue"
-            style="@style/MontserratRegular"/>
+            style="@style/Overline"/>
 
-        <de.schildbach.wallet.ui.widget.MontserratCheckBox
+        <de.schildbach.wallet.ui.widget.StyledCheckBox
             android:id="@+id/report_issue_dialog_collect_device_info"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -37,7 +35,7 @@
             android:text="@string/report_issue_dialog_collect_device_info"
             style="@style/OldCheckBox"/>
 
-        <de.schildbach.wallet.ui.widget.MontserratCheckBox
+        <de.schildbach.wallet.ui.widget.StyledCheckBox
             android:id="@+id/report_issue_dialog_collect_application_log"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -47,7 +45,7 @@
             android:text="@string/report_issue_dialog_collect_application_log"
             style="@style/OldCheckBox"/>
 
-        <de.schildbach.wallet.ui.widget.MontserratCheckBox
+        <de.schildbach.wallet.ui.widget.StyledCheckBox
             android:id="@+id/report_issue_dialog_collect_wallet_dump"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -57,7 +55,7 @@
             android:text="@string/report_issue_dialog_collect_wallet_dump"
             style="@style/OldCheckBox"/>
 
-        <de.schildbach.wallet.ui.widget.MontserratCheckBox
+        <de.schildbach.wallet.ui.widget.StyledCheckBox
             android:id="@+id/report_issue_dialog_collect_installed_packages"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

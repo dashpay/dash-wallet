@@ -26,12 +26,10 @@
 
     <TextView
         android:id="@+id/app_version_name"
-        style="@style/MontserratMedium"
+        style="@style/Headline6"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/about_text_margin"
-        android:textColor="@android:color/black"
-        android:textSize="20sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/dash_logo"
@@ -108,37 +106,36 @@
 
     <TextView
         android:id="@+id/fork_disclaimer"
-        style="@style/MontserratRegular.MG"
-        android:layout_width="wrap_content"
+        style="@style/Body1.Secondary"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="8dp"
+        android:layout_marginHorizontal="12dp"
         android:layout_marginTop="@dimen/about_text_margin"
-        android:layout_marginRight="8dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:text="@string/about_fork_disclaimer"
-        android:textSize="16sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/fcm_token" />
 
     <TextView
         android:id="@+id/github_link"
-        style="@style/MontserratRegular"
+        style="@style/Body2.Blue"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
         android:layout_marginTop="12dp"
         android:layout_marginEnd="32dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:text="@string/about_github_link"
-        android:textColor="@color/dash_blue"
-        android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/fork_disclaimer" />
 
     <TextView
         android:id="@+id/license"
+        style="@style/Body2.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="@dimen/about_button_margin"
@@ -149,6 +146,7 @@
 
     <TextView
         android:id="@+id/copyright"
+        style="@style/Body2.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="7dp"
@@ -157,21 +155,20 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <TextView
+    <Button
         android:id="@+id/contact_support"
-        style="@style/MontserratMedium.B"
+        style="@style/Button.Tertiary.Blue"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="@dimen/about_text_margin"
         android:text="@string/about_contact_support"
-        android:textSize="15sp"
         app:layout_constraintBottom_toTopOf="@+id/copyright"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/review_and_rate"
-        style="@style/NewMontserratButton.Primary"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="@dimen/about_button_margin"
@@ -183,12 +180,11 @@
         app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
-        style="@style/MontserratRegular.MG"
+        style="@style/Body1.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="@dimen/about_button_margin"
         android:text="@string/about_help_us_improve"
-        android:textSize="16sp"
         app:layout_constraintBottom_toTopOf="@+id/review_and_rate"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

@@ -25,37 +25,31 @@
 
         <TextView
             android:id="@+id/block_label"
-            style="@style/MontserratRegular"
+            style="@style/Overline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/block"
-            android:textColor="@color/dash_black"
-            android:textSize="12sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="0" />
 
         <TextView
             android:id="@+id/block_height"
-            style="@style/MontserratMedium"
+            style="@style/Body2.Medium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="5dp"
             android:layout_marginLeft="5dp"
-            android:textColor="@color/dash_black"
-            android:textSize="14sp"
             app:layout_constraintBottom_toBottomOf="@id/block_label"
             app:layout_constraintStart_toEndOf="@id/block_label"
             tools:text="112391" />
 
         <TextView
             android:id="@+id/transaction_in_block"
-            style="@style/MontserratRegular"
+            style="@style/Overline.Blue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="1dp"
-            android:textColor="@color/dash_blue"
-            android:textSize="12sp"
             android:visibility="gone"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/block_label"
@@ -77,13 +71,11 @@
 
     <TextView
         android:id="@+id/block_time"
-        style="@style/MontserratRegular"
+        style="@style/Overline.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="11dp"
         android:layout_marginRight="11dp"
-        android:textColor="@color/old_gray"
-        android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/arrow"
         app:layout_constraintTop_toTopOf="parent"

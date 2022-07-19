@@ -21,7 +21,7 @@ public abstract class ActivitiesTracker implements Application.ActivityLifecycle
         if (isTheFirstOne) {
             onStartedFirst(activity);
         }
-        onStartedAny(isTheFirstOne);
+        onStartedAny(isTheFirstOne, activity);
         numStarted++;
     }
 
@@ -63,7 +63,7 @@ public abstract class ActivitiesTracker implements Application.ActivityLifecycle
 
     }
 
-    protected void onStartedAny(boolean isTheFirstOne) {
+    protected void onStartedAny(boolean isTheFirstOne, Activity activity) {
 
     }
 }

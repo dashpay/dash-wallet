@@ -60,7 +60,6 @@
     <color name="content_tertiary">@color/dark_gray</color>
     <color name="content_disabled">#92929C</color>
     <color name="content_warning">@color/system_red</color>
-    <color name="light_gray">#DEDEE3</color>
     <color name="input_hint_gray">#c5c6c7</color>
 
     <!-- Background -->
@@ -71,6 +70,7 @@
     <color name="background_explore">@color/blue_700</color>
     <color name="background_accuracy_circle">#26008DE4</color>
     <color name="button_ripple_color">#1f000000</color>
+    <color name="button_ripple_light">#40B0B6BC</color>
     <color name="disabled_button_bg">#eeeeee</color>
     <color name="max_button_bg">#ebebeb</color>
     <color name="text_highlight_blue_bg">#14008DE4</color>
@@ -82,7 +82,7 @@
 
     <!-- Strokes -->
     <color name="divider_color">@color/extra_light_gray</color>
-    <color name="input_focused_stroke">#cce8fa</color>
+    <color name="input_focused_stroke">#33008DE4</color>
 
     <!-- Palette -->
     <color name="dash_blue">#008DE4</color>
@@ -91,6 +91,7 @@
     <color name="extra_dark_gray">#525C66</color>
     <color name="dark_gray">#75808A</color>
     <color name="gray">#B0B6BC</color>
+    <color name="light_gray">#CED2D5</color>
     <color name="extra_light_gray">#EBEDEE</color>
     <color name="system_red">#E85C4A</color>
     <color name="system_green">#3CB878</color>

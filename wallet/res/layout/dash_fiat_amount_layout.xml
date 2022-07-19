@@ -24,13 +24,11 @@
 
         <TextView
             android:id="@+id/input_value"
-            style="@style/MontserratRegular"
+            style="@style/Headline4.Regular"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:text="0.00"
-            android:textColor="@color/dash_black"
-            android:textSize="36sp" />
+            android:text="0.00" />
 
     </LinearLayout>
 
@@ -42,21 +40,17 @@
 
         <TextView
             android:id="@+id/fiat_symbol"
-            style="@style/MontserratRegular"
+            style="@style/Headline5.Regular.Tertiary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="$"
-            android:textColor="@color/dash_gray"
-            android:textSize="24sp" />
+            android:text="$" />
 
         <TextView
             android:id="@+id/fiat_value"
-            style="@style/MontserratRegular"
+            style="@style/Headline5.Regular.Tertiary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0.00"
-            android:textColor="@color/dash_gray"
-            android:textSize="24sp" />
+            android:text="0.00" />
 
     </LinearLayout>
 

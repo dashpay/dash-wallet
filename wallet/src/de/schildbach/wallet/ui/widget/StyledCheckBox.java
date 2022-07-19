@@ -23,23 +23,23 @@ import android.util.AttributeSet;
 
 import de.schildbach.wallet_test.R;
 
-public class MontserratCheckBox extends androidx.appcompat.widget.AppCompatCheckBox {
+public class StyledCheckBox extends androidx.appcompat.widget.AppCompatCheckBox {
 
-    public MontserratCheckBox(Context context) {
+    public StyledCheckBox(Context context) {
         super(context);
     }
 
-    public MontserratCheckBox(Context context, AttributeSet attrs) {
+    public StyledCheckBox(Context context, AttributeSet attrs) {
         super(context, attrs);
     }
 
-    public MontserratCheckBox(Context context, AttributeSet attrs, int defStyleAttr) {
+    public StyledCheckBox(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
 
     @Override
     protected void onFinishInflate() {
-        setTypeface(ResourcesCompat.getFont(getContext(), R.font.montserrat_medium));
+        setTypeface(ResourcesCompat.getFont(getContext(), R.font.inter_medium));
         super.onFinishInflate();
     }
 

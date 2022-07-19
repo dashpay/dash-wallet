@@ -24,24 +24,22 @@
 
 
         <TextView
-            style="@style/MontserratRegular"
+            style="@style/Headline6"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
+            android:textAlignment="gravity"
             android:layout_marginTop="10dp"
-            android:text="@string/buy_dash"
-            android:textColor="@color/dash_black"
-            android:textSize="22sp" />
+            android:text="@string/buy_dash" />
 
         <TextView
-            style="@style/TextViewStyle.Title"
+            style="@style/Body1.Secondary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:gravity="center_horizontal"
-            android:text="@string/choose_your_payment_method"
-            android:textColor="@color/dash_gray"
-            android:textSize="15sp" />
+            android:textAlignment="gravity"
+            android:text="@string/choose_your_payment_method" />
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -52,7 +50,7 @@
 
         <LinearLayout
             android:id="@+id/ll_credit_card"
-            style="@style/DashButton.White"
+            style="@style/Button.Primary.Large.White"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginLeft="16dp"
@@ -60,6 +58,7 @@
             android:layout_marginBottom="15dp"
             android:layout_marginRight="16dp"
             android:orientation="horizontal"
+            android:elevation="1dp"
             android:padding="10dp">
 
             <ImageView
@@ -69,20 +68,18 @@
                 android:background="@drawable/ic_creditcard" />
 
             <TextView
-                style="@style/TextViewStyle.Title"
+                style="@style/Body1.Secondary"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:text="@string/credit_card"
-                android:textColor="@color/dash_gray"
-                android:textSize="16sp" />
+                android:text="@string/credit_card" />
 
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/ll_cryptocurrency"
-            style="@style/DashButton.White"
+            style="@style/Button.Primary.Large.White"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginLeft="16dp"
@@ -91,6 +88,7 @@
             android:orientation="horizontal"
             android:padding="10dp"
             android:visibility="gone"
+            android:elevation="1dp"
             tools:visibility="visible">
 
             <ImageView
@@ -100,14 +98,12 @@
                 android:background="@drawable/ic_cryptocurrency" />
 
             <TextView
-                style="@style/TextViewStyle.Title"
+                style="@style/Body1.Secondary"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:text="@string/cryptocurrency"
-                android:textColor="@color/dash_gray"
-                android:textSize="16sp" />
+                android:text="@string/cryptocurrency" />
 
         </LinearLayout>
     </LinearLayout>

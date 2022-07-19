@@ -38,19 +38,17 @@
             app:layout_constraintTop_toBottomOf="@id/title"
             app:layout_constraintStart_toStartOf="parent"
             android:layout_marginTop="30dp"
-            style="@style/MontserratRegular"
+            style="@style/Button.Tertiary.Large.Blue"
             android:minWidth="96dp"
-            android:background="@android:color/transparent"
             android:text="@string/no_keep_it"
             app:layout_constraintWidth_default="percent"
             app:layout_constraintWidth_percent="0.5"
-            android:textColor="@color/dash_blue"
             android:textAllCaps="false"
             />
 
         <Button
             android:id="@+id/yes_cancel_button"
-            style="@style/DashButton.Blue"
+            style="@style/Button.Primary.Large.Blue"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"

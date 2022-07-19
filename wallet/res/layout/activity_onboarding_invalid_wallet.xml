@@ -25,10 +25,11 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            style="@style/DashButton.White"
             android:layout_marginTop="59dp"
             android:layout_marginBottom="59dp"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/SecondaryBackground">
 
             <ImageView
                 android:layout_width="wrap_content"
@@ -39,7 +40,7 @@
 
             <TextView
                 android:id="@+id/action_title"
-                style="@style/MontserratMedium.PageTitle"
+                style="@style/Headline6"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
@@ -49,7 +50,7 @@
 
             <TextView
                 android:id="@+id/action_message"
-                style="@style/MontserratMedium.B.12"
+                style="@style/Overline.Medium.Secondary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
@@ -57,21 +58,20 @@
                 android:layout_marginStart="15dp"
                 android:layout_marginEnd="15dp"
                 android:text="@string/wallet_not_encrypted_error_message"
-                android:textAlignment="center"
-                android:textColor="@color/dash_gray" />
+                android:textAlignment="center" />
 
         </LinearLayout>
 
         <Button
             android:id="@+id/unencrypted_contact_support"
-            style="@style/DashButton.Blue"
+            style="@style/Button.Primary.Large.Blue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/menu_contact_support_title" />
 
         <Button
             android:id="@+id/unencrypted_close_app"
-            style="@style/DashButton.Transparent"
+            style="@style/Button.Tertiary.Large.White"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"

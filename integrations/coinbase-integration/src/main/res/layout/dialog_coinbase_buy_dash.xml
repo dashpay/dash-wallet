@@ -18,7 +18,7 @@
 
     <TextView
         android:id="@+id/coinbase_buy_dialog_title"
-        style="@style/Headline5.Bold.Green"
+        style="@style/Headline5.Green"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"
