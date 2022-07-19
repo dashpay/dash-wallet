@@ -293,7 +293,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                     }
                 }
             } else {
-                if (request.amount != null && viewModel.isInputGreaterThanLimit(request.amount)) {
+                if (request.amount != null && viewModel.isInputGreaterThanLimit(request.amount) && !binding.convertView.dashToCrypto) {
                     showSwapValueErrorView(SwapValueErrorType.UnAuthorizedValue)
                 } else {
                     selectedCoinBaseAccount?.let {
