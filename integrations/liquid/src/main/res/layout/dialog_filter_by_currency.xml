@@ -18,7 +18,7 @@
 
 
     <TextView
-        style="@style/MontserratRegular.MG.14"
+        style="@style/Body2.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"

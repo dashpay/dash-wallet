@@ -30,7 +30,7 @@
         <item name="android:activityCloseExitAnimation">@anim/fade_out</item>
     </style>
 
-    <style name="VerifySeedTextView" parent="MontserratRegular">
+    <style name="VerifySeedTextView" parent="Body1.Blue">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginStart">14dp</item>
@@ -46,16 +46,13 @@
         <item name="android:paddingBottom">24dp</item>
         <item name="android:paddingStart">38dp</item>
         <item name="android:paddingEnd">38dp</item>
-        <item name="android:textColor">@color/colorPrimary</item>
-        <item name="android:textSize">17sp</item>
     </style>
 
-    <style name="VerifySeedWord" parent="MontserratRegular">
+    <style name="VerifySeedWord" parent="Body2.Blue">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_margin">@dimen/verify_seed_word_margin</item>
         <item name="android:gravity">center</item>
-        <item name="android:textColor">@color/colorPrimary</item>
         <item name="android:textSize">@dimen/verify_seed_word_text_size</item>
     </style>
 
@@ -76,7 +73,7 @@
         <item name="android:paddingBottom">14dp</item>
     </style>
 
-    <style name="VerifySeedWordButton" parent="NewMontserratButton.Primary">
+    <style name="VerifySeedWordButton" parent="Button.Primary.Large.Blue">
         <item name="android:background">@drawable/word_button_drawable</item>
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
@@ -118,6 +115,6 @@
         <item name="backgroundColor">@color/background_secondary</item>
         <item name="strokeColor">@color/background_secondary</item>
         <item name="rippleColor">@color/button_ripple_color</item>
-        <item name="cornerRadius">10dp</item>
+        <item name="cornerRadius">12dp</item>
     </style>
 </resources>

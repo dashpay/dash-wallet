@@ -15,14 +15,12 @@
         app:srcCompat="@drawable/ic_expand_less" />
 
     <TextView
-        style="@style/TextViewStyle.Title"
+        style="@style/Subtitle1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:gravity="center_horizontal"
-        android:text="@string/receive_title"
-        android:textColor="@color/dash_black"
-        android:textSize="18sp" />
+        android:text="@string/receive_title" />
 
     <FrameLayout
         android:layout_width="match_parent"

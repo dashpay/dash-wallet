@@ -40,7 +40,7 @@
         android:orientation="vertical">
 
         <TextView
-            style="@style/Headline5.Bold"
+            style="@style/Headline5"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="3dp"
@@ -115,7 +115,7 @@
 
         <TextView
             android:id="@+id/progress_message"
-            style="@style/Caption.SteelGray700"
+            style="@style/Caption.Secondary"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginTop="2dp"

@@ -16,14 +16,13 @@
         app:srcCompat="@drawable/ic_expand_less" />
 
     <TextView
-        style="@style/TextViewStyle.Title"
+        style="@style/Body1.Medium"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:gravity="center_horizontal"
-        android:text="@string/dialog_confirm_confirm"
-        android:textColor="@color/dash_black"
-        android:textSize="18sp" />
+        android:textAlignment="gravity"
+        android:text="@string/dialog_confirm_confirm" />
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -63,13 +62,11 @@
 
                 <TextView
                     android:id="@+id/input_value"
-                    style="@style/MontserratRegular"
+                    style="@style/Headline3.Regular"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
-                    android:text="0.00"
-                    android:textColor="@color/dash_black"
-                    android:textSize="36sp" />
+                    android:text="0.00" />
 
             </LinearLayout>
 
@@ -81,21 +78,17 @@
 
                 <TextView
                     android:id="@+id/fiat_symbol"
-                    style="@style/MontserratRegular"
+                    style="@style/Headline5.Regular.Tertiary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="$"
-                    android:textColor="@color/dash_gray"
-                    android:textSize="24sp" />
+                    android:text="$"/>
 
                 <TextView
                     android:id="@+id/fiat_value"
-                    style="@style/MontserratRegular"
+                    style="@style/Headline5.Regular.Tertiary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0.00"
-                    android:textColor="@color/dash_gray"
-                    android:textSize="24sp" />
+                    android:text="0.00" />
 
             </LinearLayout>
 
@@ -113,27 +106,22 @@
         android:paddingBottom="12dp">
 
         <TextView
-            style="@style/MontserratRegular"
+            style="@style/Body1.Tertiary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/dialog_confirm_pay_to"
-            android:textColor="@color/dash_gray"
-            android:textSize="16sp" />
+            android:text="@string/dialog_confirm_pay_to" />
 
         <TextView
             android:id="@+id/address"
-            style="@style/MontserratRegular"
+            style="@style/Body1"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:ellipsize="marquee"
             android:marqueeRepeatLimit="1"
-
             android:singleLine="true"
-            android:text="yZmdmsTnnMMXwfhTCP2bUZ5uo6qU8AsXnu"
-            android:textColor="@color/dash_black"
-            android:textSize="16sp" />
+            android:text="yZmdmsTnnMMXwfhTCP2bUZ5uo6qU8AsXnu" />
 
     </LinearLayout>
 
@@ -150,26 +138,22 @@
         tools:visibility="visible">
 
         <TextView
-            style="@style/MontserratRegular"
+            style="@style/Body1.Tertiary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/dialog_confirm_secured_by"
-            android:textColor="@color/dash_gray"
-            android:textSize="16sp" />
+            android:text="@string/dialog_confirm_secured_by" />
 
         <TextView
             android:id="@+id/payee_secured_by"
-            style="@style/MontserratRegular"
+            style="@style/Body1"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:singleLine="true"
             android:ellipsize="marquee"
             android:marqueeRepeatLimit="1"
-            android:text="Digital Signature Trust CO."
-            android:textColor="@color/dash_black"
-            android:textSize="16sp" />
+            android:text="Digital Signature Trust CO." />
 
     </LinearLayout>
 
@@ -183,13 +167,11 @@
         android:paddingBottom="12dp">
 
         <TextView
-            style="@style/MontserratRegular"
+            style="@style/Body1.Tertiary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/dialog_confirm_fee"
-            android:textColor="@color/dash_gray"
-            android:textSize="16sp" />
+            android:text="@string/dialog_confirm_fee" />
 
         <ImageView
             android:layout_width="12dp"
@@ -200,15 +182,13 @@
 
         <TextView
             android:id="@+id/transaction_fee"
-            style="@style/MontserratRegular"
+            style="@style/Body1"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_gravity="right"
             android:ellipsize="middle"
             android:singleLine="true"
-            android:text="0.0001"
-            android:textColor="@color/dash_black"
-            android:textSize="16sp" />
+            android:text="0.0001" />
 
     </LinearLayout>
 
@@ -222,13 +202,11 @@
         android:paddingBottom="12dp">
 
         <TextView
-            style="@style/MontserratRegular"
+            style="@style/Body1.Tertiary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/dialog_confirm_total"
-            android:textColor="@color/dash_gray"
-            android:textSize="16sp" />
+            android:text="@string/dialog_confirm_total" />
 
         <ImageView
             android:layout_width="12dp"
@@ -239,22 +217,20 @@
 
         <TextView
             android:id="@+id/total_amount"
-            style="@style/MontserratRegular"
+            style="@style/Body1"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_gravity="right"
             android:ellipsize="middle"
             android:singleLine="true"
             android:text="1.234"
-            android:textColor="@color/dash_black"
-            android:textSize="16sp"
             tools:ignore="HardcodedText" />
 
     </LinearLayout>
 
     <Button
         android:id="@+id/confirm_payment"
-        style="@style/DashButton.Blue"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"

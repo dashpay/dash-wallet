@@ -81,7 +81,7 @@
 
         <TextView
             android:id="@+id/search_title"
-            style="@style/Headline6.Bold"
+            style="@style/Headline6"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
