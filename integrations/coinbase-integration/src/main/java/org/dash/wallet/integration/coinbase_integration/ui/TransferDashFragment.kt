@@ -172,6 +172,19 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             )
         }
 
+        enterAmountToTransferViewModel.dashWalletNotSyncedCallback.observe(viewLifecycleOwner){
+            val dashAccountEmptyError = CoinbaseGenericErrorUIModel(
+                title = R.string.transfer_wallet_not_synced,
+                image = R.drawable.ic_info_red,
+                negativeButtonText = R.string.close
+            )
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    dashAccountEmptyError
+                )
+            )
+        }
+
         enterAmountToTransferViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner){
             val dashInStr = dashFormat.optionalDecimals(0,6).format(it.second)
             val amountFiat = dashFormat.format(it.first).toString()

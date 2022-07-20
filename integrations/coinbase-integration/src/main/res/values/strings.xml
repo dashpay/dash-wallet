@@ -85,6 +85,7 @@
     <string name="got_it">I got it</string>
     <string name="send_to_wallet_error">Cannot send this amount without going over application limit</string>
     <string name="dont_have_any_dash"> You don\'t have any Dash in your Dash Wallet.</string>
+    <string name="transfer_wallet_not_synced">Currently transfers are not possible because the wallet is not fully synced with the network</string>
     <string name="disconnected">Disconnected</string>
 
     <string name="insufficient_money_title">Not enough coins</string>
