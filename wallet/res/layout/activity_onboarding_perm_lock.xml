@@ -24,7 +24,7 @@
 
         <TextView
             android:id="@+id/action_title"
-            style="@style/MontserratMedium.PageTitle"
+            style="@style/Headline6"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
@@ -34,14 +34,14 @@
 
         <Button
             android:id="@+id/wipe_wallet"
-            style="@style/DashButton.Blue"
+            style="@style/Button.Primary.Large.Blue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/perm_lock_wipe_wallet" />
 
         <Button
             android:id="@+id/close_app"
-            style="@style/DashButton.Transparent"
+            style="@style/Button.Tertiary.Large.White"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"

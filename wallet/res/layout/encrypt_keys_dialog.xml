@@ -11,7 +11,7 @@
         android:layout_marginTop="@dimen/list_entry_padding_vertical"
         android:text="@string/encrypt_keys_dialog_message"
         android:layout_marginBottom="@dimen/space_medium"
-        style="@style/MontserratRegular.DB.12"/>
+        style="@style/Overline"/>
 
     <LinearLayout
         android:id="@+id/encrypt_keys_dialog_password_old_group"
@@ -30,7 +30,7 @@
             android:imeOptions="flagNoExtractUi"
             android:inputType="numberPassword"
             android:singleLine="true"
-            style="@style/MontserratMedium.DB.14"/>
+            style="@style/Body2.Medium"/>
 
         <TextView
             tools:visibility="visible"
@@ -41,8 +41,7 @@
             android:text="@string/private_key_bad_password"
             android:textColor="@color/fg_error"
             android:visibility="invisible"
-            android:textSize="@dimen/dialog_label_text_size"
-            style="@style/MontserratSemiBold"/>
+            style="@style/Overline.SemiBold.Red"/>
 
     </LinearLayout>
 
@@ -63,7 +62,7 @@
             android:imeOptions="flagNoExtractUi"
             android:inputType="numberPassword"
             android:singleLine="true"
-            style="@style/MontserratMedium.DB.14"/>
+            style="@style/Body2.Medium"/>
 
         <TextView
             tools:visibility="visible"
@@ -72,12 +71,11 @@
             android:layout_width="0px"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textSize="@dimen/dialog_label_text_size"
-            style="@style/MontserratSemiBold"/>
+            style="@style/Overline.SemiBold.Secondary"/>
 
     </LinearLayout>
 
-    <de.schildbach.wallet.ui.widget.MontserratCheckBox
+    <de.schildbach.wallet.ui.widget.StyledCheckBox
         android:id="@+id/encrypt_keys_dialog_show"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -94,8 +92,7 @@
         android:layout_height="wrap_content"
         android:textColor="@color/fg_error"
         android:visibility="gone"
-        android:textSize="@dimen/dialog_label_text_size"
-        style="@style/MontserratSemiBold"/>
+        style="@style/Overline.SemiBold.Red"/>
 
     <TextView
         android:layout_width="match_parent"
@@ -103,7 +100,7 @@
         android:layout_marginBottom="@dimen/list_entry_padding"
         android:layout_marginTop="@dimen/list_entry_padding"
         android:text="@string/encrypt_keys_dialog_warning"
-        style="@style/MontserratMedium.MG.12"/>
+        style="@style/Overline.Medium.Secondary"/>
 
     <de.schildbach.wallet.ui.widget.FingerprintView
         android:id="@+id/fingerprint_view"

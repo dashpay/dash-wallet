@@ -112,7 +112,6 @@ dependencies {
 
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
-    implementation 'com.jakewharton:process-phoenix:2.0.0'
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
@@ -177,7 +176,7 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 30
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70521
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70522
         versionName project.hasProperty('versionName') ? project.property('versionName') : "7.5.2"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']

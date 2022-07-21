@@ -9,7 +9,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="@dimen/dialog_text_content_spacing"
         android:text="@string/wallet_lock_unlock_dialog_message"
-        style="@style/MontserratRegular.DB.12"/>
+        style="@style/Overline"/>
 
     <LinearLayout
         android:layout_height="wrap_content"
@@ -23,12 +23,11 @@
             android:layout_width="0px"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textSize="@dimen/dialog_input_text_size"
             android:hint="@string/private_key_password"
             android:imeOptions="flagNoExtractUi"
             android:inputType="numberPassword"
             android:singleLine="true"
-            style="@style/MontserratMedium"/>
+            style="@style/Body2.Medium"/>
 
         <Button
             android:id="@+id/unlock"
@@ -36,7 +35,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/wallet_lock_unlock"
-            style="@style/MontserratButton"/>
+            style="@style/Button.Primary.Blue"/>
 
     </LinearLayout>
 
@@ -46,11 +45,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/private_key_bad_password"
-        android:textColor="@color/fg_error"
         android:layout_marginTop="2dp"
-        android:textSize="12sp"
         android:visibility="gone"
-        style="@style/MontserratSemiBold"/>
+        style="@style/Overline.SemiBold.Red"/>
 
     <de.schildbach.wallet.ui.widget.FingerprintView
         android:id="@+id/fingerprint_view"

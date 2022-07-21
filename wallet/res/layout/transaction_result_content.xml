@@ -386,8 +386,6 @@
             android:marqueeRepeatLimit="1"
             android:singleLine="true"
             android:text="Digital Signature Trust CO."
-            android:textColor="@color/dash_black"
-            android:textStyle="bold"
             tools:ignore="HardcodedText" />
     </LinearLayout>
 

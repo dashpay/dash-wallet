@@ -35,9 +35,9 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/address_preview_pane"
+        style="@style/Button.Tertiary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/selectable_background_dark"
         android:gravity="center"
         android:orientation="horizontal"
         android:paddingTop="12dp"
@@ -48,16 +48,15 @@
 
         <TextView
             android:id="@+id/address_preview"
-            style="@style/TitleTextView.Secondary"
+            style="@style/Overline.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="4dp"
             android:layout_marginRight="4dp"
             android:ellipsize="middle"
             android:gravity="center"
+            android:textAlignment="gravity"
             android:singleLine="true"
-            android:textColor="@color/dash_gray"
-            android:textSize="13sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
@@ -77,22 +76,18 @@
 
         <Button
             android:id="@+id/specify_amount_button"
-            style="@style/DashButton.Transparent"
+            style="@style/Button.Tertiary.Large.Blue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/selectable_background_dark"
             android:gravity="center"
-            android:text="@string/receive_enter_amount_button"
-            android:textColor="@color/dash_blue" />
+            android:text="@string/receive_enter_amount_button" />
 
         <Button
             android:id="@+id/share_button"
-            style="@style/DashButton.Transparent"
+            style="@style/Button.Tertiary.Large.Blue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/selectable_background_dark"
-            android:text="@string/receive_share_button"
-            android:textColor="@color/dash_blue" />
+            android:text="@string/receive_share_button" />
 
     </LinearLayout>
 

@@ -68,7 +68,7 @@
 
         <TextView
             android:id="@+id/action_title"
-            style="@style/MontserratMedium.PageTitle"
+            style="@style/Headline6"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
@@ -117,12 +117,12 @@
 
             <TextView
                 android:id="@+id/action_subtitle"
-                style="@style/MontserratMedium.BodyText"
+                style="@style/Body2.Medium.White"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:text="@string/wallet_lock_try_again"
-                android:textColor="@color/dash_white" />
+                android:textAlignment="gravity"
+                android:text="@string/wallet_lock_try_again" />
 
         </ViewFlipper>
 

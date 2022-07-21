@@ -148,9 +148,9 @@ class RadioButtonViewHolder(
         binding.additionalInfo.isVisible = !option.additionalInfo.isNullOrEmpty()
         binding.additionalInfo.text = option.additionalInfo
         if(!option.subtitleAdditionalInfo.isNullOrEmpty()){
-            TextViewCompat.setTextAppearance(  binding.additionalInfo, R.style.Body2_Gray900)
+            TextViewCompat.setTextAppearance(binding.additionalInfo, R.style.Body2)
         }else{
-            TextViewCompat.setTextAppearance(  binding.additionalInfo, R.style.Body2_Gray400)
+            TextViewCompat.setTextAppearance(binding.additionalInfo, R.style.Body2_Tertiary)
         }
 
         binding.additionalInfoSubtitle.isVisible = !option.subtitleAdditionalInfo.isNullOrEmpty()

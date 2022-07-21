@@ -48,8 +48,8 @@ open class CheckPinViewModel @Inject constructor(
         checkPinLiveData.checkPin(pin.toString())
     }
 
-    fun registerFailedAttempt(pin: String) {
-        pinRetryController.failedAttempt(pin)
+    fun isLockedAfterAttempt(pin: String): Boolean {
+        return pinRetryController.failedAttempt(pin)
     }
 
     fun getLockedMessage(resources: Resources): String {
@@ -62,5 +62,13 @@ open class CheckPinViewModel @Inject constructor(
 
     fun resetFailedPinAttempts() {
         pinRetryController.clearPinFailPrefs()
+    }
+
+    fun getRemainingAttempts(): Int {
+        return pinRetryController.remainingAttempts
+    }
+
+    fun getFailCount(): Int {
+        return pinRetryController.failCount()
     }
 }

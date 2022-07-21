@@ -41,6 +41,7 @@ import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentConvertCurrencyBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
+import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
 import java.math.BigDecimal
 import java.math.RoundingMode
