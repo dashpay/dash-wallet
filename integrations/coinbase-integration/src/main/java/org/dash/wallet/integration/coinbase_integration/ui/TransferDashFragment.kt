@@ -159,30 +159,24 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 fiatVal)
         }
 
-        enterAmountToTransferViewModel.dashWalletEmptyCallback.observe(viewLifecycleOwner){
-            val dashAccountEmptyError = CoinbaseGenericErrorUIModel(
-                title = R.string.dont_have_any_dash,
-                image = R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    dashAccountEmptyError
-                )
-            )
+        enterAmountToTransferViewModel.dashWalletEmptyCallback.observe(viewLifecycleOwner) {
+            AdaptiveDialog.create(
+                R.drawable.ic_info_red,
+                getString(R.string.dont_have_any_dash),
+                "",
+                "",
+                getString(R.string.close)
+            ).show(requireActivity()) { }
         }
 
-        enterAmountToTransferViewModel.dashWalletNotSyncedCallback.observe(viewLifecycleOwner){
-            val dashAccountEmptyError = CoinbaseGenericErrorUIModel(
-                title = R.string.transfer_wallet_not_synced,
-                image = R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    dashAccountEmptyError
-                )
-            )
+        enterAmountToTransferViewModel.dashWalletNotSyncedCallback.observe(viewLifecycleOwner) {
+            AdaptiveDialog.create(
+                R.drawable.ic_info_red,
+                getString(R.string.transfer_wallet_not_synced),
+                "",
+                "",
+                getString(R.string.close)
+            ).show(requireActivity()) { }
         }
 
         enterAmountToTransferViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner){

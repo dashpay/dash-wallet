@@ -170,12 +170,14 @@ class EnterAmountToTransferViewModel @Inject constructor(
                 (inputValue.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
 
     fun setOnTransferDirectionListener(walletToCoinbase: Boolean) {
-        if (!walletToCoinbase && dashBalanceInWalletState.value.isZero) {
-            dashWalletEmptyCallback.call()
-            return
-        }
+        // the blockchain must be synced
         if (_isBlockchainSynced.value != true) {
             dashWalletNotSyncedCallback.call()
+            return
+        }
+        // there must be a non-zero balance
+        if (!walletToCoinbase && dashBalanceInWalletState.value.isZero) {
+            dashWalletEmptyCallback.call()
             return
         }
         _isTransferFromWalletToCoinbase.value = !walletToCoinbase
