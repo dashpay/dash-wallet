@@ -123,7 +123,7 @@ public class WalletTransactionsFragment extends Fragment {
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
         recyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
-            private final int VERTICAL = 3 * getResources().getDimensionPixelOffset(R.dimen.card_padding_vertical);
+            private final int VERTICAL = getResources().getDimensionPixelOffset(R.dimen.default_vertical_padding);
             private final int HORIZONTAL = getResources().getDimensionPixelOffset(R.dimen.default_horizontal_padding);
 
             @Override

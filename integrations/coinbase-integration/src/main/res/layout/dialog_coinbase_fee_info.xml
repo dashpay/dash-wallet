@@ -49,7 +49,7 @@
             app:layout_constraintTop_toBottomOf="@id/coinbase_fee_info_title"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            style="@style/Caption.SteelGray700"
+            style="@style/Caption.Secondary"
             android:layout_marginTop="5dp"
             android:textSize="12sp"
             android:text="@string/coinbase_fee_info_msg_content"

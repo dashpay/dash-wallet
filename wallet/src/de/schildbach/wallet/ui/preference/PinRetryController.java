@@ -5,8 +5,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 
-import com.jakewharton.processphoenix.ProcessPhoenix;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,7 +77,11 @@ public class PinRetryController {
     }
 
     @SuppressLint("ApplySharedPref")
-    public void failedAttempt(String pin) {
+
+    /**
+     * @return true if the wallet should be locked out due to excessive incorrect PIN attempts
+     */
+    public boolean failedAttempt(String pin) {
         long secureTime = prefs.getLong(PREFS_SECURE_TIME, 0);
         Set<String> storedFailedPins = prefs.getStringSet(PREFS_FAILED_PINS, new HashSet<String>());
         Set<String> failedPins = new HashSet<>(storedFailedPins);
@@ -95,14 +97,16 @@ public class PinRetryController {
             if (failCount >= FAIL_LIMIT) {
                 prefsEditor.commit();
                 // wallet permanently locked, restart the app and show wallet disabled screen
-                ProcessPhoenix.triggerRebirth(WalletApplication.getInstance());
-                return;
+                // the caller needs to handle the app restart
+                return true;
             } else {
                 prefsEditor.putLong(PREFS_FAIL_HEIGHT, secureTime + System.currentTimeMillis());
             }
 
             prefsEditor.commit();
         }
+
+        return false;
     }
 
     public String getWalletTemporaryLockedMessage(Resources resources) {

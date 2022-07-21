@@ -91,7 +91,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
     private fun setPurchaseError() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_failed)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         val errorMessage = arguments?.getString(ARG_MESSAGE)
         if (errorMessage.isNullOrEmpty()){
             binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
@@ -116,7 +116,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
             else -> binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
         }
 
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         binding.buyDialogContactCoinbaseSupport.isVisible = true
         binding.coinbaseBuyDialogNegativeButton.isVisible = true
         binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)
@@ -125,7 +125,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
     private fun setDepositSuccess() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_successful)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Green)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
         binding.coinbaseBuyDialogMessage.setText(R.string.it_could_take_up_to_2_3_minutes)
         binding.buyDialogContactCoinbaseSupport.isGone = true
         binding.coinbaseBuyDialogNegativeButton.isGone = true
@@ -136,7 +136,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_failed)
         binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         binding.buyDialogContactCoinbaseSupport.isVisible = true
         binding.coinbaseBuyDialogNegativeButton.isVisible = true
         binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)
@@ -147,7 +147,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_failed)
         binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         binding.buyDialogContactCoinbaseSupport.isVisible = true
         binding.coinbaseBuyDialogNegativeButton.isVisible = true
         binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)
@@ -156,7 +156,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
     private fun setConversionSuccess() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_successful)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Green)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
         binding.coinbaseBuyDialogMessage.setText(R.string.it_could_take_up_to_5_minutes)
         binding.buyDialogContactCoinbaseSupport.isGone = true
         binding.coinbaseBuyDialogNegativeButton.isGone = true
@@ -166,7 +166,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
     private fun setTransferDashSuccess() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
         binding.coinbaseBuyDialogTitle.setText(R.string.transfer_dash_successful)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Green)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
         binding.coinbaseBuyDialogMessage.setText(R.string.it_could_take_up_to_10_minutes)
         binding.buyDialogContactCoinbaseSupport.isGone = true
         binding.coinbaseBuyDialogNegativeButton.isGone = true
@@ -184,7 +184,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
             else -> binding.coinbaseBuyDialogMessage.text = errorMessage
         }
 
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         binding.buyDialogContactCoinbaseSupport.isVisible = true
         binding.coinbaseBuyDialogNegativeButton.isVisible = true
         binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)

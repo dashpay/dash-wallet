@@ -28,23 +28,24 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:textAlignment="gravity"
             android:layout_marginBottom="@dimen/list_entry_padding"
             android:layout_marginTop="@dimen/list_entry_padding"
             android:gravity="left"
-            style="@style/MontserratMedium.DB"
-            android:textSize="@dimen/font_size_normal" />
+            style="@style/Body1.Medium" />
 
         <TextView
             android:id="@+id/wallet_address_dialog_hint"
             android:layout_width="@dimen/bitmap_dialog_qr_size"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
+            android:textAlignment="gravity"
             android:layout_marginBottom="@dimen/list_entry_padding_vertical"
             android:paddingLeft="@dimen/list_entry_padding_horizontal"
             android:paddingRight="@dimen/list_entry_padding_horizontal"
             android:text="@string/wallet_address_dialog_fragment_hint"
             android:textColor="@color/fg_less_significant"
-            style="@style/MontserratRegular.DB.12" />
+            style="@style/Overline" />
 
     </LinearLayout>
 

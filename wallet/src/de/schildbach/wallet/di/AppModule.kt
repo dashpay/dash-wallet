@@ -26,6 +26,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.AppRestartService
+import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
 import de.schildbach.wallet.ui.send.ConfirmTransactionLauncher
@@ -75,4 +77,9 @@ abstract class AppModule {
     abstract fun bindNotificationService(
         notificationService: NotificationManagerWrapper
     ): NotificationService
+
+    @Binds
+    abstract fun bindRestartService(
+        restartService: AppRestartService
+    ): RestartService
 }

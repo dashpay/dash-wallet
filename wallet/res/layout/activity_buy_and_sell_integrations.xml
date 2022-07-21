@@ -45,14 +45,12 @@
                     app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
 
                 <TextView
-                    style="@style/Headline6.Bold"
+                    style="@style/Headline5.White"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="15dp"
                     android:layout_marginTop="5dp"
-                    android:text="@string/menu_buy_and_sell_title"
-                    android:textColor="@android:color/white"
-                    android:textSize="24sp" />
+                    android:text="@string/menu_buy_and_sell_title" />
 
                 <TextView
                     android:id="@+id/select_a_service_to_buy_and_sell_dash"
@@ -61,8 +59,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="15dp"
                     android:layout_marginTop="10dp"
-                    android:text="@string/select_a_service_to_buy_and_sell_dash"
-                    android:textSize="14sp" />
+                    android:text="@string/select_a_service_to_buy_and_sell_dash" />
             </LinearLayout>
         </com.google.android.material.appbar.CollapsingToolbarLayout>
     </com.google.android.material.appbar.AppBarLayout>

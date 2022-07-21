@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.crowdnode
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -110,6 +111,26 @@ class CrowdNodeViewModelTest {
             val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock, mock())
             viewModel.deposit(partial, false)
             verify(api).deposit(partial, emptyWallet = false, checkBalanceConditions = false)
+        }
+    }
+
+    @Test
+    fun recheckState_accountAddressIsSame() {
+        runBlocking {
+            api.stub {
+                onBlocking { restoreStatus() } doReturn Unit
+                on { accountAddress } doReturn null
+            }
+            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock, mock())
+            val address = Address.fromBase58(TestNet3Params.get(), "yjMvPFucZWPZXKBaEDxHzZrm5Px44UhgJs")
+            api.stub {
+                on { accountAddress } doReturn address
+            }
+
+            viewModel.recheckState()
+
+            verify(api).restoreStatus()
+            assertEquals(address, viewModel.accountAddress.value)
         }
     }
 }
