@@ -37,6 +37,7 @@ class CoinBaseWebClientActivity : InteractionAwareActivity() {
         binding = ActivityLoginWebviewBinding.inflate(layoutInflater)
         setContentView(binding.root)
         initUI()
+        turnOffAutoLogout()
     }
     @SuppressLint("SetJavaScriptEnabled")
     private fun initUI() {
@@ -79,6 +80,11 @@ class CoinBaseWebClientActivity : InteractionAwareActivity() {
                 "&account=all"
 
         binding.webView.loadUrl(loginUrl)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        turnOnAutoLogout()
     }
 
     override fun onPause() {
