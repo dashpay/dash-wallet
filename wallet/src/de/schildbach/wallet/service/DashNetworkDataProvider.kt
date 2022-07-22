@@ -120,17 +120,17 @@ class DashNetworkDataProvider @Inject constructor(val walletDataProvider: Wallet
             // Block Reward Realocation is not activated yet, nothing to do
             return ret
         }
-        val nSuperblockCycle = params.superblockCycle
+        val superblockCycle = params.superblockCycle
         // Actual realocation starts in the cycle next to one activation happens in
-        val nReallocStart =
-            brrHeight - brrHeight % nSuperblockCycle + nSuperblockCycle
-        if (height < nReallocStart) {
+        val reallocStart =
+            brrHeight - brrHeight % superblockCycle + superblockCycle
+        if (height < reallocStart) {
             // Activated but we have to wait for the next cycle to start realocation, nothing to do
             return ret
         }
-        val nReallocCycle = nSuperblockCycle * 3
+        val reallocCycle = superblockCycle * 3
         val nCurrentPeriod: Int =
-            min((height - nReallocStart) / nReallocCycle, periods.size - 1)
+            min((height - reallocStart) / reallocCycle, periods.size - 1)
         return blockValue.multiply(periods[nCurrentPeriod].toLong()).div(1000)
     }
 
