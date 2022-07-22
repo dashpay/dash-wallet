@@ -32,6 +32,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.NetworkDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.ExchangeRatesProvider
@@ -57,7 +58,8 @@ class CrowdNodeViewModel @Inject constructor(
     private val crowdNodeApi: CrowdNodeApi,
     private val clipboardManager: ClipboardManager,
     exchangeRatesProvider: ExchangeRatesProvider,
-    val analytics: AnalyticsService
+    val analytics: AnalyticsService,
+    private val networkDataProvider: NetworkDataProvider
 ) : ViewModel() {
     companion object {
         const val URL_ARG = "url"
@@ -349,5 +351,13 @@ class CrowdNodeViewModel @Inject constructor(
     private suspend fun resetAddressAndApi() {
         _accountAddress.value = createNewAccountAddress()
         crowdNodeApi.reset()
+    }
+
+    fun getMasternodeAPY(): Double {
+        return networkDataProvider.getMasternodeAPY()
+    }
+
+    fun getCrowdNodeAPY() : Double {
+        return 0.85 * getMasternodeAPY()
     }
 }

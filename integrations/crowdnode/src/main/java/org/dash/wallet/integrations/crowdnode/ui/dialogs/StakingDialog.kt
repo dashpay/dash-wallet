@@ -21,14 +21,20 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.activityViewModels
+import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.DialogStakingBinding
+import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
+import java.util.*
 
-class StakingDialog: OffsetDialogFragment() {
+@AndroidEntryPoint
+class StakingDialog : OffsetDialogFragment() {
     private val binding by viewBinding(DialogStakingBinding::bind)
+    val viewModel by activityViewModels<CrowdNodeViewModel>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_staking, container, false)
@@ -37,9 +43,17 @@ class StakingDialog: OffsetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.stakingMessage.text = getString(
+        binding.stakingMessageTwo.text = getString(
+            R.string.crowdnode_staking_info_message_second,
+            String.format(Locale.getDefault(), "%.1f", viewModel.getMasternodeAPY())
+        )
+        binding.stakingFirstMinDepositMessage.text = getString(
             R.string.crowdnode_staking_info_message,
             CrowdNodeConstants.DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
+        )
+        binding.stakingApyTitle.text = getString(
+            R.string.crowdnode_staking_apy_title,
+            String.format(Locale.getDefault(), "%.1f", viewModel.getCrowdNodeAPY())
         )
     }
 }
