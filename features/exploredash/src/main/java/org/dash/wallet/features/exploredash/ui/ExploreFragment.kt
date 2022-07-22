@@ -29,6 +29,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentExploreBinding
+import java.util.*
 
 @AndroidEntryPoint
 @FlowPreview
@@ -58,5 +59,10 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
             viewModel.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY)
             viewModel.openStaking()
         }
+
+        binding.stakingApy.text = getString(
+            R.string.explore_staking_current_apy,
+            String.format(Locale.getDefault(), "%.1f", viewModel.getCrowdNodeAPY())
+        )
     }
 }

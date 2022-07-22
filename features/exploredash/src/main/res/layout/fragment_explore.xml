@@ -178,7 +178,7 @@
                     android:id="@+id/staking_btn"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="?attr/selectableItemBackground"
+                    android:background="@color/tx_received_background"
                     android:clickable="true"
                     android:focusable="true"
                     android:paddingTop="10dp"
@@ -215,6 +215,34 @@
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="@+id/staking_title"
                         app:layout_constraintTop_toBottomOf="@+id/staking_title" />
+
+                    <LinearLayout
+                        android:id="@+id/staking_explainer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="5dp"
+                        android:gravity="center"
+                        app:layout_constraintStart_toStartOf="@id/staking_subtitle"
+                        app:layout_constraintTop_toBottomOf="@id/staking_subtitle"
+                        android:background="@drawable/round_corners_green_10">
+
+                        <ImageView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:src="@drawable/ic_circle_green_percent" />
+
+                        <TextView
+                            android:id="@+id/staking_apy"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:textColor="@color/system_green"
+                            android:text="@string/explore_staking_current_apy"
+                            tools:text="Current APY = 6.9%"
+                            />
+                    </LinearLayout>
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>

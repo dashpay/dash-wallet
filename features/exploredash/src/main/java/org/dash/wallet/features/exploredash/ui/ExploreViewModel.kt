@@ -28,6 +28,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import org.dash.wallet.common.data.NetworkDataProvider
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
@@ -81,7 +82,8 @@ class ExploreViewModel @Inject constructor(
     private val exploreData: ExploreDataSource,
     private val locationProvider: UserLocationStateInt,
     private val syncStatusService: DataSyncStatusService,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    private val networkDataProvider: NetworkDataProvider
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -837,5 +839,9 @@ class ExploreViewModel @Inject constructor(
 
     fun logEvent(event: String) {
         analyticsService.logEvent(event, bundleOf())
+    }
+
+    fun getCrowdNodeAPY() : Double {
+        return 0.85 * networkDataProvider.getMasternodeAPY()
     }
 }
