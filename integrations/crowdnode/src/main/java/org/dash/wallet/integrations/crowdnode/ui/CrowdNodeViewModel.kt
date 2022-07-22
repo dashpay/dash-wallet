@@ -331,6 +331,17 @@ class CrowdNodeViewModel @Inject constructor(
         crowdNodeApi.setOnlineAccountCreated()
     }
 
+    suspend fun shouldShowWithdrawalLimitsInfo(): Boolean {
+        val isShown = config.getPreference(CrowdNodeConfig.WITHDRAWAL_LIMITS_SHOWN) ?: false
+        return !crowdNodeApi.hasAnyDeposits() && !isShown
+    }
+
+    fun triggerWithdrawalLimitsShown() {
+        viewModelScope.launch {
+            config.setPreference(CrowdNodeConfig.WITHDRAWAL_LIMITS_SHOWN, true)
+        }
+    }
+
     fun logEvent(eventName: String) {
         analytics.logEvent(eventName, bundleOf())
     }

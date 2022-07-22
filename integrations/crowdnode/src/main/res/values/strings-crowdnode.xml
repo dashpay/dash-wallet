@@ -120,7 +120,16 @@
     <string name="shuffle_coins">Shuffle Coins</string>
     <string name="positive_balance_required">You should have a positive balance on Dash Wallet</string>
     <string name="withdrawal_required_balance">Deposit at least 0.0003 Dash on your Dash Wallet to complete a withdrawal</string>
+    <string name="crowdnode_withdrawal_limits_title">CrowdNode withdrawal limits</string>
+    <string name="crowdnode_withdrawal_limits_message">Due to CrowdNode’s terms of service users can withdraw no more than:</string>
+    <string name="per_transaction">per transaction</string>
+    <string name="per_hour">per hour</string>
+    <string name="per_day">per 24 hours</string>
 
+
+    <string name="crowdnode_limit_per_transaction" translatable="false">15</string>
+    <string name="crowdnode_limit_per_hour" translatable="false">30</string>
+    <string name="crowdnode_limit_per_day" translatable="false">60</string>
     <string name="crowdnode_website" translatable="false">https://crowdnode.io/</string>
     <string name="crowdnode_terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>
     <string name="crowdnode_privacy_policy_url" translatable="false">https://crowdnode.io/privacy/</string>

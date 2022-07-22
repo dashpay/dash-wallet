@@ -346,7 +346,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             OnlineAccountDetailsDialog().show(parentFragmentManager, "online_account_details")
         } else {
             AdaptiveDialog.create(
-                R.drawable.ic_info_blue_encircled,
+                R.drawable.ic_info_blue,
                 getString(R.string.crowdnode_your_address_title),
                 viewModel.accountAddress.value?.toBase58() ?: "",
                 getString(R.string.button_close),

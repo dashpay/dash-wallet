@@ -158,6 +158,8 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 continueTransfer(pair.first, args.withdraw)
             }
         }
+
+        showWithdrawalLimitsInfo()
     }
 
     private fun setupWithdraw() {
@@ -315,5 +317,23 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             .setInterpolator(decayingSineWave)
             .setDuration(300)
             .start()
+    }
+
+    private fun showWithdrawalLimitsInfo() {
+        lifecycleScope.launch {
+            if (viewModel.shouldShowWithdrawalLimitsInfo()) {
+                val result = AdaptiveDialog.custom(
+                    R.layout.dialog_withdrawal_limits,
+                    null,
+                    getString(R.string.crowdnode_withdrawal_limits_title),
+                    getString(R.string.crowdnode_withdrawal_limits_message),
+                    getString(android.R.string.ok)
+                ).showAsync(requireActivity())
+
+                if (result == false) {
+                    viewModel.triggerWithdrawalLimitsShown()
+                }
+            }
+        }
     }
 }
