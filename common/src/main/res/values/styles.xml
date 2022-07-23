@@ -1121,4 +1121,10 @@
         <item name="backgroundColor">@android:color/transparent</item>
         <item name="strokeColor">@android:color/transparent</item>
     </style>
+
+    <style name="RoundedTextView">
+        <item name="cornerRadius">6dp</item>
+        <item name="backgroundColor">@color/system_green_0.1</item>
+        <item name="strokeColor">@color/system_green_0.1</item>
+    </style>
 </resources>
