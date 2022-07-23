@@ -121,7 +121,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.data.BlockchainState;
+import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 import de.schildbach.wallet.ui.OnboardingActivity;

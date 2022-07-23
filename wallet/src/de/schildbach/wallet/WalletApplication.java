@@ -115,7 +115,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import dagger.hilt.android.HiltAndroidApp;
-import de.schildbach.wallet.data.BlockchainState;
+import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;

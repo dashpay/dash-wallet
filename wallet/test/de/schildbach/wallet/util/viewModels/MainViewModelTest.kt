@@ -21,7 +21,7 @@ import android.content.ClipDescription
 import android.content.ClipboardManager
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.SavedStateHandle
-import de.schildbach.wallet.data.BlockchainState
+import org.dash.wallet.common.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.ui.main.MainViewModel
