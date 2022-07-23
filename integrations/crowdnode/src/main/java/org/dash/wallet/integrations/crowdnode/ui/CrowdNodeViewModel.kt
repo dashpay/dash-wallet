@@ -354,7 +354,12 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     fun getMasternodeAPY(): Double {
-        return blockchainStateProvider.getMasternodeAPY()
+        val apy = blockchainStateProvider.getMasternodeAPY()
+        return if (apy != 0.0) {
+            apy
+        } else {
+            blockchainStateProvider.getLastMasternodeAPY()
+        }
     }
 
     fun getCrowdNodeAPY() : Double {
