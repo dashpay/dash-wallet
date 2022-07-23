@@ -217,7 +217,7 @@
                         app:layout_constraintTop_toBottomOf="@+id/staking_title" />
 
                     <LinearLayout
-                        android:id="@+id/staking_explainer"
+                        android:id="@+id/staking_apy_container"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"

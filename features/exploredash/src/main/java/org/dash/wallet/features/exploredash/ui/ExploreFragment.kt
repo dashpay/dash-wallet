@@ -19,6 +19,7 @@ package org.dash.wallet.features.exploredash.ui
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
@@ -60,9 +61,28 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
             viewModel.openStaking()
         }
 
-        binding.stakingApy.text = getString(
-            R.string.explore_staking_current_apy,
-            String.format(Locale.getDefault(), "%.1f", viewModel.getCrowdNodeAPY())
-        )
+        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) {
+            if (it == true) {
+                // update the APY when the blockchain is synced
+                setAPY(viewModel.getCrowdNodeAPY())
+            }
+        }
+
+        // load the last APY value
+        setAPY(viewModel.getLastCrowdNodeAPY())
+        viewModel.monitorBlockchainState()
+    }
+
+    fun setAPY(apy: Double) {
+        if (apy != 0.0) {
+            binding.stakingApyContainer.isVisible = true
+            binding.stakingApy.text = getString(
+                R.string.explore_staking_current_apy,
+                String.format(Locale.getDefault(), "%.1f", apy)
+            )
+        } else {
+            // hide the APY container if we don't have a value yet
+            binding.stakingApyContainer.isVisible = false
+        }
     }
 }

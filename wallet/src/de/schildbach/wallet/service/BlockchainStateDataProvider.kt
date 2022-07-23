@@ -1,32 +1,42 @@
-/*
- * Copyright 2022 Dash Core Group.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package de.schildbach.wallet.service
 
+import de.schildbach.wallet.data.BlockchainStateDao
+import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Block
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.NetworkDataProvider
+import org.dash.wallet.common.data.BlockchainState
+import org.dash.wallet.common.services.BlockchainStateProvider
 import javax.inject.Inject
 import kotlin.math.min
 
-class DashNetworkDataProvider @Inject constructor(val walletDataProvider: WalletDataProvider) :
-    NetworkDataProvider {
+/**
+ * Blockchain state data provider
+ *
+ * @property blockchainStateDao
+ * @property walletDataProvider is used to determine the network parameters and DashJ Context
+ * @property configuration is used to save some information
+ *
+ */
+
+class BlockchainStateDataProvider @Inject constructor(
+    private val blockchainStateDao: BlockchainStateDao,
+    private val walletDataProvider: WalletDataProvider,
+    private val configuration: Configuration
+) : BlockchainStateProvider {
+    override suspend fun getState(): BlockchainState? {
+        return blockchainStateDao.loadSync()
+    }
+
+    override fun observeState(): Flow<BlockchainState?> {
+        return blockchainStateDao.observeState()
+    }
+
+    override fun getLastMasternodeAPY(): Double {
+        return configuration.prefsKeyCrowdNodeStakingApy.toDouble()
+    }
 
     override fun getMasternodeAPY(): Double {
         val masternodeListManager = walletDataProvider.wallet?.context?.masternodeListManager
@@ -35,15 +45,18 @@ class DashNetworkDataProvider @Inject constructor(val walletDataProvider: Wallet
             val mnlist = masternodeListManager.listAtChainTip
             if (mnlist.height != 0L) {
                 val prevBlock = mnlist.storedBlock.getPrev(blockChain.blockStore)
-                return getMasternodeAPY(
-                    walletDataProvider.wallet!!.params,
-                    mnlist.storedBlock.height,
-                    prevBlock.header.difficultyTarget,
-                    mnlist.validMNsCount
-                )
+                if (prevBlock != null) {
+                    val apy = getMasternodeAPY(
+                        walletDataProvider.wallet!!.params,
+                        mnlist.storedBlock.height,
+                        prevBlock.header.difficultyTarget,
+                        mnlist.validMNsCount
+                    )
+                    configuration.prefsKeyCrowdNodeStakingApy = apy.toFloat()
+                }
             }
         }
-        return 0.00
+        return configuration.prefsKeyCrowdNodeStakingApy.toDouble()
     }
 
     private val periods = arrayListOf(
@@ -69,6 +82,9 @@ class DashNetworkDataProvider @Inject constructor(val walletDataProvider: Wallet
     )
 
     // this could very well be a part of DashJ
+    // the masternode APY will
+    // * decrease by about 7% per year
+    // * increase every three months according to the periods list above
     private fun getMasternodePayment(
         params: NetworkParameters,
         height: Int,
@@ -121,7 +137,7 @@ class DashNetworkDataProvider @Inject constructor(val walletDataProvider: Wallet
             return ret
         }
         val superblockCycle = params.superblockCycle
-        // Actual realocation starts in the cycle next to one activation happens in
+        // Actual reallocation starts in the cycle next to one activation happens in
         val reallocStart =
             brrHeight - brrHeight % superblockCycle + superblockCycle
         if (height < reallocStart) {
@@ -134,7 +150,7 @@ class DashNetworkDataProvider @Inject constructor(val walletDataProvider: Wallet
         return blockValue.multiply(periods[nCurrentPeriod].toLong()).div(1000)
     }
 
-    fun getMasternodeAPY(
+    private fun getMasternodeAPY(
         params: NetworkParameters,
         height: Int,
         prevDifficultyTarget: Long,
@@ -154,7 +170,7 @@ class DashNetworkDataProvider @Inject constructor(val walletDataProvider: Wallet
 
         val blocksPerYear = (365.2425 * 24 * 60 * 60 / NetworkParameters.TARGET_SPACING)
         val payoutsPerYear = blocksPerYear / masternodeCount
-        val masternodeCost = Coin.valueOf(1000,0 )
+        val masternodeCost = Coin.valueOf(1000, 0)
 
         return 100.0 * masternodeReward.value * payoutsPerYear / masternodeCost.value
     }

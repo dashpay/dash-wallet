@@ -28,8 +28,8 @@ import de.schildbach.wallet.WalletApplication
 import org.dash.wallet.common.WalletDataProvider
 import de.schildbach.wallet.ExploreDataSyncStatus
 import de.schildbach.wallet.rates.ExchangeRatesRepository
-import de.schildbach.wallet.service.DashNetworkDataProvider
-import org.dash.wallet.common.data.NetworkDataProvider
+import de.schildbach.wallet.service.BlockchainStateDataProvider
+import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import javax.inject.Singleton
@@ -55,5 +55,7 @@ abstract class DataProviderModule {
     }
 
     @Binds
-    abstract fun bindsNetworkDataProvider(dashNetworkDataProvider: DashNetworkDataProvider): NetworkDataProvider
+    abstract fun bindBlockchainStateProvider(
+        blockchainStateService: BlockchainStateDataProvider
+    ): BlockchainStateProvider
 }

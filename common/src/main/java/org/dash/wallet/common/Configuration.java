@@ -103,6 +103,7 @@ public class Configuration {
     // CrowdNode
     public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
     public static final String PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS = "crowdnode_primary_address";
+    public static final String PREFS_KEY_CROWDNODE_STAKING_APY = "crowdnode_staking_apy_last";
 
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
@@ -552,5 +553,14 @@ public class Configuration {
 
     public void setCrowdNodePrimaryAddress(@NonNull String address) {
         prefs.edit().putString(PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS, address).apply();
+    }
+
+    @NonNull
+    public Float getPrefsKeyCrowdNodeStakingApy() {
+        return prefs.getFloat(PREFS_KEY_CROWDNODE_STAKING_APY, 0.0f);
+    }
+
+    public void setPrefsKeyCrowdNodeStakingApy(@NonNull float apy) {
+        prefs.edit().putFloat(PREFS_KEY_CROWDNODE_STAKING_APY, apy).apply();
     }
 }

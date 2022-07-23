@@ -34,8 +34,9 @@ import org.bitcoinj.params.TestNet3Params
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
-import org.dash.wallet.common.data.NetworkDataProvider
+import org.dash.wallet.common.services.NetworkDataProvider
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
@@ -96,14 +97,14 @@ class CrowdNodeViewModelTest {
         on { observeExchangeRate(any()) } doReturn flow { ExchangeRate("USD", "100") }
     }
 
-    private val networkDataProviderMock = mock<NetworkDataProvider> {
+    private val blockchainStateMock = mock<BlockchainStateProvider> {
         on { getMasternodeAPY() } doReturn 5.9
     }
 
     @Test
     fun deposit_fullBalance_setsEmptyWallet() {
         runBlocking {
-            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock, mock(), networkDataProviderMock)
+            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock, mock(), blockchainStateMock)
             viewModel.deposit(balance, false)
             verify(api).deposit(balance, emptyWallet = true, checkBalanceConditions = false)
         }
@@ -113,7 +114,7 @@ class CrowdNodeViewModelTest {
     fun deposit_lessThanFullBalance_doesNotSetEmptyWallet() {
         runBlocking {
             val partial = balance.div(6)
-            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock, mock(), networkDataProviderMock)
+            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock, mock(), blockchainStateMock)
             viewModel.deposit(partial, false)
             verify(api).deposit(partial, emptyWallet = false, checkBalanceConditions = false)
         }
@@ -126,7 +127,7 @@ class CrowdNodeViewModelTest {
                 onBlocking { restoreStatus() } doReturn Unit
                 on { accountAddress } doReturn null
             }
-            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock, mock(), networkDataProviderMock)
+            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock, mock(), blockchainStateMock)
             val address = Address.fromBase58(TestNet3Params.get(), "yjMvPFucZWPZXKBaEDxHzZrm5Px44UhgJs")
             api.stub {
                 on { accountAddress } doReturn address
