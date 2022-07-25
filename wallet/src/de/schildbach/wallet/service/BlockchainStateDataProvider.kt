@@ -10,6 +10,7 @@ import org.bitcoinj.core.CheckpointManager
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.StoredBlock
+import org.bitcoinj.store.BlockStoreException
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BlockchainState
@@ -59,7 +60,16 @@ class BlockchainStateDataProvider @Inject constructor(
         if (masternodeListManager != null && blockChain != null) {
             val mnlist = masternodeListManager.listAtChainTip
             if (mnlist.height != 0L) {
-                val prevBlock = mnlist.storedBlock.getPrev(blockChain.blockStore)
+                var prevBlock = try {
+                    mnlist.storedBlock.getPrev(blockChain.blockStore)
+                } catch (e: BlockStoreException) {
+                    null
+                }
+                // if we cannot retrieve the previous block, use the mnlist tip
+                if (prevBlock == null) {
+                    prevBlock = mnlist.storedBlock
+                }
+
                 if (prevBlock != null) {
                     val apy = getMasternodeAPY(
                         walletDataProvider.wallet!!.params,
@@ -68,6 +78,7 @@ class BlockchainStateDataProvider @Inject constructor(
                         mnlist.validMNsCount
                     )
                     configuration.prefsKeyCrowdNodeStakingApy = apy.toFloat()
+                    return apy
                 }
             }
         }
