@@ -84,6 +84,7 @@ import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dashj.platform.dapiclient.DapiClient;
 import org.dash.wallet.common.services.NotificationService;
 import org.dash.wallet.common.transactions.NotFromAddressTxFilter;
@@ -155,6 +156,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject CrowdNodeConfig crowdNodeConfig;
     @Inject BlockchainStateDao blockchainStateDao;
     @Inject ExchangeRatesDao exchangeRatesDao;
+    @Inject TransactionMetadataProvider transactionMetadataProvider;
 
     private BlockStore blockStore;
     private BlockStore headerStore;
@@ -168,6 +170,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private final Handler handler = new Handler();
     private final Handler delayHandler = new Handler();
+    private final Handler metadataHandler = new Handler();
     private WakeLock wakeLock;
 
     private PeerConnectivityListener peerConnectivityListener;
@@ -216,6 +219,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             new CrowdNodeDepositReceivedResponse(Constants.NETWORK_PARAMETERS);
 
     private CrowdNodeAPIConfirmationHandler apiConfirmationHandler;
+
+    void handleMetadata(Transaction tx) {
+        metadataHandler.post(() -> {
+            transactionMetadataProvider.syncTransactionBlocking(tx);
+        });
+    }
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
@@ -276,6 +285,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     }
                 }
             });
+
+            handleMetadata(tx);
             updateAppWidget();
         }
 
@@ -292,6 +303,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     platformRepo.handleSentCreditFundingTransaction(cftx, blockChainHeadTime);
                 }
             }
+            handleMetadata(tx);
             updateAppWidget();
         }
 
