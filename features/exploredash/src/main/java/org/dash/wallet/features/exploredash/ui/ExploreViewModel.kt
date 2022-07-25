@@ -870,13 +870,13 @@ class ExploreViewModel @Inject constructor(
         get() = _crowdNodeAPY
 
     fun getCrowdNodeAPY() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _crowdNodeAPY.value = blockchainStateProvider.getMasternodeAPY()
         }
     }
 
     fun getLastCrowdNodeAPY() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _crowdNodeAPY.value = 0.85 * blockchainStateProvider.getLastMasternodeAPY()
         }
     }
