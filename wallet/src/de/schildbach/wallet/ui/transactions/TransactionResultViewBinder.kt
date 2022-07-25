@@ -34,6 +34,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
 import org.dash.wallet.common.ui.CurrencyTextView
@@ -73,6 +74,7 @@ class TransactionResultViewBinder(
     private val payeeSecuredBy by lazy { containerView.findViewById<TextView>(R.id.payee_secured_by) }
     private val errorContainer by lazy { containerView.findViewById<View>(R.id.error_container) }
     private val errorDescription by lazy { containerView.findViewById<TextView>(R.id.error_description) }
+    private val taxCategory by lazy { containerView.findViewById<TextView>(R.id.tax_category) }
 
     private val reportIssueContainer by lazy { containerView.findViewById<View>(R.id.report_issue_card) }
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
@@ -227,6 +229,17 @@ class TransactionResultViewBinder(
         }
 
         feeRow.visibility = if (isFeeAvailable(tx.fee)) View.VISIBLE else View.GONE
+    }
+
+    fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
+        val categories =
+            containerView.resources.getStringArray(R.array.transaction_result_tax_categories)
+
+        if (transactionMetadata.taxCategory != null) {
+            taxCategory.text = categories[transactionMetadata.taxCategory!!.value]
+        } else {
+            taxCategory.text = categories[transactionMetadata.defaultTaxCategory.value]
+        }
     }
 
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {

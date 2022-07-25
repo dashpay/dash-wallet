@@ -21,7 +21,6 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -66,7 +65,6 @@ import de.schildbach.wallet.ui.backup.RestoreFromFileHelper;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Nfc;
-import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
@@ -83,8 +81,7 @@ import kotlinx.coroutines.FlowPreview;
 public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
-        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
-        SharedPreferences.OnSharedPreferenceChangeListener {
+        EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
 
     private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
     private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
@@ -147,7 +144,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     protected void onResume() {
         super.onResume();
 
-        config.registerOnSharedPreferenceChangeListener(this);
         checkLowStorageAlert();
         checkWalletEncryptionDialog();
         detectUserCountry();
@@ -663,12 +659,5 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         dialog.show(this, result -> Unit.INSTANCE);
         config.setShowNotificationsExplainer(false);
-    }
-
-    @Override
-    public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
-        if (Configuration.PREFS_KEY_REMIND_BACKUP.equals(key) || Configuration.PREFS_KEY_REMIND_BACKUP_SEED.equals(key)) {
-            refreshShortcutBar();
-        }
     }
 }

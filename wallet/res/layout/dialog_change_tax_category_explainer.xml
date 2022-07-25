@@ -32,7 +32,7 @@
 
     <TextView
         android:id="@+id/title"
-        style="@style/Headline6.Bold"
+        style="@style/Headline6"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"

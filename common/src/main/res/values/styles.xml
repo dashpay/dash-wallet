@@ -581,6 +581,10 @@
         <item name="android:textColor">@color/dash_blue</item>
     </style>
 
+    <style name="Caption.Green">
+        <item name="android:textColor">@color/system_green</item>
+    </style>
+
     <style name="Caption.Secondary">
         <item name="android:textColor">@color/content_secondary</item>
     </style>
@@ -595,10 +599,6 @@
 
     <style name="Caption.Medium">
         <item name="fontFamily">@font/inter_medium</item>
-    </style>
-
-    <style name="Caption.Medium.Tertiary">
-        <item name="android:textColor">@color/content_tertiary</item>
     </style>
 
     <style name="Caption.Medium.Tertiary">
@@ -677,14 +677,6 @@
 
     <style name="Overline.Medium.White">
         <item name="android:textColor">@color/dash_white</item>
-    </style>
-
-    <style name="Overline.Medium.Blue">
-        <item name="android:textColor">@color/dash_blue</item>
-    </style>
-
-    <style name="Overline.Medium">
-        <item name="fontFamily">@font/montserrat_medium</item>
     </style>
 
     <style name="Overline.Medium.Blue">
@@ -1135,5 +1127,23 @@
     <style name="TxNoBackground">
         <item name="backgroundColor">@android:color/transparent</item>
         <item name="strokeColor">@android:color/transparent</item>
+    </style>
+
+    <style name="BlueTextHighlight">
+        <item name="backgroundColor">@color/dash_blue_0.1</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">5dp</item>
+    </style>
+
+    <style name="GreenTextHighlight">
+        <item name="backgroundColor">@color/system_green_0.1</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">5dp</item>
+    </style>
+
+    <style name="TertiaryTextHighlight">
+        <item name="backgroundColor">@color/ultra_light_gray</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">5dp</item>
     </style>
 </resources>

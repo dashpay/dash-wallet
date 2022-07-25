@@ -35,14 +35,6 @@ import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
-import org.dash.wallet.common.ui.viewBinding
-import org.slf4j.LoggerFactory
-import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
@@ -53,6 +45,7 @@ import javax.inject.Inject
 class TransactionDetailsDialogFragment : OffsetDialogFragment() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
+    private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }
     private val binding by viewBinding(TransactionDetailsDialogBinding::bind)
     private lateinit var contentBinding: TransactionResultContentBinding
     private val viewModel: TransactionResultViewModel by viewModels()
@@ -88,17 +81,17 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
             binding.transactionResultContainer
         )
 
-        val txId = arguments?.get(TX_ID) as? Sha256Hash
         viewModel.init(txId)
         val tx = viewModel.transaction
 
-        if (tx == null) {
+        if (tx != null) {
+            transactionResultViewBinder.bind(tx)
+        } else {
             log.error("Transaction not found. TxId:", txId)
             dismiss()
             return
         }
 
-        transactionResultViewBinder.bind(tx)
         viewModel.transactionMetadata.observe(this) { metadata ->
             if(metadata != null && tx.txId == metadata.txId) {
                 transactionResultViewBinder.setTransactionMetadata(metadata)
@@ -125,7 +118,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
     private fun viewOnBlockExplorer() {
         val tx = viewModel.transaction
         if (tx != null) {
-            WalletUtils.viewOnBlockExplorer(activity, tx!!.purpose, tx!!.txId.toString())
+            WalletUtils.viewOnBlockExplorer(activity, tx.purpose, tx.txId.toString())
         }
     }
 

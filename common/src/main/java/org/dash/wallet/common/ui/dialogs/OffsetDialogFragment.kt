@@ -30,6 +30,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
+
 open class OffsetDialogFragment : BottomSheetDialogFragment() {
     protected open val forceExpand: Boolean = false
     @StyleRes protected open val backgroundStyle: Int = R.style.SecondaryBackground
