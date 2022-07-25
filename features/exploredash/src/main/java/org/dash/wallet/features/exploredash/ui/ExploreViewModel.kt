@@ -865,11 +865,19 @@ class ExploreViewModel @Inject constructor(
         _isBlockchainSyncFailed.postValue(state.syncFailed())
     }
 
-    fun getCrowdNodeAPY() : Double {
-        return 0.85 * blockchainStateProvider.getMasternodeAPY()
+    private val _crowdNodeAPY = MutableLiveData<Double>()
+    val crowdNodeAPY: LiveData<Double>
+        get() = _crowdNodeAPY
+
+    fun getCrowdNodeAPY() {
+        viewModelScope.launch {
+            _crowdNodeAPY.value = blockchainStateProvider.getMasternodeAPY()
+        }
     }
 
-    fun getLastCrowdNodeAPY(): Double {
-        return 0.85 * blockchainStateProvider.getLastMasternodeAPY()
+    fun getLastCrowdNodeAPY() {
+        viewModelScope.launch {
+            _crowdNodeAPY.value = 0.85 * blockchainStateProvider.getLastMasternodeAPY()
+        }
     }
 }

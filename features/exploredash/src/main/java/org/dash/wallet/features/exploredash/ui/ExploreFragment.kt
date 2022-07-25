@@ -61,15 +61,20 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
             viewModel.openStaking()
         }
 
+        setAPY(0.0) // hide the APY
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) {
             if (it == true) {
                 // update the APY when the blockchain is synced
-                setAPY(viewModel.getCrowdNodeAPY())
+                viewModel.getCrowdNodeAPY()
             }
         }
 
+        viewModel.crowdNodeAPY.observe(viewLifecycleOwner) {
+            setAPY(it)
+        }
+
         // load the last APY value
-        setAPY(viewModel.getLastCrowdNodeAPY())
+        viewModel.getLastCrowdNodeAPY()
         viewModel.monitorBlockchainState()
     }
 

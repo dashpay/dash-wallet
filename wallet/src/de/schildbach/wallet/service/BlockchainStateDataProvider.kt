@@ -1,14 +1,22 @@
 package de.schildbach.wallet.service
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BlockchainStateDao
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Block
+import org.bitcoinj.core.CheckpointManager
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.StoredBlock
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BlockchainState
 import org.dash.wallet.common.services.BlockchainStateProvider
+import java.io.IOException
+import java.io.InputStream
+import java.math.BigInteger
 import javax.inject.Inject
 import kotlin.math.min
 
@@ -22,6 +30,8 @@ import kotlin.math.min
  */
 
 class BlockchainStateDataProvider @Inject constructor(
+    @ApplicationContext
+    private val context: Context,
     private val blockchainStateDao: BlockchainStateDao,
     private val walletDataProvider: WalletDataProvider,
     private val configuration: Configuration
@@ -35,7 +45,12 @@ class BlockchainStateDataProvider @Inject constructor(
     }
 
     override fun getLastMasternodeAPY(): Double {
-        return configuration.prefsKeyCrowdNodeStakingApy.toDouble()
+        val apy = configuration.prefsKeyCrowdNodeStakingApy.toDouble()
+        return if (apy != 0.0) {
+            apy
+        } else {
+            getEstimatedMasternodeAPY()
+        }
     }
 
     override fun getMasternodeAPY(): Double {
@@ -148,6 +163,44 @@ class BlockchainStateDataProvider @Inject constructor(
         val nCurrentPeriod: Int =
             min((height - reallocStart) / reallocCycle, periods.size - 1)
         return blockValue.multiply(periods[nCurrentPeriod].toLong()).div(1000)
+    }
+
+    /**
+     * Get estimated masternode APY.  This uses the checkpoints file to estimate the current
+     * height of the blockchain.
+     */
+    private fun getEstimatedMasternodeAPY(): Double {
+        val masternodeCount = when (walletDataProvider.networkParameters.id) {
+            NetworkParameters.ID_MAINNET -> 4200
+            NetworkParameters.ID_TESTNET -> 150
+            else -> {
+                walletDataProvider.networkParameters.defaultMasternodeList.size
+            }
+        }
+
+        // get last checkpoint
+        val currentTime = System.currentTimeMillis()/1000
+        val lastCheckpoint = try {
+            val checkpointsInputStream: InputStream =
+                context.assets.open(Constants.Files.CHECKPOINTS_FILENAME)
+            val checkpoints = CheckpointManager(Constants.NETWORK_PARAMETERS, checkpointsInputStream)
+            checkpoints.getCheckpointBefore(currentTime)
+        } catch (x: IOException) {
+            // if there are no checkpoints, then use the genesis block
+            StoredBlock(walletDataProvider.networkParameters.genesisBlock, BigInteger.valueOf(0), 0)
+        }
+
+        // Estimate current block height
+        val timeElapsedSinceCheckpoint = currentTime - lastCheckpoint.header.time.time/1000
+        val estimatedBlockHeight = (timeElapsedSinceCheckpoint / NetworkParameters.TARGET_SPACING).toInt() + lastCheckpoint.height
+
+        val apy = getMasternodeAPY(
+            walletDataProvider.networkParameters,
+            estimatedBlockHeight,
+            lastCheckpoint.header.difficultyTarget,
+            masternodeCount)
+        configuration.prefsKeyCrowdNodeStakingApy = apy.toFloat()
+        return apy
     }
 
     private fun getMasternodeAPY(
