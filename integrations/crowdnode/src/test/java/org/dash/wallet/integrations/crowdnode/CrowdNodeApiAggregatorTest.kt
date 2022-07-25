@@ -21,15 +21,16 @@ import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.runBlocking
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.Utils
 import org.bitcoinj.params.TestNet3Params
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApiAggregator
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeWebApi
-import org.dash.wallet.integrations.crowdnode.model.CrowdNodeBalance
 import org.dash.wallet.integrations.crowdnode.model.IsAddressInUse
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
@@ -67,7 +68,7 @@ class CrowdNodeApiAggregatorTest {
 
     private val webApi = mock<CrowdNodeWebApi> {
         onBlocking { isAddressInUse(any()) } doReturn Response.success(IsAddressInUse(false, null))
-        onBlocking { getBalance(any()) } doReturn Response.success(CrowdNodeBalance("yihMSMoesHX1JhbntTiV5Nptf5NLrmFMCu", 0.7, 0.7, 0.1))
+        onBlocking { resolveBalance(any()) } doReturn Resource.success(Coin.COIN)
     }
 
     private val blockchainApi = mock<CrowdNodeBlockchainApi> {

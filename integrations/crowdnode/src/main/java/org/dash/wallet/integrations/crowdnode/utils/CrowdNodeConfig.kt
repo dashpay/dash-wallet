@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -40,6 +39,9 @@ open class CrowdNodeConfig @Inject constructor(private val context: Context) {
         val LAST_BALANCE = longPreferencesKey("last_balance")
         val SIGNED_EMAIL_MESSAGE_ID = intPreferencesKey("signed_email_message_id")
         val WITHDRAWAL_LIMITS_SHOWN = booleanPreferencesKey("withdrawal_limits_shown")
+        val WITHDRAWAL_LIMIT_PER_TX = longPreferencesKey("withdrawal_limit_per_tx")
+        val WITHDRAWAL_LIMIT_PER_HOUR = longPreferencesKey("withdrawal_limit_per_hour")
+        val WITHDRAWAL_LIMIT_PER_DAY = longPreferencesKey("withdrawal_limit_per_day")
     }
 
     private val Context.dataStore by preferencesDataStore("crowdnode")

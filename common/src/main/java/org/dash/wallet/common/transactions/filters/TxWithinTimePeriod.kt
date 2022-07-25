@@ -15,19 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.transactions
+package org.dash.wallet.common.transactions.filters
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.NetworkParameters
-import org.dash.wallet.common.transactions.filters.CoinsFromAddressTxFilter
-import org.dash.wallet.integrations.crowdnode.model.ApiCode
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
+import org.bitcoinj.core.Transaction
+import java.util.*
 
-class CrowdNodeWithdrawalDeniedResponse(networkParams: NetworkParameters): CoinsFromAddressTxFilter(
-    CrowdNodeConstants.getCrowdNodeAddress(networkParams), WITHDRAWAL_DENIED_RESPONSE_CODE
-) {
-    companion object {
-        val WITHDRAWAL_DENIED_RESPONSE_CODE: Coin =
-            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.WithdrawalDenied.code)
+class TxWithinTimePeriod(private val from: Date, private val to: Date): TransactionFilter {
+    override fun matches(tx: Transaction): Boolean {
+        return tx.updateTime.after(from) && tx.updateTime.before(to)
     }
 }

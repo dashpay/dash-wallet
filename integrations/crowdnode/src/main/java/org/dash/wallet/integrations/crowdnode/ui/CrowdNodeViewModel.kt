@@ -40,6 +40,7 @@ import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
+import org.dash.wallet.integrations.crowdnode.model.WithdrawalLimitPeriod
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import java.io.IOException
@@ -340,6 +341,14 @@ class CrowdNodeViewModel @Inject constructor(
         viewModelScope.launch {
             config.setPreference(CrowdNodeConfig.WITHDRAWAL_LIMITS_SHOWN, true)
         }
+    }
+
+    suspend fun getWithdrawalLimits(): List<Coin> {
+        return listOf(
+            crowdNodeApi.getWithdrawalLimit(WithdrawalLimitPeriod.PerTransaction),
+            crowdNodeApi.getWithdrawalLimit(WithdrawalLimitPeriod.PerHour),
+            crowdNodeApi.getWithdrawalLimit(WithdrawalLimitPeriod.PerDay)
+        )
     }
 
     fun logEvent(eventName: String) {

@@ -33,6 +33,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NotificationService
@@ -46,14 +47,13 @@ import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.net.URLEncoder
 import java.util.concurrent.Executors
 import javax.inject.Inject
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 
@@ -73,6 +73,7 @@ interface CrowdNodeApi {
     suspend fun signUp(accountAddress: Address)
     suspend fun deposit(amount: Coin, emptyWallet: Boolean, checkBalanceConditions: Boolean): Boolean
     suspend fun withdraw(amount: Coin): Boolean
+    suspend fun getWithdrawalLimit(period: WithdrawalLimitPeriod): Coin
     fun hasAnyDeposits(): Boolean
     fun refreshBalance(retries: Int = 0, afterWithdrawal: Boolean = false)
     fun trackLinkingAccount(address: Address)
@@ -155,6 +156,32 @@ class CrowdNodeApiAggregator @Inject constructor(
                 }
             }
             .launchIn(configScope)
+    }
+
+    override suspend fun restoreStatus() {
+        if (signUpStatus.value == SignUpStatus.NotStarted) {
+            log.info("restoring CrowdNode status")
+
+            if (isError()) {
+                return
+            }
+
+            if (tryRestoreSignUp()) {
+                requireNotNull(accountAddress) { "Restored signup tx set but address is null" }
+                globalConfig.crowdNodeAccountAddress = accountAddress!!.toBase58()
+                restoreCreatedOnlineAccount(accountAddress!!)
+                refreshWithdrawalLimits()
+                return
+            }
+
+            val savedAddress = globalConfig.crowdNodeAccountAddress
+
+            if (savedAddress.isNotEmpty()) {
+                accountAddress = Address.fromString(params, savedAddress)
+                tryRestoreLinkedOnlineAccount(accountAddress!!)
+                refreshWithdrawalLimits()
+            }
+        }
     }
 
     override fun persistentSignUp(accountAddress: Address) {
@@ -253,6 +280,8 @@ class CrowdNodeApiAggregator @Inject constructor(
         val balance = this.balance.value.data ?: Coin.ZERO
         require(amount <= balance) { "Amount is larger than CrowdNode balance" }
 
+        checkWithdrawalLimits(amount)
+
         return try {
             apiError.value = null
 
@@ -283,6 +312,23 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
     }
 
+    override suspend fun getWithdrawalLimit(period: WithdrawalLimitPeriod): Coin {
+        return Coin.valueOf(when(period) {
+            WithdrawalLimitPeriod.PerTransaction -> {
+                config.getPreference(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_TX) ?:
+                    CrowdNodeConstants.WithdrawalLimits.DEFAULT_LIMIT_PER_TX.value
+            }
+            WithdrawalLimitPeriod.PerHour -> {
+                config.getPreference(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_HOUR) ?:
+                    CrowdNodeConstants.WithdrawalLimits.DEFAULT_LIMIT_PER_HOUR.value
+            }
+            WithdrawalLimitPeriod.PerDay -> {
+                config.getPreference(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_DAY) ?:
+                    CrowdNodeConstants.WithdrawalLimits.DEFAULT_LIMIT_PER_DAY.value
+            }
+        })
+    }
+
     override fun hasAnyDeposits(): Boolean {
         val accountAddress = this.accountAddress
         requireNotNull(accountAddress) { "Account address is null, make sure to sign up" }
@@ -306,7 +352,11 @@ class CrowdNodeApiAggregator @Inject constructor(
                     delay(5.0.pow(i).seconds)
                 }
 
-                currentBalance = resolveBalance()
+                currentBalance = webApi.resolveBalance(accountAddress)
+
+                if (currentBalance.status == Status.SUCCESS && currentBalance.data != null) {
+                    config.setPreference(CrowdNodeConfig.LAST_BALANCE, currentBalance.data!!.value)
+                }
 
                 if (lastBalance != currentBalance.data?.value) {
                     val minimumWithdrawal = CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.MaxCode.code)
@@ -418,7 +468,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    suspend fun sendSignedEmailMessage(
+    private suspend fun sendSignedEmailMessage(
         address: Address,
         email: String,
         signature: String
@@ -455,30 +505,6 @@ class CrowdNodeApiAggregator @Inject constructor(
         config.clearAll()
     }
 
-    override suspend fun restoreStatus() {
-        if (signUpStatus.value == SignUpStatus.NotStarted) {
-            log.info("restoring CrowdNode status")
-
-            if (isError()) {
-                return
-            }
-
-            if (tryRestoreSignUp()) {
-                requireNotNull(accountAddress) { "Restored signup tx set but address is null" }
-                globalConfig.crowdNodeAccountAddress = accountAddress!!.toBase58()
-                restoreCreatedOnlineAccount(accountAddress!!)
-                return
-            }
-
-            val savedAddress = globalConfig.crowdNodeAccountAddress
-
-            if (savedAddress.isNotEmpty()) {
-                accountAddress = Address.fromString(params, savedAddress)
-                tryRestoreLinkedOnlineAccount(accountAddress!!)
-            }
-        }
-    }
-
     private fun isError(): Boolean {
         val savedError = runBlocking { config.getPreference(CrowdNodeConfig.BACKGROUND_ERROR) ?: "" }
 
@@ -507,7 +533,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 val address = set.possibleWelcomeToApiResponse!!.toAddress
 
                 if (transaction != null && address != null &&
-                    fromCrowdNode(address, transaction) != false
+                    webApi.fromCrowdNode(address, transaction) != false
                 ) {
                     setFinished(address)
                     return true
@@ -525,7 +551,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 val address = set.possibleAcceptTermsResponse!!.toAddress
 
                 if (transaction != null && address != null &&
-                    fromCrowdNode(address, transaction) != false
+                    webApi.fromCrowdNode(address, transaction) != false
                 ) {
                     setAcceptingTerms(address)
                     return true
@@ -541,7 +567,8 @@ class CrowdNodeApiAggregator @Inject constructor(
         var primaryAddressStr: String
 
         runBlocking {
-            statusOrdinal = config.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) ?: OnlineAccountStatus.None.ordinal
+            statusOrdinal = config.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
+                ?: OnlineAccountStatus.None.ordinal
             primaryAddressStr = globalConfig.crowdNodePrimaryAddress
         }
 
@@ -550,7 +577,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
 
         when (val status = OnlineAccountStatus.values()[statusOrdinal]) {
-            OnlineAccountStatus.None -> { }
+            OnlineAccountStatus.None -> {}
             OnlineAccountStatus.Linking -> {
                 log.info("found linking online account in progress, account: ${address.toBase58()}, primary: $primaryAddressStr")
                 responseScope.launch { checkIfAddressIsInUse(address) }
@@ -575,33 +602,6 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
     }
 
-    private suspend fun resolveBalance(): Resource<Coin> {
-        val address = accountAddress
-
-        return if (address != null) {
-            try {
-                val balance = Coin.parseCoin(fetchBalance(address.toBase58()))
-                config.setPreference(CrowdNodeConfig.LAST_BALANCE, balance.value)
-                Resource.success(balance)
-            } catch (ex: IOException) {
-                Resource.error(ex)
-            } catch (ex: Exception) {
-                log.error("Error while resolving balance: $ex")
-                analyticsService.logError(ex)
-                Resource.error(ex)
-            }
-        } else {
-            Resource.success(Coin.ZERO)
-        }
-    }
-
-    private suspend fun fetchBalance(address: String): String {
-        val response = webApi.getBalance(address)
-        val balance = BigDecimal.valueOf(response.body()?.totalBalance ?: 0.0)
-
-        return balance.setScale(8, RoundingMode.HALF_UP).toString()
-    }
-
     private suspend fun checkIfAddressIsInUse(address: Address) {
         val isInUse = resolveIsAddressInUse(address)
 
@@ -621,7 +621,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     private suspend fun checkAddressStatus(address: Address) {
-        val status = resolveAddressStatus(address)
+        val status = webApi.addressStatus(address)
 
         if (status?.lowercase() == VALID_STATUS && onlineAccountStatus.value != OnlineAccountStatus.Confirming) {
             changeOnlineStatus(OnlineAccountStatus.Confirming)
@@ -647,7 +647,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     private suspend fun checkIfEmailRegistered(address: Address) {
-        val isDefaultEmail = resolveIsDefaultEmail(address)
+        val isDefaultEmail = webApi.isDefaultEmail(address)
 
         if (isDefaultEmail) {
             // Check the message status in case there is an error
@@ -688,36 +688,6 @@ class CrowdNodeApiAggregator @Inject constructor(
             }
 
             false
-        }
-    }
-
-    private suspend fun resolveAddressStatus(address: Address): String? {
-        return try {
-            val result = webApi.addressStatus(address.toBase58())
-            result.body()?.status
-        } catch (ex: Exception) {
-            log.error("Error in resolveAddressStatus: $ex")
-
-            if (ex !is IOException) {
-                analyticsService.logError(ex)
-            }
-
-            null
-        }
-    }
-
-    private suspend fun resolveIsDefaultEmail(address: Address): Boolean {
-        return try {
-            val result = webApi.hasDefaultEmail(address.toBase58())
-            result.isSuccessful && result.body()?.isDefault != false
-        } catch (ex: Exception) {
-            log.error("Error in resolveIsDefaultEmail: $ex")
-
-            if (ex !is IOException) {
-                analyticsService.logError(ex)
-            }
-
-            true
         }
     }
 
@@ -791,7 +761,7 @@ class CrowdNodeApiAggregator @Inject constructor(
 
         log.info("The response to SignUp is missing sender address, confirming with GetFunds")
 
-        if (fromCrowdNode(accountAddress!!, tx) == false) {
+        if (webApi.fromCrowdNode(accountAddress!!, tx) == false) {
             log.info("Not confirmed")
             val signUpResponseTx = blockchainApi.waitForSignUpResponse()
             log.info("new signUpResponseTx id: ${signUpResponseTx.txId}")
@@ -805,46 +775,11 @@ class CrowdNodeApiAggregator @Inject constructor(
 
         log.info("The response to AcceptTerms is missing sender address, confirming with GetFunds")
 
-        if (fromCrowdNode(accountAddress!!, tx) == false) {
+        if (webApi.fromCrowdNode(accountAddress!!, tx) == false) {
             log.info("Not confirmed")
             val acceptTermsResponseTx = blockchainApi.waitForAcceptTermsResponse()
             log.info("new signUpResponseTx id: ${acceptTermsResponseTx.txId}")
         }
-    }
-
-    private suspend fun fromCrowdNode(address: Address, tx: Transaction): Boolean? {
-        var fromCrowdNode: Boolean? = false
-
-        for (i in 0..3) {
-            if (i != 0) {
-                delay(2.0.pow(i).seconds)
-            }
-
-            try {
-                val result = webApi.getTransactions(address.toBase58())
-
-                if (result.isSuccessful && result.body() != null) {
-                    if (result.body()!!.all { it.txId != tx.txId.toString() }) {
-                        fromCrowdNode = false
-                        continue
-                    } else {
-                        fromCrowdNode = true
-                        break
-                    }
-                }
-            } catch (ex: Exception) {
-                log.error("Error in getTransactions: $ex")
-
-                if (ex !is IOException) {
-                    analyticsService.logError(ex)
-                }
-            }
-
-            // Fallback to simple detection if a network or other error
-            fromCrowdNode = null
-        }
-
-        return fromCrowdNode
     }
 
     private fun setFinished(address: Address?) {
@@ -859,6 +794,44 @@ class CrowdNodeApiAggregator @Inject constructor(
         log.info("found accept terms response, account: ${address?.toBase58() ?: "null"}")
         signUpStatus.value = SignUpStatus.AcceptingTerms
         persistentSignUp(accountAddress!!)
+    }
+
+    private suspend fun checkWithdrawalLimits(value: Coin) {
+        val perTransactionLimit = getWithdrawalLimit(WithdrawalLimitPeriod.PerTransaction)
+
+        if (value > perTransactionLimit) {
+            throw WithdrawalLimitsException(perTransactionLimit, WithdrawalLimitPeriod.PerTransaction)
+        }
+
+        val withdrawalsLastHour = blockchainApi.getWithdrawalsForTheLast(1.hours)
+        val perHourLimit = getWithdrawalLimit(WithdrawalLimitPeriod.PerHour)
+
+        if (withdrawalsLastHour.add(value) > perHourLimit) {
+            throw WithdrawalLimitsException(perHourLimit, WithdrawalLimitPeriod.PerHour)
+        }
+
+        val withdrawalsLast24h = blockchainApi.getWithdrawalsForTheLast(24.hours)
+        val perDayLimit = getWithdrawalLimit(WithdrawalLimitPeriod.PerDay)
+
+        if (withdrawalsLast24h.add(value) > perDayLimit) {
+            throw WithdrawalLimitsException(perDayLimit, WithdrawalLimitPeriod.PerDay)
+        }
+    }
+
+    private fun refreshWithdrawalLimits() {
+        responseScope.launch {
+            val limits = webApi.getWithdrawalLimits(accountAddress)
+
+            limits[WithdrawalLimitPeriod.PerTransaction]?.let {
+                config.setPreference(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_TX, it.value)
+            }
+            limits[WithdrawalLimitPeriod.PerHour]?.let {
+                config.setPreference(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_HOUR, it.value)
+            }
+            limits[WithdrawalLimitPeriod.PerDay]?.let {
+                config.setPreference(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_DAY, it.value)
+            }
+        }
     }
 
     private fun notifyIfNeeded(message: String, tag: String) {

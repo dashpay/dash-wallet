@@ -120,19 +120,22 @@
     <string name="shuffle_coins">Shuffle Coins</string>
     <string name="positive_balance_required">You should have a positive balance on Dash Wallet</string>
     <string name="withdrawal_required_balance">Deposit at least 0.0003 Dash on your Dash Wallet to complete a withdrawal</string>
+    <string name="withdrawal_limit">Dash withdrawal limit</string>
+    <string name="withdrawal_limit_details">You can not withdraw more than %1$s Dash %2$s.</string>
     <string name="crowdnode_withdrawal_limits_title">CrowdNode withdrawal limits</string>
     <string name="crowdnode_withdrawal_limits_message">Due to CrowdNode’s terms of service users can withdraw no more than:</string>
+    <string name="crowdnode_withdraw_without_limits_online">Withdraw without limits with an online account on CrowdNode website.</string>
+    <string name="crowdnode_withdrawal_limits_error">This error is most likely due to exceeding CrowdNode withdrawal limits. Try again later.</string>
     <string name="per_transaction">per transaction</string>
     <string name="per_hour">per hour</string>
     <string name="per_day">per 24 hours</string>
+    <string name="read_withdrawal_policy">Read Withdrawal Policy</string>
 
 
-    <string name="crowdnode_limit_per_transaction" translatable="false">15</string>
-    <string name="crowdnode_limit_per_hour" translatable="false">30</string>
-    <string name="crowdnode_limit_per_day" translatable="false">60</string>
     <string name="crowdnode_website" translatable="false">https://crowdnode.io/</string>
     <string name="crowdnode_terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>
     <string name="crowdnode_privacy_policy_url" translatable="false">https://crowdnode.io/privacy/</string>
     <string name="crowdnode_support_url" translatable="false">https://knowledge.crowdnode.io/</string>
     <string name="crowdnode_how_to_verify_url" translatable="false">https://knowledge.crowdnode.io/en/articles/6114502-how-to-confirm-your-api-dash-address</string>
+    <string name="crowdnode_withdrawal_policy" translatable="false">https://knowledge.crowdnode.io/en/articles/6387601-api-withdrawal-limits</string>
 </resources>

@@ -23,7 +23,7 @@ import org.bitcoinj.core.*
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.services.LeftoverBalanceException
-import org.dash.wallet.common.transactions.TransactionFilter
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
 import kotlin.jvm.Throws
 

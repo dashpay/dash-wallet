@@ -19,6 +19,8 @@ package org.dash.wallet.integrations.crowdnode.ui.portal
 
 import android.animation.ObjectAnimator
 import android.animation.TimeInterpolator
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
@@ -48,8 +50,12 @@ import org.dash.wallet.integrations.crowdnode.databinding.FragmentTransferBindin
 import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardDepositHeaderBinding
 import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardWithdrawHeaderBinding
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
+import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
+import org.dash.wallet.integrations.crowdnode.model.WithdrawalLimitPeriod
+import org.dash.wallet.integrations.crowdnode.model.WithdrawalLimitsException
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.StakingDialog
+import org.dash.wallet.integrations.crowdnode.ui.dialogs.WithdrawalLimitsInfoDialog
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import kotlin.math.exp
 import kotlin.math.sin
@@ -158,8 +164,6 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 continueTransfer(pair.first, args.withdraw)
             }
         }
-
-        showWithdrawalLimitsInfo()
     }
 
     private fun setupWithdraw() {
@@ -206,6 +210,10 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             }
         }
 
+        lifecycleScope.launch {
+            showWithdrawalLimitsInfo()
+        }
+
         viewModel.dashBalance.observe(viewLifecycleOwner) {
             updateAvailableBalance()
         }
@@ -225,7 +233,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
         val isSuccess = AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
             if (isWithdraw) {
-                viewModel.withdraw(value)
+                handleWithdraw(value)
             } else {
                 handleDeposit(value)
             }
@@ -265,6 +273,15 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         }
 
         return false
+    }
+
+    private suspend fun handleWithdraw(value: Coin): Boolean {
+        return try {
+            return viewModel.withdraw(value)
+        } catch (ex: WithdrawalLimitsException) {
+            showWithdrawalLimitsError(ex.period)
+            false
+        }
     }
 
     private fun updateAvailableBalance() {
@@ -319,21 +336,48 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             .start()
     }
 
-    private fun showWithdrawalLimitsInfo() {
-        lifecycleScope.launch {
-            if (viewModel.shouldShowWithdrawalLimitsInfo()) {
-                val result = AdaptiveDialog.custom(
-                    R.layout.dialog_withdrawal_limits,
-                    null,
-                    getString(R.string.crowdnode_withdrawal_limits_title),
-                    getString(R.string.crowdnode_withdrawal_limits_message),
-                    getString(android.R.string.ok)
-                ).showAsync(requireActivity())
+    private suspend fun showWithdrawalLimitsInfo() {
+        if (viewModel.shouldShowWithdrawalLimitsInfo()) {
+            val limits = viewModel.getWithdrawalLimits()
+            val result = WithdrawalLimitsInfoDialog(
+                limits[0], limits[1], limits[2]
+            ).showAsync(requireActivity())
 
-                if (result == false) {
-                    viewModel.triggerWithdrawalLimitsShown()
-                }
+            if (result == false) {
+                viewModel.triggerWithdrawalLimitsShown()
             }
         }
+    }
+
+    private suspend fun showWithdrawalLimitsError(period: WithdrawalLimitPeriod) {
+        val limits = viewModel.getWithdrawalLimits()
+        val okButtonText = if (period == WithdrawalLimitPeriod.PerTransaction) {
+            if (viewModel.onlineAccountStatus == OnlineAccountStatus.Done) {
+                getString(R.string.read_withdrawal_policy)
+            } else {
+                getString(R.string.online_account_create)
+            }
+        } else {
+            ""
+        }
+
+        val doAction = WithdrawalLimitsInfoDialog(
+            limits[0], limits[1], limits[2],
+            highlightedLimit = period,
+            okButtonText = okButtonText
+        ).showAsync(requireActivity())
+
+        if (doAction == true) {
+            if (viewModel.onlineAccountStatus == OnlineAccountStatus.Done) {
+                openWithdrawalPolicy()
+            } else {
+                safeNavigate(TransferFragmentDirections.transferToOnlineAccountEmail())
+            }
+        }
+    }
+
+    private fun openWithdrawalPolicy() {
+        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.crowdnode_withdrawal_policy)))
+        startActivity(browserIntent)
     }
 }

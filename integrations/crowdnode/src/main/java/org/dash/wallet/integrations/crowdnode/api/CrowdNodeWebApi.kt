@@ -17,11 +17,25 @@
 
 package org.dash.wallet.integrations.crowdnode.api
 
+import kotlinx.coroutines.delay
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.crowdnode.model.*
+import org.slf4j.LoggerFactory
 import retrofit2.Response
 import retrofit2.http.*
+import java.io.IOException
+import java.math.BigDecimal
+import java.math.RoundingMode
+import javax.inject.Inject
+import kotlin.math.pow
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
 
-interface CrowdNodeWebApi {
+interface CrowdNodeEndpoint {
     @GET("odata/apifundings/GetFunds(address='{address}')")
     suspend fun getTransactions(
         @Path("address") address: String
@@ -31,6 +45,11 @@ interface CrowdNodeWebApi {
     suspend fun getBalance(
         @Path("address") address: String
     ): Response<CrowdNodeBalance>
+
+    @GET("odata/apifundings/GetWithdrawalLimits(address='{address}')")
+    suspend fun getWithdrawalLimits(
+        @Path("address") address: String
+    ): Response<List<WithdrawalLimit>>
 
     @GET("odata/apiaddresses/IsApiAddressInUse(address='{address}')")
     suspend fun isAddressInUse(
@@ -42,6 +61,11 @@ interface CrowdNodeWebApi {
         @Path("address") address: String
     ): Response<AddressStatus>
 
+    @GET("odata/apiaddresses/UsingDefaultApiEmail(address='{address}')")
+    suspend fun hasDefaultEmail(
+        @Path("address") address: String
+    ): Response<IsDefaultEmail>
+
     @GET("odata/apimessages/SendMessage(address='{address}',message='{message}',signature='{signature}',messagetype=1)")
     suspend fun sendSignedMessage(
         @Path("address") address: String,
@@ -49,13 +73,152 @@ interface CrowdNodeWebApi {
         @Path("signature") signature: String,
     ): Response<MessageStatus>
 
-    @GET("odata/apiaddresses/UsingDefaultApiEmail(address='{address}')")
-    suspend fun hasDefaultEmail(
-        @Path("address") address: String
-    ): Response<IsDefaultEmail>
-
     @GET("odata/apimessages/GetMessages(address='{address}')")
     suspend fun getMessages(
         @Path("address") address: String
     ): Response<List<MessageStatus>>
+}
+
+@ExperimentalTime
+open class CrowdNodeWebApi @Inject constructor(
+    private val endpoint: CrowdNodeEndpoint,
+    private val analyticsService: AnalyticsService
+) {
+    companion object {
+        private val log = LoggerFactory.getLogger(CrowdNodeWebApi::class.java)
+        private val MAX_PER_TX_KEY = "AmountApiWithdrawalMax"
+        private val MAX_PER_1H_KEY = "AmountApiWithdrawal1hMax"
+        private val MAX_PER_24H_KEY = "AmountApiWithdrawal24hMax"
+    }
+
+    // TODO: these methods are just mappers right now. Move more logic in here from the aggregator class
+    suspend fun sendSignedMessage(address: String, email: String, encodedSignature: String): Response<MessageStatus> {
+        return endpoint.sendSignedMessage(address, email, encodedSignature)
+    }
+
+    open suspend fun isAddressInUse(address: String): Response<IsAddressInUse> {
+        return endpoint.isAddressInUse(address)
+    }
+
+    suspend fun getMessages(address: String): Response<List<MessageStatus>> {
+        return endpoint.getMessages(address)
+    }
+    // end TODO
+
+    suspend fun fromCrowdNode(address: Address, tx: Transaction): Boolean? {
+        var fromCrowdNode: Boolean? = false
+
+        for (i in 0..3) {
+            if (i != 0) {
+                delay(2.0.pow(i).seconds)
+            }
+
+            try {
+                val response = endpoint.getTransactions(address.toBase58())
+
+                if (response.isSuccessful && response.body() != null) {
+                    if (response.body()!!.all { it.txId != tx.txId.toString() }) {
+                        fromCrowdNode = false
+                        continue
+                    } else {
+                        fromCrowdNode = true
+                        break
+                    }
+                }
+            } catch (ex: Exception) {
+                log.error("Error in getTransactions: $ex")
+
+                if (ex !is IOException) {
+                    analyticsService.logError(ex)
+                }
+            }
+
+            // Fallback to simple detection if a network or other error
+            fromCrowdNode = null
+        }
+
+        return fromCrowdNode
+    }
+
+    open suspend fun resolveBalance(address: Address?): Resource<Coin> {
+        return if (address != null) {
+            try {
+                val balance = Coin.parseCoin(fetchBalance(address.toBase58()))
+                Resource.success(balance)
+            } catch (ex: IOException) {
+                Resource.error(ex)
+            } catch (ex: Exception) {
+                log.error("Error while resolving balance: $ex")
+                analyticsService.logError(ex)
+                Resource.error(ex)
+            }
+        } else {
+            Resource.success(Coin.ZERO)
+        }
+    }
+
+    private suspend fun fetchBalance(address: String): String {
+        val response = endpoint.getBalance(address)
+        val balance = BigDecimal.valueOf(response.body()?.totalBalance ?: 0.0)
+
+        return balance.setScale(8, RoundingMode.HALF_UP).toString()
+    }
+
+    suspend fun addressStatus(address: Address): String? {
+        return try {
+            val response = endpoint.addressStatus(address.toBase58())
+            response.body()?.status
+        } catch (ex: Exception) {
+            log.error("Error in resolveAddressStatus: $ex")
+
+            if (ex !is IOException) {
+                analyticsService.logError(ex)
+            }
+
+            null
+        }
+    }
+
+    suspend fun isDefaultEmail(address: Address): Boolean {
+        return try {
+            val response = endpoint.hasDefaultEmail(address.toBase58())
+            response.isSuccessful && response.body()?.isDefault != false
+        } catch (ex: Exception) {
+            log.error("Error in resolveIsDefaultEmail: $ex")
+
+            if (ex !is IOException) {
+                analyticsService.logError(ex)
+            }
+
+            true
+        }
+    }
+
+    suspend fun getWithdrawalLimits(address: Address?): Map<WithdrawalLimitPeriod, Coin> {
+        return try {
+            val response = endpoint.getWithdrawalLimits(address?.toBase58() ?: "")
+
+            return if (response.isSuccessful && response.body()?.isNotEmpty() == true) {
+                response.body()!!.mapNotNull {
+                    when (it.key.lowercase()) {
+                        MAX_PER_TX_KEY.lowercase() -> WithdrawalLimitPeriod.PerTransaction to Coin.parseCoin(it.value)
+                        MAX_PER_1H_KEY.lowercase() -> WithdrawalLimitPeriod.PerHour to Coin.parseCoin(it.value)
+                        MAX_PER_24H_KEY.lowercase() -> WithdrawalLimitPeriod.PerDay to Coin.parseCoin(it.value)
+                        else -> null
+                    }
+                }.toMap()
+            } else {
+                log.error("getWithdrawalLimits not successful; ${response.code()} : ${response.message()}")
+                mapOf()
+            }
+        } catch (ex: Exception) {
+            log.error("Error in getWithdrawalLimits: $ex")
+
+            if (ex !is IOException) {
+                analyticsService.logError(ex)
+            }
+
+            mapOf()
+        }
+    }
 }
