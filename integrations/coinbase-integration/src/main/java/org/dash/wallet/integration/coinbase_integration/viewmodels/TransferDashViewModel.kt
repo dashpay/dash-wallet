@@ -75,7 +75,6 @@ class TransferDashViewModel @Inject constructor(
     }
 
     private fun getWithdrawalLimitOnCoinbase() = viewModelScope.launch(Dispatchers.Main){
-        _loadingState.value = true
         when (val response = coinBaseRepository.getWithdrawalLimit()){
             is ResponseResource.Success -> {
                 val withdrawalLimit = response.value
