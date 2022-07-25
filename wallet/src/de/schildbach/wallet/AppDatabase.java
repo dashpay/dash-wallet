@@ -39,13 +39,12 @@ public abstract class AppDatabase extends RoomDatabase {
 
     public static AppDatabase getAppDatabase() {
         if (instance == null) {
+            // destructive migrations are used from versions 1 to 10
             instance = Room.databaseBuilder(WalletApplication.getInstance(),
                     AppDatabase.class, "dash-wallet-database")
-                    .addMigrations(
-                            AppDatabaseMigrations.getMigration8To10(),
-                            AppDatabaseMigrations.getMigration9To10()
-                    )
-                    .fallbackToDestructiveMigration().build();
+                    // TODO: add migrations here
+                    // .addMigrations()
+                    .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7, 8, 9, 10).build();
         }
         return instance;
     }
