@@ -184,7 +184,9 @@ class BlockchainStateDataProvider @Inject constructor(
             val checkpointsInputStream: InputStream =
                 context.assets.open(Constants.Files.CHECKPOINTS_FILENAME)
             val checkpoints = CheckpointManager(Constants.NETWORK_PARAMETERS, checkpointsInputStream)
-            checkpoints.getCheckpointBefore(currentTime)
+            val result = checkpoints.getCheckpointBefore(currentTime)
+            checkpointsInputStream.close()
+            result
         } catch (x: IOException) {
             // if there are no checkpoints, then use the genesis block
             StoredBlock(walletDataProvider.networkParameters.genesisBlock, BigInteger.valueOf(0), 0)
