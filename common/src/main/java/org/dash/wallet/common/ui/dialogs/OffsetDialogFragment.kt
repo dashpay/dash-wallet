@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.dialogs
 
+import android.graphics.Rect
 import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
@@ -56,10 +57,14 @@ open class OffsetDialogFragment : BottomSheetDialogFragment() {
                 val height = if (forceExpand) displayHeight - marginTop else bottomSheet.height
                 view.layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, height)
 
+                val statusBar = Rect()
+                val window = requireActivity().window
+                window.decorView.getWindowVisibleDisplayFrame(statusBar)
+
                 val coordinatorLayout = bottomSheet.parent as CoordinatorLayout
                 val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
 
-                if (forceExpand || bottomSheet.height + marginTop > displayHeight) {
+                if (forceExpand || (bottomSheet.height + marginTop + statusBar.top) > displayHeight) {
                     // apply top offset
                     bottomSheetBehavior.isFitToContents = false
                     bottomSheetBehavior.expandedOffset = marginTop

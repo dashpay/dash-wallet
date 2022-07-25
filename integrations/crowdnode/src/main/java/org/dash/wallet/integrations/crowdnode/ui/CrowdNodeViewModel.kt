@@ -154,11 +154,6 @@ class CrowdNodeViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
-
-        viewModelScope.launch {
-            _accountAddress.value = getOrCreateAccountAddress()
-            crowdNodeApi.refreshBalance()
-        }
     }
     
     fun backupPassphrase() {
@@ -175,6 +170,12 @@ class CrowdNodeViewModel @Inject constructor(
 
     fun sendReport() {
         navigationCallback.postValue(NavigationRequest.SendReport)
+    }
+
+    suspend fun recheckState() {
+        crowdNodeApi.restoreStatus()
+        _accountAddress.value = getOrCreateAccountAddress()
+        crowdNodeApi.refreshBalance()
     }
 
     fun signUp() {

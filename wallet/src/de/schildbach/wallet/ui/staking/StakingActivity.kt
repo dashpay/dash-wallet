@@ -20,17 +20,16 @@ package de.schildbach.wallet.ui.staking
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
@@ -59,7 +58,7 @@ class StakingActivity : LockScreenActivity() {
         super.onCreate(savedInstanceState)
 
         binding = ActivityStakingBinding.inflate(layoutInflater)
-        navController = setNavigationGraph()
+        lifecycleScope.launch { navController = setNavigationGraph() }
 
         viewModel.navigationCallback.observe(this, ::handleNavigationRequest)
         viewModel.observeOnlineAccountStatus().observe(this, ::handleOnlineAccountStatus)
@@ -83,7 +82,7 @@ class StakingActivity : LockScreenActivity() {
             NavigationRequest.SendReport -> {
                 log.info("CrowdNode initiated report")
                 alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
-                    WalletApplication.getInstance()).buildAlertDialog()
+                    walletApplication).buildAlertDialog()
                 alertDialog.show()
             }
             else -> { }
@@ -121,16 +120,20 @@ class StakingActivity : LockScreenActivity() {
         }
     }
 
-    private fun setNavigationGraph(): NavController {
+    private suspend fun setNavigationGraph(): NavController {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.nav_crowdnode)
 
+        viewModel.recheckState()
+        val status = viewModel.signUpStatus
+        binding.progressBar.isVisible = false
+
         navGraph.startDestination =
-            when (viewModel.signUpStatus) {
+            when (status) {
                 SignUpStatus.LinkedOnline, SignUpStatus.Finished -> R.id.crowdNodePortalFragment
                 SignUpStatus.NotStarted -> {
-                    val isInfoShown = runBlocking { viewModel.getIsInfoShown() }
+                    val isInfoShown = viewModel.getIsInfoShown()
                     if (isInfoShown) R.id.entryPointFragment else R.id.firstTimeInfo
                 }
                 else -> R.id.newAccountFragment

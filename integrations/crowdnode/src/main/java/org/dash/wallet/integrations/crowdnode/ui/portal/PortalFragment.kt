@@ -27,6 +27,7 @@ import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -214,7 +215,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         if (isEnabled) {
             binding.withdrawIcon.setImageResource(R.drawable.ic_left_right_arrows)
             binding.withdrawTitle.setTextColor(resources.getColor(R.color.content_primary, null))
-            binding.withdrawSubtitle.setTextColor(resources.getColor(R.color.content_secondary, null))
+            binding.withdrawSubtitle.setTextColor(resources.getColor(R.color.content_tertiary, null))
         } else {
             binding.withdrawIcon.setImageResource(R.drawable.ic_withdraw_disabled)
             binding.withdrawTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
@@ -229,7 +230,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         if (isEnabled) {
             binding.depositIcon.setImageResource(R.drawable.ic_deposit_enabled)
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_primary, null))
-            binding.depositSubtitle.setTextColor(resources.getColor(R.color.content_secondary, null))
+            binding.depositSubtitle.setTextColor(resources.getColor(R.color.content_tertiary, null))
         } else {
             binding.depositIcon.setImageResource(R.drawable.ic_deposit_disabled)
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
@@ -319,7 +320,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
 
     private fun showConfirmationDialog() {
         viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_VERIFY)
-        ConfirmationDialog().show(parentFragmentManager, "confirmation_dialog")
+
+        if (requireActivity().lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            ConfirmationDialog().show(parentFragmentManager, "confirmation_dialog")
+        }
     }
 
     private fun getErrorMessage(exception: Exception): String {
@@ -388,7 +392,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
                 getString(R.string.buy_dash)
             ).show(requireActivity()) {
                 if (it == true) {
+                    viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_WITHDRAW_BUY)
                     viewModel.buyDash()
+                } else {
+                    viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_WITHDRAW_CANCEL)
                 }
             }
         }

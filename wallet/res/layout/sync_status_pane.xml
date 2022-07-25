@@ -7,11 +7,11 @@
 
     <RelativeLayout
         android:id="@+id/sync_error_pane"
-        style="@style/Panel.Red"
         android:layout_width="match_parent"
         android:layout_height="80dp"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="16dp"
+        android:background="@drawable/red_panel_background"
         tools:visibility="visible"
         android:visibility="gone">
 
@@ -25,18 +25,16 @@
             android:orientation="vertical">
 
             <TextView
+                style="@style/Subtitle2.White"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/montserrat_semibold"
-                android:text="@string/sync_status_unable_to_connect"
-                android:textColor="@color/dash_white" />
+                android:text="@string/sync_status_unable_to_connect" />
 
             <TextView
+                style="@style/Body2.White"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/montserrat_regular"
-                android:text="@string/sync_status_check_connection"
-                android:textColor="@color/dash_white" />
+                android:text="@string/sync_status_check_connection" />
 
         </LinearLayout>
 

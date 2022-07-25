@@ -47,14 +47,14 @@
 
         <Button
             android:id="@+id/create_new_wallet"
-            style="@style/DashButton.Blue"
+            style="@style/Button.Primary.Large.Blue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/onboarding_create_wallet" />
 
         <Button
             android:id="@+id/recovery_wallet"
-            style="@style/DashButton.Transparent"
+            style="@style/Button.Tertiary.Large.White"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
@@ -62,7 +62,7 @@
 
         <Button
             android:id="@+id/restore_wallet"
-            style="@style/DashButton.Transparent"
+            style="@style/Button.Tertiary.Large.White"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"

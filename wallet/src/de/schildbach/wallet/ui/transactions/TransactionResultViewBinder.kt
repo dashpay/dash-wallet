@@ -34,7 +34,6 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
 import org.dash.wallet.common.ui.CurrencyTextView
@@ -72,10 +71,8 @@ class TransactionResultViewBinder(
     private val paymentMemoContainer by lazy { containerView.findViewById<View>(R.id.payment_memo_container) }
     private val payeeSecuredByContainer by lazy { containerView.findViewById<View>(R.id.payee_verified_by_container) }
     private val payeeSecuredBy by lazy { containerView.findViewById<TextView>(R.id.payee_secured_by) }
-
     private val errorContainer by lazy { containerView.findViewById<View>(R.id.error_container) }
     private val errorDescription by lazy { containerView.findViewById<TextView>(R.id.error_description) }
-    private val taxCategory by lazy { containerView.findViewById<TextView>(R.id.tax_category) }
 
     private val reportIssueContainer by lazy { containerView.findViewById<View>(R.id.report_issue_card) }
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
@@ -164,20 +161,13 @@ class TransactionResultViewBinder(
 
         dashAmount.setFormat(dashFormat)
         //For displaying purposes only
-        val amount = if (isSent && isFeeAvailable(tx.fee)) {
-            value.plus(tx.fee)
+        if (value.isNegative) {
+            dashAmount.setAmount(value.negate())
         } else {
-            value
-        }
-
-        if (amount.isNegative) {
-            dashAmount.setAmount(amount.negate())
-        } else {
-            dashAmount.setAmount(amount)
+            dashAmount.setAmount(value)
         }
 
         if (isFeeAvailable(tx.fee)) {
-            transactionFee.setInsignificantRelativeSize(1.0f)
             transactionFee.setFormat(dashFormat)
             transactionFee.setAmount(tx.fee)
         }
@@ -193,13 +183,13 @@ class TransactionResultViewBinder(
             fiatValue.isVisible = false
         }
 
-        setTransactionDirection(tx, errorStatusStr, TransactionUtils.isEntirelySelf(tx, wallet))
+        setTransactionDirection(tx, wallet, errorStatusStr)
     }
 
     private fun setTransactionDirection(
         tx: Transaction,
-        errorStatusStr: String,
-        isInternal: Boolean
+        wallet: Wallet,
+        errorStatusStr: String
     ) {
         if (errorStatusStr.isNotEmpty()){
             errorContainer.isVisible = true
@@ -224,32 +214,19 @@ class TransactionResultViewBinder(
 
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
-                if (!isInternal) {
-                    transactionAmountSignal.text = "-"
-                }
+                transactionAmountSignal.text = "-"
+                transactionAmountSignal.isVisible = true
             } else {
                 checkIcon.setImageResource(R.drawable.ic_transaction_received)
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.system_green))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
+                transactionAmountSignal.isVisible = true
                 transactionAmountSignal.text = "+"
             }
-
             checkIcon.isVisible = true
-            transactionAmountSignal.isVisible = true
         }
 
-        feeRow.isVisible = isFeeAvailable(tx.fee)
-    }
-
-    fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
-        val categories =
-            containerView.resources.getStringArray(R.array.transaction_result_tax_categories)
-
-        if (transactionMetadata.taxCategory != null) {
-            taxCategory.text = categories[transactionMetadata.taxCategory!!.value]
-        } else {
-            taxCategory.text = categories[transactionMetadata.defaultTaxCategory.value]
-        }
+        feeRow.visibility = if (isFeeAvailable(tx.fee)) View.VISIBLE else View.GONE
     }
 
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {

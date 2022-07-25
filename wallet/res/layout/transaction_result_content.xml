@@ -2,9 +2,9 @@
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context="de.schildbach.wallet.ui.transactions.TransactionResultViewBinder"
     tools:orientation="vertical"
-    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
+    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout"
+    tools:context="de.schildbach.wallet.ui.transactions.TransactionResultViewBinder">
 
     <TextView
         android:id="@+id/transaction_title"
@@ -92,10 +92,10 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="15dp"
         android:layout_marginTop="20dp"
-        android:background="@drawable/rounded_background"
-        android:orientation="vertical"
         android:paddingHorizontal="15dp"
         android:paddingVertical="5dp"
+        android:orientation="vertical"
+        android:background="@drawable/rounded_background"
         android:theme="@style/SecondaryBackground"
         app:layout_constraintTop_toBottomOf="@id/fiat_value">
 
@@ -331,7 +331,6 @@
                 android:src="@drawable/ic_toggle_arrows" />
         </LinearLayout>
     </RelativeLayout>
-
     <RelativeLayout
         android:id="@+id/open_explorer_card"
         style="@style/ViewRaised"
@@ -368,13 +367,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="15dp"
-        android:background="@drawable/rounded_ripple_background"
         android:paddingHorizontal="15dp"
         android:paddingVertical="17dp"
-        android:theme="@style/ListViewButtonBackground"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/transaction_details_card"
-        tools:visibility="gone">
+        android:background="@drawable/rounded_ripple_background"
+        android:theme="@style/ListViewButtonBackground"
+        app:layout_constraintTop_toBottomOf="@id/open_explorer_card"
+        tools:visibility="visible">
 
         <TextView
             android:id="@+id/report_error"
@@ -432,8 +431,6 @@
             android:marqueeRepeatLimit="1"
             android:singleLine="true"
             android:text="Digital Signature Trust CO."
-            android:textColor="@color/dash_black"
-            android:textStyle="bold"
             tools:ignore="HardcodedText" />
     </LinearLayout>
 

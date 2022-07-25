@@ -32,20 +32,25 @@ open class FullCrowdNodeSignUpTxSet(
         signUpFilter,
         CrowdNodeAcceptTermsResponse(networkParams),
         CrowdNodeAcceptTermsTx(networkParams),
-        CrowdNodeWelcomeToApiResponse(networkParams)
+        CrowdNodeWelcomeToApiResponse(networkParams),
+        PossibleAcceptTermsResponse(bag, null),
+        PossibleWelcomeResponse(bag, null)
     )
 
     private val matchedFilters = mutableListOf<TransactionFilter>()
     override val transactions = sortedSetOf(TransactionComparator())
 
-    open val hasAcceptTermsResponse: Boolean
-        get() = matchedFilters.any { it is CrowdNodeAcceptTermsResponse }
+    open val acceptTermsResponse: CrowdNodeAcceptTermsResponse?
+        get() = matchedFilters.filterIsInstance<CrowdNodeAcceptTermsResponse>().firstOrNull()
 
-    open val hasWelcomeToApiResponse: Boolean
-        get() = matchedFilters.any { it is CrowdNodeWelcomeToApiResponse }
+    open val possibleAcceptTermsResponse: PossibleAcceptTermsResponse?
+        get() = matchedFilters.filterIsInstance<PossibleAcceptTermsResponse>().firstOrNull { didSignUpFromAddress(it.toAddress) }
 
-    open val accountAddress: Address?
-        get() = (matchedFilters.firstOrNull { it is CrowdNodeSignUpTx } as? CrowdNodeSignUpTx)?.fromAddresses?.first()
+    open val welcomeToApiResponse: CrowdNodeWelcomeToApiResponse?
+        get() = matchedFilters.filterIsInstance<CrowdNodeWelcomeToApiResponse>().firstOrNull()
+
+    open val possibleWelcomeToApiResponse: PossibleWelcomeResponse?
+        get() = matchedFilters.filterIsInstance<PossibleWelcomeResponse>().firstOrNull { didSignUpFromAddress(it.toAddress) }
 
     override fun tryInclude(tx: Transaction): Boolean {
         if (transactions.any { it.txId == tx.txId }) {
@@ -81,13 +86,18 @@ open class FullCrowdNodeSignUpTxSet(
 
         for (tx in transactions) {
             val value = tx.getValue(bag)
-            val isSent = value.signum() < 0
-            val fee = tx.fee
-            val removeFee = isSent && fee != null && !fee.isZero
-
-            result = result.add(if (removeFee) value.plus(fee) else value)
+            result = result.add(value)
         }
 
         return result
+    }
+
+    private fun didSignUpFromAddress(toAddress: Address?): Boolean {
+        if (toAddress == null) {
+            return false
+        }
+
+        val signUpTxs = matchedFilters.filterIsInstance<CrowdNodeSignUpTx>()
+        return signUpTxs.any { it.fromAddresses.first() == toAddress }
     }
 }

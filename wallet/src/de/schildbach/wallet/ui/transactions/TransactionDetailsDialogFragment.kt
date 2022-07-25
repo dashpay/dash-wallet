@@ -35,6 +35,14 @@ import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
+import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
+import org.dash.wallet.common.ui.viewBinding
+import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
@@ -117,7 +125,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
     private fun viewOnBlockExplorer() {
         val tx = viewModel.transaction
         if (tx != null) {
-            WalletUtils.viewOnBlockExplorer(activity, tx.purpose, tx.txId.toString())
+            WalletUtils.viewOnBlockExplorer(activity, tx!!.purpose, tx!!.txId.toString())
         }
     }
 

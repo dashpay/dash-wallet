@@ -12,4 +12,5 @@
     android:text="@string/transaction_result_sent_to"
     android:textSize="13sp"
     android:gravity="end"
+    android:textAlignment="gravity"
     tools:text="XkDnBY4…RfzLRJH6Ex" />

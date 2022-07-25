@@ -111,6 +111,9 @@ class MainViewModel @Inject constructor(
     val hideBalance: LiveData<Boolean>
         get() = _hideBalance
 
+    val isPassphraseVerified: Boolean
+        get() = !config.remindBackupSeed
+
     init {
         _hideBalance.value = config.hideBalance
         transactionsDirection = savedStateHandle.get(DIRECTION_KEY) ?: TxDirection.ALL
@@ -204,6 +207,10 @@ class MainViewModel @Inject constructor(
         analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
             "filter_value" to directionParameter
         ))
+    }
+
+    fun processDirectTransaction(tx: Transaction) {
+        walletData.processDirectTransaction(tx)
     }
 
     override fun onCleared() {

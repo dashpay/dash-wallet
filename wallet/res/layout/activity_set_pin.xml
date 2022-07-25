@@ -20,10 +20,11 @@
 
         <TextView
             android:id="@+id/page_title"
-            style="@style/MontserratMedium.PageTitle"
+            style="@style/Headline6"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
+            android:textAlignment="gravity"
             android:padding="16dp"
             android:text="@string/set_pin_set_pin" />
 
@@ -50,16 +51,17 @@
 
         <TextView
             android:id="@+id/message"
-            style="@style/MontserratMedium.BodyText"
+            style="@style/Body1.Medium"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
+            android:textAlignment="gravity"
             android:padding="16dp"
             android:text="@string/set_pin_message" />
 
         <Button
             android:id="@+id/btn_confirm"
-            style="@style/NewMontserratButton.Secondary.Inverted"
+            style="@style/Button.Tertiary.Large.Blue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end"
