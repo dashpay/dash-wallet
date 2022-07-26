@@ -21,10 +21,12 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.copy
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.DialogStakingBinding
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
@@ -55,5 +57,10 @@ class StakingDialog : OffsetDialogFragment() {
             R.string.crowdnode_staking_apy_title,
             String.format(Locale.getDefault(), "%.1f", viewModel.getCrowdNodeAPY())
         )
+        binding.stakingConnectedDashAddress.text = viewModel.accountAddress.value?.toBase58()
+        binding.stakingConnectedAddressContainer.setOnClickListener {
+            viewModel.accountAddress.value?.toBase58()?.copy(requireActivity(), "dash address")
+            Toast.makeText(requireContext(), R.string.crowdnode_staking_toast_address_copied, Toast.LENGTH_SHORT).show()
+        }
     }
 }

@@ -65,7 +65,7 @@
 
             <TextView
                 android:id="@+id/staking_message_one"
-                style="@style/Body2"
+                style="@style/Body2.Secondary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
@@ -77,7 +77,7 @@
 
             <TextView
                 android:id="@+id/staking_message_two"
-                style="@style/Body2"
+                style="@style/Body2.Secondary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
@@ -157,10 +157,9 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:text="@string/crowdnode_staking_first_minimum_deposit_title"
-                    app:layout_constraintBottom_toBottomOf="@+id/staking_first_min_deposit"
+                    app:layout_constraintBottom_toBottomOf="@id/staking_first_min_deposit"
                     app:layout_constraintStart_toEndOf="@id/staking_first_min_deposit"
-                    app:layout_constraintTop_toTopOf="@+id/staking_first_min_deposit"
-                    app:layout_constraintVertical_bias="0.0" />
+                    app:layout_constraintTop_toTopOf="@id/staking_first_min_deposit" />
 
                 <TextView
                     android:id="@+id/staking_first_min_deposit_message"
@@ -223,14 +222,27 @@
                     app:layout_constraintTop_toTopOf="@id/staking_leaving_the_pool" />
 
                 <TextView
-                    android:id="@+id/staking_leaving_the_pool_message"
+                    android:id="@+id/staking_leaving_the_pool_message_one"
+                    style="@style/Body2.Secondary"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="15dp"
-                    android:text="@string/crowdnode_staking_leave_pool_message"
+                    android:text="@string/crowdnode_staking_leave_pool_message_one"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="@id/staking_leaving_the_pool_title"
                     app:layout_constraintTop_toBottomOf="@id/staking_leaving_the_pool_title" />
+
+                <TextView
+                    android:id="@+id/staking_leaving_the_pool_message_two"
+                    style="@style/Body2.Secondary"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginEnd="15dp"
+                    android:text="@string/crowdnode_staking_leave_pool_message_two"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="@id/staking_leaving_the_pool_message_one"
+                    app:layout_constraintTop_toBottomOf="@id/staking_leaving_the_pool_message_one" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -246,6 +258,8 @@
                 app:layout_constraintTop_toBottomOf="@id/staking_benefits_container" />
 
             <TextView
+                android:id="@+id/staking_apy_message"
+                style="@style/Body2.Secondary"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
@@ -255,6 +269,69 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/staking_apy_title" />
 
+            <TextView
+                android:id="@+id/staking_connected_address_title"
+                style="@style/Headline6"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="30dp"
+                android:text="@string/crowdnode_staking_connected_dash_address_title"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/staking_apy_message" />
+
+            <TextView
+                android:id="@+id/staking_connected_address_message"
+                style="@style/Body2.Secondary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="10dp"
+                android:text="@string/crowdnode_staking_connected_dash_address_message"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/staking_connected_address_title" />
+
+            <RelativeLayout
+                android:id="@+id/staking_connected_address_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="15dp"
+                android:paddingHorizontal="15dp"
+                android:paddingVertical="10dp"
+                android:background="@drawable/rounded_ripple_background"
+                android:theme="@style/ListViewButtonBackground"
+
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/staking_connected_address_message">
+
+                <TextView
+                    android:id="@+id/staking_dash_address_title"
+                    style="@style/Overline"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:text="@string/dash_address" />
+
+                <TextView
+                    android:id="@+id/staking_connected_dash_address"
+                    style="@style/Overline"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/staking_dash_address_title"
+                    android:layout_alignParentStart="true"
+                    tools:text="yZ3XpruChNgctwFvCzQ5WpFg7RpytQVwkA" />
+
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/ic_copy" />
+
+
+            </RelativeLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.core.widget.NestedScrollView>
