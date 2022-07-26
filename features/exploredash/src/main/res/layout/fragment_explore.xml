@@ -222,9 +222,10 @@
                         android:background="@drawable/rounded_background"
                         android:gravity="center"
                         android:orientation="horizontal"
+                        android:layout_marginTop="10dp"
                         android:paddingHorizontal="8dp"
                         android:paddingVertical="5dp"
-                        android:theme="@style/RoundedTextView"
+                        android:theme="@style/SystemGreenHighlight"
                         app:layout_constraintStart_toStartOf="@id/staking_subtitle"
                         app:layout_constraintTop_toBottomOf="@id/staking_subtitle">
 
@@ -235,11 +236,11 @@
 
                         <TextView
                             android:id="@+id/staking_apy"
+                            style="@style/Caption.Medium.Green"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="4dp"
                             android:text="@string/explore_staking_current_apy"
-                            android:textColor="@color/system_green"
                             tools:text="Current APY = 6.9%" />
                     </LinearLayout>
                 </androidx.constraintlayout.widget.ConstraintLayout>
