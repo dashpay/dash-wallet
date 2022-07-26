@@ -76,18 +76,8 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.isEnabled = false
         binding.continueBtn.setOnClickListener {
-            getFiatAmount(
-                viewModel.enteredConvertAmount,
-                binding.currencyOptions.pickedOption
-            )?.let {
-                viewModel.onContinueEvent.value = SwapRequest(
-                    viewModel.dashToCrypto.value ?: false,//dash -> coinbase,
-                    it.second,
-                    it.first
-                )
-            }
+            viewModel.continueSwap(binding.currencyOptions.pickedOption)
         }
-
 
         viewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) {
             selectedCurrencyCodeExchangeRate = ExchangeRate(Coin.COIN, it.fiat)
@@ -197,7 +187,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                                     .setScale(8, RoundingMode.HALF_UP).toString()
                             } else {
 
-                                val bd = toDashValue(valueToBind, userAccountData, true)
+                                val bd = viewModel.toDashValue(valueToBind, userAccountData, true)
                                 val coin = try {
                                     Coin.parseCoin(bd.toString())
                                 } catch (x: Exception) {
@@ -218,7 +208,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                                     )
                                     .setScale(8, RoundingMode.HALF_UP).toString()
                             } else {
-                                val bd = toDashValue(valueToBind, userAccountData)
+                                val bd = viewModel.toDashValue(valueToBind, userAccountData)
                                 val coin = try {
                                     Coin.parseCoin(bd.toString())
                                 } catch (x: Exception) {
@@ -416,7 +406,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                     val dashAmount = when {
                         (it.coinBaseUserAccountData.balance?.currency == currencyCode && it.coinBaseUserAccountData.balance.currency != DASH_CURRENCY) -> {
                             val bd =
-                                toDashValue(balance, it, true)
+                                viewModel.toDashValue(balance, it, true)
                             try {
                                 Coin.parseCoin(bd.toString())
                             } catch (x: Exception) {
@@ -426,7 +416,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                         (viewModel.selectedLocalCurrencyCode == currencyCode && it.coinBaseUserAccountData.balance?.currency != DASH_CURRENCY) -> {
                             // USD
                             val bd =
-                                toDashValue(balance, it)
+                                viewModel.toDashValue(balance, it)
                             try {
                                 Coin.parseCoin(bd.toString())
                             } catch (x: Exception) {
@@ -455,8 +445,6 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         checkTheUserEnteredValue(hasBalance)
     }
 
-
-
     private fun setAmountFormat(
         spannable: Spannable,
         from: Int,
@@ -475,61 +463,6 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
             )
         }
-    }
-
-    private fun getFiatAmount(balance: String, currencyCode: String): Pair<Fiat?, Coin?>? {
-        viewModel.selectedCryptoCurrencyAccount.value?.let {
-            selectedCurrencyCodeExchangeRate?.let { rate ->
-                val fiatAmount = when {
-                    (it.coinBaseUserAccountData.balance?.currency == currencyCode && it.coinBaseUserAccountData.balance.currency != DASH_CURRENCY) -> {
-                        val cleanedValue =
-                            balance.toBigDecimal() /
-                                it.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
-                        val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
-
-                        Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())
-                    }
-                    (viewModel.selectedLocalCurrencyCode == currencyCode && it.coinBaseUserAccountData.balance?.currency != DASH_CURRENCY) -> {
-
-                        Fiat.parseFiat(rate.fiat.currencyCode, balance)
-                    }
-
-                    else -> {
-                        val cleanedValue =
-                            balance.toBigDecimal() /
-                                it.currencyToDashExchangeRate.toBigDecimal()
-                        val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
-
-                        Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())
-                    }
-                }
-
-                val bd =
-                    toDashValue(balance, it)
-                val coin = try {
-                    Coin.parseCoin(bd.toString())
-                } catch (x: Exception) {
-                    Coin.ZERO
-                }
-                return Pair(fiatAmount, coin)
-            }
-        }
-        return null
-    }
-
-    private fun toDashValue(
-        valueToBind: String,
-        userAccountData: CoinBaseUserAccountDataUIModel,
-        fromCrypto: Boolean = false
-    ): BigDecimal {
-        val convertedValue = if (fromCrypto) {
-            valueToBind.toBigDecimal() *
-                userAccountData.cryptoCurrencyToDashExchangeRate.toBigDecimal()
-        } else {
-            valueToBind.toBigDecimal() *
-                userAccountData.currencyToDashExchangeRate.toBigDecimal()
-        }.setScale(8, RoundingMode.HALF_UP)
-        return convertedValue
     }
 
     private fun checkTheUserEnteredValue(hasBalance: Boolean) {
