@@ -216,7 +216,7 @@ class BlockchainStateDataProvider @Inject constructor(
 
         // Estimate current block height
         val timeElapsedSinceCheckpoint = currentTime - lastCheckpoint.header.time.time/1000
-        val estimatedBlockHeight = (timeElapsedSinceCheckpoint / NetworkParameters.TARGET_SPACING).toInt() + lastCheckpoint.height
+        val estimatedBlockHeight = (timeElapsedSinceCheckpoint / BLOCK_TARGET_SPACING).toInt() + lastCheckpoint.height
 
         val apy = getMasternodeAPY(
             walletDataProvider.networkParameters,
