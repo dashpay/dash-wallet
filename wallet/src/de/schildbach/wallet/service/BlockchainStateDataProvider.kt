@@ -37,6 +37,17 @@ class BlockchainStateDataProvider @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val configuration: Configuration
 ) : BlockchainStateProvider {
+    companion object {
+        /**
+         *  NetworkParameters.TARGET_SPACING is 2.5 min, but the DGW algorithm targets 2.625 min
+         *  See [org.bitcoinj.params.AbstractBitcoinNetParams.DarkGravityWave]
+         */
+        const val BLOCK_TARGET_SPACING = 2.625 * 60 // seconds
+        const val DAYS_PER_YEAR = 365.242199
+        const val SECONDS_PER_DAY = 24 * 60 * 60
+        val MASTERNODE_COST: Coin = Coin.valueOf(1000, 0)
+    }
+
     override suspend fun getState(): BlockchainState? {
         return blockchainStateDao.loadSync()
     }
@@ -234,10 +245,9 @@ class BlockchainStateDataProvider @Inject constructor(
             blockReward
         )
 
-        val blocksPerYear = (365.2425 * 24 * 60 * 60 / NetworkParameters.TARGET_SPACING)
+        val blocksPerYear = (DAYS_PER_YEAR * SECONDS_PER_DAY / BLOCK_TARGET_SPACING)
         val payoutsPerYear = blocksPerYear / masternodeCount
-        val masternodeCost = Coin.valueOf(1000, 0)
 
-        return 100.0 * masternodeReward.value * payoutsPerYear / masternodeCost.value
+        return 100.0 * masternodeReward.value * payoutsPerYear / MASTERNODE_COST.value
     }
 }
