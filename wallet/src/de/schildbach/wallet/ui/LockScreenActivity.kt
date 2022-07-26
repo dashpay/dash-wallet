@@ -81,7 +81,7 @@ open class LockScreenActivity : SecureActivity() {
     private lateinit var enableFingerprintViewModel: EnableFingerprintDialog.SharedViewModel
     private val pinLength by lazy { configuration.pinLength }
 
-    protected val lockScreenDisplayed: Boolean
+    val lockScreenDisplayed: Boolean
         get() = root_view_switcher.displayedChild == 0
 
     private val temporaryLockCheckHandler = Handler()

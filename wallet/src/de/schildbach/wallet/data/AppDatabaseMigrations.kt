@@ -16,33 +16,19 @@
 
 package de.schildbach.wallet.data
 
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
 
 class AppDatabaseMigrations {
     companion object {
-        // v7.4.1 to 7.4.5 (version 8) held Explore Dash Data in these tables
-        // In v7.4.6 (version 9), Explore Dash data was moved to a different DB,
-        // but the migration to drop these tables was set at 3 to 9 which did not work.
-        @JvmStatic
-        val migration8To10 = object : Migration(8, 10) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("DROP TABLE IF EXISTS `merchant`")
-                database.execSQL("DROP TABLE IF EXISTS `atm`")
-                database.execSQL("DROP TABLE IF EXISTS `merchant_fts`")
-                database.execSQL("DROP TABLE IF EXISTS `atm_fts`")
-            }
-        }
+        // this is a place holder for future migrations post version 11
+        // that will need to preserve the transaction_metadata and address_metadata tables
+        // If new tables are added in version 12, then we will need something like this:
 
-        // v7.4.6 (version 9) still had Explore Dash Data in this DB
-        @JvmStatic
-        val migration9To10 = object : Migration(9, 10) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("DROP TABLE IF EXISTS `merchant`")
-                database.execSQL("DROP TABLE IF EXISTS `atm`")
-                database.execSQL("DROP TABLE IF EXISTS `merchant_fts`")
-                database.execSQL("DROP TABLE IF EXISTS `atm_fts`")
-            }
-        }
+//        @JvmStatic
+//        val migration11To12 = object : Migration(11, 12) {
+//            override fun migrate(database: SupportSQLiteDatabase) {
+//                database.execSQL("CREATE TABLE `table_one`...")
+//                database.execSQL("CREATE TABLE `table_two`...")
+//            }
+//        }
     }
 }

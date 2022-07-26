@@ -80,6 +80,7 @@ import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.transactions.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
+import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
@@ -124,6 +125,7 @@ import de.schildbach.wallet.transactions.TransactionWrapperHelper;
 import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.transactions.WalletTransactionObserver;
+import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.security.SecurityGuard;
 import de.schildbach.wallet.util.CrashReporter;
@@ -182,6 +184,9 @@ public class WalletApplication extends BaseWalletApplication
     BlockchainStateDao blockchainStateDao;
     @Inject
     CrowdNodeConfig crowdNodeConfig;
+
+    @Inject
+    TransactionMetadataProvider transactionMetadataProvider;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -348,6 +353,10 @@ public class WalletApplication extends BaseWalletApplication
         }
 
         config.updateLastVersionCode(packageInfo.versionCode);
+
+        if (config.getTaxCategoryInstallTime() == 0) {
+            config.setTaxCategoryInstallTime(System.currentTimeMillis());
+        }
 
         afterLoadWallet();
 
@@ -932,6 +941,8 @@ public class WalletApplication extends BaseWalletApplication
         if (walletBackupFile.exists()) {
             walletBackupFile.delete();
         }
+        // clear data on wallet reset
+        transactionMetadataProvider.clear();
         // wallet must be null for the OnboardingActivity flow
         wallet = null;
     }
@@ -1038,6 +1049,15 @@ public class WalletApplication extends BaseWalletApplication
                 wallet.getTransactions(true),
                 wrappers
         );
+    }
+
+    @NonNull
+    @Override
+    public Flow<Transaction> observeMostRecentTransaction() {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+        return new WalletMostRecentTransactionsObserver(wallet).observe();
     }
 
     // wallets from v5.17.5 and earlier do not have a BIP44 path
