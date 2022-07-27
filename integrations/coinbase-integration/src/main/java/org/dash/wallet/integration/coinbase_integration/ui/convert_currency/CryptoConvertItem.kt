@@ -85,7 +85,11 @@ class CryptoConvertItem @JvmOverloads constructor(
         binding.selectTheCoinTitle.isVisible = !isGroupVisible
     }
 
-    fun setConvertItemTitle(title: String) {
+    fun setSyncingVisibility(isGroupVisible: Boolean) {
+        binding.syncingProgressContainer.isVisible = isGroupVisible
+    }
+
+    fun setConvertItemTitle(title: String) {9
         binding.convertFromDashTitle.text = title
     }
 

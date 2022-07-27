@@ -169,16 +169,6 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             ).show(requireActivity()) { }
         }
 
-        enterAmountToTransferViewModel.dashWalletNotSyncedCallback.observe(viewLifecycleOwner) {
-            AdaptiveDialog.create(
-                R.drawable.ic_info_red,
-                getString(R.string.transfer_wallet_not_synced),
-                "",
-                "",
-                getString(R.string.close)
-            ).show(requireActivity()) { }
-        }
-
         enterAmountToTransferViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner){
             val dashInStr = dashFormat.optionalDecimals(0,6).format(it.second)
             val amountFiat = dashFormat.format(it.first).toString()
@@ -203,6 +193,11 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         enterAmountToTransferViewModel.transferDirectionState.observe(viewLifecycleOwner){
             binding.transferView.walletToCoinbase = it
             hideBanners()
+            setIsSyncing(it == true && enterAmountToTransferViewModel.isBlockchainSynced.value != true)
+        }
+
+        enterAmountToTransferViewModel.isBlockchainSynced.observe(viewLifecycleOwner) {
+            setIsSyncing(it != true && enterAmountToTransferViewModel.transferDirectionState.value == true)
         }
 
         binding.authLimitBanner.root.setOnClickListener {

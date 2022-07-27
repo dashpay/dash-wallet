@@ -228,4 +228,13 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             }
         }
     }
+
+    fun showKeyboardAndButton(isVisible: Boolean) {
+        try {
+            binding.keyboardContainer.isVisible = isVisible
+            binding.transferBtn.isVisible = isVisible
+        } catch (e: IllegalStateException) {
+            // swallow
+        }
+    }
 }

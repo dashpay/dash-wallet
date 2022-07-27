@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright 2021 Dash Core Group.
   ~
   ~ This program is free software: you can redistribute it and/or modify
@@ -78,6 +77,22 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/transfer_view"
+        tools:visibility="visible" />
+
+    <TextView
+        android:id="@+id/transfer_message"
+        style="@style/Caption"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="25dp"
+        android:layout_marginTop="10dp"
+        android:gravity="center_horizontal"
+        android:text="@string/transfer_wallet_not_synced"
+        android:textAlignment="gravity"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/amount_received"
         tools:visibility="visible" />
 
     <androidx.constraintlayout.widget.Guideline

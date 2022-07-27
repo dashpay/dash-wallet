@@ -111,9 +111,21 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
         onTransferDirectionBtnClicked = listener
     }
 
+    fun setSyncing(isSyncing: Boolean) {
+        binding.convertFromBtn.setSyncingVisibility(isSyncing)
+        //binding.loadingProgressContainer.isVisible = isSyncing
+        //binding.convertFromDashBalance.isVisible = !isSyncing
+        //binding.convertFromDashFiatAmount.isVisible = !isSyncing
+        //binding.walletIcon.isVisible = !isSyncing
+        if (!isSyncing) {
+            updateAmount()
+        }
+    }
+
     private fun initUI(){
         binding.convertFromBtn.setCryptoItemGroupVisibility(true)
         binding.convertToBtn.setCryptoItemGroupVisibility(true)
+        binding.convertFromBtn.setSyncingVisibility(false)
         binding.convertFromBtn.hideComponents()
         binding.convertToBtn.hideComponents()
         binding.convertFromBtn.setIconConstraint()
