@@ -78,10 +78,10 @@ class CoinbaseServicesViewModel @Inject constructor(
         get() = _latestUserBalance
 
     init {
-        getUserAccountInfo()
         exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode!!)
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
+        getUserAccountInfo()
     }
 
     private fun getUserAccountInfo() = viewModelScope.launch(Dispatchers.Main) {
@@ -114,4 +114,7 @@ class CoinbaseServicesViewModel @Inject constructor(
         coinbaseLogOutCallback.call()
     }
 
+    fun logEvent(eventName: String) {
+        analyticsService.logEvent(eventName, bundleOf())
+    }
 }
