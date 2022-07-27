@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
+import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +30,8 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
@@ -43,7 +46,8 @@ class CoinbaseServicesViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     val exchangeRatesProvider: ExchangeRatesProvider,
     val config: Configuration,
-    networkState: NetworkStateInt
+    networkState: NetworkStateInt,
+    private val analyticsService: AnalyticsService
 ) : ConnectivityViewModel(networkState) {
 
     private val _user: MutableLiveData<CoinBaseUserAccountData> = MutableLiveData()
@@ -73,6 +77,13 @@ class CoinbaseServicesViewModel @Inject constructor(
     val latestUserBalance: LiveData<String>
         get() = _latestUserBalance
 
+    init {
+        getUserAccountInfo()
+        exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode!!)
+            .onEach(_exchangeRate::postValue)
+            .launchIn(viewModelScope)
+    }
+
     private fun getUserAccountInfo() = viewModelScope.launch(Dispatchers.Main) {
         if(config.lastCoinbaseBalance.isNullOrEmpty()) {
             _showLoading.value = true
@@ -95,16 +106,12 @@ class CoinbaseServicesViewModel @Inject constructor(
     }
 
     fun disconnectCoinbaseAccount() = viewModelScope.launch(Dispatchers.Main) {
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.DISCONNECT, bundleOf())
+
         _showLoading.value = true
         coinBaseRepository.disconnectCoinbaseAccount()
         _showLoading.value = false
         coinbaseLogOutCallback.call()
     }
 
-    init {
-        exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode!!)
-            .onEach(_exchangeRate::postValue)
-            .launchIn(viewModelScope)
-        getUserAccountInfo()
-    }
 }

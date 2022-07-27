@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
+import androidx.core.os.bundleOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -25,18 +26,22 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integration.coinbase_integration.ERROR_ID_INVALID_REQUEST
 import org.dash.wallet.integration.coinbase_integration.ERROR_MSG_INVALID_REQUEST
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseErrorResponse
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
 import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
 class EnterTwoFaCodeViewModel @Inject constructor(
-    private val coinBaseRepository: CoinBaseRepositoryInt
+    private val coinBaseRepository: CoinBaseRepositoryInt,
+    private val analyticsService: AnalyticsService
 ) : ViewModel() {
 
     private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
@@ -88,6 +93,45 @@ class EnterTwoFaCodeViewModel @Inject constructor(
                     }
                 }
             }
+        }
+    }
+
+    fun logRetry(type: CoinBaseResultDialog.Type) {
+        when (type) {
+            CoinBaseResultDialog.Type.DEPOSIT_ERROR -> {
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_ERROR_RETRY, bundleOf())
+            }
+            CoinBaseResultDialog.Type.CONVERSION_ERROR -> {
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_RETRY, bundleOf())
+            }
+            CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR -> {
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_RETRY, bundleOf())
+            }
+            else -> {}
+        }
+    }
+
+    fun logClose(type: CoinBaseResultDialog.Type) {
+        when (type) {
+            CoinBaseResultDialog.Type.DEPOSIT_SUCCESS -> {
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_SUCCESS_CLOSE, bundleOf())
+            }
+            CoinBaseResultDialog.Type.DEPOSIT_ERROR -> {
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_ERROR_CLOSE, bundleOf())
+            }
+            CoinBaseResultDialog.Type.CONVERSION_SUCCESS -> {
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SUCCESS_CLOSE, bundleOf())
+            }
+            CoinBaseResultDialog.Type.CONVERSION_ERROR -> {
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_CLOSE, bundleOf())
+            }
+            CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_SUCCESS_CLOSE, bundleOf())
+            }
+            CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR -> {
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_CLOSE, bundleOf())
+            }
+            else -> {}
         }
     }
 }

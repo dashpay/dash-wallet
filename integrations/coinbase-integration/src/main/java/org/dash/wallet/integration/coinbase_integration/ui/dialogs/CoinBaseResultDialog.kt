@@ -33,11 +33,11 @@ import androidx.fragment.app.DialogFragment
 import androidx.navigation.fragment.findNavController
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
-import org.dash.wallet.integration.coinbase_integration.databinding.DialogCoinbaseBuyDashBinding
+import org.dash.wallet.integration.coinbase_integration.databinding.DialogCoinbaseResultBinding
 
-class CoinBaseBuyDashDialog : DialogFragment() {
-    private val binding by viewBinding(DialogCoinbaseBuyDashBinding::bind)
-    var onCoinBaseBuyDashDialogButtonsClickListener: CoinBaseBuyDashDialogButtonsClickListener? = null
+class CoinBaseResultDialog : DialogFragment() {
+    private val binding by viewBinding(DialogCoinbaseResultBinding::bind)
+    var onCoinBaseResultDialogButtonsClickListener: CoinBaseResultDialogButtonsClickListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,13 +54,14 @@ class CoinBaseBuyDashDialog : DialogFragment() {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             requestFeature(Window.FEATURE_NO_TITLE)
         }
-        return inflater.inflate(R.layout.dialog_coinbase_buy_dash, container, false)
+        return inflater.inflate(R.layout.dialog_coinbase_result, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        arguments?. getInt("Type")?.let { type ->
+        val type = arguments?.getInt("Type")
+        type?.let {
             when (type) {
                 Type.PURCHASE_ERROR.ordinal -> setPurchaseError()
                 Type.DEPOSIT_ERROR.ordinal -> setDepositError()
@@ -73,11 +74,12 @@ class CoinBaseBuyDashDialog : DialogFragment() {
             }
 
             binding.coinbaseBuyDialogPositiveButton.setOnClickListener {
-                onCoinBaseBuyDashDialogButtonsClickListener?.onPositiveButtonClick(Type.values().first { it.ordinal == type })
+                onCoinBaseResultDialogButtonsClickListener?.onPositiveButtonClick(Type.values().first { it.ordinal == type })
             }
         }
 
         binding.coinbaseBuyDialogNegativeButton.setOnClickListener {
+            type?.let { onCoinBaseResultDialogButtonsClickListener?.onNegativeButtonClick(Type.values().first { it.ordinal == type }) }
             dismiss()
             findNavController().popBackStack()
             findNavController().popBackStack()
@@ -196,12 +198,12 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         fun newInstance(
             type: Type,
             responseMessage: String?
-        ): CoinBaseBuyDashDialog {
+        ): CoinBaseResultDialog {
             val args = Bundle().apply {
                 putInt("Type", type.ordinal)
                 putString(ARG_MESSAGE, responseMessage)
             }
-            return CoinBaseBuyDashDialog().apply {
+            return CoinBaseResultDialog().apply {
                 arguments = args
             }
         }
@@ -218,8 +220,9 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         TRANSFER_DASH_ERROR
     }
 
-    interface CoinBaseBuyDashDialogButtonsClickListener {
+    interface CoinBaseResultDialogButtonsClickListener {
         fun onPositiveButtonClick(type: Type)
+        fun onNegativeButtonClick(type: Type) { }
     }
 
     private fun openCoinbaseHelp() {

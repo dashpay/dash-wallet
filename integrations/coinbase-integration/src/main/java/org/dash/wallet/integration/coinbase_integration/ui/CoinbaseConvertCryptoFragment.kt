@@ -17,6 +17,8 @@
 package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
@@ -36,6 +38,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.livedata.EventObserver
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
@@ -165,18 +168,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         viewModel.userAccountError.observe(viewLifecycleOwner) {
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.we_didnt_find_any_assets,
-                getString(R.string.you_dont_own_any_crypto),
-                R.drawable.ic_info_red,
-                R.string.buy_crypto_on_coinbase,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    placeBuyOrderError
-                )
-            )
+            showNoAssetsError()
         }
 
         convertViewModel.userDashAccountEmptyError.observe(viewLifecycleOwner) {
@@ -279,17 +271,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {
                 request.fiatAmount?.let { fait ->
                     if ((viewModel.userPreference.lastCoinbaseBalance?.toDouble() ?: 0.0) <fait.toPlainString().toDouble()) {
-                        val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                            R.string.we_didnt_find_any_assets,
-                            image = R.drawable.ic_info_red,
-                            positiveButtonText = R.string.buy_crypto_on_coinbase,
-                            negativeButtonText = R.string.close
-                        )
-                        safeNavigate(
-                            CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                                placeBuyOrderError
-                            )
-                        )
+                        showNoAssetsError()
                     }
                 }
             } else {
@@ -432,6 +414,27 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
         }
+    }
+
+    private fun showNoAssetsError() {
+        AdaptiveDialog.create(
+            R.drawable.ic_info_red,
+            getString(R.string.we_didnt_find_any_assets),
+            getString(R.string.you_dont_own_any_crypto),
+            getString(R.string.close),
+            getString(R.string.buy_crypto_on_coinbase),
+        ).show(requireActivity()) { buyOnCoinbase ->
+            if (buyOnCoinbase == true) {
+                viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_BUY_ON_COINBASE)
+                openCoinbaseWebsite()
+            }
+        }
+    }
+
+    private fun openCoinbaseWebsite() {
+        val defaultBrowser = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_BROWSER)
+        defaultBrowser.data = Uri.parse(getString(R.string.coinbase_website))
+        startActivity(defaultBrowser)
     }
 
     override fun onDestroy() {

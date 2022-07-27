@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
+import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -33,7 +35,10 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapValueErrorType
@@ -41,12 +46,19 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import javax.inject.Inject
 
+enum class CurrencyInputType {
+    Dash,
+    Crypto,
+    Fiat
+}
+
 @ExperimentalCoroutinesApi
 @HiltViewModel
 class ConvertViewViewModel @Inject constructor(
     var exchangeRates: ExchangeRatesProvider,
     var userPreference: Configuration,
-    private val walletDataProvider: WalletDataProvider
+    private val walletDataProvider: WalletDataProvider,
+    private val analyticsService: AnalyticsService
 ) : ViewModel() {
 
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
@@ -180,7 +192,6 @@ class ConvertViewViewModel @Inject constructor(
         validSwapValue.call()
     }
 
-
     fun checkEnteredAmountValue(checkSendingConditions: Boolean): SwapValueErrorType {
         val coin = try {
             if (dashToCrypto.value == true) {
@@ -225,6 +236,72 @@ class ConvertViewViewModel @Inject constructor(
         _dashToCrypto.value = false
     }
 
+    fun continueSwap(pickedCurrencyOption: String) {
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_CONTINUE, bundleOf())
+        val currencyInputType = getCurrencyInputType(pickedCurrencyOption)
+        val amount = getFiatAmount(currencyInputType)
+        amount?.let {
+            logEnteredAmountCurrency(currencyInputType)
+            onContinueEvent.value = SwapRequest(
+                dashToCrypto.value ?: false,//dash -> coinbase,
+                it.second,
+                it.first
+            )
+        }
+    }
+
+    private fun getFiatAmount(currencyInputType: CurrencyInputType): Pair<Fiat?, Coin?>? {
+        selectedCryptoCurrencyAccount.value?.let {
+            selectedLocalExchangeRate.value?.let { rate ->
+                val fiatAmount = when (currencyInputType) {
+                    CurrencyInputType.Crypto -> {
+                        val cleanedValue =
+                            enteredConvertAmount.toBigDecimal() /
+                                    it.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
+                        val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
+
+                        Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())
+                    }
+                    CurrencyInputType.Fiat -> {
+                        Fiat.parseFiat(rate.fiat.currencyCode, enteredConvertAmount)
+                    }
+                    else -> {
+                        val cleanedValue =
+                            enteredConvertAmount.toBigDecimal() /
+                                    it.currencyToDashExchangeRate.toBigDecimal()
+                        val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
+
+                        Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())
+                    }
+                }
+
+                val bd = toDashValue(enteredConvertAmount, it)
+                val coin = try {
+                    Coin.parseCoin(bd.toString())
+                } catch (x: Exception) {
+                    Coin.ZERO
+                }
+                return Pair(fiatAmount, coin)
+            }
+        }
+        return null
+    }
+
+    fun toDashValue(
+        valueToBind: String,
+        userAccountData: CoinBaseUserAccountDataUIModel,
+        fromCrypto: Boolean = false
+    ): BigDecimal {
+        val convertedValue = if (fromCrypto) {
+            valueToBind.toBigDecimal() *
+                    userAccountData.cryptoCurrencyToDashExchangeRate.toBigDecimal()
+        } else {
+            valueToBind.toBigDecimal() *
+                    userAccountData.currencyToDashExchangeRate.toBigDecimal()
+        }.setScale(8, RoundingMode.HALF_UP)
+        return convertedValue
+    }
+
     private fun setDashWalletBalance() {
         val balance = walletDataProvider.getWalletBalance()
         _dashWalletBalance.value = Event(balance)
@@ -245,6 +322,34 @@ class ConvertViewViewModel @Inject constructor(
         } catch (ex: LeftoverBalanceException) {
             false
         }
+    }
+
+    private fun getCurrencyInputType(currencyCode: String): CurrencyInputType {
+        val account = selectedCryptoCurrencyAccount.value
+
+        return when {
+            (account?.coinBaseUserAccountData?.balance?.currency?.lowercase() == DASH_CURRENCY.lowercase()) -> {
+                CurrencyInputType.Dash
+            }
+            (account?.coinBaseUserAccountData?.balance?.currency?.lowercase() == currencyCode.lowercase()) -> {
+                CurrencyInputType.Crypto
+            }
+            (selectedLocalCurrencyCode.lowercase() == currencyCode.lowercase()) -> {
+                CurrencyInputType.Fiat
+            }
+            else -> CurrencyInputType.Dash
+        }
+    }
+
+    private fun logEnteredAmountCurrency(inputType: CurrencyInputType) {
+        analyticsService.logEvent(
+            when(inputType) {
+                CurrencyInputType.Crypto -> AnalyticsConstants.Coinbase.CONVERT_ENTER_CRYPTO
+                CurrencyInputType.Fiat -> AnalyticsConstants.Coinbase.CONVERT_ENTER_FIAT
+                else -> AnalyticsConstants.Coinbase.CONVERT_ENTER_DASH
+            },
+            bundleOf()
+        )
     }
 
     override fun onCleared() {

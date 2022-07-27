@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
+import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -25,10 +26,13 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.NetworkStateInt
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
 import java.util.*
 import javax.inject.Inject
 
@@ -37,7 +41,8 @@ import javax.inject.Inject
 class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     private val walletDataProvider: WalletDataProvider,
-    val networkState: NetworkStateInt
+    val networkState: NetworkStateInt,
+    private val analyticsService: AnalyticsService
 ) : ConnectivityViewModel(networkState) {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
@@ -54,6 +59,8 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     val commitBuyOrderSuccessState = SingleLiveEvent<SendTransactionToWalletParams>()
 
     fun commitBuyOrder(params: String) = viewModelScope.launch(Dispatchers.Main) {
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_CONFIRM, bundleOf())
+
         _showLoading.value = true
         when (val result = coinBaseRepository.commitBuyOrder(params)) {
             is ResponseResource.Success -> {
@@ -89,6 +96,9 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
         }
     }
 
+    fun logEvent(eventName: String) {
+        analyticsService.logEvent(eventName, bundleOf())
+    }
 
     private fun placeBuyOrder(params: PlaceBuyOrderParams) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
@@ -122,6 +132,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     }
 
     fun onRefreshOrderClicked(fiat: Fiat?, paymentMethodId: String) {
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_RETRY, bundleOf())
         placeBuyOrder(PlaceBuyOrderParams(fiat?.toPlainString(), fiat?.currencyCode, paymentMethodId))
     }
 }

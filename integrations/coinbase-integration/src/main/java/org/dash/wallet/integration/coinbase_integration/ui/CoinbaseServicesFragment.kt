@@ -16,10 +16,11 @@
  */
 package org.dash.wallet.integration.coinbase_integration.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.activity.addCallback
-import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -28,16 +29,15 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
-import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 import javax.inject.Inject
 import androidx.fragment.app.activityViewModels
@@ -75,8 +75,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         }
 
         binding.buyDashBtn.setOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_DASH, bundleOf())
-            lifecycleScope.launch {
+           lifecycleScope.launch {
                 // repeatOnLifecycle launches the block in a new coroutine every time the
                 // lifecycle is in the STARTED state (or above) and cancels it when it's STOPPED.
 
@@ -121,10 +120,12 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         }
 
         binding.convertDashBtn.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_DASH)
             safeNavigate(CoinbaseServicesFragmentDirections.servicesToConvertCrypto(true))
         }
 
         binding.transferDashBtn.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Coinbase.TRANSFER_DASH)
             safeNavigate(CoinbaseServicesFragmentDirections.servicesToTransferDash())
         }
 
@@ -178,16 +179,19 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                 dismissProgress()
         }
 
-        viewModel.userAccountError.observe(viewLifecycleOwner){
-            val error = CoinbaseGenericErrorUIModel(
-                R.string.coinbase_dash_wallet_error_title,
-                getString(R.string.coinbase_dash_wallet_error_message),
+        viewModel.userAccountError.observe(viewLifecycleOwner) {
+            AdaptiveDialog.create(
                 R.drawable.ic_info_red,
-                R.string.CreateـDashـAccount,
-                R.string.close
-            )
-            analyticsService.logEvent(AnalyticsConstants.Coinbase.NO_DASH_WALLET, bundleOf())
-            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(error))
+                getString(R.string.coinbase_dash_wallet_error_title),
+                getString(R.string.coinbase_dash_wallet_error_message),
+                getString(R.string.close),
+                getString(R.string.create_dash_account),
+            ).show(requireActivity()) { createAccount ->
+                if (createAccount == true) {
+                    viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_CREATE_ACCOUNT)
+                    openCoinbaseWebsite()
+                }
+            }
         }
 
 //
@@ -255,5 +259,11 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         binding.titleBar.connected.setCompoundDrawablesWithIntrinsicBounds(if (hasInternet)
             org.dash.wallet.common.R.drawable.ic_connected else
                 org.dash.wallet.common.R.drawable.ic_disconnected, 0,0,0)
+    }
+
+    private fun openCoinbaseWebsite() {
+        val defaultBrowser = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_BROWSER)
+        defaultBrowser.data = Uri.parse(getString(R.string.coinbase_website))
+        startActivity(defaultBrowser)
     }
 }

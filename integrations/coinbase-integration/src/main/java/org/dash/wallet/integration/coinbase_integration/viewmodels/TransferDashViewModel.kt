@@ -1,12 +1,12 @@
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
+import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
@@ -19,6 +19,8 @@ import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
@@ -29,6 +31,7 @@ import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToW
 import org.dash.wallet.integration.coinbase_integration.model.TransactionType
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
 import java.util.*
 import javax.inject.Inject
 
@@ -40,7 +43,8 @@ class TransferDashViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val sendPaymentService: SendPaymentService,
     var exchangeRates: ExchangeRatesProvider,
-    var networkState: NetworkStateInt
+    var networkState: NetworkStateInt,
+    private val analyticsService: AnalyticsService
 ) : ConnectivityViewModel(networkState) {
 
     private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
@@ -51,7 +55,6 @@ class TransferDashViewModel @Inject constructor(
     val dashBalanceInWalletState: LiveData<Coin>
         get() = _dashBalanceInWalletState
 
-    private var coinbaseUserAccount: CoinbaseToDashExchangeRateUIModel = CoinbaseToDashExchangeRateUIModel.EMPTY
     private var exchangeRate: ExchangeRate? = null
 
     val onAddressCreationFailedCallback = SingleLiveEvent<Unit>()
@@ -184,6 +187,35 @@ class TransferDashViewModel @Inject constructor(
             sendTransactionToWalletParams,
             TransactionType.TransferDash
         )
+    }
+
+    fun logTransfer(isFiatSelected: Boolean) {
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_CONTINUE, bundleOf())
+        analyticsService.logEvent(if (isFiatSelected) {
+            AnalyticsConstants.Coinbase.TRANSFER_ENTER_FIAT
+        } else {
+            AnalyticsConstants.Coinbase.TRANSFER_ENTER_DASH
+        }, bundleOf())
+    }
+
+    fun logEvent(eventName: String) {
+        analyticsService.logEvent(eventName, bundleOf())
+    }
+
+    fun logRetry() {
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_RETRY, bundleOf())
+    }
+
+    fun logClose(type: CoinBaseResultDialog.Type) {
+        when (type) {
+            CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_SUCCESS_CLOSE, bundleOf())
+            }
+            CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR -> {
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_CLOSE, bundleOf())
+            }
+            else -> {}
+        }
     }
 
     private fun getUserData(){
