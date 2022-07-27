@@ -103,7 +103,6 @@ class EnterAmountToTransferViewModel @Inject constructor(
         get() = _isBlockchainSyncFailed
 
     val dashWalletEmptyCallback = SingleLiveEvent<Unit>()
-    val dashWalletNotSyncedCallback = SingleLiveEvent<Unit>()
     val removeBannerCallback = SingleLiveEvent<Unit>()
     val keyboardStateCallback = SingleLiveEvent<Boolean>()
 

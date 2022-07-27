@@ -71,6 +71,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private var dashValue: Coin = Coin.ZERO
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(2).optionalDecimals()
+    private lateinit var enterAmountFragment: EnterAmountToTransferFragment
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -84,11 +85,11 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
 
         if (savedInstanceState == null) {
-            val fragment = EnterAmountToTransferFragment.newInstance()
-            fragment.setViewDetails(getString(R.string.transfer_dash), null)
+            enterAmountFragment = EnterAmountToTransferFragment.newInstance()
+            enterAmountFragment.setViewDetails(getString(R.string.transfer_dash), null)
             parentFragmentManager.commit {
                 setReorderingAllowed(true)
-                add(R.id.enter_amount_to_transfer_placeholder, fragment)
+                add(R.id.enter_amount_to_transfer_placeholder, enterAmountFragment)
             }
         }
 
@@ -268,6 +269,12 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             )
             safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(failure))
         }
+    }
+
+    private fun setIsSyncing(isSyncing: Boolean) {
+        binding.transferView.setSyncing(isSyncing)
+        binding.transferMessage.isVisible = isSyncing
+        enterAmountFragment.showKeyboardAndButton(!isSyncing)
     }
 
     private suspend fun handleSend(value: Coin, isEmptyWallet: Boolean): Boolean {
