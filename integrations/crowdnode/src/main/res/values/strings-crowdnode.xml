@@ -106,6 +106,7 @@
 
     <string name="crowdnode_staking_leaving_the_pool_title">Leaving the Pool</string>
     <string name="crowdnode_staking_receiving_rewards_title">Receiving rewards</string>
+    <string name="crowdnode_staking_receiving_rewards_message">You will receive fractional payments automatically and they will by default be reinvested, however, it is also easy to set up automatic withdrawals to receive recurring payouts.</string>
     <string name="crowdnode_staking_first_minimum_deposit_title">First Minimum Deposit</string>
     <string name="crowdnode_staking_join_pool_message">As most people do not have exactly 1000 Dash at hand, CrowdNode has made a service where they by pooling deposits from members can achieve the benefits of owning a Masternode.</string>
     <string name="crowdnode_staking_join_pool_title">Joining the pool</string>

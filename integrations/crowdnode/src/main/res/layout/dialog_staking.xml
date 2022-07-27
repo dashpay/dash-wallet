@@ -133,6 +133,7 @@
 
                 <TextView
                     android:id="@+id/staking_join_pool_message"
+                    style="@style/Body2.Secondary"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="15dp"
@@ -163,6 +164,7 @@
 
                 <TextView
                     android:id="@+id/staking_first_min_deposit_message"
+                    style="@style/Body2.Secondary"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="15dp"
@@ -193,10 +195,11 @@
 
                 <TextView
                     android:id="@+id/staking_receiving_rewards_message"
+                    style="@style/Body2.Secondary"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="15dp"
-                    android:text="@string/crowdnode_staking_info_message"
+                    android:text="@string/crowdnode_staking_receiving_rewards_message"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="@id/staking_receiving_rewards_title"
                     app:layout_constraintTop_toBottomOf="@id/staking_receiving_rewards_title" />
