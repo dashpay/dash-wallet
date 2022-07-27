@@ -23,10 +23,12 @@ import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.BaseMenuActivity
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.integration.coinbase_integration.service.CloseCoinbasePortalBroadcaster
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseActivityViewModel
 import javax.inject.Inject
 
+@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class CoinbaseActivity : BaseMenuActivity() {
     private val viewModel: CoinbaseActivityViewModel by viewModels()
@@ -46,6 +48,7 @@ class CoinbaseActivity : BaseMenuActivity() {
         broadcaster.closeCoinbasePortal.observe(this){
             finish()
         }
+        viewModel.getPaymentMethods()
     }
 
     private fun setNavigationGraph(): NavController {

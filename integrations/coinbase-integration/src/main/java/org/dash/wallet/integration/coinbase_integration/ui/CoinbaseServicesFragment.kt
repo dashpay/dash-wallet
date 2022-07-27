@@ -40,6 +40,13 @@ import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoin
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 import javax.inject.Inject
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseActivityViewModel
+import org.dash.wallet.integration.coinbase_integration.viewmodels.PaymentMethodsUiState
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
@@ -48,6 +55,8 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     private val viewModel by viewModels<CoinbaseServicesViewModel>()
     private var loadingDialog: FancyAlertDialog? = null
     private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
+    private val sharedViewModel: CoinbaseActivityViewModel by activityViewModels()
+
     @Inject lateinit var analyticsService: AnalyticsService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -67,7 +76,48 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
         binding.buyDashBtn.setOnClickListener {
             analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_DASH, bundleOf())
-            viewModel.getPaymentMethods()
+            lifecycleScope.launch {
+                // repeatOnLifecycle launches the block in a new coroutine every time the
+                // lifecycle is in the STARTED state (or above) and cancels it when it's STOPPED.
+
+                    sharedViewModel.uiState.collect { uiState ->
+                        // New value received
+                        when (uiState) {
+                            is PaymentMethodsUiState.Success -> {
+                                uiState.paymentMethodsList.toTypedArray().let { paymentMethodsArray ->
+                                    CoinbaseServicesFragmentDirections.servicesToBuyDash(paymentMethodsArray)
+                                }.let { navDirection -> safeNavigate(navDirection) }
+                            }
+                            is PaymentMethodsUiState.Error -> {
+                                if (uiState.isError) {
+                                    val activePaymentMethodsError = CoinbaseGenericErrorUIModel(
+                                        R.string.coinbase_dash_wallet_no_payment_methods_error_title,
+                                        getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
+                                        R.drawable.ic_info_red,
+                                        R.string.add_payment_method,
+                                        R.string.close
+                                    )
+                                    analyticsService.logEvent(
+                                        AnalyticsConstants.Coinbase.NO_PAYMENT_METHODS,
+                                        bundleOf()
+                                    )
+                                    safeNavigate(
+                                        CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                                            activePaymentMethodsError
+                                        )
+                                    )
+                                }
+                            }
+                            is PaymentMethodsUiState.LoadingState ->{
+                                if (uiState.isLoading) {
+                                    showProgress(R.string.loading)
+                                } else
+                                    dismissProgress()
+                            }
+                        }
+                    }
+
+            }
         }
 
         binding.convertDashBtn.setOnClickListener {
@@ -77,11 +127,10 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         binding.transferDashBtn.setOnClickListener {
             safeNavigate(CoinbaseServicesFragmentDirections.servicesToTransferDash())
         }
-        viewModel.activePaymentMethods.observe(viewLifecycleOwner){ event ->
-            event.getContentIfNotHandled()?.toTypedArray()?.let { paymentMethodsArray ->
-                CoinbaseServicesFragmentDirections.servicesToBuyDash(paymentMethodsArray)
-            }?.let { navDirection -> safeNavigate(navDirection) }
-        }
+
+//        viewModel.activePaymentMethods.observe(viewLifecycleOwner){ event ->
+//
+//        }
 
         binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
         binding.walletBalanceDash.setApplyMarkup(false)
@@ -141,18 +190,18 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(error))
         }
 
-
-        viewModel.activePaymentMethodsFailureCallback.observe(viewLifecycleOwner){
-            val activePaymentMethodsError = CoinbaseGenericErrorUIModel(
-                R.string.coinbase_dash_wallet_no_payment_methods_error_title,
-                getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
-                R.drawable.ic_info_red,
-                R.string.add_payment_method,
-                R.string.close
-            )
-            analyticsService.logEvent(AnalyticsConstants.Coinbase.NO_PAYMENT_METHODS, bundleOf())
-            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(activePaymentMethodsError))
-        }
+//
+//        viewModel.activePaymentMethodsFailureCallback.observe(viewLifecycleOwner){
+//            val activePaymentMethodsError = CoinbaseGenericErrorUIModel(
+//                R.string.coinbase_dash_wallet_no_payment_methods_error_title,
+//                getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
+//                R.drawable.ic_info_red,
+//                R.string.add_payment_method,
+//                R.string.close
+//            )
+//            analyticsService.logEvent(AnalyticsConstants.Coinbase.NO_PAYMENT_METHODS, bundleOf())
+//            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(activePaymentMethodsError))
+//        }
 
 
         viewModel.coinbaseLogOutCallback.observe(viewLifecycleOwner) {

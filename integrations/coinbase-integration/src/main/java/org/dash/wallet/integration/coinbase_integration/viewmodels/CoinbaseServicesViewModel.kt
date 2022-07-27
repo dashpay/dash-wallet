@@ -58,15 +58,15 @@ class CoinbaseServicesViewModel @Inject constructor(
     val userAccountError: LiveData<Boolean>
         get() = _userAccountError
 
-    private val _activePaymentMethods: MutableLiveData<Event<List<PaymentMethod>>> = MutableLiveData()
-    val activePaymentMethods: LiveData<Event<List<PaymentMethod>>>
-        get() = _activePaymentMethods
+//    private val _activePaymentMethods: MutableLiveData<Event<List<PaymentMethod>>> = MutableLiveData()
+//    val activePaymentMethods: LiveData<Event<List<PaymentMethod>>>
+//        get() = _activePaymentMethods
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
     val exchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
 
-    val activePaymentMethodsFailureCallback = SingleLiveEvent<Unit>()
+    //val activePaymentMethodsFailureCallback = SingleLiveEvent<Unit>()
     val coinbaseLogOutCallback = SingleLiveEvent<Unit>()
 
     private val _latestUserBalance: MutableLiveData<String> = MutableLiveData()
@@ -106,69 +106,5 @@ class CoinbaseServicesViewModel @Inject constructor(
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
         getUserAccountInfo()
-    }
-
-    fun getPaymentMethods() = viewModelScope.launch(Dispatchers.Main) {
-        _showLoading.value = true
-        when (val response = coinBaseRepository.getActivePaymentMethods()) {
-            is ResponseResource.Success -> {
-                _showLoading.value = false
-                if (response.value.isEmpty()) {
-                    activePaymentMethodsFailureCallback.call()
-                } else {
-                    _activePaymentMethods.value = Event(
-                        response.value.filter { it.isBuyingAllowed == true }
-                            .map {
-                                val type = paymentMethodTypeFromCoinbaseType(it.type ?: "")
-                                val nameAccountPair = splitNameAndAccount(it.name, type)
-                                PaymentMethod(
-                                    it.id ?: "",
-                                    nameAccountPair.first,
-                                    nameAccountPair.second,
-                                    "", // set "Checking" to get "****1234 • Checking" in subtitle
-                                    paymentMethodType = type
-                                )
-                            })
-                }
-            }
-            is ResponseResource.Failure -> {
-                _showLoading.value = false
-                activePaymentMethodsFailureCallback.call()
-            }
-        }
-    }
-
-    private fun splitNameAndAccount(nameAccount: String?, type: PaymentMethodType): Pair<String, String> {
-        nameAccount?.let {
-            val match = when(type) {
-                PaymentMethodType.BankAccount, PaymentMethodType.Card, PaymentMethodType.PayPal -> {
-                    "(\\d+)?\\s?[a-z]?\\*+".toRegex().find(nameAccount)
-                }
-                PaymentMethodType.Fiat -> {
-                    "\\(.*\\)".toRegex().find(nameAccount)
-                }
-                else -> null
-            }
-
-            return match?.range?.first?.let { index ->
-                val name = nameAccount.substring(0, index).trim(' ', '-', ',', ':')
-                val account = nameAccount.substring(index, nameAccount.length).trim()
-                return Pair(name, account)
-            } ?: Pair(nameAccount, "")
-        }
-
-        return Pair("", "")
-    }
-
-    private fun paymentMethodTypeFromCoinbaseType(type: String): PaymentMethodType {
-        return when (type) {
-            "fiat_account" -> PaymentMethodType.Fiat
-            "secure3d_card", "worldpay_card", "credit_card", "debit_card" -> PaymentMethodType.Card
-            "ach_bank_account", "sepa_bank_account",
-            "ideal_bank_account", "eft_bank_account", "interac" -> PaymentMethodType.BankAccount
-            "bank_wire" -> PaymentMethodType.WireTransfer
-            "paypal_account" -> PaymentMethodType.PayPal
-            else -> PaymentMethodType.Unknown
-        }
     }
 }
