@@ -36,6 +36,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
+        android:layout_marginBottom="10dp"
         android:gravity="center"
         android:textAlignment="gravity"
         tools:text="Not a valid QR Code" />
@@ -45,7 +46,6 @@
         style="@style/Caption.Secondary"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="10dp"
         android:layout_marginBottom="25dp"
         android:gravity="center"
         android:textAlignment="gravity"

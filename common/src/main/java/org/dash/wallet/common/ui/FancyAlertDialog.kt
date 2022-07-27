@@ -30,13 +30,14 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import kotlinx.android.synthetic.main.fancy_alert_dialog.*
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
+import org.dash.wallet.common.databinding.FancyAlertDialogBinding
 
 @Deprecated("Use AdaptiveDialog")
 class FancyAlertDialog : DialogFragment() {
     var onFancyAlertButtonsClickListener: FancyAlertButtonsClickListener? = null
+    private val binding by viewBinding(FancyAlertDialogBinding::bind)
 
     enum class Type {
         INFO,
@@ -115,11 +116,11 @@ class FancyAlertDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setOrHideIfEmpty(title, "title")
-        setOrHideIfEmpty(message, "message")
-        setOrHideIfEmpty(image, "image")
-        setOrHideIfEmpty(positive_button, "positive_text")
-        setOrHideIfEmpty(negative_button, "negative_text")
+        setOrHideIfEmpty(binding.title, "title")
+        setOrHideIfEmpty(binding.message, "message")
+        setOrHideIfEmpty(binding.image, "image")
+        setOrHideIfEmpty(binding.positiveButton, "positive_text")
+        setOrHideIfEmpty(binding.negativeButton, "negative_text")
 
         when (type) {
             Type.INFO -> {
@@ -148,36 +149,36 @@ class FancyAlertDialog : DialogFragment() {
     }
 
     private fun setupInfo() {
-        progress.visibility = View.GONE
-        image.visibility = View.VISIBLE
-        positive_button.setOnClickListener {
+        binding.progress.visibility = View.GONE
+        binding.image.visibility = View.VISIBLE
+        binding.positiveButton.setOnClickListener {
             dismiss()
             onFancyAlertButtonsClickListener?.onPositiveButtonClick()
         }
-        negative_button.setOnClickListener {
+        binding.negativeButton.setOnClickListener {
             dismiss()
             onFancyAlertButtonsClickListener?.onPositiveButtonClick()
         }
     }
 
     private fun setupAction() {
-        progress.visibility = View.GONE
-        image.visibility = View.GONE
-        positive_button.setOnClickListener {
+        binding.progress.visibility = View.GONE
+        binding.image.visibility = View.GONE
+        binding.positiveButton.setOnClickListener {
             dismiss()
             onFancyAlertButtonsClickListener?.onPositiveButtonClick()
         }
-        negative_button.setOnClickListener {
+        binding.negativeButton.setOnClickListener {
             dismiss()
             onFancyAlertButtonsClickListener?.onNegativeButtonClick()
         }
     }
 
     private fun setupProgress() {
-        progress.visibility = View.VISIBLE
-        image.visibility = View.GONE
-        positive_button.visibility = View.GONE
-        negative_button.visibility = View.GONE
+        binding.progress.visibility = View.VISIBLE
+        binding.image.visibility = View.GONE
+        binding.positiveButton.visibility = View.GONE
+        binding.negativeButton.visibility = View.GONE
         isCancelable = false
     }
 

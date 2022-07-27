@@ -19,8 +19,10 @@ package org.dash.wallet.integration.coinbase_integration.ui
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.View
+import androidx.activity.addCallback
 import androidx.annotation.ColorRes
 import androidx.annotation.StyleRes
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -31,8 +33,10 @@ import coil.transform.CircleCropTransformation
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Constants
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -41,7 +45,7 @@ import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseConversionPreviewBinding
 import org.dash.wallet.integration.coinbase_integration.model.*
-import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseBuyDashDialog
+import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseConversionPreviewViewModel
 
 @ExperimentalCoroutinesApi
@@ -52,7 +56,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     private lateinit var swapTradeUIModel: SwapTradeUIModel
     private var loadingDialog: FancyAlertDialog? = null
     private var isRetrying = false
-    private var transactionStateDialog: CoinBaseBuyDashDialog? = null
+    private var transactionStateDialog: CoinBaseResultDialog? = null
     private var newSwapOrderId: String? = null
 
 
@@ -73,17 +77,28 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        binding.toolbar.setNavigationOnClickListener {
-            findNavController().popBackStack()
-        }
+        setupBackNavigation()
 
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
             setNetworkState(hasInternet)
         }
 
         binding.cancelBtn.setOnClickListener {
-            safeNavigate(CoinbaseConversionPreviewFragmentDirections.confirmCancelBuyDashTransaction())
+            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CANCEL)
+            val dialog = AdaptiveDialog.simple(
+                getString(R.string.cancel_transaction),
+                getString(R.string.no_keep_it),
+                getString(R.string.yes_cancel)
+            )
+            dialog.isCancelable = false
+            dialog.show(requireActivity()) { result ->
+                if (result == true) {
+                    viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CANCEL_YES)
+                    findNavController().popBackStack()
+                } else {
+                    viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CANCEL_NO)
+                }
+            }
         }
 
         arguments?.let {
@@ -116,19 +131,20 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         viewModel.commitSwapTradeFailureState.observe(viewLifecycleOwner) {
-            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.CONVERSION_ERROR, it)
+            showBuyOrderDialog(CoinBaseResultDialog.Type.CONVERSION_ERROR, it)
         }
 
         viewModel.sellSwapSuccessState.observe(viewLifecycleOwner) {
-            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS)
+            showBuyOrderDialog(CoinBaseResultDialog.Type.CONVERSION_SUCCESS)
         }
 
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_FEE_INFO)
             safeNavigate(CoinbaseConversionPreviewFragmentDirections.orderReviewToFeeInfo())
         }
 
         viewModel.swapTradeFailureState.observe(viewLifecycleOwner) {
-            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.SWAP_ERROR, it)
+            showBuyOrderDialog(CoinBaseResultDialog.Type.SWAP_ERROR, it)
         }
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
@@ -278,29 +294,36 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
     }
 
-    private fun showBuyOrderDialog(type: CoinBaseBuyDashDialog.Type, responseMessage: String? = null) {
+    private fun showBuyOrderDialog(type: CoinBaseResultDialog.Type, responseMessage: String? = null) {
         if (transactionStateDialog?.dialog?.isShowing == true)
             transactionStateDialog?.dismissAllowingStateLoss()
-        transactionStateDialog = CoinBaseBuyDashDialog.newInstance(type, responseMessage).apply {
-            this.onCoinBaseBuyDashDialogButtonsClickListener = object : CoinBaseBuyDashDialog.CoinBaseBuyDashDialogButtonsClickListener {
-                override fun onPositiveButtonClick(type: CoinBaseBuyDashDialog.Type) {
+        transactionStateDialog = CoinBaseResultDialog.newInstance(type, responseMessage).apply {
+            this.onCoinBaseResultDialogButtonsClickListener = object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
+                override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
                     when (type) {
-                        CoinBaseBuyDashDialog.Type.CONVERSION_ERROR -> {
+                        CoinBaseResultDialog.Type.CONVERSION_ERROR -> {
+                            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_RETRY)
                             dismiss()
                             findNavController().popBackStack()
                         }
-                        CoinBaseBuyDashDialog.Type.SWAP_ERROR -> {
+                        CoinBaseResultDialog.Type.SWAP_ERROR -> {
+                            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_RETRY)
                             dismiss()
                             findNavController().popBackStack()
                             findNavController().popBackStack()
                         }
-                        CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS -> {
+                        CoinBaseResultDialog.Type.CONVERSION_SUCCESS -> {
+                            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_SUCCESS_CLOSE)
                             dismiss()
                             requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
                             requireActivity().finish()
                         }
                         else -> {}
                     }
+                }
+
+                override fun onNegativeButtonClick(type: CoinBaseResultDialog.Type) {
+                    viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_CLOSE)
                 }
             }
         }
@@ -346,5 +369,17 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     private fun setConfirmBtnStyle(@StyleRes buttonStyle: Int, @ColorRes colorRes: Int) {
         binding.confirmBtnContainer.background = resources.getRoundedBackground(buttonStyle)
         binding.confirmBtn.setTextColor(resources.getColor(colorRes))
+    }
+
+    private fun setupBackNavigation() {
+        binding.toolbar.setNavigationOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_TOP_BACK)
+            findNavController().popBackStack()
+        }
+
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
+            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_ANDROID_BACK)
+            findNavController().popBackStack()
+        }
     }
 }
