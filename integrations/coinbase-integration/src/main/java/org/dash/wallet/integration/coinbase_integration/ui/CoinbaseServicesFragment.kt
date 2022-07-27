@@ -55,7 +55,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         binding.titleBar.toolbar.setNavigationOnClickListener {
             requireActivity().finish()
         }
-
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){
             requireActivity().finish()
         }
@@ -93,7 +92,11 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             if (rate != null) {
                 currentExchangeRate = rate
                 if (currentExchangeRate != null) {
-                    setLocalFaitAmount(viewModel.user.value?.balance?.amount ?: "0")
+                    var balance = viewModel.latestUserBalance.value
+                    if(viewModel.user.value?.balance?.amount?.isNotEmpty() == true){
+                        balance = viewModel.user.value?.balance?.amount
+                    }
+                    setLocalFaitAmount(balance ?: "0")
                 }
             }
         }
@@ -104,6 +107,15 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             binding.walletBalanceDash.setAmount(Coin.parseCoin(it.balance?.amount))
             if (currentExchangeRate != null) {
                 setLocalFaitAmount(it.balance?.amount ?: "0")
+            }
+        }
+
+        viewModel.latestUserBalance.observe(
+            viewLifecycleOwner
+        ) {
+            binding.walletBalanceDash.setAmount(Coin.parseCoin(it))
+            if (currentExchangeRate != null) {
+                setLocalFaitAmount(it ?: "0")
             }
         }
 

@@ -73,15 +73,23 @@ class CoinbaseServicesViewModel @Inject constructor(
     val activePaymentMethodsFailureCallback = SingleLiveEvent<Unit>()
     val coinbaseLogOutCallback = SingleLiveEvent<Unit>()
 
+    private val _latestUserBalance: MutableLiveData<String> = MutableLiveData()
+    val latestUserBalance: LiveData<String>
+        get() = _latestUserBalance
+
     init {
-        getUserAccountInfo()
         exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode!!)
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
+        getUserAccountInfo()
     }
 
     private fun getUserAccountInfo() = viewModelScope.launch(Dispatchers.Main) {
-        _showLoading.value = true
+        if(config.lastCoinbaseBalance.isNullOrEmpty()) {
+            _showLoading.value = true
+        }else{
+            _latestUserBalance.value = config.lastCoinbaseBalance
+        }
         when (val response = coinBaseRepository.getUserAccount()) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
@@ -105,6 +113,8 @@ class CoinbaseServicesViewModel @Inject constructor(
         _showLoading.value = false
         coinbaseLogOutCallback.call()
     }
+
+
 
     fun getPaymentMethods() = viewModelScope.launch(Dispatchers.Main) {
         analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_DASH, bundleOf())
