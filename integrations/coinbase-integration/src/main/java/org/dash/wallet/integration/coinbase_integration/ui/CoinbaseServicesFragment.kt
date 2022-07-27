@@ -23,12 +23,17 @@ import android.view.View
 import androidx.activity.addCallback
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
@@ -38,15 +43,10 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
-import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
-import javax.inject.Inject
-import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseActivityViewModel
+import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.PaymentMethodsUiState
+import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
@@ -89,22 +89,18 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                             }
                             is PaymentMethodsUiState.Error -> {
                                 if (uiState.isError) {
-                                    val activePaymentMethodsError = CoinbaseGenericErrorUIModel(
-                                        R.string.coinbase_dash_wallet_no_payment_methods_error_title,
-                                        getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
+                                    AdaptiveDialog.create(
                                         R.drawable.ic_info_red,
-                                        R.string.add_payment_method,
-                                        R.string.close
-                                    )
-                                    analyticsService.logEvent(
-                                        AnalyticsConstants.Coinbase.NO_PAYMENT_METHODS,
-                                        bundleOf()
-                                    )
-                                    safeNavigate(
-                                        CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                                            activePaymentMethodsError
-                                        )
-                                    )
+                                        getString(R.string.coinbase_dash_wallet_no_payment_methods_error_title),
+                                        getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
+                                        getString(R.string.close),
+                                        getString(R.string.add_payment_method),
+                                    ).show(requireActivity()) { addMethod ->
+                                        if (addMethod == true) {
+                                            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ADD_PAYMENT_METHOD)
+                                            openCoinbaseWebsite()
+                                        }
+                                    }
                                 }
                             }
                             is PaymentMethodsUiState.LoadingState ->{
@@ -194,19 +190,20 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             }
         }
 
-//
-//        viewModel.activePaymentMethodsFailureCallback.observe(viewLifecycleOwner){
-//            val activePaymentMethodsError = CoinbaseGenericErrorUIModel(
-//                R.string.coinbase_dash_wallet_no_payment_methods_error_title,
-//                getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
+//        viewModel.activePaymentMethodsFailureCallback.observe(viewLifecycleOwner) {
+//            AdaptiveDialog.create(
 //                R.drawable.ic_info_red,
-//                R.string.add_payment_method,
-//                R.string.close
-//            )
-//            analyticsService.logEvent(AnalyticsConstants.Coinbase.NO_PAYMENT_METHODS, bundleOf())
-//            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(activePaymentMethodsError))
+//                getString(R.string.coinbase_dash_wallet_no_payment_methods_error_title),
+//                getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
+//                getString(R.string.close),
+//                getString(R.string.add_payment_method),
+//            ).show(requireActivity()) { addMethod ->
+//                if (addMethod == true) {
+//                    viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ADD_PAYMENT_METHOD)
+//                    openCoinbaseWebsite()
+//                }
+//            }
 //        }
-
 
         viewModel.coinbaseLogOutCallback.observe(viewLifecycleOwner) {
             requireActivity().finish()
