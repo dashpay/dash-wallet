@@ -5,8 +5,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
@@ -72,6 +73,9 @@ class TransferDashViewModel @Inject constructor(
 
     init {
         getWithdrawalLimitOnCoinbase()
+        walletDataProvider.observeBalance()
+            .onEach(_dashBalanceInWalletState::postValue)
+            .launchIn(viewModelScope)
     }
 
     private fun getWithdrawalLimitOnCoinbase() = viewModelScope.launch(Dispatchers.Main){
