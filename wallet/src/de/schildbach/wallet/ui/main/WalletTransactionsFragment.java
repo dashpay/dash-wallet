@@ -61,7 +61,6 @@ import org.dash.wallet.common.transactions.TransactionWrapper;
 
 import java.util.ArrayList;
 
-import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment;
 import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment;
 import de.schildbach.wallet.ui.transactions.TransactionRowView;
@@ -124,20 +123,14 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment {
 
         adapter = new TransactionAdapter(viewModel.getBalanceDashFormat(), getResources(), true, (txView, position) -> {
             viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS);
-            List<TransactionWrapper> wrappers = viewModel.getTransactions().getValue();
 
-            if (wrappers != null) {
-                TransactionWrapper wrapper = wrappers.get(position);
-
-                if (wrapper.getTransactions().size() > 1) {
-                    TransactionGroupDetailsFragment fragment = new TransactionGroupDetailsFragment(wrapper);
-                    fragment.show(getParentFragmentManager(), "transaction_group");
-                } else {
-                    Sha256Hash txId = wrapper.getTransactions().iterator().next().getTxId();
-                    TransactionDetailsDialogFragment transactionDetailsDialogFragment =
-                            TransactionDetailsDialogFragment.newInstance(txId);
-                    transactionDetailsDialogFragment.show(getParentFragmentManager(), null);
-                }
+            if (txView.getTxWrapper() != null) {
+                TransactionGroupDetailsFragment fragment = new TransactionGroupDetailsFragment(txView.getTxWrapper());
+                fragment.show(getParentFragmentManager(), "transaction_group");
+            } else {
+                TransactionDetailsDialogFragment transactionDetailsDialogFragment =
+                        TransactionDetailsDialogFragment.newInstance(txView.getTxId());
+                transactionDetailsDialogFragment.show(getParentFragmentManager(), null);
             }
 
             return Unit.INSTANCE;
@@ -207,20 +200,11 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment {
 
         viewModel.isBlockchainSynced().observe(getViewLifecycleOwner(), isSynced -> updateSyncState());
         viewModel.getBlockchainSyncPercentage().observe(getViewLifecycleOwner(), percentage -> updateSyncState());
-        viewModel.getTransactions().observe(getViewLifecycleOwner(), wrappedTransactions -> {
+        viewModel.getTransactions().observe(getViewLifecycleOwner(), transactionViews -> {
             loading.setVisibility(View.GONE);
-            List<TransactionRowView> transactionViews = new ArrayList<>();
-
-            for (TransactionWrapper wrapper: wrappedTransactions) {
-                transactionViews.add(TransactionRowView.Companion.fromTransactionWrapper(
-                        wrapper, viewModel.getWalletData().getTransactionBag(),
-                        Constants.CONTEXT
-                ));
-            }
-
             adapter.submitList(transactionViews);
 
-            if (wrappedTransactions.isEmpty()) {
+            if (transactionViews.isEmpty()) {
                 showEmptyView();
             } else {
                 showTransactionList();

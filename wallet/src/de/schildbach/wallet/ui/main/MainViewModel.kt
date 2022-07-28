@@ -25,7 +25,6 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.livedata.Resource
@@ -36,10 +35,12 @@ import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
+import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -55,7 +56,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.slf4j.LoggerFactory
 import org.dash.wallet.common.transactions.TransactionFilter
-import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
@@ -92,8 +92,8 @@ class MainViewModel @Inject constructor(
     val isPassphraseVerified: Boolean
         get() = !config.remindBackupSeed
 
-    private val _transactions = MutableLiveData<List<TransactionWrapper>>()
-    val transactions: LiveData<List<TransactionWrapper>>
+    private val _transactions = MutableLiveData<List<TransactionRowView>>()
+    val transactions: LiveData<List<TransactionRowView>>
         get() = _transactions
 
     private val _transactionsDirection = MutableStateFlow(TxDirection.ALL)
@@ -346,10 +346,17 @@ class MainViewModel @Inject constructor(
 
     private fun refreshTransactions(filter: TransactionFilter) {
         walletData.wallet?.let { wallet ->
-            val wrappedTransactions = walletData.wrapAllTransactions(
+            val transactionViews = walletData.wrapAllTransactions(
                 FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
             ).filter { it.transactions.any { tx -> filter.matches(tx) } }
-            _transactions.postValue(wrappedTransactions.sortedWith(TransactionWrapperComparator()))
+             .sortedWith(TransactionWrapperComparator())
+             .map {
+                 TransactionRowView.fromTransactionWrapper(
+                     it, walletData.transactionBag,
+                     Constants.CONTEXT
+                 )
+             }
+            _transactions.postValue(transactionViews)
         }
     }
 

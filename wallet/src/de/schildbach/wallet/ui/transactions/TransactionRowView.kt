@@ -38,7 +38,8 @@ data class TransactionRowView(
     val transactionAmount: Int,
     val time: Long,
     val timeFormat: Int,
-    val hasErrors: Boolean
+    val hasErrors: Boolean,
+    val txWrapper: TransactionWrapper?
 ) {
     companion object {
         fun fromTransactionWrapper(
@@ -60,7 +61,8 @@ data class TransactionRowView(
                     txWrapper.transactions.size,
                     lastTx.updateTime.time,
                     TxResourceMapper().dateTimeFormat,
-                    false
+                    false,
+                    txWrapper
                 )
             } else {
                 fromTransaction(lastTx, bag, context)
@@ -113,7 +115,8 @@ data class TransactionRowView(
                 1,
                 tx.updateTime.time,
                 resourceMapper.dateTimeFormat,
-                tx.confidence.hasErrors()
+                tx.confidence.hasErrors(),
+                null
             )
         }
     }
