@@ -24,10 +24,10 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogSelectPictureBinding
-import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 
-class SelectProfilePictureDialog : BaseBottomSheetDialogFragment() {
+class SelectProfilePictureDialog : OffsetDialogFragment() {
 
     companion object {
 

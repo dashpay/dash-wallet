@@ -82,7 +82,7 @@
         android:layout_height="wrap_content"
         android:layout_marginEnd="11dp"
         android:layout_marginRight="11dp"
-        android:textColor="@color/gray"
+        android:textColor="@color/old_gray"
         android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/arrow"

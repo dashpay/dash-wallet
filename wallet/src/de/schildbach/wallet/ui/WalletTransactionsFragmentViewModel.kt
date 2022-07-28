@@ -31,34 +31,34 @@ class WalletTransactionsFragmentViewModel(application: Application) : AndroidVie
 
     val platformRepo = PlatformRepo.getInstance()
 
-    private val transactionsData = TransactionsLiveData(application as WalletApplication)
-
-    val transactionHistoryItemData = transactionsData.switchMap {
-        liveData {
-            val userIdentity = platformRepo.getBlockchainIdentity()
-            val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
-            if (userIdentity != null) {
-                val contacts = PlatformRepo.getInstance().searchContacts("",
-                        UsernameSortOrderBy.LAST_ACTIVITY, false)
-                contacts.data?.forEach {
-                    contactsByIdentity[it.dashPayProfile.userId] = it.dashPayProfile
-                }
-            }
-
-            val result = arrayListOf<TransactionsAdapter.TransactionHistoryItem>()
-            it.forEach {
-                val contactId = userIdentity?.getContactForTransaction(it)
-                if (contactId != null) {
-                    val contactProfile = contactsByIdentity[contactId]
-                    result.add(TransactionsAdapter.TransactionHistoryItem(it, contactProfile))
-                } else {
-                    result.add(TransactionsAdapter.TransactionHistoryItem(it, null))
-                }
-            }
-
-            emit(result)
-        }
-    }
+//    private val transactionsData = TransactionsLiveData(application as WalletApplication)
+//
+//    val transactionHistoryItemData = transactionsData.switchMap {
+//        liveData {
+//            val userIdentity = platformRepo.getBlockchainIdentity()
+//            val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
+//            if (userIdentity != null) {
+//                val contacts = PlatformRepo.getInstance().searchContacts("",
+//                        UsernameSortOrderBy.LAST_ACTIVITY, false)
+//                contacts.data?.forEach {
+//                    contactsByIdentity[it.dashPayProfile.userId] = it.dashPayProfile
+//                }
+//            }
+//
+//            val result = arrayListOf<TransactionsAdapter.TransactionHistoryItem>()
+//            it.forEach {
+//                val contactId = userIdentity?.getContactForTransaction(it)
+//                if (contactId != null) {
+//                    val contactProfile = contactsByIdentity[contactId]
+//                    result.add(TransactionsAdapter.TransactionHistoryItem(it, contactProfile))
+//                } else {
+//                    result.add(TransactionsAdapter.TransactionHistoryItem(it, null))
+//                }
+//            }
+//
+//            emit(result)
+//        }
+//    }
 
     val blockchainIdentityData = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase()
 }

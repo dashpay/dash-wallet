@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.main
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
+import androidx.annotation.VisibleForTesting
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,17 +28,19 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
-import de.schildbach.wallet.data.BlockchainState
-import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.SingleLiveEvent
-import de.schildbach.wallet.ui.SingleLiveEventExt
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import de.schildbach.wallet.data.BlockchainState
+import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.transactions.TxDirection
+import de.schildbach.wallet.transactions.TxDirectionFilter
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
@@ -51,9 +54,14 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.slf4j.LoggerFactory
+import org.dash.wallet.common.transactions.TransactionFilter
+import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.TransactionWrapperComparator
+import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
 
 @HiltViewModel
+@FlowPreview
 @ExperimentalCoroutinesApi
 class MainViewModel @Inject constructor(
     val analytics: AnalyticsService,
@@ -61,15 +69,21 @@ class MainViewModel @Inject constructor(
     private val config: Configuration,
     blockchainStateDao: BlockchainStateDao,
     exchangeRatesProvider: ExchangeRatesProvider,
-    private val walletData: WalletDataProvider,
+    val walletData: WalletDataProvider,
     walletApplication: WalletApplication,
     appDatabase: AppDatabase,
-    val platformRepo: PlatformRepo
+    val platformRepo: PlatformRepo,
+    private val savedStateHandle: SavedStateHandle
 ) : BaseProfileViewModel(walletApplication, appDatabase) {
     companion object {
+        private const val THROTTLE_DURATION = 500L
+        private const val DIRECTION_KEY = "tx_direction"
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
 
+    private val workerJob = SupervisorJob()
+    @VisibleForTesting
+    val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
     private val listener: SharedPreferences.OnSharedPreferenceChangeListener
     private val currencyCode = MutableStateFlow(config.exchangeCurrencyCode)
 
@@ -78,6 +92,18 @@ class MainViewModel @Inject constructor(
     val isPassphraseVerified: Boolean
         get() = !config.remindBackupSeed
 
+    private val _transactions = MutableLiveData<List<TransactionWrapper>>()
+    val transactions: LiveData<List<TransactionWrapper>>
+        get() = _transactions
+
+    private val _transactionsDirection = MutableStateFlow(TxDirection.ALL)
+    var transactionsDirection: TxDirection
+        get() = _transactionsDirection.value
+        set(value) {
+            _transactionsDirection.value = value
+            savedStateHandle.set(DIRECTION_KEY, value)
+        }
+
     private val _isBlockchainSynced = MutableLiveData<Boolean>()
     val isBlockchainSynced: LiveData<Boolean>
         get() = _isBlockchainSynced
@@ -85,6 +111,10 @@ class MainViewModel @Inject constructor(
     private val _isBlockchainSyncFailed = MutableLiveData<Boolean>()
     val isBlockchainSyncFailed: LiveData<Boolean>
         get() = _isBlockchainSyncFailed
+
+    private val _blockchainSyncPercentage = MutableLiveData<Int>()
+    val blockchainSyncPercentage: LiveData<Int>
+        get() = _blockchainSyncPercentage
 
     private val _exchangeRate = MutableLiveData<ExchangeRate>()
     val exchangeRate: LiveData<ExchangeRate>
@@ -139,7 +169,7 @@ class MainViewModel @Inject constructor(
         get() = isAbleToCreateIdentityLiveData.value ?: false
 
     val goBackAndStartActivityEvent = SingleLiveEvent<Class<*>>()
-    val showCreateUsernameEvent = SingleLiveEventExt<Unit>()
+    val showCreateUsernameEvent = SingleLiveEvent<Unit>()
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
     val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
     var processingSeriousError = false
@@ -155,15 +185,25 @@ class MainViewModel @Inject constructor(
 
     init {
         _hideBalance.value = config.hideBalance
+        transactionsDirection = savedStateHandle.get(DIRECTION_KEY) ?: TxDirection.ALL
+
+        _transactionsDirection
+            .flatMapLatest { direction ->
+                val filter = TxDirectionFilter(direction, walletData.wallet!!)
+                refreshTransactions(filter)
+                walletData.observeTransactions(filter)
+                    .debounce(THROTTLE_DURATION)
+                    .onEach { refreshTransactions(filter) }
+            }
+            .launchIn(viewModelWorkerScope)
 
         blockchainStateDao.observeState()
             .filterNotNull()
-            .onEach {
-                _isBlockchainSynced.postValue(it.isSynced())
-                _isBlockchainSyncFailed.postValue(it.syncFailed())
-                _isNetworkUnavailable.postValue(it.impediments.contains(BlockchainState.Impediment.NETWORK))
+            .onEach { state ->
+                updateSyncStatus(state)
+                updatePercentage(state)
             }
-            .launchIn(viewModelScope)
+            .launchIn(viewModelWorkerScope)
 
         walletData.observeBalance()
             .onEach(_balance::postValue)
@@ -244,13 +284,24 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        config.unregisterOnSharedPreferenceChangeListener(listener)
+    fun logDirectionChangedEvent(direction: TxDirection) {
+        val directionParameter = when (direction) {
+            TxDirection.ALL -> "all_transactions"
+            TxDirection.SENT -> "sent_transactions"
+            TxDirection.RECEIVED -> "received_transactions"
+        }
+        analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
+            "filter_value" to directionParameter
+        ))
     }
 
     fun processDirectTransaction(tx: Transaction) {
         walletData.processDirectTransaction(tx)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        config.unregisterOnSharedPreferenceChangeListener(listener)
     }
 
     // DashPay
@@ -291,5 +342,38 @@ class MainViewModel @Inject constructor(
             log,
             AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_RECEIVE
         )
+    }
+
+    private fun refreshTransactions(filter: TransactionFilter) {
+        walletData.wallet?.let { wallet ->
+            val wrappedTransactions = walletData.wrapAllTransactions(
+                FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
+            ).filter { it.transactions.any { tx -> filter.matches(tx) } }
+            _transactions.postValue(wrappedTransactions.sortedWith(TransactionWrapperComparator()))
+        }
+    }
+
+    private fun updateSyncStatus(state: BlockchainState) {
+        if (_isBlockchainSyncFailed.value != state.isSynced()) {
+            _isBlockchainSynced.postValue(state.isSynced())
+
+            if (state.replaying) {
+                _transactions.postValue(listOf())
+            }
+        }
+
+        _isBlockchainSyncFailed.postValue(state.syncFailed())
+        _isNetworkUnavailable.postValue(state.impediments.contains(BlockchainState.Impediment.NETWORK))
+    }
+
+    private fun updatePercentage(state: BlockchainState) {
+        var percentage = state.percentageSync
+
+        if (state.replaying && state.percentageSync == 100) {
+            //This is to prevent showing 100% when using the Rescan blockchain function.
+            //The first few broadcasted blockchainStates are with percentage sync at 100%
+            percentage = 0
+        }
+        _blockchainSyncPercentage.postValue(percentage)
     }
 }

@@ -1,20 +1,21 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2019 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.transactions
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -30,11 +31,17 @@ import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.AbstractWalletActivity
+import de.schildbach.wallet.ui.DashPayUserActivity
+import de.schildbach.wallet.ui.ReportIssueDialogBuilder
+
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity.ACTION_SEND_FROM_WALLET_URI
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dashj.platform.dashpay.BlockchainIdentity
@@ -43,6 +50,8 @@ import org.slf4j.LoggerFactory
 /**
  * @author Samuel Barbosa
  */
+@FlowPreview
+@ExperimentalCoroutinesApi
 class TransactionResultActivity : AbstractWalletActivity() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
@@ -92,7 +101,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
     private lateinit var transactionResultViewBinder: TransactionResultViewBinder
     private lateinit var transaction: Transaction
 
-    private val isUserAuthorised: Boolean by lazy {
+    private val isUserAuthorised: Boolean by lazy { // TODO: check why needed
         intent.extras!!.getBoolean(EXTRA_USER_AUTHORIZED)
     }
 
@@ -110,8 +119,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
         setContentView(R.layout.activity_successful_transaction)
 
-        val tx = WalletApplication.getInstance().wallet!!.getTransaction(txId)
-
+        val tx = walletData.wallet!!.getTransaction(txId)
         if (tx != null) {
             val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
             val userId = initializeIdentity(tx, blockchainIdentity)
@@ -157,7 +165,13 @@ class TransactionResultActivity : AbstractWalletActivity() {
     }
 
     private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
-        transactionResultViewBinder = TransactionResultViewBinder(container, dashPayProfile, true)
+        transactionResultViewBinder = TransactionResultViewBinder(
+            walletData.wallet!!,
+            configuration.format.noCode(),
+            container,
+            dashPayProfile,
+            true
+        )
         val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
         val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
         transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
@@ -165,10 +179,16 @@ class TransactionResultActivity : AbstractWalletActivity() {
             onTransactionDetailsDismiss()
         }
         view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
+        report_issue_card.setOnClickListener { showReportIssue() }
         check_icon.postDelayed({
             check_icon.visibility = View.VISIBLE
             (check_icon.drawable as Animatable).start()
         }, 400)
+    }
+
+    private fun showReportIssue() {
+        ReportIssueDialogBuilder.createReportIssueDialog(this, WalletApplication.getInstance())
+            .buildAlertDialog().show()
     }
 
     private fun onTransactionDetailsDismiss() {
@@ -179,7 +199,8 @@ class TransactionResultActivity : AbstractWalletActivity() {
             }
             userData != null -> {
                 finish()
-                startActivity(DashPayUserActivity.createIntent(this@TransactionResultActivity,
+                startActivity(
+                    DashPayUserActivity.createIntent(this@TransactionResultActivity,
                     userData!!, userData != null))
             }
             intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {

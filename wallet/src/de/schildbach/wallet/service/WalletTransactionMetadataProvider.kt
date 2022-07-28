@@ -18,7 +18,6 @@ package de.schildbach.wallet.service
 
 import de.schildbach.wallet.data.AddressMetadataDao
 import de.schildbach.wallet.data.TransactionMetadataDao
-import de.schildbach.wallet.util.WalletUtils.isEntirelySelf
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Address
@@ -35,6 +34,7 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.transactions.TransactionUtils
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
 import javax.inject.Inject
@@ -63,7 +63,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             if (sentTime != null && sentTime < updateTime) {
                 updateTime = sentTime
             }
-            val isInternal = isEntirelySelf(this, walletData.wallet!!)
+            val isInternal = TransactionUtils.isEntirelySelf(this, walletData.wallet!!)
 
             val metadata = TransactionMetadata(
                 txId,

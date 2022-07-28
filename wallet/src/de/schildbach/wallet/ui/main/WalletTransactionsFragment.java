@@ -19,12 +19,8 @@ package de.schildbach.wallet.ui.main;
 import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
-import android.database.ContentObserver;
 import android.graphics.Rect;
 import android.os.Bundle;
-import android.os.Handler;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
@@ -50,32 +46,35 @@ import java.util.List;
 import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
-import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
-import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
 import de.schildbach.wallet.ui.CreateUsernameActivity;
 import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.SearchUserActivity;
-import de.schildbach.wallet.ui.TransactionDetailsDialogFragment;
-import de.schildbach.wallet.ui.TransactionsAdapter;
-import de.schildbach.wallet.ui.TransactionsFilterDialog;
-import de.schildbach.wallet.ui.TransactionsFilterSharedViewModel;
 import de.schildbach.wallet.ui.WalletTransactionsFragmentViewModel;
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.ui.invite.InviteHandler;
+import org.bitcoinj.core.Sha256Hash;
+import org.dash.wallet.common.transactions.TransactionWrapper;
+
+import java.util.ArrayList;
+
+import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment;
+import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment;
+import de.schildbach.wallet.ui.transactions.TransactionRowView;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
+import kotlinx.coroutines.FlowPreview;
 
 /**
  * @author Andreas Schildbach
  */
+@FlowPreview
 @AndroidEntryPoint
-public class WalletTransactionsFragment extends BaseLockScreenFragment implements
-        TransactionsAdapter.OnClickListener, OnSharedPreferenceChangeListener {
+public class WalletTransactionsFragment extends BaseLockScreenFragment {
 
     private AbstractWalletActivity activity;
 
@@ -84,23 +83,14 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
     private Wallet wallet;
     private ContentResolver resolver;
 
+    private TextView emptyView;
     private View loading;
     private RecyclerView recyclerView;
-    private TransactionsAdapter adapter;
+    private TransactionAdapter adapter;
     private TextView syncingText;
-    private TransactionsFilterSharedViewModel transactionsFilterSharedViewModel;
-    private MainViewModel mainViewModel;
+    private MainViewModel viewModel;
 
-    private final Handler handler = new Handler();
-
-    private final ContentObserver addressBookObserver = new ContentObserver(handler) {
-        @Override
-        public void onChange(final boolean selfChange) {
-            adapter.clearCacheAndNotifyDataSetChanged();
-        }
-    };
-
-    private WalletTransactionsFragmentViewModel viewModel;
+    private WalletTransactionsFragmentViewModel walletTransactionsViewModel;
     @Inject
     public AnalyticsService analytics;
 
@@ -116,13 +106,6 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
     }
 
     @Override
-    public void onCreate(final Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        adapter = new TransactionsAdapter(activity, wallet, application.maxConnectedPeers(), this);
-    }
-
-    @Override
     public void onDestroyView() {
         super.onDestroyView();
         recyclerView.setAdapter(null);
@@ -132,104 +115,130 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
     public void onViewCreated(@NonNull View view, @androidx.annotation.Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        viewModel = new ViewModelProvider(requireActivity()).get(MainViewModel.class);
+        walletTransactionsViewModel = new ViewModelProvider(this).get(WalletTransactionsFragmentViewModel.class);
+
+        emptyView = view.findViewById(R.id.wallet_transactions_empty);
         loading = view.findViewById(R.id.loading);
-
         syncingText = view.findViewById(R.id.syncing);
-        view.findViewById(R.id.transaction_filter_btn).setOnClickListener(v -> {
-            dialogFragment = new TransactionsFilterDialog();
-            dialogFragment.show(getChildFragmentManager(), null);
+
+        adapter = new TransactionAdapter(viewModel.getBalanceDashFormat(), getResources(), true, (txView, position) -> {
+            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS);
+            List<TransactionWrapper> wrappers = viewModel.getTransactions().getValue();
+
+            if (wrappers != null) {
+                TransactionWrapper wrapper = wrappers.get(position);
+
+                if (wrapper.getTransactions().size() > 1) {
+                    TransactionGroupDetailsFragment fragment = new TransactionGroupDetailsFragment(wrapper);
+                    fragment.show(getParentFragmentManager(), "transaction_group");
+                } else {
+                    Sha256Hash txId = wrapper.getTransactions().iterator().next().getTxId();
+                    TransactionDetailsDialogFragment transactionDetailsDialogFragment =
+                            TransactionDetailsDialogFragment.newInstance(txId);
+                    transactionDetailsDialogFragment.show(getParentFragmentManager(), null);
+                }
+            }
+
+            return Unit.INSTANCE;
         });
 
-        mainViewModel = new ViewModelProvider(requireActivity()).get(MainViewModel.class);
-
-        recyclerView = view.findViewById(R.id.wallet_transactions_list);
-        recyclerView.setHasFixedSize(true);
-        recyclerView.setLayoutManager(new LinearLayoutManager(activity));
-        recyclerView.setAdapter(adapter);
-        recyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
-            private final int PADDING = 2
-                    * activity.getResources().getDimensionPixelOffset(R.dimen.card_padding_vertical);
-
+        adapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
             @Override
-            public void getItemOffsets(final Rect outRect, final View view, final RecyclerView parent,
-                                       final RecyclerView.State state) {
-                super.getItemOffsets(outRect, view, parent, state);
-
-                final int position = parent.getChildAdapterPosition(view);
-                if (position == 0)
-                    outRect.top += PADDING;
-                else if (position == parent.getAdapter().getItemCount() - 1)
-                    outRect.bottom += PADDING;
+            public void onItemRangeInserted(int positionStart, int itemCount) {
+                if (positionStart == 0) {
+                    recyclerView.scrollToPosition(0);
+                }
             }
         });
 
-        resolver.registerContentObserver(AddressBookProvider.contentUri(activity.getPackageName()), true,
-                addressBookObserver);
+//        viewModel.getTransactionHistoryItemData().observe(getViewLifecycleOwner(), new Observer<List<TransactionsAdapter.TransactionHistoryItem>>() {
+//            @Override
+//            public void onChanged(List<TransactionsAdapter.TransactionHistoryItem> transactions) {
+//                loading.setVisibility(View.GONE);
+//                adapter.replace(transactions);
+//                updateView();
+//            }
+//        }); // TODO: handle differences
 
-        config.registerOnSharedPreferenceChangeListener(this);
-
-        updateView();
-
-        mainViewModel = new ViewModelProvider(activity).get(MainViewModel.class);
-        viewModel = new ViewModelProvider(this).get(WalletTransactionsFragmentViewModel.class);
-        viewModel.getTransactionHistoryItemData().observe(getViewLifecycleOwner(), new Observer<List<TransactionsAdapter.TransactionHistoryItem>>() {
-            @Override
-            public void onChanged(List<TransactionsAdapter.TransactionHistoryItem> transactions) {
-                loading.setVisibility(View.GONE);
-                adapter.replace(transactions);
-                updateView();
-            }
-        });
-        viewModel.getBlockchainIdentityData().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
+        walletTransactionsViewModel.getBlockchainIdentityData().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
             @Override
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null) {
                     ((LockScreenActivity)requireActivity()).imitateUserInteraction();
-                    adapter.setBlockchainIdentityData(blockchainIdentityData);
+//                    adapter.setBlockchainIdentityData(blockchainIdentityData); TODO: check
                 }
             }
         });
-        mainViewModel.isAbleToCreateIdentityLiveData().observe(getViewLifecycleOwner(), canJoinDashPay -> {
-            adapter.setCanJoinDashPay(canJoinDashPay);
+
+        viewModel.isAbleToCreateIdentityLiveData().observe(getViewLifecycleOwner(), canJoinDashPay -> {
+//            adapter.setCanJoinDashPay(canJoinDashPay); TODO
         });
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(), new Observer<BlockchainState>() {
+
+        view.findViewById(R.id.transaction_filter_btn).setOnClickListener(v -> {
+            TransactionsFilterDialog dialogFragment = new TransactionsFilterDialog((direction, dialog) -> {
+                viewModel.setTransactionsDirection(direction);
+                viewModel.logDirectionChangedEvent(direction);
+                return Unit.INSTANCE;
+            });
+
+            dialogFragment.show(getChildFragmentManager(), null);
+        });
+
+        recyclerView = view.findViewById(R.id.wallet_transactions_list);
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        recyclerView.setAdapter(adapter);
+        recyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
+            private final int VERTICAL = 3 * getResources().getDimensionPixelOffset(R.dimen.card_padding_vertical);
+            private final int HORIZONTAL = getResources().getDimensionPixelOffset(R.dimen.default_horizontal_padding);
+
             @Override
-            public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
-                updateSyncState(blockchainState);
+            public void getItemOffsets(@NonNull final Rect outRect, @NonNull final View view, @NonNull final RecyclerView parent,
+                                       @NonNull final RecyclerView.State state) {
+                super.getItemOffsets(outRect, view, parent, state);
+
+                outRect.left = HORIZONTAL;
+                outRect.right = HORIZONTAL;
+                outRect.top = VERTICAL;
+                outRect.bottom = VERTICAL;
             }
         });
-        transactionsFilterSharedViewModel = new ViewModelProvider(requireActivity())
-                .get(TransactionsFilterSharedViewModel.class);
-        transactionsFilterSharedViewModel.getOnAllTransactionsSelected().observe(getViewLifecycleOwner(), aVoid -> {
-            adapter.filter(TransactionsAdapter.Filter.ALL);
-        });
-        transactionsFilterSharedViewModel.getOnReceivedTransactionsSelected().observe(getViewLifecycleOwner(), aVoid -> {
-            adapter.filter(TransactionsAdapter.Filter.INCOMING);
-        });
-        transactionsFilterSharedViewModel.getOnSentTransactionsSelected().observe(getViewLifecycleOwner(), aVoid -> {
-            adapter.filter(TransactionsAdapter.Filter.OUTGOING);
+
+        viewModel.isBlockchainSynced().observe(getViewLifecycleOwner(), isSynced -> updateSyncState());
+        viewModel.getBlockchainSyncPercentage().observe(getViewLifecycleOwner(), percentage -> updateSyncState());
+        viewModel.getTransactions().observe(getViewLifecycleOwner(), wrappedTransactions -> {
+            loading.setVisibility(View.GONE);
+            List<TransactionRowView> transactionViews = new ArrayList<>();
+
+            for (TransactionWrapper wrapper: wrappedTransactions) {
+                transactionViews.add(TransactionRowView.Companion.fromTransactionWrapper(
+                        wrapper, viewModel.getWalletData().getTransactionBag(),
+                        Constants.CONTEXT
+                ));
+            }
+
+            adapter.submitList(transactionViews);
+
+            if (wrappedTransactions.isEmpty()) {
+                showEmptyView();
+            } else {
+                showTransactionList();
+            }
         });
     }
 
-    private void updateSyncState(BlockchainState blockchainState) {
-        if (blockchainState == null) {
-            return;
-        }
+    private void updateSyncState() {
+        Boolean isSynced = viewModel.isBlockchainSynced().getValue();
+        Integer percentage = viewModel.getBlockchainSyncPercentage().getValue();
 
-        int percentage = blockchainState.getPercentageSync();
-        if (blockchainState.getReplaying() && blockchainState.getPercentageSync() == 100) {
-            //This is to prevent showing 100% when using the Rescan blockchain function.
-            //The first few broadcasted blockchainStates are with percentage sync at 100%
-            percentage = 0;
-        }
-
-        if (blockchainState.isSynced()) {
+        if (isSynced != null && isSynced) {
             syncingText.setVisibility(View.GONE);
         } else {
             syncingText.setVisibility(View.VISIBLE);
             String syncing = getString(R.string.syncing);
 
-            if (percentage == 0) {
+            if (percentage == null || percentage == 0) {
                 syncing += "…";
                 syncingText.setText(syncing);
             } else {
@@ -244,80 +253,69 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
     }
 
     @Override
-    public void onDestroy() {
-        config.unregisterOnSharedPreferenceChangeListener(this);
-
-        resolver.unregisterContentObserver(addressBookObserver);
-        super.onDestroy();
-    }
-
-    @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
                              final Bundle savedInstanceState) {
         return inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
     }
 
-    @Override
-    public void onTransactionRowClicked(TransactionsAdapter.TransactionHistoryItem transactionHistoryItem) {
-        TransactionDetailsDialogFragment transactionDetailsDialogFragment =
-                TransactionDetailsDialogFragment.newInstance(transactionHistoryItem.getTransaction().getTxId());
-        requireActivity().getSupportFragmentManager().beginTransaction()
-                .add(transactionDetailsDialogFragment, null).commitAllowingStateLoss();
-        analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS, Bundle.EMPTY);
+//    @Override
+//    public void onTransactionRowClicked(TransactionsAdapter.TransactionHistoryItem transactionHistoryItem) {
+//        TransactionDetailsDialogFragment transactionDetailsDialogFragment =
+//                TransactionDetailsDialogFragment.newInstance(transactionHistoryItem.getTransaction().getTxId());
+//        requireActivity().getSupportFragmentManager().beginTransaction()
+//                .add(transactionDetailsDialogFragment, null).commitAllowingStateLoss();
+//        analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS, Bundle.EMPTY);
+//    }
+
+//    @Override
+//    public void onProcessingIdentityRowClicked(final BlockchainIdentityBaseData blockchainIdentityData, boolean retry) {
+//        if (retry) {
+//            // check to see if an invite was used
+//            if (!blockchainIdentityData.getUsingInvite()) {
+//                activity.startService(CreateIdentityService.createIntentForRetry(activity, false));
+//            } else {
+//                // handle errors from using an invite
+//                InviteHandler handler = new InviteHandler(activity, analytics);
+//                if (handler.handleError(blockchainIdentityData)) {
+//                    adapter.setBlockchainIdentityData(null);
+//                } else {
+//                    activity.startService(CreateIdentityService.createIntentForRetryFromInvite(activity, false));
+//                }
+//            }
+//        } else {
+//            if (blockchainIdentityData.getCreationStateErrorMessage() != null) {
+//                if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.USERNAME_REGISTERING) {
+//                    startActivity(CreateUsernameActivity.createIntentReuseTransaction(activity, blockchainIdentityData));
+//                } else {
+//                    Toast.makeText(getContext(), blockchainIdentityData.getCreationStateErrorMessage(), Toast.LENGTH_LONG).show();
+//                }
+//            } else if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
+//                startActivity(new Intent(activity, SearchUserActivity.class));
+//            }
+//        }
+//    }
+//
+//    @Override
+//    public void onJoinDashPayClicked() {
+//        viewModel.getShowCreateUsernameEvent().postValue(Unit.INSTANCE);
+//    }
+//
+//    @Override
+//    public void onUsernameCreatedClicked() {
+//        viewModel.dismissUsernameCreatedCard();
+//    }
+
+    private void showTransactionList() {
+        emptyView.setVisibility(View.GONE);
+        recyclerView.setVisibility(View.VISIBLE);
     }
 
-    @Override
-    public void onProcessingIdentityRowClicked(final BlockchainIdentityBaseData blockchainIdentityData, boolean retry) {
-        if (retry) {
-            // check to see if an invite was used
-            if (!blockchainIdentityData.getUsingInvite()) {
-                activity.startService(CreateIdentityService.createIntentForRetry(activity, false));
-            } else {
-                // handle errors from using an invite
-                InviteHandler handler = new InviteHandler(activity, analytics);
-                if (handler.handleError(blockchainIdentityData)) {
-                    adapter.setBlockchainIdentityData(null);
-                } else {
-                    activity.startService(CreateIdentityService.createIntentForRetryFromInvite(activity, false));
-                }
-            }
-        } else {
-            if (blockchainIdentityData.getCreationStateErrorMessage() != null) {
-                if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.USERNAME_REGISTERING) {
-                    startActivity(CreateUsernameActivity.createIntentReuseTransaction(activity, blockchainIdentityData));
-                } else {
-                    Toast.makeText(getContext(), blockchainIdentityData.getCreationStateErrorMessage(), Toast.LENGTH_LONG).show();
-                }
-            } else if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
-                startActivity(new Intent(activity, SearchUserActivity.class));
-            }
-        }
-    }
-
-    @Override
-    public void onJoinDashPayClicked() {
-        mainViewModel.getShowCreateUsernameEvent().postValue(Unit.INSTANCE);
-    }
-
-    @Override
-    public void onUsernameCreatedClicked() {
-        mainViewModel.dismissUsernameCreatedCard();
-    }
-
-    @Override
-    public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
-        if (Configuration.PREFS_KEY_BTC_PRECISION.equals(key) || Configuration.PREFS_KEY_REMIND_BACKUP.equals(key) ||
-                Configuration.PREFS_KEY_REMIND_BACKUP_SEED.equals(key))
-            updateView();
-    }
-
-    private void updateView() {
-        adapter.setFormat(config.getFormat());
-        mainViewModel.getOnTransactionsUpdated().call(Unit.INSTANCE);
+    private void showEmptyView() {
+        emptyView.setVisibility(View.VISIBLE);
+        recyclerView.setVisibility(View.INVISIBLE);
     }
 
     public boolean isHistoryEmpty() {
         return adapter.getItemCount() == 0;
     }
-
 }

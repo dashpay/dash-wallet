@@ -81,7 +81,7 @@
                     android:layout_marginEnd="8dp"
                     android:layout_marginRight="8dp"
                     tools:text="$"
-                    android:textColor="@color/gray_900"
+                    android:textColor="@color/content_primary"
                     android:textSize="@dimen/pay_input_symbol_text_size" />
 
                 <TextView
@@ -93,7 +93,7 @@
                     android:ellipsize="middle"
                     android:hint="0"
                     android:singleLine="true"
-                    android:textColor="@color/gray_900"
+                    android:textColor="@color/content_primary"
                     android:textSize="@dimen/pay_input_symbol_text_size" />
 
                 <TextView
@@ -104,7 +104,7 @@
                     android:layout_marginLeft="8dp"
                     tools:text="$"
                     android:visibility="gone"
-                    android:textColor="@color/gray_900"
+                    android:textColor="@color/content_primary"
                     android:textSize="@dimen/pay_input_symbol_text_size" />
 
                 <ImageView

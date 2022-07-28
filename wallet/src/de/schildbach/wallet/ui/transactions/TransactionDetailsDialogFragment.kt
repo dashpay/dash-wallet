@@ -1,4 +1,4 @@
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.transactions
 
 import android.content.DialogInterface
 import android.graphics.Color
@@ -7,34 +7,48 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.Animation
-import android.view.animation.AnimationUtils
-import androidx.fragment.app.DialogFragment
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.dash.wallet.common.UserInteractionAwareCallback
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_successful_transaction.*
-import kotlinx.android.synthetic.main.transaction_details_dialog.*
-import kotlinx.android.synthetic.main.transaction_result_content.*
+import de.schildbach.wallet_test.databinding.TransactionDetailsDialogBinding
+import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
+import org.dash.wallet.common.ui.viewBinding
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
  */
-class TransactionDetailsDialogFragment : DialogFragment() {
-
+@AndroidEntryPoint
+@ExperimentalCoroutinesApi
+class TransactionDetailsDialogFragment : OffsetDialogFragment() {
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
     private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }
     private var transaction: Transaction? = null
-    private val wallet by lazy { WalletApplication.getInstance().wallet }
+    private val binding by viewBinding(TransactionDetailsDialogBinding::bind)
+    private lateinit var contentBinding: TransactionResultContentBinding
     private lateinit var transactionResultViewBinder: TransactionResultViewBinder
+
+    override val backgroundStyle = R.style.PrimaryBackground
+    override val forceExpand = true
+
+    @Inject
+    lateinit var walletData: WalletDataProvider
+    @Inject
+    lateinit var configuration: Configuration
 
     companion object {
 
@@ -53,7 +67,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val tx = wallet!!.getTransaction(txId)
+        val tx = walletData.wallet!!.getTransaction(txId)
 
         if (tx != null) {
             val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
@@ -93,12 +107,20 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     }
 
     private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
-        transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container, dashPayProfile, true)
+        contentBinding = TransactionResultContentBinding.bind(binding.transactionResultContainer)
+        transactionResultViewBinder = TransactionResultViewBinder(
+            walletData.wallet!!,
+            configuration.format.noCode(),
+            binding.transactionResultContainer,
+            dashPayProfile,
+            true
+        )
         transactionResultViewBinder.bind(tx)
-        view_on_explorer.setOnClickListener { viewOnBlockExplorer() }
-        transaction_close_btn.setOnClickListener { dismissAnimation() }
+        contentBinding.viewOnExplorer.setOnClickListener { viewOnBlockExplorer() }
+        contentBinding.reportIssueCard.setOnClickListener {
+            showReportIssue()
+        }
         dialog?.window!!.callback = UserInteractionAwareCallback(dialog?.window!!.callback, requireActivity())
-        showAnimation()
     }
 
     private fun initializeIdentity(tx: Transaction, blockchainIdentity: BlockchainIdentity?): String? {
@@ -120,32 +142,12 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         return userId
     }
 
-    private fun showAnimation() {
-        val containerAnimation = AnimationUtils.loadAnimation(activity, R.anim.fade_in)
-        transaction_details_dialog_container.startAnimation(containerAnimation)
-        val contentAnimation = AnimationUtils.loadAnimation(activity, R.anim.slide_in_bottom)
-        transaction_details_dialog_content_container.postDelayed({
-            transaction_details_dialog_content_container.visibility = View.VISIBLE
-            transaction_details_dialog_content_container.startAnimation(contentAnimation)
-        }, 150)
-    }
-
-    private fun dismissAnimation() {
-        val contentAnimation = AnimationUtils.loadAnimation(activity, R.anim.slide_out_bottom)
-        transaction_details_dialog_content_container.startAnimation(contentAnimation)
-        val containerAnimation = AnimationUtils.loadAnimation(activity, R.anim.fade_out)
-        transaction_details_dialog_content_container.postDelayed({
-            transaction_details_dialog_container.startAnimation(containerAnimation)
-        }, 150)
-        containerAnimation.setAnimationListener(object : Animation.AnimationListener {
-            override fun onAnimationEnd(animation: Animation?) {
-                dismissAllowingStateLoss()
-            }
-
-            override fun onAnimationRepeat(animation: Animation?) {}
-
-            override fun onAnimationStart(animation: Animation?) {}
-        })
+    private fun showReportIssue() {
+        ReportIssueDialogBuilder.createReportIssueDialog(
+            requireActivity(),
+            WalletApplication.getInstance()
+        )
+            .buildAlertDialog().show()
     }
 
     private fun viewOnBlockExplorer() {
@@ -154,7 +156,6 @@ class TransactionDetailsDialogFragment : DialogFragment() {
             WalletUtils.viewOnBlockExplorer(activity, it.purpose, it.txId.toString())
         }
     }
-
 
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)

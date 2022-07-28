@@ -30,7 +30,6 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
@@ -42,8 +41,9 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
 import org.dash.wallet.common.data.OnboardingState
-import kotlinx.android.synthetic.main.activity_onboarding_invalid_wallet.*
 import de.schildbach.wallet.security.SecurityGuard
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.slf4j.LoggerFactory
@@ -55,8 +55,9 @@ private const val RESTORE_PHRASE_REQUEST_CODE = 2
 private const val RESTORE_FILE_REQUEST_CODE = 3
 private const val UPGRADE_NONENCRYPTED_FLOW_TUTORIAL_REQUEST_CODE = 4
 
-
+@FlowPreview
 @AndroidEntryPoint
+@ExperimentalCoroutinesApi
 class OnboardingActivity : RestoreFromFileActivity() {
 
     companion object {
@@ -79,9 +80,8 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private lateinit var walletApplication: WalletApplication
 
-    override fun onStart() {
-        super.onStart()
-    }
+    @Inject
+    lateinit var analytics: AnalyticsService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,6 +106,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
         OnboardingState.init(walletApplication.configuration)
         OnboardingState.clear()
 
+        // TODO: we should decouple the logic from view interactions
+        // and move some of this to the viewModel, wrapping it in tests.
+        // The viewModel already has some related events
         if (walletApplication.walletFileExists()) {
             if (!walletApplication.wallet!!.isEncrypted) {
                 unencryptedFlow()
@@ -276,9 +279,5 @@ class OnboardingActivity : RestoreFromFileActivity() {
         } else if ((requestCode == SET_PIN_REQUEST_CODE || requestCode == RESTORE_PHRASE_REQUEST_CODE) && resultCode == Activity.RESULT_OK) {
             finish()
         }
-    }
-
-    fun getWalletApplication() : WalletApplication {
-        return walletApplication
     }
 }

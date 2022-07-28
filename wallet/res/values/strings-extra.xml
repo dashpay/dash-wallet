@@ -260,6 +260,7 @@
     <string name="transaction_details_received_from">Received from</string>
     <string name="transaction_details_moved_from">Moved from</string>
     <string name="transaction_details_moved_internally_to">Internally moved to</string>
+    <string name="transaction_failed_details">Transaction failed</string>
 
     <string name="authenticate_fingerprint_title">Authenticate</string>
     <string name="authenticate_fingerprint_message">Confirm fingerprint to continue</string>
@@ -634,7 +635,7 @@
 
     <string name="syncing">Syncing</string>
     <string name="syncing_balance">Syncing Balance</string>
-
+    <string name="transaction_count">%d transactions</string>
     <string name="all_transactions">All</string>
     <string name="received_transactions">Received</string>
     <string name="sent_transactions">Sent</string>

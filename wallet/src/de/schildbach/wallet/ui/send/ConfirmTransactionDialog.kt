@@ -16,28 +16,23 @@
 
 package de.schildbach.wallet.ui.send
 
-
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.DialogFragment
-import androidx.lifecycle.ViewModelProvider
 import androidx.preference.PreferenceManager
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialog
-import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
+import androidx.fragment.app.activityViewModels
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 
 
-class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
+class ConfirmTransactionDialog : OffsetDialogFragment() {
 
     companion object {
 
@@ -82,7 +77,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         }
     }
 
-    private lateinit var sharedViewModel: SharedViewModel
+    private val sharedViewModel by activityViewModels<SharedViewModel>()
 
     private val autoAcceptPrefsKey by lazy {
         "auto_accept:$username"
@@ -159,22 +154,6 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
             sharedViewModel.autoAcceptContactRequest = pendingContactRequest && confirm_auto_accept.isChecked
             sharedViewModel.clickConfirmButtonEvent.call(true)
         }
-        dialog?.setOnShowListener { dialog ->
-            // apply wrap_content height
-            val d = dialog as BottomSheetDialog
-            val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
-            val coordinatorLayout = bottomSheet!!.parent as CoordinatorLayout
-            val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
-            bottomSheetBehavior.peekHeight = bottomSheet.height
-            coordinatorLayout.parent.requestLayout()
-        }
-    }
-
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        sharedViewModel = activity?.run {
-            ViewModelProvider(this)[SharedViewModel::class.java]
-        } ?: throw IllegalStateException("Invalid Activity")
     }
 
     private var autoAcceptLastValue: Boolean

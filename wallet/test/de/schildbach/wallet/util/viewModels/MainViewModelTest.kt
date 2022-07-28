@@ -25,16 +25,20 @@ import androidx.lifecycle.MutableLiveData
 import androidx.work.WorkManager
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import androidx.lifecycle.SavedStateHandle
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.coroutines.test.resetMain
@@ -68,6 +72,7 @@ class MainCoroutineRule(
     }
 }
 
+@FlowPreview
 @ExperimentalCoroutinesApi
 class MainViewModelTest {
     private val configMock = mockk<Configuration> {
@@ -97,6 +102,7 @@ class MainViewModelTest {
     private val workManagerMock = mockk<WorkManager> {
         every { getWorkInfosByTagLiveData(any()) } returns MutableLiveData(listOf())
     }
+    private val savedStateMock = mockk<SavedStateHandle>()
 
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
@@ -120,6 +126,8 @@ class MainViewModelTest {
 
         mockkStatic(WorkManager::class)
         every { WorkManager.getInstance(any()) } returns workManagerMock
+        every { savedStateMock.get<TxDirection>(eq("tx_direction")) } returns TxDirection.ALL
+        every { savedStateMock.set<TxDirection>(any(), any()) } just runs
     }
 
     @Test
@@ -129,7 +137,7 @@ class MainViewModelTest {
 
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk()
+            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(), savedStateMock
         ))
 
         val clipboardInput = viewModel.getClipboardInput()
@@ -148,7 +156,7 @@ class MainViewModelTest {
 
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk()
+            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(), savedStateMock
         ))
 
         every { clipboardManagerMock.primaryClip?.getItemAt(0)?.uri?.toString() } returns mockUri
@@ -180,10 +188,12 @@ class MainViewModelTest {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk()
+            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(), savedStateMock
         ))
-        assertEquals(false, viewModel.isBlockchainSynced.value)
-        assertEquals(false, viewModel.isBlockchainSyncFailed.value)
+        runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
+            assertEquals(false, viewModel.isBlockchainSynced.value)
+            assertEquals(false, viewModel.isBlockchainSyncFailed.value)
+        }
     }
 
     @Test
@@ -192,10 +202,12 @@ class MainViewModelTest {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(state)
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk()
+            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(), savedStateMock
         ))
 
-        assertEquals(true, viewModel.isBlockchainSynced.value)
-        assertEquals(false, viewModel.isBlockchainSyncFailed.value)
+        runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
+            assertEquals(true, viewModel.isBlockchainSynced.value)
+            assertEquals(false, viewModel.isBlockchainSyncFailed.value)
+        }
     }
 }
