@@ -231,7 +231,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
     fun showKeyboardAndButton(isVisible: Boolean) {
         // avoid IllegalStateException
         if (isAdded) {
-            viewModel.keyboardStateCallback.postValue(isVisible)
+            viewModel.keyboardStateCallback.value = isVisible
         }
     }
 }
