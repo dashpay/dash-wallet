@@ -79,10 +79,10 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     lateinit var exchangeRate: ExchangeRate
 
     init {
+        getBaseIdForUSDModel()
         getWithdrawalLimit()
         setDashWalletBalance()
         getUserAccountInfo()
-        getBaseIdForUSDModel()
     }
     private fun getBaseIdForUSDModel() = viewModelScope.launch(Dispatchers.Main) {
         when (val response = coinBaseRepository.getBaseIdForUSDModel(userPreference.exchangeCurrencyCode!!)) {
