@@ -48,6 +48,7 @@ import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.ConfirmationDialog
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.OnlineAccountDetailsDialog
+import org.dash.wallet.integrations.crowdnode.ui.dialogs.StakingDialog
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 @AndroidEntryPoint
@@ -345,17 +346,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         if (viewModel.signUpStatus == SignUpStatus.LinkedOnline) {
             OnlineAccountDetailsDialog().show(parentFragmentManager, "online_account_details")
         } else {
-            AdaptiveDialog.create(
-                R.drawable.ic_info_blue_encircled,
-                getString(R.string.crowdnode_your_address_title),
-                viewModel.accountAddress.value?.toBase58() ?: "",
-                getString(R.string.button_close),
-                getString(R.string.button_copy_address)
-            ).show(requireActivity()) { toCopy ->
-                if (toCopy == true) {
-                    viewModel.accountAddress.value?.toBase58()?.copy(requireActivity(), "dash address")
-                }
-            }
+            StakingDialog().show(parentFragmentManager, "staking")
         }
     }
 

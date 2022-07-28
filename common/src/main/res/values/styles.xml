@@ -609,6 +609,10 @@
         <item name="android:textColor">@color/dash_blue</item>
     </style>
 
+    <style name="Caption.Medium.Green">
+        <item name="android:textColor">@color/system_green</item>
+    </style>
+
     <style name="Caption.Medium.Red">
         <item name="android:textColor">@color/system_red</item>
     </style>
@@ -1129,6 +1133,12 @@
         <item name="strokeColor">@android:color/transparent</item>
     </style>
 
+    <style name="SystemGreenHighlight">
+        <item name="cornerRadius">6dp</item>
+        <item name="backgroundColor">@color/system_green_0.1</item>
+        <item name="strokeColor">@android:color/transparent</item>
+    </style>
+    
     <style name="BlueTextHighlight">
         <item name="backgroundColor">@color/dash_blue_0.1</item>
         <item name="strokeColor">@android:color/transparent</item>

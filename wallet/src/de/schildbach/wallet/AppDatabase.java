@@ -12,7 +12,7 @@ import org.dash.wallet.common.data.TransactionMetadata;
 
 import de.schildbach.wallet.data.AddressMetadataDao;
 import de.schildbach.wallet.data.AppDatabaseMigrations;
-import de.schildbach.wallet.data.BlockchainState;
+import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.data.BlockchainStateRoomConverters;
 import de.schildbach.wallet.data.TransactionMetadataDao;

@@ -34,6 +34,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
+import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
@@ -57,7 +58,8 @@ class CrowdNodeViewModel @Inject constructor(
     private val crowdNodeApi: CrowdNodeApi,
     private val clipboardManager: ClipboardManager,
     exchangeRatesProvider: ExchangeRatesProvider,
-    val analytics: AnalyticsService
+    val analytics: AnalyticsService,
+    private val blockchainStateProvider: BlockchainStateProvider
 ) : ViewModel() {
     companion object {
         const val URL_ARG = "url"
@@ -349,5 +351,18 @@ class CrowdNodeViewModel @Inject constructor(
     private suspend fun resetAddressAndApi() {
         _accountAddress.value = createNewAccountAddress()
         crowdNodeApi.reset()
+    }
+
+    fun getMasternodeAPY(): Double {
+        val apy = blockchainStateProvider.getMasternodeAPY()
+        return if (apy != 0.0) {
+            apy
+        } else {
+            blockchainStateProvider.getLastMasternodeAPY()
+        }
+    }
+
+    fun getCrowdNodeAPY() : Double {
+        return 0.85 * getMasternodeAPY()
     }
 }

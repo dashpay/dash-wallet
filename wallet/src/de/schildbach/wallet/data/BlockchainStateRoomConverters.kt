@@ -18,6 +18,7 @@
 package de.schildbach.wallet.data
 
 import androidx.room.TypeConverter
+import org.dash.wallet.common.data.BlockchainState
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import java.util.*
