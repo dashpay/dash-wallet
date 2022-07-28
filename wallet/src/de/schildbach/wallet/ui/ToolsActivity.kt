@@ -89,9 +89,16 @@ class ToolsActivity : BaseMenuActivity() {
                     getString(R.string.button_close))
                 dialog.show(supportFragmentManager, "requireSyncing")
             } else {
-                alertDialog = ExportTransactionHistoryDialogBuilder.createExportTransactionDialog(this,
-                    WalletApplication.getInstance()).buildAlertDialog()
-                alertDialog.show()
+                viewModel.getTransactionExporter()
+                viewModel.transactionExporter.observe(this) {
+                    alertDialog =
+                        ExportTransactionHistoryDialogBuilder.createExportTransactionDialog(
+                            this,
+                            WalletApplication.getInstance(),
+                            it
+                        ).buildAlertDialog()
+                    alertDialog.show()
+                }
             }
         }
     }
