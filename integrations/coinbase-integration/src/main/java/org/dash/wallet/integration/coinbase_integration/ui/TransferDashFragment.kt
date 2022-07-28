@@ -23,8 +23,8 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
@@ -62,8 +62,8 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         fun newInstance() = TransferDashFragment()
     }
 
-    private val enterAmountToTransferViewModel by activityViewModels<EnterAmountToTransferViewModel>()
-    private val transferDashViewModel by activityViewModels<TransferDashViewModel>()
+    private val enterAmountToTransferViewModel by viewModels<EnterAmountToTransferViewModel>()
+    private val transferDashViewModel by viewModels<TransferDashViewModel>()
     private val binding by viewBinding(TransferDashFragmentBinding::bind)
     private var loadingDialog: AdaptiveDialog? = null
     @Inject lateinit var securityFunctions: ISecurityFunctions
