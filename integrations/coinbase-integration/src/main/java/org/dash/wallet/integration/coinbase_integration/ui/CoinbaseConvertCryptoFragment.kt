@@ -180,16 +180,13 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         convertViewModel.userDashAccountEmptyError.observe(viewLifecycleOwner) {
-            val dashAccountEmptyError = CoinbaseGenericErrorUIModel(
-                title = R.string.dont_have_any_dash,
-                image = R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    dashAccountEmptyError
-                )
-            )
+            AdaptiveDialog.create(
+                R.drawable.ic_info_red,
+                getString(R.string.dont_have_any_dash),
+                "",
+                "",
+                getString(R.string.close)
+            ).show(requireActivity()) { }
         }
 
         binding.convertView.setOnCurrencyChooserClicked {
