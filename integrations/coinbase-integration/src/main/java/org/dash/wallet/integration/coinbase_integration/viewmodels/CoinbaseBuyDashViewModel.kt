@@ -63,7 +63,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
         get() = _placeBuyOrder
 
     val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
-    lateinit var exchangeRate: ExchangeRate
+     var exchangeRate: ExchangeRate?= null
 
     init {
         getWithdrawalLimit()
@@ -156,9 +156,13 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
                 }catch (x: Exception) {
                     Fiat.valueOf(userPreference.coinbaseSendLimitCurrency, 0)
                 }
-                val newRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, exchangeRate.fiat)
-                val amountInDash = newRate.fiatToCoin(fiatAmount)
-                amountInDash.toPlainString().toDoubleOrZero
+                if( exchangeRate?.fiat!=null) {
+                    val newRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, exchangeRate?.fiat)
+                    val amountInDash = newRate.fiatToCoin(fiatAmount)
+                    amountInDash.toPlainString().toDoubleOrZero
+                }else{
+                    0.0
+                }
             }
         }
 
