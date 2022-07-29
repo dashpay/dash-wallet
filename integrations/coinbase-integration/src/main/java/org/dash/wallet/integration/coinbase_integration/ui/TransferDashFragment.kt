@@ -200,7 +200,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
 
         enterAmountToTransferViewModel.isBlockchainSynced.observe(viewLifecycleOwner) {
-            setIsSyncing(it != true && enterAmountToTransferViewModel.transferDirectionState.value == true)
+            setIsSyncing(it != true && binding.transferView.walletToCoinbase)
         }
 
         binding.authLimitBanner.root.setOnClickListener {
@@ -279,7 +279,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private fun setIsSyncing(isSyncing: Boolean) {
         binding.transferView.setSyncing(isSyncing)
         binding.transferMessage.isVisible = isSyncing
-        enterAmountFragment.showKeyboardAndButton(!isSyncing)
+        enterAmountToTransferViewModel.keyboardStateCallback.value = !isSyncing
     }
 
     private suspend fun handleSend(value: Coin, isEmptyWallet: Boolean): Boolean {
@@ -306,7 +306,12 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private fun setInternetAccessState(hasInternet: Boolean) {
         binding.networkStatusContainer.isVisible = !hasInternet
         binding.transferView.isDeviceConnectedToInternet = hasInternet
-        enterAmountToTransferViewModel.keyboardStateCallback.value = hasInternet
+        if (!binding.transferView.walletToCoinbase) {
+            enterAmountToTransferViewModel.keyboardStateCallback.value = hasInternet
+        } else {
+            enterAmountToTransferViewModel.keyboardStateCallback.value =
+                hasInternet && enterAmountToTransferViewModel.isBlockchainSynced.value == true
+        }
     }
 
     private fun setTransactionState(responseState: SendDashResponseState) {

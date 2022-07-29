@@ -104,7 +104,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
     val dashWalletEmptyCallback = SingleLiveEvent<Unit>()
     val removeBannerCallback = SingleLiveEvent<Unit>()
-    val keyboardStateCallback = SingleLiveEvent<Boolean>()
+    val keyboardStateCallback = MutableLiveData<Boolean>()
 
     init {
         setDashWalletBalance()
