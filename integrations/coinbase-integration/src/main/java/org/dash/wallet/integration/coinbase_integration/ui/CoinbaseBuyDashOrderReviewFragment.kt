@@ -31,9 +31,9 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.payment_method_picker.CardUtils
@@ -44,9 +44,8 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseBuyDashOrderReviewBinding
 import org.dash.wallet.integration.coinbase_integration.model.*
-import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseBuyDashDialog
+import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseBuyDashOrderReviewViewModel
-import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
@@ -58,8 +57,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     private var loadingDialog: FancyAlertDialog? = null
     private var isRetrying = false
     private var newBuyOrderId: String? = null
-    @Inject
-    lateinit var analyticsService: AnalyticsService
+
     private val countDownTimer by lazy {
         object : CountDownTimer(10000, 1000) {
 
@@ -81,18 +79,31 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         super.onViewCreated(view, savedInstanceState)
 
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            analyticsService.logEvent(AnalyticsConstants.Coinbase.BOTTOM_BACK_TO_ENTER_AMOUNT, bundleOf())
+            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_ANDROID_BACK)
             findNavController().popBackStack()
         }
 
         binding.toolbar.setNavigationOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.Coinbase.TOP_BACK_TO_ENTER_AMOUNT, bundleOf())
+            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_TOP_BACK)
             findNavController().popBackStack()
         }
 
         binding.cancelBtn.setOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.Coinbase.CANCEL_DASH_PURCHASE, bundleOf())
-            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.confirmCancelBuyDashTransaction())
+            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_CANCEL)
+            val dialog = AdaptiveDialog.simple(
+                getString(R.string.cancel_transaction),
+                getString(R.string.no_keep_it),
+                getString(R.string.yes_cancel)
+            )
+            dialog.isCancelable = false
+            dialog.show(requireActivity()) { result ->
+                if (result == true) {
+                    viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_CANCEL_YES)
+                    findNavController().popBackStack()
+                } else {
+                    viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_CANCEL_NO)
+                }
+            }
         }
 
         arguments?.let {
@@ -115,7 +126,6 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         }
 
         binding.confirmBtnContainer.setOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.Coinbase.CONFIRM_DASH_PURCHASE, bundleOf())
             countDownTimer.cancel()
             if (isRetrying) {
                 getNewBuyOrder()
@@ -146,7 +156,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         }
 
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.Coinbase.FEE_INFO, bundleOf())
+            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_FEE_INFO)
             safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.orderReviewToFeeInfo())
         }
 
@@ -215,11 +225,12 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     }
 
     private fun showBuyOrderDialog(responseMessage: String) {
-        val transactionStateDialog = CoinBaseBuyDashDialog.newInstance(CoinBaseBuyDashDialog.Type.PURCHASE_ERROR, responseMessage).apply {
-            this.onCoinBaseBuyDashDialogButtonsClickListener = object : CoinBaseBuyDashDialog.CoinBaseBuyDashDialogButtonsClickListener {
-                override fun onPositiveButtonClick(type: CoinBaseBuyDashDialog.Type) {
+        val transactionStateDialog = CoinBaseResultDialog.newInstance(CoinBaseResultDialog.Type.PURCHASE_ERROR, responseMessage).apply {
+            this.onCoinBaseResultDialogButtonsClickListener = object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
+                override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
                     when (type) {
-                        CoinBaseBuyDashDialog.Type.PURCHASE_ERROR -> {
+                        CoinBaseResultDialog.Type.PURCHASE_ERROR -> {
+                            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ERROR_CLOSE)
                             dismiss()
                             findNavController().popBackStack()
                         }

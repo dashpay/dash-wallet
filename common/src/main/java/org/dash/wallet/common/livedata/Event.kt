@@ -21,6 +21,7 @@ import androidx.lifecycle.Observer
 /**
  * Used as a wrapper for data that is exposed via a LiveData that represents an event.
  */
+@Deprecated(message = "Use SingleLiveEvent")
 open class Event<out T>(private val content: T) {
 
     var hasBeenHandled = false

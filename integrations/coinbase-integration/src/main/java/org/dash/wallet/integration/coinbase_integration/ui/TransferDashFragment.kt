@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.addCallback
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
@@ -37,6 +38,7 @@ import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.*
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
@@ -48,7 +50,7 @@ import org.dash.wallet.integration.coinbase_integration.VALUE_ZERO
 import org.dash.wallet.integration.coinbase_integration.databinding.TransferDashFragmentBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseServiceWallet
-import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseBuyDashDialog
+import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.EnterAmountToTransferViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.SendDashResponseState
 import org.dash.wallet.integration.coinbase_integration.viewmodels.TransferDashViewModel
@@ -202,6 +204,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
 
         binding.authLimitBanner.root.setOnClickListener {
+            transferDashViewModel.logEvent(AnalyticsConstants.Coinbase.TRANSFER_AUTH_LIMIT)
             AdaptiveDialog.custom(
                 R.layout.dialog_withdrawal_limit_info,
                 null,
@@ -228,6 +231,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                     details.totalAmount, null, null, null)
 
                 if (isTransactionConfirmed) {
+                    transferDashViewModel.logTransfer(enterAmountToTransferViewModel.isFiatSelected)
                     AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
                         handleSend(dashValue, isEmptyWallet)
                     }
@@ -250,6 +254,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
 
         transferDashViewModel.onBuildTransactionParamsCallback.observe(viewLifecycleOwner){
+            transferDashViewModel.logTransfer(enterAmountToTransferViewModel.isFiatSelected)
             safeNavigate(TransferDashFragmentDirections.transferDashToTwoFaCode(it))
         }
 
@@ -264,7 +269,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 R.string.coinbase_dash_wallet_error_title,
                 getString(R.string.coinbase_dash_wallet_error_message),
                 R.drawable.ic_info_red,
-                R.string.CreateـDashـAccount,
+                R.string.create_dash_account,
                 R.string.close
             )
             safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(failure))
@@ -305,29 +310,35 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     }
 
     private fun setTransactionState(responseState: SendDashResponseState) {
-        val pair: Pair<CoinBaseBuyDashDialog.Type, String?> = when(responseState){
+        val pair: Pair<CoinBaseResultDialog.Type, String?> = when(responseState){
             is SendDashResponseState.SuccessState -> {
-                Pair(if (responseState.isTransactionPending) CoinBaseBuyDashDialog.Type.TRANSFER_DASH_SUCCESS else CoinBaseBuyDashDialog.Type.TRANSFER_DASH_ERROR, null)
+                Pair(if (responseState.isTransactionPending) CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS else CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, null)
             }
-            is SendDashResponseState.FailureState -> Pair(CoinBaseBuyDashDialog.Type.TRANSFER_DASH_ERROR, responseState.failureMessage)
-            is SendDashResponseState.InsufficientMoneyState -> Pair(CoinBaseBuyDashDialog.Type.TRANSFER_DASH_ERROR, getString(R.string.insufficient_money_to_transfer))
-            else -> Pair(CoinBaseBuyDashDialog.Type.TRANSFER_DASH_ERROR, null)
+            is SendDashResponseState.FailureState -> Pair(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, responseState.failureMessage)
+            is SendDashResponseState.InsufficientMoneyState -> Pair(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, getString(R.string.insufficient_money_to_transfer))
+            else -> Pair(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, null)
         }
 
-        val transactionStateDialog = CoinBaseBuyDashDialog.newInstance(pair.first, pair.second).apply {
-            onCoinBaseBuyDashDialogButtonsClickListener = object : CoinBaseBuyDashDialog.CoinBaseBuyDashDialogButtonsClickListener {
-                override fun onPositiveButtonClick(type: CoinBaseBuyDashDialog.Type) {
+        val transactionStateDialog = CoinBaseResultDialog.newInstance(pair.first, pair.second).apply {
+            onCoinBaseResultDialogButtonsClickListener = object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
+                override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
                     when(type){
-                        CoinBaseBuyDashDialog.Type.TRANSFER_DASH_SUCCESS -> {
+                        CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
+                            transferDashViewModel.logClose(type)
                             dismiss()
                             requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
                             requireActivity().finish()
                         }
                         else -> {
+                            transferDashViewModel.logRetry()
                             dismiss()
                             findNavController().popBackStack()
                         }
                     }
+                }
+
+                override fun onNegativeButtonClick(type: CoinBaseResultDialog.Type) {
+                    transferDashViewModel.logClose(type)
                 }
             }
         }

@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
+import androidx.core.os.bundleOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
@@ -30,12 +31,15 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.TRANSACTION_TYPE_SEND
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
 import java.util.*
 import javax.inject.Inject
 
@@ -45,7 +49,8 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     private val walletDataProvider: WalletDataProvider,
     private val sendPaymentService: SendPaymentService,
-    val networkState: NetworkStateInt
+    val networkState: NetworkStateInt,
+    private val analyticsService: AnalyticsService
 ) : ConnectivityViewModel(networkState) {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
@@ -70,6 +75,8 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     var isFirstTime = true
 
     fun commitSwapTrade(tradeId: String, inputCurrency: String, inputAmount: String) = viewModelScope.launch(Dispatchers.Main) {
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, bundleOf())
+
         _showLoading.value = true
         when (val result = coinBaseRepository.commitSwapTrade(tradeId)) {
             is ResponseResource.Success -> {
@@ -158,9 +165,13 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     }
 
     fun onRefreshOrderClicked(swapTradeUIModel: SwapTradeUIModel) {
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_RETRY, bundleOf())
         swapTrade(swapTradeUIModel)
     }
 
+    fun logEvent(eventName: String) {
+        analyticsService.logEvent(eventName, bundleOf())
+    }
 
     private suspend fun sellDashToCoinBase(coin: Coin) {
         _showLoading.value = true

@@ -22,7 +22,6 @@ import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
 import android.os.Bundle
-import android.view.ContextMenu
 import android.view.View
 import android.widget.Toast
 import androidx.activity.addCallback
@@ -32,7 +31,6 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.Constants
-import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.getRoundedBackground
@@ -40,10 +38,9 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.EnterTwoFaCodeFragmentBinding
 import org.dash.wallet.integration.coinbase_integration.model.TransactionType
-import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseBuyDashDialog
+import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.EnterTwoFaCodeViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.TransactionState
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
@@ -51,8 +48,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
     private val binding by viewBinding(EnterTwoFaCodeFragmentBinding::bind)
     private val viewModel by viewModels<EnterTwoFaCodeViewModel>()
     private lateinit var loadingDialog: FancyAlertDialog
-    @Inject
-    lateinit var lockScreenBroadcaster: LockScreenBroadcaster
+
     companion object {
         fun newInstance() = EnterTwoFaCodeFragment()
     }
@@ -101,16 +97,16 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
     private fun setTransactionState(transactionType: TransactionType, state: TransactionState) {
        if (state.isTransactionSuccessful){
            when(transactionType){
-               TransactionType.BuyDash -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.DEPOSIT_SUCCESS)
-               TransactionType.BuySwap -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS)
-               TransactionType.TransferDash -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.TRANSFER_DASH_SUCCESS)
+               TransactionType.BuyDash -> showTransactionStateDialog(CoinBaseResultDialog.Type.DEPOSIT_SUCCESS)
+               TransactionType.BuySwap -> showTransactionStateDialog(CoinBaseResultDialog.Type.CONVERSION_SUCCESS)
+               TransactionType.TransferDash -> showTransactionStateDialog(CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS)
                else -> {}
            }
        } else {
            when(transactionType){
-               TransactionType.BuyDash -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.DEPOSIT_ERROR, state.responseMessage)
-               TransactionType.BuySwap -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.CONVERSION_ERROR, state.responseMessage)
-               TransactionType.TransferDash -> showTransactionStateDialog(CoinBaseBuyDashDialog.Type.TRANSFER_DASH_ERROR, state.responseMessage)
+               TransactionType.BuyDash -> showTransactionStateDialog(CoinBaseResultDialog.Type.DEPOSIT_ERROR, state.responseMessage)
+               TransactionType.BuySwap -> showTransactionStateDialog(CoinBaseResultDialog.Type.CONVERSION_ERROR, state.responseMessage)
+               TransactionType.TransferDash -> showTransactionStateDialog(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, state.responseMessage)
                else -> {}
            }
        }
@@ -183,23 +179,29 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
         }
     }
 
-    private fun showTransactionStateDialog(type: CoinBaseBuyDashDialog.Type, responseMessage: String? = null) {
-        val transactionStateDialog = CoinBaseBuyDashDialog.newInstance(type, responseMessage).apply {
-            this.onCoinBaseBuyDashDialogButtonsClickListener =
-                object : CoinBaseBuyDashDialog.CoinBaseBuyDashDialogButtonsClickListener {
-                    override fun onPositiveButtonClick(type: CoinBaseBuyDashDialog.Type) {
+    private fun showTransactionStateDialog(type: CoinBaseResultDialog.Type, responseMessage: String? = null) {
+        val transactionStateDialog = CoinBaseResultDialog.newInstance(type, responseMessage).apply {
+            this.onCoinBaseResultDialogButtonsClickListener =
+                object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
+                    override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
                         when (type) {
-                            CoinBaseBuyDashDialog.Type.CONVERSION_ERROR, CoinBaseBuyDashDialog.Type.DEPOSIT_ERROR, CoinBaseBuyDashDialog.Type.TRANSFER_DASH_ERROR -> {
+                            CoinBaseResultDialog.Type.CONVERSION_ERROR, CoinBaseResultDialog.Type.DEPOSIT_ERROR, CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR -> {
+                                viewModel.logRetry(type)
                                 dismiss()
                                 findNavController().popBackStack()
                             }
-                            CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS, CoinBaseBuyDashDialog.Type.DEPOSIT_SUCCESS, CoinBaseBuyDashDialog.Type.TRANSFER_DASH_SUCCESS -> {
+                            CoinBaseResultDialog.Type.CONVERSION_SUCCESS, CoinBaseResultDialog.Type.DEPOSIT_SUCCESS, CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
+                                viewModel.logClose(type)
                                 dismiss()
                                 requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
                                 requireActivity().finish()
                             }
                             else -> {}
                         }
+                    }
+
+                    override fun onNegativeButtonClick(type: CoinBaseResultDialog.Type) {
+                        viewModel.logClose(type)
                     }
                 }
         }

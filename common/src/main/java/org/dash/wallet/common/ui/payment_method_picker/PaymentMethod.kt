@@ -18,7 +18,7 @@
 package org.dash.wallet.common.ui.payment_method_picker
 
 import android.os.Parcelable
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
 
 @Parcelize
 enum class PaymentMethodType:Parcelable {

@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
+import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +31,8 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.util.GenericUtils
@@ -44,7 +47,8 @@ import javax.inject.Inject
 class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepository: CoinBaseRepositoryInt,
                                                    private val userPreference: Configuration,
                                                    var exchangeRates: ExchangeRatesProvider,
-                                                   var networkState: NetworkStateInt
+                                                   var networkState: NetworkStateInt,
+                                                   private val analyticsService: AnalyticsService
 ) : ConnectivityViewModel(networkState) {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
@@ -60,16 +64,34 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
 
     val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
     lateinit var exchangeRate: ExchangeRate
-    fun onContinueClicked(fiat: Fiat, paymentMethodIndex: Int) {
+
+    init {
+        getWithdrawalLimit()
+    }
+
+    fun onContinueClicked(dashToFiat: Boolean, fiat: Fiat, paymentMethodIndex: Int) {
         _activePaymentMethods.value?.let {
             if (paymentMethodIndex < it.size) {
                 val paymentMethod = it[paymentMethodIndex]
-                placeBuyOrder(PlaceBuyOrderParams(fiat.toPlainString(), fiat.currencyCode, paymentMethod.paymentMethodId))
+
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_CONTINUE, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_PAYMENT_METHOD, bundleOf(
+                    AnalyticsConstants.Parameters.VALUE to paymentMethod.paymentMethodType.name
+                ))
+                analyticsService.logEvent(
+                    if (dashToFiat) AnalyticsConstants.Coinbase.BUY_ENTER_DASH
+                    else AnalyticsConstants.Coinbase.BUY_ENTER_FIAT,
+                    bundleOf()
+                )
+
+                viewModelScope.launch {
+                    placeBuyOrder(PlaceBuyOrderParams(fiat.toPlainString(), fiat.currencyCode, paymentMethod.paymentMethodId))
+                }
             }
         }
     }
 
-    private fun placeBuyOrder(params: PlaceBuyOrderParams) = viewModelScope.launch(Dispatchers.Main) {
+    private suspend fun placeBuyOrder(params: PlaceBuyOrderParams) {
         _showLoading.value = true
         when (val result = coinBaseRepository.placeBuyOrder(params)) {
             is ResponseResource.Success -> {
@@ -92,7 +114,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
                     if (message.isNullOrEmpty()) {
                         placeBuyOrderFailedCallback.call()
                     } else {
-                        placeBuyOrderFailedCallback.value = message!!
+                        placeBuyOrderFailedCallback.value = message
                     }
                 }
             }
@@ -101,10 +123,6 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
 
     fun getActivePaymentMethods(coinbasePaymentMethods: Array<PaymentMethod>) {
         _activePaymentMethods.value = coinbasePaymentMethods.toList()
-    }
-
-    init {
-        getWithdrawalLimit()
     }
 
     private fun getWithdrawalLimit() = viewModelScope.launch(Dispatchers.Main){
@@ -121,6 +139,10 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
 
     fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
         return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
+    }
+
+    fun logEvent(eventName: String) {
+        analyticsService.logEvent(eventName, bundleOf())
     }
 
     private val withdrawalLimitInDash: Double

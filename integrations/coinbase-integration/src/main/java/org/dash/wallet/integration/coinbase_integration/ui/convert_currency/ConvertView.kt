@@ -84,20 +84,14 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
             dashToCrypto = !dashToCrypto
         }
 
-        binding.convertFromBtn.convertItemClickListener = object :
-            CryptoConvertItem.ConvertItemClickListener {
-            override fun onConvertItemClickListener() {
-                if (!dashToCrypto) {
-                    onCurrencyChooserClicked?.invoke()
-                }
+        binding.convertFromBtn.setConvertItemClickListener {
+            if (!dashToCrypto) {
+                onCurrencyChooserClicked?.invoke()
             }
         }
-        binding.convertToBtn.convertItemClickListener = object :
-            CryptoConvertItem.ConvertItemClickListener {
-            override fun onConvertItemClickListener() {
-                if (dashToCrypto) {
-                    onCurrencyChooserClicked?.invoke()
-                }
+        binding.convertToBtn.setConvertItemClickListener {
+            if (dashToCrypto) {
+                onCurrencyChooserClicked?.invoke()
             }
         }
     }

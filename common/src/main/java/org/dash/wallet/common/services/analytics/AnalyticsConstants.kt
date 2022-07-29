@@ -19,6 +19,10 @@ package org.dash.wallet.common.services.analytics
 
 // Event names should be <= 40 chars
 object AnalyticsConstants {
+    object Parameters {
+        const val VALUE = "value"
+    }
+
     object Liquid {
         const val BUY_SELL_MORE = "more_buy_sell_dash"
         const val ENTER_CONNECTED = "liquid_enter_connected"
@@ -203,19 +207,85 @@ object AnalyticsConstants {
     object Coinbase {
         const val ENTER_CONNECTED = "coinbase_enter_connected"
         const val ENTER_DISCONNECTED = "coinbase_enter_disconnected"
-        const val NO_DASH_WALLET = "coinbase_no_dash_wallet"
+
         const val BUY_DASH = "coinbase_buy_dash"
-        const val NO_PAYMENT_METHODS = "coinbase_no_payment_methods"
-        const val CHANGE_PAYMENT_METHOD = "coinbase_change_payment_method"
-        const val ENTER_AMOUNT_FIAT = "coinbase_enter_amount_fiat_amount"
-        const val ENTER_AMOUNT_DASH = "coinbase_enter_amount_dash_amount"
-        const val CONTINUE_DASH_PURCHASE = "coinbase_continue_purchase"
-        const val TOP_BACK_TO_ENTER_AMOUNT = "coinbase_top_back_to_enter_amount"
-        const val BOTTOM_BACK_TO_ENTER_AMOUNT = "coinbase_bottom_back_to_enter_amount"
-        const val CANCEL_DASH_PURCHASE = "coinbase_cancel_purchase"
-        const val CANCEL_DASH_PURCHASE_NO = "coinbase_cancel_purchase_no"
-        const val CANCEL_DASH_PURCHASE_YES = "coinbase_cancel_purchase_yes"
-        const val CONFIRM_DASH_PURCHASE = "coinbase_confirm_purchase"
-        const val FEE_INFO = "coinbase_fee_info"
+        const val CONVERT_DASH = "coinbase_convert_dash"
+        const val TRANSFER_DASH = "coinbase_transfer_dash"
+        const val DISCONNECT = "coinbase_disconnect"
+
+        const val BUY_CREATE_ACCOUNT = "coinbase_buy_b_create_dash_acc"
+        const val BUY_ADD_PAYMENT_METHOD = "coinbase_buy_b_add_payment_method"
+        const val BUY_CHANGE_PAYMENT_METHOD = "coinbase_buy_b_change_p_method"
+        const val BUY_PAYMENT_METHOD = "coinbase_buy_p_method"
+        const val BUY_ENTER_FIAT = "coinbase_buy_enter_amount_fiat"
+        const val BUY_ENTER_DASH = "coinbase_buy_enter_amount_dash"
+        const val BUY_CHANGE_FIAT_CURRENCY = "coinbase_buy_b_change_fiat_currency" // Currency selector isn't shown in Coinbase atm.
+        const val BUY_CONTINUE = "coinbase_buy_b_continue"
+        const val BUY_AUTH_LIMIT = "coinbase_buy_b_auth_limit"
+
+        const val BUY_QUOTE_TOP_BACK = "coinbase_buy_quote_b_back"
+        const val BUY_QUOTE_ANDROID_BACK = "coinbase_buy_quote_b_back_android"
+        const val BUY_QUOTE_CANCEL = "coinbase_buy_quote_b_cancel"
+        const val BUY_QUOTE_CANCEL_NO = "coinbase_buy_quote_modal_b_no"
+        const val BUY_QUOTE_CANCEL_YES = "coinbase_buy_quote_modal_b_yes"
+        const val BUY_QUOTE_CONFIRM = "coinbase_buy_quote_b_confirm"
+        const val BUY_QUOTE_RETRY = "coinbase_buy_quote_b_retry"
+        const val BUY_QUOTE_FEE_INFO = "coinbase_buy_quote_b_fee_info"
+
+        const val BUY_SUCCESS_CLOSE = "coinbase_buy_success_b_close"
+        const val BUY_ERROR_RETRY = "coinbase_buy_error_b_retry"
+        const val BUY_ERROR_CLOSE = "coinbase_buy_error_b_close"
+
+        // ----------------- TODO: NMA-1209
+        const val SELL_DASH = "coinbase_sell_dash"
+        const val SELL_CREATE_ACCOUNT = "coinbase_sell_b_create_dash_acc"
+        const val SELL_ADD_PAYMENT_METHOD = "coinbase_sell_b_add_p_method"
+        const val SELL_MAX = "coinbase_sell_b_max"
+        const val SELL_CONTINUE = "coinbase_sell_b_get_quote"
+        const val SELL_ENTER_AMOUNT_FIAT = "coinbase_sell_enter_amount_fiat"
+        const val SELL_ENTER_AMOUNT_DASH = "coinbase_sell_enter_amount_dash"
+
+        const val SELL_QUOTE_TOP_BACK = "coinbase_sell_b_back"
+        const val SELL_QUOTE_ANDROID_BACK = "coinbase_sell_b_back_android"
+        const val SELL_QUOTE_CANCEL = "coinbase_sell_preview_b_cancel"
+        const val SELL_QUOTE_CANCEL_NO = "coinbase_sell_preview_modal_b_no"
+        const val SELL_QUOTE_CANCEL_YES = "coinbase_sell_preview_modal_b_yes"
+        const val SELL_QUOTE_CONFIRM = "coinbase_sell_preview_b_confirm"
+        const val SELL_QUOTE_RETRY = "coinbase_sell_preview_b_retry"
+        const val SELL_QUOTE_FEE_INFO = "coinbase_sell_preview_b_fee_info"
+
+        const val SELL_ERROR_RETRY = "coinbase_sell_error_b_retry"
+        const val SELL_ERROR_CLOSE = "coinbase_sell_error_b_close"
+        const val SELL_SUCCESS_CLOSE = "coinbase_sell_success_b_close"
+        // ------------------
+
+        const val CONVERT_SELECT_COIN = "coinbase_convert_b_select_coin"
+        const val CONVERT_BUY_ON_COINBASE = "coinbase_convert_b_buy_on_coinbase"
+        const val CONVERT_CONTINUE = "coinbase_convert_b_get_quote"
+        const val CONVERT_ENTER_DASH = "coinbase_convert_enter_amount_dash"
+        const val CONVERT_ENTER_CRYPTO = "coinbase_convert_enter_amount_crypto"
+        const val CONVERT_ENTER_FIAT = "coinbase_convert_enter_amount_fiat"
+
+        const val CONVERT_QUOTE_TOP_BACK = "coinbase_convert_preview_b_back"
+        const val CONVERT_QUOTE_ANDROID_BACK = "coinbase_convert_preview_b_back_android"
+        const val CONVERT_QUOTE_CONFIRM = "coinbase_convert_preview_b_confirm"
+        const val CONVERT_QUOTE_CANCEL = "coinbase_convert_preview_b_cancel"
+        const val CONVERT_QUOTE_CANCEL_YES = "coinbase_convert_prev_modal_b_yes"
+        const val CONVERT_QUOTE_CANCEL_NO = "coinbase_convert_prev_modal_b_no"
+        const val CONVERT_QUOTE_RETRY = "coinbase_convert_preview_b_retry"
+        const val CONVERT_QUOTE_FEE_INFO = "coinbase_convert_preview_b_fee_info"
+
+        const val CONVERT_SUCCESS_CLOSE = "coinbase_convert_success_b_close"
+        const val CONVERT_ERROR_RETRY = "coinbase_convert_error_b_retry"
+        const val CONVERT_ERROR_CLOSE = "coinbase_convert_error_b_close"
+
+        const val TRANSFER_CONTINUE = "coinbase_transfer_b_transfer"
+        const val TRANSFER_ENTER_DASH = "coinbase_transfer_enter_amount_dash"
+        const val TRANSFER_ENTER_FIAT = "coinbase_transfer_enter_amount_fiat"
+        const val TRANSFER_AUTH_LIMIT = "coinbase_transfer_b_auth_balance"
+
+        const val TRANSFER_SUCCESS_CLOSE = "coinbase_transfer_success_b_close"
+        const val TRANSFER_ERROR_RETRY = "coinbase_transfer_error_b_retry"
+        const val TRANSFER_ERROR_CLOSE = "coinbase_transfer_error_b_close"
     }
 }

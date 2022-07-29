@@ -52,6 +52,7 @@ import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
@@ -63,6 +64,8 @@ import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.json.JSONObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
+
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class LiquidBuyAndSellDashActivity : InteractionAwareActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
@@ -83,7 +86,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity(), FancyAlertDialo
     private var liquidClient: LiquidClient? = null
     private val viewModel by viewModels<LiquidViewModel>()
     private lateinit var viewBinding: ActivityLiquidBuyAndSellDashBinding
-    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
+    @Inject lateinit var analytics: AnalyticsService
     private var countrySupportDialog: CountrySupportDialog? = null
     private lateinit var context: Context
     private var loadingDialog: ProgressDialog? = null

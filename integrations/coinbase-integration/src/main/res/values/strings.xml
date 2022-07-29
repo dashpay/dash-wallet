@@ -19,7 +19,7 @@
     <string name="last_known_balance" >Last known balance</string>
     <string name="coinbase_dash_wallet_error_title">We didn\'t find a Dash Wallet on your Coinbase account.</string>
     <string name="coinbase_dash_wallet_error_message"> Please create a Dash Wallet on Coinbase to proceed.</string>
-    <string name="CreateـDashـAccount">Create Dash Account</string>
+    <string name="create_dash_account">Create Dash Account</string>
     <string name="close">Close</string>
     <string name="retry">Retry</string>
     <string name="connected">Connected</string>
@@ -113,4 +113,6 @@
     <string name="transfer_dash_failed_msg"> There was a problem transferring it to Dash Wallet on this device.</string>
     <string name="insufficient_money_to_transfer">The amount of coins in the wallet is too small to transfer.</string>
     <string name="amount_to_transfer">You will receive %s %s %s</string>
+
+    <string name="coinbase_website" translatable="false">https://www.coinbase.com/</string>
 </resources>
