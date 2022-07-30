@@ -227,10 +227,4 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             }
         }
     }
-
-    fun showKeyboardAndButton(isVisible: Boolean) {
-        if (isAdded) { // avoid IllegalStateException
-            binding.keyboardContainer.isVisible = isVisible
-        }
-    }
 }

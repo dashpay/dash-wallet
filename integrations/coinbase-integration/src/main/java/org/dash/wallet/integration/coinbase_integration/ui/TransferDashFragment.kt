@@ -20,7 +20,6 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.addCallback
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
@@ -73,7 +72,6 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private var dashValue: Coin = Coin.ZERO
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(2).optionalDecimals()
-    private lateinit var enterAmountFragment: EnterAmountToTransferFragment
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -87,11 +85,11 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
 
         if (savedInstanceState == null) {
-            enterAmountFragment = EnterAmountToTransferFragment.newInstance()
-            enterAmountFragment.setViewDetails(getString(R.string.transfer_dash), null)
+            val fragment = EnterAmountToTransferFragment.newInstance()
+            fragment.setViewDetails(getString(R.string.transfer_dash), null)
             parentFragmentManager.commit {
                 setReorderingAllowed(true)
-                add(R.id.enter_amount_to_transfer_placeholder, enterAmountFragment)
+                add(R.id.enter_amount_to_transfer_placeholder, fragment)
             }
         }
 
