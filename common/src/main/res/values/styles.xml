@@ -1133,6 +1133,12 @@
         <item name="strokeColor">@android:color/transparent</item>
     </style>
 
+    <style name="DialogIconBackground">
+        <item name="backgroundColor">@color/background_secondary</item>
+        <item name="strokeColor">@color/background_secondary</item>
+        <item name="cornerRadius">25dp</item>
+    </style>
+
     <style name="SystemGreenHighlight">
         <item name="cornerRadius">6dp</item>
         <item name="backgroundColor">@color/system_green_0.1</item>

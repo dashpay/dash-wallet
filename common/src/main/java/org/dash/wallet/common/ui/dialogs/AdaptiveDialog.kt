@@ -164,13 +164,12 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
         val messageView: TextView? = view.findViewById(R.id.dialog_message)
         val positiveButton: TextView? = view.findViewById(R.id.dialog_positive_button)
         val negativeButton: TextView? = view.findViewById(R.id.dialog_negative_button)
-        val negativeButtonSecondary: TextView? = view.findViewById(R.id.dialog_negative_button_secondary)
 
         showIfNotEmpty(iconView, ICON_RES_ARG)
         showIfNotEmpty(titleView, TITLE_ARG)
         val isMessageShown = showIfNotEmpty(messageView, MESSAGE_ARG)
         showIfNotEmpty(negativeButton, NEG_BUTTON_ARG)
-        val isPositiveButtonShown = showIfNotEmpty(positiveButton, POS_BUTTON_ARG)
+        showIfNotEmpty(positiveButton, POS_BUTTON_ARG)
 
         if (isMessageShown) {
             messageView?.post {
@@ -185,16 +184,6 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
                         }
                     }
                 }
-            }
-        }
-
-        if (negativeButtonSecondary != null && !isPositiveButtonShown) {
-            negativeButton?.isVisible = false
-            negativeButtonSecondary.isVisible = true
-            negativeButtonSecondary.text = negativeButton?.text
-
-            negativeButtonSecondary.setOnClickListener {
-                onNegativeAction()
             }
         }
 

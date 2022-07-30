@@ -26,6 +26,7 @@ android {
         }
     }
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
@@ -53,6 +54,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation "androidx.appcompat:appcompat:$appCompatVersion"
     implementation "org.dashj:dashj-core:$dashjVersion"
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.0'
 
     // Architecture
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"

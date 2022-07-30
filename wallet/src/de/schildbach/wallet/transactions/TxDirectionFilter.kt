@@ -19,8 +19,7 @@ package de.schildbach.wallet.transactions
 
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
-import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.transactions.TransactionFilter
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 
 enum class TxDirection {
     RECEIVED, SENT, ALL

@@ -21,7 +21,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="20dp">
+    android:padding="20dp"
+    tools:context="org.dash.wallet.common.ui.dialogs.AdaptiveDialog">
 
     <ImageView
         android:id="@+id/dialog_icon"
@@ -42,7 +43,7 @@
 
     <TextView
         android:id="@+id/dialog_message"
-        style="@style/Caption.Secondary"
+        style="@style/Body2.Secondary"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="10dp"
@@ -68,13 +69,4 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
         tools:text="Cancel" />
-
-    <Button
-        android:id="@+id/dialog_negative_button_secondary"
-        style="@style/Button.Secondary"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
-        android:visibility="gone"
-        tools:text="Close" />
 </LinearLayout>
