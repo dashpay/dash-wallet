@@ -61,4 +61,6 @@ interface WalletDataProvider {
 
     @Throws(LeftoverBalanceException::class)
     fun checkSendingConditions(address: Address, amount: Coin)
+
+    fun observeMostRecentTransaction(): Flow<Transaction>
 }

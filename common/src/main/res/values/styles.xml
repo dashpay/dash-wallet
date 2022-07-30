@@ -251,6 +251,10 @@
         <item name="strokeColor">@color/gray_40</item>
     </style>
 
+    <style name="ExampleBackground" parent="GrayBackground">
+        <item name="cornerRadius">20dp</item>
+    </style>
+
     <style name="SearchInputBackground" parent="GrayBackground">
         <item name="cornerRadius">8dp</item>
     </style>
@@ -287,8 +291,8 @@
     </style>
 
     <style name="EncircledIconTheme">
-        <item name="backgroundColor">@color/steel_gray_40</item>
-        <item name="strokeColor">@color/steel_gray_40</item>
+        <item name="backgroundColor">@color/ultra_light_gray</item>
+        <item name="strokeColor">@color/ultra_light_gray</item>
         <item name="cornerRadius">15dp</item>
     </style>
 
@@ -577,6 +581,10 @@
         <item name="android:textColor">@color/dash_blue</item>
     </style>
 
+    <style name="Caption.Green">
+        <item name="android:textColor">@color/system_green</item>
+    </style>
+
     <style name="Caption.Secondary">
         <item name="android:textColor">@color/content_secondary</item>
     </style>
@@ -599,6 +607,10 @@
 
     <style name="Caption.Medium.Blue">
         <item name="android:textColor">@color/dash_blue</item>
+    </style>
+
+    <style name="Caption.Medium.Green">
+        <item name="android:textColor">@color/system_green</item>
     </style>
 
     <style name="Caption.Medium.Red">
@@ -1099,7 +1111,6 @@
     <style name="FullScreenDialog" parent="Theme.AppCompat.Light.Dialog">
         <item name="android:backgroundDimEnabled">false</item>
         <item name="android:windowNoTitle">true</item>
-        <item name="android:padding">0dp</item>
         <item name="android:windowIsFloating">false</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowCloseOnTouchOutside">false</item>
@@ -1126,5 +1137,29 @@
         <item name="backgroundColor">@color/background_secondary</item>
         <item name="strokeColor">@color/background_secondary</item>
         <item name="cornerRadius">25dp</item>
+    </style>
+
+    <style name="SystemGreenHighlight">
+        <item name="cornerRadius">6dp</item>
+        <item name="backgroundColor">@color/system_green_0.1</item>
+        <item name="strokeColor">@android:color/transparent</item>
+    </style>
+    
+    <style name="BlueTextHighlight">
+        <item name="backgroundColor">@color/dash_blue_0.1</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">5dp</item>
+    </style>
+
+    <style name="GreenTextHighlight">
+        <item name="backgroundColor">@color/system_green_0.1</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">5dp</item>
+    </style>
+
+    <style name="TertiaryTextHighlight">
+        <item name="backgroundColor">@color/ultra_light_gray</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">5dp</item>
     </style>
 </resources>

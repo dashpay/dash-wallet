@@ -94,6 +94,8 @@ public class Configuration {
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
     public static final String PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION = "is_dash_to_fiat_direction";
     public static final String PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER = "show_notifications_explainer";
+    public static final String PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER = "show_tax_catagory_explainer";
+    public static final String PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME = "show_tax_catagory_install_time";
 
     // Explore Dash
     public static final String PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY = "has_info_screen_been_shown";
@@ -103,6 +105,7 @@ public class Configuration {
     // CrowdNode
     public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
     public static final String PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS = "crowdnode_primary_address";
+    public static final String PREFS_KEY_CROWDNODE_STAKING_APY = "crowdnode_staking_apy_last";
 
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
@@ -151,6 +154,7 @@ public class Configuration {
             throw new IllegalStateException("cannot handle shift: " + shift);
     }
 
+    @NonNull
     public MonetaryFormat getFormat() {
         final int shift = PREFS_DEFAULT_BTC_SHIFT;
         final int minPrecision = 2;
@@ -504,6 +508,23 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER, needToShow).apply();
     }
 
+    // Tax Categories
+
+    public boolean getHasDisplayedTaxCategoryExplainer() {
+        return prefs.getBoolean(PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER, false);
+    }
+
+    public void setHasDisplayedTaxCategoryExplainer() {
+        prefs.edit().putBoolean(PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER, true).apply();
+    }
+
+    public long getTaxCategoryInstallTime() {
+        return prefs.getLong(PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME, 0L);
+    }
+
+    public void setTaxCategoryInstallTime(long time) {
+        prefs.edit().putLong(PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME, time).apply();
+    }
 
     // Explore Dash
 
@@ -552,5 +573,14 @@ public class Configuration {
 
     public void setCrowdNodePrimaryAddress(@NonNull String address) {
         prefs.edit().putString(PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS, address).apply();
+    }
+
+    @NonNull
+    public Float getPrefsKeyCrowdNodeStakingApy() {
+        return prefs.getFloat(PREFS_KEY_CROWDNODE_STAKING_APY, 0.0f);
+    }
+
+    public void setPrefsKeyCrowdNodeStakingApy(@NonNull float apy) {
+        prefs.edit().putFloat(PREFS_KEY_CROWDNODE_STAKING_APY, apy).apply();
     }
 }

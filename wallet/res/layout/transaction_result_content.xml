@@ -285,7 +285,52 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
     </LinearLayout>
 
+    <RelativeLayout
+        android:id="@+id/open_tax_category_card"
+        style="@style/ViewRaised"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginTop="15dp"
+        android:padding="15dp"
+        android:theme="@style/ListViewButtonBackground"
+        android:background="@drawable/rounded_ripple_background"
+        app:layout_constraintTop_toBottomOf="@id/transaction_details_card">
 
+        <TextView
+            android:id="@+id/tax_category_label"
+            style="@style/Caption.Medium.Tertiary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:text="@string/transaction_result_tax_category" />
+
+        <LinearLayout
+            android:id="@+id/tax_category_layout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerInParent="true"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tax_category"
+                style="@style/Caption.Medium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="13dp"
+                android:textSize="13sp"
+                android:text="@string/transaction_result_tax_category_loading"
+                tools:text="Income" />
+
+            <ImageView
+                android:id="@+id/tax_category_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:src="@drawable/ic_toggle_arrows" />
+        </LinearLayout>
+    </RelativeLayout>
     <RelativeLayout
         android:id="@+id/open_explorer_card"
         style="@style/ViewRaised"
@@ -296,7 +341,7 @@
         android:paddingHorizontal="15dp"
         android:paddingVertical="17dp"
         android:theme="@style/ListViewButtonBackground"
-        app:layout_constraintTop_toBottomOf="@id/transaction_details_card">
+        app:layout_constraintTop_toBottomOf="@id/open_tax_category_card">
 
         <TextView
             android:id="@+id/view_on_explorer"
@@ -327,7 +372,7 @@
         android:visibility="gone"
         android:background="@drawable/rounded_ripple_background"
         android:theme="@style/ListViewButtonBackground"
-        app:layout_constraintTop_toBottomOf="@id/transaction_details_card"
+        app:layout_constraintTop_toBottomOf="@id/open_explorer_card"
         tools:visibility="visible">
 
         <TextView

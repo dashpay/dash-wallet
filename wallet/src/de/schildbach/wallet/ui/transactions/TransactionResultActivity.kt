@@ -23,10 +23,12 @@ import android.content.Intent
 import android.graphics.drawable.Animatable
 import android.os.Bundle
 import android.view.View
+import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.AbstractWalletActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
+import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity.ACTION_SEND_FROM_WALLET_URI
 import de.schildbach.wallet.util.WalletUtils
@@ -77,6 +79,8 @@ class TransactionResultActivity : AbstractWalletActivity() {
         }
     }
 
+    private val viewModel: TransactionResultViewModel by viewModels()
+
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,17 +96,27 @@ class TransactionResultActivity : AbstractWalletActivity() {
             configuration.format.noCode(),
             container
         )
-        val tx = walletData.wallet!!.getTransaction(txId)
+
+        viewModel.init(txId)
+        val tx = viewModel.transaction
+
         if (tx != null) {
             val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
             val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
             transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
             open_explorer_card.setOnClickListener { viewOnExplorer(tx) }
+            tax_category_layout.setOnClickListener { viewOnTaxCategory()}
             transaction_close_btn.setOnClickListener {
                 onTransactionDetailsDismiss()
             }
             report_issue_card.setOnClickListener {
                 showReportIssue()
+            }
+
+            viewModel.transactionMetadata.observe(this) {
+                if(it != null) {
+                    transactionResultViewBinder.setTransactionMetadata(it)
+                }
             }
         } else {
             log.error("Transaction not found. TxId:", txId)
@@ -120,6 +134,11 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
     private fun viewOnExplorer(tx: Transaction) {
         WalletUtils.viewOnBlockExplorer(this, tx.purpose, tx.txId.toString())
+    }
+
+    private fun viewOnTaxCategory() {
+        // this should eventually trigger the observer to update the view
+        viewModel.toggleTaxCategory()
     }
 
     private fun showReportIssue() {

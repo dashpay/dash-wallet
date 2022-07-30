@@ -20,44 +20,38 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
+import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionDetailsDialogBinding
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
-import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
  */
+@FlowPreview
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
 class TransactionDetailsDialogFragment : OffsetDialogFragment() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
     private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }
-    private var tx: Transaction? = null
     private val binding by viewBinding(TransactionDetailsDialogBinding::bind)
     private lateinit var contentBinding: TransactionResultContentBinding
+    private val viewModel: TransactionResultViewModel by viewModels()
 
     override val backgroundStyle = R.style.PrimaryBackground
     override val forceExpand = true
-
-    @Inject
-    lateinit var walletData: WalletDataProvider
-    @Inject
-    lateinit var configuration: Configuration
-
 
     companion object {
 
@@ -79,25 +73,37 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        tx = walletData.wallet!!.getTransaction(txId)
+
         contentBinding = TransactionResultContentBinding.bind(binding.transactionResultContainer)
         val transactionResultViewBinder = TransactionResultViewBinder(
-            walletData.wallet!!,
-            configuration.format.noCode(),
+            viewModel.wallet!!,
+            viewModel.dashFormat,
             binding.transactionResultContainer
         )
 
+        viewModel.init(txId)
+        val tx = viewModel.transaction
+
         if (tx != null) {
-            transactionResultViewBinder.bind(tx!!)
+            transactionResultViewBinder.bind(tx)
         } else {
             log.error("Transaction not found. TxId:", txId)
             dismiss()
             return
         }
 
+        viewModel.transactionMetadata.observe(this) { metadata ->
+            if(metadata != null && tx.txId == metadata.txId) {
+                transactionResultViewBinder.setTransactionMetadata(metadata)
+            }
+        }
+
         contentBinding.openExplorerCard.setOnClickListener { viewOnBlockExplorer() }
         contentBinding.reportIssueCard.setOnClickListener {
             showReportIssue()
+        }
+        contentBinding.taxCategoryLayout.setOnClickListener {
+            viewOnTaxCategory()
         }
     }
 
@@ -110,9 +116,14 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
     }
 
     private fun viewOnBlockExplorer() {
+        val tx = viewModel.transaction
         if (tx != null) {
-            WalletUtils.viewOnBlockExplorer(activity, tx!!.purpose, tx!!.txId.toString())
+            WalletUtils.viewOnBlockExplorer(activity, tx.purpose, tx.txId.toString())
         }
     }
 
+    private fun viewOnTaxCategory() {
+        // this should eventually trigger the observer to update the view
+        viewModel.toggleTaxCategory()
+    }
 }

@@ -84,6 +84,7 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.NotificationService;
 import org.dash.wallet.common.transactions.filters.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
+import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.transactions.TransactionUtils;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationHandler;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi;
@@ -120,7 +121,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.data.BlockchainState;
+import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 import de.schildbach.wallet.ui.OnboardingActivity;
@@ -146,6 +147,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject CrowdNodeConfig crowdNodeConfig;
     @Inject BlockchainStateDao blockchainStateDao;
     @Inject ExchangeRatesDao exchangeRatesDao;
+    @Inject TransactionMetadataProvider transactionMetadataProvider;
 
     private BlockStore blockStore;
     private File blockChainFile;
@@ -156,6 +158,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private final Handler handler = new Handler();
     private final Handler delayHandler = new Handler();
+    private final Handler metadataHandler = new Handler();
     private WakeLock wakeLock;
 
     private PeerConnectivityListener peerConnectivityListener;
@@ -204,6 +207,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             new CrowdNodeDepositReceivedResponse(Constants.NETWORK_PARAMETERS);
 
     private CrowdNodeAPIConfirmationHandler apiConfirmationHandler;
+
+    void handleMetadata(Transaction tx) {
+        metadataHandler.post(() -> {
+            transactionMetadataProvider.syncTransactionBlocking(tx);
+        });
+    }
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
@@ -264,6 +273,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     }
                 }
             });
+
+            handleMetadata(tx);
             updateAppWidget();
         }
 
@@ -271,6 +282,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         public void onCoinsSent(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
+            handleMetadata(tx);
             updateAppWidget();
         }
 

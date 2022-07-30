@@ -34,10 +34,13 @@ import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NotificationService
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.util.TickerFlow
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.model.*
@@ -95,6 +98,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     private val config: CrowdNodeConfig,
     private val globalConfig: Configuration,
     private val securityFunctions: ISecurityFunctions,
+    private val transactionMetadataProvider: TransactionMetadataProvider,
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {
     companion object {
@@ -213,6 +217,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 signUpStatus.value = SignUpStatus.SigningUp
                 val signUpResponseTx = blockchainApi.makeSignUpRequest(accountAddress)
                 log.info("signUpResponseTx id: ${signUpResponseTx.txId}")
+                markAccountAddressWithTaxCategory()
                 checkIfSignUpConfirmed(signUpResponseTx)
             }
 
@@ -562,6 +567,21 @@ class CrowdNodeApiAggregator @Inject constructor(
         return false
     }
 
+    private suspend fun markAccountAddressWithTaxCategory() {
+        transactionMetadataProvider.maybeMarkAddressWithTaxCategory(
+            accountAddress!!.toBase58(),
+            false,
+            TaxCategory.TransferIn,
+            ServiceName.CrowdNode
+        )
+        transactionMetadataProvider.maybeMarkAddressWithTaxCategory(
+            accountAddress!!.toBase58(),
+            true,
+            TaxCategory.TransferOut,
+            ServiceName.CrowdNode
+        )
+    }
+
     private fun tryRestoreLinkedOnlineAccount(address: Address) {
         var statusOrdinal: Int
         var primaryAddressStr: String
@@ -615,6 +635,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 accountAddress = address
                 globalConfig.crowdNodeAccountAddress = address.toBase58()
                 globalConfig.crowdNodePrimaryAddress = primary.toBase58()
+                markAccountAddressWithTaxCategory()
                 changeOnlineStatus(OnlineAccountStatus.Validating)
             }
         }
@@ -787,6 +808,9 @@ class CrowdNodeApiAggregator @Inject constructor(
         log.info("found finished sign up, account: ${address?.toBase58() ?: "null"}")
         signUpStatus.value = SignUpStatus.Finished
         refreshBalance(3)
+        configScope.launch {
+            markAccountAddressWithTaxCategory()
+        }
     }
 
     private fun setAcceptingTerms(address: Address?) {

@@ -48,6 +48,7 @@ import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.transactions.TransactionExporter;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -60,6 +61,8 @@ public abstract class ExportTransactionHistoryDialogBuilder extends BaseAlertDia
     private final Activity context;
 
     private final EditText viewDescription;
+
+    private String txHistoryExport = "";
 
     private static final Logger log = LoggerFactory.getLogger(ExportTransactionHistoryDialogBuilder.class);
 
@@ -135,7 +138,8 @@ public abstract class ExportTransactionHistoryDialogBuilder extends BaseAlertDia
     }
 
     public static ExportTransactionHistoryDialogBuilder createExportTransactionDialog(final Activity context,
-                                                                                      final WalletApplication application) {
+                                                                                      final WalletApplication application,
+                                                                                      TransactionExporter transactionExporter) {
         final ExportTransactionHistoryDialogBuilder dialog = new ExportTransactionHistoryDialogBuilder(context,
                 R.string.report_transaction_history_title, R.string.report_transaction_history_message,
                 R.layout.export_transaction_history_dialog) {
@@ -146,7 +150,8 @@ public abstract class ExportTransactionHistoryDialogBuilder extends BaseAlertDia
 
             @Override
             protected CharSequence collectWalletDump() {
-                return WalletUtils.getTransactionHistory(application.getWallet());
+                //return WalletUtils.getTransactionHistory(application.getWallet());
+                return transactionExporter.exportString();
             }
         };
         return dialog;
