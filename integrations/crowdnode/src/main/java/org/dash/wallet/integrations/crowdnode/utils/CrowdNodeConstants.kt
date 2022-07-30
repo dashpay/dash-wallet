@@ -42,6 +42,10 @@ object CrowdNodeConstants {
     val MINIMUM_LEFTOVER_BALANCE: Coin = Coin.valueOf(30000)
 
     object WithdrawalLimits {
+        // Current withdrawal limits can be found here:
+        // https://knowledge.crowdnode.io/en/articles/6387601-api-withdrawal-limits
+        // or with the API:
+        // https://app.crowdnode.io/odata/apifundings/GetWithdrawalLimits(address='')
         val DEFAULT_LIMIT_PER_TX: Coin = Coin.COIN.multiply(15)
         val DEFAULT_LIMIT_PER_HOUR: Coin = Coin.COIN.multiply(30)
         val DEFAULT_LIMIT_PER_DAY: Coin = Coin.COIN.multiply(60)
