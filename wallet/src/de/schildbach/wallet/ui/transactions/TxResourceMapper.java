@@ -32,7 +32,6 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.transactions.TransactionUtils;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 public class TxResourceMapper {

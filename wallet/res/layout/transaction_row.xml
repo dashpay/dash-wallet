@@ -25,6 +25,7 @@
     android:background="?attr/selectableItemBackground"
     android:paddingEnd="15dp"
     android:paddingVertical="18dp"
+    android:tag="transaction"
     tools:context="de.schildbach.wallet.ui.main.TransactionAdapter">
 
     <ImageView
