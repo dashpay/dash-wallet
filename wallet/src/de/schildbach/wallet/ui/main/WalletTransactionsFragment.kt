@@ -98,28 +98,30 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         binding.walletTransactionsList.setHasFixedSize(true)
         binding.walletTransactionsList.layoutManager = LinearLayoutManager(requireContext())
         binding.walletTransactionsList.adapter = adapter
-        binding.walletTransactionsList.addItemDecoration(object : RecyclerView.ItemDecoration() {
-            private val VERTICAL = resources.getDimensionPixelOffset(R.dimen.default_vertical_padding)
-            private val HORIZONTAL = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
 
+        val horizontalMargin = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
+        val verticalMargin = resources.getDimensionPixelOffset(R.dimen.default_vertical_padding)
+        binding.walletTransactionsList.addItemDecoration(object : RecyclerView.ItemDecoration() {
             override fun getItemOffsets(
                 outRect: Rect, view: View, parent: RecyclerView,
                 state: RecyclerView.State
             ) {
                 super.getItemOffsets(outRect, view, parent, state)
-                outRect.left = HORIZONTAL
-                outRect.right = HORIZONTAL
+                outRect.left = horizontalMargin
+                outRect.right = horizontalMargin
 
                 if (view.tag == HEADER_ITEM_TAG) {
-                    outRect.top = VERTICAL * 2
+                    outRect.top = verticalMargin * 2
                 }
             }
         })
+
         binding.walletTransactionsList.addItemDecoration(
             ListDividerDecorator(
                 ResourcesCompat.getDrawable(resources, R.drawable.list_divider, null)!!,
                 showAfterLast = false,
-                marginStart = resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start)
+                marginStart = horizontalMargin + resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start),
+                marginEnd = horizontalMargin
             )
         )
 
