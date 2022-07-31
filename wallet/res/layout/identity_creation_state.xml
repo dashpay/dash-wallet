@@ -5,8 +5,6 @@
     style="@style/DashButton.White"
     android:layout_width="match_parent"
     android:layout_height="70dp"
-    android:layout_marginLeft="15dp"
-    android:layout_marginRight="15dp"
     android:layout_marginBottom="10dp"
     android:animateLayoutChanges="true"
     android:orientation="vertical"

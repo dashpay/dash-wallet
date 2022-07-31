@@ -36,6 +36,7 @@ import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.data.BlockchainIdentityDataDao
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.transactions.TxDirection
@@ -68,6 +69,7 @@ class MainViewModel @Inject constructor(
     private val clipboardManager: ClipboardManager,
     private val config: Configuration,
     blockchainStateDao: BlockchainStateDao,
+    identityDataDao: BlockchainIdentityDataDao,
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
     walletApplication: WalletApplication,
