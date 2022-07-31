@@ -70,20 +70,24 @@ public class TxResourceMapper {
                     }
 
                     if (dashPayWallet != null && CreditFundingTransaction.isCreditFundingTransaction(tx)) {
+                        try {
                         CreditFundingTransaction cftx = dashPayWallet.getCreditFundingTransaction(tx);
-                        switch (dashPayWallet.getAuthenticationKeyType(cftx.getCreditBurnPublicKeyId().getBytes())) {
-                            case INVITATION_FUNDING:
-                                typeId = R.string.dashpay_invite_fee;
-                                break;
-                            case BLOCKCHAIN_IDENTITY_FUNDING:
-                                typeId = R.string.dashpay_upgrade_fee;
-                                break;
-                            case BLOCKCHAIN_IDENTITY_TOPUP:
-                                typeId = R.string.dashpay_topup_fee;
-                                break;
-                            default:
-                                typeId = R.string.transaction_row_status_sent;
-                                break;
+                            switch (dashPayWallet.getAuthenticationKeyType(cftx.getCreditBurnPublicKeyId().getBytes())) {
+                                case INVITATION_FUNDING:
+                                    typeId = R.string.dashpay_invite_fee;
+                                    break;
+                                case BLOCKCHAIN_IDENTITY_FUNDING:
+                                    typeId = R.string.dashpay_upgrade_fee;
+                                    break;
+                                case BLOCKCHAIN_IDENTITY_TOPUP:
+                                    typeId = R.string.dashpay_topup_fee;
+                                    break;
+                                default:
+                                    typeId = R.string.transaction_row_status_sent;
+                                    break;
+                            }
+                        } catch (Exception ex) {
+                            typeId = R.string.error; // TODO
                         }
                     }
                     else if (confidence.hasErrors())

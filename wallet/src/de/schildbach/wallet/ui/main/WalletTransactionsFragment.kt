@@ -24,6 +24,7 @@ import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.style.StyleSpan
 import android.view.View
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -32,18 +33,26 @@ import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment.Companion.newInstance
 import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
+import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.WalletTransactionsFragmentBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
+import java.time.Instant
+import java.time.ZoneId
 
 @FlowPreview
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
+    companion object {
+        private const val HEADER_ITEM_TAG = "header"
+    }
+
     private val viewModel by viewModels<MainViewModel>()
     private val binding by viewBinding(WalletTransactionsFragmentBinding::bind)
 
@@ -58,12 +67,14 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         ) { rowView, _ ->
             viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
 
-            if (rowView.txWrapper != null) {
-                val fragment = TransactionGroupDetailsFragment(rowView.txWrapper)
-                fragment.show(parentFragmentManager, "transaction_group")
-            } else {
-                val transactionDetailsDialogFragment = newInstance(rowView.txId)
-                transactionDetailsDialogFragment.show(parentFragmentManager, null)
+            if (rowView is TransactionRowView) {
+                if (rowView.txWrapper != null) {
+                    val fragment = TransactionGroupDetailsFragment(rowView.txWrapper)
+                    fragment.show(parentFragmentManager, "transaction_group")
+                } else {
+                    val transactionDetailsDialogFragment = newInstance(rowView.txId)
+                    transactionDetailsDialogFragment.show(parentFragmentManager, null)
+                }
             }
         }
 
@@ -98,20 +109,37 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 super.getItemOffsets(outRect, view, parent, state)
                 outRect.left = HORIZONTAL
                 outRect.right = HORIZONTAL
-                outRect.top = VERTICAL
-                outRect.bottom = VERTICAL
+
+                if (view.tag == HEADER_ITEM_TAG) {
+                    outRect.top = VERTICAL * 2
+                }
             }
         })
+        binding.walletTransactionsList.addItemDecoration(
+            ListDividerDecorator(
+                ResourcesCompat.getDrawable(resources, R.drawable.list_divider, null)!!,
+                showAfterLast = false,
+                marginStart = resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start)
+            )
+        )
 
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
             binding.loading.isVisible = false
-            adapter.submitList(transactionViews)
 
             if (transactionViews.isEmpty()) {
                 showEmptyView()
             } else {
+                val groupedByDate = transactionViews.groupBy {
+                    Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate()
+                }.map {
+                    val outList = mutableListOf<HistoryRowView>()
+                    outList.add(HistoryRowView(it.key.toString(), "Tuesedey", it.key))
+                    outList.apply { addAll(it.value) }
+                }.reduce { acc, list -> acc.apply { addAll(list) }}
+
+                adapter.submitList(groupedByDate)
                 showTransactionList()
             }
         }
@@ -119,15 +147,6 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         viewLifecycleOwner.observeOnDestroy {
             binding.walletTransactionsList.adapter = null
         }
-
-        //        viewModel.getTransactionHistoryItemData().observe(getViewLifecycleOwner(), new Observer<List<TransactionsAdapter.TransactionHistoryItem>>() {
-//            @Override
-//            public void onChanged(List<TransactionsAdapter.TransactionHistoryItem> transactions) {
-//                loading.setVisibility(View.GONE);
-//                adapter.replace(transactions);
-//                updateView();
-//            }
-//        }); // TODO: handle differences
 
 //        walletTransactionsViewModel.getBlockchainIdentityData().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
 //            @Override

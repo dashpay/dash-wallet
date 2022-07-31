@@ -20,15 +20,19 @@ package de.schildbach.wallet.ui.main
 import android.content.res.Resources
 import android.text.format.DateUtils
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.ui.transactions.TransactionGroupHeaderViewHolder
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet.ui.transactions.TxResourceMapper
 import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.TransactionGroupHeaderBinding
 import de.schildbach.wallet_test.databinding.TransactionRowBinding
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
@@ -37,70 +41,111 @@ import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.getRoundedRippleBackground
 import org.dash.wallet.common.util.GenericUtils
 
+open class HistoryViewHolder(root: View): RecyclerView.ViewHolder(root)
+
 class TransactionAdapter(
     private val dashFormat: MonetaryFormat,
     private val resources: Resources,
     private val drawBackground: Boolean = false,
-    private val clickListener: (TransactionRowView, Int) -> Unit
-) : ListAdapter<TransactionRowView, TransactionAdapter.TransactionViewHolder>(DiffCallback()) {
+    private val clickListener: (HistoryRowView, Int) -> Unit
+) : ListAdapter<HistoryRowView, HistoryViewHolder>(DiffCallback()) {
     private val contentColor = resources.getColor(R.color.content_primary, null)
     private val warningColor = resources.getColor(R.color.content_warning, null)
     private val colorSecondaryStatus = resources.getColor(R.color.secondary_status, null)
 
-    class DiffCallback : DiffUtil.ItemCallback<TransactionRowView>() {
-        override fun areItemsTheSame(oldItem: TransactionRowView, newItem: TransactionRowView): Boolean {
-            return oldItem.txId == newItem.txId
+    class DiffCallback : DiffUtil.ItemCallback<HistoryRowView>() {
+        override fun areItemsTheSame(oldItem: HistoryRowView, newItem: HistoryRowView): Boolean {
+            val sameTransactions = (oldItem is TransactionRowView && newItem is TransactionRowView) && oldItem.txId == newItem.txId
+            return sameTransactions || oldItem == newItem // TODO: compare by date?
         }
 
-        override fun areContentsTheSame(oldItem: TransactionRowView, newItem: TransactionRowView): Boolean {
+        override fun areContentsTheSame(oldItem: HistoryRowView, newItem: HistoryRowView): Boolean {
             return oldItem == newItem
         }
     }
 
-    override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) {
-        val tx = getItem(position)
-        holder.bind(tx)
+    override fun getItemViewType(position: Int): Int {
+        if (position >= itemCount) {
+            return -1
+        }
 
-        holder.itemView.setOnClickListener {
-            clickListener.invoke(tx, position)
+        return when (getItem(position)) {
+            is TransactionRowView -> R.layout.transaction_row
+            is HistoryRowView -> R.layout.transaction_group_header
+            else -> -1
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TransactionViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HistoryViewHolder {
         val inflater = LayoutInflater.from(parent.context)
-        val binding = TransactionRowBinding.inflate(inflater, parent, false)
 
-        return TransactionViewHolder(binding)
+        return when (viewType) {
+            R.layout.transaction_row -> {
+                val binding = TransactionRowBinding.inflate(inflater, parent, false)
+                TransactionViewHolder(binding)
+            }
+            R.layout.transaction_group_header -> {
+                val binding = TransactionGroupHeaderBinding.inflate(inflater, parent, false)
+                TransactionGroupHeaderViewHolder(binding)
+            }
+            else -> {
+                throw IllegalArgumentException("viewType $viewType isn't recognized")
+            }
+        }
+    }
+
+    override fun onBindViewHolder(holder: HistoryViewHolder, position: Int) {
+        val item = getItem(position)
+        val nextItem = if (itemCount > position + 1) {
+            getItem(position + 1)
+        } else {
+            null
+        }
+
+        when (holder) {
+            is TransactionViewHolder -> {
+                holder.bind(item as TransactionRowView, nextItem !is TransactionRowView)
+                holder.binding.root.setOnClickListener { clickListener.invoke(item, position) }
+            }
+            is TransactionGroupHeaderViewHolder -> {
+                holder.bind((item as HistoryRowView).localDate)
+                holder.binding.root.setOnClickListener { clickListener.invoke(item, position) }
+            }
+        }
     }
 
     inner class TransactionViewHolder(
-        private val binding: TransactionRowBinding
-    ) : RecyclerView.ViewHolder(binding.root) {
+        val binding: TransactionRowBinding
+    ) : HistoryViewHolder(binding.root) {
         private val resourceMapper = TxResourceMapper()
 
         init {
             binding.fiatView.setApplyMarkup(false)
         }
 
-        fun bind(txView: TransactionRowView) {
+        fun bind(txView: TransactionRowView, isLastInGroup: Boolean) {
             if (drawBackground) {
-                binding.root.background = resources.getRoundedRippleBackground(R.style.TransactionRowBackground)
+                binding.root.background = if (isLastInGroup) {
+                    ResourcesCompat.getDrawable(resources, R.drawable.selectable_rectangle_white_bottom_radius, null)
+                } else {
+                    ResourcesCompat.getDrawable(resources, R.drawable.selectable_rectangle_white, null)
+                }
             }
 
             binding.icon.setImageResource(txView.icon)
             binding.icon.background = resources.getRoundedBackground(txView.iconBackground)
 
-            binding.primaryStatus.text = resources.getString(txView.title)
+            binding.primaryStatus.text = resources.getString(txView.titleRes)
             binding.primaryStatus.setTextColor(if (txView.hasErrors) {
                 warningColor
             } else {
                 contentColor
             })
 
-            if (txView.status < 0) {
+            if (txView.statusRes < 0) {
                 binding.secondaryStatus.text = null
             } else {
-                binding.secondaryStatus.text = resources.getString(txView.status)
+                binding.secondaryStatus.text = resources.getString(txView.statusRes)
                 binding.secondaryStatus.setTextColor(if (txView.hasErrors) {
                     warningColor
                 } else {

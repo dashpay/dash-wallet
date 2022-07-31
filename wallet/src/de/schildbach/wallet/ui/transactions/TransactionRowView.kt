@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.transactions
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.annotation.StyleRes
+import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
@@ -33,14 +34,14 @@ data class TransactionRowView(
     val exchangeRate: ExchangeRate?,
     @DrawableRes val icon: Int,
     @StyleRes val iconBackground: Int,
-    @StringRes val title: Int,
-    @StringRes val status: Int,
+    @StringRes val titleRes: Int,
+    @StringRes val statusRes: Int,
     val transactionAmount: Int,
     val time: Long,
     val timeFormat: Int,
     val hasErrors: Boolean,
     val txWrapper: TransactionWrapper?
-) {
+): HistoryRowView() {
     companion object {
         fun fromTransactionWrapper(
             txWrapper: TransactionWrapper,

@@ -65,6 +65,7 @@
 //import de.schildbach.wallet.data.DashPayProfile;
 //import de.schildbach.wallet.ui.dashpay.ProcessingIdentityViewHolder;
 //import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay;
+//import de.schildbach.wallet.ui.transactions.TransactionGroupHeaderViewHolder;
 //import de.schildbach.wallet.util.WalletUtils;
 //import de.schildbach.wallet_test.R;
 //

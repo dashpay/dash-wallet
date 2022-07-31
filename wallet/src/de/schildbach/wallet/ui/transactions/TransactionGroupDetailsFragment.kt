@@ -82,9 +82,11 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
                 viewModel.dashFormat,
                 resources
             ) { item, _ ->
-                TransactionDetailsDialogFragment
-                    .newInstance(item.txId)
-                    .show(parentFragmentManager, "transaction_details")
+                if (item is TransactionRowView) {
+                    TransactionDetailsDialogFragment
+                        .newInstance(item.txId)
+                        .show(parentFragmentManager, "transaction_details")
+                }
             }
 
             binding.transactions.adapter = adapter
