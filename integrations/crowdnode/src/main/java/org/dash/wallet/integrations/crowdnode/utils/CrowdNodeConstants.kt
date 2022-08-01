@@ -22,7 +22,6 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.utils.MonetaryFormat
-import org.dash.wallet.integrations.crowdnode.model.ApiCode
 
 object CrowdNodeConstants {
     private const val CROWDNODE_TESTNET_ADDRESS = "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"
@@ -41,6 +40,16 @@ object CrowdNodeConstants {
         .repeatOptionalDecimals(1, 3).postfixCode()
     val API_CONFIRMATION_DASH_AMOUNT: Coin = Coin.valueOf(54321)
     val MINIMUM_LEFTOVER_BALANCE: Coin = Coin.valueOf(30000)
+
+    object WithdrawalLimits {
+        // Current withdrawal limits can be found here:
+        // https://knowledge.crowdnode.io/en/articles/6387601-api-withdrawal-limits
+        // or with the API:
+        // https://app.crowdnode.io/odata/apifundings/GetWithdrawalLimits(address='')
+        val DEFAULT_LIMIT_PER_TX: Coin = Coin.COIN.multiply(15)
+        val DEFAULT_LIMIT_PER_HOUR: Coin = Coin.COIN.multiply(30)
+        val DEFAULT_LIMIT_PER_DAY: Coin = Coin.COIN.multiply(60)
+    }
 
     fun getCrowdNodeAddress(params: NetworkParameters): Address {
         return Address.fromBase58(params, if (params == MainNetParams.get()) {

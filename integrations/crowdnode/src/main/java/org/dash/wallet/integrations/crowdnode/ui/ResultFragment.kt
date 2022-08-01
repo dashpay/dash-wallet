@@ -69,6 +69,13 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
         binding.subtitle.text = when (ex) {
             is DustySendRequested, is CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
             is InsufficientMoneyException -> ex.message ?: getString(R.string.send_coins_error_insufficient_money)
+            is CrowdNodeException -> {
+                if (ex.message == CrowdNodeException.WITHDRAWAL_ERROR) {
+                    getString(R.string.crowdnode_withdrawal_limits_error)
+                } else {
+                    ex.message ?: ""
+                }
+            }
             else -> ex.message ?: ""
         }
     }

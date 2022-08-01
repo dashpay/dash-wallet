@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
@@ -88,20 +89,13 @@ class ExploreViewModelTest {
         on { addTransportType(TRANSPORT_WIFI) } doReturn mock
     }
 
+    private val blockchainStateMock = mock<BlockchainStateProvider> {
+        on { getMasternodeAPY() } doReturn 5.9
+    }
 
     @Before
     fun before() {
         networkRequestBuilder.addTransportType(TRANSPORT_WIFI)
-       // MockitoAnnotations.openMocks(this)
-
-        //`when`(mockContext.getSystemService(Context.CONNECTIVITY_SERVICE)).thenReturn(
-        //    mockConnectivityManager
-        //)
-        //`when`(mockConnectivityManager.activeNetworkInfo).thenReturn(mockNetworkInfo)
-        //`when`(mockNetworkInfo.isConnectedOrConnecting()).thenReturn(true)
-        //`when`( mockConnectivityManager.getNetworkInfo( ConnectivityManager.TYPE_WIFI )).thenReturn( mockNetworkInfo );
-        //`when`( mockNetworkInfo.isAvailable() ).thenReturn( true );
-        //`when`( mockNetworkInfo.isConnected() ).thenReturn( true );
     }
 
     @Test
@@ -123,7 +117,7 @@ class ExploreViewModelTest {
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
             val analyticsService = mock<AnalyticsService>()
-            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService)
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService, blockchainStateMock)
             viewModel.setSelectedTerritory(territory)
             viewModel.setFilterMode(FilterMode.All)
             viewModel.searchBounds = GeoBounds.noBounds
@@ -168,7 +162,7 @@ class ExploreViewModelTest {
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
             val analyticsService = mock<AnalyticsService>()
-            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService)
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService, blockchainStateMock)
             viewModel.setFilterMode(FilterMode.Nearby)
             viewModel.searchBounds = bounds
             viewModel.paymentMethodFilter = PaymentMethod.DASH
@@ -215,7 +209,7 @@ class ExploreViewModelTest {
             }
             val analyticsService = mock<AnalyticsService>()
 
-            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService)
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService, blockchainStateMock)
             viewModel.setSelectedTerritory(territory)
             viewModel.searchBounds = GeoBounds.noBounds
             viewModel.setFilterMode(FilterMode.All)
@@ -266,7 +260,7 @@ class ExploreViewModelTest {
             }
             val analyticsService = mock<AnalyticsService>()
 
-            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus, analyticsService)
+            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus, analyticsService, blockchainStateMock)
             viewModel.searchBounds = GeoBounds(90.0, 180.0, -90.0, -180.0, userLat, userLng)
                     .apply { zoomLevel = ExploreViewModel.MIN_ZOOM_LEVEL + 1 }
             viewModel.setFilterMode(FilterMode.Nearby)
@@ -300,7 +294,7 @@ class ExploreViewModelTest {
             }
             val analyticsService = mock<AnalyticsService>()
 
-            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus,analyticsService)
+            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus,analyticsService, blockchainStateMock)
             viewModel.setPhysicalResults(merchants)
             viewModel.onMapMarkerSelected(5)
 

@@ -20,7 +20,7 @@ package org.dash.wallet.integrations.crowdnode.transactions
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
-import org.dash.wallet.common.transactions.CoinsToAddressTxFilter
+import org.dash.wallet.common.transactions.filters.CoinsToAddressTxFilter
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
