@@ -53,6 +53,18 @@
             app:layout_constraintEnd_toEndOf="@id/from_label"
             app:layout_constraintTop_toBottomOf="@+id/from_label" />
 
+        <ImageView
+            android:id="@+id/buy_swap_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="7dp"
+            android:layout_marginEnd="5dp"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:src="@drawable/ic_grey_buy_swap"
+            app:layout_constraintTop_toBottomOf="@+id/from_label"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/to_label" />
 
         <!--View
             android:id="@+id/convert_dash_divider"

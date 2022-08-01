@@ -23,6 +23,7 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
@@ -41,6 +42,14 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
 
     private var onCurrencyChooserClicked: (() -> Unit)? = null
     private var onSwapClicked: ((Boolean) -> Unit)? = null
+
+    private var _isSellSwapEnabled: Boolean = false
+    var isSellSwapEnabled: Boolean
+        get() = _isSellSwapEnabled
+        set(value) {
+            _isSellSwapEnabled = value
+            updateSellSwapBtn()
+        }
 
     private var _input: ServiceWallet? = null
     var input: ServiceWallet?
@@ -74,7 +83,7 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
 
         binding.convertFromDashBalance.isVisible = input != null
         updateUiWithSwap()
-
+        updateSellSwapBtn()
         binding.swapBtn.setOnClickListener {
             onSwapClicked?.invoke(!dashToCrypto)
             if (dashInput?.isZero == true && !dashToCrypto) {
@@ -94,6 +103,12 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
                 onCurrencyChooserClicked?.invoke()
             }
         }
+    }
+
+    private fun updateSellSwapBtn(){
+        binding.swapBtn.isEnabled = _isSellSwapEnabled
+        binding.swapBtn.isVisible =  _isSellSwapEnabled
+        binding.buySwapBtn.isGone =  _isSellSwapEnabled
     }
 
     private fun updateUiWithSwap() {
