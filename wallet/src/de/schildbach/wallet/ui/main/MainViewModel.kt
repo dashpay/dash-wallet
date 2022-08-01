@@ -69,7 +69,6 @@ class MainViewModel @Inject constructor(
     private val clipboardManager: ClipboardManager,
     private val config: Configuration,
     blockchainStateDao: BlockchainStateDao,
-    identityDataDao: BlockchainIdentityDataDao,
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
     walletApplication: WalletApplication,
@@ -90,7 +89,6 @@ class MainViewModel @Inject constructor(
     private val currencyCode = MutableStateFlow(config.exchangeCurrencyCode)
 
     val balanceDashFormat: MonetaryFormat = config.format.noCode()
-    val onTransactionsUpdated = SingleLiveEvent<Unit>()
     val isPassphraseVerified: Boolean
         get() = !config.remindBackupSeed
 
@@ -324,6 +322,10 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             platformRepo.doneAndDismiss()
         }
+    }
+
+    fun joinDashPay() {
+        showCreateUsernameEvent.call(Unit)
     }
 
     fun startBlockchainService() {

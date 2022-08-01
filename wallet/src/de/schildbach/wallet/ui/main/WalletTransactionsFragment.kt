@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.main
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Rect
 import android.graphics.Typeface
@@ -29,6 +30,7 @@ import android.widget.Toast
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -63,7 +65,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         private const val HEADER_ITEM_TAG = "header"
     }
 
-    private val viewModel by viewModels<MainViewModel>()
+    private val viewModel by activityViewModels<MainViewModel>()
     private val binding by viewBinding(WalletTransactionsFragmentBinding::bind)
 
     val isHistoryEmpty: Boolean
@@ -108,7 +110,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         binding.walletTransactionsList.setHasFixedSize(true)
         binding.walletTransactionsList.layoutManager = LinearLayoutManager(requireContext())
 
-        val header = HistoryHeaderAdapter()
+        val header = HistoryHeaderAdapter(
+            requireContext().getSharedPreferences(
+                HistoryHeaderAdapter.PREFS_FILE_NAME,
+                Context.MODE_PRIVATE
+            )
+        )
         binding.walletTransactionsList.adapter = ConcatAdapter(header, adapter)
         viewLifecycleOwner.observeOnDestroy {
             binding.walletTransactionsList.adapter = null
@@ -116,6 +123,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
         header.setOnIdentityRetryClicked { retryIdentityCreation(header) }
         header.setOnIdentityClicked { openIdentityCreation() }
+        header.setOnJoinDashPayClicked { onJoinDashPayClicked() }
 
         val horizontalMargin = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
         val verticalMargin = resources.getDimensionPixelOffset(R.dimen.default_vertical_padding)
@@ -256,9 +264,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         }
     }
 
-//
-//    @Override
-//    public void onJoinDashPayClicked() {
-//        viewModel.getShowCreateUsernameEvent().postValue(Unit.INSTANCE);
-//    }
+    private fun onJoinDashPayClicked() {
+        viewModel.joinDashPay()
+    }
 }

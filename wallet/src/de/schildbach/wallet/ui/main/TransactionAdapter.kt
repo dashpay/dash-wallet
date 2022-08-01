@@ -56,7 +56,7 @@ class TransactionAdapter(
     class DiffCallback : DiffUtil.ItemCallback<HistoryRowView>() {
         override fun areItemsTheSame(oldItem: HistoryRowView, newItem: HistoryRowView): Boolean {
             val sameTransactions = (oldItem is TransactionRowView && newItem is TransactionRowView) && oldItem.txId == newItem.txId
-            return sameTransactions || oldItem == newItem // TODO: compare by date?
+            return sameTransactions || oldItem == newItem
         }
 
         override fun areContentsTheSame(oldItem: HistoryRowView, newItem: HistoryRowView): Boolean {

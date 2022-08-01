@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.dashpay
 
+import android.content.SharedPreferences
 import android.graphics.drawable.AnimationDrawable
 import android.view.LayoutInflater
 import android.view.View
@@ -28,16 +29,25 @@ import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HistoryHeaderViewBinding
 
-class HistoryHeaderAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+class HistoryHeaderAdapter(
+    private val preferences: SharedPreferences
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    companion object {
+        const val PREFS_FILE_NAME = "TransactionsAdapter.prefs"
+        const val PREFS_KEY_HIDE_JOIN_DASHPAY_CARD = "hide_join_dashpay_card"
+    }
+
     private lateinit var binding: HistoryHeaderViewBinding
     private var onIdentityRetryClicked: (() -> Unit)? = null
     private var onIdentityClicked: (() -> Unit)? = null
+    private var onJoinDashPayClicked: (() -> Unit)? = null
 
     var canJoinDashPay: Boolean = false
         set(value) {
             field = value
             if (::binding.isInitialized) {
                 bindCanJoinDashPay(value)
+                bindBlockchainIdentity(blockchainIdentityData)
             }
         }
 
@@ -46,6 +56,7 @@ class HistoryHeaderAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             field = value
             if (::binding.isInitialized) {
                 bindBlockchainIdentity(value)
+                bindCanJoinDashPay(canJoinDashPay)
             }
         }
 
@@ -61,8 +72,8 @@ class HistoryHeaderAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     }
 
     override fun onBindViewHolder(viewHolder: RecyclerView.ViewHolder, position: Int) {
-        refreshControls(controlsVisible)
         bindBlockchainIdentity(blockchainIdentityData)
+        bindCanJoinDashPay(canJoinDashPay)
     }
 
     fun setOnIdentityRetryClicked(listener: () -> Unit) {
@@ -71,6 +82,10 @@ class HistoryHeaderAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     fun setOnIdentityClicked(listener: () -> Unit) {
         onIdentityClicked = listener
+    }
+
+    fun setOnJoinDashPayClicked(listener: () -> Unit) {
+        onJoinDashPayClicked = listener
     }
 
     private fun bindBlockchainIdentity(
@@ -163,7 +178,16 @@ class HistoryHeaderAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     }
 
     private fun bindCanJoinDashPay(canJoin: Boolean) {
+        if (!shouldShowJoinDashPay(canJoin)) {
+            binding.joinDashpayBtn.root.isVisible = false
+            return
+        }
 
+        binding.joinDashpayBtn.root.isVisible = true
+        binding.joinDashpayBtn.root.setOnClickListener {
+            preferences.edit().putBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, true).apply()
+            onJoinDashPayClicked?.invoke()
+        }
     }
 
     private fun shouldShowHelloCard(blockchainIdentityData: BlockchainIdentityBaseData): Boolean {
@@ -171,5 +195,10 @@ class HistoryHeaderAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 blockchainIdentityData.creationComplete ||
                 blockchainIdentityData.creationError) &&
                 !blockchainIdentityData.creationCompleteDismissed
+    }
+
+    private fun shouldShowJoinDashPay(canJoin: Boolean): Boolean {
+        val hideJoinDashPay = preferences.getBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, false)
+        return blockchainIdentityData == null && canJoin && !hideJoinDashPay
     }
 }
