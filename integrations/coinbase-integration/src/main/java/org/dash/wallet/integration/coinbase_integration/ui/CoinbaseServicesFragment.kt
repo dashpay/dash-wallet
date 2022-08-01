@@ -76,9 +76,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
         binding.buyDashBtn.setOnClickListener {
            lifecycleScope.launch {
-                // repeatOnLifecycle launches the block in a new coroutine every time the
-                // lifecycle is in the STARTED state (or above) and cancels it when it's STOPPED.
-
                     sharedViewModel.uiState.collect { uiState ->
                         // New value received
                         when (uiState) {
@@ -124,10 +121,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             viewModel.logEvent(AnalyticsConstants.Coinbase.TRANSFER_DASH)
             safeNavigate(CoinbaseServicesFragmentDirections.servicesToTransferDash())
         }
-
-//        viewModel.activePaymentMethods.observe(viewLifecycleOwner){ event ->
-//
-//        }
 
         binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
         binding.walletBalanceDash.setApplyMarkup(false)
@@ -189,21 +182,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                 }
             }
         }
-
-//        viewModel.activePaymentMethodsFailureCallback.observe(viewLifecycleOwner) {
-//            AdaptiveDialog.create(
-//                R.drawable.ic_info_red,
-//                getString(R.string.coinbase_dash_wallet_no_payment_methods_error_title),
-//                getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
-//                getString(R.string.close),
-//                getString(R.string.add_payment_method),
-//            ).show(requireActivity()) { addMethod ->
-//                if (addMethod == true) {
-//                    viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ADD_PAYMENT_METHOD)
-//                    openCoinbaseWebsite()
-//                }
-//            }
-//        }
 
         viewModel.coinbaseLogOutCallback.observe(viewLifecycleOwner) {
             requireActivity().finish()

@@ -30,6 +30,7 @@ import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.PaymentMethodsUiState
 import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
@@ -109,13 +110,4 @@ class CoinbaseActivityViewModel @Inject constructor(
             else -> PaymentMethodType.Unknown
         }
     }
-}
-
-
-
-// Represents different states for the LatestNews screen
-sealed class PaymentMethodsUiState {
-    data class Success(val paymentMethodsList: List<PaymentMethod>): PaymentMethodsUiState()
-    data class Error(val isError:Boolean): PaymentMethodsUiState()
-    data class LoadingState(val isLoading:Boolean): PaymentMethodsUiState()
 }
