@@ -21,6 +21,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.annotation.StyleRes
 import de.schildbach.wallet.ui.main.HistoryRowView
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
@@ -32,6 +33,7 @@ data class TransactionRowView(
     val txId: Sha256Hash,
     val value: Coin,
     val exchangeRate: ExchangeRate?,
+    val contact: DashPayProfile?,
     @DrawableRes val icon: Int,
     @StyleRes val iconBackground: Int,
     @StringRes val titleRes: Int,
@@ -46,7 +48,8 @@ data class TransactionRowView(
         fun fromTransactionWrapper(
             txWrapper: TransactionWrapper,
             bag: TransactionBag,
-            context: Context
+            context: Context,
+            contact: DashPayProfile?
         ): TransactionRowView {
             val lastTx = txWrapper.transactions.last()
 
@@ -55,6 +58,7 @@ data class TransactionRowView(
                     lastTx.txId,
                     txWrapper.getValue(bag),
                     lastTx.exchangeRate,
+                    null,
                     R.drawable.ic_crowdnode_logo,
                     R.style.TxNoBackground,
                     R.string.crowdnode_account,
@@ -66,7 +70,7 @@ data class TransactionRowView(
                     txWrapper
                 )
             } else {
-                fromTransaction(lastTx, bag, context)
+                fromTransaction(lastTx, bag, context, contact)
             }
         }
 
@@ -74,6 +78,7 @@ data class TransactionRowView(
             tx: Transaction,
             bag: TransactionBag,
             context: Context,
+            contact: DashPayProfile?,
             resourceMapper: TxResourceMapper = TxResourceMapper()
         ): TransactionRowView {
             val value = tx.getValue(bag)
@@ -109,6 +114,7 @@ data class TransactionRowView(
                 tx.txId,
                 if (removeFee) value.add(tx.fee) else value,
                 tx.exchangeRate,
+                contact,
                 icon,
                 iconBackground,
                 resourceMapper.getTransactionTypeName(tx, bag),

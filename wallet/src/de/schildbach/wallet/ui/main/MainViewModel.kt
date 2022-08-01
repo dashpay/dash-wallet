@@ -26,7 +26,6 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.livedata.Status
@@ -36,9 +35,7 @@ import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.BlockchainIdentityDataDao
-import de.schildbach.wallet.data.BlockchainState
-import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.data.*
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.ui.transactions.TransactionRowView
@@ -57,8 +54,10 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.slf4j.LoggerFactory
 import org.dash.wallet.common.transactions.TransactionFilter
+import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
+import java.util.HashMap
 import javax.inject.Inject
 
 @HiltViewModel
@@ -348,16 +347,40 @@ class MainViewModel @Inject constructor(
         )
     }
 
-    private fun refreshTransactions(filter: TransactionFilter) {
+    private suspend fun refreshTransactions(filter: TransactionFilter) {
         walletData.wallet?.let { wallet ->
+            val userIdentity = platformRepo.getBlockchainIdentity()
+            val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
+
+            if (userIdentity != null) {
+                val contacts = platformRepo.searchContacts("",
+                    UsernameSortOrderBy.LAST_ACTIVITY, false)
+                contacts.data?.forEach { result ->
+                    contactsByIdentity[result.dashPayProfile.userId] = result.dashPayProfile
+                }
+            }
+
             val transactionViews = walletData.wrapAllTransactions(
                 FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
             ).filter { it.transactions.any { tx -> filter.matches(tx) } }
              .sortedWith(TransactionWrapperComparator())
              .map {
+                 var contact: DashPayProfile? = null
+                 val tx = it.transactions.first()
+                 val isInternal = TransactionUtils.isEntirelySelf(tx, wallet)
+
+                 if (it.transactions.size == 1 && !isInternal) {
+                     val contactId = userIdentity?.getContactForTransaction(tx)
+
+                     if (contactId != null) {
+                         contact = contactsByIdentity[contactId]
+                     }
+                 }
+
                  TransactionRowView.fromTransactionWrapper(
                      it, walletData.transactionBag,
-                     Constants.CONTEXT
+                     Constants.CONTEXT,
+                     contact
                  )
              }
             _transactions.postValue(transactionViews)

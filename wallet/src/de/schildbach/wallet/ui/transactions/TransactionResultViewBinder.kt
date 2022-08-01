@@ -23,10 +23,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.ui.DashPayUserActivity
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -53,6 +56,7 @@ class TransactionResultViewBinder(
 ): TransactionConfidence.Listener {
     private val ctx by lazy { containerView.context }
     private val checkIcon by lazy { containerView.findViewById<ImageView>(R.id.check_icon) }
+    private val secondaryIcon by lazy { containerView.findViewById<ImageView>(R.id.secondary_icon) }
     private val transactionAmountSignal by lazy { containerView.findViewById<TextView>(R.id.transaction_amount_signal) }
     private val dashAmountSymbol by lazy { containerView.findViewById<ImageView>(R.id.dash_amount_symbol) }
     private val transactionTitle by lazy { containerView.findViewById<TextView>(R.id.transaction_title) }
@@ -126,19 +130,42 @@ class TransactionResultViewBinder(
         }
 
         val inflater = LayoutInflater.from(containerView.context)
-        inputsContainer.visibility = if (inputAddresses.isEmpty()) View.GONE else View.VISIBLE
-        inputAddresses.forEach {
-            val addressView = inflater.inflate(R.layout.transaction_result_address_row,
-                inputsAddressesContainer, false) as TextView
-            addressView.text = it.toBase58()
-            inputsAddressesContainer.addView(addressView)
-        }
-        outputsContainer.visibility = if (outputAddresses.isEmpty()) View.GONE else View.VISIBLE
-        outputAddresses.forEach {
-            val addressView = inflater.inflate(R.layout.transaction_result_address_row,
+
+        if (profile != null && !TransactionUtils.isEntirelySelf(transaction, wallet)) {
+            ProfilePictureDisplay.display(checkIcon, profile)
+            outputsContainer.isVisible = true
+
+            if (profile.displayName.isNotEmpty()) {
+                val displayNameView = inflater.inflate(R.layout.transaction_result_address_row,
+                    outputsAddressesContainer, false) as TextView
+                displayNameView.text = profile.displayName
+
+                if (isSent) {
+                    inputsAddressesContainer.addView(displayNameView)
+                } else {
+                    outputsAddressesContainer.addView(displayNameView)
+                }
+            }
+
+            val userNameView = inflater.inflate(R.layout.transaction_result_address_row,
                 outputsAddressesContainer, false) as TextView
-            addressView.text = it.toBase58()
-            outputsAddressesContainer.addView(addressView)
+            userNameView.text = profile.username
+            userNameView.setTextColor(R.color.content_secondary)
+
+            if (isSent) {
+                inputsAddressesContainer.addView(userNameView)
+                inputsAddressesContainer.setOnClickListener { openProfile(profile) }
+                setOutputs(outputAddresses, inflater)
+            } else {
+                outputsAddressesContainer.addView(userNameView)
+                outputsAddressesContainer.setOnClickListener { openProfile(profile) }
+                setInputs(inputAddresses, inflater)
+            }
+
+            checkIcon.setOnClickListener { openProfile(profile) }
+        } else {
+            setInputs(inputAddresses, inflater)
+            setOutputs(outputAddresses, inflater)
         }
 
         dashAmount.setFormat(dashFormat)
@@ -171,10 +198,10 @@ class TransactionResultViewBinder(
         reason: TransactionConfidence.Listener.ChangeReason?
     ) {
         org.bitcoinj.core.Context.propagate(wallet.context)
-        updateStatus()
+        updateStatus(true)
     }
 
-    private fun updateStatus() {
+    private fun updateStatus(fromConfidence: Boolean = false) {
         val primaryStatus = resourceMapper.getTransactionTypeName(transaction, wallet)
         val secondaryStatus = resourceMapper.getReceivedStatusString(transaction, wallet.context)
         val errorStatus = resourceMapper.getErrorName(transaction)
@@ -200,11 +227,19 @@ class TransactionResultViewBinder(
             secondaryStatusStr = ""
         }
 
-        setTransactionDirection(errorStatusStr)
+        setTransactionDirection(errorStatusStr, fromConfidence)
     }
 
-    private fun setTransactionDirection(errorStatusStr: String) {
-        if (errorStatusStr.isNotEmpty()){
+    private fun setTransactionDirection(errorStatusStr: String, fromConfidence: Boolean) {
+        @DrawableRes val imageResource: Int
+
+        if (errorStatusStr.isNotEmpty()) {
+            if (profile != null) {
+                secondaryIcon.setImageResource(R.drawable.ic_transaction_failed)
+            } else {
+                checkIcon.setImageResource(R.drawable.ic_transaction_failed)
+            }
+
             errorContainer.isVisible = true
             reportIssueContainer.isVisible = true
             outputsContainer.isVisible = false
@@ -212,31 +247,40 @@ class TransactionResultViewBinder(
             feeRow.isVisible = false
             dateContainer.isVisible = false
             explorerContainer.isVisible = false
-            checkIcon.setImageResource(R.drawable.ic_transaction_failed)
             transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.content_warning))
             transactionTitle.text = ctx.getText(R.string.transaction_failed_details)
             errorDescription.text = errorStatusStr
             transactionAmountSignal.text = "-"
         } else {
             if (transaction.getValue(wallet).signum() < 0) {
-                checkIcon.setImageResource(if (TransactionUtils.isEntirelySelf(transaction, wallet)) {
+                imageResource = if (TransactionUtils.isEntirelySelf(transaction, wallet)) {
                     R.drawable.ic_shuffle
                 } else {
                     R.drawable.ic_transaction_sent
-                })
+                }
 
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
                 transactionAmountSignal.text = "-"
                 transactionAmountSignal.isVisible = true
             } else {
-                checkIcon.setImageResource(R.drawable.ic_transaction_received)
+                imageResource = R.drawable.ic_transaction_received
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.system_green))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
                 transactionAmountSignal.isVisible = true
                 transactionAmountSignal.text = "+"
             }
             checkIcon.isVisible = true
+
+            if (!fromConfidence) {
+                // If it's a confidence update, not need to set the send/receive icons again.
+                // Some hosts are replacing those with custom animated ones.
+                if (profile != null) {
+                    secondaryIcon.setImageResource(imageResource)
+                } else {
+                    checkIcon.setImageResource(imageResource)
+                }
+            }
         }
 
         feeRow.visibility = if (isFeeAvailable(transaction.fee)) View.VISIBLE else View.GONE
@@ -244,5 +288,29 @@ class TransactionResultViewBinder(
 
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {
         return transactionFee != null && transactionFee.isPositive
+    }
+
+    private fun openProfile(profile: DashPayProfile) {
+        ctx.startActivity(DashPayUserActivity.createIntent(ctx, profile))
+    }
+
+    private fun setInputs(inputAddresses: List<Address>, inflater: LayoutInflater) {
+        inputsContainer.isVisible = inputAddresses.isNotEmpty()
+        inputAddresses.forEach {
+            val addressView = inflater.inflate(R.layout.transaction_result_address_row,
+                inputsAddressesContainer, false) as TextView
+            addressView.text = it.toBase58()
+            inputsAddressesContainer.addView(addressView)
+        }
+    }
+
+    private fun setOutputs(outputAddresses: List<Address>, inflater: LayoutInflater) {
+        outputsContainer.isVisible = outputAddresses.isNotEmpty()
+        outputAddresses.forEach {
+            val addressView = inflater.inflate(R.layout.transaction_result_address_row,
+                outputsAddressesContainer, false) as TextView
+            addressView.text = it.toBase58()
+            outputsAddressesContainer.addView(addressView)
+        }
     }
 }

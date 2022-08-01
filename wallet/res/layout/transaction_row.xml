@@ -28,7 +28,7 @@
     tools:context="de.schildbach.wallet.ui.main.TransactionAdapter">
 
     <ImageView
-        android:id="@+id/icon"
+        android:id="@+id/primary_icon"
         android:layout_width="38dp"
         android:layout_height="38dp"
         android:padding="8dp"
@@ -40,6 +40,19 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <ImageView
+        android:id="@+id/secondary_icon"
+        android:layout_width="17dp"
+        android:layout_height="17dp"
+        android:padding="2dp"
+        android:src="@drawable/ic_transaction_sent"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/SecondaryBackground"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/primary_icon"
+        app:layout_constraintEnd_toEndOf="@id/primary_icon"
+        tools:visibility="visible" />
 
     <TextView
         android:id="@+id/details"
@@ -69,7 +82,7 @@
         android:ellipsize="end"
         app:layout_constraintTop_toBottomOf="@id/details"
         app:layout_constraintBottom_toTopOf="@id/time"
-        app:layout_constraintStart_toEndOf="@id/icon"
+        app:layout_constraintStart_toEndOf="@id/primary_icon"
         app:layout_constraintEnd_toStartOf="@id/secondary_status"
         app:layout_constraintVertical_chainStyle="packed"
         tools:text="Receiving" />

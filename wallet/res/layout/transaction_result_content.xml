@@ -85,6 +85,19 @@
         app:srcCompat="@drawable/check_animated"
         tools:src="@drawable/ic_transaction_sent" />
 
+    <ImageView
+        android:id="@+id/secondary_icon"
+        android:layout_width="17dp"
+        android:layout_height="17dp"
+        android:padding="2dp"
+        android:src="@drawable/ic_transaction_sent"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/SecondaryBackground"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/check_icon"
+        app:layout_constraintEnd_toEndOf="@id/check_icon"
+        tools:visibility="visible" />
+
     <LinearLayout
         android:id="@+id/transaction_details_card"
         style="@style/ViewRaised"

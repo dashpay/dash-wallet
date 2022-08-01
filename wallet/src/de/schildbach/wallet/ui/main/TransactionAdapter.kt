@@ -23,12 +23,17 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.res.ResourcesCompat
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import androidx.annotation.StyleRes
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.transactions.TransactionGroupHeaderViewHolder
+import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet.ui.transactions.TxResourceMapper
 import de.schildbach.wallet_test.R
@@ -38,7 +43,6 @@ import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.ui.getRoundedBackground
-import org.dash.wallet.common.ui.getRoundedRippleBackground
 import org.dash.wallet.common.util.GenericUtils
 
 open class HistoryViewHolder(root: View): RecyclerView.ViewHolder(root)
@@ -132,31 +136,67 @@ class TransactionAdapter(
                 }
             }
 
-            binding.icon.setImageResource(txView.icon)
-            binding.icon.background = resources.getRoundedBackground(txView.iconBackground)
+            setIcon(txView.icon, txView.iconBackground, txView.contact)
+            setPrimaryStatus(txView.titleRes, txView.hasErrors, txView.contact)
+            setSecondaryStatus(txView.statusRes, txView.hasErrors)
+            setValue(txView.value, txView.hasErrors)
+            setFiatValue(txView.value, txView.exchangeRate)
+            setTime(txView.time, resourceMapper.dateTimeFormat)
+            setDetails(txView.transactionAmount)
+        }
 
-            binding.primaryStatus.text = resources.getString(txView.titleRes)
-            binding.primaryStatus.setTextColor(if (txView.hasErrors) {
+        private fun setIcon(
+            @DrawableRes icon: Int,
+            @StyleRes iconBackground: Int,
+            contact: DashPayProfile?
+        ) {
+            if (contact != null) {
+                val userName = contact.displayName.ifEmpty { contact.username }
+                ProfilePictureDisplay.display(binding.primaryIcon, contact.avatarUrl, contact.avatarHash, userName)
+                binding.primaryIcon.setOnClickListener {
+//                    context.startActivity(DashPayUserActivity.createIntent(context, contact)); // TODO
+                }
+
+                binding.secondaryIcon.isVisible = true
+                binding.secondaryIcon.setImageResource(icon)
+            } else {
+                binding.primaryIcon.setImageResource(icon)
+                binding.primaryIcon.background = resources.getRoundedBackground(iconBackground)
+                binding.primaryIcon.setOnClickListener { }
+                binding.secondaryIcon.isVisible = false
+            }
+        }
+
+        private fun setPrimaryStatus(
+            @StringRes title: Int,
+            hasErrors: Boolean,
+            contact: DashPayProfile?
+        ) {
+            if (contact != null) {
+                val name = contact.displayName.ifEmpty { contact.username }
+                binding.primaryStatus.text = name
+            } else {
+                binding.primaryStatus.text = resources.getString(title)
+            }
+
+            binding.primaryStatus.setTextColor(if (hasErrors) {
                 warningColor
             } else {
                 contentColor
             })
+        }
 
-            if (txView.statusRes < 0) {
+        private fun setSecondaryStatus(@StringRes status: Int, hasErrors: Boolean) {
+            if (status < 0) {
                 binding.secondaryStatus.text = null
             } else {
-                binding.secondaryStatus.text = resources.getString(txView.statusRes)
-                binding.secondaryStatus.setTextColor(if (txView.hasErrors) {
+                binding.secondaryStatus.text = resources.getString(status)
+                binding.secondaryStatus.setTextColor(if (hasErrors) {
                     warningColor
                 } else {
                     colorSecondaryStatus
                 })
             }
-
-            setValue(txView.value, txView.hasErrors)
-            setFiatValue(txView.value, txView.exchangeRate)
-            setTime(txView.time, resourceMapper.dateTimeFormat)
-            setDetails(txView.transactionAmount)
         }
 
         private fun setDetails(transactionAmount: Int) {

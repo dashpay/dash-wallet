@@ -100,7 +100,7 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
             viewModel.transactions.observe(viewLifecycleOwner) { transactions ->
                 adapter.submitList(transactions.map {
                     TransactionRowView.fromTransaction(
-                        it, wallet, wallet.context, resourceMapper
+                        it, wallet, wallet.context, null, resourceMapper
                     )
                 })
             }
