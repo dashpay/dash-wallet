@@ -25,6 +25,7 @@ import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
+import androidx.core.view.setPadding
 import androidx.core.view.updateLayoutParams
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
@@ -112,7 +113,7 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
         binding.loadingProgressContainer.isVisible = isSyncing
         binding.convertFromDashBalance.isVisible = !isSyncing
         binding.convertFromDashFiatAmount.isVisible = !isSyncing
-        binding.walletIcon.isVisible = !isSyncing
+        binding.walletIcon.isVisible = !isSyncing && binding.convertFromDashBalance.text.isNotEmpty()
         if (!isSyncing) {
             updateAmount()
         }
@@ -129,19 +130,10 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
         binding.convertToBtn.setIconConstraint()
         binding.convertToBtn.setTitleConstraint()
         binding.walletIcon.visibility = View.INVISIBLE
-        //binding.fromLabel.updateLayoutParams<ConstraintLayout.LayoutParams> {
-        //    bottomToBottom = binding.convertFromBtn.id
-        //}
 
-        //binding.convertDashDivider.updateLayoutParams<LayoutParams> {
-        //    topToBottom = binding.walletBalanceContainer.id
-        //}
+        binding.rootContainer.setPadding(0)
 
-        binding.convertFromBtn.updateLayoutParams<ConstraintLayout.LayoutParams> {
-            topMargin = 0
-            bottomMargin = 0
-        }
-
+        // constrain the walletBalanceLoadingContainer to the walletGuideline
         binding.walletBalanceLoadingContainer.updateLayoutParams<LayoutParams> {
             startToStart = LayoutParams.UNSET
             topToBottom = LayoutParams.UNSET
@@ -150,23 +142,7 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
             topToTop = binding.walletGuideline.id
             bottomToBottom = binding.walletGuideline.id
             topMargin = 0
-            //marginStart = 125
         }
-        /*binding.convertFromDashFiatAmount.updateLayoutParams<ConstraintLayout.LayoutParams> {
-            topToTop = binding.walletIcon.id
-            bottomToBottom = binding.walletIcon.id
-        }*/
-
-        //binding.convertToBtn.updateLayoutParams<LayoutParams> {
-        //    topMargin = 6
-        //}
-
-        /*binding.swapBtn.updateLayoutParams<LayoutParams> {
-            topToBottom = binding.walletGuideline.id
-            topMargin = 0
-            bottomMargin = 0
-            bottomToBottom = LayoutParams.UNSET
-        }*/
     }
 
     @SuppressLint("SetTextI18n")
@@ -202,7 +178,7 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
                     binding.convertFromDashBalance.isVisible = true
                     binding.convertFromDashFiatAmount.isVisible = true
 
-                    binding.walletIcon.isVisible = true
+                    binding.walletIcon.isVisible = balance.isNotEmpty()
 
                 }
             }
