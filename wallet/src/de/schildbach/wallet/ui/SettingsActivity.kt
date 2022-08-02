@@ -32,6 +32,7 @@ import kotlinx.android.synthetic.main.activity_settings.*
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.openAppSettings
 import org.dash.wallet.common.util.openNotificationSettings
 import org.slf4j.LoggerFactory
@@ -85,11 +86,14 @@ class SettingsActivity : BaseMenuActivity() {
 
     private fun resetBlockchain() {
         var isFinished = false
-        alertDialog = baseAlertDialogBuilder.apply {
-            title = getString(R.string.preferences_initiate_reset_title)
-            message = getString(R.string.preferences_initiate_reset_dialog_message)
-            positiveText = getString(R.string.preferences_initiate_reset_dialog_positive)
-            positiveAction = {
+        AdaptiveDialog.create(
+            null,
+            getString(R.string.preferences_initiate_reset_title),
+            getString(R.string.preferences_initiate_reset_dialog_message),
+            getString(R.string.button_cancel),
+            getString(R.string.preferences_initiate_reset_dialog_positive)
+        ).show(this) {
+            if (it == true) {
                 isFinished = true
                 log.info("manually initiated blockchain reset")
                 analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, bundleOf())
@@ -97,15 +101,12 @@ class SettingsActivity : BaseMenuActivity() {
                 WalletApplication.getInstance().resetBlockchain()
                 WalletApplication.getInstance().configuration.updateLastBlockchainResetTime()
                 startActivity(WalletActivity.createIntent(this@SettingsActivity))
-            }
-            negativeText = getString(R.string.button_dismiss)
-            dismissAction = {
+            } else {
                 if (!isFinished) {
                     analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, bundleOf())
                 }
             }
-        }.buildAlertDialog()
-        alertDialog.show()
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

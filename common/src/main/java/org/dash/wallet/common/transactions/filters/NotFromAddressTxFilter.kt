@@ -15,38 +15,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.transactions
+package org.dash.wallet.common.transactions.filters
 
 import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.script.ScriptPattern
 
-open class CoinsToAddressTxFilter(
-    val toAddress: Address,
-    val coins: Coin
-): TransactionFilter {
-    var fromAddresses = listOf<Address>()
-        private set
-
+class NotFromAddressTxFilter(private val ignoreAddress: Address): TransactionFilter {
     override fun matches(tx: Transaction): Boolean {
-        val networkParameters = toAddress.parameters
+        val networkParameters = ignoreAddress.parameters
+
+        for (input in tx.inputs) {
+            input.outpoint.connectedOutput?.let { connectedOutput ->
+                val script = connectedOutput.scriptPubKey
+
+                if ((ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
+                    script.getToAddress(networkParameters) == ignoreAddress
+                ) {
+                    return false
+                }
+            }
+        }
 
         for (output in tx.outputs) {
             val script = output.scriptPubKey
 
             if ((ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-                script.getToAddress(networkParameters) == toAddress &&
-                output.value == coins
+                script.getToAddress(networkParameters) == ignoreAddress
             ) {
-                fromAddresses = tx.inputs.mapNotNull {
-                    it.outpoint.connectedOutput?.scriptPubKey?.getToAddress(networkParameters)
-                }.distinct()
-
-                return true
+                return false
             }
         }
 
-        return false
+        return true
     }
 }

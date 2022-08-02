@@ -39,7 +39,7 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.transactions.TransactionFilter
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
@@ -103,6 +103,10 @@ class MainViewModel @Inject constructor(
     val balance: LiveData<Coin>
         get() = _balance
 
+    private val _mostRecentTransaction = MutableLiveData<Transaction>()
+    val mostRecentTransaction: LiveData<Transaction>
+        get() = _mostRecentTransaction
+
     private val _hideBalance = MutableLiveData<Boolean>()
     val hideBalance: LiveData<Boolean>
         get() = _hideBalance
@@ -134,6 +138,10 @@ class MainViewModel @Inject constructor(
 
         walletData.observeBalance()
             .onEach(_balance::postValue)
+            .launchIn(viewModelScope)
+
+        walletData.observeMostRecentTransaction()
+            .onEach(_mostRecentTransaction::postValue)
             .launchIn(viewModelScope)
 
         currencyCode.filterNotNull()
