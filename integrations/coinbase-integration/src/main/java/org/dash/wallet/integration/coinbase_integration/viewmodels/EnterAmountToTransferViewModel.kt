@@ -27,8 +27,10 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.BlockchainState
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.VALUE_ZERO
@@ -44,7 +46,8 @@ import javax.inject.Inject
 class EnterAmountToTransferViewModel @Inject constructor(
     var exchangeRates: ExchangeRatesProvider,
     var configuration: Configuration,
-    walletDataProvider: WalletDataProvider
+    walletDataProvider: WalletDataProvider,
+    var blockchainStateProvider: BlockchainStateProvider
 ) : ViewModel() {
 
     var coinbaseExchangeRate: CoinbaseToDashExchangeRateUIModel? = null
@@ -91,9 +94,17 @@ class EnterAmountToTransferViewModel @Inject constructor(
     val enteredConvertDashAmount: LiveData<Pair<Fiat, Coin>>
         get() = _enteredConvertDashAmount
 
+    private val _isBlockchainSynced = MutableLiveData<Boolean>()
+    val isBlockchainSynced: LiveData<Boolean>
+        get() = _isBlockchainSynced
+
+    private val _isBlockchainSyncFailed = MutableLiveData<Boolean>()
+    val isBlockchainSyncFailed: LiveData<Boolean>
+        get() = _isBlockchainSyncFailed
+
     val dashWalletEmptyCallback = SingleLiveEvent<Unit>()
     val removeBannerCallback = SingleLiveEvent<Unit>()
-    val keyboardStateCallback = SingleLiveEvent<Boolean>()
+    val keyboardStateCallback = MutableLiveData<Boolean>()
 
     init {
         setDashWalletBalance()
@@ -101,6 +112,21 @@ class EnterAmountToTransferViewModel @Inject constructor(
             exchangeRates.observeExchangeRate(code)
         }.onEach(_localCurrencyExchangeRate::postValue)
             .launchIn(viewModelScope)
+
+        blockchainStateProvider.observeState()
+            .filterNotNull()
+            .onEach { state ->
+                updateSyncStatus(state)
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun updateSyncStatus(state: BlockchainState) {
+        if (_isBlockchainSyncFailed.value != state.isSynced()) {
+            _isBlockchainSynced.postValue(state.isSynced())
+        }
+
+        _isBlockchainSyncFailed.postValue(state.syncFailed())
     }
 
     private fun setDashWalletBalance() {
@@ -143,6 +169,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
                 (inputValue.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
 
     fun setOnTransferDirectionListener(walletToCoinbase: Boolean) {
+        // there must be a non-zero balance
         if (!walletToCoinbase && dashBalanceInWalletState.value.isZero) {
             dashWalletEmptyCallback.call()
             return
