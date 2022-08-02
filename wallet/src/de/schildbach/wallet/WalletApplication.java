@@ -97,7 +97,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InvalidObjectException;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
@@ -126,6 +125,7 @@ import de.schildbach.wallet.service.BlockchainSyncJobService;
 import de.schildbach.wallet.transactions.TransactionWrapperHelper;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.transactions.WalletTransactionObserver;
+import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.util.CrashReporter;
@@ -965,7 +965,8 @@ public class WalletApplication extends BaseWalletApplication
         notifyWalletWipe();
         PinRetryController.getInstance().clearPinFailPrefs();
         MnemonicCodeExt.clearWordlistPath(this);
-//        TransactionsAdapter.resetPreferences(this); // TODO:
+        // TODO: get rid of a separate file for this pref
+        getSharedPreferences(HistoryHeaderAdapter.PREFS_FILE_NAME, MODE_PRIVATE).edit().clear().apply();
         WorkManager.getInstance(this).pruneWork();
         try {
             new SecurityGuard().removeKeys();

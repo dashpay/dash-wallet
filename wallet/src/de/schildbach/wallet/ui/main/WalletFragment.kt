@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui.main
 
 import android.app.Activity
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Observer
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -34,13 +33,10 @@ import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.InputParser.StringInputParser
 import de.schildbach.wallet.ui.dashpay.BottomNavFragment
-import de.schildbach.wallet.ui.explore.ExploreActivity
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.send.SweepWalletActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.home_content.*
-import kotlinx.android.synthetic.main.sync_status_pane.*
 import de.schildbach.wallet_test.databinding.HomeContentBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -127,7 +123,6 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
                 }
                 binding.shortcutsPane.receiveButton -> {
                     viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE)
-//                    startActivity(PaymentsActivity.createIntent(requireContext(), PaymentsActivity.ACTIVE_TAB_RECEIVE))
                     (requireActivity() as OnSelectPaymentTabListener).onSelectPaymentTab(
                         PaymentsFragment.ACTIVE_TAB_RECEIVE
                     )
@@ -136,7 +131,6 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
                     SweepWalletActivity.start(requireContext(), true)
                 }
                 binding.shortcutsPane.explore -> {
-//                    startActivity(Intent(requireContext(), ExploreActivity::class.java))
                     (requireActivity() as OnSelectPaymentTabListener).onSelectExploreTab()
                 }
             }
