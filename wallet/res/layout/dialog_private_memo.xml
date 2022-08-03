@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingBottom="20dp">
+
+    <ImageButton
+        android:id="@+id/collapse_button"
+        style="@style/DialogCloseButton" />
+
+    <TextView
+        style="@style/Headline3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:text="@string/private_memo" />
+
+    <org.dash.wallet.common.ui.inputs.InputWrapper
+        android:id="@+id/input_wrapper"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="26dp"
+        android:layout_marginHorizontal="20dp"
+        android:hint="@string/note"
+        app:counterEnabled="true"
+        app:counterMaxLength="25"> <!-- TODO: bind -->
+
+        <EditText
+            android:id="@+id/memo_input"
+            style="@style/Body2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/email_placeholder"
+            android:inputType="textMultiLine"
+            android:singleLine="false" />
+    </org.dash.wallet.common.ui.inputs.InputWrapper>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <Button
+        android:id="@+id/continue_btn"
+        style="@style/Button.Primary.Large.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="20dp"
+        android:enabled="false"
+        android:text="@string/button_continue" />
+</LinearLayout>

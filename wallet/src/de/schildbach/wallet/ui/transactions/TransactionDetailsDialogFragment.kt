@@ -4,6 +4,7 @@ import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,6 +14,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import org.dash.wallet.common.UserInteractionAwareCallback
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -117,8 +119,9 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         )
         transactionResultViewBinder.bind(tx)
         contentBinding.viewOnExplorer.setOnClickListener { viewOnBlockExplorer() }
-        contentBinding.reportIssueCard.setOnClickListener {
-            showReportIssue()
+        contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
+        contentBinding.addPrivateMemoBtn.setOnClickListener {
+            PrivateMemoDialog().show(requireActivity().supportFragmentManager, "private_memo")
         }
         dialog?.window!!.callback = UserInteractionAwareCallback(dialog?.window!!.callback, requireActivity())
     }

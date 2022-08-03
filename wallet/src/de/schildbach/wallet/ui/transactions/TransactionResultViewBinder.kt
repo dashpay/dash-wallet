@@ -83,6 +83,7 @@ class TransactionResultViewBinder(
     private val errorDescription by lazy { containerView.findViewById<TextView>(R.id.error_description) }
 
     private val reportIssueContainer by lazy { containerView.findViewById<View>(R.id.report_issue_card) }
+    private val addPrivateMemo by lazy { containerView.findViewById<View>(R.id.add_private_memo_btn) }
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
     private val explorerContainer by lazy { containerView.findViewById<View>(R.id.open_explorer_card) }
 
@@ -242,6 +243,7 @@ class TransactionResultViewBinder(
 
             errorContainer.isVisible = true
             reportIssueContainer.isVisible = true
+            addPrivateMemo.isVisible = false
             outputsContainer.isVisible = false
             inputsContainer.isVisible = false
             feeRow.isVisible = false

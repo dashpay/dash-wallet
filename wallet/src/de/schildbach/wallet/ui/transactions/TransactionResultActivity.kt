@@ -22,6 +22,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Animatable
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet.AppDatabase
@@ -34,6 +35,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.AbstractWalletActivity
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
+import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity.ACTION_SEND_FROM_WALLET_URI
 import de.schildbach.wallet.util.WalletUtils
@@ -180,6 +182,9 @@ class TransactionResultActivity : AbstractWalletActivity() {
         }
         view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
         report_issue_card.setOnClickListener { showReportIssue() }
+        add_private_memo_btn.setOnClickListener {
+            PrivateMemoDialog().show(supportFragmentManager, "private_memo")
+        }
 
         check_icon.setImageDrawable(ContextCompat.getDrawable(this,
             R.drawable.check_animated))

@@ -31,7 +31,6 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -91,10 +90,10 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             if (rowView is TransactionRowView) {
                 if (rowView.txWrapper != null) {
                     val fragment = TransactionGroupDetailsFragment(rowView.txWrapper)
-                    fragment.show(parentFragmentManager, "transaction_group")
+                    fragment.show(requireActivity().supportFragmentManager, "transaction_group")
                 } else {
                     val transactionDetailsDialogFragment = newInstance(rowView.txId)
-                    transactionDetailsDialogFragment.show(parentFragmentManager, null)
+                    transactionDetailsDialogFragment.show(requireActivity().supportFragmentManager, null)
                 }
             }
         }

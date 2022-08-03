@@ -23,10 +23,10 @@ import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_invite_created.*
+import org.dash.wallet.common.util.KeyboardUtil
 
 class InviteWelcomeFragment : Fragment(R.layout.fragment_invite_welcome) {
 
