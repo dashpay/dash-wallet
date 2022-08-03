@@ -54,6 +54,33 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+        <LinearLayout
+            android:id="@+id/syncing_progress_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="18dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@+id/convertFromDash_icon"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/convertFromDash_icon">
+
+            <ProgressBar
+                android:id="@+id/progress_ring"
+                style="?android:attr/progressBarStyle"
+                android:layout_width="16dp"
+                android:layout_height="16dp" />
+
+            <TextView
+                style="@style/Overline.Blue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="@string/syncing" />
+        </LinearLayout>
+
+
         <ImageView
             android:id="@+id/convertFromDash_icon"
             android:layout_width="30dp"
@@ -90,6 +117,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:constraint_referenced_ids="convertFromDash_icon,convertFromDash_title,convertFromDash_subtitle"
-            tools:visibility="gone" />
+            tools:visibility="visible" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </merge>

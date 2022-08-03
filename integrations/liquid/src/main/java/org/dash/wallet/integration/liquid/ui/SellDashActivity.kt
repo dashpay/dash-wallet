@@ -28,6 +28,10 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integration.liquid.R
 import org.slf4j.LoggerFactory
 
+// TODO: update this class to be similar to BuyDashWithCreditCardActivity
+//   * network connectivity
+//   * mark walletAddress address as TransferIn with successful transfer
+
 class SellDashActivity : InteractionAwareActivity() {
 
     companion object {

@@ -19,7 +19,7 @@ package org.dash.wallet.integrations.crowdnode.transactions
 
 import org.bitcoinj.core.*
 import org.dash.wallet.common.transactions.TransactionComparator
-import org.dash.wallet.common.transactions.TransactionFilter
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionWrapper
 

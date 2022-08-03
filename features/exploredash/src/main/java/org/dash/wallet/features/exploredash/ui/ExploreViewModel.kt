@@ -28,10 +28,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import org.dash.wallet.common.data.BlockchainState
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.livedata.ConnectionLiveData
+import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
@@ -81,7 +83,8 @@ class ExploreViewModel @Inject constructor(
     private val exploreData: ExploreDataSource,
     private val locationProvider: UserLocationStateInt,
     private val syncStatusService: DataSyncStatusService,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    private val blockchainStateProvider: BlockchainStateProvider
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -837,5 +840,44 @@ class ExploreViewModel @Inject constructor(
 
     fun logEvent(event: String) {
         analyticsService.logEvent(event, bundleOf())
+    }
+
+    private val _isBlockchainSynced = MutableLiveData<Boolean>()
+    val isBlockchainSynced: LiveData<Boolean>
+        get() = _isBlockchainSynced
+
+    private val _isBlockchainSyncFailed = MutableLiveData<Boolean>()
+
+    fun monitorBlockchainState() {
+        blockchainStateProvider.observeState()
+            .filterNotNull()
+            .onEach { state ->
+                updateSyncStatus(state)
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun updateSyncStatus(state: BlockchainState) {
+        if (_isBlockchainSyncFailed.value != state.isSynced()) {
+            _isBlockchainSynced.postValue(state.isSynced())
+        }
+
+        _isBlockchainSyncFailed.postValue(state.syncFailed())
+    }
+
+    private val _stakingAPY = MutableLiveData<Double>()
+    val stakingAPY: LiveData<Double>
+        get() = _stakingAPY
+
+    fun getStakingAPY() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _stakingAPY.postValue(0.85 * blockchainStateProvider.getMasternodeAPY())
+        }
+    }
+
+    fun getLastStakingAPY() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _stakingAPY.postValue(0.85 * blockchainStateProvider.getLastMasternodeAPY())
+        }
     }
 }

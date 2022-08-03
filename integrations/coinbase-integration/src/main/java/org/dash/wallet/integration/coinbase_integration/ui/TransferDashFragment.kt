@@ -20,7 +20,6 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.addCallback
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
@@ -161,17 +160,14 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 fiatVal)
         }
 
-        enterAmountToTransferViewModel.dashWalletEmptyCallback.observe(viewLifecycleOwner){
-            val dashAccountEmptyError = CoinbaseGenericErrorUIModel(
-                title = R.string.dont_have_any_dash,
-                image = R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    dashAccountEmptyError
-                )
-            )
+        enterAmountToTransferViewModel.dashWalletEmptyCallback.observe(viewLifecycleOwner) {
+            AdaptiveDialog.create(
+                R.drawable.ic_info_red,
+                getString(R.string.dont_have_any_dash),
+                "",
+                "",
+                getString(R.string.close)
+            ).show(requireActivity()) { }
         }
 
         enterAmountToTransferViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner){
@@ -198,6 +194,11 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         enterAmountToTransferViewModel.transferDirectionState.observe(viewLifecycleOwner){
             binding.transferView.walletToCoinbase = it
             hideBanners()
+            setIsSyncing(it == true && enterAmountToTransferViewModel.isBlockchainSynced.value != true)
+        }
+
+        enterAmountToTransferViewModel.isBlockchainSynced.observe(viewLifecycleOwner) {
+            setIsSyncing(it != true && binding.transferView.walletToCoinbase)
         }
 
         binding.authLimitBanner.root.setOnClickListener {
@@ -273,6 +274,12 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
     }
 
+    private fun setIsSyncing(isSyncing: Boolean) {
+        binding.transferView.setSyncing(isSyncing)
+        binding.transferMessage.isVisible = isSyncing
+        enterAmountToTransferViewModel.keyboardStateCallback.value = !isSyncing
+    }
+
     private suspend fun handleSend(value: Coin, isEmptyWallet: Boolean): Boolean {
         try {
             transferDashViewModel.sendDash(value, isEmptyWallet, true)
@@ -297,7 +304,12 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private fun setInternetAccessState(hasInternet: Boolean) {
         binding.networkStatusContainer.isVisible = !hasInternet
         binding.transferView.isDeviceConnectedToInternet = hasInternet
-        enterAmountToTransferViewModel.keyboardStateCallback.value = hasInternet
+        if (!binding.transferView.walletToCoinbase) {
+            enterAmountToTransferViewModel.keyboardStateCallback.value = hasInternet
+        } else {
+            enterAmountToTransferViewModel.keyboardStateCallback.value =
+                hasInternet && enterAmountToTransferViewModel.isBlockchainSynced.value == true
+        }
     }
 
     private fun setTransactionState(responseState: SendDashResponseState) {
