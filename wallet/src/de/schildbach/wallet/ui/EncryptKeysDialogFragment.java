@@ -48,6 +48,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.ui.BaseDialogFragment;
+import org.dash.wallet.common.util.KeyboardUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +60,6 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.util.FingerprintHelper;
-import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
@@ -246,7 +246,7 @@ public class EncryptKeysDialogFragment extends BaseDialogFragment {
 
     @Override
     public void onDismiss(final DialogInterface dialog) {
-        KeyboardUtil.hideKeyboard(getActivity(), oldPasswordView);
+        KeyboardUtil.Companion.hideKeyboard(getActivity(), oldPasswordView);
         this.dialog = null;
 
         oldPasswordView.removeTextChangedListener(textWatcher);
