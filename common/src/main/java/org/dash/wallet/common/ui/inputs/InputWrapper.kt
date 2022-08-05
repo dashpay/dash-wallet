@@ -19,12 +19,15 @@ package org.dash.wallet.common.ui.inputs
 
 import android.content.Context
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.TextView
+import androidx.core.view.updateMarginsRelative
+import androidx.core.widget.doOnTextChanged
 import com.google.android.material.textfield.TextInputLayout
 import org.dash.wallet.common.R
-import org.dash.wallet.common.ui.getRoundedBackground
 
 class InputWrapper(context: Context, attrs: AttributeSet): TextInputLayout(context, attrs) {
     private var isErrorEnabled = false
@@ -32,12 +35,12 @@ class InputWrapper(context: Context, attrs: AttributeSet): TextInputLayout(conte
     init {
         setBackgroundResource(R.drawable.input)
         isExpandedHintEnabled = false
-        defaultHintTextColor = resources.getColorStateList(R.color.extra_dark_gray, null)
-        setHintTextAppearance(R.style.Caption_ExtraDarkGray)
-
-        if (isHintEnabled) {
-            setPadding(0, resources.getDimensionPixelOffset(R.dimen.input_vertical_padding), 0, 0)
-        }
+        defaultHintTextColor = resources.getColorStateList(R.color.content_secondary, null)
+        setHintTextAppearance(R.style.Caption_Secondary)
+        setCounterTextAppearance(R.style.Overline_Secondary)
+        setCounterOverflowTextAppearance(R.style.Overline_Red)
+        setEndIconDrawable(R.drawable.ic_clear_input)
+        setPadding()
     }
 
     override fun addView(child: View, index: Int, params: ViewGroup.LayoutParams) {
@@ -47,17 +50,30 @@ class InputWrapper(context: Context, attrs: AttributeSet): TextInputLayout(conte
             child.background = null
             child.setHintTextColor(resources.getColor(R.color.input_hint_gray, null))
 
-            val topPadding = resources.getDimensionPixelOffset(if (isHintEnabled) {
-                R.dimen.input_label_padding
+            val endPadding = if (isCounterEnabled) {
+                0
             } else {
-                R.dimen.input_vertical_padding
-            })
-            child.setPadding(
+                resources.getDimensionPixelOffset(R.dimen.input_horizontal_padding)
+            }
+
+            child.setPaddingRelative(
                 resources.getDimensionPixelOffset(R.dimen.input_horizontal_padding),
-                topPadding,
-                resources.getDimensionPixelOffset(R.dimen.input_horizontal_padding),
-                resources.getDimensionPixelOffset(R.dimen.input_vertical_padding)
+                resources.getDimensionPixelOffset(R.dimen.input_top_padding),
+                endPadding,
+                resources.getDimensionPixelOffset(R.dimen.input_bottom_padding)
             )
+
+            if (isHintEnabled) {
+                val childParams = (child.layoutParams as MarginLayoutParams)
+                childParams.updateMarginsRelative(top = resources.getDimensionPixelOffset(R.dimen.input_label_margin))
+            }
+
+            child.doOnTextChanged { text, _, _, _ ->
+                Log.i("PRIVATEMEMO", "child height: ${child.measuredHeight}")
+                if (isCounterEnabled) {
+                    setErrorEnabled((text?.length ?: 0) > counterMaxLength)
+                }
+            }
         }
     }
 
@@ -65,7 +81,7 @@ class InputWrapper(context: Context, attrs: AttributeSet): TextInputLayout(conte
         isErrorEnabled = enabled
 
         if (enabled) {
-            background = resources.getRoundedBackground(R.style.InputErrorBackground)
+            setBackgroundResource(R.drawable.input_error)
         } else {
             setBackgroundResource(R.drawable.input)
         }
@@ -73,5 +89,35 @@ class InputWrapper(context: Context, attrs: AttributeSet): TextInputLayout(conte
 
     override fun isErrorEnabled(): Boolean {
         return isErrorEnabled
+    }
+
+    override fun setCounterEnabled(enabled: Boolean) {
+        super.setCounterEnabled(enabled)
+
+        if (enabled) {
+            val counter = findViewById<TextView>(com.google.android.material.R.id.textinput_counter)
+            val params = (counter.layoutParams as MarginLayoutParams)
+            params.updateMarginsRelative(
+                top = resources.getDimensionPixelOffset(R.dimen.char_counter_top_padding),
+                end = resources.getDimensionPixelOffset(R.dimen.char_counter_end_padding)
+            )
+        }
+    }
+
+    private fun setPadding() {
+        var topPadding = 0
+        var startPadding = 0
+        var endPadding = 0
+        var bottomPadding = 0
+
+        if (isHintEnabled) {
+            topPadding = resources.getDimensionPixelOffset(R.dimen.input_bottom_padding)
+        }
+
+        if (isCounterEnabled) {
+            bottomPadding = resources.getDimensionPixelOffset(R.dimen.char_counter_bottom_padding)
+        }
+
+        setPaddingRelative(startPadding, topPadding, endPadding, bottomPadding)
     }
 }
