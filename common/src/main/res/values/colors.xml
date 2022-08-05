@@ -96,7 +96,7 @@
 
     <!-- Strokes -->
     <color name="divider_color">@color/extra_light_gray</color>
-    <color name="input_focused_stroke">#cce8fa</color>
+    <color name="input_focused_stroke">#33008DE4</color>
     <color name="input_error_stroke">#33E85C4A</color>
 
     <!-- Palette -->
