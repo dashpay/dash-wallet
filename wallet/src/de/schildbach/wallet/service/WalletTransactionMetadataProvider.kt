@@ -204,7 +204,6 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     private suspend fun getAddressMetadata(txId: Sha256Hash): AddressMetadata? {
-        var addressMetadata: AddressMetadata? = null
         val tx = walletData.wallet!!.getTransaction(txId)
         tx?.run {
             // outgoing transaction, check inputs
@@ -220,12 +219,9 @@ class WalletTransactionMetadataProvider @Inject constructor(
                         else -> null // there shouldn't be other output types on our tx's
                     }
                     if (address != null) {
-                        log.info("metadata: looking up $address")
                         val metadata =
                             addressMetadataDao.loadSender(address.toBase58())
                         if (metadata != null) {
-                            log.info("metadata: $metadata")
-                            addressMetadata = metadata
                             return metadata
                         }
                     }
@@ -248,18 +244,15 @@ class WalletTransactionMetadataProvider @Inject constructor(
                     else -> null // for now ignore OP_RETURN (DashPay Expense?)
                 }
                 if (address != null) {
-                    log.info("metadata: looking up output $address")
                     val metadata =
                         addressMetadataDao.loadRecipient(address.toBase58())
                     if (metadata != null) {
-                        log.info("metadata: $metadata")
-                        addressMetadata = metadata
                         return metadata
                     }
                 }
             }
         }
-        return addressMetadata
+        return null
     }
 
     override suspend fun getAllTransactionMetadata(): List<TransactionMetadata> {
