@@ -529,6 +529,7 @@
     <string name="display_name">Display Name</string>
     <string name="about_me">About me</string>
     <string name="char_count">%1$d/%2$d characters</string>
+    <string name="character_counter_pattern" tools:override="true" translatable="false">@string/char_count</string> <!-- overrides default TextInputLayout value. Do not change the name -->
     <string name="save">Save</string>
     <string name="edit_profile_take_picture">Take a Photo with Camera</string>
     <string name="edit_profile_choose_picture">Select from Gallery</string>

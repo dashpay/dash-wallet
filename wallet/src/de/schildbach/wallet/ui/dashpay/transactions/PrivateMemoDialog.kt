@@ -21,8 +21,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.whenCreated
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogPrivateMemoBinding
+import kotlinx.coroutines.delay
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
@@ -37,13 +40,13 @@ class PrivateMemoDialog: OffsetDialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        return inflater.inflate(R.layout.dialog_private_memo, container, false)
-    }
+        lifecycleScope.launchWhenCreated {
+            delay(250) // Wait for the dialog animation to finish before raising keyboard
+            keyboardUtil.enableAdjustLayout(requireActivity().window, binding.root)
+            KeyboardUtil.showSoftKeyboard(requireContext(), binding.memoInput)
+        }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        keyboardUtil.enableAdjustLayout(requireActivity().window, binding.root)
-        KeyboardUtil.showSoftKeyboard(requireContext(), binding.memoInput)
+        return inflater.inflate(R.layout.dialog_private_memo, container, false)
     }
 
     override fun onDestroyView() {

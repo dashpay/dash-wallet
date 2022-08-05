@@ -891,12 +891,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         headerChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.HEADERS_FILENAME);
 
-        try {
-            bootStrapStream = getAssets().open(Constants.Files.MNLIST_BOOTSTRAP_FILENAME);
-            SimplifiedMasternodeListManager.setBootStrapStream(bootStrapStream);
-        } catch (IOException x) {
-            log.info("cannot load the boot strap stream.  " + x.getMessage());
-        }
+//        try {
+//            bootStrapStream = getAssets().open(Constants.Files.MNLIST_BOOTSTRAP_FILENAME);
+//            SimplifiedMasternodeListManager.setBootStrapStream(bootStrapStream);
+//        } catch (IOException x) {
+//            log.info("cannot load the boot strap stream.  " + x.getMessage());
+//        }
 
         if (!blockChainFileExists) {
             log.info("blockchain does not exist, resetting wallet");

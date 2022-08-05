@@ -90,10 +90,10 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             if (rowView is TransactionRowView) {
                 if (rowView.txWrapper != null) {
                     val fragment = TransactionGroupDetailsFragment(rowView.txWrapper)
-                    fragment.show(requireActivity().supportFragmentManager, "transaction_group")
+                    fragment.show(requireActivity())
                 } else {
                     val transactionDetailsDialogFragment = newInstance(rowView.txId)
-                    transactionDetailsDialogFragment.show(requireActivity().supportFragmentManager, null)
+                    transactionDetailsDialogFragment.show(requireActivity())
                 }
             }
         }
