@@ -21,6 +21,7 @@ import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.DrawableRes
@@ -39,6 +40,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
 import org.dash.wallet.common.ui.CurrencyTextView
@@ -51,8 +53,7 @@ class TransactionResultViewBinder(
     private val wallet: Wallet,
     private val dashFormat: MonetaryFormat,
     private val containerView: View,
-    private val profile: DashPayProfile?,
-    private val txResult: Boolean
+    private val profile: DashPayProfile?
 ): TransactionConfidence.Listener {
     private val ctx by lazy { containerView.context }
     private val checkIcon by lazy { containerView.findViewById<ImageView>(R.id.check_icon) }
@@ -83,7 +84,9 @@ class TransactionResultViewBinder(
     private val errorDescription by lazy { containerView.findViewById<TextView>(R.id.error_description) }
 
     private val reportIssueContainer by lazy { containerView.findViewById<View>(R.id.report_issue_card) }
-    private val addPrivateMemo by lazy { containerView.findViewById<View>(R.id.add_private_memo_btn) }
+    private val privateMemoContainer by lazy { containerView.findViewById<View>(R.id.private_memo) }
+    private val addPrivateMemoBtn by lazy { containerView.findViewById<Button>(R.id.add_private_memo_btn) }
+    private val privateMemoText by lazy { containerView.findViewById<TextView>(R.id.private_memo_text) }
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
     private val explorerContainer by lazy { containerView.findViewById<View>(R.id.open_explorer_card) }
 
@@ -243,7 +246,7 @@ class TransactionResultViewBinder(
 
             errorContainer.isVisible = true
             reportIssueContainer.isVisible = true
-            addPrivateMemo.isVisible = false
+            privateMemoContainer.isVisible = false
             outputsContainer.isVisible = false
             inputsContainer.isVisible = false
             feeRow.isVisible = false
@@ -313,6 +316,18 @@ class TransactionResultViewBinder(
                 outputsAddressesContainer, false) as TextView
             addressView.text = it.toBase58()
             outputsAddressesContainer.addView(addressView)
+        }
+    }
+
+    fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
+        privateMemoText.text = transactionMetadata.memo
+
+        if (transactionMetadata.memo.isNotEmpty()) {
+            privateMemoText.isVisible = true
+            addPrivateMemoBtn.setText(R.string.edit_note)
+        } else {
+            privateMemoText.isVisible = false
+            addPrivateMemoBtn.setText(R.string.add_note)
         }
     }
 }

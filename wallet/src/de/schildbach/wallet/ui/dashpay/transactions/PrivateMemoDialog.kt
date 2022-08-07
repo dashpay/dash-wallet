@@ -21,19 +21,30 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.widget.doAfterTextChanged
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.whenCreated
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogPrivateMemoBinding
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 
+@AndroidEntryPoint
 class PrivateMemoDialog: OffsetDialogFragment() {
-    private val binding by viewBinding(DialogPrivateMemoBinding::bind)
+    companion object {
+        const val TX_ID_ARG = "tx_id"
+    }
+
     override val forceExpand: Boolean = true
     private val keyboardUtil = KeyboardUtil()
+
+    private val binding by viewBinding(DialogPrivateMemoBinding::bind)
+    private val viewModel: PrivateMemoViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -47,6 +58,39 @@ class PrivateMemoDialog: OffsetDialogFragment() {
         }
 
         return inflater.inflate(R.layout.dialog_private_memo, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        requireArguments().apply {
+            val txId = get(TX_ID_ARG) as Sha256Hash
+            viewModel.init(txId)
+        }
+
+        binding.inputWrapper.counterMaxLength = PrivateMemoViewModel.MAX_MEMO_CHARS
+        binding.memoInput.doAfterTextChanged {
+            viewModel.memo.value = it?.toString() ?: ""
+        }
+
+        binding.continueBtn.setOnClickListener {
+            lifecycleScope.launch {
+                KeyboardUtil.hideKeyboard(requireContext(), binding.memoInput)
+                viewModel.saveMemo()
+                dismiss()
+            }
+        }
+
+        viewModel.canSave.observe(viewLifecycleOwner) {
+            binding.continueBtn.isEnabled = it
+        }
+
+        viewModel.memo.observe(viewLifecycleOwner) {
+            if (binding.memoInput.text.toString() != it) {
+                binding.memoInput.setText(it)
+                binding.memoInput.setSelection(binding.memoInput.length())
+            }
+        }
     }
 
     override fun onDestroyView() {

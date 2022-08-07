@@ -69,7 +69,6 @@ class InputWrapper(context: Context, attrs: AttributeSet): TextInputLayout(conte
             }
 
             child.doOnTextChanged { text, _, _, _ ->
-                Log.i("PRIVATEMEMO", "child height: ${child.measuredHeight}")
                 if (isCounterEnabled) {
                     setErrorEnabled((text?.length ?: 0) > counterMaxLength)
                 }

@@ -664,5 +664,6 @@
     <!-- Private memo -->
     <string name="private_memo">Private Note</string>
     <string name="add_note">Add Note</string>
+    <string name="edit_note">Edit Note</string>
     <string name="note">Note</string>
 </resources>

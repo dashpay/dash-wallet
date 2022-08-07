@@ -955,10 +955,6 @@
         <item name="android:textColor">@color/content_secondary</item>
     </style>
 
-    <style name="Overline.Red">
-        <item name="android:textColor">@color/system_red</item>
-    </style>
-
     <style name="Overline.Green">
         <item name="android:textColor">@color/system_green</item>
     </style>
