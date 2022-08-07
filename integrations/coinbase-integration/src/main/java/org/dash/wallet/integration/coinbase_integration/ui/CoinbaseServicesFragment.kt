@@ -76,7 +76,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
         binding.buyDashBtn.setOnClickListener {
            lifecycleScope.launch {
-                    sharedViewModel.uiState.collect { uiState ->
+                    sharedViewModel.paymentMethodsUiState.collect { uiState ->
                         // New value received
                         when (uiState) {
                             is PaymentMethodsUiState.Success -> {
