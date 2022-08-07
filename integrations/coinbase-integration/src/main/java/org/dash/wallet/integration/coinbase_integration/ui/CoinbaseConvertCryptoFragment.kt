@@ -270,7 +270,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 when (uiState) {
                     is BaseIdForFaitDataUIState.Success -> {
                         uiState.baseIdForFaitDataList.let { list ->
-                            viewModel.setBaseIdForUSDModelCoinBase(list)
+                            viewModel.setBaseIdForFaitModelCoinBase(list)
                         }
                     }
 

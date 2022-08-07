@@ -58,7 +58,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
-   private val baseIdForFaitModelCoinBase: MutableLiveData<List<BaseIdForUSDData>> = MutableLiveData()
+   private val _baseIdForFaitModelCoinBase: MutableLiveData<List<BaseIdForUSDData>> = MutableLiveData()
 
     private val _swapTradeOrder: MutableLiveData<Event<SwapTradeUIModel>> = MutableLiveData()
     val swapTradeOrder: LiveData<Event<SwapTradeUIModel>>
@@ -85,8 +85,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         getUserAccountInfo()
     }
 
-    fun setBaseIdForUSDModelCoinBase(list:List<BaseIdForUSDData>){
-        baseIdForFaitModelCoinBase.value = list
+    fun setBaseIdForFaitModelCoinBase(list:List<BaseIdForUSDData>){
+        _baseIdForFaitModelCoinBase.value = list
     }
 
     private fun getUserAccountInfo() = viewModelScope.launch(Dispatchers.Main) {
@@ -107,11 +107,11 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         _showLoading.value = true
 
         val source_asset =
-            if (dashToCrypt)baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == DASH_CURRENCY }?.base_id ?: ""
-            else baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
-        val target_asset = if (dashToCrypt)baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
+            if (dashToCrypt)_baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == DASH_CURRENCY }?.base_id ?: ""
+            else _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
+        val target_asset = if (dashToCrypt)_baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
         else
-            baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == DASH_CURRENCY }?.base_id ?: ""
+            _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == DASH_CURRENCY }?.base_id ?: ""
 
         val tradesRequest = TradesRequest(
             GenericUtils.fiatToStringWithoutCurrencyCode(valueToConvert),
