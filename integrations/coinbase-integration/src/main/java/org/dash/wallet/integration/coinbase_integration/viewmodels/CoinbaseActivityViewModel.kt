@@ -50,10 +50,11 @@ class CoinbaseActivityViewModel @Inject constructor(
     private val _baseIdForFaitModelCoinBase= MutableStateFlow<BaseIdForFaitDataUIState>(BaseIdForFaitDataUIState.LoadingState(true))
     val baseIdForFaitModelCoinBase:StateFlow<BaseIdForFaitDataUIState> = _baseIdForFaitModelCoinBase
 
-    fun getBaseIdForUSDModel() = viewModelScope.launch(Dispatchers.Main) {
+    fun getBaseIdForFaitModel() = viewModelScope.launch(Dispatchers.Main) {
         _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(true)
         when (val response =
-            userPreference.exchangeCurrencyCode?.let { coinBaseRepository.getBaseIdForUSDModel(it) }) {
+            userPreference.exchangeCurrencyCode?.let {
+                coinBaseRepository.getBaseIdForUSDModel(it) }) {
 
             is ResponseResource.Success -> {
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(false)
@@ -64,6 +65,7 @@ class CoinbaseActivityViewModel @Inject constructor(
 
             is ResponseResource.Failure -> {
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(false)
+                _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.Error(true)
             }
         }
     }

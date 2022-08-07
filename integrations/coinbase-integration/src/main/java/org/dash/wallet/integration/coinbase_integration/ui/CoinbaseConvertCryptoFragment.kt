@@ -263,6 +263,33 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         monitorNetworkChanges()
+
+        lifecycleScope.launch {
+            sharedViewModel.baseIdForFaitModelCoinBase.collect { uiState ->
+                // New value received
+                when (uiState) {
+                    is BaseIdForFaitDataUIState.Success -> {
+                        uiState.baseIdForFaitDataList.let { list ->
+                            viewModel.setBaseIdForUSDModelCoinBase(list)
+                        }
+                    }
+
+                    is BaseIdForFaitDataUIState.LoadingState ->{
+                        if (uiState.isLoading) {
+                            showProgress(R.string.loading)
+                        } else
+                            dismissProgress()
+                    }
+                    is BaseIdForFaitDataUIState.Error ->{
+                        if (uiState.isError) {
+                            //TODO retry in case of error
+                            sharedViewModel.getBaseIdForFaitModel()
+                        }
+                    }
+                }
+            }
+
+        }
     }
 
     private fun proceedWithSwap(request: SwapRequest, checkSendingConditions: Boolean = true) {
@@ -280,27 +307,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 } else {
                     selectedCoinBaseAccount?.let {
                         request.fiatAmount?.let { fait ->
-                            lifecycleScope.launch {
-                                sharedViewModel.baseIdForFaitModelCoinBase.collect { uiState ->
-                                    // New value received
-                                    when (uiState) {
-                                        is BaseIdForFaitDataUIState.Success -> {
-                                            uiState.baseIdForFaitDataList.let { list ->
-                                                viewModel.swapTrade(fait, it, request.dashToCrypto,list)
-                                            }
-                                        }
-
-                                        is BaseIdForFaitDataUIState.LoadingState ->{
-                                            if (uiState.isLoading) {
-                                                showProgress(R.string.loading)
-                                            } else
-                                                dismissProgress()
-                                        }
-                                    }
-                                }
-
-                            }
-
+                                viewModel.swapTrade(fait, it, request.dashToCrypto)
                         }
                     }
                 }

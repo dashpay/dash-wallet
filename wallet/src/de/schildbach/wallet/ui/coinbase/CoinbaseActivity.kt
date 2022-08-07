@@ -49,7 +49,7 @@ class CoinbaseActivity : BaseMenuActivity() {
             finish()
         }
         viewModel.getPaymentMethods()
-        viewModel.getBaseIdForUSDModel()
+        viewModel.getBaseIdForFaitModel()
     }
 
     private fun setNavigationGraph(): NavController {
