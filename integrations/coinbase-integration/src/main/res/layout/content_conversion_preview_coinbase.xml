@@ -217,7 +217,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:padding="7dp"
-            android:src="@drawable/ic_info_blue"
+            android:src="@drawable/ic_dash_info_blue_meduim"
             app:layout_constraintBottom_toBottomOf="@+id/coinbase_fee_label"
             app:layout_constraintStart_toEndOf="@id/coinbase_fee_label"
             app:layout_constraintTop_toTopOf="@id/coinbase_fee_label" />

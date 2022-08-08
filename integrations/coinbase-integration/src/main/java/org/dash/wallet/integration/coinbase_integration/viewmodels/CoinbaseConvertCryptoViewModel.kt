@@ -58,7 +58,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
-    private val _baseIdForUSDModelCoinBase: MutableLiveData<List<BaseIdForUSDData>> = MutableLiveData()
+   private val _baseIdForFaitModelCoinBase: MutableLiveData<List<BaseIdForUSDData>> = MutableLiveData()
 
     private val _swapTradeOrder: MutableLiveData<Event<SwapTradeUIModel>> = MutableLiveData()
     val swapTradeOrder: LiveData<Event<SwapTradeUIModel>>
@@ -79,22 +79,14 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     lateinit var exchangeRate: ExchangeRate
 
     init {
+
         getWithdrawalLimit()
         setDashWalletBalance()
         getUserAccountInfo()
-        getBaseIdForUSDModel()
     }
-    private fun getBaseIdForUSDModel() = viewModelScope.launch(Dispatchers.Main) {
-        when (val response = coinBaseRepository.getBaseIdForUSDModel(userPreference.exchangeCurrencyCode!!)) {
-            is ResponseResource.Success -> {
-                response.value?.data?.let {
-                    _baseIdForUSDModelCoinBase.value = it
-                }
-            }
 
-            is ResponseResource.Failure -> {
-            }
-        }
+    fun setBaseIdForFaitModelCoinBase(list:List<BaseIdForUSDData>){
+        _baseIdForFaitModelCoinBase.value = list
     }
 
     private fun getUserAccountInfo() = viewModelScope.launch(Dispatchers.Main) {
@@ -115,11 +107,11 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         _showLoading.value = true
 
         val source_asset =
-            if (dashToCrypt)_baseIdForUSDModelCoinBase.value?.firstOrNull { it.base == DASH_CURRENCY }?.base_id ?: ""
-            else _baseIdForUSDModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
-        val target_asset = if (dashToCrypt)_baseIdForUSDModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
+            if (dashToCrypt)_baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == DASH_CURRENCY }?.base_id ?: ""
+            else _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
+        val target_asset = if (dashToCrypt)_baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
         else
-            _baseIdForUSDModelCoinBase.value?.firstOrNull { it.base == DASH_CURRENCY }?.base_id ?: ""
+            _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == DASH_CURRENCY }?.base_id ?: ""
 
         val tradesRequest = TradesRequest(
             GenericUtils.fiatToStringWithoutCurrencyCode(valueToConvert),

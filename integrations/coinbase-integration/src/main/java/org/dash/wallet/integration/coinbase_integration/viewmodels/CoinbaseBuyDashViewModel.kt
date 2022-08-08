@@ -36,6 +36,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
@@ -69,7 +70,12 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
         getWithdrawalLimit()
     }
 
-    fun onContinueClicked(dashToFiat: Boolean, fiat: Fiat, paymentMethodIndex: Int) {
+    fun onContinueClicked(
+        dashToFiat: Boolean,
+        fiat: Fiat,
+        dashAmount: CharSequence,
+        paymentMethodIndex: Int
+    ) {
         _activePaymentMethods.value?.let {
             if (paymentMethodIndex < it.size) {
                 val paymentMethod = it[paymentMethodIndex]
@@ -85,7 +91,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
                 )
 
                 viewModelScope.launch {
-                    placeBuyOrder(PlaceBuyOrderParams(fiat.toPlainString(), fiat.currencyCode, paymentMethod.paymentMethodId))
+                    placeBuyOrder(PlaceBuyOrderParams(dashAmount.toString(), DASH_CURRENCY, paymentMethod.paymentMethodId))
                 }
             }
         }
