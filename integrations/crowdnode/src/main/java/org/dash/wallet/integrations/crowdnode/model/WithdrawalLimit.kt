@@ -15,10 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.transactions
+package org.dash.wallet.integrations.crowdnode.model
 
-import org.bitcoinj.core.Transaction
+import com.google.gson.annotations.SerializedName
+import org.bitcoinj.core.Coin
 
-interface TransactionFilter {
-    fun matches(tx: Transaction): Boolean
+data class WithdrawalLimit(
+    @SerializedName("Key")
+    val key: String,
+    @SerializedName("Value")
+    val value: String
+)
+
+enum class WithdrawalLimitPeriod {
+    PerTransaction,
+    PerHour,
+    PerDay
 }
+
+data class WithdrawalLimitsException(
+    val amount: Coin,
+    val period: WithdrawalLimitPeriod
+): Exception()

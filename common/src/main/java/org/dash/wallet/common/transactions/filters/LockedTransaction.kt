@@ -15,11 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.transactions
+package org.dash.wallet.common.transactions.filters
 
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 
 class LockedTransaction(private val topUpTxId: Sha256Hash): TransactionFilter {
     override fun matches(tx: Transaction): Boolean {

@@ -15,30 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.transactions
+package org.dash.wallet.common.transactions.filters
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.TransactionBag
-import org.dash.wallet.common.transactions.filters.CoinsReceivedTxFilter
+import org.bitcoinj.core.*
+import org.bitcoinj.script.ScriptPattern
 
-class PossibleAcceptTermsResponse(
-    bag: TransactionBag,
-    private val accountAddress: Address?
-): CoinsReceivedTxFilter(
-    bag,
-    CrowdNodeAcceptTermsResponse.ACCEPT_TERMS_RESPONSE_CODE
-) {
-    var transaction: Transaction? = null
+open class CoinsReceivedTxFilter(
+    private val bag: TransactionBag,
+    private val coins: Coin
+): TransactionFilter {
+    var toAddress: Address? = null
         private set
 
     override fun matches(tx: Transaction): Boolean {
-        val matches = super.matches(tx) && (accountAddress == null || super.toAddress == accountAddress)
+        val output = tx.outputs.firstOrNull { it.isMine(bag) && it.value == coins }
 
-        if (matches) {
-            transaction = tx
+        if (output != null) {
+            val script = output.scriptPubKey
+
+            if (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) {
+                toAddress = script.getToAddress(tx.params)
+            }
+
+            return true
         }
 
-        return matches
+        return false
     }
 }

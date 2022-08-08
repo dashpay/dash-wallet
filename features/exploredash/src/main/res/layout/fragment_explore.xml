@@ -14,8 +14,7 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -27,8 +26,8 @@
         android:id="@+id/title_bar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        app:navigationIcon="@drawable/ic_arrow_back_white"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:navigationIcon="@drawable/ic_arrow_back_white" />
 
     <ImageView
         android:layout_width="wrap_content"
@@ -48,8 +47,8 @@
         android:layout_marginHorizontal="28dp"
         android:layout_marginTop="17dp"
         android:layout_marginBottom="4dp"
-        android:text="@string/explore_dash"
         android:gravity="center"
+        android:text="@string/explore_dash"
         android:textAlignment="gravity"
         app:layout_constraintBottom_toTopOf="@id/explore_subtitle" />
 
@@ -60,8 +59,8 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="28dp"
         android:layout_marginBottom="27dp"
-        android:text="@string/explore_subtitle"
         android:gravity="center"
+        android:text="@string/explore_subtitle"
         android:textAlignment="gravity"
         app:layout_constraintBottom_toTopOf="@id/bottom_content" />
 
@@ -115,8 +114,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="67dp"
-                        android:text="@string/explore_merchants_title"
                         android:layout_marginTop="7dp"
+                        android:text="@string/explore_merchants_title"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 
@@ -146,8 +145,8 @@
                         android:id="@+id/atms_icon"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:src="@drawable/ic_atm"
                         android:layout_marginStart="2dp"
+                        android:src="@drawable/ic_atm"
                         app:layout_constraintEnd_toStartOf="@id/atms_title"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
@@ -200,8 +199,8 @@
                         style="@style/Subtitle2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="7dp"
                         android:layout_marginStart="67dp"
+                        android:layout_marginTop="7dp"
                         android:text="@string/staking_title"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
@@ -215,6 +214,35 @@
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="@+id/staking_title"
                         app:layout_constraintTop_toBottomOf="@+id/staking_title" />
+
+                    <LinearLayout
+                        android:id="@+id/staking_apy_container"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/rounded_background"
+                        android:gravity="center"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="10dp"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="5dp"
+                        android:theme="@style/SystemGreenHighlight"
+                        app:layout_constraintStart_toStartOf="@id/staking_subtitle"
+                        app:layout_constraintTop_toBottomOf="@id/staking_subtitle">
+
+                        <ImageView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:src="@drawable/ic_circle_green_percent" />
+
+                        <TextView
+                            android:id="@+id/staking_apy"
+                            style="@style/Caption.Medium.Green"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="@string/explore_staking_current_apy"
+                            tools:text="Current APY = 6.9%" />
+                    </LinearLayout>
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>

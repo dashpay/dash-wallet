@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.transactions
+package org.dash.wallet.common.transactions.filters
 
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
