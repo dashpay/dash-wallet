@@ -130,6 +130,7 @@ class TransactionResultViewBinder(
         } else {
             inputAddresses = arrayListOf()
             outputAddresses = TransactionUtils.getToAddressOfReceived(tx, wallet)
+            inputsLabel.setText(R.string.transaction_details_received_from)
             outputsLabel.setText(R.string.transaction_details_received_at)
         }
 
@@ -139,31 +140,31 @@ class TransactionResultViewBinder(
             ProfilePictureDisplay.display(checkIcon, profile)
             outputsContainer.isVisible = true
 
+            val userNameView = inflater.inflate(R.layout.transaction_result_address_row,
+                outputsAddressesContainer, false) as TextView
+            userNameView.text = profile.username
+
             if (profile.displayName.isNotEmpty()) {
                 val displayNameView = inflater.inflate(R.layout.transaction_result_address_row,
                     outputsAddressesContainer, false) as TextView
                 displayNameView.text = profile.displayName
+                userNameView.setTextColor(R.color.content_secondary)
 
                 if (isSent) {
-                    inputsAddressesContainer.addView(displayNameView)
-                } else {
                     outputsAddressesContainer.addView(displayNameView)
+                } else {
+                    inputsAddressesContainer.addView(displayNameView)
                 }
             }
 
-            val userNameView = inflater.inflate(R.layout.transaction_result_address_row,
-                outputsAddressesContainer, false) as TextView
-            userNameView.text = profile.username
-            userNameView.setTextColor(R.color.content_secondary)
-
             if (isSent) {
-                inputsAddressesContainer.addView(userNameView)
-                inputsAddressesContainer.setOnClickListener { openProfile(profile) }
-                setOutputs(outputAddresses, inflater)
-            } else {
                 outputsAddressesContainer.addView(userNameView)
                 outputsAddressesContainer.setOnClickListener { openProfile(profile) }
                 setInputs(inputAddresses, inflater)
+            } else {
+                inputsAddressesContainer.addView(userNameView)
+                inputsAddressesContainer.setOnClickListener { openProfile(profile) }
+                setOutputs(outputAddresses, inflater)
             }
 
             checkIcon.setOnClickListener { openProfile(profile) }
@@ -239,6 +240,7 @@ class TransactionResultViewBinder(
 
         if (errorStatusStr.isNotEmpty()) {
             if (profile != null) {
+                secondaryIcon.isVisible = true
                 secondaryIcon.setImageResource(R.drawable.ic_transaction_failed)
             } else {
                 checkIcon.setImageResource(R.drawable.ic_transaction_failed)
@@ -281,6 +283,7 @@ class TransactionResultViewBinder(
                 // If it's a confidence update, not need to set the send/receive icons again.
                 // Some hosts are replacing those with custom animated ones.
                 if (profile != null) {
+                    secondaryIcon.isVisible = true
                     secondaryIcon.setImageResource(imageResource)
                 } else {
                     checkIcon.setImageResource(imageResource)

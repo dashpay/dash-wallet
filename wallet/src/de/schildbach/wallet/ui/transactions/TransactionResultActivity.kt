@@ -104,7 +104,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
     private lateinit var transactionResultViewBinder: TransactionResultViewBinder
 
-    private val isUserAuthorised: Boolean by lazy { // TODO: check why needed
+    private val isUserAuthorised: Boolean by lazy {
         intent.extras!!.getBoolean(EXTRA_USER_AUTHORIZED)
     }
 

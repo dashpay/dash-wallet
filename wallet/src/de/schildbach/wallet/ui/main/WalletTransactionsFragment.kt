@@ -37,6 +37,7 @@ import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.ui.CreateUsernameActivity
+import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.SearchUserActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
@@ -84,11 +85,13 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
         val adapter = TransactionAdapter(
             viewModel.balanceDashFormat, resources, true
-        ) { rowView, _ ->
+        ) { rowView, isProfileClick ->
             viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
 
             if (rowView is TransactionRowView) {
-                if (rowView.txWrapper != null) {
+                if (isProfileClick && rowView.contact != null) {
+                    requireContext().startActivity(DashPayUserActivity.createIntent(requireContext(), rowView.contact))
+                } else if (rowView.txWrapper != null) {
                     val fragment = TransactionGroupDetailsFragment(rowView.txWrapper)
                     fragment.show(requireActivity())
                 } else {
@@ -162,7 +165,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate()
                 }.map {
                     val outList = mutableListOf<HistoryRowView>()
-                    outList.add(HistoryRowView(it.key.toString(), "Tuesedey", it.key))
+                    outList.add(HistoryRowView(it.key))
                     outList.apply { addAll(it.value) }
                 }.reduce { acc, list -> acc.apply { addAll(list) }}
 
