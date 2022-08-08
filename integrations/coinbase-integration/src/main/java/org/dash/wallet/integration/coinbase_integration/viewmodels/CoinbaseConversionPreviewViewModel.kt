@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
+import android.app.Service
 import androidx.core.os.bundleOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -28,9 +29,11 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
@@ -50,7 +53,8 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val sendPaymentService: SendPaymentService,
     val networkState: NetworkStateInt,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    private val transactionMetadataProvider: TransactionMetadataProvider
 ) : ConnectivityViewModel(networkState) {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
@@ -100,6 +104,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                             type = TRANSACTION_TYPE_SEND
                         ).apply {
                             commitSwapTradeSuccessState.value = this
+                            transactionMetadataProvider.markAddressAsTransferInAsync(to!!, ServiceName.Coinbase)
                         }
                     }
                 }
@@ -198,6 +203,10 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         val address = Address.fromString(walletDataProvider.networkParameters, addressInfo.trim { it <= ' ' })
         return try {
             val transaction = sendPaymentService.sendCoins(address, coin, checkBalanceConditions = false)
+            transactionMetadataProvider.markAddressAsTransferOutAsync(
+                address.toBase58(),
+                ServiceName.Coinbase
+            )
             transaction.isPending
         } catch (x: InsufficientMoneyException) {
             onInsufficientMoneyCallback.call()

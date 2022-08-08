@@ -24,8 +24,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.NetworkStateInt
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
@@ -42,7 +44,8 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     private val walletDataProvider: WalletDataProvider,
     val networkState: NetworkStateInt,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    private val transactionMetadataProvider: TransactionMetadataProvider
 ) : ConnectivityViewModel(networkState) {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
@@ -76,7 +79,9 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
                         type = result.value.transactionType
                     ).apply {
                         commitBuyOrderSuccessState.value = this
+                        transactionMetadataProvider.markAddressAsTransferInAsync(to!!, ServiceName.Coinbase)
                     }
+
                 }
             }
             is ResponseResource.Failure -> {
