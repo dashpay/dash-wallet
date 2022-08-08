@@ -101,7 +101,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
     private lateinit var transactionResultViewBinder: TransactionResultViewBinder
     private lateinit var transaction: Transaction
 
-    private val isUserAuthorised: Boolean by lazy { // TODO: check why needed
+    private val isUserAuthorised: Boolean by lazy {
         intent.extras!!.getBoolean(EXTRA_USER_AUTHORIZED)
     }
 
@@ -169,8 +169,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
             walletData.wallet!!,
             configuration.format.noCode(),
             container,
-            dashPayProfile,
-            true
+            dashPayProfile
         )
         val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
         val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)

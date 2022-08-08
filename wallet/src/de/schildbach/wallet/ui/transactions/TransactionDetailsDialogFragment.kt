@@ -1,8 +1,6 @@
 package de.schildbach.wallet.ui.transactions
 
 import android.content.DialogInterface
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -64,6 +62,10 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         }
     }
 
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        return inflater.inflate(R.layout.transaction_details_dialog, container, false)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -89,31 +91,13 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         tx.confidence.addEventListener(transactionResultViewBinder)
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, android.R.style.Theme_Translucent_NoTitleBar)
-    }
-
-    override fun onStart() {
-        super.onStart()
-        val width = ViewGroup.LayoutParams.MATCH_PARENT
-        val height = ViewGroup.LayoutParams.MATCH_PARENT
-        dialog?.window?.setLayout(width, height)
-        dialog?.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.transaction_details_dialog, container, false)
-    }
-
     private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
         contentBinding = TransactionResultContentBinding.bind(binding.transactionResultContainer)
         transactionResultViewBinder = TransactionResultViewBinder(
             walletData.wallet!!,
             configuration.format.noCode(),
             binding.transactionResultContainer,
-            dashPayProfile,
-            true
+            dashPayProfile
         )
         transactionResultViewBinder.bind(tx)
         contentBinding.viewOnExplorer.setOnClickListener { viewOnBlockExplorer() }

@@ -20,18 +20,14 @@ package de.schildbach.wallet.ui.main
 import java.time.LocalDate
 
 open class HistoryRowView(
-    val title: String = "",
-    val status: String = "", // TODO: need this?
     val localDate: LocalDate = LocalDate.now()
 ) {
     override fun equals(other: Any?): Boolean {
         return other is HistoryRowView &&
-                other.title == title && other.status == status
+                other.localDate == localDate
     }
 
     override fun hashCode(): Int {
-        var result = title.hashCode()
-        result = 31 * result + status.hashCode()
-        return result
+        return localDate.hashCode()
     }
 }

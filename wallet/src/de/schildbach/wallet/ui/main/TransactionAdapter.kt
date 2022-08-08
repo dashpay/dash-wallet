@@ -23,10 +23,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.res.ResourcesCompat
-import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.annotation.StyleRes
 import androidx.core.view.isVisible
+import androidx.core.view.setPadding
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -51,7 +50,7 @@ class TransactionAdapter(
     private val dashFormat: MonetaryFormat,
     private val resources: Resources,
     private val drawBackground: Boolean = false,
-    private val clickListener: (HistoryRowView, Int) -> Unit
+    private val clickListener: (HistoryRowView, Boolean) -> Unit,
 ) : ListAdapter<HistoryRowView, HistoryViewHolder>(DiffCallback()) {
     private val contentColor = resources.getColor(R.color.content_primary, null)
     private val warningColor = resources.getColor(R.color.content_warning, null)
@@ -109,11 +108,11 @@ class TransactionAdapter(
         when (holder) {
             is TransactionViewHolder -> {
                 holder.bind(item as TransactionRowView, nextItem !is TransactionRowView)
-                holder.binding.root.setOnClickListener { clickListener.invoke(item, position) }
+                holder.binding.root.setOnClickListener { clickListener.invoke(item, false) }
             }
             is TransactionGroupHeaderViewHolder -> {
                 holder.bind((item as HistoryRowView).localDate)
-                holder.binding.root.setOnClickListener { clickListener.invoke(item, position) }
+                holder.binding.root.setOnClickListener { clickListener.invoke(item, false) }
             }
         }
     }
@@ -136,7 +135,7 @@ class TransactionAdapter(
                 }
             }
 
-            setIcon(txView.icon, txView.iconBackground, txView.contact)
+            setIcon(txView)
             setPrimaryStatus(txView.titleRes, txView.hasErrors, txView.contact)
             setSecondaryStatus(txView.statusRes, txView.hasErrors)
             setValue(txView.value, txView.hasErrors)
@@ -145,16 +144,18 @@ class TransactionAdapter(
             setDetails(txView.transactionAmount)
         }
 
-        private fun setIcon(
-            @DrawableRes icon: Int,
-            @StyleRes iconBackground: Int,
-            contact: DashPayProfile?
-        ) {
+        private fun setIcon(txView: TransactionRowView) {
+            val icon = txView.icon
+            val iconBackground = txView.iconBackground
+            val contact = txView.contact
+
             if (contact != null) {
                 val userName = contact.displayName.ifEmpty { contact.username }
+                binding.primaryIcon.background = null
+                binding.primaryIcon.setPadding(0)
                 ProfilePictureDisplay.display(binding.primaryIcon, contact.avatarUrl, contact.avatarHash, userName)
                 binding.primaryIcon.setOnClickListener {
-//                    context.startActivity(DashPayUserActivity.createIntent(context, contact)); // TODO
+                    clickListener.invoke(txView, true)
                 }
 
                 binding.secondaryIcon.isVisible = true
