@@ -52,8 +52,7 @@ import org.dash.wallet.common.ui.CurrencyTextView
 class TransactionResultViewBinder(
     private val wallet: Wallet,
     private val dashFormat: MonetaryFormat,
-    private val containerView: View,
-    private val profile: DashPayProfile?
+    private val containerView: View
 ): TransactionConfidence.Listener {
     private val ctx by lazy { containerView.context }
     private val checkIcon by lazy { containerView.findViewById<ImageView>(R.id.check_icon) }
@@ -92,9 +91,12 @@ class TransactionResultViewBinder(
 
     private val resourceMapper = TxResourceMapper()
     private lateinit var transaction: Transaction
+    private var dashPayProfile: DashPayProfile? = null
 
-    fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
+    fun bind(tx: Transaction, profile: DashPayProfile?, payeeName: String? = null, payeeSecuredBy: String? = null) {
         this.transaction = tx
+        this.dashPayProfile = profile
+
         val value = tx.getValue(wallet)
         val isSent = value.signum() < 0
 
@@ -239,7 +241,7 @@ class TransactionResultViewBinder(
         @DrawableRes val imageResource: Int
 
         if (errorStatusStr.isNotEmpty()) {
-            if (profile != null) {
+            if (dashPayProfile != null) {
                 secondaryIcon.isVisible = true
                 secondaryIcon.setImageResource(R.drawable.ic_transaction_failed)
             } else {
@@ -282,7 +284,7 @@ class TransactionResultViewBinder(
             if (!fromConfidence) {
                 // If it's a confidence update, not need to set the send/receive icons again.
                 // Some hosts are replacing those with custom animated ones.
-                if (profile != null) {
+                if (dashPayProfile != null) {
                     secondaryIcon.isVisible = true
                     secondaryIcon.setImageResource(imageResource)
                 } else {

@@ -43,12 +43,14 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
@@ -73,7 +75,8 @@ class MainViewModel @Inject constructor(
     walletApplication: WalletApplication,
     appDatabase: AppDatabase,
     val platformRepo: PlatformRepo,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    private val metadataProvider: TransactionMetadataProvider
 ) : BaseProfileViewModel(walletApplication, appDatabase) {
     companion object {
         private const val THROTTLE_DURATION = 500L
@@ -188,11 +191,14 @@ class MainViewModel @Inject constructor(
 
         _transactionsDirection
             .flatMapLatest { direction ->
-                val filter = TxDirectionFilter(direction, walletData.wallet!!)
-                refreshTransactions(filter)
-                walletData.observeTransactions(filter)
-                    .debounce(THROTTLE_DURATION)
-                    .onEach { refreshTransactions(filter) }
+                metadataProvider.observeAllMemos()
+                    .flatMapLatest { memos ->
+                        val filter = TxDirectionFilter(direction, walletData.wallet!!)
+                        refreshTransactions(filter, memos)
+                        walletData.observeTransactions(filter)
+                            .debounce(THROTTLE_DURATION)
+                            .onEach { refreshTransactions(filter, memos) }
+                    }
             }
             .launchIn(viewModelWorkerScope)
 
@@ -347,7 +353,7 @@ class MainViewModel @Inject constructor(
         )
     }
 
-    private suspend fun refreshTransactions(filter: TransactionFilter) {
+    private suspend fun refreshTransactions(filter: TransactionFilter, memos: Map<Sha256Hash, String>) {
         walletData.wallet?.let { wallet ->
             val userIdentity = platformRepo.getBlockchainIdentity()
             val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
@@ -366,19 +372,25 @@ class MainViewModel @Inject constructor(
              .sortedWith(TransactionWrapperComparator())
              .map {
                  var contact: DashPayProfile? = null
+                 var memo = ""
                  val tx = it.transactions.first()
                  val isInternal = TransactionUtils.isEntirelySelf(tx, wallet)
 
-                 if (it.transactions.size == 1 && !isInternal) {
-                     val contactId = userIdentity?.getContactForTransaction(tx)
+                 if (it.transactions.size == 1) {
+                     memo = memos.getOrDefault(tx.txId, "")
 
-                     if (contactId != null) {
-                         contact = contactsByIdentity[contactId]
+                     if (!isInternal) {
+                         val contactId = userIdentity?.getContactForTransaction(tx)
+
+                         if (contactId != null) {
+                             contact = contactsByIdentity[contactId]
+                         }
                      }
                  }
 
                  TransactionRowView.fromTransactionWrapper(
-                     it, walletData.transactionBag,
+                     it, memo,
+                     walletData.transactionBag,
                      Constants.CONTEXT,
                      contact
                  )

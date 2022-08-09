@@ -142,6 +142,7 @@ class TransactionAdapter(
             setFiatValue(txView.value, txView.exchangeRate)
             setTime(txView.time, resourceMapper.dateTimeFormat)
             setDetails(txView.transactionAmount)
+            setComment(txView.comment)
         }
 
         private fun setIcon(txView: TransactionRowView) {
@@ -162,6 +163,7 @@ class TransactionAdapter(
                 binding.secondaryIcon.setImageResource(icon)
             } else {
                 binding.primaryIcon.setImageResource(icon)
+                binding.primaryIcon.setPadding(resources.getDimensionPixelOffset(R.dimen.transaction_icon_padding))
                 binding.primaryIcon.background = resources.getRoundedBackground(iconBackground)
                 binding.primaryIcon.setOnClickListener { }
                 binding.secondaryIcon.isVisible = false
@@ -207,6 +209,11 @@ class TransactionAdapter(
             } else {
                 binding.details.isVisible = false
             }
+        }
+
+        private fun setComment(comment: String) {
+            binding.comment.text = comment
+            binding.comment.isVisible = comment.isNotEmpty()
         }
 
         private fun setTime(time: Long, dateTimeFormat: Int) {

@@ -128,6 +128,12 @@ class TransactionResultActivity : AbstractWalletActivity() {
         val tx = viewModel.transaction
 
         if (tx != null) {
+            transactionResultViewBinder = TransactionResultViewBinder(
+                walletData.wallet!!,
+                configuration.format.noCode(),
+                container
+            )
+
             val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
             val userId = initializeIdentity(tx, blockchainIdentity)
 
@@ -177,15 +183,9 @@ class TransactionResultActivity : AbstractWalletActivity() {
     }
 
     private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
-        transactionResultViewBinder = TransactionResultViewBinder(
-            walletData.wallet!!,
-            configuration.format.noCode(),
-            container,
-            dashPayProfile
-        )
         val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
         val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
-        transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
+        transactionResultViewBinder.bind(tx, dashPayProfile, payeeName, payeeVerifiedBy)
         transaction_close_btn.setOnClickListener {
             onTransactionDetailsDismiss()
         }

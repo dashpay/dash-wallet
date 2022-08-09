@@ -79,22 +79,28 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         val tx = viewModel.transaction
 
         if (tx != null) {
+            transactionResultViewBinder = TransactionResultViewBinder(
+                walletData.wallet!!,
+                configuration.format.noCode(),
+                binding.transactionResultContainer
+            )
+
             val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
             val userId = initializeIdentity(tx, blockchainIdentity)
 
             if (blockchainIdentity == null || userId == null) {
                 finishInitialization(tx, null)
             }
+
+            viewModel.transactionMetadata.observe(this) { metadata ->
+                if(metadata != null && tx.txId == metadata.txId) {
+                    transactionResultViewBinder.setTransactionMetadata(metadata)
+                }
+            }
         } else {
             log.error("Transaction not found. TxId:", txId)
             dismiss()
             return
-        }
-
-        viewModel.transactionMetadata.observe(this) { metadata ->
-            if(metadata != null && tx.txId == metadata.txId) {
-                transactionResultViewBinder.setTransactionMetadata(metadata)
-            }
         }
     }
 
@@ -105,13 +111,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
 
     private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
         contentBinding = TransactionResultContentBinding.bind(binding.transactionResultContainer)
-        transactionResultViewBinder = TransactionResultViewBinder(
-            walletData.wallet!!,
-            configuration.format.noCode(),
-            binding.transactionResultContainer,
-            dashPayProfile
-        )
-        transactionResultViewBinder.bind(tx)
+        transactionResultViewBinder.bind(tx, dashPayProfile)
         contentBinding.viewOnExplorer.setOnClickListener { viewOnBlockExplorer() }
         contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
         contentBinding.addPrivateMemoBtn.setOnClickListener {
