@@ -50,7 +50,7 @@ class CoinBaseRepository @Inject constructor(
             val userAccounts = servicesApi.getUserAccounts()?.data ?: emptyList()
             val exchangeRates = servicesApi.getExchangeRates(exchangeCurrencyCode)?.data
             val currencyToDashExchangeRate = exchangeRates?.rates?.get(DASH_CURRENCY).orEmpty()
-            val currencyToUSDExchangeRate = exchangeRates?.rates?.get("USD").orEmpty()
+            val currencyToUSDExchangeRate = exchangeRates?.rates?.get(USD_CURRENCY).orEmpty()
 
             return@safeApiCall userAccounts.map {
                 val currencyToCryptoCurrencyExchangeRate = exchangeRates?.rates?.get(it.currency?.code).orEmpty()
