@@ -16,11 +16,13 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
@@ -46,7 +48,8 @@ class TransferDashViewModel @Inject constructor(
     private val sendPaymentService: SendPaymentService,
     var exchangeRates: ExchangeRatesProvider,
     var networkState: NetworkStateInt,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    private val transactionMetadataProvider: TransactionMetadataProvider
 ) : ConnectivityViewModel(networkState) {
 
     private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
@@ -165,6 +168,10 @@ class TransferDashViewModel @Inject constructor(
                 emptyWallet = isEmptyWallet,
                 checkBalanceConditions = checkConditions
             )
+            transactionMetadataProvider.markAddressAsTransferOutAsync(
+                dashAddress.toBase58(),
+                ServiceName.Coinbase
+            )
             SendDashResponseState.SuccessState(transaction.isPending)
         } catch(e: LeftoverBalanceException) {
             throw e
@@ -192,6 +199,7 @@ class TransferDashViewModel @Inject constructor(
             sendTransactionToWalletParams,
             TransactionType.TransferDash
         )
+        transactionMetadataProvider.markAddressAsTransferInAsync(sendTransactionToWalletParams.to!!, ServiceName.Coinbase)
     }
 
     fun logTransfer(isFiatSelected: Boolean) {

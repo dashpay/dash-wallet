@@ -4,5 +4,6 @@ object ServiceName {
     const val CrowdNode = "crowdnode"
     const val Liquid = "liquid"
     const val Uphold = "uphold"
+    const val Coinbase = "Coinbase"
     const val Unknown = "unknown"
 }
