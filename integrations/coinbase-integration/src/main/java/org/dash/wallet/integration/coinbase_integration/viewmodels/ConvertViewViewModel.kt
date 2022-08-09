@@ -142,8 +142,13 @@ class ConvertViewViewModel @Inject constructor(
         }
         this._selectedCryptoCurrencyAccount.value = account
 
+        //To check if the user has different fiat than usd the min is 2 usd
+        val minFaitValue = "2".toBigDecimal() / account.currencyToUSDExchangeRate.toBigDecimal()
+
         val cleanedValue: BigDecimal =
-            minAllowedSwapAmount.toBigDecimal() * account.currencyToDashExchangeRate.toBigDecimal()
+            minFaitValue * account.currencyToDashExchangeRate.toBigDecimal()
+
+        minAllowedSwapAmount = minFaitValue.toString()
         val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
         val coin = try {
