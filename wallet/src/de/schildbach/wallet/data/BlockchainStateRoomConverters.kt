@@ -98,12 +98,12 @@ class BlockchainStateRoomConverters {
 
     @TypeConverter
     fun toCreditBalance(value: Long): Coin? {
-        return if (value >= 0) Coin.valueOf(value) else null
+        return Coin.valueOf(value)
     }
 
     @TypeConverter
     fun fromCreditBalance(creditBalance: Coin?): Long {
-        return creditBalance?.value ?: -1
+        return creditBalance?.value ?: 0L
     }
 
     @TypeConverter
