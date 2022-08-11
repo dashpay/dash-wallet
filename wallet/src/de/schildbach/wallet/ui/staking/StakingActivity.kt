@@ -114,7 +114,11 @@ class StakingActivity : LockScreenActivity() {
             val pin = securityFunctions.requestPinCode(this@StakingActivity)
 
             if (pin != null) {
-                val intent = VerifySeedActivity.createIntent(this@StakingActivity, pin)
+                val intent = VerifySeedActivity.createIntent(
+                    this@StakingActivity,
+                    pin,
+                    goHomeOnClose = false
+                )
                 startActivity(intent)
             }
         }
