@@ -61,12 +61,13 @@ class CoinBaseResultDialog : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val type = arguments?.getInt("Type")
+        val coinbaseWallet = arguments?.getString(ARG_COINBASE_WALLET_NAME)
         type?.let {
             when (type) {
                 Type.PURCHASE_ERROR.ordinal -> setPurchaseError()
                 Type.DEPOSIT_ERROR.ordinal -> setDepositError()
                 Type.DEPOSIT_SUCCESS.ordinal -> setDepositSuccess()
-                Type.CONVERSION_SUCCESS.ordinal -> setConversionSuccess()
+                Type.CONVERSION_SUCCESS.ordinal -> setConversionSuccess(coinbaseWallet)
                 Type.CONVERSION_ERROR.ordinal -> setConversionError()
                 Type.SWAP_ERROR.ordinal -> setSwapError()
                 Type.TRANSFER_DASH_SUCCESS.ordinal -> setTransferDashSuccess()
@@ -155,11 +156,11 @@ class CoinBaseResultDialog : DialogFragment() {
         binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)
         binding.coinbaseBuyDialogPositiveButton.isVisible = false
     }
-    private fun setConversionSuccess() {
+    private fun setConversionSuccess(coinbaseWallet: String?) {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green)
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
-        binding.coinbaseBuyDialogMessage.setText(R.string.it_could_take_up_to_5_minutes)
+        binding.coinbaseBuyDialogMessage.setText(getString(R.string.it_could_take_up_to_5_minutes,coinbaseWallet?:""))
         binding.buyDialogContactCoinbaseSupport.isGone = true
         binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.close)
@@ -195,13 +196,16 @@ class CoinBaseResultDialog : DialogFragment() {
 
     companion object {
         const val ARG_MESSAGE: String = "ARG_RESPONSE_MESSAGE"
+        const val ARG_COINBASE_WALLET_NAME: String = "ARG_COINBASE_WALLET_NAME"
         fun newInstance(
             type: Type,
-            responseMessage: String?
+            responseMessage: String?,
+            coinbaseWalletName: String?=null
         ): CoinBaseResultDialog {
             val args = Bundle().apply {
                 putInt("Type", type.ordinal)
                 putString(ARG_MESSAGE, responseMessage)
+                putString(ARG_COINBASE_WALLET_NAME, coinbaseWalletName)
             }
             return CoinBaseResultDialog().apply {
                 arguments = args

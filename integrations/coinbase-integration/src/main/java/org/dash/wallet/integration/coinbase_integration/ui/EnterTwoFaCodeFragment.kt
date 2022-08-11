@@ -180,7 +180,8 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
     }
 
     private fun showTransactionStateDialog(type: CoinBaseResultDialog.Type, responseMessage: String? = null) {
-        val transactionStateDialog = CoinBaseResultDialog.newInstance(type, responseMessage).apply {
+        val params = arguments?.let { EnterTwoFaCodeFragmentArgs.fromBundle(it).transactionParams }
+        val transactionStateDialog = CoinBaseResultDialog.newInstance(type, responseMessage,params?.coinbaseWalletName).apply {
             this.onCoinBaseResultDialogButtonsClickListener =
                 object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
                     override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {

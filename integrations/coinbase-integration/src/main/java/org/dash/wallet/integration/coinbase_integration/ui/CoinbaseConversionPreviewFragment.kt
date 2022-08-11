@@ -155,7 +155,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         viewModel.commitSwapTradeSuccessState.observe(viewLifecycleOwner) { params ->
             safeNavigate(
                 CoinbaseConversionPreviewFragmentDirections.conversionPreviewToTwoFaCode(
-                    CoinbaseTransactionParams(params, TransactionType.BuySwap)
+                    CoinbaseTransactionParams(params, TransactionType.BuySwap,swapTradeUIModel.inputCurrencyName)
                 )
             )
         }
