@@ -52,25 +52,17 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     var networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
 ) : ConnectivityViewModel(networkState) {
-    private val _userAccountsInfo: MutableLiveData<List<CoinBaseUserAccountDataUIModel>> = MutableLiveData()
-
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
-   private val _baseIdForFaitModelCoinBase: MutableLiveData<List<BaseIdForUSDData>> = MutableLiveData()
+    private val _baseIdForFaitModelCoinBase: MutableLiveData<List<BaseIdForUSDData>> = MutableLiveData()
 
     private val _swapTradeOrder: MutableLiveData<Event<SwapTradeUIModel>> = MutableLiveData()
     val swapTradeOrder: LiveData<Event<SwapTradeUIModel>>
         get() = _swapTradeOrder
 
     val swapTradeFailedCallback = SingleLiveEvent<String?>()
-
-    private val _userAccountsWithBalance: MutableLiveData<Event<List<CoinBaseUserAccountDataUIModel>>> = MutableLiveData()
-    val userAccountsWithBalance: LiveData<Event<List<CoinBaseUserAccountDataUIModel>>>
-        get() = _userAccountsWithBalance
-
-    val userAccountError = SingleLiveEvent<Unit>()
 
     private val _dashWalletBalance = MutableLiveData<Coin>()
     val dashWalletBalance: LiveData<Coin>
@@ -79,28 +71,12 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     lateinit var exchangeRate: ExchangeRate
 
     init {
-
         getWithdrawalLimit()
         setDashWalletBalance()
-        getUserAccountInfo()
     }
 
     fun setBaseIdForFaitModelCoinBase(list:List<BaseIdForUSDData>){
         _baseIdForFaitModelCoinBase.value = list
-    }
-
-    private fun getUserAccountInfo() = viewModelScope.launch(Dispatchers.Main) {
-        _showLoading.value = true
-        when (val response = coinBaseRepository.getUserAccounts(userPreference.exchangeCurrencyCode!!)) {
-            is ResponseResource.Success -> {
-                _showLoading.value = false
-                _userAccountsInfo.value = response.value
-            }
-
-            is ResponseResource.Failure -> {
-                _showLoading.value = false
-            }
-        }
     }
 
     fun swapTrade(valueToConvert: Fiat, selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel, dashToCrypt: Boolean) = viewModelScope.launch(Dispatchers.Main) {
@@ -159,25 +135,21 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         }
     }
 
-    fun getUserWalletAccounts(dashToCrypt: Boolean) {
+    suspend fun getUserWalletAccounts(dashToCrypt: Boolean): List<CoinBaseUserAccountDataUIModel> {
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SELECT_COIN, bundleOf())
 
-        val userAccountsWithBalanceList =
+        return when (
+            val response = coinBaseRepository.getUserAccounts(userPreference.exchangeCurrencyCode!!)
+        ) {
+            is ResponseResource.Success -> response.value
+            else -> listOf()
+        }.filter {
             if (dashToCrypt) {
-                _userAccountsInfo.value?.filter {
-                    isValidCoinBaseAccount(it)
-                }
+                isValidCoinBaseAccount(it)
             } else {
-                _userAccountsInfo.value?.filter {
-                    isValidCoinBaseAccount(it) && it.coinBaseUserAccountData.balance?.amount?.toDouble() != 0.0
-                }
+                isValidCoinBaseAccount(it) && it.coinBaseUserAccountData.balance?.amount?.toDouble() != 0.0
             }
-
-        if (userAccountsWithBalanceList.isNullOrEmpty()) {
-            userAccountError.call()
-        } else {
-            _userAccountsWithBalance.value = Event(userAccountsWithBalanceList)
-        }
+        }.sortedBy { item -> item.coinBaseUserAccountData.currency?.code }
     }
 
     fun logEvent(eventName: String) {
