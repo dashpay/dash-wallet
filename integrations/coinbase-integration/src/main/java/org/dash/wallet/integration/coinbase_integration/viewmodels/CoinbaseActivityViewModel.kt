@@ -16,9 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +27,6 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
-import org.dash.wallet.integration.coinbase_integration.model.BaseIdForUSDData
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseIdForFaitDataUIState
@@ -39,10 +36,9 @@ import javax.inject.Inject
 @ExperimentalCoroutinesApi
 @HiltViewModel
 class CoinbaseActivityViewModel @Inject constructor(
-    application: Application,
     val userPreference: Configuration,
     private val coinBaseRepository: CoinBaseRepositoryInt
-) : AndroidViewModel(application){
+) : ViewModel() {
 
     private val _paymentMethodsUiState = MutableStateFlow<PaymentMethodsUiState>(PaymentMethodsUiState.LoadingState(true))
     val paymentMethodsUiState: StateFlow<PaymentMethodsUiState> = _paymentMethodsUiState
@@ -52,10 +48,9 @@ class CoinbaseActivityViewModel @Inject constructor(
 
     fun getBaseIdForFaitModel() = viewModelScope.launch(Dispatchers.Main) {
         _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(true)
-        when (val response =
-            userPreference.exchangeCurrencyCode?.let {
-                coinBaseRepository.getBaseIdForUSDModel(it) }) {
-
+        when (val response = userPreference.exchangeCurrencyCode?.let {
+            coinBaseRepository.getBaseIdForUSDModel(it)
+        }) {
             is ResponseResource.Success -> {
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(false)
                 response.value?.data?.let {
@@ -67,6 +62,7 @@ class CoinbaseActivityViewModel @Inject constructor(
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(false)
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.Error(true)
             }
+            else -> { }
         }
     }
 

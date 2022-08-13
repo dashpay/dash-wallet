@@ -74,12 +74,11 @@ class RadioGroupAdapter(
 
     class DiffCallback : DiffUtil.ItemCallback<IconifiedViewItem>() {
         override fun areItemsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
-            return oldItem == newItem
+            return oldItem.title == newItem.title && oldItem.icon == newItem.icon
         }
 
         override fun areContentsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
-            return oldItem.title == newItem.title &&
-                    oldItem.icon == newItem.icon
+            return oldItem == newItem
         }
     }
 }

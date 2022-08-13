@@ -25,6 +25,7 @@ import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
 import java.math.BigDecimal
 import javax.inject.Inject
+
 class CoinBaseRepository @Inject constructor(
     private val servicesApi: CoinBaseServicesApi,
     private val authApi: CoinBaseAuthApi,
@@ -34,9 +35,12 @@ class CoinBaseRepository @Inject constructor(
     private val commitBuyOrderMapper: CommitBuyOrderMapper,
     private val coinbaseAddressMapper: CoinbaseAddressMapper
 ) : CoinBaseRepositoryInt {
-    override suspend fun getUserAccount() = safeApiCall {
+    private var userAccountInfo: List<CoinBaseUserAccountData> = listOf()
+
+    override suspend fun getUserAccount(): ResponseResource<CoinBaseUserAccountData?> = safeApiCall {
         val apiResponse = servicesApi.getUserAccounts()
-        val userAccountData = apiResponse?.data?.firstOrNull {
+        userAccountInfo = apiResponse?.data ?: listOf()
+        val userAccountData = userAccountInfo.firstOrNull {
             it.balance?.currency?.equals(DASH_CURRENCY) ?: false
         }
         userAccountData?.also {
@@ -47,12 +51,15 @@ class CoinBaseRepository @Inject constructor(
 
     override suspend fun getUserAccounts(exchangeCurrencyCode: String): ResponseResource<List<CoinBaseUserAccountDataUIModel>> =
         safeApiCall {
-            val userAccounts = servicesApi.getUserAccounts()?.data ?: emptyList()
+            if (userAccountInfo.isEmpty()) {
+                getUserAccount()
+            }
+
             val exchangeRates = servicesApi.getExchangeRates(exchangeCurrencyCode)?.data
             val currencyToDashExchangeRate = exchangeRates?.rates?.get(DASH_CURRENCY).orEmpty()
             val currencyToUSDExchangeRate = exchangeRates?.rates?.get(USD_CURRENCY).orEmpty()
 
-            return@safeApiCall userAccounts.map {
+            return@safeApiCall userAccountInfo.map {
                 val currencyToCryptoCurrencyExchangeRate = exchangeRates?.rates?.get(it.currency?.code).orEmpty()
                 val cryptoCurrencyToDashExchangeRate = (BigDecimal(currencyToDashExchangeRate) / BigDecimal(currencyToCryptoCurrencyExchangeRate)).toString()
 
@@ -63,7 +70,7 @@ class CoinBaseRepository @Inject constructor(
                     cryptoCurrencyToDashExchangeRate,
                     currencyToUSDExchangeRate
                 )
-            } ?: emptyList()
+            }
         }
 
     override suspend fun getBaseIdForUSDModel(baseCurrency: String) = safeApiCall {
@@ -150,8 +157,11 @@ class CoinBaseRepository @Inject constructor(
     }
 
     override suspend fun getExchangeRateFromCoinbase(): ResponseResource<CoinbaseToDashExchangeRateUIModel> = safeApiCall {
-        val apiResponse = servicesApi.getUserAccounts()
-        val userAccountData = apiResponse?.data?.firstOrNull {
+        if (userAccountInfo.isEmpty()) {
+            getUserAccount()
+        }
+
+        val userAccountData = userAccountInfo.firstOrNull {
             it.balance?.currency?.equals(DASH_CURRENCY) ?: false
         }
         val exchangeRates = userPreferences.exchangeCurrencyCode?.let { servicesApi.getExchangeRates(it)?.data }

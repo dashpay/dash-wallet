@@ -76,5 +76,6 @@ object CoinBaseModule {
 @InstallIn(SingletonComponent::class)
 abstract class AbstractBindingProvision {
     @Binds
+    @Singleton
     abstract fun bindCoinbaseRepository(coinBaseRepository: CoinBaseRepository): CoinBaseRepositoryInt
 }
