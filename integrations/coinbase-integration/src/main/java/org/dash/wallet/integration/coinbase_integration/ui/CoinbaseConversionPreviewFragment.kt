@@ -153,9 +153,10 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         viewModel.commitSwapTradeSuccessState.observe(viewLifecycleOwner) { params ->
+           val walletName= if( swapTradeUIModel.inputCurrency == DASH_CURRENCY)swapTradeUIModel.inputCurrencyName else swapTradeUIModel.outputCurrencyName
             safeNavigate(
                 CoinbaseConversionPreviewFragmentDirections.conversionPreviewToTwoFaCode(
-                    CoinbaseTransactionParams(params, TransactionType.BuySwap,swapTradeUIModel.inputCurrencyName)
+                    CoinbaseTransactionParams(params, TransactionType.BuySwap,walletName)
                 )
             )
         }
@@ -297,7 +298,8 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     private fun showBuyOrderDialog(type: CoinBaseResultDialog.Type, responseMessage: String? = null) {
         if (transactionStateDialog?.dialog?.isShowing == true)
             transactionStateDialog?.dismissAllowingStateLoss()
-        transactionStateDialog = CoinBaseResultDialog.newInstance(type, responseMessage).apply {
+
+        transactionStateDialog = CoinBaseResultDialog.newInstance(type, responseMessage , dashToCoinbase = swapTradeUIModel.inputCurrency == DASH_CURRENCY).apply {
             this.onCoinBaseResultDialogButtonsClickListener = object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
                     when (type) {
