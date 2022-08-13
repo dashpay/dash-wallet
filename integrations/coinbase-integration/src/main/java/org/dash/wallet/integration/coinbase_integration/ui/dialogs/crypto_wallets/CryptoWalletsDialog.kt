@@ -53,7 +53,6 @@ import org.dash.wallet.integration.coinbase_integration.model.getCoinBaseExchang
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
 class CryptoWalletsDialog(
-    private val userAccountsWithBalance: List<CoinBaseUserAccountDataUIModel>,
     private val selectedCurrencyCode: String = "USD",
     private val clickListener: (Int, DialogFragment) -> Unit
 ) : OffsetDialogFragment() {
@@ -62,8 +61,8 @@ class CryptoWalletsDialog(
     private val viewModel: CryptoWalletsDialogViewModel by viewModels()
     private var itemList = listOf<IconifiedViewItem>()
     private var didFocusOnSelected = false
+    private var adapter: RadioGroupAdapter? = null
 
-    private var currentExchangeRate: ExchangeRate? = null
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -75,9 +74,10 @@ class CryptoWalletsDialog(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.progressRing.isVisible = true
         binding.searchTitle.text = getString(R.string.select_a_coin)
 
-        val adapter = RadioGroupAdapter(0, true) { item, _ ->
+        this.adapter = RadioGroupAdapter(0, true) { item, _ ->
             val index = itemList.indexOfFirst { it.title == item.title }
             clickListener.invoke(index, this)
         }
@@ -94,7 +94,7 @@ class CryptoWalletsDialog(
         binding.searchQuery.doOnTextChanged { text, _, _, _ ->
             binding.clearBtn.isVisible = !text.isNullOrEmpty()
 
-            adapter.submitList(
+            adapter?.submitList(
                 if (text.isNullOrBlank()) {
                     itemList
                 } else {
@@ -117,48 +117,72 @@ class CryptoWalletsDialog(
             binding.searchQuery.text.clear()
         }
 
-        viewModel.exchangeRate.observe(viewLifecycleOwner) { rates ->
+        viewModel.exchangeRate.observe(viewLifecycleOwner) { rate ->
+            refreshItems(rate, viewModel.dataList.value ?: listOf())
+        }
 
-            itemList = userAccountsWithBalance.map {
-                val icon = getFlagFromCurrencyCode(it.coinBaseUserAccountData.currency?.code ?: "")
-                val iconUrl =
-                    if (icon == R.drawable.ic_default_flag && it.coinBaseUserAccountData.currency?.code.isNullOrEmpty()
+        viewModel.dataList.observe(viewLifecycleOwner) { data ->
+            binding.progressRing.isVisible = false
+            refreshItems(viewModel.exchangeRate.value, data)
+        }
+
+        childFragmentManager.beginTransaction()
+            .replace(R.id.dialog_network_status_container, NetworkUnavailableFragment.newInstance())
+            .commit()
+    }
+
+    fun submitList(accounts: List<CoinBaseUserAccountDataUIModel>) {
+        viewModel.submitList(accounts)
+    }
+
+    fun handleNetworkState(hasInternet: Boolean) {
+        lifecycleScope.launchWhenStarted {
+            binding.dialogNetworkStatusContainer.isVisible = !hasInternet
+            binding.searchBox.isVisible = hasInternet
+            binding.contentList.isVisible = hasInternet
+        }
+    }
+
+    private fun refreshItems(rate: ExchangeRate?, dataList: List<CoinBaseUserAccountDataUIModel>) {
+        itemList = dataList.map {
+            val icon = getFlagFromCurrencyCode(it.coinBaseUserAccountData.currency?.code ?: "")
+            val iconUrl =
+                if (icon == R.drawable.ic_default_flag && it.coinBaseUserAccountData.currency?.code.isNullOrEmpty()
                         .not()
-                    ) {
-                        "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/${it.coinBaseUserAccountData.currency?.code?.lowercase()}.png"
-                    } else {
-                        null
-                    }
-
-                val cryptoCurrencyBalance =
-                    if (it.coinBaseUserAccountData.balance?.amount.isNullOrEmpty() || it.coinBaseUserAccountData.balance?.amount?.toDouble() == 0.0) {
-                        MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-                            .noCode().minDecimals(2).optionalDecimals().format(Coin.ZERO).toString()
-                    } else {
-                        it.coinBaseUserAccountData.balance?.amount
-                    }
-
-                if (rates != null) {
-                    currentExchangeRate = rates
+                ) {
+                    "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/${it.coinBaseUserAccountData.currency?.code?.lowercase()}.png"
+                } else {
+                    null
                 }
 
-                IconifiedViewItem(
-                    it.coinBaseUserAccountData.currency?.code ?: "",
-                    it.coinBaseUserAccountData.currency?.name ?: "",
-                    icon,
-                    IconSelectMode.None,
-                    setLocalFaitAmount(it)?.first,
-                    subtitleAdditionalInfo = cryptoCurrencyBalance,
-                    iconUrl = iconUrl
-                )
-            }
+            val cryptoCurrencyBalance =
+                if (it.coinBaseUserAccountData.balance?.amount.isNullOrEmpty() || it.coinBaseUserAccountData.balance?.amount?.toDouble() == 0.0) {
+                    MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+                        .noCode().minDecimals(2).optionalDecimals().format(Coin.ZERO).toString()
+                } else {
+                    it.coinBaseUserAccountData.balance?.amount
+                }
 
+            IconifiedViewItem(
+                it.coinBaseUserAccountData.currency?.code ?: "",
+                it.coinBaseUserAccountData.currency?.name ?: "",
+                icon,
+                IconSelectMode.None,
+                setLocalFaitAmount(rate, it)?.first,
+                subtitleAdditionalInfo = cryptoCurrencyBalance,
+                iconUrl = iconUrl
+            )
+        }
+
+        val adapter = adapter
+
+        if (adapter != null && itemList.isNotEmpty()) {
             if (!didFocusOnSelected) {
                 lifecycleScope.launch {
                     delay(250)
                     adapter.submitList(itemList)
                     val selectedRateIndex =
-                        itemList.indexOfFirst { it.additionalInfo == selectedCurrencyCode }
+                        itemList.indexOfFirst { it.title == selectedCurrencyCode }
                     adapter.selectedIndex = selectedRateIndex
                     binding.contentList.scrollToPosition(selectedRateIndex)
                     didFocusOnSelected = true
@@ -175,21 +199,12 @@ class CryptoWalletsDialog(
                 binding.contentList.scrollToPosition(scrollPosition)
             }
         }
-
-        childFragmentManager.beginTransaction()
-            .replace(R.id.dialog_network_status_container, NetworkUnavailableFragment.newInstance())
-            .commit()
     }
 
-    fun handleNetworkState(hasInternet: Boolean) {
-        lifecycleScope.launchWhenStarted {
-            binding.dialogNetworkStatusContainer.isVisible = !hasInternet
-            binding.searchBox.isVisible = hasInternet
-            binding.contentList.isVisible = hasInternet
-        }
-    }
-    private fun setLocalFaitAmount(coinBaseUserAccountData: CoinBaseUserAccountDataUIModel): Pair<String, Coin>? {
-
+    private fun setLocalFaitAmount(
+        currentExchangeRate: ExchangeRate?,
+        coinBaseUserAccountData: CoinBaseUserAccountDataUIModel
+    ): Pair<String, Coin>? {
         currentExchangeRate?.let {
             return coinBaseUserAccountData.getCoinBaseExchangeRateConversion(it)
         }

@@ -44,8 +44,6 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
-import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integration.liquid.data.LiquidClient
@@ -66,7 +64,7 @@ import kotlin.concurrent.schedule
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
-class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
+class BuyAndSellIntegrationsActivity : LockScreenActivity() {
 
     private var liquidClient: LiquidClient? = null
     private var loadingDialog: AdaptiveDialog? = null
@@ -116,9 +114,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
         title = ""
         loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
         initViewModel()
-        // do we need this here?
-        // setLoginStatus(isNetworkOnline)
-        updateBalances()
 
         supportFragmentManager.beginTransaction()
             .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
@@ -275,13 +270,17 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
                     Status.ERROR -> {
                         if (!isFinishing) {
                             if (it.exception is LiquidUnauthorizedException) {
-                                FancyAlertDialog.newInstance(
-                                    org.dash.wallet.integration.liquid.R.string.liquid_logout_title,
-                                    org.dash.wallet.integration.liquid.R.string.liquid_forced_logout,
+                                AdaptiveDialog.create(
                                     org.dash.wallet.integration.liquid.R.drawable.ic_liquid_icon,
-                                    android.R.string.ok,
-                                    0
-                                ).show(supportFragmentManager, "auto-logout-dialog")
+                                    getString(org.dash.wallet.integration.liquid.R.string.liquid_logout_title),
+                                    getString(org.dash.wallet.integration.liquid.R.string.liquid_forced_logout),
+                                    "",
+                                    getString(android.R.string.ok)
+                                ).show(this) { okClicked ->
+                                    if (okClicked == true) {
+                                        startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellIntegrationsActivity))
+                                    }
+                                }
                             }
                             // TODO: if the exception is UnknownHostException and isNetworkOnline is true
                             // then there is a problem contacting the server and we don't have
@@ -357,11 +356,13 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun setNetworkState(online: Boolean) {
-        binding.networkStatusContainer.isVisible = !online
-        setLoginStatus()
-        if (online) {
+        if (online && binding.networkStatusContainer.isVisible) {
+            // Just got back online
             updateBalances()
         }
+
+        binding.networkStatusContainer.isVisible = !online
+        setLoginStatus()
     }
 
     private fun updateBalances() {
@@ -451,12 +452,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
         viewModel.setLoadingState(false)
         super.onPause()
     }
-
-    override fun onPositiveButtonClick() {
-        startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellIntegrationsActivity))
-    }
-
-    override fun onNegativeButtonClick() {}
 
     private fun launchCoinBasePortal(){
         startActivityForResult(Intent(this, CoinbaseActivity::class.java), USER_BUY_SELL_DASH)

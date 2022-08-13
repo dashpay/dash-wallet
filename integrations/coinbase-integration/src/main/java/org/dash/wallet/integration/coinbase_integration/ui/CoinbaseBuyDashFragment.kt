@@ -30,6 +30,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -93,7 +94,11 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
             binding.authLimitBanner.root.isVisible = viewModel.isInputGreaterThanLimit(pair.first)
             if (!binding.authLimitBanner.root.isVisible) {
                 val dashToFiat = amountViewModel.dashToFiatDirection.value ?: true
-                viewModel.onContinueClicked(dashToFiat, pair.second, binding.paymentMethodPicker.selectedMethodIndex)
+
+                val dashAmount = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+                    .noCode().minDecimals(6).optionalDecimals().format( pair.first)
+
+                viewModel.onContinueClicked(dashToFiat, pair.second, dashAmount, binding.paymentMethodPicker.selectedMethodIndex)
             }
         }
 

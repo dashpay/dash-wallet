@@ -16,6 +16,7 @@
  */
 
 package de.schildbach.wallet.ui.coinbase
+
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.navigation.NavController
@@ -48,7 +49,9 @@ class CoinbaseActivity : BaseMenuActivity() {
         broadcaster.closeCoinbasePortal.observe(this){
             finish()
         }
+
         viewModel.getPaymentMethods()
+        viewModel.getBaseIdForFaitModel()
     }
 
     private fun setNavigationGraph(): NavController {
