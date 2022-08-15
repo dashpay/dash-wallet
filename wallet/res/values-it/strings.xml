@@ -25,7 +25,7 @@
     <string name="exchange_rates_fragment_balance">Saldo</string>
     <string name="exchange_rates_fragment_source">Prezzo da %s</string>
     <string name="exchange_rates_options_search">Ricerca tasso di cambio</string>
-    <string name="exchange_rates_context_set_as_default_title">Imposta come valuta straniera predefinita</string>
+    <string name="exchange_rates_context_set_as_default_title">Imposta come predefinito</string>
     <string name="wallet_transactions_fragment_empty_text">Non ci sono transazioni da visualizzare</string>
     <string name="wallet_transactions_row_warning_backup">Congratulazioni, hai ricevuto i tuoi primi pagamenti! Hai già eseguito un backup del tuo portafoglio, per proteggerlo dai danni?</string>
     <string name="wallet_transactions_fragment_coinbase">minato</string>
@@ -44,7 +44,7 @@
     <string name="wallet_timeskew_dialog_title">Controlla data &amp; impostazioni di tempo</string>
     <string name="wallet_timeskew_dialog_msg">Il tuo dispositivo è spento da %d minuti. Probabilmente non puoi inviare ne ricevere Dash per via di questo problema.\n\nDevi controllare e correggere l\'ora e il fuso orario del tuo dispositivo.</string>
     <string name="wallet_version_dialog_title">Una nuova versione è disponibile!</string>
-    <string name="wallet_version_dialog_msg">Questa versione ha corretto bug importanti. Per dettagli, guarda il "chan" su Google Play.</string>
+    <string name="wallet_version_dialog_msg">Questa versione ha corretto bug importanti. Per dettagli, guarda il \"chan\" su Google Play.</string>
     <string name="wallet_version_dialog_msg_deprecated">Se non si vede un aggiornamento, questo probabilmente significa che la vostra versione di Android non è più supportata.</string>
     <string name="wallet_version_dialog_button_market">Google Play</string>
     <string name="wallet_version_dialog_button_binary">Scarica</string>
@@ -106,7 +106,7 @@
     <string name="sweep_wallet_options_reload">Ricarica saldo</string>
     <string name="maintenance_dialog_title">Manutenzione raccomandata</string>
     <string name="maintenance_dialog_message">Hai ricevuto %1$s su indirizzi insicuri. Vorresti muovere queste monete su indirizzi sicuri? Si pagherà una piccola commissione di rete di %2$s.</string>
-    <string name="maintenance_dialog_state_decrypting">Decriptazione in corso…</string>
+    <string name="maintenance_dialog_state_decrypting">Decriptazione…</string>
     <string name="maintenance_dialog_state_done">Fatto.</string>
     <string name="maintenance_dialog_button_move">Sposta</string>
     <string name="request_coins_activity_title">Richiedi Dash</string>
@@ -142,7 +142,7 @@
     <string name="edit_address_book_entry_dialog_address_label">Indirizzo</string>
     <string name="edit_address_book_entry_dialog_label_label">Etichetta</string>
     <string name="edit_address_book_entry_dialog_button_edit">Salva</string>
-    <string name="transaction_row_fee">Commissione di rete</string>
+    <string name="transaction_row_fee">Commissione di Rete</string>
     <string name="transaction_row_message_purpose_key_rotation">Questa transazione rinforza il tuo portafoglio contro i furti. &lt;u&gt;Maggiori dettagli.&lt;/u&gt;</string>
     <string name="transaction_row_message_purpose_raise_fee">Questa operazione aumenta la tassa di rete per un pagamento precedente.</string>
     <string name="transaction_row_message_own_unbroadcasted">Questo pagamento non è ancora stato trasmesso.</string>
@@ -184,8 +184,8 @@
     <string name="network_monitor_activity_title">Controllo della rete</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blocchi</string>
-    <string name="block_row_mining_difficulty_adjustment">Aggiustamento difficoltà di "Mining"</string>
-    <string name="block_row_mining_reward_adjustment">La ricompensa per il "Mining" si dimezza</string>
+    <string name="block_row_mining_difficulty_adjustment">Aggiustamento difficoltà di \"Mining\"</string>
+    <string name="block_row_mining_reward_adjustment">La ricompensa per il \"Mining\" si dimezza</string>
     <string name="block_row_now">esattamete ora</string>
     <string name="peer_list_fragment_empty">Nessun peer connesso</string>
     <string name="peer_list_row_ping_time">⇆ %d&#x2009;ms</string>
@@ -260,7 +260,7 @@
     <string name="preferences_precision_labels_0_6">µDASH, no decimali</string>
     <string name="preferences_own_name_title">Nome</string>
     <string name="preferences_own_name_summary">Aggiungi Il tuo nome alle richieste di pagamento. Prova a mantenerlo corto.</string>
-    <string name="preferences_send_coins_autoclose_title">Ciudi automaticamente la finestra di invio "coins"</string>
+    <string name="preferences_send_coins_autoclose_title">Ciudi automaticamente la finestra di invio \"coins\"</string>
     <string name="preferences_send_coins_autoclose_summary">Quando viene effettuato il pagamento, la finestra di dialogo di invio si chiuderà automaticamente.</string>
     <string name="preferences_connectivity_notification_title">Indicatore di connettività</string>
     <string name="preferences_connectivity_notification_summary">Mostra il numero corrente di peer connessi nell\'area di notifica.</string>
@@ -289,7 +289,7 @@
     <string name="extended_public_key_fragment_title">Chiave pubblica estesa</string>
     <string name="extended_public_key_fragment_share">Condividi xpub…</string>
     <string name="report_issue_dialog_title_issue">Segnala un problema</string>
-    <string name="report_issue_dialog_title_crash">"Crash" precedente rilevato</string>
+    <string name="report_issue_dialog_title_crash">\"Crash\" precedente rilevato</string>
     <string name="report_issue_dialog_title_transaction">Segnala un problema con il pagamento selezionato</string>
     <string name="report_issue_dialog_message_issue">Si prega di descrivere il problema con sufficiente precisione per essere riprodotto. Usa la lingua inglese se puoi. Aspettati un\'e-mail dall\'assistenza Dash in merito al tuo problema entro 24 ore.</string>
     <string name="report_issue_dialog_message_crash">Vorresti inviare una segnalazione di crash, aiutando a correggere questo problema nel futuro?</string>
@@ -350,7 +350,7 @@
     <string name="button_request_coins">Richiedi Dash</string>
     <string name="button_send_coins">Invia Dash</string>
     <string name="button_pay">Invia</string>
-    <string name="button_scan">Analizza</string>
+    <string name="button_scan">Scansiona</string>
     <string name="button_settings">Impostazioni</string>
     <string name="action_show_qr">Mostra codice QR</string>
     <string name="action_browse">Naviga</string>

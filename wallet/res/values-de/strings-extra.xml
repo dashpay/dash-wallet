@@ -10,7 +10,7 @@
     <string name="set_pin_upgrade_wallet">Wallet aktualisieren</string>
     <string name="set_pin_restore_wallet">Wallet wiederherstellen</string>
     <string name="set_pin_enter_pin">Alte PIN eingeben</string>
-    <string name="set_pin_set_pin">PIN setzen</string>
+    <string name="set_pin_set_pin">PIN festsetzen</string>
     <string name="set_pin_confirm_pin">PIN bestätigen</string>
     <string name="set_pin_encrypting">Wallet verschlüsseln</string>
     <string name="set_pin_decrypting">Wallet entschlüsseln</string>
@@ -32,13 +32,13 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Wallet jetzt absichern</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Zur Zahlung scannen</string>
+    <string name="shortcut_scan_to_pay">Scannen</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Zur Adresse senden</string>
+    <string name="shortcut_pay_to_address">An Adresse senden</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Kaufe / Verkaufe Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_receive">Empfangen</string>
+    <string name="shortcut_receive">Empfange</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Privaten Schlüssel importieren</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -80,7 +80,7 @@
 
     <string name="payments_title">Zahlungen</string>
     <string name="payments_tab_pay_label">Senden</string>
-    <string name="payments_tab_receive_label">Empfangen</string>
+    <string name="payments_tab_receive_label">Empfange</string>
     <string name="payments_pay_by_qr_title">Gesendet von</string>
     <string name="payments_pay_by_qr_sub_title">QR-Code scannen</string>
     <string name="payments_pay_to_clipboard_title">An kopierte Adresse senden</string>

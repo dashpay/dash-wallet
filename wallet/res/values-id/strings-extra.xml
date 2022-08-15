@@ -10,8 +10,8 @@
     <string name="set_pin_upgrade_wallet">Tingkatkan Dompet</string>
     <string name="set_pin_restore_wallet">Pulihkan dompet</string>
     <string name="set_pin_enter_pin">Masukkan PIN lama</string>
-    <string name="set_pin_set_pin">tetapkan PIN</string>
-    <string name="set_pin_confirm_pin">Konfirmasikan PIN</string>
+    <string name="set_pin_set_pin">Tetapkan PIN</string>
+    <string name="set_pin_confirm_pin">Pastikan PIN</string>
     <string name="set_pin_encrypting">Enkripsi dompet</string>
     <string name="set_pin_decrypting">Mendekripsi dompet</string>
     <string name="set_pin_verifying_pin">Memverifikasi PIN</string>
@@ -257,7 +257,7 @@
     <string name="menu_tools_title">Alat</string>
     <string name="menu_tools_subtitle">Impor kunci pribadi…</string>
     <string name="menu_local_currency">Mata uang lokal</string>
-    <string name="menu_rescan_blockchain">Memindai ulang blockchain</string>
+    <string name="menu_rescan_blockchain">Piindai ulang blockchain</string>
     <string name="menu_contact_support_title">Hubungi Dukungan</string>
     <string name="menu_contact_support_subtitle">Laporkan masalah</string>
     <string name="menu_explore_title">Jelajahi</string>

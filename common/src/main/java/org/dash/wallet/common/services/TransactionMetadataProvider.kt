@@ -47,30 +47,55 @@ interface TransactionMetadataProvider {
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 
     // Address methods
+    /**
+     * mark an address with a tax category.  This will replace existing data
+     *
+     * @param address the address to mark
+     * @param isInput the address is an input in a transaction
+     * @param taxCategory the tax category
+     * @param service the name of the service associated with this address
+     */
     suspend fun markAddressWithTaxCategory(
         address: String,
-        sendTo: Boolean,
+        isInput: Boolean,
         taxCategory: TaxCategory,
         service: String
     )
 
+    /**
+     * mark an address with a tax category if it hasn't been marked
+     *
+     * @param address the address to mark
+     * @param isInput the address is an input in a transaction
+     * @param taxCategory the tax category
+     * @param service the name of the service associated with this address
+     */
     suspend fun maybeMarkAddressWithTaxCategory(
         address: String,
-        sendTo: Boolean,
+        isInput: Boolean,
         taxCategory: TaxCategory,
         service: String
     ): Boolean
 
-    fun markAddressAsync(address: String, sendTo: Boolean, taxCategory: TaxCategory, service: String)
+    /**
+     * Same as [markAddressWithTaxCategory] but as a non-blocking call
+     */
+    fun markAddressAsync(address: String, isInput: Boolean, taxCategory: TaxCategory, service: String)
 
+    /**
+     * Mark a destination address as TransferOut
+     */
     fun markAddressAsTransferOutAsync(address: String, service: String) {
-        markAddressAsync(address, true, TaxCategory.TransferOut, service)
+        markAddressAsync(address, false, TaxCategory.TransferOut, service)
     }
 
+    /**
+     * Mark a receiving address as TransferIn
+     */
     fun markAddressAsTransferInAsync(address: String, service: String) {
         markAddressAsync(address, false, TaxCategory.TransferIn, service)
     }
 
     // Reset methods
-    fun clear();
+    fun clear()
 }

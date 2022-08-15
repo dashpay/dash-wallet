@@ -23,7 +23,7 @@
     <string name="home_balance_show_hint">Toque para mostrar o saldo</string>
     <string name="home_balance_hide_hint">Toque para esconder o saldo</string>
 
-    <string name="dialog_confirm_confirm">Confirme</string>
+    <string name="dialog_confirm_confirm">Confirmar</string>
     <string name="dialog_confirm_pay_to">Enviar para</string>
     <string name="dialog_confirm_secured_by">Protegido por</string>
     <string name="dialog_confirm_fee">Taxa de rede</string>
@@ -60,7 +60,7 @@
     <string name="perm_lock_wipe_wallet">Limpar Carteira</string>
     <string name="perm_lock_close_app">Fechar</string>
 
-    <string name="scan_to_pay_error_dialog_title">Scanear para Enviar</string>
+    <string name="scan_to_pay_error_dialog_title">Enviar</string>
     <string name="scan_to_pay_error_dialog_message">Não contém um endereço ou link de de Dash válido na área de transferência:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Não contém um endereço ou link de de Dash válido na área de transferência.</string>
     <string name="pay_to_confirm_address">Este é o endereço Dash para o qual você deseja enviar o pagamento?</string>
@@ -73,7 +73,7 @@
     <string name="pay_title">Enviar</string>
     <string name="history_title">Histórico</string>
     <string name="more_title">Mais</string>
-    <string name="settings_title">Ajustes</string>
+    <string name="settings_title">Configurações</string>
     <string name="security_title">Segurança</string>
     <string name="recover_wallet_title">Restaurar Carteira</string>
     <string name="tools_title">Ferramentas</string>

@@ -106,7 +106,7 @@
     <string name="sweep_wallet_options_reload">Znovu načíst bilanci</string>
     <string name="maintenance_dialog_title">Údržba doporučena</string>
     <string name="maintenance_dialog_message">Přijal jste %1$s na nezabezpečenou adresu. Přejete si převést tuto částku na zabezpečenou adresu? Malý poplatek síti ve výši %2$s bude uhrazen.</string>
-    <string name="maintenance_dialog_state_decrypting">Dešifruji…</string>
+    <string name="maintenance_dialog_state_decrypting">Dešifrování…</string>
     <string name="maintenance_dialog_state_done">Hotovo.</string>
     <string name="maintenance_dialog_button_move">Přemístit</string>
     <string name="request_coins_activity_title">Vyžádat Dash</string>
@@ -156,7 +156,7 @@
     <string name="transaction_row_message_received_rbf">U této platby došlo ke zpoždění, protože odesílatel použil nezabezpečený způsob platby.</string>
     <string name="transaction_row_status_received">Přijato</string>
     <string name="transaction_row_status_sent">Odesláno</string>
-    <string name="transaction_row_status_sending">Posílám</string>
+    <string name="transaction_row_status_sending">Odesílání</string>
     <string name="transaction_row_status_sent_internally">Interní</string>
     <string name="transaction_row_status_processing">Zpracovává se</string>
     <string name="transaction_row_status_confirming">Konfirmace</string>
@@ -235,7 +235,7 @@
     <string name="encrypt_keys_dialog_password_strength_strong">silné</string>
     <string name="encrypt_keys_dialog_show">Zobrazit PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Šifruji…</string>
-    <string name="encrypt_keys_dialog_state_decrypting">Dešifruji…</string>
+    <string name="encrypt_keys_dialog_state_decrypting">Dešifrování…</string>
     <string name="encrypt_keys_dialog_state_done">Hotovo</string>
     <string name="scan_camera_problem_dialog_title">Promiňte</string>
     <string name="scan_camera_problem_dialog_message">Problém s kamerou. Pravděpodobně je potřeba aby jste restartoval zařízení.</string>
@@ -373,7 +373,7 @@
     <string name="dash_wallet">Peněženka</string>
 
     <string name="activity_security_backup_wallet">Zálohovat peněženku do souboru</string>
-    <string name="activity_security_view_recovery_phrase">Zobrazit Frázi Pro Obnovení</string>
+    <string name="activity_security_view_recovery_phrase">Zobrazit frázi pro obnovení</string>
     <string name="activity_security_advanced">Pokročilé zabzpečení</string>
     <string name="activity_security_biometric_auth">Autentifikace otiskem prstu</string>
     <string name="activity_security_hide_balance">Automaticky skrýt zůstatek</string>

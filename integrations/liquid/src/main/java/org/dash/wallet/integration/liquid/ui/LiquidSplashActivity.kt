@@ -27,13 +27,15 @@ import android.os.Bundle
 import androidx.preference.PreferenceManager
 import android.view.MenuItem
 import android.view.View
+import androidx.activity.viewModels
 import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
-import androidx.lifecycle.ViewModelProvider
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
@@ -47,12 +49,13 @@ import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-
+@ExperimentalCoroutinesApi
+@AndroidEntryPoint
 class LiquidSplashActivity : InteractionAwareActivity() {
 
     private var loadingDialog: ProgressDialog? = null
     private var liquidClient: LiquidClient? = null
-    private lateinit var viewModel: LiquidViewModel
+    private val viewModel by viewModels<LiquidViewModel>()
     private lateinit var viewBinding: LiquidSplashScreenBinding
     private lateinit var countrySupportDialog: CountrySupportDialog
 
@@ -106,8 +109,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     }
 
     fun initViewModel() {
-        viewModel = ViewModelProvider(this)[LiquidViewModel::class.java]
-        viewModel.connectivityLiveData.observe(this) { isConnected ->
+        viewModel.isDeviceConnectedToInternet.observe(this) { isConnected ->
             if (isConnected != null) {
                 setConnectionStatus(isConnected)
             }
@@ -331,6 +333,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     override fun onResume() {
         super.onResume()
         super.turnOnAutoLogout()
+        viewModel.monitorNetworkStateChange()
     }
 
     override fun onPause() {

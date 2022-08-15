@@ -14,7 +14,7 @@
     <string name="uphold_withdrawal_success_title">Başarılı</string>
     <string name="uphold_withdrawal_success_message">İşleminiz gönderildi ve tutar birkaç dakika içinde cüzdanınızda belirecek.\n\nİşlem kimliği: %s</string>
     <string name="uphold_otp_dialog_title">2FA kodunu aşağıya girin</string>
-    <string name="uphold_transfer">Aktarım</string>
+    <string name="uphold_transfer">Transfer</string>
     <string name="uphold_see_on_uphold">Uphold\'da gör</string>
     <string name="uphold_logout_title">Uphold\'dan çıkış yap</string>
     <string name="uphold_logout">Çıkış Yap</string>
@@ -23,7 +23,7 @@
     <string name="uphold_error">Uphold Hatası</string>
     <string name="uphold_error_not_logged_in">Dash Cüzdan artık Uphold hesabınıza bağlı değil. Bir sonraki ekranda cüzdanınızı Uphold hesabınıza bağlayın.</string>
     <string name="uphold_error_not_available">Uphold hizmeti şuan kullanım dışı. Lütfen daha sonra tekrar deneyin.</string>
-    <string name="uphold_error_report_issue">Lütfen bu sorunu ana menüden "Sorun Bildir" i kullanarak Dash Wallet destek ekibine bildirin.</string>
+    <string name="uphold_error_report_issue">Lütfen bu sorunu ana menüden \"Sorun Bildir\" i kullanarak Dash Wallet destek ekibine bildirin.</string>
 
     <string name="uphold_general_error_title">Hata</string>
     <string name="uphold_api_error_title">Uphold hatası</string>

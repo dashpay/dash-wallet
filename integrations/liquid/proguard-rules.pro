@@ -30,7 +30,10 @@
 -keep interface org.dash.wallet.integration.uphold.** {*;}
 -keep interface org.dash.wallet.integration.liquid.** {*;}
 
-
+-keep class org.dash.wallet.integration.coinbase_integration.** {
+    public protected private *;
+}
+-keep interface org.dash.wallet.integration.coinbase_integration.** {*;}
 
 
 #OkHttp

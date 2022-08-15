@@ -26,8 +26,8 @@
     <string name="dialog_confirm_confirm">승인</string>
     <string name="dialog_confirm_pay_to">다음으로 전송합니다</string>
     <string name="dialog_confirm_secured_by">다음이 보증합니다</string>
-    <string name="dialog_confirm_fee">네트워크 비용</string>
-    <string name="dialog_confirm_total">총계</string>
+    <string name="dialog_confirm_fee">네트워크 수수료</string>
+    <string name="dialog_confirm_total">총합</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">현재 지갑이 안전합니다</string>
@@ -255,8 +255,8 @@
     <string name="menu_settings_title">설정</string>
     <string name="menu_settings_subtitle">통화 기본값, 단축키, 관련 정보...</string>
     <string name="menu_tools_title">도구</string>
-    <string name="menu_tools_subtitle">프라이빗 키 가져오기…</string>
-    <string name="menu_local_currency">현지 통화</string>
+    <string name="menu_tools_subtitle">개인 키를 불러옵니다....</string>
+    <string name="menu_local_currency">로컬 통화</string>
     <string name="menu_rescan_blockchain">블록체인 재스캔</string>
     <string name="menu_contact_support_title">고객 지원부에 문의하기</string>
     <string name="menu_contact_support_subtitle">오류 보고하기</string>
@@ -264,7 +264,7 @@
     <string name="menu_explore_subtitle">155,000개 이상의 상점에서 대시로 쇼핑하세요</string>
 
     <string name="tools_address_book">주소록</string>
-    <string name="tools_import_private_key">프라이빗 키 가져오기</string>
+    <string name="tools_import_private_key">프라이빗 키 불러오기</string>
     <string name="tools_network_monitor">블럭체인 모니터링</string>
     <string name="tools_show_xpub">확장된 공개 키</string>
 

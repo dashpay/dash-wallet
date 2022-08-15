@@ -45,6 +45,7 @@ import android.webkit.CookieManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.hilt.work.HiltWorkerFactory;
@@ -81,6 +82,7 @@ import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
+import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
@@ -365,6 +367,8 @@ public class WalletApplication extends BaseWalletApplication
             createNotificationChannels();
         }
         initUphold();
+        CoinBaseClientConstants.CLIENT_ID= BuildConfig.COINBASE_CLIENT_ID;
+        CoinBaseClientConstants.CLIENT_SECRET = BuildConfig.COINBASE_CLIENT_SECRET;
     }
 
     private void initUphold() {
@@ -997,6 +1001,11 @@ public class WalletApplication extends BaseWalletApplication
         return wallet.currentReceiveAddress();
     }
 
+    @NotNull
+    public Coin getWalletBalance() {
+        return wallet.getBalance(Wallet.BalanceType.ESTIMATED);
+    }
+
     @NonNull
     @Override
     public Flow<Coin> observeBalance(@NonNull Wallet.BalanceType balanceType) {
@@ -1082,7 +1091,7 @@ public class WalletApplication extends BaseWalletApplication
 
     @Override
     public void checkSendingConditions(
-            @NonNull Address address,
+            @Nullable Address address,
             @NonNull Coin amount
     ) throws LeftoverBalanceException {
         new CrowdNodeBalanceCondition().check(

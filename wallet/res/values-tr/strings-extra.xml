@@ -78,7 +78,7 @@
     <string name="recover_wallet_title">Cüzdanı Kurtar</string>
     <string name="tools_title">Araçlar</string>
 
-    <string name="payments_title">Tüm Ödemeler</string>
+    <string name="payments_title">Ödemeler</string>
     <string name="payments_tab_pay_label">Gönder</string>
     <string name="payments_tab_receive_label">Al</string>
     <string name="payments_pay_by_qr_title">Tarafından Gönderildi</string>
@@ -150,18 +150,18 @@
     <string name="wallet_last_attempt_message">Başka bir başarısız girişim, cüzdanımı kurtarmak için parolamı gerektirecek</string>
 
     <plurals name="wallet_lock_attempts_remaining">
-        <item quantity="one">%d deneme hakkı kaldı</item>
-        <item quantity="other">%d deneme hakkı kaldı</item>
+        <item quantity="one">%d deneme kaldı</item>
+        <item quantity="other">%d deneme kaldı</item>
     </plurals>
 
     <plurals name="minute">
-        <item quantity="one">dakika</item>
-        <item quantity="other">dakika</item>
+        <item quantity="one">dakikalar</item>
+        <item quantity="other">dakikalar</item>
     </plurals>
 
     <plurals name="hour">
-        <item quantity="one">saat</item>
-        <item quantity="other">saat</item>
+        <item quantity="one">saatler</item>
+        <item quantity="other">saatler</item>
     </plurals>
 
     <string name="encrypt_new_key_chain_upgrade_button">Yükselt</string>
@@ -236,7 +236,7 @@
     <string name="view_seed_title">Kurtarma Sözcük Grubu</string>
     <string name="transaction_result_view_on_explorer">Blok gezgininde görüntüle</string>
     <string name="transaction_result_paid_successfully">Başarıyla gönderildi</string>
-    <string name="transaction_result_sent_to">Gönder</string>
+    <string name="transaction_result_sent_to">Gönderildi</string>
     <string name="transaction_date_and_time">Tarih</string>
     <string name="transaction_close">Kapat</string>
     <string name="transaction_details_amount_received">Alınan Tutar</string>
@@ -269,7 +269,7 @@
     <string name="menu_explore_subtitle">155.000\'den fazla satıcıda DASH ile alışveriş yapın</string>
 
     <string name="tools_address_book">Adres Rehberi</string>
-    <string name="tools_import_private_key">Özel anahtar içeri al</string>
+    <string name="tools_import_private_key">Özel Anahtarı İçe Aktar</string>
     <string name="tools_network_monitor">Ağ monitörü</string>
     <string name="tools_show_xpub">Genişletilmiş Genel Anahtar</string>
 

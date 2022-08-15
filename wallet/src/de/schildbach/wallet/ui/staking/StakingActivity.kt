@@ -77,7 +77,7 @@ class StakingActivity : LockScreenActivity() {
                 ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
             }
             NavigationRequest.BuyDash -> {
-                startActivity(BuyAndSellLiquidUpholdActivity.createIntent(this))
+                startActivity(BuyAndSellIntegrationsActivity.createIntent(this))
             }
             NavigationRequest.SendReport -> {
                 log.info("CrowdNode initiated report")

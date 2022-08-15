@@ -45,6 +45,8 @@ interface WalletDataProvider {
     @Deprecated("Inject Configuration instead")
     fun defaultCurrencyCode(): String
 
+    fun getWalletBalance(): Coin
+
     fun observeBalance(balanceType: Wallet.BalanceType = Wallet.BalanceType.ESTIMATED): Flow<Coin>
 
     fun observeTransactions(vararg filters: TransactionFilter): Flow<Transaction>
@@ -60,7 +62,7 @@ interface WalletDataProvider {
     fun processDirectTransaction(tx: Transaction)
 
     @Throws(LeftoverBalanceException::class)
-    fun checkSendingConditions(address: Address, amount: Coin)
+    fun checkSendingConditions(address: Address?, amount: Coin)
 
     fun observeMostRecentTransaction(): Flow<Transaction>
 }

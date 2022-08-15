@@ -14,7 +14,7 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
-<LinearLayout
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -25,6 +25,10 @@
     tools:context="org.dash.wallet.common.ui.radio_group.OptionPickerDialog">
 
     <FrameLayout
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:id="@+id/search_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp">
@@ -48,6 +52,10 @@
 
     <FrameLayout
         android:id="@+id/search_box"
+        tools:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@+id/search_layout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:layout_marginStart="15dp"
@@ -81,14 +89,42 @@
             tools:visibility="visible" />
     </FrameLayout>
 
+    <ProgressBar
+        android:id="@+id/progress_ring"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:visibility="visible" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/content_list"
+        app:layout_constraintTop_toBottomOf="@+id/search_box"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:clipToPadding="false"
         android:paddingTop="12dp"
         android:paddingBottom="30dp"
+        tools:visibility="gone"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         tools:itemCount="5"
         tools:listitem="@layout/radiobutton_row" />
-</LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/dialog_network_status_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@+id/search_layout"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:ignore="UselessLeaf" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

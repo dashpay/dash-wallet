@@ -4,7 +4,7 @@
     <string name="uphold_account">Uphold</string>
     <string name="uphold_buy_dash_activity_title">Koupit/Prodat Dash přes Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Koupit Dash prostřednictvím Uphold účtu</string>
-    <string name="uphold_buy_dash_button">Koupit Dash</string>
+    <string name="uphold_buy_dash_button">Nákup Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Převést z Uphold</string>
     <string name="uphold_link_account">Připojit účet Uphold</string>
     <string name="uphold_account_dash_balance">Zůstatek Dash vašeho účtu Uphold je</string>
@@ -14,7 +14,7 @@
     <string name="uphold_withdrawal_success_title">Úspěšně dokončeno</string>
     <string name="uphold_withdrawal_success_message">Transakce byla odeslána, částka by se měla objevit v peněžence během několika minut.\n\nID transakce: %s</string>
     <string name="uphold_otp_dialog_title">Vložte váš 2FA kód níže</string>
-    <string name="uphold_transfer">Převod</string>
+    <string name="uphold_transfer">Transakce</string>
     <string name="uphold_see_on_uphold">Ukázat na Uphold</string>
     <string name="uphold_logout_title">Odhlásit z účtu Uphold</string>
     <string name="uphold_logout">Odhlásit se</string>

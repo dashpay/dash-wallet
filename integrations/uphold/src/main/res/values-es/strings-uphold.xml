@@ -13,7 +13,7 @@
     <string name="uphold_withdrawal_instructions">Ingresa la cantidad a transferir</string>
     <string name="uphold_withdrawal_success_title">Éxito</string>
     <string name="uphold_withdrawal_success_message">Tu transacción se envió y el monto debe aparecer en tu billetera en unos minutos.\n\n ID de transacción: %s</string>
-    <string name="uphold_otp_dialog_title">Ingresa tu código 2FA debajo</string>
+    <string name="uphold_otp_dialog_title">Ingresar tu código 2FA debajo</string>
     <string name="uphold_transfer">Transferir</string>
     <string name="uphold_see_on_uphold">Ver en Uphold</string>
     <string name="uphold_logout_title">Cerrar sesión desde Uphold</string>

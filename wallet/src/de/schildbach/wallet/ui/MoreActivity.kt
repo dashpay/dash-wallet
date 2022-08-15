@@ -83,7 +83,7 @@ class MoreActivity : GlobalFooterActivity() {
 
     private fun startBuyAndSellActivity() {
         analytics.logEvent(AnalyticsConstants.Liquid.BUY_SELL_MORE, bundleOf())
-        startActivityForResult(BuyAndSellLiquidUpholdActivity.createIntent(this), REQUEST_CODE_BUY_SELL)
+        startActivityForResult(BuyAndSellIntegrationsActivity.createIntent(this), REQUEST_CODE_BUY_SELL)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

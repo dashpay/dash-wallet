@@ -24,7 +24,7 @@
     <string name="exchange_rates_fragment_balance">Sold</string>
     <string name="exchange_rates_fragment_source">Preț de la %s</string>
     <string name="exchange_rates_options_search">Caută cursul de schimb</string>
-    <string name="exchange_rates_context_set_as_default_title">Setează ca și default</string>
+    <string name="exchange_rates_context_set_as_default_title">Setează ca si default</string>
     <string name="wallet_transactions_row_warning_backup">Felicitări, ai primit prima ta plată! Ai creat deja portofelul, pentru protecție împotriva pierderii?</string>
     <string name="wallet_transactions_fragment_coinbase">minerit</string>
     <string name="wallet_transactions_fragment_internal">intern</string>

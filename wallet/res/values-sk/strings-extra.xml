@@ -58,7 +58,7 @@
 
     <string name="perm_lock_info">Peňaženka je trvalo zamknutá</string>
     <string name="perm_lock_wipe_wallet">Vymazať Peňaženku</string>
-    <string name="perm_lock_close_app">Ukončiť</string>
+    <string name="perm_lock_close_app">Zatvoriť</string>
 
     <string name="scan_to_pay_error_dialog_title">Skenovať a poslať</string>
     <string name="scan_to_pay_error_dialog_message">V schránke nie je platná Dash adresa, alebo URL požiadavka:\n\n%s</string>
@@ -81,8 +81,8 @@
     <string name="payments_title">Platby</string>
     <string name="payments_tab_pay_label">Poslať</string>
     <string name="payments_tab_receive_label">Prijať</string>
-    <string name="payments_pay_by_qr_title">Poslať od</string>
-    <string name="payments_pay_by_qr_sub_title">Skenuje sa QR kód</string>
+    <string name="payments_pay_by_qr_title">Poslať</string>
+    <string name="payments_pay_by_qr_sub_title">Skenovaním QR kódu</string>
     <string name="payments_pay_to_clipboard_title">Poslať na skopírovanú adresu</string>
     <string name="payments_pay_to_clipboard_sub_title">Nebola skopírovaná žiadna adresa</string>
 
@@ -113,7 +113,7 @@
     <string name="import_keys_dialog_title_from_seed">Obnoviť z frázy pre obnovenie</string>
     <string name="backup_to_seed_wallet_dialog_message">Toto je vaša fráza pre obnovenie. Zapíšte si ju.</string>
     <string name="backup_wallet_to_seed_dialog_warning">NENECHÁVAJTE nikoho aby videl vašu frázu pre obnovenie, inak môžu minúť vaše Dash.</string>
-    <string name="backup_to_seed_wallet_dialog_enter_pin_message">Vaša peňaženka je chránená PIN-om pre míňanie. Vložte Vás PIN a stlačte "Ukázať" pre zobrazenie frázy pre obnovenie.</string>
+    <string name="backup_to_seed_wallet_dialog_enter_pin_message">Vaša peňaženka je chránená PIN-om pre míňanie. Vložte Vás PIN a stlačte \"Ukázať\" pre zobrazenie frázy pre obnovenie.</string>
     <string name="import_keys_from_seed_dialog_message">Sem vložte vašu frázu pre obnovenie.</string>
     <string name="import_export_keys_dialog_password_phrase">Fráza pre obnovenie patrí sem.</string>
     <string name="preferences_report_issue_summary">Zozbierať informácie o vašich problémoch a poslať report e-mailom vývojárom.</string>
@@ -126,7 +126,7 @@
     <string name="restore_wallet_from_invalid_seed_failure">Peňaženku nebolo možné obnoviť:\n\n%s\n\nZlá fráza pre obnovenie?</string>
 
     <string name="send_coins_options_fee_category_zero">Bez poplatku</string>
-    <string name="send_coins_fragment_hint_fee_zero">Nebude zaplatený žiadny poplatok. Používajte "Bez poplatku", iba ak Vám nezáleží na čase potvrdenia.</string>
+    <string name="send_coins_fragment_hint_fee_zero">Nebude zaplatený žiadny poplatok. Používajte \"Bez poplatku\", iba ak Vám nezáleží na čase potvrdenia.</string>
 
     <!-- Deep Links:  Message pops up when another app requests information from this app -->
     <string name="wallet_uri_handler_public_key_request_dialog_msg">Aplikácia %s by chcela získať váš hlavný verejný kľúč. Ten môže byť použitý na sledovanie peňaženky, ale nedá sa použiť na presun vašich Dash.</string>
@@ -144,16 +144,16 @@
 
     <string name="wallet_lock_wallet_disabled">Peňaženka neaktívna</string>
     <string name="wallet_lock_try_again">Skúste znova za %1$d %2$s</string>
-    <string name="wallet_lock_reset">Reset</string>
+    <string name="wallet_lock_reset">Obnoviť</string>
     <string name="wallet_lock_wrong_pin">Chybný PIN! %s</string>
     <string name="wallet_last_attempt">Posledný pokus pre PIN</string>
     <string name="wallet_last_attempt_message">Ďalší neúspešný pokus bude vyžadovať moju prístupovú frázu na obnovenie mojej peňaženky</string>
 
     <plurals name="wallet_lock_attempts_remaining">
-        <item quantity="one">Zostáva %d pokus</item>
-        <item quantity="few">Zostávajú %d pokusy</item>
-        <item quantity="many">Zostáva %d pokusov</item>
-        <item quantity="other">Zostáva %d pokusov</item>
+        <item quantity="one">%d zostávajúci pokus</item>
+        <item quantity="few">%d zostávajúce pokusy</item>
+        <item quantity="many">%d zostávajúcich pokusov</item>
+        <item quantity="other">%d zostávajúcich pokusov</item>
     </plurals>
 
     <plurals name="minute">
@@ -220,12 +220,12 @@
     <string name="verify_it_is_important_subtitle">Chystáme sa vám ukázať tajný kľúč k vašej peňaženke.</string>
     <string name="verify_info_text_1">Táto fráza pre obnovenie predstavuje váš prístup k finančným prostriedkom v tejto peňaženke.</string>
     <string name="verify_info_text_2">Túto frázu pre obnovenie neuchovávame.</string>
-    <string name="verify_info_text_3">Túto frázu pre obnovenie budete potrebovať na prístup k vašim finančným prostriedkom, ak dôjde k strate či poškodeniu tohto zariadenia alebo k náhodnému odinštalovaniu Dash Wallet z tohto zariadenia.</string>
+    <string name="verify_info_text_3">Túto frázu pre obnovenie budete potrebovať na prístup k vašim finančným prostriedkom, ak dôjde k strate či poškodeniu tohto zariadenia, alebo k náhodnému odinštalovaniu Dash Wallet z tohoto zariadenia.</string>
     <string name="verify_skip">Preskočiť</string>
     <string name="verify_secure_now_btn">Teraz zabezbečiť</string>
     <string name="verify_secure_now_message">Ak toto zariadenie stratíte, stratíte vaše prostriedky. Získajte frázu pre obnovenie, aby ste mohli peňaženku obnoviť na inom zariadení.</string>
     <string name="verify_seed_title">Prosím, zapíšte si ju</string>
-    <string name="verify_seed_write_down_confirmation">Zapísal som si to</string>
+    <string name="verify_seed_write_down_confirmation">Zapísal som si ju</string>
     <string name="verify_seed_buttons_tip">Klepnite na slová z obnovovacej frázy v správnom poradí</string>
     <string name="verify_seed_success_title">Úspešne overené</string>
     <string name="verify_seed_success_message">Vaša peňaženka je zabezpečená. Frázu pre obnovenie môžete kedykoľvek použiť na obnovenie svojho účtu na inom zariadení.</string>
@@ -244,7 +244,7 @@
     <string name="transaction_result_paid_successfully">Úspešne poslané</string>
     <string name="transaction_result_sent_to">Poslané ku</string>
     <string name="transaction_date_and_time">Dátum</string>
-    <string name="transaction_close">Ukončiť</string>
+    <string name="transaction_close">Zatvoriť</string>
     <string name="transaction_details_amount_received">Prijatá suma</string>
     <string name="transaction_details_amount_sent">Odoslaná suma</string>
     <string name="transaction_details_sent_from">Poslané od</string>
@@ -269,7 +269,7 @@
     <string name="menu_tools_subtitle">Importovať privátny kľúč…</string>
     <string name="menu_local_currency">Miestna mena</string>
     <string name="menu_rescan_blockchain">Znova prehľadať blockchain</string>
-    <string name="menu_contact_support_title">Kontaktovať Podporu</string>
+    <string name="menu_contact_support_title">Kontaktovať podporu</string>
     <string name="menu_contact_support_subtitle">Nahlásiť problém</string>
     <string name="menu_explore_title">Preskúmať</string>
     <string name="menu_explore_subtitle">Nakupujte s DASH u viac ako 155 000 obchodníkov</string>
@@ -281,7 +281,7 @@
 
     <string name="about_help_us_improve">Pomôžte nám vylepšiť váš zážitok</string>
     <string name="about_review_and_rate">Ohodnotiť aplikáciu</string>
-    <string name="about_contact_support">Kontaktovať Podporu</string>
+    <string name="about_contact_support">Kontaktovať podporu</string>
     <string name="about_fork_disclaimer">Toto je aplikácia s otvoreným zdrojovým kódom vytvorená z bitcoin peňaženky</string>
     <string name="about_copyright">Autorské práva © 2022 Dash Core</string>
     <string name="about_license">Všeobecná verejná licencia GNU v3.0</string>
@@ -350,7 +350,7 @@
     <string name="payment_request_problem_title">Platba nebola uznaná</string>
     <string name="payment_request_problem_message">Vaša platba nemohla byť spracovaná serverom, prosím informujte sa u obchodníka</string>
     <string name="payment_request_expired_title">Žiadosť o platbu vypršala</string>
-    <string name="payment_request_close">Ukončiť</string>
+    <string name="payment_request_close">Zatvoriť</string>
     <string name="payment_request_skip">Preskočiť</string>
     <string name="payment_request_paid_to">Zaplatené</string>
 

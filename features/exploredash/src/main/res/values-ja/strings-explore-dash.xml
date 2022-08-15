@@ -47,11 +47,11 @@
     <string name="distance_kilometers">%skm</string>
 
     <plurals name="explore_merchant_amount">
-        <item quantity="other">%d店舗</item>
+        <item quantity="other">%dカ所の加盟店があります</item>
     </plurals>
 
     <plurals name="explore_atm_amount">
-        <item quantity="other">%dカ所</item>
+        <item quantity="other">%dカ所のATMがあります</item>
     </plurals>
 
     <!-- Details -->
