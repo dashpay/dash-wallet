@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
@@ -77,19 +76,13 @@ public abstract class AppExploreDatabase extends RoomDatabase {
         ExploreRepository repository
     ) {
         String exploreDatabaseName = config.getExploreDatabaseName();
-
-        File dbFile = context.getDatabasePath(exploreDatabaseName);
         File dbUpdateFile = repository.getUpdateFile();
-        if (!dbFile.exists() && !dbUpdateFile.exists()) {
-            repository.preloadFromAssetsInto(dbUpdateFile);
-        }
 
         if (dbUpdateFile.exists()) {
-            log.info("found explore db update package {}", dbUpdateFile.getAbsolutePath());
-
-            repository.deleteOldDB(dbFile);
-
             long dbTimestamp = repository.getTimestamp(dbUpdateFile);
+            log.info("found explore db update package {}, with a timestamp: {}", dbUpdateFile.getAbsolutePath(), dbTimestamp);
+            File oldDbFile = context.getDatabasePath(exploreDatabaseName);
+            repository.markDbForDeletion(oldDbFile);
             exploreDatabaseName = config.setExploreDatabaseName(dbTimestamp);
         }
 
@@ -101,8 +94,10 @@ public abstract class AppExploreDatabase extends RoomDatabase {
 
         log.info("Build database {}", exploreDatabaseName);
         AppExploreDatabase database = buildDatabase(dbBuilder, repository, dbUpdateFile);
+        File dbFile = context.getDatabasePath(exploreDatabaseName);
 
         if (!dbFile.exists()) {
+            log.info("querying database to trigger the open callback");
             // execute simple query to trigger database opening (onOpenPrepackagedDatabase)
             database.query("SELECT * FROM sqlite_master", null);
         }
