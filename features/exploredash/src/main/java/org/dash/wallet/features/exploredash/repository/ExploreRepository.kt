@@ -149,21 +149,21 @@ class GCExploreDatabase @Inject constructor(
         }
     }
 
-    private fun splitComment(comment: String) : Array<String> {
-        return comment.split("#".toRegex()).toTypedArray()
+    private fun extractComment(zipFile: ZipFile) : Array<String> {
+        return zipFile.comment.split("#".toRegex()).toTypedArray()
     }
 
     @Throws(IOException::class)
     override fun getTimestamp(file: File): Long {
         val zipFile = ZipFile(file)
-        val comment = splitComment(zipFile.comment)
+        val comment = extractComment(zipFile)
         return comment[0].toLong()
     }
 
     @Throws(IOException::class)
     override fun getDatabaseInputStream(file: File): InputStream? {
         val zipFile = ZipFile(file)
-        val comment = splitComment(zipFile.comment)
+        val comment = extractComment(zipFile)
         updateTimestampCache = comment[0].toLong()
         val checksum = comment[1]
         log.info("package timestamp {}, checksum {}", updateTimestampCache, checksum)
