@@ -189,7 +189,13 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
                 object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
                     override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
                         when (type) {
-                            CoinBaseResultDialog.Type.CONVERSION_ERROR, CoinBaseResultDialog.Type.DEPOSIT_ERROR, CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR -> {
+                            CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR , CoinBaseResultDialog.Type.DEPOSIT_ERROR-> {
+                                viewModel.logRetry(type)
+                                viewModel.isRetryingTransfer(true)
+                                dismiss()
+                                binding.enterCodeField.text?.clear()
+                            }
+                            CoinBaseResultDialog.Type.CONVERSION_ERROR-> {
                                 viewModel.logRetry(type)
                                 dismiss()
                                 findNavController().popBackStack()

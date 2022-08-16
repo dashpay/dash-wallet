@@ -36,6 +36,7 @@ import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
 import java.io.IOException
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -54,14 +55,27 @@ class EnterTwoFaCodeViewModel @Inject constructor(
 
     val twoFaErrorState = SingleLiveEvent<Unit>()
 
+    private var _isRetryingTransfer: Boolean = false
+
+    fun isRetryingTransfer(isRetryingTransfer: Boolean) {
+        _isRetryingTransfer = isRetryingTransfer
+    }
+
     fun verifyUserAndCompleteTransaction(
         params: SendTransactionToWalletParams?,
         twoFaCode: String
     ) = viewModelScope.launch(Dispatchers.Main) {
         _loadingState.value = true
 
-        params?.let {
-            when (val result = coinBaseRepository.sendFundsToWallet(params, twoFaCode)) {
+        val sendTransactionToWalletParams = if (_isRetryingTransfer) {
+            params?.copy(idem = UUID.randomUUID().toString())
+        } else {
+            params
+        }
+
+        sendTransactionToWalletParams?.let {
+            _isRetryingTransfer = false
+            when (val result = coinBaseRepository.sendFundsToWallet(it, twoFaCode)) {
                 is ResponseResource.Success -> {
                     _loadingState.value = false
                     if (result.value == null) {
@@ -135,7 +149,6 @@ class EnterTwoFaCodeViewModel @Inject constructor(
         }
     }
 }
-
 
 
 data class TransactionState(
