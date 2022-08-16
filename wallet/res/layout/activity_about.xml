@@ -57,6 +57,7 @@
         android:layout_marginTop="10dp"
         android:background="@drawable/selectable_background_dark"
         android:gravity="center"
+        android:textAlignment="center"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
         app:layout_constraintEnd_toEndOf="parent"
