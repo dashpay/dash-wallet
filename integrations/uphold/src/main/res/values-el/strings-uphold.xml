@@ -23,7 +23,7 @@
     <string name="uphold_error">Σφάλμα Uphold</string>
     <string name="uphold_error_not_logged_in">Το Πορτοφόλι Dash δεν συνδέεται πλέον με τον λογαριασμό σας στο Uphold. Στην επόμενη οθόνη πατήστε σύνδεση λογαριασμού Uphold.</string>
     <string name="uphold_error_not_available">Η υπηρεσία Uphold δεν είναι διαθέσιμη. Παρακαλώ προσπαθήστε ξανά αργότερα.</string>
-    <string name="uphold_error_report_issue">Παρακαλώ αναφέρετε αυτό το ζήτημα στην ομάδα υποστήριξης του Πορτοφολιού Dash χρησιμοποιώντας το "Αναφορά έκδοσης" από το κύριο μενού.</string>
+    <string name="uphold_error_report_issue">Παρακαλώ αναφέρετε αυτό το ζήτημα στην ομάδα υποστήριξης του Πορτοφολιού Dash χρησιμοποιώντας το \"Αναφορά έκδοσης\" από το κύριο μενού.</string>
 
     <string name="uphold_general_error_title">Σφάλμα</string>
     <string name="uphold_api_error_title">Σφάλμα Uphold</string>

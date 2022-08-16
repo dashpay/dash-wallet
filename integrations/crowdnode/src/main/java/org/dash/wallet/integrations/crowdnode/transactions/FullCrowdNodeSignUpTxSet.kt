@@ -69,7 +69,7 @@ open class FullCrowdNodeSignUpTxSet(
                 }
             }
         }
-
+        
         val matchedFilter = crowdNodeTxFilters.firstOrNull { it.matches(tx) }
 
         if (matchedFilter != null) {

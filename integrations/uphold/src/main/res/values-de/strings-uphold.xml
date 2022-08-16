@@ -23,7 +23,7 @@
     <string name="uphold_error">Uphold Fehler</string>
     <string name="uphold_error_not_logged_in">Die Dash Wallet ist nicht mehr mit einem Uphold-Account verbunden. Auf der nächsten Seite musst du den Link Uphold-Account klicken.</string>
     <string name="uphold_error_not_available">Der Uphold-Service ist nicht verfügbar. Versuche es später erneut.</string>
-    <string name="uphold_error_report_issue">Bitte teile dem Dash Wallet Support-Team diesen Fehler über die Option "Fehler melden" im Hauptmenü mit.</string>
+    <string name="uphold_error_report_issue">Bitte teile dem Dash Wallet Support-Team diesen Fehler über die Option \"Fehler melden\" im Hauptmenü mit.</string>
 
     <string name="uphold_general_error_title">Fehler</string>
     <string name="uphold_api_error_title">Uphold Fehler</string>

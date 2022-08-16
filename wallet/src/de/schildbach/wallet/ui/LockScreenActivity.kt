@@ -27,6 +27,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
+import androidx.annotation.CallSuper
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -144,7 +145,7 @@ open class LockScreenActivity : SecureActivity() {
     private val onLogoutListener = AutoLogout.OnLogoutListener {
         dismissKeyboard()
         setLockState(State.USE_DEFAULT)
-        onLockScreenActivated()
+        handleLockScreenActivated()
     }
 
     override fun onUserInteraction() {
@@ -221,7 +222,7 @@ open class LockScreenActivity : SecureActivity() {
             if (autoLogout.isTimerActive) {
                 autoLogout.stopTimer()
             }
-            onLockScreenActivated()
+            handleLockScreenActivated()
         } else {
             root_view_switcher.displayedChild = 1
             if (!keepUnlocked) {
@@ -530,14 +531,16 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
-    open fun onLockScreenActivated() {
+    private fun handleLockScreenActivated() {
         if (this::alertDialog.isInitialized){
             alertDialog.dismissDialog()
         }
-
         lockScreenBroadcaster.activatingLockScreen.call()
         dismissDialogFragments(supportFragmentManager)
+        onLockScreenActivated()
     }
+
+    open fun onLockScreenActivated() { }
 
     open fun onLockScreenDeactivated() { }
 

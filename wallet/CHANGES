@@ -601,7 +601,6 @@ v5.15
 
 * Block sending payments while blockchain replay is in progress.
 
->>>>>>> v5.17
 v5.14
 
 * Update translations from Transifex.
@@ -836,7 +835,6 @@ v4.41
 * Add blockexplorer.com to block explorers used for browsing transactions, addresses and blocks.
 * Update Dutch, Italian and Russian translations.
 
->>>>>>> c7022b0381011ed8a85b305909f2133882edb0bb
 v4.40
 
 * Bugfixes.
@@ -1251,7 +1249,6 @@ v3.24
 
 * fixed issue with stuck outgoing transactions
 
->>>>>>> upstream/prod
 v3.23
 
 * fixed issue with detecting online state

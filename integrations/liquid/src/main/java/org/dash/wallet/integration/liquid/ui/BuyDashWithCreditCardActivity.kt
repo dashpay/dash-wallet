@@ -1,3 +1,20 @@
+/*
+ * Copyright 2021 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.dash.wallet.integration.liquid.ui
 
 
@@ -16,6 +33,7 @@ import android.view.MenuItem
 import android.view.View
 import android.webkit.*
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
@@ -23,13 +41,15 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.NetworkUnavailableFragmentViewModel
@@ -102,6 +122,8 @@ class WidgetEvent(
         var event: String?
 )
 
+@ExperimentalCoroutinesApi
+@AndroidEntryPoint
 class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
 
     companion object {
@@ -116,10 +138,10 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     // Used for Firebase events
     private var widgetState: String = ""
     private var processingStartTime = 0L
-    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
+    @Inject lateinit var analytics: AnalyticsService
 
     private lateinit var viewBinding: ActivityWebviewQuickExchangeBinding
-    private lateinit var viewModel: ConnectivityViewModel
+    private val viewModel by viewModels<ConnectivityViewModel>()
     @Inject
     lateinit var transactionMetadataProvider: TransactionMetadataProvider
     @Inject
@@ -158,8 +180,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     }
 
     fun initViewModel() {
-        viewModel = ViewModelProvider(this)[ConnectivityViewModel::class.java]
-        viewModel.connectivityLiveData.observe(this) { isConnected ->
+        viewModel.isDeviceConnectedToInternet.observe(this) { isConnected ->
             if (isConnected != null) {
                 setConnectedState(isConnected)
             }
@@ -613,5 +634,10 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
             log.info("liquid: onBackPressed: successful transaction was not made")
             finish()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.monitorNetworkStateChange()
     }
 }

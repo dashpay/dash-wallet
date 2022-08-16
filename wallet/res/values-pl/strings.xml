@@ -78,7 +78,7 @@
     <string name="send_coins_fragment_insufficient_money_msg1">Brakuje %s.</string>
     <string name="send_coins_fragment_insufficient_money_msg2">Czy chcesz wysłać wszystko?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Opróżnienie portfela nie powiodło się</string>
-    <string name="send_coins_fragment_state_decrypting">Odszyfrowywanie…</string>
+    <string name="send_coins_fragment_state_decrypting">Odszyfrowywuje...</string>
     <string name="send_coins_preparation_msg">Podpisywanie…</string>
     <string name="send_coins_sending_msg">Wysyłanie…</string>
     <string name="send_coins_sent_msg">Wysłano!</string>
@@ -106,7 +106,7 @@
     <string name="sweep_wallet_options_reload">Odśwież saldo</string>
     <string name="maintenance_dialog_title">Zalecana konserwacja</string>
     <string name="maintenance_dialog_message">Otrzymałeś %1$s na niezabezpieczony adres. Czy chcesz przenieść środki na bezpieczny adres? Zostanie pobrana niewielka opłata za transakcję w wysokości %2$s.</string>
-    <string name="maintenance_dialog_state_decrypting">Odszyfrowywanie...</string>
+    <string name="maintenance_dialog_state_decrypting">Odszyfrowywuje...</string>
     <string name="maintenance_dialog_state_done">Zrobione.</string>
     <string name="maintenance_dialog_button_move">Przenieś</string>
     <string name="request_coins_activity_title">Poproś o Dashe</string>
@@ -191,7 +191,7 @@
     <string name="peer_list_row_ping_time">⇆ %d ms</string>
     <string name="restore_wallet_permission_dialog_title">Brak zezwolenia na odczyt</string>
     <string name="restore_wallet_permission_dialog_message">Aby wybrać plik kopii bezpieczeństwa z pamięci zewnętrznej, wymagane jest udzielenie pozwolenie na odczyt.</string>
-    <string name="import_keys_dialog_title">Importuj prywatne klucze</string>
+    <string name="import_keys_dialog_title">Importowanie kluczy Dash</string>
     <string name="import_keys_dialog_message">Wybierz plik z kluczami prywatnymi do importowania z zewnętrznego nośnika lub aplikacji przechowującej:</string>
     <string name="restore_wallet_dialog_replace_warning">Zamierzasz zastąpić obecny portfel. Wszelkie monety obecne w portfelu zostaną utracone chyba że jesteś w posiadaniu osobnej kopii zapasowej.</string>
     <string name="import_keys_dialog_warning">Ważne: Nie załadowywuj kluczy prywatnych z wątpliwych źródeł! Inni mogą mieć kontrolę nad twoimi środkami.</string>
@@ -347,10 +347,10 @@
     <string name="button_copy_request">Skopiuj żądanie</string>
     <string name="button_paste">Wklej</string>
     <string name="button_set_as_default">Ustaw jako domyślne</string>
-    <string name="button_request_coins">Poproś o Dashy</string>
+    <string name="button_request_coins">Poproś o Dashe</string>
     <string name="button_send_coins">Wyślij Dashe</string>
     <string name="button_pay">Wyślij</string>
-    <string name="button_scan">Skanuj</string>
+    <string name="button_scan">Zeskanuj</string>
     <string name="button_settings">Ustawienia</string>
     <string name="action_show_qr">Pokaż kod QR</string>
     <string name="action_browse">Przeglądaj</string>

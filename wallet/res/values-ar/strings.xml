@@ -13,7 +13,7 @@
     <string name="blockchain_state_progress_stalled">تعطل التزامن</string>
     <string name="blockchain_state_progress_problem_storage">مزامنة: مشكلة في التخزين</string>
     <string name="blockchain_state_progress_problem_network">مزامنة: مشكلة في الشبكة</string>
-    <string name="wallet_address_fragment_clipboard_msg">تم نسخ عنوان محفظتك إلى الحافظة</string>
+    <string name="wallet_address_fragment_clipboard_msg">تم نسخ عنوان داش الى الحافظة</string>
     <string name="wallet_address_dialog_fragment_hint">لحماية خصوصيتك، سيتغير عنوانك بمجرد استلامه دفعة.</string>
     <string name="wallet_balance_fragment_too_much">هذا المبلغ مرتفع جدا لحمل في جيبك. يرجى نقل البعض منه إلى مكان أكثر أمانا.</string>
     <string name="wallet_balance_fragment_replaying">الرصيد غير متاح في حالة إعادة التشغيل.</string>
@@ -236,7 +236,7 @@
     <string name="encrypt_keys_dialog_password_strength_strong">قوي</string>
     <string name="encrypt_keys_dialog_show">إظهار الرقم السري الشخصي</string>
     <string name="encrypt_keys_dialog_state_encrypting">تشفير ...</string>
-    <string name="encrypt_keys_dialog_state_decrypting">فك تشفير ...</string>
+    <string name="encrypt_keys_dialog_state_decrypting">جارٍ فك التشفير ...</string>
     <string name="encrypt_keys_dialog_state_done">تم</string>
     <string name="scan_camera_problem_dialog_title">عذرا</string>
     <string name="scan_camera_problem_dialog_message">هناك مشكلة في الكاميرا. ربما تحتاج إلى إعادة تشغيل الجهاز.</string>

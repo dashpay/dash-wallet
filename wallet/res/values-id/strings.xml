@@ -62,7 +62,7 @@
     <string name="send_coins_fragment_receiving_address_complex">alamat\nyang rumit</string>
     <string name="send_coins_fragment_pending">(%s menunggu konfirmasi)</string>
     <string name="send_coins_fragment_amount_label">Jumlah untuk dikirim</string>
-    <string name="send_coins_fragment_pin_label">Masukkan pin</string>
+    <string name="send_coins_fragment_pin_label">Masukkan PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Biaya jaringan %s akan dibayarkan.</string>
     <string name="send_coins_fragment_hint_fee_priority">Biaya prioritas %s akan dibayarkan. Jika Anda peduli dengan biaya rendah, gunakan \'prioritas\' hanya jika Anda perlu konfirmasi sesegera mungkin.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Jumlah pembayaran kecil di dompet Anda tidak menambah nilai yang dapat dikirim.</string>
@@ -191,7 +191,7 @@
     <string name="peer_list_row_ping_time">⇆ %d ms</string>
     <string name="restore_wallet_permission_dialog_title">Izin baca menghilang</string>
     <string name="restore_wallet_permission_dialog_message">Untuk mencari cadangan dompet di penyimpanan eksternal Anda, Anda perlu memberikan izin baca.</string>
-    <string name="import_keys_dialog_title">Kembalikan kunci pribadi</string>
+    <string name="import_keys_dialog_title">Pulihkan kunci pribadi</string>
     <string name="import_keys_dialog_message">Pilih berkas kunci pribadi dari penyimpanan eksternal (%s):</string>
     <string name="restore_wallet_dialog_replace_warning">Anda akan mengganti dompet Anda saat ini. Koin apa pun yang ada  di dompet saat ini akan hilang kecuali Anda memiliki cadangan terpisah dari itu.</string>
     <string name="import_keys_dialog_warning">Penting: Jangan memuat kunci pribadi dari sumber yang meragukan! Orang lain dapat mengendalikan dana Anda jika Anda melakukannya.</string>
@@ -288,7 +288,7 @@
     <string name="bitmap_fragment_share">Bagikan...</string>
     <string name="extended_public_key_fragment_title">Kunci Publik Diperpanjang</string>
     <string name="extended_public_key_fragment_share">Bagikan xpub...</string>
-    <string name="report_issue_dialog_title_issue">Laporkan masalah</string>
+    <string name="report_issue_dialog_title_issue">Laporkan Masalah</string>
     <string name="report_issue_dialog_title_crash">Kesalahan terdeteksi</string>
     <string name="report_issue_dialog_title_transaction">Laporkan masalah dengan pembayaran yang dipilih</string>
     <string name="report_issue_dialog_message_issue">Tolong jelaskan masalah Anda secara tepat agar dapat kami atasi. Gunakan bahasa Inggris jika Anda bisa.  Harap tunggu email dari pusat bantuan Dash mengenai masalah Anda dalam 24 jam.</string>
@@ -334,7 +334,7 @@
     <string name="appwidget_wallet_balance_title">Saldo Dash</string>
 
     <!-- generic buttons -->
-    <string name="button_ok">IYA</string>
+    <string name="button_ok">OK</string>
     <string name="button_dismiss">Tolak</string>
     <string name="button_cancel">Batal</string>
     <string name="button_help">Bantuan</string>

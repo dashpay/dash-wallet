@@ -128,7 +128,7 @@
 
     </LinearLayout>
 
-    <org.dash.wallet.common.ui.LockScreenButton
+    <de.schildbach.wallet.ui.LockScreenButton
         android:id="@+id/action_receive"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -143,7 +143,7 @@
         app:layout_constraintWidth_percent="0.24"
         app:text="@string/lock_action_quick_receive" />
 
-    <org.dash.wallet.common.ui.LockScreenButton
+    <de.schildbach.wallet.ui.LockScreenButton
         android:id="@+id/action_login_with_pin"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -158,7 +158,7 @@
         app:layout_constraintWidth_percent="0.24"
         app:text="@string/lock_action_login_with_pin" />
 
-    <org.dash.wallet.common.ui.LockScreenButton
+    <de.schildbach.wallet.ui.LockScreenButton
         android:id="@+id/action_login_with_fingerprint"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -173,7 +173,7 @@
         app:layout_constraintWidth_percent="0.24"
         app:text="@string/lock_action_login_with_fingerprint" />
 
-    <org.dash.wallet.common.ui.LockScreenButton
+    <de.schildbach.wallet.ui.LockScreenButton
         android:id="@+id/action_scan_to_pay"
         android:layout_width="0dp"
         android:layout_height="0dp"

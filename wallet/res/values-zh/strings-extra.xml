@@ -86,7 +86,7 @@
     <string name="payments_pay_to_clipboard_title">发送至复制地址</string>
     <string name="payments_pay_to_clipboard_sub_title">未复制地址</string>
 
-    <string name="forgot_pin_title">忘记PIN？</string>
+    <string name="forgot_pin_title">忘记PIN?</string>
     <string name="forgot_pin_message">您可以借助助记词来设置新的PIN</string>
     <string name="forgot_pin_instruction_1">输入助记词来找回您的钱包</string>
     <string name="forgot_pin_instruction_2">设置一个新PIN</string>
@@ -150,7 +150,7 @@
     <string name="wallet_last_attempt_message">再次失败的话将需要助记词来恢复钱包</string>
 
     <plurals name="wallet_lock_attempts_remaining">
-        <item quantity="other">剩余尝试次数 %d </item>
+        <item quantity="other">剩余尝试次数%d</item>
     </plurals>
 
     <plurals name="minute">

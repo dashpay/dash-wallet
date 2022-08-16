@@ -1,0 +1,118 @@
+<!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="coinbase">Coinbase</string>
+    <string name="last_known_balance" >Last known balance</string>
+    <string name="coinbase_dash_wallet_error_title">We didn\'t find a Dash Wallet on your Coinbase account.</string>
+    <string name="coinbase_dash_wallet_error_message"> Please create a Dash Wallet on Coinbase to proceed.</string>
+    <string name="create_dash_account">Create Dash Account</string>
+    <string name="close">Close</string>
+    <string name="retry">Retry</string>
+    <string name="connected">Connected</string>
+    <string name="disconnect_coinbase_account">Disconnect Coinbase Account</string>
+    <string name="receive_directly_into_dash_wallet">Receive directly into Dash Wallet.</string>
+    <string name="buy_dash">Buy Dash</string>
+    <string name="balance">Balance:</string>
+    <string name="balance_on_coinbase">Balance on Coinbase</string>
+    <string name="sending_to">Sending to</string>
+    <string name="dash_wallet_device">Dash Wallet on this device</string>
+    <string name="exchange_rate_template">%1$s DASH = %2$s</string>
+    <string name="payment_method">Payment method</string>
+    <string name="purchase">Purchase</string>
+    <string name="coinbase_fee">Coinbase Fee</string>
+    <string name="total">Total</string>
+    <string name="order_preview">Order Preview</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">You will receive %s Dash on your Dash Wallet on this device. Please note that it can take up to 2-3 minutes to complete a transfer.</string>
+    <string name="amount_in_dash">Amount in Dash</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm_sec">Confirm (%ss)</string>
+    <string name="confirm">Confirm</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_title">We didn’t find any payment methods.</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_message"> Please update your Coinbase account to proceed.</string>
+    <string name="add_payment_method">Add Payment Method</string>
+    <string name="error">Error</string>
+    <string name="cancel_transaction">Cancel transaction?</string>
+    <string name="yes_cancel">Yes, cancel</string>
+    <string name="no_keep_it">No, keep it</string>
+    <string name="purchase_successful">Purchase successful</string>
+    <string name="conversion_successful">Conversion successful</string>
+    <string name="purchase_failed">Purchase Failed</string>
+    <string name="transfer_failed">Transfer Failed</string>
+    <string name="conversion_failed">Conversion Failed</string>
+    <string name="transfer_failed_msg"> The Dash was successfully deposited to your Coinbase account. But there was a problem transferring it to Dash Wallet on this device.</string>
+    <string name="purchase_failed_msg"> Something went wrong</string>
+    <string name="it_could_take_up_to_2_3_minutes">It could take up to 2-3 minutes for the Dash to be transferred to your Dash Wallet on this device.</string>
+    <string name="it_could_take_up_to_5_minutes">It could take up to 5 minutes to convert DASH from Dash Wallet on this device to Y in your Coinbase account..</string>
+    <string name="contact_coinbase_support">Contact Coinbase Support</string>
+    <string name="fees_in_crypto_purchase">Fees in crypto purchases</string>
+    <string name="coinbase_fee_info_msg_content">In addition to the displayed Coinbase fee, we include a spread in the price. Cryptocurrency markets are volatile, and this allows us to temporary lock in a price for trade execution.</string>
+    <string name="learn_more">Learn More</string>
+    <string name="something_wrong_title">Something went wrong!</string>
+    <string name="retry_later_message">Please retry a little bit later or contact our support center to get help</string>
+    <string name="convert_crypto">Convert Crypto</string>
+    <string name="between_dash_wallet_and_coinbase">Between Dash Wallet and Coinbase.</string>
+    <string name="conversion_preview">Conversion Preview</string>
+    <string name="you_send">you send</string>
+    <string name="from_your_coinbase_account">From your Coinbase account</string>
+    <string name="you_receive">you receive</string>
+    <string name="to_dash_wallet_on_this_device">To Dash wallet on this device</string>
+    <string name="to_your_coinbase_account">to your Coinbase account</string>
+    <string name="from_dash_wallet_on_this_device">From Dash wallet on this device</string>
+    <string name="you_will_receive">You will receive</string>
+    <string name="you_will_receive_dash" translatable="false">%s DASH</string>
+    <string name="we_didnt_find_any_assets" > We didn’t find any assets on your Coinbase account.</string>
+    <string name="you_dont_own_any_crypto" > You don’t own any crypto. Buy some crypto to get started..</string>
+    <string name="buy_crypto_on_coinbase" >Buy Crypto on Coinbase</string>
+    <string name="auth_limit_description">You exceeded the authorization limit on Coinbase.</string>
+    <string name="debit_money">Debit money from your account</string>
+    <string name="change_limit">Change this limit</string>
+    <string name="set_auth_limit">Make sure you set up the right authorization limit on Coinbase</string>
+    <string name="change_withdrawal_limit">You can change it anytime by logging out of your Coinbase account in Dash Wallet and logging back in.</string>
+    <string name="got_it">I got it</string>
+    <string name="send_to_wallet_error">Cannot send this amount without going over application limit</string>
+    <string name="dont_have_any_dash"> You don\'t have any Dash in your Dash Wallet.</string>
+    <string name="transfer_wallet_not_synced">Transfers from Dash Wallet to Coinbase are not possible until wallet sync is completed.</string>
+    <string name="disconnected">Disconnected</string>
+
+    <string name="insufficient_money_title">Not enough coins</string>
+    <string name="insufficient_money_msg">The amount of coins in the wallet is too small for sweeping.</string>
+    <string name="send_coins_error_msg">Problem sending coins!</string>
+    <string name="entered_amount_is_too_low">The minimum transaction amount is</string>
+    <string name="entered_amount_is_too_high">The maximum transaction amount is</string>
+    <string name="verify_continue">Verify</string>
+    <string name="enter_auth_code">Enter Coinbase 2FA code</string>
+    <string name="extra_steps_label">This extra step shows it’s really you trying to make a transaction.</string>
+    <string name="need_help">Need help ?</string>
+    <string name="coinbase_fa_code_hint">Coinbase 2FA code</string>
+    <string name="enter_code_details">It could be the code from the SMS on your phone. If not, enter the code from the authentication app.</string>
+    <string name="two_fa_code_incorrect">The code is incorrect. Please check and try again!</string>
+    <string name="invalid_code">That code was invalid. Please try again</string>
+    <string name="verify_code">Verify</string>
+    <string name="you_dont_have_enough_balance">You don’t have enough balance</string>
+    <string name="transfer_dash">Transfer Dash</string>
+    <string name="transfer_amount">Transfer</string>
+    <string name="dash_wallet_limit_description">The amount is higher than your balance</string>
+    <string name="address_creation_failed">We could not create an address for your account to complete your transaction. Please try later.</string>
+    <string name="transaction_row_rate_not_available">Not available</string>
+    <string name="transfer_dash_successful">Transfer successful</string>
+    <string name="it_could_take_up_to_10_minutes">It could take up to 10 minutes to transfer Dash from Coinbase to the Dash wallet of this device.</string>
+    <string name="transfer_dash_failed_msg"> There was a problem transferring it to Dash Wallet on this device.</string>
+    <string name="insufficient_money_to_transfer">The amount of coins in the wallet is too small to transfer.</string>
+    <string name="amount_to_transfer">You will receive %s %s %s</string>
+
+    <string name="coinbase_website" translatable="false">https://www.coinbase.com/</string>
+</resources>

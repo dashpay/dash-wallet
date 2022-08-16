@@ -60,7 +60,7 @@
     <string name="perm_lock_wipe_wallet">حذف کیف پول</string>
     <string name="perm_lock_close_app">بستن</string>
 
-    <string name="scan_to_pay_error_dialog_title">اسکن برای ارسال </string>
+    <string name="scan_to_pay_error_dialog_title">اسکن برای ارسال</string>
     <string name="scan_to_pay_error_dialog_message">نشانی دش یا نشانی اینترنتی نامعتبر
 درخواست در کلیپ‌برد: \n\n %s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">نشانی دش یا نشانی اینترنتی نامعتبر

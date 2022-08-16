@@ -23,7 +23,9 @@ dependencies {
     implementation project(path: ":features:exploredash")
     implementation project(path: ':integrations:liquid')
     implementation project(path: ':integrations:uphold')
+    implementation project(path: ":integrations:coinbase-integration")
     implementation project(path: ":integrations:crowdnode")
+
     implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
@@ -42,8 +44,8 @@ dependencies {
     implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
     implementation 'androidx.preference:preference-ktx:1.1.1'
+    implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "androidx.work:work-runtime-ktx:$workRuntimeVersion"
     implementation "org.dashj:dashj-core:$dashjVersion"
     //noinspection GradleDependency
@@ -67,7 +69,7 @@ dependencies {
     implementation 'com.github.tony19:logback-android-core:1.1.1-6'
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
     implementation 'com.tbuonomo:dotsindicator:4.2'
-    
+
     implementation 'com.google.android.gms:play-services-auth:19.0.0'
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
 
@@ -191,6 +193,10 @@ android {
         buildConfigField("String", "LIQUID_PUBLIC_API_KEY", "\"LIQUID_PUBLIC_API_KEY\"")
         buildConfigField("String", "SUPPORT_EMAIL", "\"\"")
 
+        buildConfigField("String", "COINBASE_CLIENT_ID", "\"COINBASE_CLIENT_ID\"")
+        buildConfigField("String", "COINBASE_CLIENT_SECRET", "\"COINBASE_CLIENT_SECRET\"")
+
+
         def supportEmail = localProps.getProperty("SUPPORT_EMAIL")
         if (supportEmail != null) {
             buildConfigField("String", "SUPPORT_EMAIL", "\"$supportEmail\"")
@@ -265,6 +271,19 @@ android {
             buildConfigField("String", "UPHOLD_CLIENT_ID", upholdClientId)
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", upholdClientSecret)
             buildConfigField("String", "LIQUID_PUBLIC_API_KEY", liquidClientId)
+
+            def coinbaseClientId = props.getProperty("COINBASE_CLIENT_ID")
+            def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET")
+
+            if (coinbaseClientId == null) {
+                coinbaseClientId = "\"COINBASE_CLIENT_ID\""
+            }
+            if (coinbaseClientSecret == null) {
+                coinbaseClientSecret = "\"COINBASE_CLIENT_SECRET\""
+            }
+            buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
+            buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
+
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
@@ -283,6 +302,19 @@ android {
             buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
             buildConfigField("String", "LIQUID_PUBLIC_API_KEY", liquidClientId)
+
+            def coinbaseClientId = props.getProperty("COINBASE_CLIENT_ID")
+            def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET")
+
+            if (coinbaseClientId == null) {
+                coinbaseClientId = "\"COINBASE_CLIENT_ID\""
+            }
+            if (coinbaseClientSecret == null) {
+                coinbaseClientSecret = "\"COINBASE_CLIENT_SECRET\""
+            }
+            buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
+            buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
+
         }
     }
 

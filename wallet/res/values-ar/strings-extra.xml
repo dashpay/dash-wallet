@@ -53,7 +53,7 @@
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">مسح للإرسال</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
-    <string name="lock_enter_pin">أدخل الرقم السري</string>
+    <string name="lock_enter_pin">أدخل الرمز السري</string>
     <string name="lock_unlock_with_fingerprint">استخدم بصمتك للفتح</string>
 
     <string name="perm_lock_info">المحفظة مقفلة بشكل دائم</string>
@@ -303,7 +303,7 @@
     <string name="scan_private_key_intro_1">أنت على وشك مسح الأموال من محفظة أوراق داش.</string>
     <string name="scan_private_key_intro_2">سيؤدي هذا إلى نقل جميع العملات المعدنية من تلك المحفظة إلى محفظتك على هذا الجهاز.</string>
     <string name="scan_private_key_intro_3">عندما يتم تأكيد المعاملة ، ستكون المحفظة الأخرى عديمة القيمة ويجب عدم إعادة استخدامها لأسباب تتعلق بالسلامة.</string>
-    <string name="confirm">تأكد</string>
+    <string name="confirm">تأكيد</string>
 
     <string name="advanced_security_security_level">مستوى الأمان</string>
     <string name="auto_logout">تسجيل الخروج التلقائي</string>
