@@ -24,7 +24,7 @@
     <string name="exchange_rates_fragment_balance">Sold</string>
     <string name="exchange_rates_fragment_source">Preț de la %s</string>
     <string name="exchange_rates_options_search">Caută cursul de schimb</string>
-    <string name="exchange_rates_context_set_as_default_title">Setează ca si default</string>
+    <string name="exchange_rates_context_set_as_default_title">Setează ca și default</string>
     <string name="wallet_transactions_row_warning_backup">Felicitări, ai primit prima ta plată! Ai creat deja portofelul, pentru protecție împotriva pierderii?</string>
     <string name="wallet_transactions_fragment_coinbase">minerit</string>
     <string name="wallet_transactions_fragment_internal">intern</string>
@@ -244,10 +244,8 @@
     <string name="preferences_show_disclaimer_title">Afișează declarația de exonerare a răspunderii</string>
     <string name="preferences_show_disclaimer_summary">Ești sigur că ai citit notele de siguranță? Ai efectuat deja un back up al portofelului tău?</string>
     <string name="preferences_report_issue_title">Raportează problema</string>
-    <string name="preferences_initiate_reset_title">Resetează blockchain-ul</string>
-    <string name="preferences_initiate_reset_summary">Resetează blockchain-ul, tranzacțiile si soldul portofelului. Replay-ul va dura o perioada, deci resetează doar dacă ai un motiv. </string>
-    <string name="preferences_initiate_reset_dialog_message">Dorești să resetezi si sa replay blockchain-ul?\n\nAcest lucru va ascunde temporar soldul portofelului și va elimina tranzacțiile. Ambele se vor recupera pe măsură ce blockchain-ul este sincronizat. Asigură-te că ai o conexiune bună la internet.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Resetează</string>
+    <string name="preferences_initiate_reset_title">scanează din nou blockchain-ul</string>
+    <string name="preferences_initiate_reset_dialog_positive">Scanează din nou</string>
     <string name="preferences_extended_public_key_title">Arată xpub</string>
     <string name="preferences_extended_public_key_summary">Arată Cheia Publică Extinsă a portofelului tau, pentru a putea fi importată in alte aplicaţii și servicii. Ai grijă: acest lucru va dezvălui confidențialitatea ta monetară aplicației respective.</string>
     <string name="bitmap_fragment_share">Distribuie...</string>

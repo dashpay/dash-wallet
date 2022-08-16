@@ -62,7 +62,7 @@
     <string name="send_coins_fragment_receiving_address_complex">alamat\nyang rumit</string>
     <string name="send_coins_fragment_pending">(%s menunggu konfirmasi)</string>
     <string name="send_coins_fragment_amount_label">Jumlah untuk dikirim</string>
-    <string name="send_coins_fragment_pin_label">Masukkan PIN</string>
+    <string name="send_coins_fragment_pin_label">Masukkan pin</string>
     <string name="send_coins_fragment_hint_fee_economic">Biaya jaringan %s akan dibayarkan.</string>
     <string name="send_coins_fragment_hint_fee_priority">Biaya prioritas %s akan dibayarkan. Jika Anda peduli dengan biaya rendah, gunakan \'prioritas\' hanya jika Anda perlu konfirmasi sesegera mungkin.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Jumlah pembayaran kecil di dompet Anda tidak menambah nilai yang dapat dikirim.</string>
@@ -191,7 +191,7 @@
     <string name="peer_list_row_ping_time">⇆ %d ms</string>
     <string name="restore_wallet_permission_dialog_title">Izin baca menghilang</string>
     <string name="restore_wallet_permission_dialog_message">Untuk mencari cadangan dompet di penyimpanan eksternal Anda, Anda perlu memberikan izin baca.</string>
-    <string name="import_keys_dialog_title">Pulihkan kunci pribadi</string>
+    <string name="import_keys_dialog_title">Kembalikan kunci pribadi</string>
     <string name="import_keys_dialog_message">Pilih berkas kunci pribadi dari penyimpanan eksternal (%s):</string>
     <string name="restore_wallet_dialog_replace_warning">Anda akan mengganti dompet Anda saat ini. Koin apa pun yang ada  di dompet saat ini akan hilang kecuali Anda memiliki cadangan terpisah dari itu.</string>
     <string name="import_keys_dialog_warning">Penting: Jangan memuat kunci pribadi dari sumber yang meragukan! Orang lain dapat mengendalikan dana Anda jika Anda melakukannya.</string>
@@ -279,16 +279,14 @@
     <string name="preferences_show_disclaimer_title">Tampilkan penafian</string>
     <string name="preferences_show_disclaimer_summary">Apakah Anda benar-benar membaca catatan keamanan? Apakah Anda sudah mencadangkan dompet Anda ke tempat yang aman?</string>
     <string name="preferences_report_issue_title">Laporkan Masalah</string>
-    <string name="preferences_initiate_reset_title">Atur-ulang Rantai-blok</string>
-    <string name="preferences_initiate_reset_summary">Setel ulang rantai blok, transaksi, dan saldo dompet. Pemutaran ulang akan memakan waktu cukup lama, jadi lakukan ini hanya jika Anda tahu alasannya.</string>
-    <string name="preferences_initiate_reset_dialog_message">Apakah Anda ingin mengatur ulang dan memutar ulang rantai blok? \n\nIni akan menyembunyikan sementara saldo dompet Anda dan menghapus transaksi. Keduanya akan pulih saat sinkronisasi rantai blok berlangsung. Pastikan Anda memiliki koneksi yang dapat diandalkan ke internet.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Atur-ulang</string>
+    <string name="preferences_initiate_reset_title">memindai ulang blockchain</string>
+    <string name="preferences_initiate_reset_dialog_positive">Pindai ulang</string>
     <string name="preferences_extended_public_key_title">Tampilkan xpub</string>
     <string name="preferences_extended_public_key_summary">Lihat kunci publik yang diperluas dari dompet Anda, sehingga dapat diimpor ke aplikasi dan layanan lain. Hati-hati: melakukannya akan mengungkapkan moneter pribadi anda di aplikasi tersebut.</string>
     <string name="bitmap_fragment_share">Bagikan...</string>
     <string name="extended_public_key_fragment_title">Kunci Publik Diperpanjang</string>
     <string name="extended_public_key_fragment_share">Bagikan xpub...</string>
-    <string name="report_issue_dialog_title_issue">Laporkan Masalah</string>
+    <string name="report_issue_dialog_title_issue">Laporkan masalah</string>
     <string name="report_issue_dialog_title_crash">Kesalahan terdeteksi</string>
     <string name="report_issue_dialog_title_transaction">Laporkan masalah dengan pembayaran yang dipilih</string>
     <string name="report_issue_dialog_message_issue">Tolong jelaskan masalah Anda secara tepat agar dapat kami atasi. Gunakan bahasa Inggris jika Anda bisa.  Harap tunggu email dari pusat bantuan Dash mengenai masalah Anda dalam 24 jam.</string>
@@ -334,7 +332,7 @@
     <string name="appwidget_wallet_balance_title">Saldo Dash</string>
 
     <!-- generic buttons -->
-    <string name="button_ok">OK</string>
+    <string name="button_ok">IYA</string>
     <string name="button_dismiss">Tolak</string>
     <string name="button_cancel">Batal</string>
     <string name="button_help">Bantuan</string>
@@ -384,9 +382,8 @@
     <string name="payment_protocol_insufficient_funds_error_message">Anda tidak memiliki dana yang cukup umtuk memyelesaikan pembayaran ini</string>
 
 
-
     <string name="select_a_service">Pilih Layanan</string>
     <string name="activity_buy_and_sell_dash_filter">Menyaring</string>
     <string name="clear_filter">Hapus Filter</string>
     <string name="select_currency">Pilih mata uang</string>
-</resources>
+    </resources>

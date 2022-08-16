@@ -11,8 +11,9 @@
     <string name="buy_dash">Dash Al</string>
     <string name="copied">Kopyalandı</string>
     <string name="staking_title">Staking</string>
+    <string name="email">E-Posta</string>
+    <string name="email_placeholder">Örneğin. johndoe@mail.com</string>
     <string name="error">Hata</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Lirası</string>
     <!-- Local Currency List: JEP -->
@@ -51,8 +52,12 @@
     <string name="permission_allow">İzin ver</string>
     <string name="permission_deny">Reddet</string>
     <string name="max">Maksimum</string>
+    <string name="dash">Dash</string>
     <string name="select_currency">Para Birimini Seçin</string>
     <string name="send_coins_error_dusty_send">Bu miktar göndermek için çok düşüktür</string>
     <string name="send_coins_error_insufficient_money">Yetersiz bakiye</string>
 
-    </resources>
+    <string name="empty_wallet_warning_title">Dash Cüzdanınızı boşaltıyor gibisiniz</string>
+    <string name="empty_wallet_crowdnode_warning">Bakiyenizi 0.0003 Dash\'in üstüne çıkmadan CrowdNode\'dan bu cüzdana para çekemeyeceğinizi lütfen unutmayın.</string>
+    <string name="syncing">Senkronize ediliyor</string>
+</resources>

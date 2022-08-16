@@ -82,7 +82,7 @@
     <string name="payments_tab_pay_label">Ipadala</string>
     <string name="payments_tab_receive_label">Tumanggap</string>
     <string name="payments_pay_by_qr_title">Pinadala ni</string>
-    <string name="payments_pay_by_qr_sub_title">Nag- i scan ang  QR code</string>
+    <string name="payments_pay_by_qr_sub_title">Scanning QR code</string>
     <string name="payments_pay_to_clipboard_title">Ipadala sa kinopyang address</string>
     <string name="payments_pay_to_clipboard_sub_title">Walang address na nakopya</string>
 
@@ -109,7 +109,7 @@
     <string name="wallet_options_disconnect">Idiskonekta</string>
 
     <string name="network_monitor_masternodes_title">Masternodes</string>
-    <string name="export_keys_dialog_title_to_seed">Ipakita ang recovery phrase</string>
+    <string name="export_keys_dialog_title_to_seed">Ipakita ang parirala ng muling pagbawi</string>
     <string name="import_keys_dialog_title_from_seed">Manumbalik sa dating kalagayan mula sa parirala ng muling pagbawi</string>
     <string name="backup_to_seed_wallet_dialog_message">Ito ang iyong parirala ng muling pagbawi. Pakisulat sa ibaba.</string>
     <string name="backup_wallet_to_seed_dialog_warning">WAG hayaang may makakita ng iyong parirala ng muling pagbawi dahil maaari nilang magastos ang iyong Dash.</string>
@@ -182,6 +182,8 @@
     <string name="notification_transactions_channel_description">Makatanggap ng alerto tungkol sa parating na mga transaksyon.</string>
     <string name="notification_synchronization_channel_name">Pagtutugma</string>
     <string name="notification_synchronization_channel_description">Magpakita ng notipikasyon kapag ang app ay tumugma sa network.</string>
+    <string name="notification_generic_channel_name">Pangkalahatang abiso</string>
+    <string name="notification_generic_channel_description">Iba pang mga kaganapan sa Dash Wallet</string>
     <string name="notification_push_channel_name">Mga Push Notification</string>
     <string name="notification_push_channel_description">Nagpapakita ng mga push notification na ipinadala sa iyo ni Dash</string>
     <string name="notification_settings_title">Mga Notipikasyon</string>
@@ -234,7 +236,7 @@
     <string name="view_seed_title">Recovery phrase</string>
     <string name="transaction_result_view_on_explorer">Tingnan sa block explorer</string>
     <string name="transaction_result_paid_successfully">Matagumpay na naipadala</string>
-    <string name="transaction_result_sent_to">Ipadala kay</string>
+    <string name="transaction_result_sent_to">Pinadala kay</string>
     <string name="transaction_date_and_time">Petsa</string>
     <string name="transaction_close">Sarado</string>
     <string name="transaction_details_amount_received">Halagang natanggap</string>
@@ -244,7 +246,6 @@
     <string name="transaction_details_received_at">Natanggap sa</string>
     <string name="transaction_details_moved_from">Ilipat mula</string>
     <string name="transaction_details_moved_internally_to">Internally ilipat sa</string>
-
     <string name="authenticate_fingerprint_title">Patunayan</string>
     <string name="authenticate_fingerprint_message">Kumpirmahin ang fingerprint para magpatuloy</string>
     <string name="authenticate_pin_message">I-enter ang iyong PIN para magpatuloy</string>
@@ -303,7 +304,7 @@
     <string name="five_minute">5 minuto</string>
     <string name="one_hour">1 oras</string>
     <string name="biometric_limit">Biometric Limit</string>
-    <string name="spending_confirmation_hint_zero">Ang PIN ay laging kailangan sa pagbabayad.</string>
+    <string name="spending_confirmation_hint_zero">Ang PIN ay laging kailangan sa pagbabayadb</string>
     <string name="spending_confirmation_hint_above_zero">Maari kang magkumpirma gamit ang Biometric Authentication sa mga bayarin sa ibaba</string>
 
     <string name="security_none">Wala</string>
@@ -354,7 +355,6 @@
 
     <string name="syncing">Nagsi-sync</string>
     <string name="syncing_balance">Syncing Balance</string>
-
     <string name="all_transactions">Lahat</string>
     <string name="received_transactions">Natanggap</string>
     <string name="sent_transactions">Ipinadala</string>
@@ -364,6 +364,13 @@
     <string name="wallet_encryption_error_message">May problema sa paggawa ng wallet. Mangyaring iulat ito sa Support Desk.</string>
     <string name="wallet_not_encrypted_error_message">May problema sa iyong wallet.\n\nKung wala kang Dash sa wallet na ito, i-uninstall at muling i-install ang app na ito. Pagkatapos ay gumawa ng bagong wallet.\n\nKung mayroon kang recovery phrase o backup na file, i-uninstall ang app na ito at muling i-install ito.\n\nKung hindi, mangyaring iulat ito sa Support Desk.</string>
 
+    <string name="reset_wallet_title">Sigurado ka bang gusto mong i-reset ang wallet?</string>
+    <string name="reset_wallet_message">Kung ni-reset mo ang iyong wallet ang tanging paraan upang makakuha ng access dito ay ang pagbawi ng wallet na may recovery phrase.</string>
+    <string name="positive_reset_text">Oo, I-reset ang Wallet</string>
+    <string name="launch_reset_wallet_title">You have a positive balance</string>
+    <string name="launch_reset_wallet_message">Kung ni-reset mo ang iyong wallet, mawawala ang lahat ng iyong pondo kung hindi mo na-back up ang iyong recovery phrase.</string>
     <string name="continue_reset">Ipagpatuloy</string>
+    <string name="launch_reset_wallet_extra_message">I-back up ang iyong recovery phrase</string>
+    <string name="start_reset_wallet_title">Baka matalo ka ng %s</string>
     <string name="reset_wallet_text">I-reset ang pitaka</string>
-</resources>
+    </resources>

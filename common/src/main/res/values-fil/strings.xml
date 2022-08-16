@@ -11,8 +11,9 @@
     <string name="buy_dash">Bumili ng Dash</string>
     <string name="copied">Kinopya</string>
     <string name="staking_title">Staking</string>
+    <string name="email">Email</string>
+    <string name="email_placeholder">hal. juandelacruz@gmail.com</string>
     <string name="error">Mali</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -51,8 +52,12 @@
     <string name="permission_allow">Payagan</string>
     <string name="permission_deny">Tanggihan</string>
     <string name="max">Max</string>
+    <string name="dash">Dash</string>
     <string name="select_currency">Piliin ang Pera</string>
     <string name="send_coins_error_dusty_send">Ang halaga ay sobrang liit para maipadala</string>
     <string name="send_coins_error_insufficient_money">Hindi sapat na pondo</string>
 
-    </resources>
+    <string name="empty_wallet_warning_title">Mukhang inubos mo ang laman ng iyong Dash Wallet</string>
+    <string name="empty_wallet_crowdnode_warning">Pakitandaan, hindi mo mai-withdraw ang iyong mga pondo mula sa CrowdNode patungo sa wallet na ito hanggang sa mapataas mo ang iyong balanse sa 0.0003 Dash.</string>
+    <string name="syncing">Nagsi-sync</string>
+</resources>

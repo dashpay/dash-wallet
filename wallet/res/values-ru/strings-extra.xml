@@ -10,7 +10,7 @@
     <string name="set_pin_upgrade_wallet">Обновить кошелёк</string>
     <string name="set_pin_restore_wallet">Восстановить кошелёк</string>
     <string name="set_pin_enter_pin">Введите старый PIN</string>
-    <string name="set_pin_set_pin">Установить PIN</string>
+    <string name="set_pin_set_pin">Установите PIN</string>
     <string name="set_pin_confirm_pin">Подтвердите PIN</string>
     <string name="set_pin_encrypting">Шифрование кошелька</string>
     <string name="set_pin_decrypting">Расшифровка кошелька</string>
@@ -27,7 +27,7 @@
     <string name="dialog_confirm_pay_to">Отправить</string>
     <string name="dialog_confirm_secured_by">Защищено</string>
     <string name="dialog_confirm_fee">Комиссия сети</string>
-    <string name="dialog_confirm_total">Всего</string>
+    <string name="dialog_confirm_total">Итого</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Сохраните кошелёк</string>
@@ -53,7 +53,7 @@
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">Сканировать</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
-    <string name="lock_enter_pin">Введите PIN</string>
+    <string name="lock_enter_pin">Введите PIN-код</string>
     <string name="lock_unlock_with_fingerprint">Используйте свой отпечаток пальца, чтобы разблокировать</string>
 
     <string name="perm_lock_info">Кошелёк заблокирован навсегда</string>
@@ -75,7 +75,7 @@
     <string name="more_title">Больше</string>
     <string name="settings_title">Настройки</string>
     <string name="security_title">Безопасность</string>
-    <string name="recover_wallet_title">Восстановить кошелек</string>
+    <string name="recover_wallet_title">Восстановить кошелёк</string>
     <string name="tools_title">Инструменты</string>
 
     <string name="payments_title">Платежи</string>
@@ -95,13 +95,13 @@
     <string name="forgot_pin_recover">Введите фразу восстановления</string>
     <string name="forgot_pin_passphrase_doesnt_match">Эта фраза восстановления не совпадает с заданной при создании этого кошелька.</string>
 
-    <string name="send_coins_auto_lock_feasible">Эта транзакция будет подтверждена немедленно без дополнительной комиссии</string>
+    <string name="send_coins_auto_lock_feasible">Эту транзакция будет подтверждена немедленно без дополнительной комиссии</string>
     <string name="send_coins_auto_lock_not_feasible">Подтверждение может занять несколько минут. Провести мгновенно за %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Подтверждение может занять несколько минут.</string>
 
     <string name="options_paste_from_clipboard_title">Вставить из буфера обмена</string>
 
-    <string name="transaction_row_message_own_instantx_lock_request_notsent">Этот платёж ещё не был передан в сеть.</string>
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Платёж ещё не был передан в сеть.</string>
     <string name="transaction_row_message_sent_to_single_peer">Платёж был передан в сеть.</string>
 
     <string name="regular_transaction_info_message">Транзакция не была подтверждена мгновенно.</string>
@@ -113,7 +113,7 @@
     <string name="import_keys_dialog_title_from_seed">Восстановить из фразы восстановления</string>
     <string name="backup_to_seed_wallet_dialog_message">Это Ваша фраза восстановления. Пожалуйста, запишите и сохраните её.</string>
     <string name="backup_wallet_to_seed_dialog_warning">НЕ РАСКРЫВАЙТЕ никому свою фразу восстановления: она даёт доступ ко всем Вашим средствам.</string>
-    <string name="backup_to_seed_wallet_dialog_enter_pin_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН и нажмите \"Показать\" для просмотра фразы восстановления.</string>
+    <string name="backup_to_seed_wallet_dialog_enter_pin_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН и нажмите "Показать" для просмотра фразы восстановления.</string>
     <string name="import_keys_from_seed_dialog_message">Введите свою фразу восстановления.</string>
     <string name="import_export_keys_dialog_password_phrase">Ваша фраза восстановления.</string>
     <string name="preferences_report_issue_summary">Изложите в подробностях вашу проблему и отправьте на электронный адрес разработчиков.</string>
@@ -138,13 +138,13 @@
     <string name="wallet_lock_unlock_to_see_txs_title">Кошелёк закрыт</string>
     <string name="wallet_lock_unlock_to_see_txs_txt">Коснитесь иконки сверху, чтобы открыть свой кошелёк и увидеть историю транзакций.</string>
     <string name="wallet_lock_unlock_dialog_title">Открыть ваш кошелёк</string>
-    <string name="wallet_lock_unlock_dialog_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН-код и нажмите \"Открыть\".</string>
-    <string name="wallet_lock_reset_wallet_title">Сбросить кошелек</string>
+    <string name="wallet_lock_unlock_dialog_message">Ваш кошелёк защищён ПИН-кодом. Введите свой ПИН-код и нажмите "Открыть".</string>
+    <string name="wallet_lock_reset_wallet_title">Сброс кошелька</string>
     <string name="wallet_lock_reset_wallet_message">Вы уверены? Ваш кошелёк будет удалён, а доступ к средствам утерян.\n\nВаш кошелёк Dash можно будет восстановить только с помощью файла восстановления или фразы восстановления.</string>
 
     <string name="wallet_lock_wallet_disabled">Кошелёк отключён</string>
     <string name="wallet_lock_try_again">Попробуйте снова через %1$d%2$s</string>
-    <string name="wallet_lock_reset">Сбросить</string>
+    <string name="wallet_lock_reset">Сброс</string>
     <string name="wallet_lock_wrong_pin">Неправильный ПИН-код! %s</string>
     <string name="wallet_last_attempt">Последняя попытка ввести PIN</string>
     <string name="wallet_last_attempt_message">После ещё одной неудачной попытки для восстановления кошелька потребуется фраза восстановления</string>
@@ -210,12 +210,12 @@
     <string name="exchange_rate_missing">Это давний платёж, фиатный эквивалент недоступен.</string>
 
     <string name="preferences_enable_payment_request_summary">Используйте платёжный протокол для платежей через QR-код</string>
-    <string name="preferences_enable_payment_request_title">BIP70 для функции \"сканируй и плати\"</string>
+    <string name="preferences_enable_payment_request_title">BIP70 для функции "сканируй и плати"</string>
 
     <string name="verify_continue">Продолжить</string>
     <string name="verify_backup_wallet">Резервное копирование кошелька</string>
     <string name="verify_show_recovery_phrase">Показать фразу восстановления</string>
-    <string name="verify_secure_now">Сохраните кошелёк</string>
+    <string name="verify_secure_now">Сохранить кошелёк сейчас</string>
     <string name="verify_it_is_important">Это важно</string>
     <string name="verify_it_is_important_subtitle">Сейчас мы покажем секретный ключ к Вашему кошельку.</string>
     <string name="verify_info_text_1">Эта фраза восстановления - Ваш доступ к средствам на этом кошельке.</string>
@@ -228,7 +228,7 @@
     <string name="verify_seed_write_down_confirmation">Я записал</string>
     <string name="verify_seed_buttons_tip">Пожалуйста, нажмите на слова из Вашей фразы восстановления в правильном порядке</string>
     <string name="verify_seed_success_title">Успешно подтверждено</string>
-    <string name="verify_seed_success_message">Ваш кошелёк защищён. Вы можете использовать фразу восстановления в любое время, чтобы получить доступ к Вашему кошельку на другом устройстве.</string>
+    <string name="verify_seed_success_message">Сейчас Ваш кошелёк защищён. Вы можете использовать фразу восстановления в любое время, чтобы получить доступ к Вашему аккаунту на другом устройстве.</string>
     <string name="verify_no_screenshot_title">Не делайте скриншот</string>
     <string name="verify_no_screenshot_message">Пожалуйста, запишите фразу восстановления в надёжном месте.</string>
     <string name="verify_why_no_screenshot">Почему я не могу сделать скриншот?</string>
@@ -241,8 +241,16 @@
     <string name="view_seed_done">Готово</string>
     <string name="view_seed_title">Фраза восстановления</string>
     <string name="transaction_result_view_on_explorer">Посмотреть в Block Explorer</string>
+    <string name="transaction_result_tax_category">Налоговая категория</string>
+    <string name="transaction_result_tax_category_loading">Загрузка…</string>
+    <string-array name="transaction_result_tax_categories">
+        <item>Доходы</item>
+        <item>Расходы</item>
+        <item>Входящие переводы</item>
+        <item>Исходящие переводы</item>
+    </string-array>
     <string name="transaction_result_paid_successfully">Успешно отправлено</string>
-    <string name="transaction_result_sent_to">Отправлено</string>
+    <string name="transaction_result_sent_to">Отправить</string>
     <string name="transaction_date_and_time">Дата</string>
     <string name="transaction_close">Закрыть</string>
     <string name="transaction_details_amount_received">Полученная сумма</string>
@@ -251,7 +259,8 @@
     <string name="transaction_details_sent_to">Отправлено</string>
     <string name="transaction_details_received_at">Получено на</string>
     <string name="transaction_details_moved_from">Перемещено из</string>
-    <string name="transaction_details_moved_internally_to">Внутренний перевод на</string>
+    <string name="transaction_details_moved_internally_to">Перемещено в </string>
+    <string name="transaction_failed_details">Ошибка транзакции</string>
 
     <string name="authenticate_fingerprint_title">Аутентифицировать</string>
     <string name="authenticate_fingerprint_message">Подтвердите отпечаток пальца, чтобы продолжить</string>
@@ -267,7 +276,7 @@
     <string name="menu_settings_subtitle">Валюта по умолчанию, ярлыки, о программе…</string>
     <string name="menu_tools_title">Инструменты</string>
     <string name="menu_tools_subtitle">Импортировать приватный ключ…</string>
-    <string name="menu_local_currency">Валюта</string>
+    <string name="menu_local_currency">Местная валюта</string>
     <string name="menu_rescan_blockchain">Пересканировать блокчейн</string>
     <string name="menu_contact_support_title">Связаться с поддержкой</string>
     <string name="menu_contact_support_subtitle">Сообщить о проблеме</string>
@@ -275,7 +284,7 @@
     <string name="menu_explore_subtitle">Покупайте за DASH в более чем 155 000 магазинах</string>
 
     <string name="tools_address_book">Адресная книга</string>
-    <string name="tools_import_private_key">Импорт ключа</string>
+    <string name="tools_import_private_key">Импортировать приватный ключ</string>
     <string name="tools_network_monitor">Сетевой монитор</string>
     <string name="tools_show_xpub">Расширенный  публичный ключ</string>
 
@@ -362,7 +371,7 @@
 
     <string name="syncing">Синхронизация</string>
     <string name="syncing_balance">Синхронизация баланса</string>
-
+    <string name="transaction_count">%dтранзакций</string>
     <string name="all_transactions">Все</string>
     <string name="received_transactions">Получено</string>
     <string name="sent_transactions">Отправлено</string>
@@ -381,4 +390,14 @@
     <string name="launch_reset_wallet_extra_message">Сохранить фразу восстановления</string>
     <string name="start_reset_wallet_title">Вы можете потерять %s</string>
     <string name="reset_wallet_text">Сбросить кошелек</string>
+    <string name="reclassify_transactions_title">Переклассифицировать транзакции</string>
+    <string name="reclassify_transactions_title_message">Эти классификации будут отражены при экспорте в CSV-файл, который в дальнейшем можно использовать для передачи в налоговые службы.</string>
+    <string name="reclassify_transactions_question">Где можно сменить налоговую категорию?</string>
+    <string name="reclassify_transactions_outgoing_title">Исходящие транзакции</string>
+    <string name="reclassify_transactions_by_default_message">по умолчанию будут отмечены как</string>
+    <string name="reclassify_transactions_incoming_title">Входящие транзакции</string>
+    <string name="reclassify_transactions_change_it_message">Можно изменить на</string>
+    <string name="reclassify_transactions_linked_accounts_title">Привязанные аккаунты</string>
+    <string name="reclassify_transactions_linked_accounts_message">по умолчанию все транзакции с привязанных аккаунтов или на них (биржи, стейкинг и т.д.) будут отмечены как переводы.</string>
+    <string name="reclassify_transactions_change_explanation">Выберите любую транзакцию на домашней странице и измените категорию на странице сведений о транзакции.</string>
 </resources>

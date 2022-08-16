@@ -9,9 +9,9 @@
     <string name="set_pin_create_new_wallet">Stwórz Nowy Portfel</string>
     <string name="set_pin_upgrade_wallet">Uaktualnij Portfel</string>
     <string name="set_pin_restore_wallet">Przywróć Portfel</string>
-    <string name="set_pin_enter_pin">Wpisz stary kod PIN</string>
+    <string name="set_pin_enter_pin">Wprowadź Stary PIN</string>
     <string name="set_pin_set_pin">Ustaw PIN</string>
-    <string name="set_pin_confirm_pin">Potwierdź kod PIN</string>
+    <string name="set_pin_confirm_pin">Potwierdź PIN</string>
     <string name="set_pin_encrypting">Szyfruje portfel</string>
     <string name="set_pin_decrypting">Odszyfrowywanie portfela</string>
     <string name="set_pin_verifying_pin">Zweryfikuj PIN</string>
@@ -84,7 +84,7 @@
     <string name="payments_pay_by_qr_title">Wyślij przez</string>
     <string name="payments_pay_by_qr_sub_title">Zeskanuj QR Kod</string>
     <string name="payments_pay_to_clipboard_title">Wyślij do skopiowanego adresu</string>
-    <string name="payments_pay_to_clipboard_sub_title">Adres nie skopiowany</string>
+    <string name="payments_pay_to_clipboard_sub_title">Brak skopiowanego adresu</string>
 
     <string name="forgot_pin_title">Zapomniałeś kodu PIN?</string>
     <string name="forgot_pin_message">Możesz ustawić nowy kod PIN za pomocą frazy odzyskiwania danych</string>
@@ -95,7 +95,7 @@
     <string name="forgot_pin_recover">Wpisz Frazy Odzyskiwania</string>
     <string name="forgot_pin_passphrase_doesnt_match">Ta fraza nie pasuje do tej wykreowanej kiedy portfel został stworzony. </string>
 
-    <string name="send_coins_auto_lock_feasible">Ta transakcja powinna się usadowić natychmiast bez konieczności dodatkowych opłat</string>
+    <string name="send_coins_auto_lock_feasible">Ta transakcja powinna się usadowić natychmiast bez braku dodatkowych opłat</string>
     <string name="send_coins_auto_lock_not_feasible">Rozliczenie transakcji może potrwać dłuższą chwilę. Wykonać natychmiast za dodatkowe %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Rozliczenie transakcji może potrwać dłuższą chwilę.</string>
 
@@ -218,7 +218,7 @@
     <string name="verify_secure_now">Zabezpiecz Portfel Teraz</string>
     <string name="verify_it_is_important">To ważne!</string>
     <string name="verify_it_is_important_subtitle">Za chwilę pokażemy Ci tajny klucz do twojego portfela.</string>
-    <string name="verify_info_text_1">Ta fraza odzyskiwania jest Twoim dostępem do środków w tym portfelu.</string>
+    <string name="verify_info_text_1">Ta fraza odzyskiwania jest dostępem do środków w tym portfelu.</string>
     <string name="verify_info_text_2">NIE przechowujemy słów wymaganych do odzysku portfela</string>
     <string name="verify_info_text_3">Fraza odzysku danych będzie potrzebna aby mieć dostęp do funduszy w wypadku utraty tego urządzenia lub jeśli Dash Wallet zostanie przypadkowo odinstalowany. </string>
     <string name="verify_skip">Pomiń</string>
@@ -252,7 +252,6 @@
     <string name="transaction_details_received_at">Odebrane przez</string>
     <string name="transaction_details_moved_from">Przeniesiony z</string>
     <string name="transaction_details_moved_internally_to">Wewnętrznie przeniesiony do</string>
-
     <string name="authenticate_fingerprint_title">Uwierzytelnij się</string>
     <string name="authenticate_fingerprint_message">Potwierdź odciskiem palca by kontynuować</string>
     <string name="authenticate_pin_message">Wprowadź kod PIN by kontynuować </string>
@@ -362,7 +361,6 @@
 
     <string name="syncing">Synchronizowanie</string>
     <string name="syncing_balance">Synchronizowanie bilansu</string>
-
     <string name="all_transactions">Całość</string>
     <string name="received_transactions">Otrzymano</string>
     <string name="sent_transactions">Wysłano</string>
@@ -381,4 +379,4 @@
     <string name="launch_reset_wallet_extra_message">Dokonaj kopii zapasowej fraz odzyskiwania</string>
     <string name="start_reset_wallet_title">Możesz stracić %s</string>
     <string name="reset_wallet_text">Resetuj portfel</string>
-</resources>
+    </resources>

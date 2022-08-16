@@ -25,7 +25,7 @@
     <string name="exchange_rates_fragment_balance">餘額</string>
     <string name="exchange_rates_fragment_source">價格由 %s 起</string>
     <string name="exchange_rates_options_search">搜尋匯率</string>
-    <string name="exchange_rates_context_set_as_default_title">設為預設</string>
+    <string name="exchange_rates_context_set_as_default_title">設為預設值</string>
     <string name="wallet_transactions_fragment_empty_text">沒有交易能夠顯示</string>
     <string name="wallet_transactions_row_warning_backup">恭喜你收到第一筆付款! 你是否已經備份好你的錢包來防止意外發生?</string>
     <string name="wallet_transactions_fragment_coinbase">已採礦</string>
@@ -78,7 +78,7 @@
     <string name="send_coins_fragment_insufficient_money_msg1">你少了 %s.</string>
     <string name="send_coins_fragment_insufficient_money_msg2">你打算發送所有的餘額嗎?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">清空錢包失敗</string>
-    <string name="send_coins_fragment_state_decrypting">正在解密…</string>
+    <string name="send_coins_fragment_state_decrypting">正在解密...</string>
     <string name="send_coins_preparation_msg">簽署中…</string>
     <string name="send_coins_sending_msg">付款中…</string>
     <string name="send_coins_sent_msg">已付款!</string>
@@ -156,7 +156,7 @@
     <string name="transaction_row_message_received_rbf">由於發件人使用了不安全的交易類型，此款項被延遲。</string>
     <string name="transaction_row_status_received">己收到</string>
     <string name="transaction_row_status_sent">發送</string>
-    <string name="transaction_row_status_sending">發送中</string>
+    <string name="transaction_row_status_sending">付款中</string>
     <string name="transaction_row_status_sent_internally">內部</string>
     <string name="transaction_row_status_processing">正在處理</string>
     <string name="transaction_row_status_confirming">確認中</string>
@@ -279,10 +279,10 @@
     <string name="preferences_show_disclaimer_title">顯示免責聲明</string>
     <string name="preferences_show_disclaimer_summary">你有沒有認真閱讀安全注意事項? 你已經將錢包備份到安全的地方了嗎?</string>
     <string name="preferences_report_issue_title">問題報告</string>
-    <string name="preferences_initiate_reset_title">重置區塊鏈</string>
-    <string name="preferences_initiate_reset_summary">重置區塊鏈，交易和錢包餘額。 重播將需要一段時間，所以只有在你明白的情況下才這樣做。</string>
-    <string name="preferences_initiate_reset_dialog_message">您是否要重置並重播區塊鏈?\n\n這會暫時隱藏您的錢包餘額並移除交易。隨著區塊鏈進行同步，兩者都會恢復。確保你有一個可靠的互聯網連線。</string>
-    <string name="preferences_initiate_reset_dialog_positive">重設</string>
+    <string name="preferences_initiate_reset_title">重新掃瞄區塊鏈</string>
+    <string name="preferences_initiate_reset_summary">重新掃描區塊鏈、交易和錢包餘額。這個過程需要一段時間，所以只有在你知道原因的情況下才這樣做。</string>
+    <string name="preferences_initiate_reset_dialog_message">你想重新掃描區塊鏈嗎？\n\n這將暫時隱藏你的錢包餘額並刪除交易。隨著區塊鏈同步的進行，兩者都將恢復。在進行前請確保您有可靠的互聯網連線。</string>
+    <string name="preferences_initiate_reset_dialog_positive">重新掃瞄</string>
     <string name="preferences_extended_public_key_title">顯示 xpub</string>
     <string name="preferences_extended_public_key_summary">查看你的錢包的擴展公鑰，這樣就可以將其導入其他程式或服務中。請注意：這樣做會泄露您的財務私隱給該程式。</string>
     <string name="bitmap_fragment_share">分享…</string>
@@ -384,9 +384,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">您沒有足夠的資金來完成此交易</string>
 
 
-
+    <string name="select_a_service_to_buy_and_sell_dash">選擇一項服務來買賣達世幣。</string>
     <string name="select_a_service">選擇服務</string>
     <string name="activity_buy_and_sell_dash_filter">篩選</string>
     <string name="clear_filter">清除篩選</string>
     <string name="select_currency">選擇貨幣</string>
+    <string name="reason">理由</string>
 </resources>

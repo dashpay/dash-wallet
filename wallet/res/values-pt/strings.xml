@@ -142,7 +142,7 @@
     <string name="edit_address_book_entry_dialog_address_label">Endereço</string>
     <string name="edit_address_book_entry_dialog_label_label">Etiqueta</string>
     <string name="edit_address_book_entry_dialog_button_edit">Salvar</string>
-    <string name="transaction_row_fee">Taxa de rede</string>
+    <string name="transaction_row_fee">Taxa da rede</string>
     <string name="transaction_row_message_purpose_key_rotation">Esta transação fortalece sua carteira contra roubo. &lt;u&gt;Mais informações.&lt;/u&gt;</string>
     <string name="transaction_row_message_purpose_raise_fee">Esta transação aumenta a taxa da rede para um pagamento anterior.</string>
     <string name="transaction_row_message_own_unbroadcasted">Este pagamento ainda não foi transmitido.</string>
@@ -279,10 +279,8 @@
     <string name="preferences_show_disclaimer_title">Mostrar aviso legal</string>
     <string name="preferences_show_disclaimer_summary">Você já leu as notas de segurança? Já fez o backup da sua carteira em um lugar seguro?</string>
     <string name="preferences_report_issue_title">Informar problema</string>
-    <string name="preferences_initiate_reset_title">Reiniciar Blockchain</string>
-    <string name="preferences_initiate_reset_summary">Redefinir a blockchain, transações e saldo de carteira. Voltar a realizar vai demorar um pouco, então apenas faz isso se você sabe o por quê.</string>
-    <string name="preferences_initiate_reset_dialog_message">Gostaria de redefinir e reproduzir a blockchain\n\nIsso ocultará temporariamente o saldo da sua carteira e removerá as transações. Ambos serão recuperados à medida que a sincronização da blockchain progride. Certifique-se de que tem uma conexão à Internet.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Resetar</string>
+    <string name="preferences_initiate_reset_title">Reexaminar blockchain</string>
+    <string name="preferences_initiate_reset_dialog_positive">Reescanear</string>
     <string name="preferences_extended_public_key_title">Mostrar xpub</string>
     <string name="preferences_extended_public_key_summary">Ver a chave pública estendida de sua carteira, para que possa ser importada para outros aplicativos e serviços. Tenha cuidado: isso irá divulgar a sua privacidade monetária para o app.</string>
     <string name="bitmap_fragment_share">Compartilhar…</string>
@@ -298,7 +296,7 @@
     <string name="report_issue_dialog_collect_device_info">Acrescentar informações sobre o dispositivo</string>
     <string name="report_issue_dialog_collect_installed_packages">Anexar lista de pacotes instalados</string>
     <string name="report_issue_dialog_collect_application_log">Anexar log do aplicativo</string>
-    <string name="report_issue_dialog_collect_wallet_dump">Anexar \"wallet dump\"</string>
+    <string name="report_issue_dialog_collect_wallet_dump">Anexar "wallet dump"</string>
     <string name="report_issue_dialog_mail_intent_chooser">Enviar relatório usando…</string>
     <string name="report_issue_dialog_mail_intent_failed">Envio de relatório falhou.</string>
     <string name="report_transaction_history_export">Exportar</string>
@@ -384,9 +382,8 @@
     <string name="payment_protocol_insufficient_funds_error_message">Você não tem fundos suficientes para completar esta transação</string>
 
 
-
     <string name="select_a_service">Selecione um serviço</string>
     <string name="activity_buy_and_sell_dash_filter">Filtro</string>
     <string name="clear_filter">Limpar Filtro</string>
     <string name="select_currency">Selecione a moeda</string>
-</resources>
+    </resources>

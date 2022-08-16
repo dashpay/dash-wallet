@@ -24,7 +24,6 @@
     <string name="explore_atms_title">Geldautomaten</string>
     <string name="explore_atms_subtitle">Vind waar je DASH en andere cryptovaluta\'s kan kopen of verkopen voor cash.</string>
     <string name="explore_staking_subtitle">Stake makkelijk Dash en verdien passief inkomen met een paar eenvoudige kliks.</string>
-
     <!-- Search -->
     <string name="explore_search_results">Zoekresultaten</string>
     <string name="explore_physical_merchant">Fysieke acceptanten</string>
@@ -119,7 +118,7 @@
 
     <plurals name="radius_miles">
         <item quantity="one">%d mile</item>
-        <item quantity="other">%d milen</item>
+        <item quantity="other">%d miles</item>
     </plurals>
 
     <plurals name="radius_kilometers">

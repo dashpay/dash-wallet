@@ -106,7 +106,7 @@
     <string name="sweep_wallet_options_reload">Znovu načíst bilanci</string>
     <string name="maintenance_dialog_title">Údržba doporučena</string>
     <string name="maintenance_dialog_message">Přijal jste %1$s na nezabezpečenou adresu. Přejete si převést tuto částku na zabezpečenou adresu? Malý poplatek síti ve výši %2$s bude uhrazen.</string>
-    <string name="maintenance_dialog_state_decrypting">Dešifrování…</string>
+    <string name="maintenance_dialog_state_decrypting">Dešifruji…</string>
     <string name="maintenance_dialog_state_done">Hotovo.</string>
     <string name="maintenance_dialog_button_move">Přemístit</string>
     <string name="request_coins_activity_title">Vyžádat Dash</string>
@@ -156,7 +156,7 @@
     <string name="transaction_row_message_received_rbf">U této platby došlo ke zpoždění, protože odesílatel použil nezabezpečený způsob platby.</string>
     <string name="transaction_row_status_received">Přijato</string>
     <string name="transaction_row_status_sent">Odesláno</string>
-    <string name="transaction_row_status_sending">Odesílání</string>
+    <string name="transaction_row_status_sending">Posílám</string>
     <string name="transaction_row_status_sent_internally">Interní</string>
     <string name="transaction_row_status_processing">Zpracovává se</string>
     <string name="transaction_row_status_confirming">Konfirmace</string>
@@ -235,7 +235,7 @@
     <string name="encrypt_keys_dialog_password_strength_strong">silné</string>
     <string name="encrypt_keys_dialog_show">Zobrazit PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Šifruji…</string>
-    <string name="encrypt_keys_dialog_state_decrypting">Dešifrování…</string>
+    <string name="encrypt_keys_dialog_state_decrypting">Dešifruji…</string>
     <string name="encrypt_keys_dialog_state_done">Hotovo</string>
     <string name="scan_camera_problem_dialog_title">Promiňte</string>
     <string name="scan_camera_problem_dialog_message">Problém s kamerou. Pravděpodobně je potřeba aby jste restartoval zařízení.</string>
@@ -279,10 +279,8 @@
     <string name="preferences_show_disclaimer_title">Zobrazit vyloučení odpovědnosti</string>
     <string name="preferences_show_disclaimer_summary">Opravdu jste si přečetli bezpečnostní instrukce? Už jste zálohovali vaší peněženku na bezpečné místo?</string>
     <string name="preferences_report_issue_title">Nahlásit problém</string>
-    <string name="preferences_initiate_reset_title">Resetovat blockchain</string>
-    <string name="preferences_initiate_reset_summary">Resetovat blockchain, transakce a bilanci v peněžence. Přehrávání bude chvíli trvat, proto to udělejte jen pokud víte co děláte.</string>
-    <string name="preferences_initiate_reset_dialog_message">Přejete si resetovat a přehrát blockchain?\n\nToto dočasně schová zůstatek ve vaší peněžence a odstraní transakce. Všechno se zase obnoví až v průběhu synchronizace. Ujistěte se, že máte dobré připojení k internetu.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Resetovat</string>
+    <string name="preferences_initiate_reset_title">Znovu skenovat blockchain</string>
+    <string name="preferences_initiate_reset_dialog_positive">Znovu skenovat</string>
     <string name="preferences_extended_public_key_title">Zobrazit xpub</string>
     <string name="preferences_extended_public_key_summary">Zobrazit rozšířený veřejný klíč vaší peněženky za účelem importování do jiných aplikací a služeb. Buďte opatrní: tímto sdílíte Vaše peněžní soukromí s danou aplikaci.</string>
     <string name="bitmap_fragment_share">Sdílet…</string>
@@ -373,7 +371,7 @@
     <string name="dash_wallet">Peněženka</string>
 
     <string name="activity_security_backup_wallet">Zálohovat peněženku do souboru</string>
-    <string name="activity_security_view_recovery_phrase">Zobrazit frázi pro obnovení</string>
+    <string name="activity_security_view_recovery_phrase">Zobrazit Frázi Pro Obnovení</string>
     <string name="activity_security_advanced">Pokročilé zabzpečení</string>
     <string name="activity_security_biometric_auth">Autentifikace otiskem prstu</string>
     <string name="activity_security_hide_balance">Automaticky skrýt zůstatek</string>
@@ -384,9 +382,8 @@
     <string name="payment_protocol_insufficient_funds_error_message">Nemáte dostatečné prostředky pro uskutečnění této transakce</string>
 
 
-
     <string name="select_a_service">Vybrat službu</string>
     <string name="activity_buy_and_sell_dash_filter">Filtr</string>
     <string name="clear_filter">Zrušit filtr</string>
     <string name="select_currency">Vybrat měnu</string>
-</resources>
+    </resources>
