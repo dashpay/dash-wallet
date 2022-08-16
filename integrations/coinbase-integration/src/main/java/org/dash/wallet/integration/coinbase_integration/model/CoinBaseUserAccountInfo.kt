@@ -101,7 +101,8 @@ data class CoinBaseUserAccountDataUIModel(
     override val coinBaseUserAccountData: CoinBaseUserAccountData,
     val currencyToCryptoCurrencyExchangeRate: String,
     override val currencyToDashExchangeRate: String,
-    val cryptoCurrencyToDashExchangeRate: String
+    val cryptoCurrencyToDashExchangeRate: String,
+    val currencyToUSDExchangeRate: String,
 ) : CoinbaseToDashExchangeRateUIModel(coinBaseUserAccountData, currencyToDashExchangeRate), Parcelable
 
 fun CoinBaseUserAccountDataUIModel.getCoinBaseExchangeRateConversion(

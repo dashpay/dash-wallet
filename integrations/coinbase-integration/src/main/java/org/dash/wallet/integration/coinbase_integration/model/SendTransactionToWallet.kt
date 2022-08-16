@@ -117,5 +117,6 @@ sealed class TransactionType: Parcelable {
 @Parcelize
 data class CoinbaseTransactionParams(
     val params: SendTransactionToWalletParams,
-    val type: TransactionType
+    val type: TransactionType,
+    val coinbaseWalletName:String?=null
 ): Parcelable

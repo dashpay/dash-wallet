@@ -109,7 +109,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
        } else {
            when(transactionType){
                TransactionType.BuyDash -> showTransactionStateDialog(CoinBaseResultDialog.Type.DEPOSIT_ERROR, state.responseMessage)
-               TransactionType.BuySwap -> showTransactionStateDialog(CoinBaseResultDialog.Type.CONVERSION_ERROR, state.responseMessage)
+               TransactionType.BuySwap -> showTransactionStateDialog(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, state.responseMessage)
                TransactionType.TransferDash -> showTransactionStateDialog(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, state.responseMessage)
                else -> {}
            }
@@ -183,12 +183,19 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
     }
 
     private fun showTransactionStateDialog(type: CoinBaseResultDialog.Type, responseMessage: String? = null) {
-        val transactionStateDialog = CoinBaseResultDialog.newInstance(type, responseMessage).apply {
+        val params = arguments?.let { EnterTwoFaCodeFragmentArgs.fromBundle(it).transactionParams }
+        val transactionStateDialog = CoinBaseResultDialog.newInstance(type, responseMessage,params?.coinbaseWalletName, dashToCoinbase = false).apply {
             this.onCoinBaseResultDialogButtonsClickListener =
                 object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
                     override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
                         when (type) {
-                            CoinBaseResultDialog.Type.CONVERSION_ERROR, CoinBaseResultDialog.Type.DEPOSIT_ERROR, CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR -> {
+                            CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR , CoinBaseResultDialog.Type.DEPOSIT_ERROR-> {
+                                viewModel.logRetry(type)
+                                viewModel.isRetryingTransfer(true)
+                                dismiss()
+                                binding.enterCodeField.text?.clear()
+                            }
+                            CoinBaseResultDialog.Type.CONVERSION_ERROR-> {
                                 viewModel.logRetry(type)
                                 dismiss()
                                 findNavController().popBackStack()
