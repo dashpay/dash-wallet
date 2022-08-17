@@ -180,7 +180,7 @@ public class TxResourceMapper {
     }
 
     public int getDateTimeFormat() {
-        return DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_MONTH | DateUtils.FORMAT_SHOW_TIME;
+        return DateUtils.FORMAT_SHOW_TIME;
     }
 
     /**

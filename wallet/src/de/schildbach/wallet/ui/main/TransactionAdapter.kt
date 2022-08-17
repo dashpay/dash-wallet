@@ -24,6 +24,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -38,7 +39,6 @@ import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.ui.getRoundedBackground
-import org.dash.wallet.common.ui.getRoundedRippleBackground
 import org.dash.wallet.common.util.GenericUtils
 
 open class HistoryViewHolder(root: View): RecyclerView.ViewHolder(root)
@@ -56,7 +56,7 @@ class TransactionAdapter(
     class DiffCallback : DiffUtil.ItemCallback<HistoryRowView>() {
         override fun areItemsTheSame(oldItem: HistoryRowView, newItem: HistoryRowView): Boolean {
             val sameTransactions = (oldItem is TransactionRowView && newItem is TransactionRowView) && oldItem.txId == newItem.txId
-            return sameTransactions || oldItem == newItem // TODO: compare by date?
+            return sameTransactions || oldItem == newItem
         }
 
         override fun areContentsTheSame(oldItem: HistoryRowView, newItem: HistoryRowView): Boolean {
@@ -96,15 +96,10 @@ class TransactionAdapter(
 
     override fun onBindViewHolder(holder: HistoryViewHolder, position: Int) {
         val item = getItem(position)
-        val nextItem = if (itemCount > position + 1) {
-            getItem(position + 1)
-        } else {
-            null
-        }
 
         when (holder) {
             is TransactionViewHolder -> {
-                holder.bind(item as TransactionRowView, nextItem !is TransactionRowView)
+                holder.bind(item as TransactionRowView, position)
                 holder.binding.root.setOnClickListener { clickListener.invoke(item, position) }
             }
             is TransactionGroupHeaderViewHolder -> {
@@ -123,14 +118,33 @@ class TransactionAdapter(
             binding.fiatView.setApplyMarkup(false)
         }
 
-        fun bind(txView: TransactionRowView, isLastInGroup: Boolean) {
+        fun bind(txView: TransactionRowView, position: Int) {
+            val nextItem = if (itemCount > position + 1) {
+                getItem(position + 1)
+            } else {
+                null
+            }
+            val isLastInGroup = nextItem !is TransactionRowView
+
             if (drawBackground) {
                 binding.root.background = if (isLastInGroup) {
                     ResourcesCompat.getDrawable(resources, R.drawable.selectable_rectangle_white_bottom_radius, null)
                 } else {
                     ResourcesCompat.getDrawable(resources, R.drawable.selectable_rectangle_white, null)
                 }
+            } else {
+                binding.root.updatePadding(top = resources.getDimensionPixelOffset(if (position == 0) {
+                    R.dimen.transaction_row_extended_padding
+                } else {
+                    R.dimen.transaction_row_vertical_padding
+                }))
             }
+
+            binding.root.updatePadding(bottom = resources.getDimensionPixelOffset(if (isLastInGroup) {
+                R.dimen.transaction_row_extended_padding
+            } else {
+                R.dimen.transaction_row_vertical_padding
+            }))
 
             binding.icon.setImageResource(txView.icon)
             binding.icon.background = resources.getRoundedBackground(txView.iconBackground)

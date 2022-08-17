@@ -17,14 +17,7 @@
 
 package de.schildbach.wallet.ui.transactions
 
-import android.graphics.Typeface
-import android.text.SpannableString
-import android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-import android.text.Spanned.SPAN_INCLUSIVE_INCLUSIVE
 import android.text.TextUtils
-import android.text.style.AbsoluteSizeSpan
-import android.text.style.StyleSpan
-import android.util.TypedValue
 import de.schildbach.wallet.ui.main.HistoryViewHolder
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionGroupHeaderBinding
@@ -35,24 +28,14 @@ class TransactionGroupHeaderViewHolder(
     val binding: TransactionGroupHeaderBinding
 ): HistoryViewHolder(binding.root) {
     fun bind(date: LocalDate) {
-        val bigSize = itemView.context.resources.getDimensionPixelSize(R.dimen.date_text_big)
-        val smallSize = itemView.context.resources.getDimensionPixelSize(R.dimen.date_text_small)
-
         val now = LocalDate.now()
         val isToday = now == date
         val isYesterday = !isToday && date == now.minusDays(1)
 
         when {
-            isToday -> {
-                binding.dateTitle.setText(R.string.today)
-                binding.dateTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            }
-            isYesterday -> {
-                binding.dateTitle.setText(R.string.yesterday)
-                binding.dateTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            }
+            isToday -> binding.dateTitle.setText(R.string.today)
+            isYesterday -> binding.dateTitle.setText(R.string.yesterday)
             else -> {
-                binding.dateTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                 val formatter = if (now.year == date.year) {
                     DateTimeFormatter.ofPattern("MMMM")
                 } else {
@@ -61,15 +44,11 @@ class TransactionGroupHeaderViewHolder(
 
                 val dateStr = formatter.format(date)
                 val dayStr = DateTimeFormatter.ofPattern("dd").format(date)
-                val span1 = SpannableString(dayStr)
-                span1.setSpan(AbsoluteSizeSpan(bigSize), 0, dayStr.length, SPAN_INCLUSIVE_INCLUSIVE)
-                span1.setSpan(StyleSpan(Typeface.BOLD), 0, dayStr.length, SPAN_EXCLUSIVE_EXCLUSIVE)
-                val span2 = SpannableString(dateStr)
-                span2.setSpan(AbsoluteSizeSpan(smallSize), 0, dateStr.length, SPAN_INCLUSIVE_INCLUSIVE)
 
-                binding.dateTitle.text = TextUtils.concat(span1, " ", span2)
+                binding.dateTitle.text = TextUtils.concat(dayStr, " ", dateStr)
             }
         }
+
         val formatter = DateTimeFormatter.ofPattern("EEEE")
         binding.dateWeekday.text = formatter.format(date)
     }

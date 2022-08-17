@@ -73,39 +73,24 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
             binding.detailsMessage.text = getString(R.string.crowdnode_tx_set_explainer)
         }
 
-        val resourceMapper = if (transactionWrapper is FullCrowdNodeSignUpTxSet) {
-            CrowdNodeTxResourceMapper()
-        } else {
-            TxResourceMapper()
+        val adapter = TransactionAdapter(viewModel.dashFormat, resources) { item, _ ->
+            if (item is TransactionRowView) {
+                TransactionDetailsDialogFragment
+                    .newInstance(item.txId)
+                    .show(parentFragmentManager, "transaction_details")
+            }
         }
 
-        viewModel.walletData.wallet?.let { wallet ->
-            val adapter = TransactionAdapter(
-                viewModel.dashFormat,
-                resources
-            ) { item, _ ->
-                if (item is TransactionRowView) {
-                    TransactionDetailsDialogFragment
-                        .newInstance(item.txId)
-                        .show(parentFragmentManager, "transaction_details")
-                }
-            }
+        binding.transactions.adapter = adapter
+        val divider = ResourcesCompat.getDrawable(resources, R.drawable.list_divider, null)
+        binding.transactions.addItemDecoration(ListDividerDecorator(
+            divider!!,
+            showAfterLast = false,
+            marginStart = resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start)
+        ))
 
-            binding.transactions.adapter = adapter
-            val divider = ResourcesCompat.getDrawable(resources, R.drawable.list_divider, null)
-            binding.transactions.addItemDecoration(ListDividerDecorator(
-                divider!!,
-                showAfterLast = false,
-                marginStart = resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start)
-            ))
-
-            viewModel.transactions.observe(viewLifecycleOwner) { transactions ->
-                adapter.submitList(transactions.map {
-                    TransactionRowView.fromTransaction(
-                        it, wallet, wallet.context, null, resourceMapper
-                    )
-                })
-            }
+        viewModel.transactions.observe(viewLifecycleOwner) { transactions ->
+            adapter.submitList(transactions)
         }
 
         viewModel.dashValue.observe(viewLifecycleOwner) {

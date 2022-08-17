@@ -49,4 +49,6 @@
     <dimen name="char_counter_top_padding">-3dp</dimen>
     <dimen name="char_counter_bottom_padding">10dp</dimen>
     <dimen name="char_counter_end_padding">12dp</dimen>
+    <dimen name="transaction_row_vertical_padding">13dp</dimen>
+    <dimen name="transaction_row_extended_padding">17dp</dimen>
 </resources>
