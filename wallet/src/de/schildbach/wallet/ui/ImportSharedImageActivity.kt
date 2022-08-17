@@ -21,8 +21,6 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
@@ -38,7 +36,6 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.ui.FancyAlertDialog
-import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.slf4j.LoggerFactory
 
 /**
@@ -46,7 +43,7 @@ import org.slf4j.LoggerFactory
  * It search for the QR codes inside the image, decode them and try to parse
  * the decoded URI
  */
-class ImportSharedImageActivity : AppCompatActivity() {
+class ImportSharedImageActivity : AppCompatActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -119,13 +116,6 @@ class ImportSharedImageActivity : AppCompatActivity() {
     private fun showErrorDialog(title: Int, msg: Int, image: Int) {
         val errorDialog = FancyAlertDialog.newInstance(title, msg, image, R.string.button_ok, 0)
         errorDialog.show(supportFragmentManager, "error_dialog")
-        val errorDialogViewModel = ViewModelProvider(this)[FancyAlertDialogViewModel::class.java]
-        errorDialogViewModel.onPositiveButtonClick.observe(this, Observer {
-            finish()
-        })
-        errorDialogViewModel.onNegativeButtonClick.observe(this, Observer {
-            finish()
-        })
     }
 
     /**
@@ -184,5 +174,13 @@ class ImportSharedImageActivity : AppCompatActivity() {
 
     companion object {
         private val log = LoggerFactory.getLogger(ImportSharedImageActivity::class.java)
+    }
+
+    override fun onPositiveButtonClick() {
+        finish()
+    }
+
+    override fun onNegativeButtonClick() {
+        finish()
     }
 }

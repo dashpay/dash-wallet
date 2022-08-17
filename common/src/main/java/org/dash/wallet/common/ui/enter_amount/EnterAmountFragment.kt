@@ -32,6 +32,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.FragmentEnterAmountBinding
+import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -130,6 +131,14 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         viewModel.canContinue.observe(viewLifecycleOwner) {
             binding.continueBtn.isEnabled = it
         }
+
+        viewModel.canContinue.observe(viewLifecycleOwner) {
+            binding.continueBtn.isEnabled = it
+        }
+
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
+            .commit()
     }
 
 
@@ -208,6 +217,13 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
             }
 
             binding.amountView.input = value.toString()
+        }
+    }
+
+    fun handleNetworkState(hasInternet: Boolean) {
+        lifecycleScope.launchWhenStarted {
+            binding.bottomCard.isVisible = hasInternet
+            binding.networkStatusContainer.isVisible = !hasInternet
         }
     }
 }

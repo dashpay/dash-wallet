@@ -250,7 +250,6 @@
     <string name="transaction_details_received_at">Přijato na</string>
     <string name="transaction_details_moved_from">Přesunuto z</string>
     <string name="transaction_details_moved_internally_to">Interně přesunuto do</string>
-
     <string name="authenticate_fingerprint_title">Ověřit</string>
     <string name="authenticate_fingerprint_message">Pokračujte potvrzením otisku prstu</string>
     <string name="authenticate_pin_message">Pokračujte zadáním kódu PIN</string>
@@ -360,7 +359,6 @@
 
     <string name="syncing">Synchronizace</string>
     <string name="syncing_balance">Synchronizace zůstatku</string>
-
     <string name="all_transactions">Vše</string>
     <string name="received_transactions">Přijato</string>
     <string name="sent_transactions">Odesláno</string>
@@ -372,4 +370,4 @@
 
     <string name="continue_reset">Pokračovat</string>
     <string name="reset_wallet_text">Resetovat peněženku</string>
-</resources>
+    </resources>

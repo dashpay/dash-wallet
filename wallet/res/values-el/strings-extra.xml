@@ -182,6 +182,8 @@
     <string name="notification_transactions_channel_description">Λάβετε ειδοποιήσεις για εισερχόμενες συναλλαγές</string>
     <string name="notification_synchronization_channel_name">Συγχρονισμός</string>
     <string name="notification_synchronization_channel_description">Εμφανίζει μια ειδοποίηση όταν η εφαρμογή συγχρονίζεται με το δίκτυο.</string>
+    <string name="notification_generic_channel_name">Γενικές ειδοποιήσεις</string>
+    <string name="notification_generic_channel_description">Άλλες εκδηλώσεις του Dash Wallet</string>
     <string name="notification_push_channel_name">Ειδοποιήσεις Push</string>
     <string name="notification_push_channel_description">Εμφανίζει τις ειδοποιήσεις push που σας αποστέλλονται από το Dash</string>
     <string name="notification_settings_title">Ειδοποιήσεις</string>
@@ -244,7 +246,6 @@
     <string name="transaction_details_received_at">Ελήφθησαν στο</string>
     <string name="transaction_details_moved_from">Μετακινήθηκε από</string>
     <string name="transaction_details_moved_internally_to">Μετακινήθηκε εσωτερικά στο</string>
-
     <string name="authenticate_fingerprint_title">Ταυτοποίηση</string>
     <string name="authenticate_fingerprint_message">Επιβεβαιώστε το Δακτυλικό αποτύπωμα για να συνεχίσετε</string>
     <string name="authenticate_pin_message">Εισαγάγετε το PIN σας για να συνεχίσετε</string>
@@ -354,7 +355,6 @@
 
     <string name="syncing">Συγχρονισμός</string>
     <string name="syncing_balance">Συγχρονισμός Υπολοίπου</string>
-
     <string name="all_transactions">Όλα</string>
     <string name="received_transactions">Ελήφθησαν</string>
     <string name="sent_transactions">Εστάλη</string>
@@ -364,6 +364,13 @@
     <string name="wallet_encryption_error_message">Υπάρχει ένα πρόβλημα στη δημιουργία του πορτοφολιού. Παρακαλούμε αναφέρετέ το στο Γραφείο Υποστήριξης.</string>
     <string name="wallet_not_encrypted_error_message">Υπάρχει πρόβλημα με το πορτοφόλι σας.\n\nΕάν δεν έχετε Dash σε αυτό το πορτοφόλι, τότε απεγκαταστήστε και επανεγκαταστήστε αυτή την εφαρμογή. Στη συνέχεια, δημιουργήστε ένα νέο πορτοφόλι.\n\nΕάν έχετε μια φράση αποκατάστασης ή ένα αρχείο αντιγράφου ασφαλείας, τότε απεγκαταστήστε αυτή την εφαρμογή και επανεγκαταστήστε την.\n\nΑλλιώς, αναφέρετε το πρόβλημα στο Γραφείο Υποστήριξης.</string>
 
+    <string name="reset_wallet_title">Είστε σίγουροι ότι θέλετε να επαναφέρετε το πορτοφόλι;</string>
+    <string name="reset_wallet_message"> Εάν επαναφέρετε το πορτοφόλι σας, ο μόνος τρόπος για να αποκτήσετε πρόσβαση σε αυτό είναι να ανακτήσετε το πορτοφόλι με τη φράση ανάκτησης.</string>
+    <string name="positive_reset_text">Ναι, Επαναφορά πορτοφολιού</string>
+    <string name="launch_reset_wallet_title">Έχετε θετικό υπόλοιπο</string>
+    <string name="launch_reset_wallet_message">Εάν επαναφέρετε το πορτοφόλι σας, θα χάσετε όλα τα χρήματά σας, εάν δεν έχετε δημιουργήσει αντίγραφα ασφαλείας της φράσης ανάκτησης.</string>
     <string name="continue_reset">Συνέχεια</string>
+    <string name="launch_reset_wallet_extra_message">Δημιουργήστε αντίγραφα ασφαλείας της φράσης ανάκτησης</string>
+    <string name="start_reset_wallet_title">Μπορεί να χάσετε %s</string>
     <string name="reset_wallet_text">Επαναφορά Πορτοφολιού</string>
-</resources>
+    </resources>

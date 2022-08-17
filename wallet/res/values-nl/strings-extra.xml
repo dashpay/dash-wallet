@@ -246,7 +246,6 @@
     <string name="transaction_details_received_at">Ontvangen met</string>
     <string name="transaction_details_moved_from">Verplaatst van</string>
     <string name="transaction_details_moved_internally_to">Intern verplaatst naar</string>
-
     <string name="authenticate_fingerprint_title">Verifieer</string>
     <string name="authenticate_fingerprint_message">Bevestig vingerafdruk om door te gaan</string>
     <string name="authenticate_pin_message">Voer PIN in om door te gaan</string>
@@ -356,7 +355,6 @@
 
     <string name="syncing">Aan het synchroniseren</string>
     <string name="syncing_balance">Saldo aan het synchroniseren</string>
-
     <string name="all_transactions">Alles</string>
     <string name="received_transactions">Ontvangen</string>
     <string name="sent_transactions">Verzonden</string>
@@ -375,4 +373,4 @@
     <string name="launch_reset_wallet_extra_message">Back-up je herstelzin</string>
     <string name="start_reset_wallet_title">Je kan %s kwijtraken</string>
     <string name="reset_wallet_text">Portemonnee resetten</string>
-</resources>
+    </resources>

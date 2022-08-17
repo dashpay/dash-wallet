@@ -77,7 +77,7 @@ class StakingActivity : LockScreenActivity() {
                 ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
             }
             NavigationRequest.BuyDash -> {
-                startActivity(BuyAndSellLiquidUpholdActivity.createIntent(this))
+                startActivity(BuyAndSellIntegrationsActivity.createIntent(this))
             }
             NavigationRequest.SendReport -> {
                 log.info("CrowdNode initiated report")
@@ -114,7 +114,11 @@ class StakingActivity : LockScreenActivity() {
             val pin = securityFunctions.requestPinCode(this@StakingActivity)
 
             if (pin != null) {
-                val intent = VerifySeedActivity.createIntent(this@StakingActivity, pin)
+                val intent = VerifySeedActivity.createIntent(
+                    this@StakingActivity,
+                    pin,
+                    goHomeOnClose = false
+                )
                 startActivity(intent)
             }
         }

@@ -238,6 +238,14 @@
     <string name="view_seed_done">Hecho</string>
     <string name="view_seed_title">Frase de recuperación</string>
     <string name="transaction_result_view_on_explorer">Ver en el explorador de bloques</string>
+    <string name="transaction_result_tax_category">Categoría de impuestos</string>
+    <string name="transaction_result_tax_category_loading">Cargando...</string>
+    <string-array name="transaction_result_tax_categories">
+        <item>Ingreso</item>
+        <item>Gasto</item>
+        <item>Transferencia entrante</item>
+        <item>Transferencia de salida</item>
+    </string-array>
     <string name="transaction_result_paid_successfully">Enviado exitosamente</string>
     <string name="transaction_result_sent_to">Enviado para</string>
     <string name="transaction_date_and_time">Fecha</string>
@@ -249,6 +257,7 @@
     <string name="transaction_details_received_at">Recibido en</string>
     <string name="transaction_details_moved_from">Movido de</string>
     <string name="transaction_details_moved_internally_to">Movido internamente para</string>
+    <string name="transaction_failed_details">Transferencia fallida</string>
 
     <string name="authenticate_fingerprint_title">Autenticar</string>
     <string name="authenticate_fingerprint_message">Confirma la huella dactilar para continuar</string>
@@ -359,7 +368,7 @@
 
     <string name="syncing">Sincronizando</string>
     <string name="syncing_balance">Sincronizando Balance </string>
-
+    <string name="transaction_count">%d transferencias</string>
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recibido</string>
     <string name="sent_transactions">Enviado</string>
@@ -378,4 +387,14 @@
     <string name="launch_reset_wallet_extra_message">Haz una copia de seguridad de tu frase de recuperación</string>
     <string name="start_reset_wallet_title">Puedes perder %s</string>
     <string name="reset_wallet_text">Reiniciar billetera</string>
+    <string name="reclassify_transactions_title">Reclasifica tus transacciones</string>
+    <string name="reclassify_transactions_title_message">Estas clasificaciones se reflejarán en la exportación CSV que se pueden usar para importar a los servicios de informes de impuestos.</string>
+    <string name="reclassify_transactions_question">¿Dónde puedo cambiar la categoría fiscal?</string>
+    <string name="reclassify_transactions_outgoing_title">Transacciones salientes</string>
+    <string name="reclassify_transactions_by_default_message">por defecto se marcará como</string>
+    <string name="reclassify_transactions_incoming_title">Transacciones entrantes</string>
+    <string name="reclassify_transactions_change_it_message">Puedes cambiarlo a</string>
+    <string name="reclassify_transactions_linked_accounts_title">Cuentas vinculadas</string>
+    <string name="reclassify_transactions_linked_accounts_message">de forma predeterminada, todas las transacciones hacia o desde tus cuentas vinculadas (intercambios, apuestas, etc.) se marcarán como transferencias.</string>
+    <string name="reclassify_transactions_change_explanation">Elije cualquier transacción de la página de inicio y cambia la categoría en la página de detalles de la transacción.</string>
 </resources>

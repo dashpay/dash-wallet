@@ -24,6 +24,7 @@
     <string name="explore_atms_title">ATM</string>
     <string name="explore_atms_subtitle">DASHやその他の仮想通貨を現金で売買できる場所を探します。</string>
     <string name="explore_staking_subtitle">簡単にDashをステークし、数回のクリックでパッシブ収入を得ます。</string>
+    <string name="explore_staking_current_apy">現在のAPY = %s%%</string>
 
     <!-- Search -->
     <string name="explore_search_results">検索結果</string>

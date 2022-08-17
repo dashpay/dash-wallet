@@ -179,6 +179,8 @@
     <string name="notification_transactions_channel_description">รับการแจ้งเตือนเกี่ยวกับการทำธุรกรรมที่เข้ามา</string>
     <string name="notification_synchronization_channel_name">ซิงโครไนซ์</string>
     <string name="notification_synchronization_channel_description">แสดงการแจ้งเตือนเมื่อแอพพลิเคชั่นกำลังซิงโครไนซ์กับเครือข่าย</string>
+    <string name="notification_generic_channel_name">การแจ้งเตือนทั่วไป</string>
+    <string name="notification_generic_channel_description">กิจกรรมกระเป๋าเงิน Dash อื่น ๆ</string>
     <string name="notification_push_channel_name">การแจ้งเตือน</string>
     <string name="notification_push_channel_description">แสดงการแจ้งเตือนที่ส่งถึงคุณโดย Dash</string>
     <string name="notification_settings_title">การแจ้งเตือน</string>
@@ -241,7 +243,6 @@
     <string name="transaction_details_received_at">ได้รับที่</string>
     <string name="transaction_details_moved_from">เคลื่อนย้ายจาก</string>
     <string name="transaction_details_moved_internally_to">ย้ายไปภายแล้ว</string>
-
     <string name="authenticate_fingerprint_title">รับรองความน่าเชื่อถือ</string>
     <string name="authenticate_fingerprint_message">ยืนยันลายนิ้วมือเพื่อดำเนินการต่อไป</string>
     <string name="authenticate_pin_message">ป้อนเลขรหัสผ่านของคุณเพื่อดำเนินการต่อไป</string>
@@ -351,7 +352,6 @@
 
     <string name="syncing">กำลังซิงค์</string>
     <string name="syncing_balance">กำลังซิงค์ยอดคงเหลือ</string>
-
     <string name="all_transactions">ทั้งหมด</string>
     <string name="received_transactions">ได้รับ</string>
     <string name="sent_transactions">ส่ง</string>
@@ -361,6 +361,13 @@
     <string name="wallet_encryption_error_message">มีปัญหาในการสร้างกระเป๋าเงินโปรดรายงานสิ่งนี้ไปยังแผนกซัพพอร์ต</string>
     <string name="wallet_not_encrypted_error_message">มีปัญหาเกิดขึ้นกับกระเป๋าเงินของคุณ.\n\nIf คุณไม่มี  Dash ในกระเป๋าเงินนี้ ถอนการติดตั้งและติดตั้งแอพนี้ใหม่จากนั้นสร้างกระเป๋าเงินใหม่.\n\nIf คุณมีวลีการกู้คืนหรือไฟล์สำรองข้อมูลจากนั้นถอนการติดตั้งแอพนี้และติดตั้งใหม่.\n\nOtherwise โปรดรายงานสิ่งนี้ไปยังแผนกซัพพอร์ต</string>
 
+    <string name="reset_wallet_title">แน่ใจหรือว่าต้องการรีเซ็ตกระเป๋าเงิน?</string>
+    <string name="reset_wallet_message">หากคุณรีเซ็ตกระเป๋าเงินของคุณวิธีเดียวที่จะเข้าถึงได้คือการกู้คืนกระเป๋าเงินด้วยวลีการกู้คืน</string>
+    <string name="positive_reset_text">ใช่ รีเซ็ตกระเป๋าเงิน</string>
+    <string name="launch_reset_wallet_title">คุณมียอดคงเหลือในเชิงบวก</string>
+    <string name="launch_reset_wallet_message">หากคุณรีเซ็ตกระเป๋าเงินของคุณคุณจะสูญเสียเงินทั้งหมดหากคุณยังไม่ได้สำรองวลีการกู้คืน</string>
     <string name="continue_reset">ดำเนินการต่อ</string>
+    <string name="launch_reset_wallet_extra_message">สำรองวลีการกู้คืนของคุณ</string>
+    <string name="start_reset_wallet_title">คุณอาจสูญเสีย %s</string>
     <string name="reset_wallet_text">รีเซ็ตกระเป๋าสตางค์</string>
-</resources>
+    </resources>

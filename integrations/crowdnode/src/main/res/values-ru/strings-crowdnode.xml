@@ -17,11 +17,12 @@
 <resources>
     <string name="crowdnode_get_started">Начало работы с CrowdNode</string>
     <string name="crowdnode_get_started_hint">Чтобы приступить к стейкингу, создайте аккаунт на CrowdNode или подключитесь к уже существующему</string>
+    <string name="crowdnode_account">Аккаунт CrowdNode</string>
     <string name="new_account">Новый аккаунт CrowdNode</string>
     <string name="account_create">Создать аккаунт</string>
-    <string name="account_create_response">Создать аккаунт, ответ</string>
+    <string name="accept_terms_response">Пожалуйста, примите условия использования</string>
     <string name="accept_terms">Принять условия использования</string>
-    <string name="accept_terms_response">Принять условия использования, ответ</string>
+    <string name="welcome_response">Аккаунт создан</string>
     <string name="account_link">Привязать уже существующий аккаунт</string>
     <string name="crowdnode_login">Войти в CrowdNode</string>
     <string name="crowdnode_signup">Подписаться на новости CrowdNode</string>
@@ -93,8 +94,26 @@
     <string name="crowdnode_minimum_deposit">Чтобы начать зарабатывать, внесите не менее %s</string>
     <string name="crowdnode_minimum_deposit_difference">Внести %s, чтобы начать зарабатывать</string>
     <string name="crowdnode_first_deposit">Первый депозит должен быть не менее %s</string>
-    <string name="crowdnode_staking_info_title">Как работает стейкинг</string>
+    <string name="crowdnode_staking_info_title">Как работает стейкинг CrowdNode </string>
+    <string name="crowdnode_staking_info_message_first">Сеть Dash работает на основе мастернод, которые играют важную роль в проведении платежей</string>
+    <string name="crowdnode_staking_info_message_second">Для создания мастерноды необходимо вложить 1000 Dash в качестве коллатерального залога. На данный момент каждая мастернода получает примерно%s%%вознаграждения в год. </string>
+    <string name="crowdnode_staking_apy_title">Текущий APY %s%%</string>
     <string name="crowdnode_staking_info_message">Вы начинаете зарабатывать, если на вашем аккаунте на CrowdNode находится более %s</string>
+    <string name="staking_apy_title">Текущий APY %s</string>
+    <string name="crowdnode_staking_current_apy_message">Это текущая годовая процентная доходность полной мастерноды за минусом 15% комиссии CrowdNode. Эта сумма не является точной и может колебаться в зависимости от размера пулов CrowdNode и курса Dash.</string>
+    <string name="crowdnode_staking_leave_pool_message_one">Участники могут свободно выходить из пула и чаще всего могут сделать это мгновенно.</string>
+    <string name="crowdnode_staking_leave_pool_message_two">В случае вывода крупных сумм, CrowdNode выплатит эти суммы в течение двух недель. Это зависит от их протоколов безопасности, но часто платежи проводятся намного быстрее.</string>
+
+    <string name="crowdnode_staking_leaving_the_pool_title">Выход из пула</string>
+    <string name="crowdnode_staking_receiving_rewards_title">Получение вознаграждений</string>
+    <string name="crowdnode_staking_receiving_rewards_message">Вы будете автоматически получать свою долю выплат, и они по умолчанию будут реинвестированы. Однако, для повторяющихся выплат можно легко настроить автоматический вывод средств.</string>
+    <string name="crowdnode_staking_first_minimum_deposit_title">Первый минимальный депозит</string>
+    <string name="crowdnode_staking_join_pool_message">Часто у людей нет на руках суммы в 1000 Dash, и CrowdNode создал сервис, где можно получить преимущества владения мастернодой за счёт вкладов участников в общий пул.</string>
+    <string name="crowdnode_staking_join_pool_title">Как присоединиться к пулу</string>
+    <string name="crowdnode_staking_crowdnode_benefits_title">Как присоединиться к пулу</string>
+    <string name="crowdnode_staking_connected_dash_address_title">Связанный адрес Dash </string>
+    <string name="crowdnode_staking_connected_dash_address_message">Это Dash адрес, созданный для вашего аккаунта CrowdNode в Dash Wallet на этом устройстве</string>
+    <string name="crowdnode_staking_toast_address_copied">Адрес CrowdNode скопирован в буфер обмена</string>
     <string name="crowdnode_verify_api_address">Подтвердить свой API Dash адрес</string>
     <string name="crowdnode_how_to_verify">Как подтвердить свой API Dash адрес</string>
     <string name="crowdnode_how_to_verify_description1">Отправьте %sDash с основного Dash адреса, который вы сейчас используете с аккаунтом CrowdNode</string>
@@ -119,5 +138,16 @@
     <string name="shuffle_coins">Перемешать монеты</string>
     <string name="positive_balance_required">Для этого в вашем Dash Wallet должен быть положительный баланс</string>
     <string name="withdrawal_required_balance">Внесите не менее 0.0003 Dash в Dash Wallet, чтобы завершить вывод средств</string>
+    <string name="withdrawal_limit">Лимит Dash на вывод</string>
+    <string name="withdrawal_limit_details">Нельзя вывести больше, чем %1$sDash %2$s.</string>
+    <string name="crowdnode_withdrawal_limits_title">Лимит CrowdNode на вывод</string>
+    <string name="crowdnode_withdrawal_limits_message">Из-за условий использования CrowdNode пользователи не могут вывести больше, чем:</string>
+    <string name="crowdnode_withdraw_without_limits_online">Вывести без ограничений в онлайн аккаунте на сайте CrowdNode.</string>
+    <string name="crowdnode_withdrawal_limits_error">Скорее всего, ошибка произошла из-за превышения лимита CrowdNode на вывод. Попробуйте ещё раз позже.</string>
+    <string name="per_transaction">за транзакцию</string>
+    <string name="per_hour">в час</string>
+    <string name="per_day">в 24 часа</string>
+    <string name="read_withdrawal_policy">Прочитать Правила вывода средств</string>
+
 
     </resources>

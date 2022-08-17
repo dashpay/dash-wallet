@@ -23,7 +23,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
+import kotlinx.android.synthetic.main.dash_fiat_amount_layout.*
 import kotlinx.android.synthetic.main.dialog_receive_details.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat

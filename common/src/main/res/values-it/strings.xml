@@ -14,6 +14,7 @@
     <string name="email">E-mail</string>
     <string name="email_placeholder">esempio: johndoe@mail.com</string>
     <string name="error">Errore</string>
+    <string name="select_a_coin">Seleziona una coin</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -38,6 +39,7 @@
     <string name="button_dismiss">Chiudi</string>
     <string name="network_unavailable_return">Torna al Portafoglio</string>
     <string name="button_continue">Continua</string>
+    <string name="get_quote">Ottieni preventivo</string>
     <string name="button_close">Chiudi</string>
     <string name="button_retry">Riprova</string>
     <string name="button_send_report">Spedisci il rapporto</string>
@@ -52,11 +54,20 @@
     <string name="search_hint">Cerca</string>
     <string name="permission_allow">Permetti</string>
     <string name="permission_deny">Nega</string>
+    <string name="pay_with">Paga con</string>
+    <string name="choose_payment_method">Scegli metodo di pagamento</string>
+    <string name="debit_credit_card">Debit/Credit card</string>
     <string name="max">Massimo</string>
+    <string name="select_the_coin">Seleziona una coin</string>
+    <string name="dash">Dash</string>
+    <string name="dash_wallet_name">Dash Wallet</string>
+    <string name="from">da</string>
+    <string name="to">a</string>
     <string name="select_currency">Seleziona Valuta</string>
     <string name="send_coins_error_dusty_send">L\'importo è troppo piccolo per l\'invio</string>
     <string name="send_coins_error_insufficient_money">Fondi insufficenti</string>
 
     <string name="empty_wallet_warning_title">Sembra che tu stia svuotando il tuo Dash Wallet</string>
     <string name="empty_wallet_crowdnode_warning">Attenzione: non potrai prelevare i tuoi fondi da CrowdNode su questo portafoglio finché non aumenterai il tuo saldo a 0,0003 Dash.</string>
+    <string name="syncing">Sincronizzazione</string>
 </resources>

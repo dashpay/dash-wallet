@@ -279,10 +279,8 @@
     <string name="preferences_show_disclaimer_title">Εμφάνιση της αποποίησης ευθυνών</string>
     <string name="preferences_show_disclaimer_summary">Έχετε διαβάσει πραγματικά τις οδηγίες ασφαλείας; Κρατήσατε αντίγραφο ασφαλείας του πορτοφολιού σας σε ασφαλές μέρος;</string>
     <string name="preferences_report_issue_title">Αναφέρετε το πρόβλημα</string>
-    <string name="preferences_initiate_reset_title">Επαναφορά blockchain</string>
-    <string name="preferences_initiate_reset_summary">Επαναφορά blockchain, συναλλαγών και του υπόλοιπου του πορτοφολιού. Η επανάληψη θα πάρει λίγο χρόνο, για αυτό καταφύγετε σε αυτή την λύση μόνο όταν το κρίνετε απαραίτητο</string>
-    <string name="preferences_initiate_reset_dialog_message">Θέλετε να επαναφέρετε και να επαναλάβετε το blockchain;\n\nΑυτό θα κρύψει προσωρινά το υπόλοιπο του πορτοφολιού σας και θα αφαιρέσει τις συναλλαγές. Και τα δύο θα επανέλθουν μόλις ο συγχρονισμός του blockchain προχωρήσει. Σιγουρευτείτε ότι έχετε σταθερή σύνδεση στο ίντερνετ.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Επαναφορά</string>
+    <string name="preferences_initiate_reset_title">Επανασάρωση του blockchain</string>
+    <string name="preferences_initiate_reset_dialog_positive">Επανάληψη της σάρωσης</string>
     <string name="preferences_extended_public_key_title">Δείξε xpub</string>
     <string name="preferences_extended_public_key_summary">Δείτε το εκτετεμένο δημόσιο κλειδί από το πορτοφόλι σας, έτσι ώστε να μπορέσετε να το εισάγετε σε άλλες εφαρμογές και υπηρεσίες. Να είστε προσεκτικοί: με αυτό τον τρόπο θα αποκαλύψετε τη νομισματική προστασία της ιδιωτικής σας ζωής σε αυτή την εφαρμογή.</string>
     <string name="bitmap_fragment_share">Μοιραστείτε...</string>
@@ -384,9 +382,8 @@
     <string name="payment_protocol_insufficient_funds_error_message">Δεν έχετε αρκετά χρήματα για να ολοκληρώσετε αυτή την συναλλαγή</string>
 
 
-
     <string name="select_a_service">Επιλέξτε μια Υπηρεσία</string>
     <string name="activity_buy_and_sell_dash_filter">Φίλτρο</string>
     <string name="clear_filter">Καθαρισμός Φίλτρου</string>
     <string name="select_currency">Επιλέξτε Νόμισμα</string>
-</resources>
+    </resources>

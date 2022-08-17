@@ -218,7 +218,6 @@
     <string name="transaction_details_received_at">Nhận được tại</string>
     <string name="transaction_details_moved_from">Được di chuyển từ</string>
     <string name="transaction_details_moved_internally_to">Được di chuyển nội bộ đến</string>
-
     <string name="authenticate_fingerprint_title">Xác thực</string>
     <string name="authenticate_fingerprint_message">Xác nhận vân tay để tiếp tục</string>
     <string name="authenticate_pin_message">Nhập mã PIN của bạn để tiếp tục</string>
@@ -317,4 +316,4 @@
     <string name="sent_transactions">Đã gửi</string>
     <string name="continue_reset">Tiếp tục</string>
     <string name="reset_wallet_text">Thiết lập lại ví</string>
-</resources>
+    </resources>

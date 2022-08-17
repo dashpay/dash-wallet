@@ -279,10 +279,8 @@
     <string name="preferences_show_disclaimer_title">Ukázať vyhlásenie</string>
     <string name="preferences_show_disclaimer_summary">Naozaj ste si prečítali bezpečnostné pokyny? Zálohovali ste už peňaženku na bezpečné miesto?</string>
     <string name="preferences_report_issue_title">Nahlásiť problém</string>
-    <string name="preferences_initiate_reset_title">Resetovať reťazec blokov</string>
-    <string name="preferences_initiate_reset_summary">Vymazať reťazec blokov, transakcie a zostatok v peňaženke. Opätovné načítanie bude chvíľu trvať, preto používajte iba v prípade nutnosti.</string>
-    <string name="preferences_initiate_reset_dialog_message">Chcete vymazať a znova nahrať reťazec blokov?\n\nTýmto dočasne skryjete svoju bilanciu a zmažete transakcie. Oboje bude obnovené počas synchronizácie reťazca blokov. Uistite sa, že máte spoľahlivé internetové pripojenie</string>
-    <string name="preferences_initiate_reset_dialog_positive">Reset</string>
+    <string name="preferences_initiate_reset_title">Znova prehľadať blockchain</string>
+    <string name="preferences_initiate_reset_dialog_positive">Pre-skenovať</string>
     <string name="preferences_extended_public_key_title">Ukázať xpub</string>
     <string name="preferences_extended_public_key_summary">Zobraziť rozšírený verejný kľúč vašej peňaženky, za účelom importovania do iných aplikácií a služieb. Buďte opatrní: odhalíte tým vaše finančné informácie s danou aplikáciou.</string>
     <string name="bitmap_fragment_share">Zdieľať...</string>
@@ -384,9 +382,8 @@
     <string name="payment_protocol_insufficient_funds_error_message">Na dokončenie tejto transakcie nemáte dostatok prostriedkov </string>
 
 
-
     <string name="select_a_service">Vyberte službu</string>
     <string name="activity_buy_and_sell_dash_filter">Filter platieb</string>
     <string name="clear_filter">Zrušiť filter</string>
     <string name="select_currency">Vyberte menu</string>
-</resources>
+    </resources>

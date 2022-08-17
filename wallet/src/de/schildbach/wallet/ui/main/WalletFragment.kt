@@ -135,7 +135,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 }
                 binding.shortcutsPane.buySellButton -> {
                     viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL)
-                    startActivity(BuyAndSellLiquidUpholdActivity.createIntent(requireContext()))
+                    startActivity(BuyAndSellIntegrationsActivity.createIntent(requireContext()))
                 }
                 binding.shortcutsPane.payToAddressButton -> {
                     handlePayToAddress()

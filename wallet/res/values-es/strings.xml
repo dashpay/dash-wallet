@@ -279,10 +279,10 @@
     <string name="preferences_show_disclaimer_title">Mostrar descargo de responsabilidad</string>
     <string name="preferences_show_disclaimer_summary">¿Has leído las notas de seguridad? ¿Ya hiciste backup de tu billetera a un lugar seguro?</string>
     <string name="preferences_report_issue_title">Reportar problema</string>
-    <string name="preferences_initiate_reset_title">Restaurar cadena de bloques</string>
-    <string name="preferences_initiate_reset_summary">Restaurar la cadena de bloques, transacciones y balance de la billetera. La reproducción tomará un tiempo, solo haz esto si sabes porqué.</string>
-    <string name="preferences_initiate_reset_dialog_message">Deseas restaurar y restablecer la cadena de bloques?\n\nEsto ocultará temporalmente tu balance de la billetera y removerá transacciones. Ambas se recoperarán en la medida en que la sincronización de la cadena de bloques progrese. Asegurate de tener una conexión a Internet confiable.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Reiniciar</string>
+    <string name="preferences_initiate_reset_title">Escanear de nuevo la cadena de bloques</string>
+    <string name="preferences_initiate_reset_summary">Vuelve a escanear la cadena de bloques, las transacciones y el saldo de la billetera. La reproducción tardará un rato, así que hazlo solo si sabes por qué.</string>
+    <string name="preferences_initiate_reset_dialog_message">¿te gustaría volver a escanear la cadena de bloques?\n\nEsto ocultará temporalmente el saldo de tu billetera y eliminará las transacciones. Ambos se recuperarán a medida que avance la sincronización de la cadena de bloques. Asegúrate de tener una conexión confiable a Internet.</string>
+    <string name="preferences_initiate_reset_dialog_positive">Escanear nuevamente</string>
     <string name="preferences_extended_public_key_title">Mostrar xpub</string>
     <string name="preferences_extended_public_key_summary">Ve la llave publica extendida de tu billetera, para que pueda ser importada hacia otras apps y servicios ten cuidado: hacer esto dara a conocer tu privacidad monetaria a esa app.</string>
     <string name="bitmap_fragment_share">Comparte…</string>
@@ -384,9 +384,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">No tienes fondos suficientes para completar esta transacción.</string>
 
 
-
+    <string name="select_a_service_to_buy_and_sell_dash">Seleccione un servicio para comprar y vender Dash.</string>
     <string name="select_a_service">Seleccionar un servicio</string>
     <string name="activity_buy_and_sell_dash_filter">Filtrar</string>
     <string name="clear_filter">Borrar filtro</string>
     <string name="select_currency">Selecciona el tipo de moneda</string>
+    <string name="reason">Razón</string>
 </resources>

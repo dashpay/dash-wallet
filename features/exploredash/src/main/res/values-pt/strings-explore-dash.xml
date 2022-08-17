@@ -24,7 +24,6 @@
     <string name="explore_atms_title">Caixas Eletrônicos</string>
     <string name="explore_atms_subtitle">Encontre onde comprar ou vender DASH e outras criptomoedas por dinheiro.</string>
     <string name="explore_staking_subtitle">Realize facilmente operações de stake no Dash e ganhe renda passiva com apenas alguns cliques.</string>
-
     <!-- Search -->
     <string name="explore_search_results">Procurar resultados</string>
     <string name="explore_physical_merchant">Comércio Físico</string>

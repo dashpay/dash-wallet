@@ -82,12 +82,6 @@
         <item name="android:textSize">@dimen/font_size_normal</item>
     </style>
 
-    <style name="My.Widget.Button.Borderless" parent="@android:style/Widget.Holo.Button.Borderless">
-        <item name="android:paddingLeft">8dp</item>
-        <item name="android:paddingRight">8dp</item>
-        <item name="android:drawablePadding">8dp</item>
-    </style>
-
     <style name="My.Widget.Button.Borderless.Unpadded" parent="@android:style/Widget.Holo.Button.Borderless">
         <item name="android:padding">0px</item>
         <item name="android:drawablePadding">0px</item>
@@ -290,6 +284,10 @@
         <item name="cardCornerRadius">15dp</item>
     </style>
 
+    <style name="CardViewRaised.Radius7">
+        <item name="cardCornerRadius">7dp</item>
+    </style>
+
     <style name="EncircledIconTheme">
         <item name="backgroundColor">@color/ultra_light_gray</item>
         <item name="strokeColor">@color/ultra_light_gray</item>
@@ -305,6 +303,7 @@
     <style name="DialogBackground" parent="SecondaryBackground">
         <item name="cornerRadius">14dp</item>
     </style>
+
 
     <!-- Typography -->
 
@@ -655,6 +654,14 @@
         <item name="android:textAlignment">viewStart</item>
     </style>
 
+    <style name="Overline.Secondary">
+        <item name="android:textColor">@color/content_secondary</item>
+    </style>
+
+    <style name="Overline.Tertiary">
+        <item name="android:textColor">@color/content_tertiary</item>
+    </style>
+
     <style name="Overline.White">
         <item name="android:textColor">@color/dash_white</item>
     </style>
@@ -665,14 +672,6 @@
 
     <style name="Overline.Red">
         <item name="android:textColor">@color/system_red</item>
-    </style>
-
-    <style name="Overline.Secondary">
-        <item name="android:textColor">@color/content_secondary</item>
-    </style>
-
-    <style name="Overline.Tertiary">
-        <item name="android:textColor">@color/content_tertiary</item>
     </style>
 
     <style name="Overline.Medium">
@@ -764,6 +763,12 @@
         <item name="backgroundColor">@color/dash_blue</item>
         <item name="strokeColor">@color/dash_blue</item>
         <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.Large.TransparentBlue">
+        <item name="backgroundColor">@color/light_blue</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="strokeWidth">0dp</item>
     </style>
 
     <style name="PrimaryButtonTheme.Large.White">

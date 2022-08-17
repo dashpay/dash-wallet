@@ -30,6 +30,8 @@ import de.schildbach.wallet.service.AppRestartService
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
+import de.schildbach.wallet.ui.send.ConfirmTransactionLauncher
+import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.LockScreenBroadcaster
@@ -65,6 +67,11 @@ abstract class AppModule {
     abstract fun bindSendPaymentService(
         sendCoinsTaskRunner: SendCoinsTaskRunner
     ): SendPaymentService
+
+    @Binds
+    abstract fun bindConfirmTransactionService(
+        confirmTransactionLauncher: ConfirmTransactionLauncher
+    ): ConfirmTransactionService
 
     @Binds
     abstract fun bindNotificationService(

@@ -11,7 +11,10 @@
     <string name="buy_dash">購買達世幣</string>
     <string name="copied">已複製</string>
     <string name="staking_title">質押</string>
+    <string name="email">電子郵件</string>
+    <string name="email_placeholder">例如 johndoe@mail.com</string>
     <string name="error">錯誤</string>
+    <string name="select_a_coin">選擇一個幣</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -36,6 +39,7 @@
     <string name="button_dismiss">取消</string>
     <string name="network_unavailable_return">返回錢包</string>
     <string name="button_continue">繼續</string>
+    <string name="get_quote">獲得報價</string>
     <string name="button_close">關閉</string>
     <string name="button_retry">重試</string>
     <string name="button_send_report">發送報告</string>
@@ -50,9 +54,20 @@
     <string name="search_hint">搜索</string>
     <string name="permission_allow">允許</string>
     <string name="permission_deny">拒絕</string>
+    <string name="pay_with">使用。。。來支付</string>
+    <string name="choose_payment_method">選擇付款方式</string>
+    <string name="debit_credit_card">借記卡/信用卡</string>
     <string name="max">最大值</string>
+    <string name="select_the_coin">選擇幣種</string>
+    <string name="dash">達世幣</string>
+    <string name="dash_wallet_name">達世幣錢包</string>
+    <string name="from">由</string>
+    <string name="to">至</string>
     <string name="select_currency">選擇貨幣</string>
     <string name="send_coins_error_dusty_send">這個金額太小，無法發送。</string>
     <string name="send_coins_error_insufficient_money">餘額不足</string>
 
-    </resources>
+    <string name="empty_wallet_warning_title">看來你正在清空你的達世幣錢包</string>
+    <string name="empty_wallet_crowdnode_warning">請注意，在您的餘額增加到 0.0003 Dash 之前，您將無法將資金從 CrowdNode 提款到此錢包。</string>
+    <string name="syncing">同步中</string>
+</resources>

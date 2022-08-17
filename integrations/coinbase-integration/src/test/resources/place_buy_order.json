@@ -1,0 +1,43 @@
+{
+  "data": {
+    "id": "a23a3cc4-76b1-51a1-892d-d6c30030c4f3",
+    "fee": {
+      "amount": "0.99",
+      "currency": "USD"
+    },
+    "status": "quote",
+    "user_reference": null,
+    "transaction": null,
+    "created_at": null,
+    "updated_at": null,
+    "resource": "buy",
+    "resource_path": null,
+    "payment_method": {
+      "id": "931aa7a2-6500-505b-bf0b-35f031466711",
+      "resource": "payment_method",
+      "resource_path": "/v2/payment-methods/931aa7a2-6500-505b-bf0b-35f031466711"
+    },
+    "hold_until": null,
+    "hold_days": 0,
+    "is_first_buy": false,
+    "amount": {
+      "amount": "0.00369540",
+      "currency": "DASH"
+    },
+    "total": {
+      "amount": "1.49",
+      "currency": "USD"
+    },
+    "subtotal": {
+      "amount": "0.50",
+      "currency": "USD"
+    },
+    "unit_price": {
+      "amount": "135.30",
+      "currency": "USD",
+      "scale": 2
+    },
+    "requires_completion_step": false,
+    "next_step": null
+  }
+}

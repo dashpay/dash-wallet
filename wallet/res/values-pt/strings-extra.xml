@@ -8,7 +8,7 @@
 
     <string name="set_pin_create_new_wallet">Criar uma Nova Carteira</string>
     <string name="set_pin_upgrade_wallet">Atualizar Carteira</string>
-    <string name="set_pin_restore_wallet">Restaurar carteira</string>
+    <string name="set_pin_restore_wallet">Restaurar Carteira</string>
     <string name="set_pin_enter_pin">Inserir PIN antigo</string>
     <string name="set_pin_set_pin">Definir PIN</string>
     <string name="set_pin_confirm_pin">Confirmar PIN</string>
@@ -32,7 +32,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Proteger Carteira Agora</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Scanear para Pagar</string>
+    <string name="shortcut_scan_to_pay">Escanear para Pagar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Enviar para Endereço</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -51,7 +51,7 @@
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_login_with_fingerprint">Entrar com Digital</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
-    <string name="lock_action_scan_to_pay">Enviar</string>
+    <string name="lock_action_scan_to_pay">Escanear para Enviar</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
     <string name="lock_enter_pin">Inserir PIN</string>
     <string name="lock_unlock_with_fingerprint">Use sua digital para desbloquear</string>
@@ -60,7 +60,7 @@
     <string name="perm_lock_wipe_wallet">Limpar Carteira</string>
     <string name="perm_lock_close_app">Fechar</string>
 
-    <string name="scan_to_pay_error_dialog_title">Scanear para Enviar</string>
+    <string name="scan_to_pay_error_dialog_title">Escanear para Enviar</string>
     <string name="scan_to_pay_error_dialog_message">Não contém um endereço ou link de de Dash válido na área de transferência:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Não contém um endereço ou link de de Dash válido na área de transferência.</string>
     <string name="pay_to_confirm_address">Este é o endereço Dash para o qual você deseja enviar o pagamento?</string>
@@ -82,7 +82,7 @@
     <string name="payments_tab_pay_label">Enviar</string>
     <string name="payments_tab_receive_label">Receber</string>
     <string name="payments_pay_by_qr_title">Enviar por</string>
-    <string name="payments_pay_by_qr_sub_title">Scaneando código QR</string>
+    <string name="payments_pay_by_qr_sub_title">Escaneando código QR</string>
     <string name="payments_pay_to_clipboard_title">Enviar para endereço copiado</string>
     <string name="payments_pay_to_clipboard_sub_title">Nenhum endereço copiado</string>
 
@@ -139,7 +139,7 @@
     <string name="wallet_lock_unlock_to_see_txs_txt">Toque o ícone de cadeado acima para desbloquear a sua carteira e ver o histórico de transações.</string>
     <string name="wallet_lock_unlock_dialog_title">Desbloqueie sua carteira</string>
     <string name="wallet_lock_unlock_dialog_message">Sua carteira é protegida por um PIN. Insira o seu PIN e pressione Desbloquear para continuar.</string>
-    <string name="wallet_lock_reset_wallet_title">Resetar Carteira</string>
+    <string name="wallet_lock_reset_wallet_title">Redefinir Carteira</string>
     <string name="wallet_lock_reset_wallet_message">Tem certeza? Sua carteira será deletada e todo seu Dash será perdido.\n\nA única maneira de recuperar seu Dash é com um arquivo de backup ou frase de recuperação.</string>
 
     <string name="wallet_lock_wallet_disabled">Carteira desabilitada</string>
@@ -185,6 +185,8 @@
     <string name="notification_transactions_channel_description">Receba alerta sobre transações entrantes</string>
     <string name="notification_synchronization_channel_name">Sincronização</string>
     <string name="notification_synchronization_channel_description">Mostra uma notificação enquanto o app está sincronizando com a rede.</string>
+    <string name="notification_generic_channel_name">Notificações genéricas</string>
+    <string name="notification_generic_channel_description">Outros eventos da Carteira Dash</string>
     <string name="notification_push_channel_name">Notificações via push</string>
     <string name="notification_push_channel_description">Mostra as notificações push enviadas a você pelo Dash</string>
     <string name="notification_settings_title">Notificações</string>
@@ -247,7 +249,6 @@
     <string name="transaction_details_received_at">Recebido em</string>
     <string name="transaction_details_moved_from">Movido de</string>
     <string name="transaction_details_moved_internally_to">Movido internamente para</string>
-
     <string name="authenticate_fingerprint_title">Autenticar</string>
     <string name="authenticate_fingerprint_message">Confirmar digital para continuar</string>
     <string name="authenticate_pin_message">Insira seu PIN para continuar</string>
@@ -290,7 +291,7 @@
     <string name="hash">Hash</string>
     <string name="block_info">Informação de Bloco</string>
 
-    <string name="scan_private_key">Scanear Chave Privada</string>
+    <string name="scan_private_key">Escanear Chave Privada</string>
     <string name="scan_private_key_intro_1">Você está prestes a varrer os fundos de uma carteira Dash de papel.</string>
     <string name="scan_private_key_intro_2">Isso moverá todas as moedas daquela carteira para a carteira nesse dispositivo.</string>
     <string name="scan_private_key_intro_3">Quando a transação esteja confirmada, a outra carteira será inutilizada e não deve ser utilizada por razões de segurança.</string>
@@ -357,7 +358,6 @@
 
     <string name="syncing">Sincronizando</string>
     <string name="syncing_balance">Sincronizando Saldo</string>
-
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recebido</string>
     <string name="sent_transactions">Enviado</string>
@@ -367,6 +367,13 @@
     <string name="wallet_encryption_error_message">Houve um problema ao criar a carteira. Por favor, informe isso ao Suporte Técnico.</string>
     <string name="wallet_not_encrypted_error_message">Há um problema com sua carteira.\n\nSe você não tiver Dash nesta carteira, desinstale e reinstale este aplicativo. Em seguida, crie uma nova carteira.\n\nSe você tiver uma frase de recuperação ou um arquivo de backup, desinstale este aplicativo e reinstale-o.\n\nCaso contrário, informe ao Suporte.</string>
 
+    <string name="reset_wallet_title">Tem certeza de que deseja redefinir a carteira?</string>
+    <string name="reset_wallet_message">Se você redefinir a sua carteira, a única maneira de obter acesso a ela é recuperar a carteira com a frase de recuperação.</string>
+    <string name="positive_reset_text">Sim, Redefinir Carteira</string>
+    <string name="launch_reset_wallet_title">Você tem um saldo positivo</string>
+    <string name="launch_reset_wallet_message">Se você redefinir a sua carteira, perderá todos os seus fundos caso não tenha feito backup da sua frase de recuperação.</string>
     <string name="continue_reset">Continuar</string>
-    <string name="reset_wallet_text">Resetar Carteira</string>
-</resources>
+    <string name="launch_reset_wallet_extra_message">Faça backup da sua frase de recuperação</string>
+    <string name="start_reset_wallet_title">Você pode perder %s</string>
+    <string name="reset_wallet_text">Redefinir Carteira</string>
+    </resources>

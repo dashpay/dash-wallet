@@ -244,7 +244,6 @@
     <string name="transaction_details_received_at">Empfangen bei</string>
     <string name="transaction_details_moved_from">Verschoben von</string>
     <string name="transaction_details_moved_internally_to">Intern verschoben nach</string>
-
     <string name="authenticate_fingerprint_title">Authentifizieren</string>
     <string name="authenticate_fingerprint_message">Fingerabdruck zum Fortfahren bestätigen</string>
     <string name="authenticate_pin_message">PIN zum Fortfahren eingeben</string>
@@ -354,7 +353,6 @@
 
     <string name="syncing">Synchronisiere</string>
     <string name="syncing_balance">Synchronisiere Guthaben</string>
-
     <string name="all_transactions">Alles</string>
     <string name="received_transactions">Erhalten</string>
     <string name="sent_transactions">Gesendet</string>
@@ -366,4 +364,4 @@
 
     <string name="continue_reset">Fortfahren</string>
     <string name="reset_wallet_text">Wallet zurücksetzen</string>
-</resources>
+    </resources>
