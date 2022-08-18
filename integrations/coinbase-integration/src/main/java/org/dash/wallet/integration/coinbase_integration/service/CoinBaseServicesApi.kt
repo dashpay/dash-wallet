@@ -58,7 +58,7 @@ interface CoinBaseServicesApi {
     @POST("v2/accounts/{account_id}/transactions")
     suspend fun sendCoinsToWallet(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
-        @Header(CB_2FA_TOKEN_KEY) api2FATokenVersion: String,
+        @Header(CB_2FA_TOKEN_KEY) api2FATokenVersion: String?,
         @Path("account_id") accountId: String,
         @Body sendTransactionToWalletParams: SendTransactionToWalletParams
     ): SendTransactionToWalletResponse?

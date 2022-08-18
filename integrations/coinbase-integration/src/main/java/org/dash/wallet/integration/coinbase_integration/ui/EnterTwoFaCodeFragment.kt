@@ -58,6 +58,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
         super.onViewCreated(view, savedInstanceState)
         handleBackPress()
         val params = arguments?.let { EnterTwoFaCodeFragmentArgs.fromBundle(it).transactionParams }
+        viewModel.sendInitialTransactionToSMSTwoFactorAuth(params?.params)
 
         binding.verifyBtn.setOnClickListener {
             viewModel.verifyUserAndCompleteTransaction(params?.params, binding.enterCodeField.text.toString())
