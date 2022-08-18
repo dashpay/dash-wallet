@@ -333,9 +333,13 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 2: Create and send the credit funding transaction
             //
-            platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey)
+            // check to see if the funding transaction exists
+            if (blockchainIdentity.creditFundingTransaction == null) {
+                platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey)
+            }
         }
 
+        //TODO: check to see if the funding transaction has been sent
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_SENDING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_SENDING)
             val timerIsLock = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_ISLOCK)
@@ -343,6 +347,7 @@ class CreateIdentityService : LifecycleService() {
             timerIsLock.logTiming()
         }
 
+        //TODO: check to see if the funding transaction has been been confirmed
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CONFIRMED) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_CONFIRMED)
             // If the tx is in a block, seen by a peer, InstantSend lock, then it is considered confirmed

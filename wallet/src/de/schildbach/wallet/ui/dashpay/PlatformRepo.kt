@@ -834,7 +834,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             keysCreated = blockchainIdentityData.keysCreated ?: 0
             currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
             currentMainKeyType = blockchainIdentityData.currentMainKeyType
-                    ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
+                    ?: IdentityPublicKey.Type.ECDSA_SECP256K1
         }
     }
 

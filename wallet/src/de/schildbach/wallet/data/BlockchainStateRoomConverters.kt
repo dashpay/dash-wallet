@@ -107,12 +107,12 @@ class BlockchainStateRoomConverters {
     }
 
     @TypeConverter
-    fun toCurrentMainKeyType(value: Int): IdentityPublicKey.TYPES? {
-        return if (value > -1) IdentityPublicKey.TYPES.values()[value] else null
+    fun toCurrentMainKeyType(value: Int): IdentityPublicKey.Type? {
+        return if (value > -1) IdentityPublicKey.Type.values()[value] else null
     }
 
     @TypeConverter
-    fun fromCurrentMainKeyType(currentMainKeyType: IdentityPublicKey.TYPES?): Int {
+    fun fromCurrentMainKeyType(currentMainKeyType: IdentityPublicKey.Type?): Int {
         return currentMainKeyType?.ordinal ?: -1
     }
 
