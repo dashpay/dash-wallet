@@ -1,4 +1,7 @@
 Dash Wallet
+v7.6.1
+* Coinbase 2FA fixes
+
 v7.6
 * Add support for Coinbase
     * Buy DASH
