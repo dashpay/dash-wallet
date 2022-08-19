@@ -21,6 +21,7 @@ import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.DrawableRes
@@ -39,6 +40,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
 import org.dash.wallet.common.ui.CurrencyTextView
@@ -50,8 +52,7 @@ import org.dash.wallet.common.ui.CurrencyTextView
 class TransactionResultViewBinder(
     private val wallet: Wallet,
     private val dashFormat: MonetaryFormat,
-    private val containerView: View,
-    private val profile: DashPayProfile?
+    private val containerView: View
 ): TransactionConfidence.Listener {
     private val ctx by lazy { containerView.context }
     private val checkIcon by lazy { containerView.findViewById<ImageView>(R.id.check_icon) }
@@ -82,14 +83,20 @@ class TransactionResultViewBinder(
     private val errorDescription by lazy { containerView.findViewById<TextView>(R.id.error_description) }
 
     private val reportIssueContainer by lazy { containerView.findViewById<View>(R.id.report_issue_card) }
+    private val privateMemoContainer by lazy { containerView.findViewById<View>(R.id.private_memo) }
+    private val addPrivateMemoBtn by lazy { containerView.findViewById<Button>(R.id.add_private_memo_btn) }
+    private val privateMemoText by lazy { containerView.findViewById<TextView>(R.id.private_memo_text) }
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
     private val explorerContainer by lazy { containerView.findViewById<View>(R.id.open_explorer_card) }
 
     private val resourceMapper = TxResourceMapper()
     private lateinit var transaction: Transaction
+    private var dashPayProfile: DashPayProfile? = null
 
-    fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
+    fun bind(tx: Transaction, profile: DashPayProfile?, payeeName: String? = null, payeeSecuredBy: String? = null) {
         this.transaction = tx
+        this.dashPayProfile = profile
+
         val value = tx.getValue(wallet)
         val isSent = value.signum() < 0
 
@@ -234,7 +241,7 @@ class TransactionResultViewBinder(
         @DrawableRes val imageResource: Int
 
         if (errorStatusStr.isNotEmpty()) {
-            if (profile != null) {
+            if (dashPayProfile != null) {
                 secondaryIcon.isVisible = true
                 secondaryIcon.setImageResource(R.drawable.ic_transaction_failed)
             } else {
@@ -243,6 +250,7 @@ class TransactionResultViewBinder(
 
             errorContainer.isVisible = true
             reportIssueContainer.isVisible = true
+            privateMemoContainer.isVisible = false
             outputsContainer.isVisible = false
             inputsContainer.isVisible = false
             feeRow.isVisible = false
@@ -276,7 +284,7 @@ class TransactionResultViewBinder(
             if (!fromConfidence) {
                 // If it's a confidence update, not need to set the send/receive icons again.
                 // Some hosts are replacing those with custom animated ones.
-                if (profile != null) {
+                if (dashPayProfile != null) {
                     secondaryIcon.isVisible = true
                     secondaryIcon.setImageResource(imageResource)
                 } else {
@@ -313,6 +321,18 @@ class TransactionResultViewBinder(
                 outputsAddressesContainer, false) as TextView
             addressView.text = it.toBase58()
             outputsAddressesContainer.addView(addressView)
+        }
+    }
+
+    fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
+        privateMemoText.text = transactionMetadata.memo
+
+        if (transactionMetadata.memo.isNotEmpty()) {
+            privateMemoText.isVisible = true
+            addPrivateMemoBtn.setText(R.string.edit_note)
+        } else {
+            privateMemoText.isVisible = false
+            addPrivateMemoBtn.setText(R.string.add_note)
         }
     }
 }

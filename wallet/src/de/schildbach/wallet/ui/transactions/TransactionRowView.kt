@@ -38,6 +38,7 @@ data class TransactionRowView(
     @StyleRes val iconBackground: Int,
     @StringRes val titleRes: Int,
     @StringRes val statusRes: Int,
+    val comment: String,
     val transactionAmount: Int,
     val time: Long,
     val timeFormat: Int,
@@ -47,6 +48,7 @@ data class TransactionRowView(
     companion object {
         fun fromTransactionWrapper(
             txWrapper: TransactionWrapper,
+            memo: String,
             bag: TransactionBag,
             context: Context,
             contact: DashPayProfile?
@@ -63,6 +65,7 @@ data class TransactionRowView(
                     R.style.TxNoBackground,
                     R.string.crowdnode_account,
                     -1,
+                    memo,
                     txWrapper.transactions.size,
                     lastTx.updateTime.time,
                     TxResourceMapper().dateTimeFormat,
@@ -70,12 +73,13 @@ data class TransactionRowView(
                     txWrapper
                 )
             } else {
-                fromTransaction(lastTx, bag, context, contact)
+                fromTransaction(lastTx, memo, bag, context, contact)
             }
         }
 
         fun fromTransaction(
             tx: Transaction,
+            comment: String,
             bag: TransactionBag,
             context: Context,
             contact: DashPayProfile?,
@@ -119,6 +123,7 @@ data class TransactionRowView(
                 iconBackground,
                 resourceMapper.getTransactionTypeName(tx, bag),
                 status,
+                comment,
                 1,
                 tx.updateTime.time,
                 resourceMapper.dateTimeFormat,

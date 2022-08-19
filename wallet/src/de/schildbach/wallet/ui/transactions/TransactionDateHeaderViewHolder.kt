@@ -27,12 +27,12 @@ import android.text.style.StyleSpan
 import android.util.TypedValue
 import de.schildbach.wallet.ui.main.HistoryViewHolder
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.TransactionGroupHeaderBinding
+import de.schildbach.wallet_test.databinding.TransactionDateHeaderBinding
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class TransactionGroupHeaderViewHolder(
-    val binding: TransactionGroupHeaderBinding
+class TransactionDateHeaderViewHolder(
+    val binding: TransactionDateHeaderBinding
 ): HistoryViewHolder(binding.root) {
     fun bind(date: LocalDate) {
         val bigSize = itemView.context.resources.getDimensionPixelSize(R.dimen.date_text_big)

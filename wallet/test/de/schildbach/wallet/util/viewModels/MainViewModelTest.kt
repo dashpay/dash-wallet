@@ -137,7 +137,8 @@ class MainViewModelTest {
 
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(), savedStateMock
+            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
+            savedStateMock, mockk()
         ))
 
         val clipboardInput = viewModel.getClipboardInput()
@@ -156,7 +157,8 @@ class MainViewModelTest {
 
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(), savedStateMock
+            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
+            savedStateMock, mockk()
         ))
 
         every { clipboardManagerMock.primaryClip?.getItemAt(0)?.uri?.toString() } returns mockUri
@@ -188,7 +190,8 @@ class MainViewModelTest {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(), savedStateMock
+            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
+            savedStateMock, mockk()
         ))
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
             assertEquals(false, viewModel.isBlockchainSynced.value)
@@ -202,7 +205,8 @@ class MainViewModelTest {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(state)
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(), savedStateMock
+            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
+            savedStateMock, mockk()
         ))
 
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {

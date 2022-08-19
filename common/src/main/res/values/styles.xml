@@ -934,10 +934,6 @@
         <item name="android:textColor">@color/gray_600</item>
     </style>
 
-    <style name="Caption.ExtraDarkGray">
-        <item name="android:textColor">@color/extra_dark_gray</item>
-    </style>
-
     <style name="Overline" parent="TextAppearance.MaterialComponents.Overline">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/content_primary</item>
@@ -949,6 +945,18 @@
 
     <style name="Overline.White">
         <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="Overline.Red">
+        <item name="android:textColor">@color/system_red</item>
+    </style>
+
+    <style name="Overline.Secondary">
+        <item name="android:textColor">@color/content_secondary</item>
+    </style>
+
+    <style name="Overline.Green">
+        <item name="android:textColor">@color/system_green</item>
     </style>
 
     <style name="Overline.Medium">

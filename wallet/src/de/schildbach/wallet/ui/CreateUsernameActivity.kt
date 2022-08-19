@@ -45,12 +45,12 @@ import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
 import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
-import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_create_username.*
 import kotlinx.android.synthetic.main.users_orbit.*
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.common.util.KeyboardUtil
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint

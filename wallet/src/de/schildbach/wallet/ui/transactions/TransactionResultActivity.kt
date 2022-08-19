@@ -23,7 +23,9 @@ import android.content.Intent
 import android.graphics.drawable.Animatable
 import android.os.Bundle
 import android.view.View
+import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.main.MainActivity
@@ -34,6 +36,8 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.AbstractWalletActivity
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
+import de.schildbach.wallet.ui.TransactionResultViewModel
+import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity.ACTION_SEND_FROM_WALLET_URI
 import de.schildbach.wallet.util.WalletUtils
@@ -99,7 +103,6 @@ class TransactionResultActivity : AbstractWalletActivity() {
     }
 
     private lateinit var transactionResultViewBinder: TransactionResultViewBinder
-    private lateinit var transaction: Transaction
 
     private val isUserAuthorised: Boolean by lazy {
         intent.extras!!.getBoolean(EXTRA_USER_AUTHORIZED)
@@ -108,6 +111,8 @@ class TransactionResultActivity : AbstractWalletActivity() {
     private val userData by lazy {
         intent.extras!!.getParcelable<UsernameSearchResult>(EXTRA_USER_DATA)
     }
+
+    private val viewModel: TransactionResultViewModel by viewModels()
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,13 +124,27 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
         setContentView(R.layout.activity_successful_transaction)
 
-        val tx = walletData.wallet!!.getTransaction(txId)
+        viewModel.init(txId)
+        val tx = viewModel.transaction
+
         if (tx != null) {
+            transactionResultViewBinder = TransactionResultViewBinder(
+                walletData.wallet!!,
+                configuration.format.noCode(),
+                container
+            )
+
             val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
             val userId = initializeIdentity(tx, blockchainIdentity)
 
             if (blockchainIdentity == null || userId == null) {
                 finishInitialization(tx, null)
+            }
+
+            viewModel.transactionMetadata.observe(this) {
+                if(it != null) {
+                    transactionResultViewBinder.setTransactionMetadata(it)
+                }
             }
         } else {
             log.error("Transaction not found. TxId:", txId)
@@ -154,7 +173,6 @@ class TransactionResultActivity : AbstractWalletActivity() {
     }
 
     private fun finishInitialization(tx: Transaction, dashPayProfile: DashPayProfile?) {
-        this.transaction = tx
         initiateTransactionBinder(tx, dashPayProfile)
         val mainThreadExecutor = ContextCompat.getMainExecutor(walletApplication)
         tx.confidence.addEventListener(mainThreadExecutor, transactionResultViewBinder)
@@ -165,20 +183,21 @@ class TransactionResultActivity : AbstractWalletActivity() {
     }
 
     private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
-        transactionResultViewBinder = TransactionResultViewBinder(
-            walletData.wallet!!,
-            configuration.format.noCode(),
-            container,
-            dashPayProfile
-        )
         val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
         val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
-        transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
+        transactionResultViewBinder.bind(tx, dashPayProfile, payeeName, payeeVerifiedBy)
         transaction_close_btn.setOnClickListener {
             onTransactionDetailsDismiss()
         }
         view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
         report_issue_card.setOnClickListener { showReportIssue() }
+        add_private_memo_btn.setOnClickListener {
+            viewModel.transaction?.txId?.let { hash ->
+                PrivateMemoDialog().apply {
+                    arguments = bundleOf(PrivateMemoDialog.TX_ID_ARG to hash)
+                }.show(supportFragmentManager, "private_memo")
+            }
+        }
 
         check_icon.setImageDrawable(ContextCompat.getDrawable(this,
             R.drawable.check_animated))
@@ -212,5 +231,10 @@ class TransactionResultActivity : AbstractWalletActivity() {
                 startActivity(MainActivity.createIntent(this))
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        viewModel.transaction?.confidence?.removeEventListener(transactionResultViewBinder)
     }
 }

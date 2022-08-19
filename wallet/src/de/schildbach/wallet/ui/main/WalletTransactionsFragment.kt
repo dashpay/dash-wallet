@@ -93,10 +93,10 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     requireContext().startActivity(DashPayUserActivity.createIntent(requireContext(), rowView.contact))
                 } else if (rowView.txWrapper != null) {
                     val fragment = TransactionGroupDetailsFragment(rowView.txWrapper)
-                    fragment.show(parentFragmentManager, "transaction_group")
+                    fragment.show(requireActivity())
                 } else {
                     val transactionDetailsDialogFragment = newInstance(rowView.txId)
-                    transactionDetailsDialogFragment.show(parentFragmentManager, null)
+                    transactionDetailsDialogFragment.show(requireActivity())
                 }
             }
         }

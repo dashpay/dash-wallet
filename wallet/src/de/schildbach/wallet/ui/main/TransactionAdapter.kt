@@ -30,13 +30,13 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.ui.transactions.TransactionGroupHeaderViewHolder
+import de.schildbach.wallet.ui.transactions.TransactionDateHeaderViewHolder
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet.ui.transactions.TxResourceMapper
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.TransactionGroupHeaderBinding
+import de.schildbach.wallet_test.databinding.TransactionDateHeaderBinding
 import de.schildbach.wallet_test.databinding.TransactionRowBinding
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
@@ -74,7 +74,7 @@ class TransactionAdapter(
 
         return when (getItem(position)) {
             is TransactionRowView -> R.layout.transaction_row
-            is HistoryRowView -> R.layout.transaction_group_header
+            is HistoryRowView -> R.layout.transaction_date_header
             else -> -1
         }
     }
@@ -87,9 +87,9 @@ class TransactionAdapter(
                 val binding = TransactionRowBinding.inflate(inflater, parent, false)
                 TransactionViewHolder(binding)
             }
-            R.layout.transaction_group_header -> {
-                val binding = TransactionGroupHeaderBinding.inflate(inflater, parent, false)
-                TransactionGroupHeaderViewHolder(binding)
+            R.layout.transaction_date_header -> {
+                val binding = TransactionDateHeaderBinding.inflate(inflater, parent, false)
+                TransactionDateHeaderViewHolder(binding)
             }
             else -> {
                 throw IllegalArgumentException("viewType $viewType isn't recognized")
@@ -110,7 +110,7 @@ class TransactionAdapter(
                 holder.bind(item as TransactionRowView, nextItem !is TransactionRowView)
                 holder.binding.root.setOnClickListener { clickListener.invoke(item, false) }
             }
-            is TransactionGroupHeaderViewHolder -> {
+            is TransactionDateHeaderViewHolder -> {
                 holder.bind((item as HistoryRowView).localDate)
                 holder.binding.root.setOnClickListener { clickListener.invoke(item, false) }
             }
@@ -142,6 +142,7 @@ class TransactionAdapter(
             setFiatValue(txView.value, txView.exchangeRate)
             setTime(txView.time, resourceMapper.dateTimeFormat)
             setDetails(txView.transactionAmount)
+            setComment(txView.comment)
         }
 
         private fun setIcon(txView: TransactionRowView) {
@@ -162,6 +163,7 @@ class TransactionAdapter(
                 binding.secondaryIcon.setImageResource(icon)
             } else {
                 binding.primaryIcon.setImageResource(icon)
+                binding.primaryIcon.setPadding(resources.getDimensionPixelOffset(R.dimen.transaction_icon_padding))
                 binding.primaryIcon.background = resources.getRoundedBackground(iconBackground)
                 binding.primaryIcon.setOnClickListener { }
                 binding.secondaryIcon.isVisible = false
@@ -207,6 +209,11 @@ class TransactionAdapter(
             } else {
                 binding.details.isVisible = false
             }
+        }
+
+        private fun setComment(comment: String) {
+            binding.comment.text = comment
+            binding.comment.isVisible = comment.isNotEmpty()
         }
 
         private fun setTime(time: Long, dateTimeFormat: Int) {
