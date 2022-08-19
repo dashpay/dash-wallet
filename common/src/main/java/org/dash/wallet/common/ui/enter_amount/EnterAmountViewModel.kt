@@ -42,8 +42,8 @@ class EnterAmountViewModel @Inject constructor(
             _selectedCurrencyCode.value = value
         }
 
-    private val _selectedExchangeRate = MutableLiveData<ExchangeRate>()
-    val selectedExchangeRate: LiveData<ExchangeRate>
+    private val _selectedExchangeRate = MutableLiveData<ExchangeRate?>()
+    val selectedExchangeRate: LiveData<ExchangeRate?>
         get() = _selectedExchangeRate
 
     val onContinueEvent = SingleLiveEvent<Pair<Coin, Fiat>>()
@@ -85,7 +85,8 @@ class EnterAmountViewModel @Inject constructor(
             .filterNotNull()
             .flatMapLatest { code ->
                 exchangeRates.observeExchangeRate(code)
-            }.onEach(_selectedExchangeRate::postValue)
+            }
+            .onEach(_selectedExchangeRate::postValue)
             .launchIn(viewModelScope)
     }
 

@@ -35,6 +35,7 @@ import de.schildbach.wallet.ui.dashpay.notification.UserAlertViewHolder
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
+import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityDashpayUserBinding
 import org.bitcoinj.core.PrefixedChecksummedBytes

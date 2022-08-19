@@ -42,6 +42,9 @@ interface TransactionMetadataDao {
     @Query("SELECT * FROM transaction_metadata WHERE txid = :txId")
     fun observe(txId: Sha256Hash): Flow<TransactionMetadata?>
 
+    @Query("SELECT txId, memo FROM transaction_metadata WHERE memo != ''")
+    fun observeMemos(): Flow<List<TransactionMemo>>
+
     @Query("SELECT * FROM transaction_metadata WHERE timestamp <= :end and timestamp >= :start")
     fun observeByTimestampRange(start: Long, end: Long): Flow<List<TransactionMetadata>>
 

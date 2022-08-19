@@ -20,8 +20,11 @@ package org.dash.wallet.common.ui.dialogs
 import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
-import androidx.annotation.DrawableRes
+import androidx.annotation.StyleRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.content.res.ResourcesCompat
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -29,12 +32,13 @@ import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
 open class OffsetDialogFragment : BottomSheetDialogFragment() {
-    companion object {
-        private const val FULLSCREEN_DIFF = 80
-    }
-
     protected open val forceExpand: Boolean = false
-    @DrawableRes protected open val background: Int = R.drawable.offset_dialog_background
+    @StyleRes protected open val backgroundStyle: Int = R.style.SecondaryBackground
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setStyle(STYLE_NORMAL, R.style.OffsetDialog)
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -43,17 +47,21 @@ open class OffsetDialogFragment : BottomSheetDialogFragment() {
             val d = dialog as BottomSheetDialog
             val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
             bottomSheet?.let {
-                bottomSheet.setBackgroundResource(background)
+                bottomSheet.background = ResourcesCompat.getDrawable(
+                    resources,
+                    R.drawable.offset_dialog_background,
+                    resources.newTheme().apply { applyStyle(backgroundStyle, true) }
+                )
 
+                val marginTop = resources.getDimensionPixelSize(R.dimen.offset_dialog_margin_top)
                 val displayHeight = requireContext().resources.displayMetrics.heightPixels
-                val height = if (forceExpand) displayHeight - FULLSCREEN_DIFF else bottomSheet.height
+                val height = if (forceExpand) displayHeight - marginTop else bottomSheet.height
                 view.layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, height)
 
                 val coordinatorLayout = bottomSheet.parent as CoordinatorLayout
                 val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
-                val marginTop = resources.getDimensionPixelSize(R.dimen.offset_dialog_margin_top)
 
-                if (forceExpand || bottomSheet.height + FULLSCREEN_DIFF > displayHeight) {
+                if (forceExpand || bottomSheet.height + marginTop > displayHeight) {
                     // apply top offset
                     bottomSheetBehavior.isFitToContents = false
                     bottomSheetBehavior.expandedOffset = marginTop
@@ -77,5 +85,11 @@ open class OffsetDialogFragment : BottomSheetDialogFragment() {
         }
 
         dialog?.window?.callback = UserInteractionAwareCallback(dialog?.window?.callback, requireActivity())
+    }
+
+    fun show(activity: FragmentActivity) {
+        if (activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            show(activity.supportFragmentManager, "offset_dialog")
+        }
     }
 }

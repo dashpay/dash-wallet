@@ -101,4 +101,4 @@
     <string name="crowdnode_online_account_details_title">Impormasyon tungkol sa iyong online na account</string>
     <string name="crowdnode_online_account_details_primary">Ang iyong pangunahing Dash address na kasalukuyan mong ginagamit para sa iyong CrowdNode account</string>
     <string name="crowdnode_online_account_details_api">Dash address na itinalaga para sa iyong CrowdNode account sa Dash Wallet sa device na ito</string>
-    </resources>
+</resources>

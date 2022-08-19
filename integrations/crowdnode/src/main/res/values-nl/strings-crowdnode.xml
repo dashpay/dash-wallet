@@ -119,5 +119,4 @@
     <string name="shuffle_coins">Munten schudden</string>
     <string name="positive_balance_required">Je zou een positief saldo moeten hebben in de Dash portemonnee</string>
     <string name="withdrawal_required_balance">Stort minimaal 0,0003 Dash in je Dash portemonnee om een opname te voltooien</string>
-
-    </resources>
+</resources>

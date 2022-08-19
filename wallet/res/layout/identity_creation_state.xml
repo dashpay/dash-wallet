@@ -5,8 +5,6 @@
     style="@style/DashButton.White"
     android:layout_width="match_parent"
     android:layout_height="70dp"
-    android:layout_marginLeft="15dp"
-    android:layout_marginRight="15dp"
     android:layout_marginBottom="10dp"
     android:animateLayoutChanges="true"
     android:orientation="vertical"
@@ -36,21 +34,19 @@
 
         <TextView
             android:id="@+id/title"
-            style="@style/MontserratMedium"
+            style="@style/Body2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/processing_home_title"
-            android:textSize="15sp" />
+            android:text="@string/processing_home_title" />
 
         <TextView
             android:id="@+id/subtitle"
-            style="@style/MontserratRegular.G"
+            style="@style/Caption.Tertiary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="1"
             android:text="@string/processing_home_title"
-            android:textSize="13sp"
             tools:text="@string/processing_home_step_1" />
 
     </LinearLayout>

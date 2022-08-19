@@ -260,6 +260,7 @@
     <string name="transaction_details_received_from">Received from</string>
     <string name="transaction_details_moved_from">Moved from</string>
     <string name="transaction_details_moved_internally_to">Internally moved to</string>
+    <string name="transaction_failed_details">Transaction failed</string>
 
     <string name="authenticate_fingerprint_title">Authenticate</string>
     <string name="authenticate_fingerprint_message">Confirm fingerprint to continue</string>
@@ -527,7 +528,8 @@
     <string name="edit_profile">Edit Profile</string>
     <string name="display_name">Display Name</string>
     <string name="about_me">About me</string>
-    <string name="char_count">%1$d/%2$d Characters</string>
+    <string name="char_count">%1$d/%2$d characters</string>
+    <string name="character_counter_pattern" tools:override="true" translatable="false">@string/char_count</string> <!-- overrides default TextInputLayout value. Do not change the name -->
     <string name="save">Save</string>
     <string name="edit_profile_take_picture">Take a Photo with Camera</string>
     <string name="edit_profile_choose_picture">Select from Gallery</string>
@@ -634,7 +636,7 @@
 
     <string name="syncing">Syncing</string>
     <string name="syncing_balance">Syncing Balance</string>
-
+    <string name="transaction_count">%d transactions</string>
     <string name="all_transactions">All</string>
     <string name="received_transactions">Received</string>
     <string name="sent_transactions">Sent</string>
@@ -658,4 +660,10 @@
     <string name="launch_reset_wallet_extra_message">Back up your recovery phrase</string>
     <string name="start_reset_wallet_title">You may lose %s</string>
     <string name="reset_wallet_text">Reset Wallet</string>
+
+    <!-- Private memo -->
+    <string name="private_memo">Private Note</string>
+    <string name="add_note">Add Note</string>
+    <string name="edit_note">Edit Note</string>
+    <string name="note">Note</string>
 </resources>
