@@ -66,8 +66,8 @@ source_lang = en
 type = ANDROID
 
 [dash-mobile-wallets.strings-coinbase]
-file_filter = integrations/coinbase-integration/src/main/res/values-<lang>/strings.xml
+file_filter = integrations/coinbase/src/main/res/values-<lang>/strings.xml
 lang_map = sl_SI:sl, zh_TW:zh-rTW
-source_file = integrations/coinbase-integration/src/main/res/values/strings.xml
+source_file = integrations/coinbase/src/main/res/values/strings.xml
 source_lang = en
 type = ANDROID

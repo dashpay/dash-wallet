@@ -23,7 +23,7 @@ dependencies {
     implementation project(path: ":features:exploredash")
     implementation project(path: ':integrations:liquid')
     implementation project(path: ':integrations:uphold')
-    implementation project(path: ":integrations:coinbase-integration")
+    implementation project(path: ":integrations:coinbase")
     implementation project(path: ":integrations:crowdnode")
 
     implementation(project(':integration-android')) {
