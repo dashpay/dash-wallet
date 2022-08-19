@@ -61,6 +61,14 @@ class EnterTwoFaCodeViewModel @Inject constructor(
         _isRetryingTransfer = isRetryingTransfer
     }
 
+    fun sendInitialTransactionToSMSTwoFactorAuth(
+        params: SendTransactionToWalletParams? ) =viewModelScope.launch(Dispatchers.Main) {
+         val sendTransactionToWalletParams=  params?.copy(idem = UUID.randomUUID().toString())
+          sendTransactionToWalletParams?.let {
+              coinBaseRepository.sendFundsToWallet(it,null)
+        }
+    }
+
     fun verifyUserAndCompleteTransaction(
         params: SendTransactionToWalletParams?,
         twoFaCode: String
