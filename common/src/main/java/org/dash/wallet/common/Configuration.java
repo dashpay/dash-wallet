@@ -88,7 +88,6 @@ public class Configuration {
     public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
     public static final String PREFS_PIN_LENGTH = "pin_length";
 
-    public static final String PREFS_KEY_LAST_LIQUID_BALANCE = "last_liquid_balance";
     public static final String PREFS_KEY_LAST_UPHOLD_BALANCE = "last_uphold_balance";
 
     // Coinbase
@@ -502,14 +501,6 @@ public class Configuration {
 
     public String getLastUpholdBalance() {
         return prefs.getString(PREFS_KEY_LAST_UPHOLD_BALANCE, null);
-    }
-
-    public void setLastLiquidBalance(String balance) {
-        prefs.edit().putString(PREFS_KEY_LAST_LIQUID_BALANCE, balance).apply();
-    }
-
-    public String getLastLiquidBalance() {
-        return prefs.getString(PREFS_KEY_LAST_LIQUID_BALANCE, null);
     }
 
     public Boolean isDashToFiatDirection() {

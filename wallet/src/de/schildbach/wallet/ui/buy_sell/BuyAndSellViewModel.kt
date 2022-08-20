@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.buy_sell
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -46,8 +46,7 @@ class BuyAndSellViewModel
     private val coinBaseRepository: CoinBaseRepository,
     private val config: Configuration,
     networkState: NetworkStateInt
-)
-    : ConnectivityViewModel(networkState) {
+): ConnectivityViewModel(networkState) {
 
     //TODO: move this into UpholdViewModel
     private val triggerUploadBalanceUpdate = MutableLiveData<Unit>()
@@ -124,11 +123,10 @@ class BuyAndSellViewModel
         } else BuyAndSellDashServicesModel.ServiceStatus.IDLE
     }
 
-    fun setServicesStatus(coinBaseClientIsAuthenticated: Boolean, liquidClientIsAuthenticated: Boolean, upHoldClientIsAuthenticated: Boolean) {
+    fun setServicesStatus(coinBaseClientIsAuthenticated: Boolean, upHoldClientIsAuthenticated: Boolean) {
         setDashServiceList(
             buyAndSellDashServicesModel.toMutableList().map { model ->
                 val serviceStatus = when (model.serviceType) {
-                    BuyAndSellDashServicesModel.ServiceType.LIQUID -> changeItemStatus(liquidClientIsAuthenticated)
                     BuyAndSellDashServicesModel.ServiceType.UPHOLD -> changeItemStatus(upHoldClientIsAuthenticated)
                     BuyAndSellDashServicesModel.ServiceType.COINBASE -> changeItemStatus(coinBaseClientIsAuthenticated)
                 }
