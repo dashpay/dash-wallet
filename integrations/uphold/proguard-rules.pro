@@ -7,11 +7,6 @@
 -keep class org.dash.wallet.integration.uphold.** {
     public protected private *;
 }
--keep class org.dash.wallet.integration.liquid.** {
-    public protected private *;
-}
--keep interface org.dash.wallet.integration.uphold.** {*;}
--keep interface org.dash.wallet.integration.liquid.** {*;}
 
 #OkHttp
 -dontwarn com.squareup.okhttp.**
