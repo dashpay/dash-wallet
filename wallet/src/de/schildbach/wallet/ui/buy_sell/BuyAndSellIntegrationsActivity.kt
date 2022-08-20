@@ -118,7 +118,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
         binding.dashServicesList.itemAnimator = null
         binding.dashServicesList.adapter = buyAndSellDashServicesAdapter
 
-        viewModel.showLoading.observe(this){ showDialog ->
+        viewModel.showLoading.observe(this) { showDialog ->
             if (showDialog) loadingDialog?.show(this)
             else if (loadingDialog?.isAdded == true) loadingDialog?.dismiss()
         }
@@ -187,9 +187,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
         viewModel.upholdBalanceLiveData.observe(this) {
             if (it != null) {
                 when (it.status) {
-                    Status.LOADING -> {
-                        loadingDialog?.show(this)
-                    }
+                    Status.LOADING -> { }
                     Status.SUCCESS -> {
                         if (!isFinishing) {
                             val balance = it.data.toString()
@@ -200,7 +198,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
                                 balance
                             )
                         }
-                        loadingDialog?.dismiss()
                     }
                     Status.ERROR -> {
                         if (!isFinishing) {
@@ -216,7 +213,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
                                 )
                             }
                         }
-                        loadingDialog?.dismiss()
                     }
                     Status.CANCELED -> {
                         config.lastUpholdBalance?.let {
@@ -226,7 +222,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
                                 config.lastUpholdBalance
                             )
                         }
-                        loadingDialog?.dismiss()
                     }
                 }
             }
