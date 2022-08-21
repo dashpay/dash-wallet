@@ -342,14 +342,14 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
         super.onPause()
     }
 
-    private fun launchCoinBasePortal(){
+    private fun launchCoinBasePortal() {
         startActivityForResult(Intent(this, CoinbaseActivity::class.java), USER_BUY_SELL_DASH)
     }
 
     private fun checkLiquidStatus() {
-        val client = LiquidClient.getInstance()
+        val liquidClient = LiquidClient.getInstance()
 
-        if (client.isAuthenticated) {
+        if (liquidClient.isAuthenticated) {
             AdaptiveDialog.custom(
                 R.layout.dialog_liquid_unavailable,
                 null,
@@ -357,10 +357,9 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
                 "",
                 "",
                 getString(android.R.string.ok)
-            ).show(this@BuyAndSellIntegrationsActivity) { confirmed ->
-                if (confirmed == true) {
-                    client.clearLiquidData()
-                }
+            ).apply { isCancelable = false }
+             .show(this) {
+                 liquidClient.clearLiquidData()
             }
         }
     }

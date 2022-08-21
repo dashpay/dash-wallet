@@ -30,15 +30,11 @@
         style="@style/ViewRaised"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="40dp"
+        android:layout_marginTop="40dp"
+        android:layout_marginHorizontal="30dp"
         android:padding="10dp"
         android:background="@drawable/rounded_background"
-<<<<<<< HEAD
-        android:theme="@style/PrimaryBackground"
-=======
         android:theme="@style/SecondaryBackground"
->>>>>>> 6a9c6a34d62da652bb6b8a04f20a0c82fd34a473
-        app:layout_constraintBottom_toTopOf="@+id/white_container"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
@@ -74,16 +70,12 @@
         style="@style/ViewRaised"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="40dp"
+        android:layout_marginHorizontal="30dp"
         android:layout_marginTop="10dp"
         android:padding="10dp"
-        android:alpha="0.4"
+        android:alpha="0.9"
         android:background="@drawable/rounded_background"
-<<<<<<< HEAD
-        android:theme="@style/PrimaryBackground"
-=======
         android:theme="@style/SecondaryBackground"
->>>>>>> 6a9c6a34d62da652bb6b8a04f20a0c82fd34a473
         app:layout_constraintTop_toBottomOf="@+id/uphold_row">
 
         <ImageView
@@ -92,6 +84,7 @@
             android:layout_height="35dp"
             android:src="@drawable/ic_liquid_saturated"
             android:padding="8dp"
+            android:alpha="0.4"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
@@ -103,12 +96,14 @@
             android:layout_height="wrap_content"
             android:text="@string/liquid"
             android:layout_marginStart="10dp"
+            android:alpha="0.4"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@id/liquid_icon" />
 
         <ImageView
             style="@style/NavigationArrowStyle"
+            android:alpha="0.4"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
@@ -116,13 +111,13 @@
 
 
     <LinearLayout
-        android:id="@+id/white_container"
+        android:id="@+id/text_container"
         style="@style/ViewRaised"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingBottom="20dp"
         android:orientation="vertical"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="40dp"
         android:background="@color/background_secondary"
         app:layout_constraintTop_toBottomOf="@id/liquid_row">
 
@@ -138,10 +133,10 @@
             style="@style/Subtitle1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="30dp"
             android:layout_marginHorizontal="20dp"
             android:gravity="center"
             android:textAlignment="gravity"
-            android:paddingTop="25dp"
             android:text="@string/liquid_unavailable"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -149,7 +144,7 @@
 
         <TextView
             android:id="@+id/liquid_unavailable_message"
-            style="@style/Caption.Secondary"
+            style="@style/Body2.Secondary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="20dp"
@@ -162,11 +157,7 @@
             app:layout_constraintTop_toBottomOf="@id/set_auth_limit_label" />
 
         <Button
-<<<<<<< HEAD
-            android:id="@+id/dialog_negative_button"
-=======
             android:id="@+id/dialog_positive_button"
->>>>>>> 6a9c6a34d62da652bb6b8a04f20a0c82fd34a473
             style="@style/Button.Tertiary.Blue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
