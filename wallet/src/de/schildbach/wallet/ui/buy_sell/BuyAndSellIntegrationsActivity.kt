@@ -47,7 +47,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.integration.uphold.api.LiquidClient
 import org.dash.wallet.integration.uphold.api.UpholdClient
 import org.dash.wallet.integration.uphold.data.UpholdConstants
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
@@ -119,20 +118,13 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
         binding.dashServicesList.itemAnimator = null
         binding.dashServicesList.adapter = buyAndSellDashServicesAdapter
 
-        viewModel.showLoading.observe(this){ showDialog ->
+        viewModel.showLoading.observe(this) { showDialog ->
             if (showDialog) loadingDialog?.show(this)
             else if (loadingDialog?.isAdded == true) loadingDialog?.dismiss()
         }
 
-        if (LiquidClient.getInstance()!!.isAuthenticated) {
-            AdaptiveDialog.custom(
-                R.layout.dialog_liquid_unavailable,
-                null,
-                "",
-                "",
-                getString(android.R.string.ok),
-                ""
-            ).show(this)
+        lifecycleScope.launchWhenResumed {
+            checkLiquidStatus()
         }
     }
 
@@ -195,9 +187,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
         viewModel.upholdBalanceLiveData.observe(this) {
             if (it != null) {
                 when (it.status) {
-                    Status.LOADING -> {
-                        loadingDialog?.show(this)
-                    }
+                    Status.LOADING -> { }
                     Status.SUCCESS -> {
                         if (!isFinishing) {
                             val balance = it.data.toString()
@@ -208,7 +198,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
                                 balance
                             )
                         }
-                        loadingDialog?.dismiss()
                     }
                     Status.ERROR -> {
                         if (!isFinishing) {
@@ -224,7 +213,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
                                 )
                             }
                         }
-                        loadingDialog?.dismiss()
                     }
                     Status.CANCELED -> {
                         config.lastUpholdBalance?.let {
@@ -234,7 +222,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
                                 config.lastUpholdBalance
                             )
                         }
-                        loadingDialog?.dismiss()
                     }
                 }
             }
@@ -357,5 +344,24 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
 
     private fun launchCoinBasePortal(){
         startActivityForResult(Intent(this, CoinbaseActivity::class.java), USER_BUY_SELL_DASH)
+    }
+
+    private fun checkLiquidStatus() {
+        val client = LiquidClient.getInstance()
+
+        if (client.isAuthenticated) {
+            AdaptiveDialog.custom(
+                R.layout.dialog_liquid_unavailable,
+                null,
+                "",
+                "",
+                "",
+                getString(android.R.string.ok)
+            ).show(this@BuyAndSellIntegrationsActivity) { confirmed ->
+                if (confirmed == true) {
+                    client.clearLiquidData()
+                }
+            }
+        }
     }
 }

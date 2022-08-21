@@ -14,12 +14,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.integration.uphold.api
+package de.schildbach.wallet.ui.buy_sell
 
 import android.content.Context
 import android.content.SharedPreferences
 import com.securepreferences.SecurePreferences
-import org.slf4j.LoggerFactory
 
 
 class LiquidClient private constructor(context: Context, private val encryptionKey: String) {
@@ -31,7 +30,6 @@ class LiquidClient private constructor(context: Context, private val encryptionK
 
     companion object {
         private var instance: LiquidClient? = null
-        private val log = LoggerFactory.getLogger(LiquidClient::class.java)
         private const val LIQUID_PREFS = "liquid_prefs.xml"
         private const val LIQUID_SESSION_ID = "session_id"
         private const val LIQUID_SESSION_SECRET = "session_secret"
@@ -42,9 +40,9 @@ class LiquidClient private constructor(context: Context, private val encryptionK
             return instance
         }
 
-        fun getInstance(): LiquidClient? {
+        fun getInstance(): LiquidClient {
             checkNotNull(instance) { "You must call LiquidClient#init() first" }
-            return instance
+            return instance!!
         }
     }
 
@@ -52,9 +50,9 @@ class LiquidClient private constructor(context: Context, private val encryptionK
         prefs.edit().clear().apply()
     }
 
-    val storedSessionId: String? get() = prefs.getString(LIQUID_SESSION_ID, "")
-    val storedUserId: String? get() = prefs.getString(LIQUID_USER_ID, "")
-    val storedSessionSecret: String? get() = prefs.getString(LIQUID_SESSION_SECRET, "")
+    private val storedSessionId: String? get() = prefs.getString(LIQUID_SESSION_ID, "")
+    private val storedUserId: String? get() = prefs.getString(LIQUID_USER_ID, "")
+    private val storedSessionSecret: String? get() = prefs.getString(LIQUID_SESSION_SECRET, "")
 
     val isAuthenticated: Boolean get() = storedUserId != "" && storedSessionId != "" && storedSessionSecret != ""
 }

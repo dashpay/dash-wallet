@@ -33,7 +33,11 @@
         android:layout_marginHorizontal="40dp"
         android:padding="10dp"
         android:background="@drawable/rounded_background"
+<<<<<<< HEAD
         android:theme="@style/PrimaryBackground"
+=======
+        android:theme="@style/SecondaryBackground"
+>>>>>>> 6a9c6a34d62da652bb6b8a04f20a0c82fd34a473
         app:layout_constraintBottom_toTopOf="@+id/white_container"
         app:layout_constraintTop_toTopOf="parent">
 
@@ -75,7 +79,11 @@
         android:padding="10dp"
         android:alpha="0.4"
         android:background="@drawable/rounded_background"
+<<<<<<< HEAD
         android:theme="@style/PrimaryBackground"
+=======
+        android:theme="@style/SecondaryBackground"
+>>>>>>> 6a9c6a34d62da652bb6b8a04f20a0c82fd34a473
         app:layout_constraintTop_toBottomOf="@+id/uphold_row">
 
         <ImageView
@@ -154,7 +162,11 @@
             app:layout_constraintTop_toBottomOf="@id/set_auth_limit_label" />
 
         <Button
+<<<<<<< HEAD
             android:id="@+id/dialog_negative_button"
+=======
+            android:id="@+id/dialog_positive_button"
+>>>>>>> 6a9c6a34d62da652bb6b8a04f20a0c82fd34a473
             style="@style/Button.Tertiary.Blue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

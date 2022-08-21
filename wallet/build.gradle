@@ -43,7 +43,6 @@ dependencies {
     implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
-    implementation 'androidx.preference:preference-ktx:1.1.1'
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "androidx.work:work-runtime-ktx:$workRuntimeVersion"
     implementation "org.dashj:dashj-core:$dashjVersion"
@@ -76,6 +75,10 @@ dependencies {
     implementation "androidx.room:room-ktx:$roomVersion"
     implementation "androidx.room:room-runtime:$roomVersion"
     kapt "androidx.room:room-compiler:$roomVersion"
+
+    // Prefs
+    implementation 'androidx.preference:preference-ktx:1.1.1'
+    implementation 'com.scottyab:secure-preferences-lib:0.1.7'
 
     implementation 'androidx.multidex:multidex:2.0.1'
 
