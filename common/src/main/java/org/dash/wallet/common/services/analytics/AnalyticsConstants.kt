@@ -32,6 +32,10 @@ object AnalyticsConstants {
         const val BUY_DASH = "uphold_buy_dash"
     }
 
+    object MoreMenu {
+        const val BUY_SELL_MORE = "more_buy_sell_dash"
+    }
+
     object Security {
         const val VIEW_RECOVERY_PHRASE = "security_view_recovery_phrase"
         const val CHANGE_PIN = "security_change_pin"

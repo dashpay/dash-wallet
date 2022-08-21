@@ -26,11 +26,14 @@ import de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsActivity
 import de.schildbach.wallet.ui.explore.ExploreActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.Constants.REQUEST_CODE_BUY_SELL
 import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 
-
+@FlowPreview
+@ExperimentalCoroutinesApi
 class MoreActivity : GlobalFooterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,7 +85,7 @@ class MoreActivity : GlobalFooterActivity() {
     }
 
     private fun startBuyAndSellActivity() {
-//        analytics.logEvent(AnalyticsConstants.Liquid.BUY_SELL_MORE, bundleOf()) // TODO
+        analytics.logEvent(AnalyticsConstants.MoreMenu.BUY_SELL_MORE, bundleOf())
         startActivityForResult(BuyAndSellIntegrationsActivity.createIntent(this), REQUEST_CODE_BUY_SELL)
     }
 
