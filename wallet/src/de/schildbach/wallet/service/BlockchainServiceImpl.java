@@ -357,7 +357,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         notification.setContentTitle(msg);
         if (text.length() > 0)
             notification.setContentText(text);
-        notification.setContentIntent(PendingIntent.getActivity(this, 0, OnboardingActivity.createIntent(this), 0));
+        notification.setContentIntent(PendingIntent.getActivity(this, 0, OnboardingActivity.createIntent(this), PendingIntent.FLAG_IMMUTABLE));
         notification.setNumber(notificationCount == 1 ? 0 : notificationCount);
         notification.setWhen(System.currentTimeMillis());
         notification.setSound(Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.coins_received));
@@ -414,7 +414,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     notification.setContentTitle(getString(R.string.app_name));
                     notification.setContentText(getString(R.string.notification_peers_connected_msg, numPeers));
                     notification.setContentIntent(PendingIntent.getActivity(BlockchainServiceImpl.this, 0,
-                            OnboardingActivity.createIntent(BlockchainServiceImpl.this), 0));
+                            OnboardingActivity.createIntent(BlockchainServiceImpl.this), PendingIntent.FLAG_IMMUTABLE));
                     notification.setWhen(System.currentTimeMillis());
                     notification.setOngoing(true);
                     nm.notify(Constants.NOTIFICATION_ID_CONNECTED, notification.build());
@@ -1024,7 +1024,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private Notification createNetworkSyncNotification(BlockchainState blockchainState) {
         Intent notificationIntent = OnboardingActivity.createIntent(this);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
-                notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         final String message = (blockchainState != null)
                 ? BlockchainStateUtils.getSyncStateString(blockchainState, this)

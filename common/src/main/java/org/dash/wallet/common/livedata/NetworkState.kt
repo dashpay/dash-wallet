@@ -112,7 +112,7 @@ class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
                 postValue(true)
             }
 
-            override fun onLost(network: Network?) {
+            override fun onLost(network: Network) {
                 postValue(false)
             }
         }

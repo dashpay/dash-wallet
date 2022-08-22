@@ -30,7 +30,7 @@ class WebViewActivity : InteractionAwareActivity() {
             setDisplayShowHomeEnabled(true)
         }
         setTitle(intent.getStringExtra("title"))
-        webView.loadUrl(intent.getStringExtra("url"))
+        webView.loadUrl(intent.getStringExtra("url")!!)
     }
 
     override fun onPause() {

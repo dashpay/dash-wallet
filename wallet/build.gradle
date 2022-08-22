@@ -166,7 +166,7 @@ if (file("../local.properties").exists()) {
 }
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 31
     android.ndkVersion '21.3.6528147'
 
     lintOptions {
@@ -175,7 +175,7 @@ android {
     }
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 30
+        targetSdkVersion 31
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70610
         versionName project.hasProperty('versionName') ? project.property('versionName') : "7.6.1"
         multiDexEnabled true

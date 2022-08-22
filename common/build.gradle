@@ -5,11 +5,11 @@ apply plugin: 'kotlin-parcelize'
 apply plugin: 'dagger.hilt.android.plugin'
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 31
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 29
+        targetSdkVersion 31
         vectorDrawables.useSupportLibrary = true
         versionCode 1
         versionName "1.0"
