@@ -11,8 +11,6 @@ android {
         minSdkVersion 23
         targetSdkVersion 31
         vectorDrawables.useSupportLibrary = true
-        versionCode 1
-        versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -25,7 +23,6 @@ android {
         }
         debug {
             multiDexEnabled true
-            debuggable true
         }
     }
 
@@ -40,6 +37,7 @@ android {
     buildFeatures {
         viewBinding true
     }
+    namespace 'org.dash.wallet.common'
 }
 
 dependencies {

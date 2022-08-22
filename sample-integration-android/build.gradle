@@ -15,7 +15,6 @@ dependencies {
 android {
     compileSdkVersion 31
 
-    lintOptions { abortOnError false }
 
     sourceSets {
         main {
@@ -25,16 +24,21 @@ android {
             assets.srcDirs = ['assets']
         }
     }
-
     packagingOptions {
-        exclude 'lib/x86_64/darwin/libscrypt.dylib'
-        exclude 'lib/x86_64/freebsd/libscrypt.so'
-        exclude 'lib/x86_64/linux/libscrypt.so'
-        exclude 'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml'
-        exclude 'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml'
-        exclude 'org/bitcoinj/crypto/mnemonic/wordlist/english.txt'
-        exclude 'org/bitcoinj/crypto/cacerts'
+        jniLibs {
+            excludes += ['lib/x86_64/freebsd/libscrypt.so', 'lib/x86_64/linux/libscrypt.so']
+        }
+        resources {
+            excludes += [
+                    'lib/x86_64/darwin/libscrypt.dylib',
+                    'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml',
+                    'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml',
+                    'org/bitcoinj/crypto/mnemonic/wordlist/english.txt',
+                    'org/bitcoinj/crypto/cacerts'
+            ]
+        }
     }
+
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 31
@@ -43,5 +47,8 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+    lint {
+        abortOnError false
     }
 }
