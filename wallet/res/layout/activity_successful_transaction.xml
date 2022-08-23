@@ -1,23 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white">
+    android:fillViewport="true"
+    android:background="@color/background_primary">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:paddingTop="40dp"
         android:clipToPadding="false"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:paddingLeft="16dp"
-        android:paddingTop="@dimen/transaction_detail_dialog_content_vertical_padding"
-        android:paddingRight="16dp"
-        android:paddingBottom="@dimen/transaction_detail_dialog_content_vertical_padding">
+        android:orientation="vertical">
 
         <include layout="@layout/transaction_result_content" />
 
-    </LinearLayout>
-
+        <Button
+            android:id="@+id/transaction_close_btn"
+            style="@style/Button.Primary.Large.Blue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="15dp"
+            android:layout_marginHorizontal="25dp"
+            android:text="@string/transaction_close"
+            app:layout_constraintTop_toTopOf="@id/payee_verified_by_container"
+            app:layout_constraintBottom_toBottomOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

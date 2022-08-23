@@ -21,6 +21,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
@@ -35,6 +36,7 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import kotlin.jvm.Throws
 
+@ExperimentalCoroutinesApi
 class SendCoinsTaskRunner @Inject constructor(
     private val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,

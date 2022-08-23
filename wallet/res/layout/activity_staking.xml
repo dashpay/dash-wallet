@@ -23,6 +23,12 @@
     android:background="@color/background_primary"
     tools:context="de.schildbach.wallet.ui.staking.StakingActivity">
 
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center" />
+
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/nav_host_fragment"
         android:name="androidx.navigation.fragment.NavHostFragment"

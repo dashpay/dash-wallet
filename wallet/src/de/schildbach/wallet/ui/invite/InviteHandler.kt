@@ -20,6 +20,7 @@ import android.app.Activity
 import android.app.ActivityManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.bundleOf
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityBaseData
@@ -44,19 +45,19 @@ import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAsse
 import org.dashj.platform.dpp.errors.concensus.fee.BalanceIsNotEnoughException
 import org.slf4j.LoggerFactory
 
-class InviteHandler(val activity: AppCompatActivity, private val analytics: AnalyticsService) {
+class InviteHandler(val activity: FragmentActivity, private val analytics: AnalyticsService) {
 
     private lateinit var inviteLoadingDialog: FancyAlertDialog
 
     companion object {
         private val log = LoggerFactory.getLogger(InviteHandler::class.java)
 
-        private fun getMainTask(activity: AppCompatActivity): ActivityManager.AppTask {
-            val activityManager = activity.getSystemService(AppCompatActivity.ACTIVITY_SERVICE) as ActivityManager
+        private fun getMainTask(activity: FragmentActivity): ActivityManager.AppTask {
+            val activityManager = activity.getSystemService(FragmentActivity.ACTIVITY_SERVICE) as ActivityManager
             return activityManager.appTasks.last()
         }
 
-        private fun handleDialogButtonClick(activity: AppCompatActivity) {
+        private fun handleDialogButtonClick(activity: FragmentActivity) {
             activity.setResult(Activity.RESULT_CANCELED)
             val walletApplication = WalletApplication.getInstance()
             val mainTask = getMainTask(activity)
@@ -69,14 +70,14 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
             activity.finish()
         }
 
-        private fun handleMoveToFront(activity: AppCompatActivity) {
+        private fun handleMoveToFront(activity: FragmentActivity) {
             activity.setResult(Activity.RESULT_CANCELED)
             val mainTask = getMainTask(activity)
             mainTask.moveToFront()
             activity.finish()
         }
 
-        private fun handleDialogResult(activity: AppCompatActivity) {
+        private fun handleDialogResult(activity: FragmentActivity) {
             val errorDialogViewModel =
                 ViewModelProvider(activity)[FancyAlertDialogViewModel::class.java]
             errorDialogViewModel.onPositiveButtonClick.observe(activity) {
@@ -87,7 +88,7 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
             }
         }
 
-        private fun handleDialogResult(activity: AppCompatActivity, onClick : (AppCompatActivity) -> Unit) {
+        private fun handleDialogResult(activity: FragmentActivity, onClick : (FragmentActivity) -> Unit) {
             val errorDialogViewModel =
                 ViewModelProvider(activity)[FancyAlertDialogViewModel::class.java]
             errorDialogViewModel.onPositiveButtonClick.observe(activity) {

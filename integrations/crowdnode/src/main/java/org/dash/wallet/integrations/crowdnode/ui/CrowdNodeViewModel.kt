@@ -177,6 +177,10 @@ class CrowdNodeViewModel @Inject constructor(
         navigationCallback.postValue(NavigationRequest.SendReport)
     }
 
+    suspend fun recheckState() {
+        crowdNodeApi.restoreStatus()
+    }
+
     fun signUp() {
         crowdNodeApi.persistentSignUp(_accountAddress.value!!)
     }

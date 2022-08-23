@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.widget
 
-import android.animation.LayoutTransition
 import android.content.Context
 import android.util.AttributeSet
 import android.util.DisplayMetrics

@@ -18,7 +18,6 @@
 package de.schildbach.wallet.transactions
 
 import android.os.Looper
-import android.util.Log
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose

@@ -4,9 +4,11 @@
     <style name="SplashActivity.Theme" parent="My.Theme">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:windowBackground">@drawable/splash_activity_background</item>
+        <item name="android:windowBackground">@drawable/splash_background</item>
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
 
     <style name="LockScreenActivity.Theme" parent="SplashActivity.Theme">
@@ -72,14 +74,6 @@
         <item name="android:paddingTop">14dp</item>
         <item name="android:paddingRight">38dp</item>
         <item name="android:paddingBottom">14dp</item>
-    </style>
-
-    <style name="VerifySeedTitle" parent="MontserratMedium.B">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">68dp</item>
-        <item name="android:textColor">@android:color/black</item>
-        <item name="android:textSize">20sp</item>
     </style>
 
     <style name="VerifySeedWordButton" parent="NewMontserratButton.Primary">
@@ -218,11 +212,21 @@
     </style>
 
     <style name="ScreenshotWarningBackground">
-        <item name="primaryColor">@android:color/white</item>
-        <item name="secondaryColor">@android:color/white</item>
+        <item name="backgroundColor">@color/background_secondary</item>
+        <item name="strokeColor">@color/background_secondary</item>
+        <item name="cornerRadius">10dp</item>
     </style>
 
-    <style name="VerifySeedTextViewBackground" parent="SecondaryBackground">
+    <style name="VerifySeedTextViewBackground">
+        <item name="backgroundColor">@color/background_secondary</item>
+        <item name="strokeColor">@color/background_secondary</item>
         <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="TransactionRowBackground">
+        <item name="backgroundColor">@color/background_secondary</item>
+        <item name="strokeColor">@color/background_secondary</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+        <item name="cornerRadius">10dp</item>
     </style>
 </resources>

@@ -28,6 +28,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
@@ -39,6 +40,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.TickerFlow
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.model.*
+import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeAcceptTermsResponse
+import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWelcomeToApiResponse
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
@@ -65,6 +68,7 @@ interface CrowdNodeApi {
     var notificationIntent: Intent?
     var showNotificationOnResult: Boolean
 
+    suspend fun restoreStatus()
     fun persistentSignUp(accountAddress: Address)
     suspend fun signUp(accountAddress: Address)
     suspend fun deposit(amount: Coin, emptyWallet: Boolean, checkBalanceConditions: Boolean): Boolean
@@ -124,7 +128,6 @@ class CrowdNodeApiAggregator @Inject constructor(
     override var showNotificationOnResult = false
 
     init {
-        restoreStatus()
         walletDataProvider.attachOnWalletWipedListener {
             configScope.launch { reset() }
         }
@@ -183,11 +186,13 @@ class CrowdNodeApiAggregator @Inject constructor(
                 signUpStatus.value = SignUpStatus.SigningUp
                 val signUpResponseTx = blockchainApi.makeSignUpRequest(accountAddress)
                 log.info("signUpResponseTx id: ${signUpResponseTx.txId}")
+                checkIfSignUpConfirmed(signUpResponseTx)
             }
 
             signUpStatus.value = SignUpStatus.AcceptingTerms
             val acceptTermsResponseTx = blockchainApi.acceptTerms(accountAddress)
             log.info("acceptTermsResponseTx id: ${acceptTermsResponseTx.txId}")
+            checkIfAcceptTermsConfirmed(acceptTermsResponseTx)
 
             signUpStatus.value = SignUpStatus.Finished
             log.info("CrowdNode sign up finished")
@@ -307,7 +312,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                     val minimumWithdrawal = CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.MaxCode.code)
                     if (!afterWithdrawal) {
                         // balance changed, no need to retry anymore
-                        break;
+                        break
                     } else if (lastBalance - (currentBalance.data?.value?: 0L) >= minimumWithdrawal.value) {
                         // balance changed, no need to retry anymore
                         break
@@ -450,7 +455,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         config.clearAll()
     }
 
-    private fun restoreStatus() {
+    override suspend fun restoreStatus() {
         if (signUpStatus.value == SignUpStatus.NotStarted) {
             log.info("restoring CrowdNode status")
 
@@ -459,6 +464,8 @@ class CrowdNodeApiAggregator @Inject constructor(
             }
 
             if (tryRestoreSignUp()) {
+                requireNotNull(accountAddress) { "Restored signup tx set but address is null" }
+                globalConfig.crowdNodeAccountAddress = accountAddress!!.toBase58()
                 restoreCreatedOnlineAccount(accountAddress!!)
                 return
             }
@@ -486,25 +493,43 @@ class CrowdNodeApiAggregator @Inject constructor(
         return false
     }
 
-    private fun tryRestoreSignUp(): Boolean {
+    private suspend fun tryRestoreSignUp(): Boolean {
         val fullSignUpSet = blockchainApi.getFullSignUpTxSet()
         fullSignUpSet?.let { set ->
-            accountAddress = set.accountAddress
-            requireNotNull(accountAddress) { "Restored signup tx set but address is null" }
-            configScope.launch { globalConfig.crowdNodeAccountAddress = accountAddress!!.toBase58() }
-
-            if (set.hasWelcomeToApiResponse) {
-                log.info("found finished sign up, account: ${set.accountAddress?.toBase58() ?: "null"}")
-                signUpStatus.value = SignUpStatus.Finished
-                refreshBalance(3)
+            if (set.welcomeToApiResponse != null) {
+                setFinished(set.welcomeToApiResponse!!.toAddress)
                 return true
             }
 
-            if (set.hasAcceptTermsResponse) {
-                log.info("found accept terms response, account: ${set.accountAddress?.toBase58() ?: "null"}")
-                signUpStatus.value = SignUpStatus.AcceptingTerms
-                persistentSignUp(accountAddress!!)
+            if (set.possibleWelcomeToApiResponse != null) {
+                log.info("Possible sign-up, confirming")
+                val transaction = set.possibleWelcomeToApiResponse!!.transaction
+                val address = set.possibleWelcomeToApiResponse!!.toAddress
+
+                if (transaction != null && address != null &&
+                    fromCrowdNode(address, transaction) != false
+                ) {
+                    setFinished(address)
+                    return true
+                }
+            }
+
+            if (set.acceptTermsResponse != null) {
+                setAcceptingTerms(set.acceptTermsResponse!!.toAddress)
                 return true
+            }
+
+            if (set.possibleAcceptTermsResponse != null) {
+                log.info("Possible accept terms, confirming")
+                val transaction = set.possibleAcceptTermsResponse!!.transaction
+                val address = set.possibleAcceptTermsResponse!!.toAddress
+
+                if (transaction != null && address != null &&
+                    fromCrowdNode(address, transaction) != false
+                ) {
+                    setAcceptingTerms(address)
+                    return true
+                }
             }
         }
 
@@ -531,8 +556,17 @@ class CrowdNodeApiAggregator @Inject constructor(
                 responseScope.launch { checkIfAddressIsInUse(address) }
             }
             OnlineAccountStatus.Creating, OnlineAccountStatus.SigningUp -> {
-                // This should not happen - this method is reachable only for a linked account case
-                throw IllegalStateException("Creating state found in tryRestoreOnlineAccount")
+                if (status == OnlineAccountStatus.Creating && globalConfig.crowdNodePrimaryAddress.isNotEmpty()) {
+                    // The bug from 7.5.0 -> 7.5.1 upgrade scenario.
+                    // The actual state is Done, there is a linked account.
+                    // TODO: remove when there is no 7.5.0 in the wild
+                    log.info("found 7.5.0 -> 7.5.1 upgrade bug, resolving")
+                    changeOnlineStatus(OnlineAccountStatus.Done, save = true)
+                    log.info("found online account, status: ${OnlineAccountStatus.Done}, account: ${address.toBase58()}, primary: $primaryAddressStr")
+                } else {
+                    // This should not happen - this method is reachable only for a linked account case
+                    throw IllegalStateException("Invalid state found in tryRestoreLinkedOnlineAccount: $status")
+                }
             }
             else -> {
                 changeOnlineStatus(status, save = false)
@@ -748,6 +782,83 @@ class CrowdNodeApiAggregator @Inject constructor(
         if (save) {
             configScope.launch { config.setPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, status.ordinal) }
         }
+    }
+
+    private suspend fun checkIfSignUpConfirmed(tx: Transaction) {
+        if (CrowdNodeAcceptTermsResponse(params).matches(tx)) {
+            return
+        }
+
+        log.info("The response to SignUp is missing sender address, confirming with GetFunds")
+
+        if (fromCrowdNode(accountAddress!!, tx) == false) {
+            log.info("Not confirmed")
+            val signUpResponseTx = blockchainApi.waitForSignUpResponse()
+            log.info("new signUpResponseTx id: ${signUpResponseTx.txId}")
+        }
+    }
+
+    private suspend fun checkIfAcceptTermsConfirmed(tx: Transaction) {
+        if (CrowdNodeWelcomeToApiResponse(params).matches(tx)) {
+            return
+        }
+
+        log.info("The response to AcceptTerms is missing sender address, confirming with GetFunds")
+
+        if (fromCrowdNode(accountAddress!!, tx) == false) {
+            log.info("Not confirmed")
+            val acceptTermsResponseTx = blockchainApi.waitForAcceptTermsResponse()
+            log.info("new signUpResponseTx id: ${acceptTermsResponseTx.txId}")
+        }
+    }
+
+    private suspend fun fromCrowdNode(address: Address, tx: Transaction): Boolean? {
+        var fromCrowdNode: Boolean? = false
+
+        for (i in 0..3) {
+            if (i != 0) {
+                delay(2.0.pow(i).seconds)
+            }
+
+            try {
+                val result = webApi.getTransactions(address.toBase58())
+
+                if (result.isSuccessful && result.body() != null) {
+                    if (result.body()!!.all { it.txId != tx.txId.toString() }) {
+                        fromCrowdNode = false
+                        continue
+                    } else {
+                        fromCrowdNode = true
+                        break
+                    }
+                }
+            } catch (ex: Exception) {
+                log.error("Error in getTransactions: $ex")
+
+                if (ex !is IOException) {
+                    analyticsService.logError(ex)
+                }
+            }
+
+            // Fallback to simple detection if a network or other error
+            fromCrowdNode = null
+        }
+
+        return fromCrowdNode
+    }
+
+    private fun setFinished(address: Address?) {
+        accountAddress = address
+        log.info("found finished sign up, account: ${address?.toBase58() ?: "null"}")
+        signUpStatus.value = SignUpStatus.Finished
+        refreshBalance(3)
+    }
+
+    private fun setAcceptingTerms(address: Address?) {
+        accountAddress = address
+        log.info("found accept terms response, account: ${address?.toBase58() ?: "null"}")
+        signUpStatus.value = SignUpStatus.AcceptingTerms
+        persistentSignUp(accountAddress!!)
     }
 
     private fun notifyIfNeeded(message: String, tag: String) {

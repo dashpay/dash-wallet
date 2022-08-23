@@ -39,7 +39,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="22dp"
-            android:textColor="@color/gray"
+            android:textColor="@color/old_gray"
             android:textSize="12sp"
             tools:text="121639" />
 
@@ -57,7 +57,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="22dp"
-            android:textColor="@color/gray"
+            android:textColor="@color/old_gray"
             android:textSize="12sp"
             tools:text="6 minutes ago" />
 
@@ -75,7 +75,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="22dp"
-            android:textColor="@color/gray"
+            android:textColor="@color/old_gray"
             android:textSize="12sp"
             tools:text="96a8e83f9925719d912a22dffea73b21e0938667ecd912f2839d496e3511b2b715a67424abe78534eb0d6b804d049834" />
 

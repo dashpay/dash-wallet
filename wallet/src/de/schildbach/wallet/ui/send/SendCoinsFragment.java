@@ -38,6 +38,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.fragment.app.DialogFragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelProviders;
@@ -80,9 +81,10 @@ import de.schildbach.wallet.livedata.Status;
 import org.dash.wallet.common.ui.BaseLockScreenFragment;
 import de.schildbach.wallet.ui.CheckPinDialog;
 import de.schildbach.wallet.ui.CheckPinSharedModel;
-import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
+import de.schildbach.wallet.ui.SingleActionSharedViewModel;
+import de.schildbach.wallet.ui.transactions.TransactionResultActivity;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 import static java.lang.Math.min;
@@ -697,7 +699,7 @@ public class SendCoinsFragment extends BaseLockScreenFragment {
         String displayName = dashPayProfile == null || dashPayProfile.getDisplayName().isEmpty() ? username : dashPayProfile.getDisplayName();
         String avatarUrl = dashPayProfile != null ? dashPayProfile.getAvatarUrl() : null;
 
-        dialogFragment = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
+        DialogFragment dialogFragment = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
                 fiatSymbol, fee, total, null, null, null,
                 username, displayName, avatarUrl, isPendingContactRequest);
         dialogFragment.show(getParentFragmentManager(), "ConfirmTransactionDialog");

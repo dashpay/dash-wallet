@@ -38,6 +38,8 @@ import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.RestoreWalletFromFileViewModel;
 import de.schildbach.wallet_test.R;
@@ -60,16 +62,20 @@ import java.io.InputStream;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
 
+import javax.inject.Inject;
+
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public class RestoreWalletDialogFragment extends DialogFragment {
     private static final String FRAGMENT_TAG = RestoreWalletDialogFragment.class.getName();
     private static final String KEY_BACKUP_URI = "backup_uri";
     private static final int REQUEST_CODE_OPEN_DOCUMENT = 0;
 
     private OnboardingActivity activity;
-    private WalletApplication application;
+    @Inject
+    WalletApplication application;
     private ContentResolver contentResolver;
     private Configuration config;
     private FragmentManager fragmentManager;
@@ -100,7 +106,6 @@ public class RestoreWalletDialogFragment extends DialogFragment {
     public void onAttach(final Context context) {
         super.onAttach(context);
         this.activity = (OnboardingActivity) context;
-        this.application = activity.getWalletApplication();
         this.contentResolver = application.getContentResolver();
         this.config = application.getConfiguration();
         this.fragmentManager = getParentFragmentManager();

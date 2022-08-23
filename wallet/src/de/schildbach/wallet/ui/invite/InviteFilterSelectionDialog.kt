@@ -26,11 +26,11 @@ import androidx.lifecycle.ViewModelStoreOwner
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogInviteFilterBinding
-import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 
 @AndroidEntryPoint
 class InviteFilterSelectionDialog(private val owner: ViewModelStoreOwner) :
-    BaseBottomSheetDialogFragment() {
+    OffsetDialogFragment() {
 
     companion object {
 

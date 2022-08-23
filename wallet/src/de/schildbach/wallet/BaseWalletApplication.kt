@@ -16,9 +16,6 @@
  */
 package de.schildbach.wallet
 
-import android.app.Activity
-import android.content.Intent
-import android.net.Uri
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
@@ -27,16 +24,12 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.switchMap
 import androidx.multidex.MultiDexApplication
 import de.schildbach.wallet.rates.ExchangeRatesRepository
-import de.schildbach.wallet.ui.send.SendCoinsActivity
 import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRateData
 
+// TODO: do we need this class?
 abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider {
-
-    protected abstract fun getWalletData(): Wallet?
 
     protected val backgroundHandler: Handler
 
@@ -51,7 +44,7 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
 
     override fun freshReceiveAddress(): Address {
         checkWalletCreated()
-        return getWalletData()!!.freshReceiveAddress()
+        return wallet!!.freshReceiveAddress()
     }
 
     override fun getExchangeRate(currencyCode: String): LiveData<ExchangeRateData> {
@@ -66,15 +59,8 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
         return walletApplication.configuration.exchangeCurrencyCode!!
     }
 
-    override fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?) {
-        val finalAmount = amount ?: Coin.ZERO
-        val uriStr = "dash:${address.toBase58()}?amount=${finalAmount.toPlainString()}"
-        val sendCoinsIntent = Intent(Intent.ACTION_VIEW, Uri.parse(uriStr), activity, SendCoinsActivity::class.java)
-        activity.startActivityForResult(sendCoinsIntent, requestCode)
-    }
-
     private fun checkWalletCreated() {
-        if (getWalletData() == null) {
+        if (wallet == null) {
             throw RuntimeException("this method can't be used before creating the wallet")
         }
     }
