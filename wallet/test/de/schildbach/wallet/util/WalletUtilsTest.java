@@ -29,7 +29,6 @@ import org.junit.Test;
  */
 public class WalletUtilsTest {
     @Test
-    @Ignore("Fails in Firebase with gradle 7.2")
     public void restoreWalletFromProtobufOrBase58() throws Exception {
         WalletUtils.restoreWalletFromProtobufOrBase58(getClass().getResourceAsStream("backup-protobuf-testnet"),
                 TestNet3Params.get());
