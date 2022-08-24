@@ -327,7 +327,11 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     fun getAccountUrl(): String {
-        return CrowdNodeConstants.getFundsOpenUrl(_accountAddress.value!!)
+        return CrowdNodeConstants.getFundsOpenUrl(if (signUpStatus == SignUpStatus.LinkedOnline) {
+            primaryDashAddress!!
+        } else {
+            _accountAddress.value!!
+        })
     }
 
     fun finishSignUpToOnlineAccount() {
