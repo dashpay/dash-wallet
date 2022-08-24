@@ -366,6 +366,9 @@
     <string name="import_image_import_valid_private_key">Copy a valid private key to import Dash from it</string>
     <string name="import_image_invalid_private">Invalid Private Key</string>
 
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+
     <string name="syncing">Syncing</string>
     <string name="syncing_balance">Syncing Balance</string>
     <string name="transaction_count">%d transactions</string>

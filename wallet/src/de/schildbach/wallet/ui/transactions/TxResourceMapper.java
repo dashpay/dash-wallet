@@ -32,7 +32,6 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.transactions.TransactionUtils;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 public class TxResourceMapper {
@@ -181,7 +180,7 @@ public class TxResourceMapper {
     }
 
     public int getDateTimeFormat() {
-        return DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_MONTH | DateUtils.FORMAT_SHOW_TIME;
+        return DateUtils.FORMAT_SHOW_TIME;
     }
 
     /**
