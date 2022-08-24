@@ -103,7 +103,7 @@ class BlockchainStateRoomConverters {
 
     @TypeConverter
     fun fromCreditBalance(creditBalance: Coin?): Long {
-        return creditBalance?.value ?: -1
+        return creditBalance?.value ?: 0L
     }
 
     @TypeConverter

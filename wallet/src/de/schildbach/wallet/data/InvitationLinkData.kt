@@ -83,7 +83,7 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
 
     @IgnoredOnParcel
     val cftx by lazy {
-        link.getQueryParameter(PARAM_CFTX) ?: link.getQueryParameter(PARAM_CFTX_2)!!
+        (link.getQueryParameter(PARAM_CFTX) ?: link.getQueryParameter(PARAM_CFTX_2)!!).lowercase()
     }
 
     @IgnoredOnParcel
@@ -93,7 +93,7 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
 
     @IgnoredOnParcel
     val instantSendLock by lazy {
-        link.getQueryParameter(PARAM_IS_LOCK) ?: link.getQueryParameter(PARAM_IS_LOCK_2)!!
+        (link.getQueryParameter(PARAM_IS_LOCK) ?: link.getQueryParameter(PARAM_IS_LOCK_2)!!).lowercase()
     }
 
     val isValid: Boolean
