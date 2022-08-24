@@ -29,7 +29,6 @@ androidFiles = {
                 "../wallet/res/values/strings-extra.xml",
                 "../common/src/main/res/values/strings.xml",
                 "../integrations/uphold/src/main/res/values/strings-uphold.xml",
-                "../integrations/liquid/src/main/res/values/strings-liquid.xml",
                 "../integrations/crowdnode/src/main/res/values/strings-crowdnode.xml",
                 "../features/exploredash/src/main/res/values/strings-explore-dash.xml"
                 }

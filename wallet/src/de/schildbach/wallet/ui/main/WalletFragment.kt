@@ -33,6 +33,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.InputParser.StringInputParser
+import de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsActivity
 import de.schildbach.wallet.ui.explore.ExploreActivity
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!--    <style name="My.Theme" parent="Theme.AppCompat.DayNight">--> <!-- Change to this and uncomment night mode colors to test the night mode -->
+<!--    <style name="My.Theme" parent="Theme.AppCompat.DayNight"> &lt;!&ndash; Change to this and uncomment night mode colors to test the night mode &ndash;&gt;-->
     <style name="My.Theme" parent="Theme.AppCompat.Light.DarkActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
@@ -1170,5 +1170,13 @@
         <item name="backgroundColor">@color/ultra_light_gray</item>
         <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">5dp</item>
+    </style>
+
+    <style name="NavigationArrowStyle">
+        <item name="android:layout_width">16dp</item>
+        <item name="android:layout_height">16dp</item>
+        <item name="android:rotation">180</item>
+        <item name="android:src">@drawable/ic_arrow_back</item>
+        <item name="android:tint">@color/light_gray</item>
     </style>
 </resources>
