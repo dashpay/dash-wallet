@@ -44,10 +44,10 @@ import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.ui.ExternalUrlProfilePictureViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper.OnResourceReadyListener
-import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.InteractionAwareDialogFragment
+import org.dash.wallet.common.util.KeyboardUtil
 import org.slf4j.LoggerFactory
 import java.math.BigInteger
 import java.util.regex.Matcher

@@ -89,6 +89,7 @@ import org.dashj.platform.dapiclient.DapiClient;
 import org.dash.wallet.common.services.NotificationService;
 import org.dash.wallet.common.transactions.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.TransactionFilter;
+import org.dash.wallet.common.transactions.TransactionUtils;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationHandler;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi;
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeDepositReceivedResponse;
@@ -261,16 +262,15 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
             transactionsReceived.incrementAndGet();
 
-            final Address address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
+            final Address address = TransactionUtils.INSTANCE.getWalletAddressOfReceived(tx, wallet);
             final Coin amount = tx.getValue(wallet);
             final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
             final boolean isRestoringBackup = application.getConfiguration().isRestoringBackup();
 
             handler.post(() -> {
-                final boolean isReceived = amount.signum() > 0;
                 final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
 
-                if (isReceived && !isReplayedTx) {
+                if (!isReplayedTx) {
                     if (depositReceivedResponse.matches(tx)) {
                         notificationService.showNotification(
                                 "deposit_received",
@@ -280,7 +280,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         );
                     } else if (apiConfirmationHandler != null && apiConfirmationHandler.matches(tx)) {
                         apiConfirmationHandler.handle(tx);
-                    } else if (passFilters(tx)) {
+                    } else if (passFilters(tx, wallet)) {
                         notifyCoinsReceived(address, amount, tx.getExchangeRate());
                     }
                 }
@@ -307,7 +307,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             updateAppWidget();
         }
 
-        private Boolean passFilters(final Transaction tx) {
+        private Boolean passFilters(final Transaction tx, final Wallet wallet) {
+            Coin amount = tx.getValue(wallet);
+            final boolean isReceived = amount.signum() > 0;
+
+            if (!isReceived) {
+                return false;
+            }
+
             boolean passFilters = false;
 
             for (TransactionFilter filter: crowdnodeFilters) {

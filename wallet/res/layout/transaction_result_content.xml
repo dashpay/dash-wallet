@@ -2,206 +2,177 @@
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:gravity="center"
     tools:orientation="vertical"
-    tools:parentTag="android.widget.LinearLayout">
-
-    <ImageView
-        android:id="@+id/check_icon"
-        android:layout_width="62dp"
-        android:layout_height="62dp"
-        android:layout_marginBottom="15dp"
-        android:visibility="invisible"
-        app:srcCompat="@drawable/check_animated"
-        tools:src="@drawable/ic_transaction_sent"
-        tools:visibility="visible" />
+    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout"
+    tools:context="de.schildbach.wallet.ui.transactions.TransactionResultViewBinder">
 
     <TextView
         android:id="@+id/transaction_title"
-        style="@style/MontserratRegular.MG"
+        style="@style/Body2.Medium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="15dp"
         android:text="@string/transaction_result_paid_successfully"
-        android:textSize="13sp"
-        app:layout_constraintBottom_toTopOf="@+id/dash_amount_container"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="@id/left_guideline"
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/dash_amount_container"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="6dp"
+        android:layout_height="42dp"
         android:gravity="center"
         android:orientation="horizontal"
-        app:layout_constraintBottom_toTopOf="@+id/fiat_amount_view"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintStart_toStartOf="@id/left_guideline"
+        app:layout_constraintTop_toBottomOf="@id/transaction_title">
 
         <TextView
             android:id="@+id/transaction_amount_signal"
-            style="@style/MontserratMedium.MG"
+            style="@style/Headline3.Regular"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="2dp"
             android:layout_marginRight="2dp"
-            android:textSize="17sp"
             android:visibility="gone"
-            tools:text="+"
+            app:layout_constraintBottom_toBottomOf="@+id/dash_amount"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/dash_amount"
+            tools:text="-"
             tools:visibility="visible" />
-
-        <ImageView
-            android:id="@+id/dash_amount_symbol"
-            android:layout_width="18.62dp"
-            android:layout_height="14.63dp"
-            android:layout_marginTop="1dp"
-            android:layout_marginEnd="4dp"
-            android:layout_marginRight="4dp"
-            android:scaleType="centerInside"
-            app:srcCompat="@drawable/ic_dash_symbol_gray" />
 
         <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/dash_amount"
-            style="@style/MontserratSemiBold.MG"
+            style="@style/Headline3.Regular"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="17sp"
-            tools:text="-3.14938028 Dash" />
-
-    </LinearLayout>
-
-    <org.dash.wallet.common.ui.CurrencyTextView
-        android:id="@+id/fiat_amount_view"
-        style="@style/MontserratRegular.MG"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="34dp"
-        android:textSize="13sp"
-        tools:text="-$483.33" />
-
-    <TextView
-        android:id="@+id/view_on_explorer"
-        style="@style/MontserratRegular"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="20dp"
-        android:text="@string/transaction_result_view_on_explorer"
-        android:textColor="@color/dash_blue"
-        android:textSize="15sp" />
-
-    <View
-        android:id="@+id/center_divider"
-        style="@style/SuccessfulTransactionSeparator" />
-
-    <LinearLayout
-        android:id="@+id/payment_memo_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?android:attr/selectableItemBackground"
-        android:orientation="vertical"
-        android:paddingTop="12dp"
-        android:visibility="gone"
-        tools:visibility="visible">
-
-        <TextView
-            android:id="@+id/payment_memo"
-            style="@style/MontserratRegular.MG"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:maxLines="2"
-            android:textSize="16sp"
-            tools:text="Pay 0.11 USD to MasksDelivery | Anypay.com" />
-
-        <View
-            style="@style/SuccessfulTransactionSeparator"
-            android:layout_marginTop="16dp" />
-
-    </LinearLayout>
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/user_container"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <androidx.constraintlayout.widget.Guideline
-            android:id="@+id/user_container_guideline"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            app:layout_constraintGuide_percent="0.4" />
-
-        <TextView
-            android:id="@+id/user_label"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="7dp"
-            android:layout_weight="1"
-            android:text="@string/dialog_confirm_pay_to"
-            android:textColor="@color/dash_gray"
-            android:textSize="16sp"
+            android:layout_height="0dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginRight="4dp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="@id/user_container_guideline"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintStart_toEndOf="@id/transaction_amount_signal"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="-3.14" />
 
-        <LinearLayout
-            android:gravity="end"
-            android:orientation="horizontal"
-            android:id="@+id/displayname_container"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            app:layout_constraintHorizontal_chainStyle="packed"
-            app:layout_constraintBottom_toBottomOf="parent"
+        <ImageView
+            android:id="@+id/dash_amount_symbol"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginLeft="8dp"
+            android:scaleType="centerInside"
+            app:layout_constraintBottom_toBottomOf="@+id/dash_amount"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/user_container_guideline"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <ImageView
-                android:id="@+id/avatar"
-                android:layout_width="30dp"
-                app:layout_constraintEnd_toStartOf="@id/displayname"
-                android:layout_height="30dp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintHorizontal_bias="1"
-                app:layout_constraintTop_toTopOf="parent"
-                tools:src="@drawable/user1" />
-
-            <TextView
-                android:layout_gravity="center_vertical"
-                android:id="@+id/displayname"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:text="ThisIsAVeryLongDisplayName"
-                android:textColor="@color/dash_black"
-                android:textSize="16sp"/>
-
-        </LinearLayout>
-
-        <View
-            android:id="@+id/separator7"
-            style="@style/SuccessfulTransactionSeparator"
-            android:layout_marginTop="12dp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            app:layout_constraintStart_toEndOf="@id/dash_amount"
+            app:layout_constraintTop_toTopOf="@+id/dash_amount"
+            app:srcCompat="@drawable/ic_dash_d_black"
+            app:tint="@color/content_primary" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <FrameLayout
-        android:id="@+id/inputs_container"
+    <org.dash.wallet.common.ui.CurrencyTextView
+        android:id="@+id/fiat_value"
+        style="@style/Caption.Tertiary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="13sp"
+        app:layout_constraintStart_toStartOf="@id/left_guideline"
+        app:layout_constraintTop_toBottomOf="@id/dash_amount_container"
+        tools:text="-$483.33" />
+
+    <ImageView
+        android:id="@+id/check_icon"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        app:layout_constraintBottom_toBottomOf="@id/fiat_value"
+        app:layout_constraintEnd_toStartOf="@id/right_guideline"
+        app:layout_constraintTop_toTopOf="@id/transaction_title"
+        app:srcCompat="@drawable/check_animated"
+        tools:src="@drawable/ic_transaction_sent" />
+
+    <ImageView
+        android:id="@+id/secondary_icon"
+        android:layout_width="19dp"
+        android:layout_height="19dp"
+        android:padding="2dp"
+        android:layout_marginBottom="-2dp"
+        android:layout_marginEnd="-2dp"
+        android:src="@drawable/ic_transaction_sent"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/SecondaryBackground"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/check_icon"
+        app:layout_constraintEnd_toEndOf="@id/check_icon"
+        tools:visibility="visible" />
+
+    <LinearLayout
+        android:id="@+id/transaction_details_card"
+        style="@style/ViewRaised"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/center_divider">
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginTop="20dp"
+        android:paddingHorizontal="15dp"
+        android:paddingVertical="5dp"
+        android:orientation="vertical"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/SecondaryBackground"
+        app:layout_constraintTop_toBottomOf="@id/fiat_value">
 
         <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/inputs_container_content"
+            android:id="@+id/error_container"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:paddingVertical="12dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/error_label"
+                style="@style/Caption.Medium.Tertiary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="4dp"
+                android:ellipsize="end"
+                android:lines="1"
+                android:text="@string/reason"
+                android:textSize="13sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/error_description"
+                style="@style/Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="13sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/error_label"
+                tools:text="Nonstandard" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <LinearLayout
+            android:id="@+id/payment_memo_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingVertical="12dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/payment_memo"
+                style="@style/Caption.Medium.Tertiary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="2"
+                android:textSize="13sp"
+                tools:text="Pay 0.11 USD to MasksDelivery | Anypay.com" />
+
+        </LinearLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/inputs_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingVertical="12dp">
 
             <LinearLayout
                 android:id="@+id/transaction_input_addresses_container"
@@ -214,40 +185,24 @@
 
             <TextView
                 android:id="@+id/input_addresses_label"
-                style="@style/MontserratRegular.G"
+                style="@style/Caption.Medium.Tertiary"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
                 android:layout_marginEnd="4dp"
                 android:ellipsize="end"
                 android:lines="1"
                 android:text="@string/transaction_details_sent_from"
-                android:textSize="16sp"
+                android:textSize="13sp"
                 app:layout_constraintEnd_toStartOf="@id/transaction_input_addresses_container"
-                app:layout_constraintHorizontal_bias="1.0"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
-
-            <View
-                android:id="@+id/separator6"
-                style="@style/SuccessfulTransactionSeparator"
-                android:layout_marginTop="12dp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/transaction_input_addresses_container" />
-
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-    </FrameLayout>
-
-    <FrameLayout
-        android:id="@+id/outputs_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
         <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/outputs_container_content"
+            android:id="@+id/outputs_container"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:paddingVertical="12dp">
 
             <LinearLayout
                 android:id="@+id/transaction_output_addresses_container"
@@ -260,160 +215,244 @@
 
             <TextView
                 android:id="@+id/output_addresses_label"
-                style="@style/MontserratRegular.G"
+                style="@style/Caption.Medium.Tertiary"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
                 android:layout_marginRight="4dp"
                 android:ellipsize="end"
                 android:lines="1"
                 android:text="@string/transaction_result_sent_to"
-                android:textSize="16sp"
+                android:textSize="13sp"
                 app:layout_constraintEnd_toStartOf="@id/transaction_output_addresses_container"
-                app:layout_constraintHorizontal_bias="1.0"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
-
-            <View
-                style="@style/SuccessfulTransactionSeparator"
-                android:layout_marginTop="12dp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/transaction_output_addresses_container" />
-
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-    </FrameLayout>
-
-    <FrameLayout
-        android:id="@+id/fee_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/outputs_container">
-
         <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/fee_container"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:paddingVertical="12dp">
+
+            <TextView
+                android:id="@+id/network_fee_label"
+                style="@style/Caption.Medium.Tertiary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="4dp"
+                android:text="@string/transaction_row_fee"
+                android:textSize="13sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@id/transaction_fee" />
 
             <org.dash.wallet.common.ui.CurrencyTextView
                 android:id="@+id/transaction_fee"
-                style="@style/MontserratRegular.MG"
+                style="@style/Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginRight="4dp"
                 android:text="@string/transaction_result_sent_to"
-                android:textSize="16sp"
-                app:layout_constraintEnd_toEndOf="parent"
+                android:textSize="13sp"
+                app:layout_constraintEnd_toStartOf="@id/fee_dash_icon"
                 app:layout_constraintTop_toTopOf="parent"
                 tools:text="-0.00000239 Dash" />
 
             <ImageView
                 android:id="@+id/fee_dash_icon"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:layout_marginEnd="8dp"
-                android:layout_marginRight="8dp"
-                app:layout_constraintBottom_toBottomOf="@+id/transaction_fee"
-                app:layout_constraintEnd_toStartOf="@+id/transaction_fee"
-                app:layout_constraintTop_toTopOf="@+id/transaction_fee"
-                app:srcCompat="@drawable/ic_dash_symbol_gray" />
-
-            <TextView
-                android:id="@+id/network_fee_label"
-                style="@style/MontserratRegular.G"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
-                android:ellipsize="end"
-                android:lines="1"
-                android:text="@string/transaction_row_fee"
-                android:textSize="16sp"
-                app:layout_constraintEnd_toStartOf="@id/fee_dash_icon"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="@id/transaction_fee" />
-
-            <View
-                android:id="@+id/separator3"
-                style="@style/SuccessfulTransactionSeparator"
-                android:layout_marginTop="16dp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/transaction_fee" />
-
+                android:layout_width="15dp"
+                android:layout_height="12dp"
+                app:layout_constraintBottom_toBottomOf="@+id/network_fee_label"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/network_fee_label"
+                app:srcCompat="@drawable/ic_dash_d_black"
+                app:tint="@color/content_primary" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-    </FrameLayout>
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/date_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingVertical="12dp">
 
-    <LinearLayout
+            <TextView
+                android:id="@+id/transaction_date_and_time_label"
+                style="@style/Caption.Medium.Tertiary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/transaction_date_and_time"
+                android:textSize="13sp"
+                app:layout_constraintBottom_toBottomOf="@id/transaction_date_and_time"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@id/transaction_date_and_time" />
+
+            <TextView
+                android:id="@+id/transaction_date_and_time"
+                style="@style/Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="right"
+                android:maxLines="2"
+                android:text="@string/transaction_result_sent_to"
+                android:textSize="13sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="2014-01-19 01:40" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/private_memo"
+        style="@style/ViewRaised"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:orientation="horizontal">
+        android:layout_margin="15dp"
+        android:background="@drawable/rounded_background"
+        android:paddingStart="15dp"
+        android:paddingEnd="4dp"
+        android:paddingVertical="8dp"
+        android:theme="@style/ListViewButtonBackground"
+        app:layout_constraintTop_toBottomOf="@id/transaction_details_card">
 
         <TextView
-            android:id="@+id/transaction_date_and_time_label"
-            style="@style/MontserratRegular.G"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:layout_weight="0"
-            android:ellipsize="end"
-            android:lines="1"
-            android:text="@string/transaction_date_and_time"
-            android:textSize="16sp"
-            app:layout_constraintEnd_toStartOf="@id/transaction_date_and_time"
-            app:layout_constraintHorizontal_bias="1.0"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@id/transaction_date_and_time" />
-
-        <TextView
-            android:id="@+id/transaction_date_and_time"
-            style="@style/MontserratRegular.MG"
+            android:id="@+id/private_memo_label"
+            style="@style/Caption.Medium.Tertiary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:width="0dp"
-            android:gravity="right"
-            android:maxLines="2"
-            android:text="@string/transaction_result_sent_to"
-            android:textSize="16sp"
+            android:textSize="13sp"
+            android:text="@string/private_memo"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/add_private_memo_btn"
+            app:layout_constraintBottom_toBottomOf="@id/add_private_memo_btn" />
+
+        <Button
+            android:id="@+id/add_private_memo_btn"
+            style="@style/Button.Tertiary.Small.Blue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/add_note"
+            android:drawablePadding="6dp"
+            android:drawableStart="@drawable/ic_pencil"
             app:layout_constraintEnd_toEndOf="parent"
-            tools:text="2014-01-19 01:40" />
+            app:layout_constraintTop_toTopOf="parent" />
 
-    </LinearLayout>
+        <TextView
+            android:id="@+id/private_memo_text"
+            style="@style/Caption"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="10dp"
+            android:layout_marginEnd="11dp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textSize="13sp"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/add_private_memo_btn"
+            app:layout_constraintBottom_toBottomOf="parent"
+            tools:visibility="visible"
+            tools:text="Payment to Anthony" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <View
-        android:id="@+id/separator4"
-        style="@style/SuccessfulTransactionSeparator"
-        android:layout_marginTop="16dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/transaction_date_and_time_label" />
+    <RelativeLayout
+        android:id="@+id/open_explorer_card"
+        style="@style/ViewRaised"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="15dp"
+        android:background="@drawable/rounded_ripple_background"
+        android:paddingHorizontal="15dp"
+        android:paddingVertical="17dp"
+        android:theme="@style/ListViewButtonBackground"
+        app:layout_constraintTop_toBottomOf="@id/private_memo">
+
+        <TextView
+            android:id="@+id/view_on_explorer"
+            style="@style/Caption.Medium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:text="@string/transaction_result_view_on_explorer"
+            android:textSize="13sp" />
+
+        <ImageView
+            android:id="@+id/go_to_explorer_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:src="@drawable/ic_light_gray_arrow_right" />
+    </RelativeLayout>
+
+
+    <RelativeLayout
+        android:id="@+id/report_issue_card"
+        style="@style/ViewRaised"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="15dp"
+        android:paddingHorizontal="15dp"
+        android:paddingVertical="17dp"
+        android:visibility="gone"
+        android:background="@drawable/rounded_ripple_background"
+        android:theme="@style/ListViewButtonBackground"
+        app:layout_constraintTop_toBottomOf="@id/private_memo"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/report_error"
+            style="@style/Caption.Medium.Tertiary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:text="@string/report_issue_dialog_title_issue"
+            android:textSize="13sp" />
+
+        <ImageView
+            android:id="@+id/go_report_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:src="@drawable/ic_light_gray_arrow_right" />
+    </RelativeLayout>
+
+    <Space
+        android:id="@+id/shadow_spacer"
+        android:layout_width="match_parent"
+        android:layout_height="15dp"
+        app:layout_constraintTop_toBottomOf="@id/open_explorer_card" />
 
     <LinearLayout
         android:id="@+id/payee_verified_by_container"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
+        android:gravity="center"
         android:orientation="vertical"
         android:padding="16dp"
         android:visibility="gone"
-        tools:visibility="gone">
+        app:layout_constraintEnd_toEndOf="@id/right_guideline"
+        app:layout_constraintStart_toStartOf="@id/left_guideline"
+        app:layout_constraintTop_toBottomOf="@id/shadow_spacer"
+        tools:visibility="visible">
 
         <TextView
-            style="@style/MontserratRegular.MG.14"
+            style="@style/Caption.Medium.Tertiary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
             android:layout_marginBottom="4dp"
             android:drawablePadding="4dp"
             android:text="@string/dialog_confirm_secured_by"
             android:textColor="@color/dash_gray"
-            app:drawableStartCompat="@drawable/ic_secured_by" />
+            app:drawableStartCompat="@drawable/ic_secured_by"
+            app:drawableTint="@color/content_primary" />
 
         <TextView
             android:id="@+id/payee_secured_by"
-            style="@style/MontserratRegular.MG.14"
+            style="@style/Body2.Medium"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:ellipsize="marquee"
             android:marqueeRepeatLimit="1"
             android:singleLine="true"
@@ -421,48 +460,19 @@
             android:textColor="@color/dash_black"
             android:textStyle="bold"
             tools:ignore="HardcodedText" />
-
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/status_layout"
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/left_guideline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:orientation="horizontal"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/separator4">
+        android:orientation="vertical"
+        app:layout_constraintGuide_begin="25dp" />
 
-        <TextView
-            android:id="@+id/transaction_primary_status"
-            style="@style/MontserratMedium"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingRight="6dp"
-            android:textColor="@color/primary_status"
-            android:textSize="15sp"
-            tools:text="Receiving" />
-
-        <TextView
-            android:id="@+id/transaction_secondary_status"
-            style="@style/MontserratMedium.B.12"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/secondary_status"
-            tools:text="Processing" />
-
-    </LinearLayout>
-
-    <Button
-        android:id="@+id/transaction_close_btn"
-        style="@style/DashButton.Blue"
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/right_guideline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="30dp"
-        android:text="@string/transaction_close"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/status_layout" />
-
+        android:orientation="vertical"
+        app:layout_constraintGuide_end="25dp" />
 </merge>

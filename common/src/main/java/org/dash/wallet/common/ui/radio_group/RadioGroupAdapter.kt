@@ -28,7 +28,7 @@ import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.RadiobuttonRowBinding
 import org.dash.wallet.common.ui.getRoundedBackground
-import org.dash.wallet.common.ui.ListDividerDecorator
+import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 
 class RadioGroupAdapter(
     defaultSelectedIndex: Int = 0,
@@ -90,7 +90,7 @@ class RadioButtonViewHolder(
 
         binding.title.text = option.title
         binding.title.setTextColor(resources.getColorStateList(
-            if (option.iconSelectMode == IconSelectMode.Encircle) R.color.gray_900 else R.color.radiobutton_text_color,
+            if (option.iconSelectMode == IconSelectMode.Encircle) R.color.content_primary else R.color.radiobutton_text_color,
             null
         ))
 

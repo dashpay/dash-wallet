@@ -30,10 +30,10 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_platform_payment_confirm.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
-import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.util.GenericUtils
 
-class PlatformPaymentConfirmDialog : BaseBottomSheetDialogFragment() {
+class PlatformPaymentConfirmDialog : OffsetDialogFragment() {
 
     companion object {
 

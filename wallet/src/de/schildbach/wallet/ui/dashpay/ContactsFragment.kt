@@ -42,7 +42,6 @@ import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
-import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentContactsRootBinding
 import org.bitcoinj.core.PrefixedChecksummedBytes
@@ -52,6 +51,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.KeyboardUtil
 
 @AndroidEntryPoint
 class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root),

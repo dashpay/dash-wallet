@@ -45,6 +45,7 @@ interface TransactionMetadataProvider {
     fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?>
 
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
+    fun observeAllMemos(): Flow<Map<Sha256Hash, String>>
 
     // Address methods
     suspend fun markAddressWithTaxCategory(

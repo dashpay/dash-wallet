@@ -35,6 +35,7 @@ import org.bitcoinj.core.Coin
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
@@ -121,11 +122,15 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         }
 
         amountViewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->
-            binding.toolbarSubtitle.text = getString(
-                R.string.exchange_rate_template,
-                Coin.COIN.toPlainString(),
-                GenericUtils.fiatToString(rate.fiat)
-            )
+            binding.toolbarSubtitle.text = if (rate != null) {
+                getString(
+                    R.string.exchange_rate_template,
+                    Coin.COIN.toPlainString(),
+                    GenericUtils.fiatToString(rate.fiat)
+                )
+            } else {
+                ""
+            }
         }
 
         amountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) {
@@ -143,7 +148,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 if (amount > (maxValue.value ?: Coin.ZERO)) {
                     R.style.Caption_Red
                 } else {
-                    R.style.Caption_SteelGray
+                    R.style.Caption_Secondary
                 }
             )
         }
@@ -209,7 +214,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             if (viewModel.shouldShowFirstDepositBanner &&
                 value.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
             ) {
-                showBannerError()
+                showErrorBanner()
                 return
             }
 
@@ -227,12 +232,14 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
         if (isSuccess) {
             if (isWithdraw) {
+                viewModel.logEvent(AnalyticsConstants.CrowdNode.WITHDRAWAL_REQUESTED)
                 safeNavigate(TransferFragmentDirections.transferToResult(
                     false,
                     getString(R.string.withdrawal_requested),
                     getString(R.string.withdrawal_requested_message)
                 ))
             } else {
+                viewModel.logEvent(AnalyticsConstants.CrowdNode.DEPOSIT_REQUESTED)
                 safeNavigate(TransferFragmentDirections.transferToResult(
                     false,
                     getString(R.string.deposit_sent),
@@ -290,8 +297,8 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         }
     }
 
-    private fun showBannerError() {
-        binding.messageBanner.setBackgroundColor(resources.getColor(R.color.red_300, null))
+    private fun showErrorBanner() {
+        binding.messageBanner.setBackgroundColor(resources.getColor(R.color.content_warning, null))
         runWiggleAnimation(binding.messageBanner)
     }
 
