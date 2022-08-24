@@ -46,7 +46,7 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
                                   var totalKeyCount: Int? = null,
                                   var keysCreated: Long? = null,
                                   var currentMainKeyIndex: Int? = null,
-                                  var currentMainKeyType: IdentityPublicKey.TYPES? = null) {
+                                  var currentMainKeyType: IdentityPublicKey.Type? = null) {
 
     @PrimaryKey
     var id = 1

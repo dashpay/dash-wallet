@@ -121,7 +121,6 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
-import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
@@ -165,7 +164,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private File headerChainFile;
     private BlockChain blockChain;
     private BlockChain headerChain;
-    private InputStream bootStrapStream;
+    private InputStream mnlistinfoBootStrapStream;
+    private InputStream qrinfoBootStrapStream;
     @Nullable
     private PeerGroup peerGroup;
 
@@ -333,6 +333,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             registerCrowdNodeConfirmedAddressFilter();
         }
     };
+
+    private boolean resetMNListsOnPeerGroupStart = false;
 
     private void notifyCoinsReceived(@Nullable final Address address, final Coin amount,
                                      @Nullable ExchangeRate exchangeRate) {
@@ -634,8 +636,16 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     CrashReporter.saveBackgroundTrace(new RuntimeException(message), application.packageInfo());
                 }
 
+                wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
+
                 log.info("starting peergroup");
                 peerGroup = new PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain);
+                if (resetMNListsOnPeerGroupStart) {
+                    resetMNListsOnPeerGroupStart = false;
+                    application.getWallet().getContext().masternodeListManager.setBootstrap(mnlistinfoBootStrapStream, qrinfoBootStrapStream, SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION);
+                    resetMNLists(true);
+                }
+
                 peerGroup.setDownloadTxDependencies(0); // recursive implementation causes StackOverflowError
                 peerGroup.addWallet(wallet);
                 peerGroup.setUserAgent(Constants.USER_AGENT, application.packageInfo().versionName);
@@ -750,6 +760,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup.startBlockChainDownload(blockchainDownloadListener);
                 PlatformRepo.getInstance().addPreBlockProgressListener(blockchainDownloadListener);
             } else if (!impediments.isEmpty() && peerGroup != null) {
+                application.getWallet().getContext().close();
                 log.info("stopping peergroup");
                 peerGroup.removeDisconnectedEventListener(peerConnectivityListener);
                 peerGroup.removeConnectedEventListener(peerConnectivityListener);
@@ -891,24 +902,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         headerChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.HEADERS_FILENAME);
 
-        try {
-            bootStrapStream = getAssets().open(Constants.Files.MNLIST_BOOTSTRAP_FILENAME);
-            SimplifiedMasternodeListManager.setBootStrapStream(bootStrapStream, null, SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION);
-        } catch (IOException x) {
-            log.info("cannot load the boot strap stream.  " + x.getMessage());
-        }
+        mnlistinfoBootStrapStream = loadStream(Constants.Files.MNLIST_BOOTSTRAP_FILENAME);
+        qrinfoBootStrapStream = loadStream(Constants.Files.QRINFO_BOOTSTRAP_FILENAME);
 
         if (!blockChainFileExists) {
             log.info("blockchain does not exist, resetting wallet");
             wallet.reset();
-            try {
-                SimplifiedMasternodeListManager manager = wallet.getContext().masternodeListManager;
-                if (manager != null)
-                    manager.resetMNList(true, true);
-            } catch (RuntimeException x) {
-                // swallow this exception.  It is thrown when there is not a bootstrap mnlist file
-                // there is not a bootstrap mnlist file for testnet
-            }
+            resetMNLists(false);
+            resetMNListsOnPeerGroupStart = true;
         }
 
         try {
@@ -939,10 +940,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         } catch (final BlockStoreException x) {
             blockChainFile.delete();
             headerChainFile.delete();
-            SimplifiedMasternodeListManager manager = application.getWallet().getContext().masternodeListManager;
-            if(manager != null) {
-                manager.resetMNList(true, false);
-            }
+            resetMNLists(false);
 
             final String msg = "blockstore cannot be created";
             log.error(msg, x);
@@ -969,8 +967,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
-        wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
-
         peerDiscoveryList.add(dnsDiscovery);
 
         if (Constants.SUPPORTS_PLATFORM) {
@@ -985,6 +981,18 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     void initViewModel() {
         blockchainStateDao.load().observe(this, this::handleBlockchainStateNotification);
         registerCrowdNodeConfirmedAddressFilter();
+    }
+
+    private void resetMNLists(boolean requestFreshList) {
+        try {
+            SimplifiedMasternodeListManager manager = application.getWallet().getContext().masternodeListManager;
+            if (manager != null)
+                manager.resetMNList(true, requestFreshList);
+        } catch (RuntimeException x) {
+            // swallow this exception.  It is thrown when there is not a bootstrap file
+            // there is not a bootstrap mnlist file for testnet
+            log.info("error resetting masternode list with bootstrap files", x);
+        }
     }
 
     @Override
@@ -1078,6 +1086,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         PlatformRepo.getInstance().shutdown();
 
         if (peerGroup != null) {
+            application.getWallet().getContext().close();
             peerGroup.removeDisconnectedEventListener(peerConnectivityListener);
             peerGroup.removeConnectedEventListener(peerConnectivityListener);
             peerGroup.removeWallet(application.getWallet());
@@ -1104,10 +1113,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             application.saveWallet();
         }
 
-        //Dash Specific
-
-        //Dash Specific
-
         if (wakeLock.isHeld()) {
             log.debug("wakelock still held, releasing");
             wakeLock.release();
@@ -1117,11 +1122,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             log.info("removing blockchain");
             //noinspection ResultOfMethodCallIgnored
             blockChainFile.delete();
+            //noinspection ResultOfMethodCallIgnored
             headerChainFile.delete();
-            SimplifiedMasternodeListManager manager = application.getWallet().getContext().masternodeListManager;
-            if(manager != null) {
-                manager.resetMNList(true, false);
-            }
+            resetMNLists(false);
             if (deleteWalletFileOnShutdown) {
                 log.info("removing wallet file and app data");
                 application.finalizeWipe();
@@ -1136,13 +1139,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             });
         }
 
-        if(bootStrapStream != null) {
-            try {
-                bootStrapStream.close();
-            } catch (IOException x) {
-                //do nothing
-            }
-        }
+        closeStream(mnlistinfoBootStrapStream);
+        closeStream(qrinfoBootStrapStream);
 
         super.onDestroy();
 
@@ -1324,6 +1322,27 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             );
         } else {
             apiConfirmationHandler = null;
+        }
+    }
+
+    InputStream loadStream(String filename) {
+        InputStream stream = null;
+        try {
+            stream = getAssets().open(filename);
+        } catch (IOException x) {
+            log.warn("cannot load the bootstrap stream: {}", x.getMessage());
+        }
+        return stream;
+    }
+
+
+    private void closeStream(InputStream mnlistinfoBootStrapStream) {
+        if (mnlistinfoBootStrapStream != null) {
+            try {
+                mnlistinfoBootStrapStream.close();
+            } catch (IOException x) {
+                //do nothing
+            }
         }
     }
 }
