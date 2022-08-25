@@ -6,8 +6,6 @@ This project contains several sub-projects:
      The Android app itself. This is probably what you're searching for.
  * __common__:
      Contains common components used by integrations.
- * __integration/liquid__
-     Contains the liquid integration 
  * __integrations/uphold__
      Contains the uphold integration
  * __market__:

@@ -26,6 +26,7 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -133,7 +134,7 @@ class StakingActivity : LockScreenActivity() {
         val status = viewModel.signUpStatus
         binding.progressBar.isVisible = false
 
-        navGraph.startDestination =
+        navGraph.setStartDestination(
             when (status) {
                 SignUpStatus.LinkedOnline, SignUpStatus.Finished -> R.id.crowdNodePortalFragment
                 SignUpStatus.NotStarted -> {
@@ -142,6 +143,7 @@ class StakingActivity : LockScreenActivity() {
                 }
                 else -> R.id.newAccountFragment
             }
+        )
 
         navController.graph = navGraph
 

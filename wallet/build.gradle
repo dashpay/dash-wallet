@@ -21,9 +21,8 @@ repositories {
 dependencies {
     implementation project(path: ':common')
     implementation project(path: ":features:exploredash")
-    implementation project(path: ':integrations:liquid')
     implementation project(path: ':integrations:uphold')
-    implementation project(path: ":integrations:coinbase-integration")
+    implementation project(path: ":integrations:coinbase")
     implementation project(path: ":integrations:crowdnode")
 
     implementation(project(':integration-android')) {
@@ -45,7 +44,6 @@ dependencies {
     implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
-    implementation 'androidx.preference:preference-ktx:1.1.1'
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "androidx.work:work-runtime-ktx:$workRuntimeVersion"
     implementation "org.dashj:dashj-core:$dashjVersion"
@@ -78,6 +76,10 @@ dependencies {
     implementation "androidx.room:room-ktx:$roomVersion"
     implementation "androidx.room:room-runtime:$roomVersion"
     kapt "androidx.room:room-compiler:$roomVersion"
+
+    // Prefs
+    implementation 'androidx.preference:preference-ktx:1.1.1'
+    implementation 'com.scottyab:secure-preferences-lib:0.1.7'
 
     implementation 'androidx.multidex:multidex:2.0.1'
 
@@ -113,6 +115,7 @@ dependencies {
 
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
+    implementation "androidx.lifecycle:lifecycle-extensions:2.2.0"
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
@@ -167,16 +170,12 @@ if (file("../local.properties").exists()) {
 }
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 31
     android.ndkVersion '21.3.6528147'
 
-    lintOptions {
-        abortOnError false
-        disable 'MissingTranslation'
-    }
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 30
+        targetSdkVersion 31
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70610
         versionName project.hasProperty('versionName') ? project.property('versionName') : "7.6.1"
         multiDexEnabled true
@@ -191,7 +190,6 @@ android {
         }
         buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
         buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
-        buildConfigField("String", "LIQUID_PUBLIC_API_KEY", "\"LIQUID_PUBLIC_API_KEY\"")
         buildConfigField("String", "SUPPORT_EMAIL", "\"\"")
 
         buildConfigField("String", "COINBASE_CLIENT_ID", "\"COINBASE_CLIENT_ID\"")
@@ -259,19 +257,14 @@ android {
             applicationId = "hashengineering.darkcoin.wallet"
             def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID")
             def upholdClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET")
-            def liquidClientId = props.getProperty("LIQUID_PUBLIC_API_KEY")
             if (upholdClientId == null) {
                 upholdClientId = "\"UPHOLD_CLIENT_ID\""
             }
             if (upholdClientSecret == null) {
                 upholdClientSecret = "\"UPHOLD_CLIENT_SECRET\""
             }
-            if (liquidClientId == null) {
-                liquidClientId = "\"LIQUID_PUBLIC_API_KEY\""
-            }
             buildConfigField("String", "UPHOLD_CLIENT_ID", upholdClientId)
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", upholdClientSecret)
-            buildConfigField("String", "LIQUID_PUBLIC_API_KEY", liquidClientId)
 
             def coinbaseClientId = props.getProperty("COINBASE_CLIENT_ID")
             def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET")
@@ -290,19 +283,14 @@ android {
             applicationId = "hashengineering.darkcoin.wallet_test"
             def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
             def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
-            def liquidClientId = props.getProperty("LIQUID_PUBLIC_API_KEY_SANDBOX")
             if (imgurClientId == null) {
                 imgurClientId = "\"UPHOLD_CLIENT_ID\""
             }
             if (imgurClientSecret == null) {
                 imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
             }
-            if (liquidClientId == null) {
-                liquidClientId = "\"LIQUID_PUBLIC_API_KEY\""
-            }
             buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
-            buildConfigField("String", "LIQUID_PUBLIC_API_KEY", liquidClientId)
 
             def coinbaseClientId = props.getProperty("COINBASE_CLIENT_ID")
             def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET")
@@ -318,24 +306,25 @@ android {
 
         }
     }
-
     packagingOptions {
-        exclude 'lib/x86_64/darwin/libscrypt.dylib'
-        exclude 'lib/x86_64/freebsd/libscrypt.so'
-        exclude 'lib/x86_64/linux/libscrypt.so'
-        exclude 'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml'
-        exclude 'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml'
-        exclude 'org/bitcoinj/crypto/mnemonic/wordlist/english.txt'
-        exclude 'org/bitcoinj/crypto/cacerts'
-        exclude 'org.bitcoin.production.checkpoints.txt'
-        exclude 'org.bitcoin.test.checkpoints.txt'
-        exclude 'google/protobuf/*.proto'
-        exclude 'META-INF/DEPENDENCIES'
-        exclude "META-INF/AL2.0"
-        exclude "META-INF/LGPL2.1"
-    }
-    dexOptions {
-        preDexLibraries true
+        jniLibs {
+            excludes += ['lib/x86_64/freebsd/libscrypt.so', 'lib/x86_64/linux/libscrypt.so']
+        }
+        resources {
+            excludes += [
+                    'lib/x86_64/darwin/libscrypt.dylib',
+                    'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml',
+                    'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml',
+                    'org/bitcoinj/crypto/mnemonic/wordlist/english.txt',
+                    'org/bitcoinj/crypto/cacerts',
+                    'org.bitcoin.production.checkpoints.txt',
+                    'org.bitcoin.test.checkpoints.txt',
+                    'google/protobuf/*.proto',
+                    'META-INF/DEPENDENCIES',
+                    'META-INF/AL2.0',
+                    'META-INF/LGPL2.1'
+            ]
+        }
     }
     kotlinOptions {
         jvmTarget = "1.8"
@@ -347,6 +336,10 @@ android {
     }
     buildFeatures {
         viewBinding true
+    }
+    lint {
+        abortOnError false
+        disable 'MissingTranslation'
     }
 }
 
