@@ -168,9 +168,11 @@ class CoinBaseRepository @Inject constructor(
 
         return@safeApiCall userAccountData?.let {
             val currencyToDashExchangeRate = exchangeRates?.rates?.get(DASH_CURRENCY).orEmpty()
+            val currencyToUSDExchangeRate = exchangeRates?.rates?.get(USD_CURRENCY).orEmpty()
             CoinbaseToDashExchangeRateUIModel(
                 it,
-                currencyToDashExchangeRate
+                currencyToDashExchangeRate,
+                currencyToUSDExchangeRate
             )
         } ?: CoinbaseToDashExchangeRateUIModel.EMPTY
     }
