@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.crowdnode.api
 
+import android.util.Log
 import kotlinx.coroutines.flow.first
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -26,6 +27,7 @@ import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.transactions.ExactOutputsSelector
+import org.dash.wallet.common.transactions.filters.CoinsReceivedTxFilter
 import org.dash.wallet.common.transactions.filters.LockedTransaction
 import org.dash.wallet.common.transactions.filters.TxWithinTimePeriod
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
@@ -186,6 +188,20 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         val filter = CrowdNodeAPIConfirmationTx(accountAddress)
         return walletData.getTransactions(filter).firstOrNull()
             ?: walletData.observeTransactions(filter).first()
+    }
+
+    fun getApiAddressForwardedConfirmation(): Transaction? {
+        val filter = CoinsReceivedTxFilter(
+            walletData.transactionBag,
+            CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT
+        ) // address is unknown at this point
+
+        val potentialApiConfirmationTx = walletData.getTransactions(filter).firstOrNull()
+        potentialApiConfirmationTx?.let {
+            Log.i("CROWDNODE", "potential tx value: ${it.getValue(walletData.transactionBag)}, fee: ${it.fee}")
+        }
+
+        return null
     }
 
     open fun getFullSignUpTxSet(): FullCrowdNodeSignUpTxSet? {

@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -184,6 +185,8 @@ class CrowdNodeApiAggregator @Inject constructor(
                 accountAddress = Address.fromString(params, savedAddress)
                 tryRestoreLinkedOnlineAccount(accountAddress!!)
                 refreshWithdrawalLimits()
+            } else {
+                checkLinkedConfirmationTransaction()
             }
         }
     }
@@ -620,6 +623,11 @@ class CrowdNodeApiAggregator @Inject constructor(
                 log.info("found online account, status: ${status.name}, account: ${address.toBase58()}, primary: $primaryAddressStr")
             }
         }
+    }
+
+    private suspend fun checkLinkedConfirmationTransaction() {
+        val tx = blockchainApi.getApiAddressForwardedConfirmation()
+        Log.i("CROWDNODE", tx.toString())
     }
 
     private suspend fun checkIfAddressIsInUse(address: Address) {
