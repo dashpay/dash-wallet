@@ -1,2 +1,1 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.dash.wallet.integration.coinbase_integration"/>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

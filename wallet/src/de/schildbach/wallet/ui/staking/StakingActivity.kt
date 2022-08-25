@@ -134,7 +134,7 @@ class StakingActivity : LockScreenActivity() {
         val status = viewModel.signUpStatus
         binding.progressBar.isVisible = false
 
-        navGraph.startDestination =
+        navGraph.setStartDestination(
             when (status) {
                 SignUpStatus.LinkedOnline, SignUpStatus.Finished -> R.id.crowdNodePortalFragment
                 SignUpStatus.NotStarted -> {
@@ -143,6 +143,7 @@ class StakingActivity : LockScreenActivity() {
                 }
                 else -> R.id.newAccountFragment
             }
+        )
 
         navController.graph = navGraph
 

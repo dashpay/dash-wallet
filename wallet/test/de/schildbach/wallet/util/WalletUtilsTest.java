@@ -19,14 +19,22 @@ package de.schildbach.wallet.util;
 
 import java.io.IOException;
 
+import org.bitcoinj.core.Context;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
  * @author Andreas Schildbach
  */
 public class WalletUtilsTest {
+    @Before
+    public void recreateContext() {
+        // Forcefully re-create context to avoid the context mismatch bug
+        Context context = new Context(TestNet3Params.get());
+    }
+
     @Test
     public void restoreWalletFromProtobufOrBase58() throws Exception {
         WalletUtils.restoreWalletFromProtobufOrBase58(getClass().getResourceAsStream("backup-protobuf-testnet"),

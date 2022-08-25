@@ -170,16 +170,12 @@ if (file("../local.properties").exists()) {
 }
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 31
     android.ndkVersion '21.3.6528147'
 
-    lintOptions {
-        abortOnError false
-        disable 'MissingTranslation'
-    }
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 30
+        targetSdkVersion 31
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70610
         versionName project.hasProperty('versionName') ? project.property('versionName') : "7.6.1"
         multiDexEnabled true
@@ -310,24 +306,25 @@ android {
 
         }
     }
-
     packagingOptions {
-        exclude 'lib/x86_64/darwin/libscrypt.dylib'
-        exclude 'lib/x86_64/freebsd/libscrypt.so'
-        exclude 'lib/x86_64/linux/libscrypt.so'
-        exclude 'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml'
-        exclude 'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml'
-        exclude 'org/bitcoinj/crypto/mnemonic/wordlist/english.txt'
-        exclude 'org/bitcoinj/crypto/cacerts'
-        exclude 'org.bitcoin.production.checkpoints.txt'
-        exclude 'org.bitcoin.test.checkpoints.txt'
-        exclude 'google/protobuf/*.proto'
-        exclude 'META-INF/DEPENDENCIES'
-        exclude "META-INF/AL2.0"
-        exclude "META-INF/LGPL2.1"
-    }
-    dexOptions {
-        preDexLibraries true
+        jniLibs {
+            excludes += ['lib/x86_64/freebsd/libscrypt.so', 'lib/x86_64/linux/libscrypt.so']
+        }
+        resources {
+            excludes += [
+                    'lib/x86_64/darwin/libscrypt.dylib',
+                    'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml',
+                    'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml',
+                    'org/bitcoinj/crypto/mnemonic/wordlist/english.txt',
+                    'org/bitcoinj/crypto/cacerts',
+                    'org.bitcoin.production.checkpoints.txt',
+                    'org.bitcoin.test.checkpoints.txt',
+                    'google/protobuf/*.proto',
+                    'META-INF/DEPENDENCIES',
+                    'META-INF/AL2.0',
+                    'META-INF/LGPL2.1'
+            ]
+        }
     }
     kotlinOptions {
         jvmTarget = "1.8"
@@ -339,6 +336,10 @@ android {
     }
     buildFeatures {
         viewBinding true
+    }
+    lint {
+        abortOnError false
+        disable 'MissingTranslation'
     }
 }
 

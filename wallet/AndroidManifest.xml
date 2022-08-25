@@ -56,6 +56,8 @@
     <application
         android:name="de.schildbach.wallet.WalletApplication"
         android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:largeHeap="true"
@@ -73,7 +75,8 @@
         <activity
             android:name="de.schildbach.wallet.ui.OnboardingActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/SplashActivity.Theme">
+            android:theme="@style/SplashActivity.Theme"
+            android:exported="true">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -109,7 +112,9 @@
 
         <activity-alias
             android:name="de.schildbach.wallet.WalletActivity"
-            android:targetActivity="de.schildbach.wallet.ui.main.WalletActivity">
+            android:targetActivity="de.schildbach.wallet.ui.main.WalletActivity"
+            android:exported="true">
+
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
 
@@ -131,7 +136,9 @@
             android:label="@string/pay_title"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"
-            tools:ignore="LockedOrientationActivity">
+            tools:ignore="LockedOrientationActivity"
+            android:exported="true">
+
             <intent-filter android:label="@string/send_coins_activity_title">
                 <action android:name="android.intent.action.VIEW" />
 
@@ -142,6 +149,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
             </intent-filter>
+
             <intent-filter android:label="@string/send_coins_activity_title">
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
 
@@ -156,7 +164,7 @@
             android:name="de.schildbach.wallet.ui.SendCoinsQrActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:screenOrientation="portrait"
-            android:theme="@style/LockScreenActivity.Child.Theme"></activity>
+            android:theme="@style/LockScreenActivity.Child.Theme"/>
         <activity
             android:name="de.schildbach.wallet.ui.AddressBookActivity"
             android:configChanges="keyboard|keyboardHidden"
@@ -201,10 +209,10 @@
 
         <activity
             android:name="de.schildbach.wallet.ui.WalletUriHandlerActivity"
-            android:label="@string/app_name"
             android:noHistory="true"
             android:excludeFromRecents="true"
-            android:theme="@style/My.Theme.Transparent">
+            android:theme="@style/My.Theme.Transparent"
+            android:exported="true">
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -220,9 +228,9 @@
         <activity
             android:name="de.schildbach.wallet.ui.ImportSharedImageActivity"
             android:excludeFromRecents="true"
-            android:label="@string/app_name"
             android:noHistory="true"
-            android:theme="@style/My.Theme.Transparent">
+            android:theme="@style/My.Theme.Transparent"
+            android:exported="true">
 
             <intent-filter android:label="@string/sweep_wallet_activity_title">
                 <action android:name="android.intent.action.SEND" />
@@ -336,15 +344,10 @@
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Theme" />
 
-
-        <!--///////////////////////////-->
-
-
         <activity
             android:name="de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsActivity"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <!--/////////-->
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"
             android:authorities="${applicationId}.address_book"
@@ -367,7 +370,9 @@
 
         <receiver
             android:name="de.schildbach.wallet.WalletBalanceWidgetProvider"
-            android:label="@string/appwidget_wallet_balance_title">
+            android:label="@string/appwidget_wallet_balance_title"
+            android:exported="true">
+
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -384,7 +389,10 @@
             android:name="de.schildbach.wallet.offline.AcceptBluetoothService"
             android:exported="false" />
 
-        <receiver android:name="de.schildbach.wallet.service.BootstrapReceiver">
+        <receiver
+            android:name="de.schildbach.wallet.service.BootstrapReceiver"
+            android:exported="true">
+
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
