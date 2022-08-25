@@ -344,86 +344,10 @@
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Theme" />
 
-
-        <!--///////////////////////////-->
-
-
         <activity
-            android:name="de.schildbach.wallet.ui.BuyAndSellIntegrationsActivity"
+            android:name="de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsActivity"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity
-            android:name="org.dash.wallet.integration.liquid.ui.BuyDashWithCreditCardActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
-        <activity
-            android:name="org.dash.wallet.integration.liquid.ui.BuyDashWithCryptoCurrencyActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
-
-        <activity
-            android:name="org.dash.wallet.integration.liquid.ui.SellDashActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
-
-
-        <activity
-            android:name="org.dash.wallet.integration.liquid.ui.WebViewActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
-
-
-        <activity
-            android:name="org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity"
-            android:theme="@style/My.Theme.ChildActivity" />
-        <activity
-            android:name="org.dash.wallet.integration.liquid.ui.LiquidSplashActivity"
-            android:launchMode="singleTop"
-            android:theme="@style/My.Theme.ChildActivity"/>
-
-        <activity
-            android:name="org.dash.wallet.integration.liquid.ui.LiquidAuthRedirectActivity"
-            android:excludeFromRecents="true"
-            android:noHistory="true"
-            android:theme="@style/My.Theme.ChildActivity"
-            android:exported="true">
-
-            <intent-filter android:label="@string/liquid">
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="callback"
-                    android:scheme="liquid-oauth" />
-
-
-            </intent-filter>
-
-            <!--    <intent-filter android:autoVerify="true">
-                    <action android:name="android.intent.action.VIEW" />
-
-                    <category android:name="android.intent.category.DEFAULT" />
-                    <category android:name="android.intent.category.BROWSABLE" />
-
-
-
-                </intent-filter>-->
-
-        </activity>
-
-        <!--   <activity
-               android:name="de.schildbach.wallet.ui.LiquidTransferActivity"
-               android:screenOrientation="portrait"
-               android:theme="@style/My.Theme.ChildActivity" />
-
-           <activity
-               android:name="de.schildbach.wallet.ui.LiquidDashToDashTransferActivity"
-               android:screenOrientation="portrait"
-               android:theme="@style/My.Theme.ChildActivity" />-->
-
-        <!--/////////-->
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"
             android:authorities="${applicationId}.address_book"

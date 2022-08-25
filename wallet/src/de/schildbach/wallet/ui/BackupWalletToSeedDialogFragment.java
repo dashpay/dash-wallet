@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -48,12 +47,11 @@ import org.bitcoinj.wallet.Wallet;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.BaseDialogFragment;
+import org.dash.wallet.common.util.KeyboardUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-
-import javax.annotation.Nullable;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
@@ -62,7 +60,6 @@ import de.schildbach.wallet.ui.send.DeriveKeyTask;
 import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.FingerprintHelper;
-import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
@@ -330,13 +327,13 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
             seedViewGroup.setVisibility(View.GONE);
             privateKeyPasswordView.post(() -> {
                 if (isAdded()) {
-                    KeyboardUtil.showSoftKeyboard(getActivity(), privateKeyPasswordView);
+                    KeyboardUtil.Companion.showSoftKeyboard(getActivity(), privateKeyPasswordView);
                 }
             });
         } else {
             seedViewGroup.setVisibility(View.VISIBLE);
             privateKeyPasswordViewGroup.setVisibility(View.GONE);
-            KeyboardUtil.hideKeyboard(getActivity(), privateKeyPasswordView);
+            KeyboardUtil.Companion.hideKeyboard(getActivity(), privateKeyPasswordView);
         }
     }
 

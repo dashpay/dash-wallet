@@ -29,7 +29,7 @@ class ListDividerDecorator(
     private val marginEnd: Int = 0
 ) : RecyclerView.ItemDecoration() {
 
-    override fun onDraw(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+    override fun onDrawOver(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
         super.onDraw(c, parent, state)
 
         val itemCount = (parent.adapter?.itemCount ?: 0)
@@ -39,20 +39,24 @@ class ListDividerDecorator(
         }
 
         for (i in 0 until parent.childCount) {
-            if (!showAfterLast && (i >= parent.childCount - 1 || i >= itemCount - 1)) {
+            val child = parent.getChildAt(i)
+            val childPosition = parent.getChildAdapterPosition(child)
+
+            if ((!showAfterLast && (childPosition == itemCount - 1)) ||
+                childPosition == RecyclerView.NO_POSITION
+            ) {
                 continue
             }
 
-            if (!divideDifferentTypes && i < itemCount - 1) {
-                val viewType = parent.adapter?.getItemViewType(i)
-                val nextViewType = parent.adapter?.getItemViewType(i + 1)
+            if (!divideDifferentTypes && childPosition < itemCount - 1) {
+                val viewType = parent.adapter?.getItemViewType(childPosition)
+                val nextViewType = parent.adapter?.getItemViewType(childPosition + 1)
 
                 if (viewType != nextViewType) {
                     continue
                 }
             }
 
-            val child = parent.getChildAt(i)
             val params = child.layoutParams as RecyclerView.LayoutParams
             val topBound = child.bottom + params.bottomMargin
             val bottomBound = topBound + dividerDrawable.intrinsicHeight

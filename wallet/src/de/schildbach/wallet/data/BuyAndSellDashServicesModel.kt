@@ -36,11 +36,8 @@ data class BuyAndSellDashServicesModel(
         @StringRes val serviceName: Int,
         @DrawableRes val serviceIcon: Int
     ) {
-        LIQUID(org.dash.wallet.integration.liquid.R.string.liquid, org.dash.wallet.common.R.drawable.ic_liquid){
-            override fun getOfflineServiceIcon() = org.dash.wallet.common.R.drawable.ic_liquid_saturated
-        },
-        UPHOLD(org.dash.wallet.integration.uphold.R.string.uphold_account, org.dash.wallet.common.R.drawable.ic_uphold){
-            override fun getOfflineServiceIcon() = org.dash.wallet.common.R.drawable.ic_uphold_saturated
+        UPHOLD(org.dash.wallet.integration.uphold.R.string.uphold_account, R.drawable.ic_uphold) {
+            override fun getOfflineServiceIcon() = R.drawable.ic_uphold_saturated
         },
         COINBASE(org.dash.wallet.integration.coinbase_integration.R.string.coinbase, R.drawable.ic_coinbase){
             override fun getOfflineServiceIcon() = R.drawable.ic_coinbase_saturated
@@ -55,7 +52,6 @@ data class BuyAndSellDashServicesModel(
 
     companion object {
         fun getBuyAndSellDashServicesList() = listOf(
-            BuyAndSellDashServicesModel(ServiceType.LIQUID, ServiceStatus.IDLE),
             BuyAndSellDashServicesModel(ServiceType.UPHOLD, ServiceStatus.IDLE),
             BuyAndSellDashServicesModel(ServiceType.COINBASE, ServiceStatus.IDLE)
         )

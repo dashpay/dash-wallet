@@ -22,11 +22,13 @@ package org.dash.wallet.integrations.crowdnode.model
 // that maps to the old order value (see ApiCode)
 enum class SignUpStatus {
     NotStarted,
+    // Create New Account
     FundingWallet,
     SigningUp,
     AcceptingTerms,
     Finished,
     Error,
+    // Link Existing Account
     LinkedOnline
 }
 

@@ -23,12 +23,12 @@ import androidx.fragment.app.DialogFragment;
 
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.util.KeyboardUtil;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet.util.FingerprintHelper;
-import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -108,9 +108,9 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
         final AlertDialog alertDialog = abstractPinAlertDialogBuilder.buildAlertDialog();
         alertDialog.setOnShowListener(dialog -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                pinView.postDelayed(() -> KeyboardUtil.showSoftKeyboard(getActivity(), pinView), 100);
+                pinView.postDelayed(() -> KeyboardUtil.Companion.showSoftKeyboard(getActivity(), pinView), 100);
             } else {
-                KeyboardUtil.showSoftKeyboard(getActivity(), pinView);
+                KeyboardUtil.Companion.showSoftKeyboard(getActivity(), pinView);
             }
         });
 

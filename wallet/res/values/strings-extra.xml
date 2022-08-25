@@ -266,6 +266,9 @@
 
     <string name="menu_buy_and_sell_title">Buy &amp; Sell Dash</string>
     <string name="menu_buy_and_sell_subtitle">Connect with third party exchanges</string>
+    <string name="liquid" translatable="false">Liquid</string>
+    <string name="liquid_unavailable">Liquid integration with Dash Wallet is no longer available</string>
+    <string name="liquid_unavailable_details">If you have any questions regarding your Dash holdings at Liquid, please contact Liquid support center</string>
     <string name="menu_security_title">Security</string>
     <string name="menu_security_subtitle">View passphrase, backup wallet…</string>
     <string name="menu_settings_title">Settings</string>
@@ -366,13 +369,16 @@
     <string name="import_image_import_valid_private_key">Copy a valid private key to import Dash from it</string>
     <string name="import_image_invalid_private">Invalid Private Key</string>
 
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+
     <string name="syncing">Syncing</string>
     <string name="syncing_balance">Syncing Balance</string>
     <string name="transaction_count">%d transactions</string>
     <string name="all_transactions">All</string>
     <string name="received_transactions">Received</string>
     <string name="sent_transactions">Sent</string>
-    <string name="services_portal_subtitle_error" translatable="false">Keys are missing for these services. See CONFIGURATION FOR UPHOLD AND LIQUID in README.md for more information.</string>
+    <string name="services_portal_subtitle_error" translatable="false">Keys are missing for these services. See CONFIGURATION FOR UPHOLD AND COINBASE in README.md for more information.</string>
     <string name="set_pin_error_missing_wallet_title">Missing Wallet Error</string>
     <string name="set_pin_error_missing_wallet_message">The wallet is missing.  Please report this to the Support Desk.</string>
     <string name="wallet_encryption_error_title">Wallet Creation Error</string>

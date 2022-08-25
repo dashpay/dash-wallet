@@ -24,6 +24,8 @@ import android.widget.FrameLayout
 import androidx.annotation.StyleRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.res.ResourcesCompat
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -89,5 +91,11 @@ open class OffsetDialogFragment : BottomSheetDialogFragment() {
         }
 
         dialog?.window?.callback = UserInteractionAwareCallback(dialog?.window?.callback, requireActivity())
+    }
+
+    fun show(activity: FragmentActivity) {
+        if (activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            show(activity.supportFragmentManager, "offset_dialog")
+        }
     }
 }
