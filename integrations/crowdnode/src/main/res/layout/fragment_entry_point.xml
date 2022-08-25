@@ -103,7 +103,7 @@
                         android:text="@string/account_create" />
 
                     <ImageView
-                        style="@style/CrowdNodeNavigationIconStyle"
+                        style="@style/NavigationArrowStyle"
                         android:layout_gravity="end|center" />
                 </LinearLayout>
 
@@ -234,7 +234,7 @@
                     android:text="@string/account_link" />
 
                 <ImageView
-                    style="@style/CrowdNodeNavigationIconStyle"
+                    style="@style/NavigationArrowStyle"
                     android:layout_gravity="end|center" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>

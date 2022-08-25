@@ -154,7 +154,7 @@
 
                 <ImageView
                     android:id="@+id/deposit_nav_icon"
-                    style="@style/CrowdNodeNavigationIconStyle"
+                    style="@style/NavigationArrowStyle"
                     android:layout_marginEnd="1dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@id/deposit_icon"
@@ -228,7 +228,7 @@
 
                 <ImageView
                     android:id="@+id/withdraw_nav_icon"
-                    style="@style/CrowdNodeNavigationIconStyle"
+                    style="@style/NavigationArrowStyle"
                     android:layout_marginEnd="1dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@id/withdraw_icon"
@@ -340,7 +340,7 @@
 
                 <ImageView
                     android:id="@+id/online_nav_icon"
-                    style="@style/CrowdNodeNavigationIconStyle"
+                    style="@style/NavigationArrowStyle"
                     android:layout_marginEnd="1dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@id/online_account_icon"
@@ -387,7 +387,7 @@
 
                 <ImageView
                     android:id="@+id/support_nav_icon"
-                    style="@style/CrowdNodeNavigationIconStyle"
+                    style="@style/NavigationArrowStyle"
                     android:layout_marginEnd="1dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@id/support_icon"
