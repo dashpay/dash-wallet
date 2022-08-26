@@ -20,16 +20,17 @@ package de.schildbach.wallet.ui.staking
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
@@ -41,6 +42,7 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @AndroidEntryPoint
+@ExperimentalCoroutinesApi
 class StakingActivity : LockScreenActivity() {
     companion object {
         private val log = LoggerFactory.getLogger(StakingActivity::class.java)
@@ -57,7 +59,7 @@ class StakingActivity : LockScreenActivity() {
         super.onCreate(savedInstanceState)
 
         binding = ActivityStakingBinding.inflate(layoutInflater)
-        navController = setNavigationGraph()
+        lifecycleScope.launch { navController = setNavigationGraph() }
 
         viewModel.navigationCallback.observe(this, ::handleNavigationRequest)
         viewModel.observeOnlineAccountStatus().observe(this, ::handleOnlineAccountStatus)
@@ -76,12 +78,12 @@ class StakingActivity : LockScreenActivity() {
                 ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
             }
             NavigationRequest.BuyDash -> {
-                startActivity(BuyAndSellLiquidUpholdActivity.createIntent(this))
+                startActivity(BuyAndSellIntegrationsActivity.createIntent(this))
             }
             NavigationRequest.SendReport -> {
                 log.info("CrowdNode initiated report")
                 alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
-                    WalletApplication.getInstance()).buildAlertDialog()
+                    walletApplication).buildAlertDialog()
                 alertDialog.show()
             }
             else -> { }
@@ -113,26 +115,35 @@ class StakingActivity : LockScreenActivity() {
             val pin = securityFunctions.requestPinCode(this@StakingActivity)
 
             if (pin != null) {
-                val intent = VerifySeedActivity.createIntent(this@StakingActivity, pin)
+                val intent = VerifySeedActivity.createIntent(
+                    this@StakingActivity,
+                    pin,
+                    goHomeOnClose = false
+                )
                 startActivity(intent)
             }
         }
     }
 
-    private fun setNavigationGraph(): NavController {
+    private suspend fun setNavigationGraph(): NavController {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.nav_crowdnode)
 
-        navGraph.startDestination =
-            when (viewModel.signUpStatus) {
+        viewModel.recheckState()
+        val status = viewModel.signUpStatus
+        binding.progressBar.isVisible = false
+
+        navGraph.setStartDestination(
+            when (status) {
                 SignUpStatus.LinkedOnline, SignUpStatus.Finished -> R.id.crowdNodePortalFragment
                 SignUpStatus.NotStarted -> {
-                    val isInfoShown = runBlocking { viewModel.getIsInfoShown() }
+                    val isInfoShown = viewModel.getIsInfoShown()
                     if (isInfoShown) R.id.entryPointFragment else R.id.firstTimeInfo
                 }
                 else -> R.id.newAccountFragment
             }
+        )
 
         navController.graph = navGraph
 

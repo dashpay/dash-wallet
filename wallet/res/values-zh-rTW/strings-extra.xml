@@ -118,7 +118,7 @@
     <string name="import_export_keys_dialog_password_phrase">恢復詞組在這裡。</string>
     <string name="preferences_report_issue_summary">收集有關您問題的信息，並將您的報告以電子郵件發方式發送給開發人員。</string>
     <string name="navigation_configuration">配置</string>
-    <string name="request_coins_clipboard_address_msg">達世幣位址已經複製到剪貼簿</string>
+    <string name="request_coins_clipboard_address_msg">達世幣位址複製到剪貼板</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">顯示</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" 不是恢復詞組的字詞</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">恢復詞組必須包含 12 個字</string>
@@ -149,6 +149,18 @@
     <string name="wallet_last_attempt">最後一次 PIN 嘗試</string>
     <string name="wallet_last_attempt_message">再次失敗的話將需要我的恢復詞組來恢復我的錢包</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="other">剩餘%d 次嘗試機會</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="other">分鐘</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="other">小時</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">升級</string>
     <string name="encrypt_new_key_chain_dialog_title">升級你的錢包</string>
     <string name="encrypt_new_key_chain_dialog_message">您的錢包將升級為支援從更多的應用程式導入和導出功能。</string>
@@ -167,6 +179,8 @@
     <string name="notification_transactions_channel_description">接收有關接收交易的警報。</string>
     <string name="notification_synchronization_channel_name">同步</string>
     <string name="notification_synchronization_channel_description">應用程序與網絡同步時顯示通知。</string>
+    <string name="notification_generic_channel_name">一般通知</string>
+    <string name="notification_generic_channel_description">其他達世幣錢包活動</string>
     <string name="notification_push_channel_name">推送通知</string>
     <string name="notification_push_channel_description">顯示達世幣發送給您的推送通知</string>
     <string name="notification_settings_title">通知</string>
@@ -218,6 +232,14 @@
     <string name="view_seed_done">完成</string>
     <string name="view_seed_title">恢復詞組</string>
     <string name="transaction_result_view_on_explorer">在區塊瀏覽器中查看</string>
+    <string name="transaction_result_tax_category">稅種</string>
+    <string name="transaction_result_tax_category_loading">載入中...</string>
+    <string-array name="transaction_result_tax_categories">
+        <item>收入</item>
+        <item>支出</item>
+        <item>轉入</item>
+        <item>轉出</item>
+    </string-array>
     <string name="transaction_result_paid_successfully">發送成功</string>
     <string name="transaction_result_sent_to">發給</string>
     <string name="transaction_date_and_time">日期</string>
@@ -229,6 +251,7 @@
     <string name="transaction_details_received_at">在......收到</string>
     <string name="transaction_details_moved_from">從移動</string>
     <string name="transaction_details_moved_internally_to">內部移至</string>
+    <string name="transaction_failed_details">交易失敗</string>
 
     <string name="authenticate_fingerprint_title">認證</string>
     <string name="authenticate_fingerprint_message">確認指紋以繼續</string>
@@ -339,7 +362,7 @@
 
     <string name="syncing">同步中</string>
     <string name="syncing_balance">正在同步餘額</string>
-
+    <string name="transaction_count">%d 交易</string>
     <string name="all_transactions">所有</string>
     <string name="received_transactions">己收到</string>
     <string name="sent_transactions">發送</string>
@@ -349,6 +372,23 @@
     <string name="wallet_encryption_error_message">創建錢包時出現問題。請將此報告給支援平台。</string>
     <string name="wallet_not_encrypted_error_message">您的錢包有問題。\n\n如果您的錢包中沒有達世幣，請卸載並重新安裝此應用。然後創建一個新錢包。\n\n如果您有恢復詞組或備份文件，請卸載此應用並重新安裝。\n\n否則，請向支援平台報告。</string>
 
+    <string name="reset_wallet_title">您確定要重置錢包嗎？</string>
+    <string name="reset_wallet_message">如果您重置錢包，訪問它的唯一方法是使用恢復詞組來恢復錢包。</string>
+    <string name="positive_reset_text">是的，重置錢包</string>
+    <string name="launch_reset_wallet_title">你的結餘為正數</string>
+    <string name="launch_reset_wallet_message">如果您重置您的錢包，如果您沒有備份您的恢復詞組，您將失去所有資金。</string>
     <string name="continue_reset">繼續</string>
+    <string name="launch_reset_wallet_extra_message">備份您的恢復詞組</string>
+    <string name="start_reset_wallet_title">你可能失去 %s</string>
     <string name="reset_wallet_text">重置錢包</string>
+    <string name="reclassify_transactions_title">重新分類您的交易</string>
+    <string name="reclassify_transactions_title_message">這些分類將反映在可用於導入稅務報告服務的 CSV 導出中。</string>
+    <string name="reclassify_transactions_question">我在哪裡可以更改稅種?</string>
+    <string name="reclassify_transactions_outgoing_title">發出去的交易</string>
+    <string name="reclassify_transactions_by_default_message">在預設情況下將被標記為</string>
+    <string name="reclassify_transactions_incoming_title">進來的交易</string>
+    <string name="reclassify_transactions_change_it_message">您可以將其更改為</string>
+    <string name="reclassify_transactions_linked_accounts_title">關聯賬戶</string>
+    <string name="reclassify_transactions_linked_accounts_message">在預設情況下，所有進出您關聯賬戶的交易（交易所、質押等）都將被標記為轉賬。</string>
+    <string name="reclassify_transactions_change_explanation">從主頁選擇任何交易並在交易詳情頁面更改類別。</string>
 </resources>

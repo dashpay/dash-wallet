@@ -60,7 +60,7 @@
     <string name="perm_lock_wipe_wallet">حذف کیف پول</string>
     <string name="perm_lock_close_app">بستن</string>
 
-    <string name="scan_to_pay_error_dialog_title">اسکن برای ارسال</string>
+    <string name="scan_to_pay_error_dialog_title">اسکن برای ارسال </string>
     <string name="scan_to_pay_error_dialog_message">نشانی دش یا نشانی اینترنتی نامعتبر
 درخواست در کلیپ‌برد: \n\n %s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">نشانی دش یا نشانی اینترنتی نامعتبر
@@ -151,6 +151,21 @@
     <string name="wallet_last_attempt">آخرین امکان وارد کردن رمز</string>
     <string name="wallet_last_attempt_message">اگر یک بار دیگر، رمز به صورت اشتباه وارد شود، باید از عبارت‌ورودی برای بازگرداندن کیف پول استفاده کنید</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="one">%d بار دیگر می‌توانید تلاش کنید</item>
+        <item quantity="other">%d بار دیگر می‌توانید تلاش کنید</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="one">دقیقه</item>
+        <item quantity="other">دقیقه</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="one">ساعت</item>
+        <item quantity="other">ساعت</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">به‌روزرسانی</string>
     <string name="encrypt_new_key_chain_dialog_title">کیف پول‌تان را به‌روزرسانی کنید</string>
     <string name="encrypt_new_key_chain_dialog_message">به‌روزرسانی کیف پول با هدف افزایش قابلیت دریافت و ارسال به اپلیکیشن‌های بیشتر صورت می‌گیرد.</string>
@@ -169,6 +184,8 @@
     <string name="notification_transactions_channel_description">دریافت پیعام درباره تراکنش‌های دریافتی</string>
     <string name="notification_synchronization_channel_name">همزمان‌سازی</string>
     <string name="notification_synchronization_channel_description">وقتی اولیکیشن در حال همزمان‌سازی خود با شبکه است، پیغامی را نشان بده.</string>
+    <string name="notification_generic_channel_name">نوتیفیکشن‌های عمومی</string>
+    <string name="notification_generic_channel_description">سایر رویدادهای مربوط به دش والت</string>
     <string name="notification_push_channel_name">نوتیفیکیشن</string>
     <string name="notification_push_channel_description">نوتیفیکشن‌های دش را نشان بده</string>
     <string name="notification_settings_title">نوتیفیکیشن‌ها</string>
@@ -220,6 +237,14 @@
     <string name="view_seed_done">انجام شد</string>
     <string name="view_seed_title">عبارت بازیابی</string>
     <string name="transaction_result_view_on_explorer">مشاهده در مرورگر بلاک</string>
+    <string name="transaction_result_tax_category">دسته‌بندی مالیاتی</string>
+    <string name="transaction_result_tax_category_loading">در حال بارگذاری...</string>
+    <string-array name="transaction_result_tax_categories">
+        <item>درآمد</item>
+        <item>هزینه</item>
+        <item>انتقال به حساب</item>
+        <item>انتقال از حساب</item>
+    </string-array>
     <string name="transaction_result_paid_successfully">با موفقیت ارسال شد</string>
     <string name="transaction_result_sent_to">ارسال شد به</string>
     <string name="transaction_date_and_time">تاریخ</string>
@@ -231,6 +256,7 @@
     <string name="transaction_details_received_at">دریافت شد در</string>
     <string name="transaction_details_moved_from">منتقل شد از</string>
     <string name="transaction_details_moved_internally_to">به صورت داخلی منتقل شد به</string>
+    <string name="transaction_failed_details">تراکنش ناموفق</string>
 
     <string name="authenticate_fingerprint_title">تائید</string>
     <string name="authenticate_fingerprint_message">برای ادامه، اثرانگشت‌ را تائید کنید</string>
@@ -341,7 +367,7 @@
 
     <string name="syncing">در حال همزمان‌سازی</string>
     <string name="syncing_balance">در حال همزمان‌سازی موجودی </string>
-
+    <string name="transaction_count">%dتراکنش</string>
     <string name="all_transactions">همه</string>
     <string name="received_transactions">دریافتی</string>
     <string name="sent_transactions">ارسالی</string>
@@ -351,6 +377,23 @@
     <string name="wallet_encryption_error_message">مشکلی در ایجاد کیف پول صورت گرفته است. لطفا موضوع را به بخش پشتیبانی اطلاع دهید. </string>
     <string name="wallet_not_encrypted_error_message">مشکلی در رابطه با کیف پول‌تان روی داده. \n\n اگر مقداری دش در کیف پول‌تان دارید، اپلیکیشن کیف پول را حذف کرده و دوباره آن را نصب کنید. سپس یک کیف پول جدید ایجاد کنید. \n\n اگر عبارت بازیابی یا فایل پشتیبان دارید، اپلیکیشن را حذف کرده و دوباره نصب کنید. \n\n در غیر این صورت، لطفا موضوع را به بخش پشتیابنی اطلاع دهید. </string>
 
+    <string name="reset_wallet_title">آیا مطمئن هستید می‌خواهید کیف پول‌تان را ریست کنید؟ </string>
+    <string name="reset_wallet_message">اگر کیف پول‌تان را ریست کنید، تنها راه برای دسترسی به آن، استفاده از عبارت بازیابی خواهد بود. </string>
+    <string name="positive_reset_text">بله. کیف پول را ریست کن</string>
+    <string name="launch_reset_wallet_title">موجودی‌تان مثبت است</string>
+    <string name="launch_reset_wallet_message">اگر کیف پول‌تان را ریست کنید، در صورتی که عبارت بازیابی را نداشته باشید، همه موجودی‌تان از بین می‌رود.</string>
     <string name="continue_reset">ادامه</string>
+    <string name="launch_reset_wallet_extra_message">گرفتن نسخه پشتیبان از عبارت بازیابی</string>
+    <string name="start_reset_wallet_title">ممکن است %s از دست بدهید</string>
     <string name="reset_wallet_text">ریست کیف پول</string>
+    <string name="reclassify_transactions_title">دسته‌بندی دوباره تراکنش‌ها </string>
+    <string name="reclassify_transactions_title_message">این دسته‌بندی‌ها در فایل CSV خروجی مشخص خواهد بود و از آن می‌توانید برای اظهارنامه مالیاتی‌تان استفاده کنید. </string>
+    <string name="reclassify_transactions_question">کجا می‌توانم دسته‌بندی مالیاتی را تغییر دهم؟ </string>
+    <string name="reclassify_transactions_outgoing_title">تراکنش‌های خروجی</string>
+    <string name="reclassify_transactions_by_default_message">به صورت پیشفرض با این عنوان خواهد بود:  </string>
+    <string name="reclassify_transactions_incoming_title">تراکنش‌های ورودی</string>
+    <string name="reclassify_transactions_change_it_message">می‌توانید این را تغییر دهید به: </string>
+    <string name="reclassify_transactions_linked_accounts_title">حساب‌های متصل</string>
+    <string name="reclassify_transactions_linked_accounts_message">به صورت پیشفرض، همه تراکنش‌‌ها به یا از حساب‌های متصل (صرافی‌ها، استیکینگ و ...) به عنوان تراکنش در نظر گرفته می‌شوند. </string>
+    <string name="reclassify_transactions_change_explanation">هر تراکنشی که خواستید را از صفحه اصلی انتخاب کنید و دسته‌بندی آن را در صفحه جزئیات تغییر دهید. </string>
 </resources>

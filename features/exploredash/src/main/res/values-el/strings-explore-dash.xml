@@ -24,7 +24,6 @@
     <string name="explore_atms_title">ATM</string>
     <string name="explore_atms_subtitle">Βρείτε πού μπορείτε να αγοράσετε ή να πουλήσετε DASH και άλλα κρυπτονομίσματα με μετρητά.</string>
     <string name="explore_staking_subtitle">Κάντε εύκολα Stake το Dash και κερδίστε παθητικό εισόδημα με μερικά απλά κλικ.</string>
-
     <!-- Search -->
     <string name="explore_search_results">Αποτελέσματα αναζήτησης</string>
     <string name="explore_physical_merchant">Φυσικός έμπορος</string>
@@ -47,7 +46,7 @@
     <string name="distance_kilometers">%sχιλιόμετρα</string>
 
     <plurals name="explore_merchant_amount">
-        <item quantity="one">%d έμπορος.</item>
+        <item quantity="one">%d έμπορος</item>
         <item quantity="other">%dέμποροι</item>
     </plurals>
 
@@ -119,12 +118,12 @@
 
     <plurals name="radius_miles">
         <item quantity="one">%d μίλι</item>
-        <item quantity="other">%d μίλια</item>
+        <item quantity="other">%dμίλια</item>
     </plurals>
 
     <plurals name="radius_kilometers">
-        <item quantity="one">%d χιλιόμετρο</item>
-        <item quantity="other">%d χιλιόμετρα</item>
+        <item quantity="one">%dχιλιόμετρο</item>
+        <item quantity="other">%dχιλιόμετρα</item>
     </plurals>
 
     <!-- Location Permission -->

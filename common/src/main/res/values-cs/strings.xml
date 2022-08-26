@@ -11,6 +11,7 @@
     <string name="buy_dash">Nákup Dash</string>
     <string name="copied">Zkopírováno</string>
     <string name="staking_title">Úročení</string>
+    <string name="error">Chyba</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernseyská libra</string>
@@ -31,7 +32,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Titles/Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Zavřít</string>
     <string name="network_unavailable_return">Zpět do pěněženky</string>
     <string name="button_continue">Pokračovat</string>
@@ -43,7 +44,6 @@
     <string name="button_okay">Dobře</string>
     <string name="button_share">Sdílet</string>
     <string name="verify">Ověřit</string>
-    <string name="error">Chyba</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Vyhledávání</string>
@@ -53,4 +53,5 @@
     <string name="select_currency">Vybrat měnu</string>
     <string name="send_coins_error_dusty_send">Částka je příliš nízká pro odeslání</string>
     <string name="send_coins_error_insufficient_money">Nedostatečný zůstatek</string>
-</resources>
+
+    </resources>

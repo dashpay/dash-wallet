@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:background="@color/background_primary_light"
+    android:background="@color/background_primary"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -18,11 +18,12 @@
 
         <TextView
             android:id="@+id/label"
-            style="@style/MontserratMedium.MenuRowTitle.Internal"
+            style="@style/MenuRowTitle.Internal"
             android:layout_width="200dp"
             android:layout_margin="10dp"
             android:text="@string/forgot_pin_instruction_1"
             android:gravity="center"
+            android:textAlignment="gravity"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
@@ -70,7 +71,7 @@
                     android:text="@string/verify_no_screenshot_title" />
 
                 <TextView
-                    style="@style/DescriptionTextView"
+                    style="@style/Caption"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -79,7 +80,7 @@
         </LinearLayout>
 
         <Button
-            style="@style/DashButton.Blue"
+            style="@style/Button.Primary.Large.Blue"
             android:id="@+id/submit"
             android:enabled="false"
             android:layout_width="match_parent"

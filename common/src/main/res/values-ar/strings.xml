@@ -11,7 +11,9 @@
     <string name="buy_dash">شراء داش</string>
     <string name="copied">تم النسخ</string>
     <string name="staking_title">ستاكنج</string>
-
+    <string name="email">البريد الإلكتروني</string>
+    <string name="email_placeholder">على سبيل المثال johndoe@mail.com</string>
+    <string name="error">خطأ</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">جيرنزي جنيه</string>
     <!-- Local Currency List: JEP -->
@@ -31,7 +33,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">دولار الجوزاء</string>
 
-    <!-- Generic Titles/Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">تجاهل</string>
     <string name="network_unavailable_return">العودة إلى المحفظة</string>
     <string name="button_continue">استمر</string>
@@ -44,14 +46,18 @@
     <string name="button_okay">اوك</string>
     <string name="button_share">مشاركة</string>
     <string name="verify">تحقق</string>
-    <string name="error">خطأ</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">بحث</string>
     <string name="permission_allow">السماح</string>
     <string name="permission_deny">الرفض</string>
     <string name="max">الحد الأقصى</string>
+    <string name="dash">داش</string>
     <string name="select_currency">اختر العملة</string>
     <string name="send_coins_error_dusty_send">المبلغ صغير جدا بحيث لا يمكن إرساله.</string>
     <string name="send_coins_error_insufficient_money">رصيد غير كاف</string>
+
+    <string name="empty_wallet_warning_title">يبدو أنك تقوم بإفراغ محفظة داش</string>
+    <string name="empty_wallet_crowdnode_warning">يرجى ملاحظة أنك لن تتمكن من سحب أموالك من CrowdNode إلى هذه المحفظة حتى تقوم بزيادة رصيدك إلى 0.0003 داش.</string>
+    <string name="syncing">يتم المزامنة</string>
 </resources>

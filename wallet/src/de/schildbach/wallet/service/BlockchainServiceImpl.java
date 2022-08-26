@@ -82,8 +82,10 @@ import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.NotificationService;
-import org.dash.wallet.common.transactions.NotFromAddressTxFilter;
-import org.dash.wallet.common.transactions.TransactionFilter;
+import org.dash.wallet.common.transactions.filters.NotFromAddressTxFilter;
+import org.dash.wallet.common.transactions.filters.TransactionFilter;
+import org.dash.wallet.common.services.TransactionMetadataProvider;
+import org.dash.wallet.common.transactions.TransactionUtils;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationHandler;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi;
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeDepositReceivedResponse;
@@ -119,7 +121,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.data.BlockchainState;
+import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 import de.schildbach.wallet.ui.OnboardingActivity;
@@ -128,7 +130,6 @@ import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
-import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
@@ -146,6 +147,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject CrowdNodeConfig crowdNodeConfig;
     @Inject BlockchainStateDao blockchainStateDao;
     @Inject ExchangeRatesDao exchangeRatesDao;
+    @Inject TransactionMetadataProvider transactionMetadataProvider;
 
     private BlockStore blockStore;
     private BlockStore headerStore;
@@ -160,6 +162,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private final Handler handler = new Handler();
     private final Handler delayHandler = new Handler();
+    private final Handler metadataHandler = new Handler();
     private WakeLock wakeLock;
 
     private PeerConnectivityListener peerConnectivityListener;
@@ -209,6 +212,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private CrowdNodeAPIConfirmationHandler apiConfirmationHandler;
 
+    void handleMetadata(Transaction tx) {
+        metadataHandler.post(() -> {
+            transactionMetadataProvider.syncTransactionBlocking(tx);
+        });
+    }
+
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
 
@@ -244,16 +253,16 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
             transactionsReceived.incrementAndGet();
 
-            final Address address = WalletUtils.getWalletAddressOfReceived(tx, wallet);
+
+            final Address address = TransactionUtils.INSTANCE.getWalletAddressOfReceived(tx, wallet);
             final Coin amount = tx.getValue(wallet);
             final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
             final boolean isRestoringBackup = application.getConfiguration().isRestoringBackup();
 
             handler.post(() -> {
-                final boolean isReceived = amount.signum() > 0;
                 final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
 
-                if (isReceived && !isReplayedTx) {
+                if (!isReplayedTx) {
                     if (depositReceivedResponse.matches(tx)) {
                         notificationService.showNotification(
                                 "deposit_received",
@@ -263,11 +272,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         );
                     } else if (apiConfirmationHandler != null && apiConfirmationHandler.matches(tx)) {
                         apiConfirmationHandler.handle(tx);
-                    } else if (passFilters(tx)) {
+                    } else if (passFilters(tx, wallet)) {
                         notifyCoinsReceived(address, amount, tx.getExchangeRate());
                     }
                 }
             });
+
+            handleMetadata(tx);
             updateAppWidget();
         }
 
@@ -275,10 +286,18 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         public void onCoinsSent(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
+            handleMetadata(tx);
             updateAppWidget();
         }
 
-        private Boolean passFilters(final Transaction tx) {
+        private Boolean passFilters(final Transaction tx, final Wallet wallet) {
+            Coin amount = tx.getValue(wallet);
+            final boolean isReceived = amount.signum() > 0;
+
+            if (!isReceived) {
+                return false;
+            }
+
             boolean passFilters = false;
 
             for (TransactionFilter filter: crowdnodeFilters) {
@@ -344,7 +363,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         notification.setContentTitle(msg);
         if (text.length() > 0)
             notification.setContentText(text);
-        notification.setContentIntent(PendingIntent.getActivity(this, 0, OnboardingActivity.createIntent(this), 0));
+        notification.setContentIntent(PendingIntent.getActivity(this, 0, OnboardingActivity.createIntent(this), PendingIntent.FLAG_IMMUTABLE));
         notification.setNumber(notificationCount == 1 ? 0 : notificationCount);
         notification.setWhen(System.currentTimeMillis());
         notification.setSound(Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.coins_received));
@@ -401,7 +420,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     notification.setContentTitle(getString(R.string.app_name));
                     notification.setContentText(getString(R.string.notification_peers_connected_msg, numPeers));
                     notification.setContentIntent(PendingIntent.getActivity(BlockchainServiceImpl.this, 0,
-                            OnboardingActivity.createIntent(BlockchainServiceImpl.this), 0));
+                            OnboardingActivity.createIntent(BlockchainServiceImpl.this), PendingIntent.FLAG_IMMUTABLE));
                     notification.setWhen(System.currentTimeMillis());
                     notification.setOngoing(true);
                     nm.notify(Constants.NOTIFICATION_ID_CONNECTED, notification.build());
@@ -1092,7 +1111,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private Notification createNetworkSyncNotification(BlockchainState blockchainState) {
         Intent notificationIntent = OnboardingActivity.createIntent(this);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
-                notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         final String message = (blockchainState != null)
                 ? BlockchainStateUtils.getSyncStateString(blockchainState, this)

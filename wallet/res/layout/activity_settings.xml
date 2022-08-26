@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
-    android:background="@color/background_primary_light"
+    android:background="@color/background_primary"
     android:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.SettingsActivity">
 
@@ -20,7 +20,7 @@
         android:layout_marginTop="20dp">
 
         <TextView
-            style="@style/MontserratMedium.MenuRowTitle.Internal"
+            style="@style/MenuRowTitle.Internal"
             android:text="@string/menu_local_currency"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -36,7 +36,7 @@
 
         <TextView
             android:id="@+id/local_currency_symbol"
-            style="@style/MontserratMedium.MenuRowTitle.Internal"
+            style="@style/MenuRowTitle.Internal"
             android:layout_marginEnd="16dp"
             android:layout_marginRight="16dp"
             android:textColor="@color/dash_blue"
@@ -53,7 +53,7 @@
         style="@style/MenuRow.Internal">
 
         <TextView
-            style="@style/MontserratMedium.MenuRowTitle.Internal"
+            style="@style/MenuRowTitle.Internal"
             android:text="@string/menu_rescan_blockchain"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -67,7 +67,7 @@
 
         <TextView
             android:id="@+id/about_title"
-            style="@style/MontserratMedium.MenuRowTitle.Internal"
+            style="@style/MenuRowTitle.Internal"
             android:text="@string/about_title"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -88,7 +88,7 @@
 
         <TextView
             android:id="@+id/notifications_title"
-            style="@style/MontserratMedium.MenuRowTitle.Internal"
+            style="@style/MenuRowTitle.Internal"
             android:text="@string/notification_settings_title"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"

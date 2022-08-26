@@ -27,6 +27,7 @@ import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -36,7 +37,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.copy
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentPortalBinding
@@ -47,6 +47,7 @@ import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.ConfirmationDialog
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.OnlineAccountDetailsDialog
+import org.dash.wallet.integrations.crowdnode.ui.dialogs.StakingDialog
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 @AndroidEntryPoint
@@ -214,7 +215,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         if (isEnabled) {
             binding.withdrawIcon.setImageResource(R.drawable.ic_left_right_arrows)
             binding.withdrawTitle.setTextColor(resources.getColor(R.color.content_primary, null))
-            binding.withdrawSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
+            binding.withdrawSubtitle.setTextColor(resources.getColor(R.color.content_tertiary, null))
         } else {
             binding.withdrawIcon.setImageResource(R.drawable.ic_withdraw_disabled)
             binding.withdrawTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
@@ -229,7 +230,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         if (isEnabled) {
             binding.depositIcon.setImageResource(R.drawable.ic_deposit_enabled)
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_primary, null))
-            binding.depositSubtitle.setTextColor(resources.getColor(R.color.steel_gray_500, null))
+            binding.depositSubtitle.setTextColor(resources.getColor(R.color.content_tertiary, null))
         } else {
             binding.depositIcon.setImageResource(R.drawable.ic_deposit_disabled)
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
@@ -319,7 +320,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
 
     private fun showConfirmationDialog() {
         viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_VERIFY)
-        ConfirmationDialog().show(parentFragmentManager, "confirmation_dialog")
+
+        if (requireActivity().lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            ConfirmationDialog().show(parentFragmentManager, "confirmation_dialog")
+        }
     }
 
     private fun getErrorMessage(exception: Exception): String {
@@ -341,17 +345,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         if (viewModel.signUpStatus == SignUpStatus.LinkedOnline) {
             OnlineAccountDetailsDialog().show(parentFragmentManager, "online_account_details")
         } else {
-            AdaptiveDialog.create(
-                R.drawable.ic_info_blue_encircled,
-                getString(R.string.crowdnode_your_address_title),
-                viewModel.accountAddress.value?.toBase58() ?: "",
-                getString(R.string.button_close),
-                getString(R.string.button_copy_address)
-            ).show(requireActivity()) { toCopy ->
-                if (toCopy == true) {
-                    viewModel.accountAddress.value?.toBase58()?.copy(requireActivity(), "dash address")
-                }
-            }
+            StakingDialog().show(parentFragmentManager, "staking")
         }
     }
 
@@ -388,7 +382,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
                 getString(R.string.buy_dash)
             ).show(requireActivity()) {
                 if (it == true) {
+                    viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_WITHDRAW_BUY)
                     viewModel.buyDash()
+                } else {
+                    viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_WITHDRAW_CANCEL)
                 }
             }
         }

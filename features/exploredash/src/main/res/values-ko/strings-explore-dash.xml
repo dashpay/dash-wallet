@@ -24,6 +24,7 @@
     <string name="explore_atms_title">ATM</string>
     <string name="explore_atms_subtitle">어디에서 대시 및 기타 암호화폐를 매수&amp;매도할 수 있는지 찾아보세요.</string>
     <string name="explore_staking_subtitle">간단한 클릭만으로 대시를 손쉽게 스테이킹하고 소극적 소득을 얻으세요.</string>
+    <string name="explore_staking_current_apy">현재 APY = %s%%</string>
 
     <!-- Search -->
     <string name="explore_search_results">검색 결과</string>
@@ -116,11 +117,11 @@
     </string-array>
 
     <plurals name="radius_miles">
-        <item quantity="other">%d 마일</item>
+        <item quantity="other">%d마일</item>
     </plurals>
 
     <plurals name="radius_kilometers">
-        <item quantity="other">%d 킬로미터</item>
+        <item quantity="other">%d킬로미터</item>
     </plurals>
 
     <!-- Location Permission -->

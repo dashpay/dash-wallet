@@ -24,7 +24,6 @@
     <string name="explore_atms_title">Mga ATM</string>
     <string name="explore_atms_subtitle">Hanapin kung saan bibili o magbenta ng DASH at iba pang cryptocurrencies para sa cash.</string>
     <string name="explore_staking_subtitle">Madaling i-stake ang Dash at kumita ng passive income sa ilang simpleng pag-click.</string>
-
     <!-- Search -->
     <string name="explore_search_results">Mga Resulta ng Paghahanap</string>
     <string name="explore_physical_merchant">Pisikal na Merchant</string>
@@ -48,7 +47,7 @@
 
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d mga merchant</item>
-        <item quantity="other">%d merchants</item>
+        <item quantity="other">%d mga merchant</item>
     </plurals>
 
     <plurals name="explore_atm_amount">

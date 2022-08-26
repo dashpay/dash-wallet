@@ -11,7 +11,9 @@
     <string name="buy_dash">Beli Dash</string>
     <string name="copied">Disalin</string>
     <string name="staking_title">Staking</string>
-
+    <string name="email">Email</string>
+    <string name="email_placeholder">misalnya johndoe@mail.com</string>
+    <string name="error">Kesalahan</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Pound Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -31,7 +33,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Titles/Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Tolak</string>
     <string name="network_unavailable_return">Kembali ke dompet</string>
     <string name="button_continue">Teruskan</string>
@@ -44,14 +46,18 @@
     <string name="button_okay">Oke</string>
     <string name="button_share">Berbagi</string>
     <string name="verify">Memeriksa</string>
-    <string name="error">Kesalahan</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Cari</string>
     <string name="permission_allow">Izinkan</string>
     <string name="permission_deny">Tolak</string>
     <string name="max">Max</string>
+    <string name="dash">Dash</string>
     <string name="select_currency">Pilih mata uang</string>
     <string name="send_coins_error_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
     <string name="send_coins_error_insufficient_money">Dana tidak mencukupi</string>
+
+    <string name="empty_wallet_warning_title">Sepertinya Anda sedang mengosongkan Dompet Dash Anda</string>
+    <string name="empty_wallet_crowdnode_warning">Harap dicatat, Anda tidak akan dapat menarik dana Anda dari CrowdNode ke dompet ini sampai saldo Anda meningkat menjadi 0,0003 Dash.</string>
+    <string name="syncing">Menyingkronkan:</string>
 </resources>

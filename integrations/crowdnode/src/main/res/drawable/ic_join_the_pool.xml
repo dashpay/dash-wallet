@@ -1,0 +1,79 @@
+
+<!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="50dp"
+    android:height="50dp"
+    android:viewportWidth="50"
+    android:viewportHeight="50">
+  <path
+      android:pathData="M25.01,4C25.564,4 25.992,4.45 25.992,5.004V11.229H27.557C28.01,11.229 28.302,11.403 28.434,11.751C28.566,12.107 28.5,12.468 28.236,12.832L25.679,16.263C25.498,16.495 25.272,16.611 25,16.611C24.72,16.611 24.493,16.495 24.321,16.263L21.764,12.832C21.5,12.484 21.434,12.128 21.566,11.763C21.689,11.407 21.986,11.229 22.455,11.229H23.983V5.004C23.983,4.45 24.455,4 25.01,4Z"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M7.5,31m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M21.5,31m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M35.5,31m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M14.5,31m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M28.5,31m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M42.5,31m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M11,38m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M25,38m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M39,38m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M18,38m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M32,38m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M21.5,45m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M35.5,45m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M14.5,45m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M28.5,45m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M24.995,35.656C26.091,35.656 27.122,35.448 28.086,35.032C29.05,34.615 29.901,34.037 30.637,33.297C31.374,32.557 31.951,31.704 32.371,30.739C32.79,29.774 33,28.747 33,27.656C33,26.566 32.79,25.538 32.371,24.573C31.951,23.608 31.372,22.756 30.632,22.016C29.892,21.275 29.041,20.697 28.076,20.281C27.112,19.864 26.081,19.656 24.985,19.656C23.895,19.656 22.868,19.864 21.904,20.281C20.94,20.697 20.091,21.275 19.358,22.016C18.625,22.756 18.049,23.608 17.629,24.573C17.21,25.538 17,26.566 17,27.656C17,28.747 17.21,29.774 17.629,30.739C18.049,31.704 18.626,32.557 19.363,33.297C20.099,34.037 20.95,34.615 21.914,35.032C22.878,35.448 23.905,35.656 24.995,35.656Z"
+      android:fillColor="#008DE4"/>
+  <path
+      android:pathData="M22.988,23.754H26.487C29.562,23.754 30.107,25.429 29.666,27.787C29.373,29.37 28.639,30.581 27.411,31.149C26.86,31.407 26.333,31.55 25.105,31.55H21.617L21.909,29.927H24.979C26.826,29.932 27.313,29.129 27.554,28.429C27.646,28.166 27.853,27.357 27.858,26.875C27.87,25.94 27.411,25.377 25.856,25.377L22.701,25.372L22.988,23.754ZM20.352,27.788C20.438,27.425 20.577,26.841 21.485,26.841H25.065C25.065,26.841 25.03,27.036 24.916,27.507C24.915,27.51 24.914,27.514 24.913,27.518C24.827,27.881 24.688,28.465 23.78,28.465H20.2C20.2,28.465 20.234,28.27 20.349,27.799C20.35,27.795 20.351,27.791 20.352,27.788Z"
+      android:fillColor="#ffffff"
+      android:fillType="evenOdd"/>
+</vector>

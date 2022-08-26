@@ -40,7 +40,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Ontvang</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_import_key">Importeer privésleutel</string>
+    <string name="shortcut_import_key">Importeer persoonlijke sleutel</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_add_shortcut">Voeg snelkoppeling toe</string>
 
@@ -58,19 +58,19 @@
 
     <string name="perm_lock_info">Portemonnee permanent vergrendeld</string>
     <string name="perm_lock_wipe_wallet">Portemonnee Verwijderen</string>
-    <string name="perm_lock_close_app">Sluit</string>
+    <string name="perm_lock_close_app">Sluiten</string>
 
     <string name="scan_to_pay_error_dialog_title">Scan om te verzenden</string>
     <string name="scan_to_pay_error_dialog_message">Geen geldig Dash adres of URL verzoek op klembord:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">Geen geldig Dash adres of URL verzoek op klembord.</string>
     <string name="pay_to_confirm_address">Is dit het Dash adres waarnaar je de betaling wilt sturen?</string>
 
-    <string name="receive_title">Ontvang</string>
+    <string name="receive_title">Ontvangen</string>
     <string name="receive_enter_amount_message">Specificeer het te ontvangen bedrag</string>
     <string name="receive_enter_amount_button">Specificeer bedrag</string>
-    <string name="receive_share_button">Deel</string>
+    <string name="receive_share_button">Delen</string>
 
-    <string name="pay_title">Verstuur</string>
+    <string name="pay_title">Verzenden</string>
     <string name="history_title">Geschiedenis</string>
     <string name="more_title">Meer</string>
     <string name="settings_title">Instellingen</string>
@@ -79,8 +79,8 @@
     <string name="tools_title">Gereedschap</string>
 
     <string name="payments_title">Betalingen</string>
-    <string name="payments_tab_pay_label">Verstuur</string>
-    <string name="payments_tab_receive_label">Ontvang</string>
+    <string name="payments_tab_pay_label">Verzenden</string>
+    <string name="payments_tab_receive_label">Ontvangen</string>
     <string name="payments_pay_by_qr_title">Verstuurd door</string>
     <string name="payments_pay_by_qr_sub_title">QR Code scannen</string>
     <string name="payments_pay_to_clipboard_title">Versturen naar gekopieerd adres</string>
@@ -118,7 +118,7 @@
     <string name="import_export_keys_dialog_password_phrase">Voer hier je herstelzin in.</string>
     <string name="preferences_report_issue_summary">Vergaar informatie over je probleem en verstuur via e-mail een melding aan de ontwikkelaars.</string>
     <string name="navigation_configuration">Configuratie</string>
-    <string name="request_coins_clipboard_address_msg">Dashadres is gekopieerd naar klembord</string>
+    <string name="request_coins_clipboard_address_msg">Dash-adres is gekopieerd naar het klembord</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Toon</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" is geen herstelzinwoord</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Herstelzin moet 12 woorden hebben</string>
@@ -142,7 +142,7 @@
     <string name="wallet_lock_reset_wallet_title">Portemonnee resetten</string>
     <string name="wallet_lock_reset_wallet_message">Weet je het zeker? Je portemonnee wordt verwijderd en al je Dash gaat verloren.\n\nDe enige manier om je Dash te herstellen is met een back-upbestand of herstelzin.</string>
 
-    <string name="wallet_lock_wallet_disabled">Portemonnee is uitgeschakeld</string>
+    <string name="wallet_lock_wallet_disabled">Portemonnee uitgeschakeld</string>
     <string name="wallet_lock_try_again">Probeer nogmaals over %1$d %2$s</string>
     <string name="wallet_lock_reset">Reset</string>
     <string name="wallet_lock_wrong_pin">Verkeerde pin! %s</string>
@@ -221,7 +221,7 @@
     <string name="verify_seed_title">Schrijf het a.u.b op</string>
     <string name="verify_seed_write_down_confirmation">ik heb het opgeschreven</string>
     <string name="verify_seed_buttons_tip">Tik a.u.b. op de woorden van je herstelzin in de juiste volgorde</string>
-    <string name="verify_seed_success_title">Succesvol geverifieerd</string>
+    <string name="verify_seed_success_title">Succesvol geverifieerd </string>
     <string name="verify_seed_success_message">Je portemonnee is nu beveiligd. U kunt je herstelzin op elk gewenst moment gebruiken om je account op een ander apparaat te herstellen.</string>
     <string name="verify_no_screenshot_title">Maak geen screenshot</string>
     <string name="verify_no_screenshot_message">noteer de herstelzin en berg hem goed op</string>
@@ -238,7 +238,7 @@
     <string name="transaction_result_paid_successfully">Succesvol verzonden</string>
     <string name="transaction_result_sent_to">Verzonden naar</string>
     <string name="transaction_date_and_time">Datum</string>
-    <string name="transaction_close">Sluit</string>
+    <string name="transaction_close">Sluiten</string>
     <string name="transaction_details_amount_received">Ontvangen bedrag</string>
     <string name="transaction_details_amount_sent">Verzonden bedrag</string>
     <string name="transaction_details_sent_from">Verzonden vanaf</string>
@@ -246,7 +246,6 @@
     <string name="transaction_details_received_at">Ontvangen met</string>
     <string name="transaction_details_moved_from">Verplaatst van</string>
     <string name="transaction_details_moved_internally_to">Intern verplaatst naar</string>
-
     <string name="authenticate_fingerprint_title">Verifieer</string>
     <string name="authenticate_fingerprint_message">Bevestig vingerafdruk om door te gaan</string>
     <string name="authenticate_pin_message">Voer PIN in om door te gaan</string>
@@ -260,8 +259,8 @@
     <string name="menu_settings_title">Instellingen</string>
     <string name="menu_settings_subtitle">Standaard valuta, snelkoppelingen, over... </string>
     <string name="menu_tools_title">Gereedschap</string>
-    <string name="menu_tools_subtitle">Importeer prive-sleutel</string>
-    <string name="menu_local_currency">Lokale munteenheid</string>
+    <string name="menu_tools_subtitle">Importeer persoonlijke sleutel…</string>
+    <string name="menu_local_currency">Lokale valuta</string>
     <string name="menu_rescan_blockchain">Blockchain opnieuw scannen</string>
     <string name="menu_contact_support_title">Neem contact op</string>
     <string name="menu_contact_support_subtitle">Meld een probleem</string>
@@ -269,7 +268,7 @@
     <string name="menu_explore_subtitle">Winkel met DASH bij meer dan 155.000 acceptanten</string>
 
     <string name="tools_address_book">Adresboek</string>
-    <string name="tools_import_private_key">Importeer privésleutel</string>
+    <string name="tools_import_private_key">Importeer persoonlijke sleutel</string>
     <string name="tools_network_monitor">Netwerk monitor</string>
     <string name="tools_show_xpub">Uitgebreide publieke sleutel</string>
 
@@ -344,7 +343,7 @@
     <string name="payment_request_problem_title">Betaling werd niet bevestigd</string>
     <string name="payment_request_problem_message">Je betaling kon niet door de server worden verwerkt, doe a.u.b. navraag bij de winkelier</string>
     <string name="payment_request_expired_title">Betaalverzoek is verlopen</string>
-    <string name="payment_request_close">Sluit</string>
+    <string name="payment_request_close">Sluiten</string>
     <string name="payment_request_skip">Overslaan</string>
     <string name="payment_request_paid_to">Betaald aan</string>
 
@@ -356,7 +355,6 @@
 
     <string name="syncing">Aan het synchroniseren</string>
     <string name="syncing_balance">Saldo aan het synchroniseren</string>
-
     <string name="all_transactions">Alles</string>
     <string name="received_transactions">Ontvangen</string>
     <string name="sent_transactions">Verzonden</string>
@@ -375,4 +373,4 @@
     <string name="launch_reset_wallet_extra_message">Back-up je herstelzin</string>
     <string name="start_reset_wallet_title">Je kan %s kwijtraken</string>
     <string name="reset_wallet_text">Portemonnee resetten</string>
-</resources>
+    </resources>

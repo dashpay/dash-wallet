@@ -51,11 +51,11 @@ class ExploreDashInfoDialog : OffsetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.learnMoreLabel.setOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.ExploreDash.LEARN_MORE, bundleOf())
+            analyticsService.logEvent(AnalyticsConstants.Explore.LEARN_MORE, bundleOf())
             dialogSafeNavigate(ExploreDashInfoDialogDirections.infoToGiftCardDetail())
         }
         binding.exploreDashInfoContinueBtn.setOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.ExploreDash.CONTINUE, bundleOf())
+            analyticsService.logEvent(AnalyticsConstants.Explore.CONTINUE, bundleOf())
             dismissAllowingStateLoss()
         }
     }

@@ -141,7 +141,7 @@ public final class CurrencyAmountView extends FrameLayout {
             final String currencySymbol = GenericUtils.currencySymbol(currencyCode);
             final float textSize = textView.getTextSize();
             final float smallerTextSize = textSize * 0.85f;
-            Typeface typeface = ResourcesCompat.getFont(getContext(), R.font.montserrat_semibold);
+            Typeface typeface = ResourcesCompat.getFont(getContext(), R.font.inter_semibold);
             currencySymbolDrawable = new CurrencySymbolDrawable(currencySymbol,
                     typeface, smallerTextSize, colorPrimary, smallerTextSize * 0.41f);
             localCurrencyCode = currencyCode;

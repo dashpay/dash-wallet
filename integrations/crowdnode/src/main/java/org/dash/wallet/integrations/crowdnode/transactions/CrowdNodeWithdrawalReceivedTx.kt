@@ -21,14 +21,20 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.script.ScriptPattern
-import org.dash.wallet.common.transactions.TransactionFilter
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 class CrowdNodeWithdrawalReceivedTx(
     private val networkParams: NetworkParameters
 ): TransactionFilter {
+    private val joinedFilters = mutableListOf<TransactionFilter>()
+
     override fun matches(tx: Transaction): Boolean {
+        if (joinedFilters.any { !it.matches(tx) }) {
+            return false
+        }
+
         val fromAddress = CrowdNodeConstants.getCrowdNodeAddress(networkParams)
 
         for (input in tx.inputs) {
@@ -44,6 +50,11 @@ class CrowdNodeWithdrawalReceivedTx(
         }
 
         return false
+    }
+
+    fun and(txFilter: TransactionFilter): CrowdNodeWithdrawalReceivedTx {
+        joinedFilters.add(txFilter)
+        return this
     }
 
     private fun isApiResponse(coin: Coin): Boolean {

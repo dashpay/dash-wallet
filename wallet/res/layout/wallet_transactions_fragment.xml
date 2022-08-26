@@ -15,13 +15,14 @@
 
     <TextView
         android:id="@+id/wallet_transactions_empty"
+        style="@style/Body2.Secondary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="64dp"
         android:gravity="center_horizontal"
+        android:textAlignment="gravity"
         android:text="@string/wallet_transactions_fragment_empty_text"
-        android:textSize="@dimen/font_size_small"
-        app:fontFamily="@font/montserrat" />
+        android:textSize="@dimen/font_size_small" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -34,15 +35,14 @@
             android:orientation="horizontal"
             android:paddingStart="16dp"
             android:paddingLeft="16dp"
-            android:paddingTop="8dp"
             android:paddingEnd="16dp"
-            android:paddingRight="16dp"
-            android:paddingBottom="8dp">
+            android:paddingRight="8dp">
 
             <ImageView
                 android:id="@+id/transaction_filter_btn"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:padding="8dp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -50,28 +50,24 @@
 
             <TextView
                 android:id="@+id/transaction_list_title"
-                style="@style/MontserratSemiBold"
+                style="@style/Subtitle1"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
                 android:layout_weight="1"
                 android:text="@string/history_title"
-                android:textColor="@color/black_text"
-                android:textSize="16sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/syncing"
-                style="@style/MontserratRegular"
+                style="@style/Body1"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
-                android:layout_marginEnd="16dp"
+                android:layout_marginEnd="8dp"
                 android:layout_weight="1"
-                android:textColor="@android:color/black"
-                android:textSize="16sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/transaction_filter_btn"
                 app:layout_constraintTop_toTopOf="parent"
@@ -86,9 +82,8 @@
             android:animateLayoutChanges="false"
             android:clipToPadding="false"
             android:scrollbars="vertical"
+            android:paddingBottom="20dp"
             tools:itemCount="5"
             tools:listitem="@layout/transaction_row"/>
-
     </LinearLayout>
-
 </FrameLayout>

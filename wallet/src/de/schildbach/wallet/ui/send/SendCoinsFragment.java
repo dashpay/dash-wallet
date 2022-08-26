@@ -64,7 +64,7 @@ import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.BlockchainState;
+import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.livedata.Resource;
@@ -72,7 +72,7 @@ import org.dash.wallet.common.ui.BaseLockScreenFragment;
 import de.schildbach.wallet.ui.CheckPinDialog;
 import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
-import de.schildbach.wallet.ui.TransactionResultActivity;
+import de.schildbach.wallet.ui.transactions.TransactionResultActivity;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
@@ -595,10 +595,8 @@ public class SendCoinsFragment extends BaseLockScreenFragment {
         String fiatSymbol = fiatAmount != null ? GenericUtils.currencySymbol(fiatAmount.currencyCode) : "";
         String fee = txFee.toPlainString();
 
-        dialogFragment = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
+        ConfirmTransactionDialog.showDialog(requireActivity(), address, amountStr, amountFiat,
                 fiatSymbol, fee, total, null, null, null);
-
-        dialogFragment.show(getParentFragmentManager(), "ConfirmTransactionDialog");
     }
 
 

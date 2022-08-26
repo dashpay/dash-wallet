@@ -1,18 +1,16 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
+apply plugin: 'kotlin-parcelize'
 apply plugin: 'dagger.hilt.android.plugin'
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 31
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 29
+        targetSdkVersion 31
         vectorDrawables.useSupportLibrary = true
-        versionCode 1
-        versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -25,7 +23,6 @@ android {
         }
         debug {
             multiDexEnabled true
-            debuggable true
         }
     }
 
@@ -40,6 +37,7 @@ android {
     buildFeatures {
         viewBinding true
     }
+    namespace 'org.dash.wallet.common'
 }
 
 dependencies {
@@ -55,6 +53,11 @@ dependencies {
     implementation platform("com.google.firebase:firebase-bom:$firebaseVersion")
     implementation 'com.google.firebase:firebase-analytics-ktx'
     implementation 'com.google.firebase:firebase-crashlytics-ktx'
+
+    //UI
+    implementation "com.github.bumptech.glide:glide:$glideVersion"
+    kapt "com.github.bumptech.glide:compiler:$glideVersion"
+    implementation "io.coil-kt:coil:$coilVersion"
 
     //Retrofit + OkHttp
     api "com.squareup.okhttp3:okhttp:$ok_http_version"
@@ -73,6 +76,14 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
+    implementation "androidx.datastore:datastore-preferences:1.0.0"
+
+    // UI
+    implementation 'com.google.android.material:material:1.4.0'
+    implementation "androidx.browser:browser:$browserVersion"
+    implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
+    //noinspection GradleDependency
+    implementation 'com.google.zxing:core:3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
 
     // UI
     implementation 'com.google.android.material:material:1.4.0'
@@ -88,7 +99,7 @@ dependencies {
     // Database
     api "androidx.room:room-runtime:$roomVersion"
     api "androidx.room:room-ktx:$roomVersion"
-    annotationProcessor "androidx.room:room-compiler:$roomVersion"
+    kapt "androidx.room:room-compiler:$roomVersion"
 
     testImplementation "junit:junit:$junitVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"

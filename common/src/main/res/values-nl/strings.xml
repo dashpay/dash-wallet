@@ -11,7 +11,9 @@
     <string name="buy_dash">Koop Dash</string>
     <string name="copied">Gekopieerd</string>
     <string name="staking_title">Staking</string>
-
+    <string name="email">E-mail</string>
+    <string name="email_placeholder">bijvoorbeeld jan@mail.com</string>
+    <string name="error">Fout</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -31,7 +33,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
-    <!-- Generic Titles/Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Annuleren</string>
     <string name="network_unavailable_return">Keer terug naar portemonnee</string>
     <string name="button_continue">Doorgaan</string>
@@ -44,14 +46,18 @@
     <string name="button_okay">Oké</string>
     <string name="button_share">Deel</string>
     <string name="verify">Verifiëren</string>
-    <string name="error">Fout</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Zoek</string>
     <string name="permission_allow">Sta toe</string>
     <string name="permission_deny">Weiger</string>
     <string name="max">Max</string>
+    <string name="dash">Dash</string>
     <string name="select_currency">Selecteer valuta</string>
     <string name="send_coins_error_dusty_send">bedrag is te klein om te versturen</string>
     <string name="send_coins_error_insufficient_money">Ontoereikende fondsen</string>
+
+    <string name="empty_wallet_warning_title">Het ziet er naar uit dat je je Dashportemonee leeg aan het maken bent</string>
+    <string name="empty_wallet_crowdnode_warning">Let op, je zal geen geld kunnen opnemen van CrowdNode naar deze portemonnee totdat je je saldo verhoogt tot 0,0003 Dash.</string>
+    <string name="syncing">Aan het synchroniseren</string>
 </resources>

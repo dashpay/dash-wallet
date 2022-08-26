@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
-    android:background="@color/background_primary_light"
+    android:background="@color/background_primary"
     android:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.ToolsActivity">
 
@@ -20,7 +20,7 @@
         android:layout_marginTop="20dp">
 
         <TextView
-            style="@style/MontserratMedium.MenuRowTitle.Internal"
+            style="@style/MenuRowTitle.Internal"
             android:text="@string/tools_address_book"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/address_book_arrow"
@@ -42,7 +42,7 @@
         style="@style/MenuRow.Internal">
 
         <TextView
-            style="@style/MontserratMedium.MenuRowTitle.Internal"
+            style="@style/MenuRowTitle.Internal"
             android:text="@string/tools_import_private_key"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/import_keys_arrow"
@@ -64,7 +64,7 @@
         style="@style/MenuRow.Internal">
 
         <TextView
-            style="@style/MontserratMedium.MenuRowTitle.Internal"
+            style="@style/MenuRowTitle.Internal"
             android:text="@string/tools_network_monitor"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/network_monitor_arrow"
@@ -86,7 +86,7 @@
         style="@style/MenuRow.Internal">
 
         <TextView
-            style="@style/MontserratMedium.MenuRowTitle.Internal"
+            style="@style/MenuRowTitle.Internal"
             android:text="@string/tools_show_xpub"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/show_xpub_arrow"
@@ -108,7 +108,7 @@
         style="@style/MenuRow.Internal">
 
         <TextView
-            style="@style/MontserratMedium.MenuRowTitle.Internal"
+            style="@style/MenuRowTitle.Internal"
             android:text="@string/report_transaction_history_title"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/transaction_history_arrow"

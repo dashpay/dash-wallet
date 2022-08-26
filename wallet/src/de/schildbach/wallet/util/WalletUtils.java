@@ -46,6 +46,7 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
@@ -59,6 +60,7 @@ import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
+import org.dash.wallet.common.transactions.TransactionUtils;
 
 import com.google.common.base.Charsets;
 
@@ -119,91 +121,6 @@ public class WalletUtils {
         }
 
         return builder;
-    }
-
-    @Nullable
-    public static Address getWalletAddressOfReceived(final Transaction tx, final Wallet wallet) {
-        for (final TransactionOutput output : tx.getOutputs()) {
-            try {
-                if (output.isMine(wallet)) {
-                    final Script script = output.getScriptPubKey();
-                    return script.getToAddress(Constants.NETWORK_PARAMETERS, true);
-                }
-            } catch (final ScriptException x) {
-                // swallow
-            }
-        }
-
-        return null;
-    }
-
-    public static List<Address> getFromAddressOfSent(final Transaction tx, final Wallet wallet) {
-        List<Address> result = new ArrayList<>();
-
-        for (final TransactionInput input : tx.getInputs()) {
-            try {
-                Transaction connectedTransaction = input.getConnectedTransaction();
-                if (connectedTransaction != null) {
-                    TransactionOutput output = connectedTransaction.getOutput(input.getOutpoint().getIndex());
-                    final Script script = output.getScriptPubKey();
-                    result.add(script.getToAddress(Constants.NETWORK_PARAMETERS, true));
-                }
-            } catch (final ScriptException x) {
-                // swallow
-            }
-        }
-
-        return result;
-    }
-
-    public static List<Address> getToAddressOfReceived(final Transaction tx, final  Wallet wallet) {
-        List<Address> result = new ArrayList<>();
-
-        for (TransactionOutput output : tx.getOutputs()) {
-            try {
-                if (output.isMine(wallet)) {
-                    final Script script = output.getScriptPubKey();
-                    result.add(script.getToAddress(Constants.NETWORK_PARAMETERS, true));
-                }
-            } catch (final ScriptException x) {
-                // swallow
-            }
-        }
-
-        return result;
-    }
-
-    public static List<Address> getToAddressOfSent(final Transaction tx, final Wallet wallet) {
-        List<Address> result = new ArrayList<>();
-
-        for (TransactionOutput output : tx.getOutputs()) {
-            try {
-                if (!output.isMine(wallet)) {
-                    final Script script = output.getScriptPubKey();
-                    result.add(script.getToAddress(Constants.NETWORK_PARAMETERS, true));
-                }
-            } catch (final ScriptException x) {
-                // swallow
-            }
-        }
-
-        return result;
-    }
-
-
-    public static boolean isEntirelySelf(final Transaction tx, final Wallet wallet) {
-        for (final TransactionInput input : tx.getInputs()) {
-            final TransactionOutput connectedOutput = input.getConnectedOutput();
-            if (connectedOutput == null || !connectedOutput.isMine(wallet))
-                return false;
-        }
-
-        for (final TransactionOutput output : tx.getOutputs()) {
-            if (!output.isMine(wallet))
-                return false;
-        }
-
-        return true;
     }
 
     public static Wallet restoreWalletFromProtobufOrBase58(final InputStream is,
@@ -462,7 +379,7 @@ public class WalletUtils {
         DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
         format.setTimeZone(tz);
         for (Transaction tx : txList) {
-            if (isEntirelySelf(tx, wallet))
+            if (TransactionUtils.INSTANCE.isEntirelySelf(tx, wallet))
                 continue;
             Coin value = tx.getValue(wallet);
 

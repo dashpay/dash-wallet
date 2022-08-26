@@ -28,6 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.ui.radio_group.*
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
 import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
@@ -47,8 +48,7 @@ import javax.inject.Inject
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class FiltersDialog: OffsetDialogFragment() {
-    override val background: Int
-        get() = R.drawable.primary_background_rounded
+    override val backgroundStyle = R.style.PrimaryBackground
 
     private val radiusOptions = listOf(1, 5, 20, 50)
     private var selectedRadiusOption: Int = ExploreViewModel.DEFAULT_RADIUS_OPTION
@@ -194,7 +194,7 @@ class FiltersDialog: OffsetDialogFragment() {
 
             val optionNames = binding.root.resources.getStringArray(
                 if (viewModel.isMetric) R.array.radius_filter_options_kilometers else R.array.radius_filter_options_miles
-            ).map { IconifiedViewItem(it) }
+            ).map { IconifiedViewItem(it, "") }
 
             val radiusOption = selectedRadiusOption
             val adapter = RadioGroupAdapter(radiusOptions.indexOf(radiusOption)) { _, optionIndex ->

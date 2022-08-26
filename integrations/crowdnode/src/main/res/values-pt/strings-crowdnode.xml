@@ -39,7 +39,6 @@
     <string name="privacy_policy">Política de Privacidade</string>
     <string name="crowdnode_account_ready">Sua conta CrowdNode está configurada e pronta para uso!</string>
     <string name="notify_when_done">Fechar e notificar quando finalizar</string>
-    <string name="crowdnode_creating">Sua conta CrowdNode está sendo criada…</string>
     <string name="accepting_terms">Aceitando os termos de uso…</string>
     <string name="crowdnode_signup_error">Não foi possível criar sua conta CrowdNode.</string>
     <string name="crowdnode_deposit_error">Não foi possível fazer um depósito na sua conta CrowdNode.</string>
@@ -58,12 +57,11 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ Carteira Dash</string>
     <string name="online_account">Conta on-line</string>
     <string name="online_account_create">Criar conta online</string>
-    <string name="secure_online_account">Proteja seus ganhos</string>
     <string name="crowdnode_support">Suporte CrowdNode</string>
     <string name="unlink_account">Desvincular Conta</string>
     <string name="online_account_title">Por que você precisa de uma conta online?</string>
     <string name="crowdnode_online_synced">Sincronizado com a Carteira Dash atual</string>
-    <string name="crowdnode_in_process">Processando…</string>
+    <string name="crowdnode_in_process">Processando...</string>
     <string name="account_recovery">Recuperação de Conta</string>
     <string name="crowdnode_recovery_info">Se você perder sua frase de recuperação, poderá ser verificado por outros meios para recuperar o acesso aos seus fundos do CrowdNode.</string>
     <string name="transaction_history">Histórico de Transações</string>
@@ -71,7 +69,6 @@
     <string name="payout_options">Opções de Pagamento</string>
     <string name="payout_options_details">Você pode alterar como / quando seus ganhos de recompensa serão pagos.</string>
     <string name="crowdnode_balance">Saldo no CrowdNode</string>
-    <string name="crowdnode_your_address_title">Aqui está o endereço do Dash que você usou na integração com o CrowdNode</string>
     <string name="chain_syncing">A cadeia está sendo sincronizada…</string>
     <string name="crowdnode_wait_for_sync">Aguarde até que a cadeia esteja totalmente sincronizada para que possamos revisar seu histórico de transações. Visite o site do CrowdNode para fazer login ou se inscrever.</string>
     <string name="crowdnode_open_website">Acesse o site do CrowdNode</string>
@@ -104,6 +101,4 @@
     <string name="crowdnode_online_account_details_title">Informações sobre sua conta online</string>
     <string name="crowdnode_online_account_details_primary">Seu endereço primário Dash que você usa atualmente para sua conta CrowdNode</string>
     <string name="crowdnode_online_account_details_api">Endereço Dash designado para sua conta CrowdNode na Carteira Dash neste dispositivo</string>
-    <string name="crowdnode_reset_address">Redefinir Endereço</string>
-
     </resources>

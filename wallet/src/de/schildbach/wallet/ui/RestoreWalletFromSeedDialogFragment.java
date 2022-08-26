@@ -39,6 +39,7 @@ import android.widget.TextView;
 import org.bitcoinj.crypto.MnemonicException;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.util.KeyboardUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +56,6 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.main.WalletActivity;
 import de.schildbach.wallet.util.Crypto;
-import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -152,7 +152,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
         passwordView.post(new Runnable() {
             @Override
             public void run() {
-                KeyboardUtil.showSoftKeyboard(getActivity(), passwordView);
+                KeyboardUtil.Companion.showSoftKeyboard(getActivity(), passwordView);
             }
         });
         passwordView.addTextChangedListener(new TextWatcher() {

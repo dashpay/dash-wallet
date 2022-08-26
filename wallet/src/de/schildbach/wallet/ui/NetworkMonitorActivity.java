@@ -29,10 +29,12 @@ import androidx.fragment.app.FragmentStatePagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 
 import de.schildbach.wallet_test.R;
+import kotlinx.coroutines.FlowPreview;
 
 /**
  * @author Andreas Schildbach
  */
+@FlowPreview
 public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
 
     private PeerListFragment peerListFragment;
@@ -63,7 +65,7 @@ public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
 
             pager.setAdapter(pagerAdapter);
             pager.setPageMargin(2);
-            pager.setPageMarginDrawable(R.color.background_primary_light);
+            pager.setPageMarginDrawable(R.color.background_primary);
             pager.addOnPageChangeListener(onPageChangeListener);
 
             peerListFragment = new PeerListFragment();

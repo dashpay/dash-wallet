@@ -17,7 +17,7 @@
     <string name="wallet_address_dialog_fragment_hint">Gizliliğinizi korumak için, adresiniz bir ödeme aldığında değiştirilecektir.</string>
     <string name="wallet_balance_fragment_too_much">Bu miktar cebinizde taşımak için oldukça fazladır. Bir miktarını daha güvenli bir yere aktarınız.</string>
     <string name="wallet_balance_fragment_replaying">Tekrar süresince bakiye kullanılamaz</string>
-    <string name="exchange_rates_activity_title">Yerel Para Birimi</string>
+    <string name="exchange_rates_activity_title">Yerel para birimi</string>
     <string name="exchange_rates_fragment_empty_text">Döviz kurları yüklenemedi.</string>
     <string name="exchange_rates_fragment_empty_search">Döviz kuru bulunamadı.</string>
     <string name="exchange_rates_fragment_default">(varsayılan)</string>
@@ -88,7 +88,7 @@
     <string name="send_coins_options_fee_category_economic">Ekonomik</string>
     <string name="send_coins_options_fee_category_priority">Öncelikli</string>
     <string name="send_coins_options_empty">Boş cüzdan</string>
-    <string name="sweep_wallet_activity_title">Özel Anahtarı İçe Aktar</string>
+    <string name="sweep_wallet_activity_title">Özel anahtar içeri al</string>
     <string name="sweep_wallet_fragment_intro">Bir kupon veya kağıt cüzdan taramak üzeresiniz. Tarama yaptığınız takdirde, buradaki tüm Dash\'ler cihazınızdaki cüzdana taşıyanacaktır. İşlem onaylandığında, kağıt cüzdanın veya kuponun hiçbir değeri kalmayacaktır ve güvenlik nedenlerinden dolayı tekrar kullanılmamalıdır.</string>
     <string name="sweep_wallet_fragment_hint">Kağıt cüzdanlar genelde soğuk depolama için kullanılır. Bazı ATMler Dashleri doğrudan mobil cihazınıza yollamak yerine kağıt çıktısına yazar. Bazı kişiler önceden doldurulmuş kağıt cüzdanları para aktarmak için kullanırlar (bu tavsiye edilmez).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Kağıt cüzdanın özel anahtarını tarayarak başlayın. Kamera butonunu kullanın.</string>
@@ -154,8 +154,8 @@
     <string name="transaction_row_message_received_dust">Bu düşük miktar muhtemelen hiçbir zaman ekonomik olarak harcanılamayacaktır.</string>
     <string name="transaction_row_message_received_pay_to_many">Bu ödeme sizinkiyle beraber birçok cüzdana ödeme yapmaktadır ve bu uygulamanın zamanla yavaşlamasına yol açar. Mümkünse sadece size ödeme yapan ödeme almaya çalışın.</string>
     <string name="transaction_row_message_received_rbf">Bu ödeme geçikti çünkü gönderen güvenli olmayan bir işlem türü kullanmıştır.</string>
-    <string name="transaction_row_status_received">Alınan</string>
-    <string name="transaction_row_status_sent">Gönderilen</string>
+    <string name="transaction_row_status_received">Alındı</string>
+    <string name="transaction_row_status_sent">Gönderildi</string>
     <string name="transaction_row_status_sending">Gönderiliyor</string>
     <string name="transaction_row_status_sent_internally">Dahili</string>
     <string name="transaction_row_status_processing">İşleniyor</string>
@@ -279,10 +279,8 @@
     <string name="preferences_show_disclaimer_title">Sorumluluk reddi beyanını göster</string>
     <string name="preferences_show_disclaimer_summary">Güvenlik notlarını gerçekten okudun mu? Cüzdanını güvenli bir yere yedekledin mi?</string>
     <string name="preferences_report_issue_title">Sorun rapor et</string>
-    <string name="preferences_initiate_reset_title">Blok zincirini yeniden başlat</string>
-    <string name="preferences_initiate_reset_summary">Blok zincirini, işlemleri ve cüzdan bakiyesini yeniden başlat. Eski haline gelmesi vakit alacaktır, bu yüzden bunu neden yaptığınızı biliyorsanız yapınız.</string>
-    <string name="preferences_initiate_reset_dialog_message">Blok zincirini yeniden başlatıp tekrar yüklenmesini ister misiniz?\n\nBu geçici olarak bakiyenizi gizler ve işlemlerinizi kaldırır. Blok zinciri senkronize oldukça ikiside yeniden gösterilecektir. Güvenilir bir internet bağlantınız olduğundan emin olun.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Yeniden Başlat</string>
+    <string name="preferences_initiate_reset_title">Blok zincirini tekrar tara</string>
+    <string name="preferences_initiate_reset_dialog_positive">Yeniden tara</string>
     <string name="preferences_extended_public_key_title">xpub\'ı göster</string>
     <string name="preferences_extended_public_key_summary">Başka uygulama ve servislere iç aktarım yapılabilmesi için cüzdanınızın genişletilmiş genel anahtarını gösterir. Dikkatli olun: bunu yapmanız parasal gizliliğinizi o uygulamaya ifşa edecektir.</string>
     <string name="bitmap_fragment_share">Paylaş…</string>
@@ -334,7 +332,7 @@
     <string name="appwidget_wallet_balance_title">Dash bakiyesi</string>
 
     <!-- generic buttons -->
-    <string name="button_ok">Tamam</string>
+    <string name="button_ok">TAMAM</string>
     <string name="button_dismiss">Son Ver</string>
     <string name="button_cancel">İptal et</string>
     <string name="button_help">Yardım</string>
@@ -384,9 +382,8 @@
     <string name="payment_protocol_insufficient_funds_error_message">Bu işlemi gerçekleştirmek için yeterli bakiyeniz yoktur</string>
 
 
-
     <string name="select_a_service">Bir Hizmet Seçin</string>
     <string name="activity_buy_and_sell_dash_filter">Filtre</string>
     <string name="clear_filter">Filtreyi sıfırla</string>
     <string name="select_currency">Para Birimini Seçin</string>
-</resources>
+    </resources>

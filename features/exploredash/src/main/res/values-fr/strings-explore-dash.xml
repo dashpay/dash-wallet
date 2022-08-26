@@ -24,7 +24,6 @@
     <string name="explore_atms_title">Distributeurs d\'espèces</string>
     <string name="explore_atms_subtitle">Trouvez où acheter ou vendre des dashs et d\'autres cryptomonnaies, contre des espèces.</string>
     <string name="explore_staking_subtitle">Percevez facilement des gains Dash et gagnez un revenu passif après quelques simples clics.</string>
-
     <!-- Search -->
     <string name="explore_search_results">Résultats de la recherche</string>
     <string name="explore_physical_merchant">Vendeur physique</string>
@@ -47,15 +46,15 @@
     <string name="distance_kilometers">%s kilomètres</string>
 
     <plurals name="explore_merchant_amount">
-        <item quantity="one">%d vendeur</item>
+        <item quantity="one">%d vendeurs</item>
         <item quantity="many">%d vendeurs</item>
         <item quantity="other">%d vendeurs</item>
     </plurals>
 
     <plurals name="explore_atm_amount">
-        <item quantity="one">%d distributeur ATM</item>
-        <item quantity="many">%d distributeurs ATM</item>
-        <item quantity="other">%d distributeurs ATM</item>
+        <item quantity="one">%d distributeurs</item>
+        <item quantity="many">%d distributeurs</item>
+        <item quantity="other">%d distributeurs</item>
     </plurals>
 
     <!-- Details -->
@@ -126,7 +125,7 @@
     </plurals>
 
     <plurals name="radius_kilometers">
-        <item quantity="one">%d kilomètre</item>
+        <item quantity="one">%d kilomètres</item>
         <item quantity="many">%d kilomètres</item>
         <item quantity="other">%d kilomètres</item>
     </plurals>

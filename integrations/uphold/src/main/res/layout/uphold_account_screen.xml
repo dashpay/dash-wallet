@@ -18,7 +18,7 @@
 
         <TextView
             android:id="@+id/uphold_logout"
-            style="@style/MontserratMedium"
+            style="@style/Body2.Medium.White"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_gravity="end"
@@ -28,15 +28,14 @@
             android:gravity="center_vertical"
             android:paddingLeft="16dp"
             android:paddingRight="16dp"
-            android:text="@string/uphold_logout"
-            android:textSize="14sp" />
+            android:text="@string/uphold_logout" />
 
     </androidx.appcompat.widget.Toolbar>
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/background_primary_light"
+        android:background="@color/background_primary"
         android:orientation="vertical"
         tools:ignore="MissingDefaultResource">
 
@@ -84,21 +83,19 @@
 
             <org.dash.wallet.common.ui.CurrencyTextView
                 android:id="@+id/uphold_account_balance"
-                style="@style/MontserratRegular"
+                style="@style/Headline5.Regular.Blue"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_marginLeft="8dp"
                 android:includeFontPadding="false"
-                android:textColor="@color/colorPrimary"
-                android:textSize="26sp"
                 tools:text="0.00" />
 
         </LinearLayout>
 
         <Button
             android:id="@+id/uphold_buy_dash_btn"
-            style="@style/DashButton.White"
+            style="@style/Button.Tertiary.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
@@ -108,7 +105,7 @@
 
         <Button
             android:id="@+id/uphold_transfer_to_this_wallet_button"
-            style="@style/DashButton.Blue"
+            style="@style/Button.Primary.Large.Blue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_above="@id/uphold_buy_dash_btn"

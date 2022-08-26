@@ -1,22 +1,28 @@
+<!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:width="22dp"
+    android:height="22dp"
+    android:viewportWidth="22"
+    android:viewportHeight="22">
   <path
-      android:pathData="M12,12m-11.75,0a11.75,11.75 0,1 1,23.5 0a11.75,11.75 0,1 1,-23.5 0"
-      android:strokeAlpha="1"
-      android:strokeWidth="0.50000006"
-      android:fillColor="#00000000"
-      android:strokeColor="#008de4"
-      android:fillAlpha="1"
-      android:strokeLineCap="round"/>
+      android:pathData="M11,0L11,0A11,11 0,0 1,22 11L22,11A11,11 0,0 1,11 22L11,22A11,11 0,0 1,0 11L0,11A11,11 0,0 1,11 0z"
+      android:fillColor="#3CB878"/>
   <path
-      android:pathData="m12.003,18.4472 l5.271,-5.271m-10.5481,0 l5.271,5.271M12,5.554 L12,18.446"
-      android:strokeAlpha="1"
-      android:strokeLineJoin="miter"
-      android:strokeWidth="0.60000014"
-      android:fillColor="#00000000"
-      android:strokeColor="#008de4"
-      android:strokeLineCap="round"/>
+      android:pathData="M11.009,5.5C11.492,5.5 11.865,5.892 11.865,6.376V11.805H13.23C13.625,11.805 13.88,11.957 13.995,12.261C14.11,12.571 14.053,12.886 13.823,13.204L11.592,16.196C11.434,16.399 11.237,16.5 11,16.5C10.756,16.5 10.558,16.399 10.407,16.196L8.177,13.204C7.947,12.9 7.89,12.59 8.004,12.271C8.112,11.961 8.371,11.805 8.78,11.805H10.113V6.376C10.113,5.892 10.525,5.5 11.009,5.5Z"
+      android:fillColor="#ffffff"/>
 </vector>

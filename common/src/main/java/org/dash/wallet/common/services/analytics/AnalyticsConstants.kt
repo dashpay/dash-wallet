@@ -19,19 +19,8 @@ package org.dash.wallet.common.services.analytics
 
 // Event names should be <= 40 chars
 object AnalyticsConstants {
-    object Liquid {
-        const val BUY_SELL_MORE = "more_buy_sell_dash"
-        const val ENTER_CONNECTED = "liquid_enter_connected"
-        const val ENTER_DISCONNECTED = "liquid_enter_disconnected"
-        const val DISCONNECT = "liquid_disconnect"
-        const val SUPPORTED_COUNTRIES = "liquid_country_support_info"
-        const val BUY_DASH = "liquid_buy_dash"
-        const val BUY_CREDIT_CARD = "liquid_buy_with_credit_card"
-        const val WIDGET_QUOTE_CLOSE = "liquid_quote_screen_close"
-        const val WIDGET_QUOTE_BUY = "liquid_quote_screen_buy_with_visa"
-        const val WIDGET_PROCESSING_DURATION = "liquid_processing_duration"
-        const val WIDGET_PROCESSING_CLOSE_TOP_LEFT = "liquid_processing_close_top_left"
-        const val WIDGET_PROCESSING_CLOSE_OVERLAY = "liquid_processing_close_overlay"
+    object Parameters {
+        const val VALUE = "value"
     }
 
     object Uphold {
@@ -41,6 +30,10 @@ object AnalyticsConstants {
         const val LINK_ACCOUNT = "uphold_link_account"
         const val TRANSFER_DASH = "uphold_transfer_dash"
         const val BUY_DASH = "uphold_buy_dash"
+    }
+
+    object MoreMenu {
+        const val BUY_SELL_MORE = "more_buy_sell_dash"
     }
 
     object Security {
@@ -99,7 +92,7 @@ object AnalyticsConstants {
         const val SEND_RECEIVE_BUTTON = "home_send_receive_button"
     }
 
-    object ExploreDash {
+    object Explore {
         const val WHERE_TO_SPEND = "explore__where_to_spend"
         const val PORTAL_ATM = "explore__atms"
         const val LEARN_MORE = "explore_info_learn_more"
@@ -142,8 +135,6 @@ object AnalyticsConstants {
         const val FILTER_MERCHANT_CANCEL_ACTION = "explore_filter_merch_cancel_action"
         const val FILTER_MERCHANT_SWIPE_ACTION = "explore_filter_merch_swipe_action"
 
-        const val FILTER_ATM_SELECT_DASH = "explore_filter_atm_select_dash"
-        const val FILTER_ATM_SELECT_GIFT_CARD = "explore_filter_atm_select_gift_card"
         const val FILTER_ATM_SORT_BY_NAME = "explore_filter_atm_sort_by_name"
         const val FILTER_ATM_SORT_BY_DISTANCE = "explore_filter_atm_sort_by_distance"
         const val FILTER_ATM_CURRENT_LOCATION = "explore_filter_atm_current_location"
@@ -172,28 +163,118 @@ object AnalyticsConstants {
 
     object CrowdNode {
         const val STAKING_ENTRY = "explore__staking"
-        const val WELCOME_DIALOG_CONTINUE = "staking__welcome_modal__b_continue"
-        const val CREATE_NEW_ACCOUNT = "staking__b_create_acc"
-        const val CREATE_ACCOUNT_BUTTON = "staking__new_acc__b_create_acc"
-        const val NOTIFY_WHEN_CREATED = "staking__new_acc__b_close_notify"
-        const val CREATE_ACCOUNT_ERROR_RETRY = "staking__new_acc__dialogue_b_retry"
-        const val CREATE_ACCOUNT_ERROR_CLOSE = "staking__new_acc__dialogue_b_close"
 
-        const val LINK_EXISTING = "staking__b_link_acc"
-        const val LINK_EXISTING_LOGIN_BUTTON = "staking__link_acc__b_login"
-        const val LINK_EXISTING_HOW_TO_CONFIRM = "staking__link_acc__b_how_confirm_api_dash"
-        const val LINK_EXISTING_SHOW_QR = "staking__link_acc__b_show_qr"
-        const val LINK_EXISTING_SHARE_BUTTON = "staking__link_acc__b_share"
+        const val WELCOME_DIALOG_CONTINUE = "staking_cn__welcome_modal__b_continue"
+        const val CREATE_NEW_ACCOUNT = "staking_cn__b_create_acc"
+        const val CREATE_ACCOUNT_BUTTON = "staking_cn__new_acc__b_create_acc"
+        const val NOTIFY_WHEN_CREATED = "staking_cn__new_acc__b_close_notify"
+        const val CREATE_ACCOUNT_ERROR_RETRY = "staking_cn__new_acc__dialogue_b_retry"
+        const val CREATE_ACCOUNT_ERROR_CLOSE = "staking_cn__new_acc__dialogue_b_close"
 
-        const val PORTAL_DEPOSIT = "staking__crowdnode__b_deposit"
-        const val PORTAL_WITHDRAW = "staking__crowdnode__b_withdraw"
-        const val PORTAL_CREATE_ONLINE_ACCOUNT = "staking__crowdnode__b_create_online_acc"
-        const val PORTAL_INFO_BUTTON = "staking__crowdnode__b_info"
-        const val PORTAL_VERIFY = "staking__crowdnode__b_verify"
+        const val LINK_EXISTING = "staking_cn__b_link_acc"
+        const val LINK_EXISTING_LOGIN_BUTTON = "staking_cn__link_acc__b_login"
+        const val LINK_EXISTING_HOW_TO_CONFIRM = "staking_cn__link_acc__b_how_confirm_api"
+        const val LINK_EXISTING_SHOW_QR = "staking_cn__link_acc__b_show_qr"
+        const val LINK_EXISTING_SHARE_BUTTON = "staking_cn__link_acc__b_share"
 
-        const val CREATE_ONLINE_CONTINUE = "staking__crowdnode__online__b_continue"
+        const val PORTAL_DEPOSIT = "staking_cn__b_deposit"
+        const val PORTAL_WITHDRAW = "staking_cn__b_withdraw"
+        const val PORTAL_WITHDRAW_CANCEL = "staking_cn__withdraw__m_b_cancel"
+        const val PORTAL_WITHDRAW_BUY = "staking_cn__withdraw__m_b_buy"
+        const val PORTAL_CREATE_ONLINE_ACCOUNT = "staking_cn__b_create_online_acc"
+        const val PORTAL_INFO_BUTTON = "staking_cn__b_info"
+        const val PORTAL_VERIFY = "staking_cn__b_verify"
 
-        const val LOW_BALANCE_PROCEED = "crowdnode__dialogue_low_balance_proceed"
-        const val LOW_BALANCE_CANCEL = "crowdnode__dialogue_low_balance_cancel"
+        const val CREATE_ONLINE_CONTINUE = "staking_cn__online__b_continue"
+        const val WITHDRAWAL_REQUESTED = "staking_cn__b_withdraw_final"
+        const val DEPOSIT_REQUESTED = "staking_cn__b_deposit_final"
+
+        const val LOW_BALANCE_PROCEED = "staking_cn__dialogue_low_balance_proceed"
+        const val LOW_BALANCE_CANCEL = "staking_cn__dialogue_low_balance_cancel"
+    }
+
+    object Coinbase {
+        const val ENTER_CONNECTED = "coinbase_enter_connected"
+        const val ENTER_DISCONNECTED = "coinbase_enter_disconnected"
+
+        const val BUY_DASH = "coinbase_buy_dash"
+        const val CONVERT_DASH = "coinbase_convert_dash"
+        const val TRANSFER_DASH = "coinbase_transfer_dash"
+        const val DISCONNECT = "coinbase_disconnect"
+
+        const val BUY_CREATE_ACCOUNT = "coinbase_buy_b_create_dash_acc"
+        const val BUY_ADD_PAYMENT_METHOD = "coinbase_buy_b_add_payment_method"
+        const val BUY_CHANGE_PAYMENT_METHOD = "coinbase_buy_b_change_p_method"
+        const val BUY_PAYMENT_METHOD = "coinbase_buy_p_method"
+        const val BUY_ENTER_FIAT = "coinbase_buy_enter_amount_fiat"
+        const val BUY_ENTER_DASH = "coinbase_buy_enter_amount_dash"
+        const val BUY_CHANGE_FIAT_CURRENCY = "coinbase_buy_b_change_fiat_currency" // Currency selector isn't shown in Coinbase atm.
+        const val BUY_CONTINUE = "coinbase_buy_b_continue"
+        const val BUY_AUTH_LIMIT = "coinbase_buy_b_auth_limit"
+
+        const val BUY_QUOTE_TOP_BACK = "coinbase_buy_quote_b_back"
+        const val BUY_QUOTE_ANDROID_BACK = "coinbase_buy_quote_b_back_android"
+        const val BUY_QUOTE_CANCEL = "coinbase_buy_quote_b_cancel"
+        const val BUY_QUOTE_CANCEL_NO = "coinbase_buy_quote_modal_b_no"
+        const val BUY_QUOTE_CANCEL_YES = "coinbase_buy_quote_modal_b_yes"
+        const val BUY_QUOTE_CONFIRM = "coinbase_buy_quote_b_confirm"
+        const val BUY_QUOTE_RETRY = "coinbase_buy_quote_b_retry"
+        const val BUY_QUOTE_FEE_INFO = "coinbase_buy_quote_b_fee_info"
+
+        const val BUY_SUCCESS_CLOSE = "coinbase_buy_success_b_close"
+        const val BUY_ERROR_RETRY = "coinbase_buy_error_b_retry"
+        const val BUY_ERROR_CLOSE = "coinbase_buy_error_b_close"
+
+        // ----------------- TODO: NMA-1209
+        const val SELL_DASH = "coinbase_sell_dash"
+        const val SELL_CREATE_ACCOUNT = "coinbase_sell_b_create_dash_acc"
+        const val SELL_ADD_PAYMENT_METHOD = "coinbase_sell_b_add_p_method"
+        const val SELL_MAX = "coinbase_sell_b_max"
+        const val SELL_CONTINUE = "coinbase_sell_b_get_quote"
+        const val SELL_ENTER_AMOUNT_FIAT = "coinbase_sell_enter_amount_fiat"
+        const val SELL_ENTER_AMOUNT_DASH = "coinbase_sell_enter_amount_dash"
+
+        const val SELL_QUOTE_TOP_BACK = "coinbase_sell_b_back"
+        const val SELL_QUOTE_ANDROID_BACK = "coinbase_sell_b_back_android"
+        const val SELL_QUOTE_CANCEL = "coinbase_sell_preview_b_cancel"
+        const val SELL_QUOTE_CANCEL_NO = "coinbase_sell_preview_modal_b_no"
+        const val SELL_QUOTE_CANCEL_YES = "coinbase_sell_preview_modal_b_yes"
+        const val SELL_QUOTE_CONFIRM = "coinbase_sell_preview_b_confirm"
+        const val SELL_QUOTE_RETRY = "coinbase_sell_preview_b_retry"
+        const val SELL_QUOTE_FEE_INFO = "coinbase_sell_preview_b_fee_info"
+
+        const val SELL_ERROR_RETRY = "coinbase_sell_error_b_retry"
+        const val SELL_ERROR_CLOSE = "coinbase_sell_error_b_close"
+        const val SELL_SUCCESS_CLOSE = "coinbase_sell_success_b_close"
+        // ------------------
+
+        const val CONVERT_SELECT_COIN = "coinbase_convert_b_select_coin"
+        const val CONVERT_BUY_ON_COINBASE = "coinbase_convert_b_buy_on_coinbase"
+        const val CONVERT_CONTINUE = "coinbase_convert_b_get_quote"
+        const val CONVERT_ENTER_DASH = "coinbase_convert_enter_amount_dash"
+        const val CONVERT_ENTER_CRYPTO = "coinbase_convert_enter_amount_crypto"
+        const val CONVERT_ENTER_FIAT = "coinbase_convert_enter_amount_fiat"
+
+        const val CONVERT_QUOTE_TOP_BACK = "coinbase_convert_preview_b_back"
+        const val CONVERT_QUOTE_ANDROID_BACK = "coinbase_convert_preview_b_back_android"
+        const val CONVERT_QUOTE_CONFIRM = "coinbase_convert_preview_b_confirm"
+        const val CONVERT_QUOTE_CANCEL = "coinbase_convert_preview_b_cancel"
+        const val CONVERT_QUOTE_CANCEL_YES = "coinbase_convert_prev_modal_b_yes"
+        const val CONVERT_QUOTE_CANCEL_NO = "coinbase_convert_prev_modal_b_no"
+        const val CONVERT_QUOTE_RETRY = "coinbase_convert_preview_b_retry"
+        const val CONVERT_QUOTE_FEE_INFO = "coinbase_convert_preview_b_fee_info"
+
+        const val CONVERT_SUCCESS_CLOSE = "coinbase_convert_success_b_close"
+        const val CONVERT_ERROR_RETRY = "coinbase_convert_error_b_retry"
+        const val CONVERT_ERROR_CLOSE = "coinbase_convert_error_b_close"
+
+        const val TRANSFER_CONTINUE = "coinbase_transfer_b_transfer"
+        const val TRANSFER_ENTER_DASH = "coinbase_transfer_enter_amount_dash"
+        const val TRANSFER_ENTER_FIAT = "coinbase_transfer_enter_amount_fiat"
+        const val TRANSFER_AUTH_LIMIT = "coinbase_transfer_b_auth_balance"
+
+        const val TRANSFER_SUCCESS_CLOSE = "coinbase_transfer_success_b_close"
+        const val TRANSFER_ERROR_RETRY = "coinbase_transfer_error_b_retry"
+        const val TRANSFER_ERROR_CLOSE = "coinbase_transfer_error_b_close"
     }
 }

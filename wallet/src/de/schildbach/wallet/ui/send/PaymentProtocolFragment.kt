@@ -30,6 +30,7 @@ import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_payment_protocol.*
 import kotlinx.android.synthetic.main.view_payment_request_details.*
@@ -39,6 +40,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.protocols.payments.PaymentProtocolException
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
+import de.schildbach.wallet.ui.CheckPinSharedModel
 import org.dash.wallet.common.ui.BaseLockScreenFragment
 import org.dash.wallet.common.util.GenericUtils
 import org.slf4j.LoggerFactory

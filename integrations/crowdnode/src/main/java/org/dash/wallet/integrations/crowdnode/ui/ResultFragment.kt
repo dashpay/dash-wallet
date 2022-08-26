@@ -69,6 +69,13 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
         binding.subtitle.text = when (ex) {
             is DustySendRequested, is CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
             is InsufficientMoneyException -> ex.message ?: getString(R.string.send_coins_error_insufficient_money)
+            is CrowdNodeException -> {
+                if (ex.message == CrowdNodeException.WITHDRAWAL_ERROR) {
+                    getString(R.string.crowdnode_withdrawal_limits_error)
+                } else {
+                    ex.message ?: ""
+                }
+            }
             else -> ex.message ?: ""
         }
     }
@@ -76,7 +83,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
     private fun setError() {
         binding.icon.setImageResource(R.drawable.ic_error_red)
         binding.title.text = args.title
-        binding.title.setTextAppearance(R.style.Headline5_Bold_Red)
+        binding.title.setTextAppearance(R.style.Headline5_Red)
         binding.subtitle.text = args.subtitle
         binding.sendReportBtn.isVisible = true
         binding.negativeBtn.isVisible = true
@@ -138,7 +145,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
     private fun setSuccess() {
         binding.icon.setImageResource(R.drawable.ic_success_green)
         binding.title.text = args.title
-        binding.title.setTextAppearance(R.style.Headline5_Bold_Green)
+        binding.title.setTextAppearance(R.style.Headline5_Green)
         binding.subtitle.text = args.subtitle
         binding.sendReportBtn.isVisible = false
         binding.negativeBtn.isVisible = false

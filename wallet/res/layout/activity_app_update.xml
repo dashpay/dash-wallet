@@ -52,7 +52,7 @@
 
         <TextView
             android:id="@+id/action_title"
-            style="@style/MontserratMedium.PageTitle"
+            style="@style/Headline6"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/lock_unlock_with_fingerprint"
@@ -60,7 +60,7 @@
 
         <TextView
             android:id="@+id/action_subtitle"
-            style="@style/MontserratMedium.BodyText"
+            style="@style/Body2.Medium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"

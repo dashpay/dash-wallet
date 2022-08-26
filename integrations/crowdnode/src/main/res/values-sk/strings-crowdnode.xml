@@ -19,6 +19,7 @@
     <string name="crowdnode_get_started_hint">Ak chcete začať stávkovať, vytvorte si účet na CrowdNode alebo sa pripojte k existujúcemu účtu.</string>
     <string name="new_account">Nový CrowdNode účet</string>
     <string name="account_create">Vytvoriť účet</string>
+    <string name="account_create_response">Vytvoriť odpoveď účtu</string>
     <string name="account_link">Prepojiť existujúci účet</string>
     <string name="crowdnode_login">Prihláste sa do CrowdNode</string>
     <string name="crowdnode_link">Prepojiť existujúci CrowdNode účet</string>
@@ -39,7 +40,6 @@
     <string name="privacy_policy">Zásady ochrany osobných údajov</string>
     <string name="crowdnode_account_ready">Váš účet CrowdNode je nastavený a pripravený na použitie!</string>
     <string name="notify_when_done">Zatvoriť a upozorniť, keď to bude hotové</string>
-    <string name="crowdnode_creating">Váš CrowdNode účet sa vytvára…</string>
     <string name="accepting_terms">Prijímam podmienky používania…</string>
     <string name="crowdnode_signup_error">Nepodarilo sa nám vytvoriť váš CrowdNode účet.</string>
     <string name="crowdnode_deposit_error">Nepodarilo sa nám uskutočniť vklad na váš CrowdNode účet.</string>
@@ -58,7 +58,6 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
     <string name="online_account">Online účet</string>
     <string name="online_account_create">Vytvoriť online účet</string>
-    <string name="secure_online_account">Chráňte svoje zárobky</string>
     <string name="crowdnode_support">Podpora CrowdNode</string>
     <string name="unlink_account">Odpojiť účet</string>
     <string name="online_account_title">Prečo potrebujete online účet?</string>
@@ -71,8 +70,7 @@
     <string name="payout_options">Možnosti výplaty</string>
     <string name="payout_options_details">Môžete zmeniť spôsob alebo kedy sa vám budú vyplácať vaše zárobky.</string>
     <string name="crowdnode_balance">Zostatok na CrowdNode</string>
-    <string name="crowdnode_your_address_title">Tu je Dash adresa, ktorú ste použili pri integrácii s CrowdNode</string>
-    <string name="chain_syncing">Reťazec sa synchronizuje…</string>
+    <string name="chain_syncing">Reťazec sa synchronizuje...</string>
     <string name="crowdnode_wait_for_sync">Počkajte, kým sa reťazec úplne zosynchronizuje, aby sme mohli skontrolovať vašu históriu transakcií. Pre prihlásenie alebo registráciu navštívte webovú stránku CrowdNode.</string>
     <string name="crowdnode_open_website">Prejdite na webovú stránku CrowdNode</string>
     <string name="crowdnode_info_title">Staňte sa súčasťou Dash Masternode s CrowdNode</string>
@@ -104,6 +102,4 @@
     <string name="crowdnode_online_account_details_title">Informácie o vašom online účte</string>
     <string name="crowdnode_online_account_details_primary">Vaša primárna Dash adresa, ktorú momentálne používate pre svoj účet CrowdNode</string>
     <string name="crowdnode_online_account_details_api">Dash adresa určená pre váš CrowdNode účet v Dash peňaženke na tomto zariadení</string>
-    <string name="crowdnode_reset_address">Resetovať adresu</string>
-
     </resources>

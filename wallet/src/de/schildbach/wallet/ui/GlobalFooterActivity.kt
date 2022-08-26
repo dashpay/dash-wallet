@@ -16,20 +16,20 @@
 
 package de.schildbach.wallet.ui
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.widget.GlobalFooterView
-import de.schildbach.wallet_test.R
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
-
-@SuppressLint("Registered")
+@FlowPreview
 @AndroidEntryPoint
+@ExperimentalCoroutinesApi
 open class GlobalFooterActivity : LockScreenActivity(), GlobalFooterView.OnFooterActionListener {
 
     private lateinit var globalFooterView: GlobalFooterView
@@ -40,12 +40,6 @@ open class GlobalFooterActivity : LockScreenActivity(), GlobalFooterView.OnFoote
     fun setContentViewWithFooter(layoutResId: Int) {
         globalFooterView = GlobalFooterView.encloseContentView(this, layoutResId)
         setContentView(globalFooterView)
-        setupFooter()
-    }
-
-    fun setContentViewFooter(layoutResId: Int) {
-        super.setContentView(layoutResId)
-        globalFooterView = findViewById(R.id.global_footer_view)
         setupFooter()
     }
 

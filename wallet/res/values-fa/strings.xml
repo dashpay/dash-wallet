@@ -79,7 +79,7 @@
     <string name="send_coins_fragment_insufficient_money_msg1"> به میزان %s کمبود موجودی دارید. </string>
     <string name="send_coins_fragment_insufficient_money_msg2">آیا می‌خواهید همه موجودی‌تان را بفرستید؟</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">خالی کردن موجودی کیف پول ناموفق بود</string>
-    <string name="send_coins_fragment_state_decrypting">رمزگشایی...</string>
+    <string name="send_coins_fragment_state_decrypting">در حال رمزگشایی...</string>
     <string name="send_coins_preparation_msg">در حال امضاء کردن تراکنش...</string>
     <string name="send_coins_sending_msg">در حال ارسال...</string>
     <string name="send_coins_sent_msg">ارسال شد!</string>
@@ -225,7 +225,7 @@
     <string name="backup_wallet_dialog_password_mismatch">دو گذرواژه همخوانی ندارند!</string>
     <string name="import_export_keys_dialog_show">نمایش گذرواژه</string>
     <string name="import_export_keys_dialog_failure_title">خطا</string>
-    <string name="import_keys_intent_filter_action">بازگردانی کیف پول</string>
+    <string name="import_keys_intent_filter_action">بازیابی کیف پول</string>
     <string name="encrypt_keys_dialog_title">تغییر پین کد</string>
     <string name="encrypt_keys_dialog_message">پرداخت از کیف پول‌تان فقط پس از وارد کردن رمز انتخابی امکان‌پذیر خواهد شد.</string>
     <string name="encrypt_keys_dialog_warning">توجه: حتما باید این رمز را به خاطر بسپارید. از اعداد رایج (نظیر سال تولد) استفاده نکنید. </string>
@@ -280,10 +280,10 @@
     <string name="preferences_show_disclaimer_title">نشان دادن هشدار</string>
     <string name="preferences_show_disclaimer_summary">آیا واقعا مطالب مربوط به ایمنی را خوانده‌اید؟ آیا از کیف پول‌تان یک نسخه پشتیبان تهیه کرده و در جایی امن از آن نگهداری می‌کنید؟ </string>
     <string name="preferences_report_issue_title">گزارش مشکل</string>
-    <string name="preferences_initiate_reset_title">بازنشانی بلاک چین</string>
-    <string name="preferences_initiate_reset_summary">بازنشانی بلاک چین، تراکنش‌ها و موجودی کیف پول. این فرآیند اعتبارسنجی تراکنش‌ها در بلاک چین ممکن است مدتی طول بکشد. پس فقط در موارد ضروری دست به این کار بزنید.</string>
-    <string name="preferences_initiate_reset_dialog_message">آیا مایلید فرآیند اعتبارسنجی تراکنش‌ها در بلاک چین را آغاز کنید؟ n\n\ این کار سبب می‌شود موجودی کیف پول‌تان به صورت موقت ناپدید شود و تراکنش‌ها حذف شوند. به محض هماهنگی بلاک چین، هر دوی اینها دوباره ظاهر می‌شوند. اطمینان حاصل کنید که به شکلی مستمر به اینترنت متصل خواهید بود. </string>
-    <string name="preferences_initiate_reset_dialog_positive">بازنشانی</string>
+    <string name="preferences_initiate_reset_title">اسکن دوباره بلاکچین</string>
+    <string name="preferences_initiate_reset_summary">بلاکچین، تراکنش‌‌ها و موجودی کیف پول را دوباره اسکن کن. این کار کمی زمان می‌برد، به همین دلیل، اگر واقعا نیاز داشتید این کار را انجام دهید. </string>
+    <string name="preferences_initiate_reset_dialog_message">مایلید بلاکچین را دوباره اسکن کنید؟ \n\n این اقدام موجب می‌شود موجودی‌تان به شکل موقت پنهان شود و تراکنش‌ها نیز حذف شوند. هر دوی اینها پس از پس از تکمیل عملیات همزمان‌سازی بلاکچین بازمی‌گردند. اطمینان یابید اتصال‌تان به اینترنت پایدار است. </string>
+    <string name="preferences_initiate_reset_dialog_positive">اسکن دوباره</string>
     <string name="preferences_extended_public_key_title">نمایش کلید عمومی جامع</string>
     <string name="preferences_extended_public_key_summary">مشاهده کلید عمومی گسترده برای کیف پول‌‌تان: این کلید عمومی را می‌توان به سایر اپلیکیشن‌ها و خدمات نیز ارائه کرد. مراقب باشید: این کار سبب می‌شود حریم خصوصی مالی شما برای آن اپلیکیشن خارجی آشکار شود. </string>
     <string name="bitmap_fragment_share">در حال به اشتراک‌ گذاری...</string>
@@ -385,9 +385,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">موجودی‌تان برای انجام این تراکنش، کافی نیست</string>
 
 
-
+    <string name="select_a_service_to_buy_and_sell_dash">انتخاب یک سرویس برای خرید و فروش دش</string>
     <string name="select_a_service">یک خدمت را انتخاب کنید</string>
     <string name="activity_buy_and_sell_dash_filter">فیلتر</string>
     <string name="clear_filter">حذف فیلتر</string>
     <string name="select_currency">واحد پول‌تان را انتخاب کنید</string>
+    <string name="reason">دلیل</string>
 </resources>

@@ -23,6 +23,7 @@
     <string name="explore_merchants_subtitle">ค้นหาร้าค้าที่ยอมรับการชำระเงินด้วย Dash </string>
     <string name="explore_atms_title">เอทีเอ็ม</string>
     <string name="explore_atms_subtitle">ค้นหาสถานที่ซื้อหรือขาย Dash และ คริปโทเคเรนซีอื่น ๆ เป็นเงินสด</string>
+    <string name="explore_staking_subtitle"> Stake Dash ได้อย่างง่ายดายและได้รับรายได้แบบ passive income ด้วยการคลิกง่ายๆ</string>
     <!-- Search -->
     <string name="explore_search_results">ผลการค้นหา</string>
     <string name="explore_physical_merchant">ร้านค้า</string>
@@ -43,6 +44,14 @@
     <string name="explore_no_atms">ไม่พบเอทีเอ็ม</string>
     <string name="distance_miles">%s ไมล์</string>
     <string name="distance_kilometers">%s กิโลเมตร</string>
+
+    <plurals name="explore_merchant_amount">
+        <item quantity="other">%d ร้านค้า</item>
+    </plurals>
+
+    <plurals name="explore_atm_amount">
+        <item quantity="other">%d เอทีเอ็ม</item>
+    </plurals>
 
     <!-- Details -->
     <string name="explore_back_to_locations">กลับไปยังสถานที่ทั้งหมด</string>
@@ -104,6 +113,14 @@
         <item>ชื่อ</item>
         <item>ระยะทาง</item>
     </string-array>
+
+    <plurals name="radius_miles">
+        <item quantity="other">%d ไมล์</item>
+    </plurals>
+
+    <plurals name="radius_kilometers">
+        <item quantity="other">%d กิโลเมต</item>
+    </plurals>
 
     <!-- Location Permission -->
     <string name="explore_location_allowed">อนุญาติแล้ว</string>

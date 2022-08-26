@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_account">Uphold</string>
+    <string name="uphold_buy_dash_activity_title">Купуйте/продавайте Dash з Uphold</string>
+    <string name="uphold_buy_dash_with_uphold">Купити Dash за допомогою акаунта Uphold</string>
+    <string name="uphold_buy_dash_button">Купити Dash</string>
+    <string name="uphold_transfer_to_this_wallet_button">Переказ з Uphold</string>
+    <string name="uphold_link_account">Прив\'язати акаунт Uphold</string>
+    <string name="uphold_account_dash_balance">Ваш баланс Dash на Uphold складає</string>
+    <string name="uphold_transfer_to_this_wallet">Переказати Dash з Uphold облікового запису на цей гаманець</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">Комісія буде списана із запитаної суми.</string>
+    <string name="uphold_withdrawal_instructions">Вкажіть суму переказу</string>
+    <string name="uphold_withdrawal_success_title">Успішно</string>
+    <string name="uphold_withdrawal_success_message">Ваша транзакція була відправлена ​​і відповідна сума повинна з\'явитися у Вашому гаманці за кілька хвилин.\n\nId транзакції: %s</string>
+    <string name="uphold_otp_dialog_title">Введіть код 2FA нижче</string>
+    <string name="uphold_transfer">Переказати</string>
+    <string name="uphold_see_on_uphold">Переглянути на Uphold</string>
+    <string name="uphold_logout_title">Вийти з Uphold</string>
+    <string name="uphold_logout">Вийти</string>
+    <string name="uphold_logout_explanation_text">Вам також потрібно буде вийти з веб-сайту Uphold за допомогою браузера</string>
+    <string name="uphold_go_to_website">Перейти на сайт</string>
+    <string name="uphold_error">Помилка Uphold</string>
+    <string name="uphold_error_not_logged_in">Dash Wallet більше не пов’язано з вашим обліковим записом Uphold. На наступному екрані натисніть Прив\'язати акаунт Uphold.</string>
+    <string name="uphold_error_not_available">Сервіс Uphold недоступний. Будь ласка, спробуйте пізніше.</string>
+    <string name="uphold_error_report_issue">Повідомте про цю проблему команді підтримки Dash Wallet за допомогою пункту Повідомити про проблему в головному меню.</string>
+
+    <string name="uphold_general_error_title">Помилка</string>
+    <string name="uphold_api_error_title">Помилка Uphold</string>
+    <string name="uphold_api_error_identity">Ваш обліковий запис Uphold ще не підтверджено. Кошти не можна зняти.</string>
+    <string name="uphold_api_error_403_description">Ваш Uphold обліковий запис був позначений для перевірки.\n\nUphold тимчасово заблокував ваш обліковий запис, ви не зможете вивести кошти.\n\n%s</string>
+    <string name="uphold_api_error_403_generic">Найближчим часом Uphold зв\'яжеться з вами для вирішення проблеми.</string>
+    <string name="uphold_api_error_403_due_diligence">Будь ласка, зайдіть у свій обліковий запис Uphold і дайте відповідь на кілька питань про себе.</string>
+    <string name="uphold_api_error_403_identity">Будь ласка, зайдіть у свій обліковий запис Uphold для підтвердження особистості.</string>
+    <string name="uphold_api_error_403_proof_of_address">Будь ласка, зв\'яжіться з Uphold для підтвердження адресних даних.</string>
+
+    <string name="uphold_api_error_400_description">Кошти на Uphold заблоковані на 24 години.\n\nКошти для цієї транзакції стануть доступними через %s.</string>
+    <string name="uphold_api_error_400_locked">Кошти на Uphold (%1$s %2$s) заблоковані на 65 днів.\n\nКошти для цієї транзакції будуть доступні через %3$s.</string>
+    <string name="uphold_api_error_400_tx_insufficentfunds">У вас недостатньо коштів для цієї транзакції</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">Сума транзакції повинна бути менше %s DASH.</string>
+    <string name="uphold_api_error_400_greater_than_or_equal_to">Сума транзакції повинна бути більше %s DASH.</string>
+    <string name="uphold_api_error_400_tx_validation">Неможливо переказати таку велику суму через програму (максимум $3000)</string>
+    <string name="uphold_api_error_400_password_reset">Кошти на Uphold заблоковані через нещодавню зміну пароля.\n\nПерш ніж переказувати кошти, потрібно почекати до %s.</string>
+    <string name="uphold_api_error_400_authentication_change">Кошти на Uphold заблоковані через нещодавню зміну способу автентифікації.\n\nПерш ніж переказувати кошти, потрібно почекати до %s.</string>
+
+    <string name="uphold_api_error_400_invalid_beneficiary">Неможливо переказати таку велику суму через додаток (максимум $3000)\n\nБудь ласка, скористайтесь для переказу акаунтом Uphold.</string>
+    <string name="uphold_api_error_400_required">Неможливо переказати таку велику суму через додаток (максимум $3000)\n\nБудь ласка, скористайтесь для переказу акаунтом Uphold.</string>
+
+    <string name="uphold_requirement_not_met_base_message">На даний момент виконати цю операцію неможливо. %s</string>
+</resources>

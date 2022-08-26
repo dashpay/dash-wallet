@@ -17,13 +17,11 @@
 
     <TextView
         android:id="@+id/peer_list_row_ip"
-        style="@style/MontserratMedium"
+        style="@style/Body2.Medium"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:lines="1"
-        android:textColor="@color/dash_black"
-        android:textSize="15sp"
         app:layout_constraintEnd_toStartOf="@id/peer_list_row_height"
         app:layout_constraintHorizontal_bias="0"
         app:layout_constraintStart_toStartOf="parent"
@@ -32,35 +30,29 @@
 
     <TextView
         android:id="@+id/peer_list_row_height"
-        style="@style/MontserratRegular"
+        style="@style/Overline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/dash_black"
-        android:textSize="12sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/peer_list_row_ip"
         tools:text="935826 blocks" />
 
     <TextView
         android:id="@+id/peer_list_row_version"
-        style="@style/MontserratRegular"
+        style="@style/Overline.Tertiary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:textColor="@color/gray"
-        android:textSize="12sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/peer_list_row_height"
         tools:text="/Dash Core:0.12.3.2/\nprotocol: 70210" />
 
     <TextView
         android:id="@+id/peer_list_row_ping"
-        style="@style/MontserratRegular"
+        style="@style/Overline.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="1dp"
-        android:textColor="@color/gray"
-        android:textSize="12sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/peer_list_row_version"
         tools:text="123 ms" />

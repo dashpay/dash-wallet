@@ -24,7 +24,6 @@
     <string name="explore_atms_title">Caixas Eletrônicos</string>
     <string name="explore_atms_subtitle">Encontre onde comprar ou vender DASH e outras criptomoedas por dinheiro.</string>
     <string name="explore_staking_subtitle">Realize facilmente operações de stake no Dash e ganhe renda passiva com apenas alguns cliques.</string>
-
     <!-- Search -->
     <string name="explore_search_results">Procurar resultados</string>
     <string name="explore_physical_merchant">Comércio Físico</string>
@@ -53,9 +52,9 @@
     </plurals>
 
     <plurals name="explore_atm_amount">
-        <item quantity="one">%d Caixa Eletrônico</item>
-        <item quantity="many">%d Caixas Eletrônicos</item>
-        <item quantity="other">%d Caixas Eletrônicos</item>
+        <item quantity="one">%d caixa eletrônico</item>
+        <item quantity="many">%d caixas eletrônicos</item>
+        <item quantity="other">%d caixas eletrônicos</item>
     </plurals>
 
     <!-- Details -->
@@ -121,13 +120,13 @@
 
     <plurals name="radius_miles">
         <item quantity="one">%d milha</item>
-        <item quantity="many">%d milha</item>
+        <item quantity="many">%d milhas</item>
         <item quantity="other">%d milhas</item>
     </plurals>
 
     <plurals name="radius_kilometers">
         <item quantity="one">%d quilômetro</item>
-        <item quantity="many">%d quilômetro</item>
+        <item quantity="many">%d quilômetros</item>
         <item quantity="other">%d quilômetros</item>
     </plurals>
 

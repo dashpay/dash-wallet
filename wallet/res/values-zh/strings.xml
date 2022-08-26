@@ -62,7 +62,7 @@
     <string name="send_coins_fragment_receiving_address_complex">复杂\n地址</string>
     <string name="send_coins_fragment_pending">(%s 正在等待确认)</string>
     <string name="send_coins_fragment_amount_label">要发送的数额</string>
-    <string name="send_coins_fragment_pin_label">输入PIN</string>
+    <string name="send_coins_fragment_pin_label">输入 PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">将支付 %s 的网络费用.</string>
     <string name="send_coins_fragment_hint_fee_priority">将支付 %s 作为优先确认费用. 如果您不在意些许的手续费, 使用\'优先确认\'可以使您的交易尽快完成确认.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">您钱包中的微小付款金额无法达到可支付的金额.</string>
@@ -84,7 +84,7 @@
     <string name="send_coins_sent_msg">已发送!</string>
     <string name="send_coins_failed_msg">失败!</string>
     <string name="send_coins_error_msg">支付Dash时出现了问题!</string>
-    <string name="send_coins_options_fee_category">手续费</string>
+    <string name="send_coins_options_fee_category">费用</string>
     <string name="send_coins_options_fee_category_economic">经济的</string>
     <string name="send_coins_options_fee_category_priority">优先级</string>
     <string name="send_coins_options_empty">清空钱包</string>
@@ -142,7 +142,7 @@
     <string name="edit_address_book_entry_dialog_address_label">地址</string>
     <string name="edit_address_book_entry_dialog_label_label">名称</string>
     <string name="edit_address_book_entry_dialog_button_edit">保存</string>
-    <string name="transaction_row_fee">网络手续费</string>
+    <string name="transaction_row_fee">网络费用</string>
     <string name="transaction_row_message_purpose_key_rotation">该项交易能加强您的钱包安全性, 防止被盗. &lt;u&gt;更多信息.&lt;/u&gt;</string>
     <string name="transaction_row_message_purpose_raise_fee">由于此前的支付, 本次交易会增加网络费用</string>
     <string name="transaction_row_message_own_unbroadcasted">此项支付尚未传输.</string>
@@ -279,10 +279,8 @@
     <string name="preferences_show_disclaimer_title">显示免责声明</string>
     <string name="preferences_show_disclaimer_summary">您是否仔细阅读了安全须知? 并且已经妥善备份了您的钱包?</string>
     <string name="preferences_report_issue_title">报告问题</string>
-    <string name="preferences_initiate_reset_title">重置区块链 (blockchain)</string>
-    <string name="preferences_initiate_reset_summary">重置区块链, 交易, 以及钱包余额. 此步骤需要等待一段时间, 使用前请务必了解此功能用途.</string>
-    <string name="preferences_initiate_reset_dialog_message">您是否想重置区块链?/n/n这样做会暂时隐藏您的钱包余额和交易记录. 区块链同步完成后会恢复. 请确保您已联入了可靠的网络.</string>
-    <string name="preferences_initiate_reset_dialog_positive">重置</string>
+    <string name="preferences_initiate_reset_title">重新扫描区块链</string>
+    <string name="preferences_initiate_reset_dialog_positive">重新扫描</string>
     <string name="preferences_extended_public_key_title">显示xpub</string>
     <string name="preferences_extended_public_key_summary">浏览您钱包的公钥, 这样可以将其导入其他程序或服务中. 请注意: 如此做会对其他程序暴露您的财政隐私.</string>
     <string name="bitmap_fragment_share">分享...</string>
@@ -334,7 +332,7 @@
     <string name="appwidget_wallet_balance_title">Dash余额</string>
 
     <!-- generic buttons -->
-    <string name="button_ok">好</string>
+    <string name="button_ok">确定</string>
     <string name="button_dismiss">忽略</string>
     <string name="button_cancel">取消</string>
     <string name="button_help">帮助</string>
@@ -384,9 +382,8 @@
     <string name="payment_protocol_insufficient_funds_error_message">您没有足够的资金来完成此次交易</string>
 
 
-
     <string name="select_a_service">选择服务</string>
     <string name="activity_buy_and_sell_dash_filter">过滤</string>
     <string name="clear_filter">清除过滤</string>
     <string name="select_currency">选择货币</string>
-</resources>
+    </resources>

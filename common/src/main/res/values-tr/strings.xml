@@ -11,7 +11,9 @@
     <string name="buy_dash">Dash Al</string>
     <string name="copied">Kopyalandı</string>
     <string name="staking_title">Staking</string>
-
+    <string name="email">E-Posta</string>
+    <string name="email_placeholder">Örneğin. johndoe@mail.com</string>
+    <string name="error">Hata</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Lirası</string>
     <!-- Local Currency List: JEP -->
@@ -31,7 +33,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Doları</string>
 
-    <!-- Generic Titles/Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Son Ver</string>
     <string name="network_unavailable_return">Cüzdan\'a Dön</string>
     <string name="button_continue">Devam</string>
@@ -44,14 +46,18 @@
     <string name="button_okay">Tamam</string>
     <string name="button_share">Paylaş</string>
     <string name="verify">Onayla</string>
-    <string name="error">Hata</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Ara</string>
     <string name="permission_allow">İzin ver</string>
     <string name="permission_deny">Reddet</string>
     <string name="max">Maksimum</string>
+    <string name="dash">Dash</string>
     <string name="select_currency">Para Birimini Seçin</string>
     <string name="send_coins_error_dusty_send">Bu miktar göndermek için çok düşüktür</string>
     <string name="send_coins_error_insufficient_money">Yetersiz bakiye</string>
+
+    <string name="empty_wallet_warning_title">Dash Cüzdanınızı boşaltıyor gibisiniz</string>
+    <string name="empty_wallet_crowdnode_warning">Bakiyenizi 0.0003 Dash\'in üstüne çıkmadan CrowdNode\'dan bu cüzdana para çekemeyeceğinizi lütfen unutmayın.</string>
+    <string name="syncing">Senkronize ediliyor</string>
 </resources>

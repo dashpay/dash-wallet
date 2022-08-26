@@ -53,7 +53,7 @@
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">مسح للإرسال</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
-    <string name="lock_enter_pin">أدخل الرمز السري</string>
+    <string name="lock_enter_pin">أدخل الرقم السري</string>
     <string name="lock_unlock_with_fingerprint">استخدم بصمتك للفتح</string>
 
     <string name="perm_lock_info">المحفظة مقفلة بشكل دائم</string>
@@ -149,6 +149,33 @@
     <string name="wallet_last_attempt">آخر محاولة رقم التعريف الشخصي</string>
     <string name="wallet_last_attempt_message">ستتطلب المحاولة الفاشلة الأخرى عبارة المرور الخاصة بي لاستعادة محفظتي</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="zero">%dالمحاولات المتبقية</item>
+        <item quantity="one">%dالمحاولات المتبقية</item>
+        <item quantity="two">%dالمحاولات المتبقية</item>
+        <item quantity="few">%dالمحاولات المتبقية</item>
+        <item quantity="many">%dالمحاولات المتبقية</item>
+        <item quantity="other">%dالمحاولات المتبقية</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="zero">دقائق</item>
+        <item quantity="one">دقائق</item>
+        <item quantity="two">دقائق</item>
+        <item quantity="few">دقائق</item>
+        <item quantity="many">دقائق</item>
+        <item quantity="other">دقائق</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="zero">ساعات</item>
+        <item quantity="one">ساعات</item>
+        <item quantity="two">ساعات</item>
+        <item quantity="few">ساعات</item>
+        <item quantity="many">ساعات</item>
+        <item quantity="other">ساعات</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">ترقية</string>
     <string name="encrypt_new_key_chain_dialog_title">ترقية محفظتك</string>
     <string name="encrypt_new_key_chain_dialog_message">ستتم تحديث محفظتك لدعم الاستيراد والتصدير إلى المزيد من التطبيقات.</string>
@@ -167,6 +194,8 @@
     <string name="notification_transactions_channel_description">تلقي تنبيهات حول المعاملات الواردة.</string>
     <string name="notification_synchronization_channel_name">التزامن</string>
     <string name="notification_synchronization_channel_description">يعرض إشعارًا عندما يكون التطبيق متزامنًا مع الشبكة.</string>
+    <string name="notification_generic_channel_name">الاشعارات العامة</string>
+    <string name="notification_generic_channel_description">أحداث محفظة داش الأخرى</string>
     <string name="notification_push_channel_name">الاشعارات المنبثقة</string>
     <string name="notification_push_channel_description">تظهر الاشعارات المنبثقة المرسلة لك من قبل داش</string>
     <string name="notification_settings_title">الاشعارات</string>
@@ -229,7 +258,6 @@
     <string name="transaction_details_received_at">تم الاستلام في</string>
     <string name="transaction_details_moved_from">تم النقل من</string>
     <string name="transaction_details_moved_internally_to">تم النقل الداخلي إلى</string>
-
     <string name="authenticate_fingerprint_title">المصادقة</string>
     <string name="authenticate_fingerprint_message">تأكيد بصمة الإصبع للمتابعة</string>
     <string name="authenticate_pin_message">أدخل الرقم السري للمتابعة</string>
@@ -276,7 +304,7 @@
     <string name="scan_private_key_intro_1">أنت على وشك مسح الأموال من محفظة أوراق داش.</string>
     <string name="scan_private_key_intro_2">سيؤدي هذا إلى نقل جميع العملات المعدنية من تلك المحفظة إلى محفظتك على هذا الجهاز.</string>
     <string name="scan_private_key_intro_3">عندما يتم تأكيد المعاملة ، ستكون المحفظة الأخرى عديمة القيمة ويجب عدم إعادة استخدامها لأسباب تتعلق بالسلامة.</string>
-    <string name="confirm">تأكيد</string>
+    <string name="confirm">تأكد</string>
 
     <string name="advanced_security_security_level">مستوى الأمان</string>
     <string name="auto_logout">تسجيل الخروج التلقائي</string>
@@ -339,7 +367,6 @@
 
     <string name="syncing">يتم المزامنة</string>
     <string name="syncing_balance">يتم مزامنة الرصيد ...</string>
-
     <string name="all_transactions">الكل</string>
     <string name="received_transactions">تم الاستلام</string>
     <string name="sent_transactions">أرسلت </string>
@@ -349,6 +376,13 @@
     <string name="wallet_encryption_error_message">هناك مشكلة في إنشاء المحفظة. يرجى إبلاغ مكتب الدعم بهذا.</string>
     <string name="wallet_not_encrypted_error_message">توجد مشكلة في محفظتك.\n\nإذا لم يكن لديك داش في هذه المحفظة ، فقم بإلغاء تثبيت هذا التطبيق وإعادة تثبيته. ثم أنشئ محفظة جديدة. \n\nإذا كانت لديك عبارة استرداد أو ملف نسخ احتياطي ، فقم بإلغاء تثبيت هذا التطبيق وإعادة تثبيته.\n\nوإلا ، يرجى إبلاغ مكتب الدعم.</string>
 
+    <string name="reset_wallet_title">هل أنت متأكد أنك تريد إعادة تعيين المحفظة؟</string>
+    <string name="reset_wallet_message">إذا قمت بإعادة ضبط محفظتك ، فإن الطريقة الوحيدة للوصول إليها هي استرداد المحفظة باستخدام عبارة الاسترداد.</string>
+    <string name="positive_reset_text">نعم ، أعد تعيين المحفظة</string>
+    <string name="launch_reset_wallet_title">لديك رصيد إيجابي</string>
+    <string name="launch_reset_wallet_message">إذا قمت بإعادة تعيين محفظتك ، فستفقد جميع أموالك إذا لم تقم بعمل نسخة احتياطية من عبارة الاسترداد الخاصة بك.</string>
     <string name="continue_reset">استمر</string>
+    <string name="launch_reset_wallet_extra_message">نسخة احتياطية من عبارة الاسترداد الخاصة بك</string>
+    <string name="start_reset_wallet_title">قد تفقد %s </string>
     <string name="reset_wallet_text">إعادة تعيين المحفظة</string>
-</resources>
+    </resources>

@@ -237,6 +237,14 @@
     <string name="view_seed_done">Done</string>
     <string name="view_seed_title">Recovery Phrase</string>
     <string name="transaction_result_view_on_explorer">View in Block Explorer</string>
+    <string name="transaction_result_tax_category">Tax Category</string>
+    <string name="transaction_result_tax_category_loading">Loading...</string>
+    <string-array name="transaction_result_tax_categories">
+        <item>Income</item>
+        <item>Expense</item>
+        <item>Transfer-in</item>
+        <item>Transfer-out</item>
+    </string-array>
     <string name="transaction_result_paid_successfully">Sent successfully</string>
     <string name="transaction_result_sent_to">Sent to</string>
     <string name="transaction_date_and_time">Date</string>
@@ -248,6 +256,7 @@
     <string name="transaction_details_received_at">Received at</string>
     <string name="transaction_details_moved_from">Moved from</string>
     <string name="transaction_details_moved_internally_to">Internally moved to</string>
+    <string name="transaction_failed_details">Transaction failed</string>
 
     <string name="authenticate_fingerprint_title">Authenticate</string>
     <string name="authenticate_fingerprint_message">Confirm fingerprint to continue</string>
@@ -257,6 +266,9 @@
 
     <string name="menu_buy_and_sell_title">Buy &amp; Sell Dash</string>
     <string name="menu_buy_and_sell_subtitle">Connect with third party exchanges</string>
+    <string name="liquid" translatable="false">Liquid</string>
+    <string name="liquid_unavailable">Liquid integration with Dash Wallet is no longer available</string>
+    <string name="liquid_unavailable_details">If you have any questions regarding your Dash holdings at Liquid, please contact Liquid support center</string>
     <string name="menu_security_title">Security</string>
     <string name="menu_security_subtitle">View passphrase, backup wallet…</string>
     <string name="menu_settings_title">Settings</string>
@@ -357,13 +369,16 @@
     <string name="import_image_import_valid_private_key">Copy a valid private key to import Dash from it</string>
     <string name="import_image_invalid_private">Invalid Private Key</string>
 
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+
     <string name="syncing">Syncing</string>
     <string name="syncing_balance">Syncing Balance</string>
-
+    <string name="transaction_count">%d transactions</string>
     <string name="all_transactions">All</string>
     <string name="received_transactions">Received</string>
     <string name="sent_transactions">Sent</string>
-    <string name="services_portal_subtitle_error" translatable="false">Keys are missing for these services. See CONFIGURATION FOR UPHOLD AND LIQUID in README.md for more information.</string>
+    <string name="services_portal_subtitle_error" translatable="false">Keys are missing for these services. See CONFIGURATION FOR UPHOLD AND COINBASE in README.md for more information.</string>
     <string name="set_pin_error_missing_wallet_title">Missing Wallet Error</string>
     <string name="set_pin_error_missing_wallet_message">The wallet is missing.  Please report this to the Support Desk.</string>
     <string name="wallet_encryption_error_title">Wallet Creation Error</string>
@@ -380,4 +395,14 @@
     <string name="launch_reset_wallet_extra_message">Back up your recovery phrase</string>
     <string name="start_reset_wallet_title">You may lose %s</string>
     <string name="reset_wallet_text">Reset Wallet</string>
+    <string name="reclassify_transactions_title">Reclassify Your Transactions</string>
+    <string name="reclassify_transactions_title_message">These classifications will be reflected in the CSV Export that can be used to import into tax reporting services.</string>
+    <string name="reclassify_transactions_question">Where can I change the tax category?</string>
+    <string name="reclassify_transactions_outgoing_title">Outgoing transactions</string>
+    <string name="reclassify_transactions_by_default_message">by default will be marked as</string>
+    <string name="reclassify_transactions_incoming_title">Incoming transactions</string>
+    <string name="reclassify_transactions_change_it_message">You can change it to</string>
+    <string name="reclassify_transactions_linked_accounts_title">Linked accounts</string>
+    <string name="reclassify_transactions_linked_accounts_message">by default all transactions to or from your linked accounts (exchanges, staking, etc) will be marked as transfers.</string>
+    <string name="reclassify_transactions_change_explanation">Choose any transaction from the homepage and change the category on the transaction details page.</string>
 </resources>

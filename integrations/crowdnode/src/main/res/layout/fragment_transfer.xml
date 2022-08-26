@@ -20,7 +20,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary_light"
+    android:background="@color/background_primary"
     tools:context=".ui.portal.TransferFragment">
 
     <androidx.appcompat.widget.Toolbar
@@ -48,7 +48,7 @@
 
             <TextView
                 android:id="@+id/toolbar_subtitle"
-                style="@style/Overline"
+                style="@style/Overline.Tertiary"
                 android:layout_marginTop="3dp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -72,12 +72,11 @@
 
         <TextView
             android:id="@+id/banner_message_text"
-            style="@style/Caption"
+            style="@style/Overline.White"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
-            android:text="@string/crowdnode_first_deposit"
-            android:textColor="@color/white" />
+            android:text="@string/crowdnode_first_deposit" />
 
         <ImageView
             android:layout_width="16dp"
@@ -106,15 +105,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
+        android:layout_marginTop="-4dp"
         app:layout_constraintStart_toEndOf="@id/source_icon"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/source_icon" />
 
     <TextView
         android:id="@+id/balance_text"
-        style="@style/Caption.SteelGray"
+        style="@style/Overline.Tertiary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="-3dp"
         app:layout_constraintStart_toStartOf="@id/source_label"
         app:layout_constraintBottom_toBottomOf="@id/source_icon"
         tools:text="Balance: 200,00 US$" />

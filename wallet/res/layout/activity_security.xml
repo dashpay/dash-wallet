@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary_light"
+    android:background="@color/background_primary"
     android:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.SecurityActivity">
 
@@ -29,7 +29,7 @@
                 android:onClick="viewRecoveryPhrase">
 
                 <TextView
-                    style="@style/MontserratMedium.MenuRowTitle.Internal"
+                    style="@style/MenuRowTitle.Internal"
                     android:text="@string/activity_security_view_recovery_phrase"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/recovery_phrase_arrow"
@@ -52,7 +52,7 @@
                 android:onClick="changePin">
 
                 <TextView
-                    style="@style/MontserratMedium.MenuRowTitle.Internal"
+                    style="@style/MenuRowTitle.Internal"
                     android:text="@string/encrypt_keys_dialog_title"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/change_pin_arrow"
@@ -74,7 +74,7 @@
                 style="@style/MenuRow.Internal">
 
                 <TextView
-                    style="@style/MontserratMedium.MenuRowTitle.Internal"
+                    style="@style/MenuRowTitle.Internal"
                     android:text="@string/activity_security_biometric_auth"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/fingerprint_auth_switch"
@@ -98,7 +98,7 @@
                 style="@style/MenuRow.Internal">
 
                 <TextView
-                    style="@style/MontserratMedium.MenuRowTitle.Internal"
+                    style="@style/MenuRowTitle.Internal"
                     android:text="@string/activity_security_hide_balance"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/hide_balance_switch"
@@ -123,7 +123,7 @@
                 android:onClick="openAdvancedSecurity">
 
                 <TextView
-                    style="@style/MontserratMedium.MenuRowTitle.Internal"
+                    style="@style/MenuRowTitle.Internal"
                     android:text="@string/activity_security_advanced"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/advanced_security_arrow"
@@ -155,7 +155,7 @@
                     app:srcCompat="@drawable/ic_menu_row_arrow" />
 
                 <TextView
-                    style="@style/MontserratMedium.MenuRowTitle.Internal"
+                    style="@style/MenuRowTitle.Internal"
                     android:layout_width="0dp"
                     android:text="@string/activity_security_backup_wallet"
                     app:layout_constraintBottom_toBottomOf="parent"
@@ -172,7 +172,7 @@
                 android:onClick="resetWallet">
 
                 <TextView
-                    style="@style/MontserratMedium.MenuRowTitle.Internal"
+                    style="@style/MenuRowTitle.Internal"
                     android:text="@string/wallet_lock_reset_wallet_title"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/reset_wallet_arrow"

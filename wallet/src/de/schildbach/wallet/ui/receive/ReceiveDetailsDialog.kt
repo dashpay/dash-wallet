@@ -22,19 +22,19 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
-import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
+import kotlinx.android.synthetic.main.dash_fiat_amount_layout.*
 import kotlinx.android.synthetic.main.dialog_receive_details.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.util.GenericUtils
 
 private const val ARG_DASH_AMOUNT = "arg_dash_amount"
 private const val ARG_FIAT_AMOUNT = "arg_fiat_amount"
 
-class ReceiveDetailsDialog : BaseBottomSheetDialogFragment() {
+class ReceiveDetailsDialog : OffsetDialogFragment() {
 
     companion object {
 

@@ -20,14 +20,20 @@ package de.schildbach.wallet.ui.main
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
+import androidx.annotation.VisibleForTesting
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.Constants
+import org.dash.wallet.common.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.ui.SingleLiveEvent
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import de.schildbach.wallet.transactions.TxDirection
+import de.schildbach.wallet.transactions.TxDirectionFilter
+import de.schildbach.wallet.ui.transactions.TransactionRowView
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -35,9 +41,13 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.transactions.filters.TransactionFilter
+import org.dash.wallet.common.transactions.TransactionWrapperComparator
+import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
 
 @HiltViewModel
+@FlowPreview
 @ExperimentalCoroutinesApi
 class MainViewModel @Inject constructor(
     private val analytics: AnalyticsService,
@@ -45,13 +55,34 @@ class MainViewModel @Inject constructor(
     private val config: Configuration,
     blockchainStateDao: BlockchainStateDao,
     exchangeRatesProvider: ExchangeRatesProvider,
-    walletDataProvider: WalletDataProvider
+    val walletData: WalletDataProvider,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+    companion object {
+        private const val THROTTLE_DURATION = 500L
+        private const val DIRECTION_KEY = "tx_direction"
+    }
+
+    private val workerJob = SupervisorJob()
+    @VisibleForTesting
+    val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
+
     private val listener: SharedPreferences.OnSharedPreferenceChangeListener
     private val currencyCode = MutableStateFlow(config.exchangeCurrencyCode)
 
     val balanceDashFormat: MonetaryFormat = config.format.noCode()
-    val onTransactionsUpdated = SingleLiveEvent<Unit>()
+
+    private val _transactions = MutableLiveData<List<TransactionRowView>>()
+    val transactions: LiveData<List<TransactionRowView>>
+        get() = _transactions
+
+    private val _transactionsDirection = MutableStateFlow(TxDirection.ALL)
+    var transactionsDirection: TxDirection
+        get() = _transactionsDirection.value
+        set(value) {
+            _transactionsDirection.value = value
+            savedStateHandle.set(DIRECTION_KEY, value)
+        }
 
     private val _isBlockchainSynced = MutableLiveData<Boolean>()
     val isBlockchainSynced: LiveData<Boolean>
@@ -61,6 +92,10 @@ class MainViewModel @Inject constructor(
     val isBlockchainSyncFailed: LiveData<Boolean>
         get() = _isBlockchainSyncFailed
 
+    private val _blockchainSyncPercentage = MutableLiveData<Int>()
+    val blockchainSyncPercentage: LiveData<Int>
+        get() = _blockchainSyncPercentage
+
     private val _exchangeRate = MutableLiveData<ExchangeRate>()
     val exchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
@@ -69,23 +104,45 @@ class MainViewModel @Inject constructor(
     val balance: LiveData<Coin>
         get() = _balance
 
+    private val _mostRecentTransaction = MutableLiveData<Transaction>()
+    val mostRecentTransaction: LiveData<Transaction>
+        get() = _mostRecentTransaction
+
     private val _hideBalance = MutableLiveData<Boolean>()
     val hideBalance: LiveData<Boolean>
         get() = _hideBalance
 
+    val isPassphraseVerified: Boolean
+        get() = !config.remindBackupSeed
+
     init {
         _hideBalance.value = config.hideBalance
+        transactionsDirection = savedStateHandle.get(DIRECTION_KEY) ?: TxDirection.ALL
+
+        _transactionsDirection
+            .flatMapLatest { direction ->
+                val filter = TxDirectionFilter(direction, walletData.wallet!!)
+                refreshTransactions(filter)
+                walletData.observeTransactions(filter)
+                    .debounce(THROTTLE_DURATION)
+                    .onEach { refreshTransactions(filter) }
+            }
+            .launchIn(viewModelWorkerScope)
 
         blockchainStateDao.observeState()
             .filterNotNull()
-            .onEach {
-                _isBlockchainSynced.postValue(it.isSynced())
-                _isBlockchainSyncFailed.postValue(it.syncFailed())
+            .onEach { state ->
+                updateSyncStatus(state)
+                updatePercentage(state)
             }
+            .launchIn(viewModelWorkerScope)
+
+        walletData.observeBalance()
+            .onEach(_balance::postValue)
             .launchIn(viewModelScope)
 
-        walletDataProvider.observeBalance()
-            .onEach(_balance::postValue)
+        walletData.observeMostRecentTransaction()
+            .onEach(_mostRecentTransaction::postValue)
             .launchIn(viewModelScope)
 
         currencyCode.filterNotNull()
@@ -142,8 +199,62 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun logDirectionChangedEvent(direction: TxDirection) {
+        val directionParameter = when (direction) {
+            TxDirection.ALL -> "all_transactions"
+            TxDirection.SENT -> "sent_transactions"
+            TxDirection.RECEIVED -> "received_transactions"
+        }
+        analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
+            "filter_value" to directionParameter
+        ))
+    }
+
+    fun processDirectTransaction(tx: Transaction) {
+        walletData.processDirectTransaction(tx)
+    }
+
     override fun onCleared() {
         super.onCleared()
         config.unregisterOnSharedPreferenceChangeListener(listener)
+    }
+
+    private fun refreshTransactions(filter: TransactionFilter) {
+        walletData.wallet?.let { wallet ->
+            val transactionViews = walletData.wrapAllTransactions(
+                FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
+            ).filter { it.transactions.any { tx -> filter.matches(tx) } }
+             .sortedWith(TransactionWrapperComparator())
+             .map {
+                 TransactionRowView.fromTransactionWrapper(
+                     it, walletData.transactionBag,
+                     Constants.CONTEXT
+                 )
+             }
+            _transactions.postValue(transactionViews)
+        }
+    }
+
+    private fun updateSyncStatus(state: BlockchainState) {
+        if (_isBlockchainSyncFailed.value != state.isSynced()) {
+            _isBlockchainSynced.postValue(state.isSynced())
+
+            if (state.replaying) {
+                _transactions.postValue(listOf())
+            }
+        }
+
+        _isBlockchainSyncFailed.postValue(state.syncFailed())
+    }
+
+    private fun updatePercentage(state: BlockchainState) {
+        var percentage = state.percentageSync
+
+        if (state.replaying && state.percentageSync == 100) {
+            //This is to prevent showing 100% when using the Rescan blockchain function.
+            //The first few broadcasted blockchainStates are with percentage sync at 100%
+            percentage = 0
+        }
+        _blockchainSyncPercentage.postValue(percentage)
     }
 }

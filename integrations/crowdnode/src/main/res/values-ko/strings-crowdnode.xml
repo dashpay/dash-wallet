@@ -17,10 +17,15 @@
 <resources>
     <string name="crowdnode_get_started">크라우드노드 시작하기</string>
     <string name="crowdnode_get_started_hint">스테이킹을 시작하려면 크라우드노드에 계정을 만들거나 기존 계정에 연결하세요.</string>
+    <string name="crowdnode_account">크라우드노드 계정</string>
     <string name="new_account">새로운 크라우드노드 계정</string>
     <string name="account_create">계정 생성하기</string>
+    <string name="accept_terms_response">약관에 동의해주십시오</string>
+    <string name="accept_terms">약관 동의하기</string>
+    <string name="welcome_response">계정이 생성되었습니다</string>
     <string name="account_link">기존 계정 연결</string>
     <string name="crowdnode_login">크라우드노드에 로그인</string>
+    <string name="crowdnode_signup">크라우드노드 가입하기</string>
     <string name="crowdnode_link">기존의 크라우드노드 계정 연결</string>
     <string name="required_passphrase_backup">대시 지갑에 암호 문구를 백업해야 합니다</string>
     <string name="backup_passphrase">암호 문구 백업하기</string>
@@ -39,8 +44,8 @@
     <string name="privacy_policy">개인정보보호정책</string>
     <string name="crowdnode_account_ready">크라우드노드 계정 설정이 완료되어 지금 사용할 수 있습니다!</string>
     <string name="notify_when_done">완료되면 종료하고 알림받기</string>
-    <string name="crowdnode_creating">당신의 크라우드노드 계정을 생성하는 중입니다…</string>
-    <string name="accepting_terms">이용 약관에 동의하는 중…</string>
+    <string name="crowdnode_creating">당신의 크라우드노드 계정을 생성 중입니다…</string>
+    <string name="accepting_terms">이용 약관에 동의하는 중...</string>
     <string name="crowdnode_signup_error">당신의 크라우드노드 계정을 생성하지 못했습니다.</string>
     <string name="crowdnode_deposit_error">당신의 크라우드노드 계정에 입금하지 못했습니다.</string>
     <string name="crowdnode_withdraw_error">당신의 크라우드노드 계정에서 출금하지 못했습니다.</string>
@@ -58,12 +63,15 @@
     <string name="crowdnode_withdraw_to_wallet">크라우드노드 ➝ 대시지갑</string>
     <string name="online_account">온라인 계정</string>
     <string name="online_account_create">온라인 계정 생성하기</string>
-    <string name="secure_online_account">수입 보호하기</string>
+    <string name="secure_online_account">계좌 보호하기</string>
+    <string name="crowdnode_signup_to_finish">가입하여 계정 설정을 완료하세요</string>
+    <string name="online_account_create_full">온라인 크라우드노드 계정 생성하기</string>
+    <string name="online_account_email_privacy">이 이메일은 대시 지갑에 의해 저장되지 않으며 크라우드노드로만 보내진다는 점에 주의하십시오</string>
     <string name="crowdnode_support">크라우드노드 지원</string>
     <string name="unlink_account">계정 연결 해제</string>
     <string name="online_account_title">왜 온라인 계정이 필요한가요?</string>
     <string name="crowdnode_online_synced">현재 대시 지갑과 동기화됨</string>
-    <string name="crowdnode_in_process">처리중…</string>
+    <string name="crowdnode_in_process">처리중...</string>
     <string name="account_recovery">계정 복구</string>
     <string name="crowdnode_recovery_info">암호 문구를 잃어버리게 되면 크라우드노드 자금에 다시 액세스하기 위해 다른 방법으로 본인 인증을 해야 합니다.</string>
     <string name="transaction_history">거래 내역</string>
@@ -71,8 +79,8 @@
     <string name="payout_options">지불 옵션</string>
     <string name="payout_options_details">당신의 리워드 수익을 어떻게 / 언제 받을 것인지 변경할 수 있습니다.</string>
     <string name="crowdnode_balance">크라우드노드 잔고</string>
-    <string name="crowdnode_your_address_title">크라우드노드에 통합한 당신의 대시 주소입니다</string>
-    <string name="chain_syncing">체인 동기화 중…</string>
+    <string name="crowdnode_your_address_title">다음은 당신의 크라우드노드 계정과 연결된 대시 주소입니다</string>
+    <string name="chain_syncing">체인 동기화 중...</string>
     <string name="crowdnode_wait_for_sync">우리가 당신의 거래 내역을 리뷰할 수 있도록 체인이 완전히 동기화될 때까지 기다려 주세요. 크라우드노드 웹사이트에 방문하셔서 로그인하거나 가입하세요.</string>
     <string name="crowdnode_open_website">크라우드노드 웹사이트 방문하기</string>
     <string name="crowdnode_info_title">크라우드노드를 통해 대시 마스터노드의 일원이 되세요</string>
@@ -86,8 +94,26 @@
     <string name="crowdnode_minimum_deposit">최소 보증금 %s로 리워드를 받으세요</string>
     <string name="crowdnode_minimum_deposit_difference">보증금 %s로 리워드를 받으세요</string>
     <string name="crowdnode_first_deposit">첫 보증금은 %s 이상이어야 합니다</string>
-    <string name="crowdnode_staking_info_title">스테이킹이 이루어지는 방식</string>
+    <string name="crowdnode_staking_info_title">크라우드노드 스테이킹이 이루어지는 방식</string>
+    <string name="crowdnode_staking_info_message_first">대시 네트워크는 지불이 이루어지도록 도와주는 중요 부분인 마스터노드에 의해 운영됩니다.</string>
+    <string name="crowdnode_staking_info_message_second">마스터노드는 보증금으로 1000대시가 필요하며, 각 마스터노드는 현재 연간 약 %s%%을 보상받고 있습니다.</string>
+    <string name="crowdnode_staking_apy_title">현재 APY는 %s%% 입니다</string>
     <string name="crowdnode_staking_info_message">당신의 크라우드노드 계정에 %s이상 보유하면 보상을 받기 시작합니다.</string>
+    <string name="staking_apy_title">현재 APY는 %s 입니다</string>
+    <string name="crowdnode_staking_current_apy_message">이것은 전체 마스터노드의 현재 연간 수익률에서 15% 크라우드노드 수수료를 뺀 값을 나타냅니다. 이는 보장된 수익률은 아니며, 크라우드노드 풀의 크기와 대시 가격에 따라 증가하거나 감소할 수 있습니다.</string>
+    <string name="crowdnode_staking_leave_pool_message_one">멤버들은 풀을 자유롭게 떠날 수 있으며, 즉시 떠날 수도 있습니다.</string>
+    <string name="crowdnode_staking_leave_pool_message_two">출금 금액이 큰 경우, 크라우드노드는 2주 이내에 출금 금액을 지불합니다. 이는 보안 프로토콜로 인한 것으로, 대부분의 경우 이보다 훨씬 빠르게 처리됩니다.</string>
+
+    <string name="crowdnode_staking_leaving_the_pool_title">풀 떠나기</string>
+    <string name="crowdnode_staking_receiving_rewards_title">보상 받기</string>
+    <string name="crowdnode_staking_receiving_rewards_message">당신은 분할된 지불금을 자동적으로 받게 되며, 이 금액은 디폴트로 다시 투자됩니다. 그러나, 쉬운 설정을 통해 지속적으로 이 수익금을 받아 자동 출금할 수도 있습니다.</string>
+    <string name="crowdnode_staking_first_minimum_deposit_title">첫 번째 최소 보증금</string>
+    <string name="crowdnode_staking_join_pool_message">대부분의 사람들이 당장 손에 1000대시를 쥐고 있지 않은 만큼, 크라우드노드는 멤버들의 보증금을 풀로 모아 마스터노드 소유의 이점을 누릴 수 있도록 하는 서비스를 개설하였습니다.</string>
+    <string name="crowdnode_staking_join_pool_title">풀 가입하기</string>
+    <string name="crowdnode_staking_crowdnode_benefits_title">크라우드노드의 이점</string>
+    <string name="crowdnode_staking_connected_dash_address_title">연결된 대시 주소</string>
+    <string name="crowdnode_staking_connected_dash_address_message">다음은 이 기기의 대시 지갑 내 크라우드노드 계정에 지정된 대시 주소입니다.</string>
+    <string name="crowdnode_staking_toast_address_copied">클립보드로 크라우드노드 주소 복사됨</string>
     <string name="crowdnode_verify_api_address">API 대시 주소 인증하기</string>
     <string name="crowdnode_how_to_verify">당신의 API 대시 주소를 확인하는 방법</string>
     <string name="crowdnode_how_to_verify_description1">당신이 현재 크라우드노드 계정을 위해 사용하고 있는 주요 대시 주소에서 %s대시를 </string>
@@ -97,13 +123,31 @@
     <string name="scan_qr">QR 코드 스캔</string>
     <string name="qr_contains_request">이 QR은 이미 %s 대시 지불 요청을 담고 있습니다</string>
     <string name="verification_required">인증이 필요함</string>
-    <string name="validating_address">주소 확인중…</string>
+    <string name="validating_address">주소 확인중...</string>
     <string name="crowdnode_address_validated">당신의 크라우드노드 주소가 확인되었으나, 인증이 필요합니다.</string>
     <string name="crowdnode_address_confirmed">당신의 크라우드노드 주소가 확인되었습니다.</string>
     <string name="crowdnode_bad_confirmation">잘못된 주요 주소로 확인이 전송되었습니다</string>
     <string name="crowdnode_online_account_details_title">당신의 온라인 계정에 대한 정보</string>
     <string name="crowdnode_online_account_details_primary">당신이 현재 크라우드노드 계정을 위해 사용하고 있는 주요 대시 주소</string>
     <string name="crowdnode_online_account_details_api">이 기기의 대시 지갑 내 크라우드노드 계정에 지정한 대시 주소</string>
-    <string name="crowdnode_reset_address">주소 재설정</string>
+    <string name="crowdnode_primary_missing">당신의 계정 내 주요 대시 주소가 비어 있습니다. 크라우드노드 웹사이트에서 설정하십시오.</string>
+    <string name="crowdnode_wait_signed_email">당신의 이메일이 처리될 때까지 기다려 주십시오…</string>
+    <string name="cannot_send">보낼 수 없습니다.</string>
+    <string name="crowdnode_tx_set_title">왜 모든 거래 내역을 보게 되나요?</string>
+    <string name="crowdnode_tx_set_explainer">당신의 크라우드노드 계정은 이들 거래를 사용해 생성되었습니다.</string>
+    <string name="shuffle_coins">코인 셔플하기</string>
+    <string name="positive_balance_required">대시 지갑에 잔고가 있어야 합니다.</string>
+    <string name="withdrawal_required_balance">출금을 완료하려면 대시 지갑에 최소 0.0003 대시를 입금하세요</string>
+    <string name="withdrawal_limit">대시 출금 한도</string>
+    <string name="withdrawal_limit_details">%1$s 대시 %2$s 이상의 금액을 출금할 수 없습니다.</string>
+    <string name="crowdnode_withdrawal_limits_title">크라우드노드 출금 한도</string>
+    <string name="crowdnode_withdrawal_limits_message">크라우드노드의 서비스 이용 약관에 따라, 사용자들은 다음의 금액 이상을 출금할 수 없습니다:</string>
+    <string name="crowdnode_withdraw_without_limits_online">제한 없이 출금하려면 크라우드노드 웹사이트의 온라인 계정을 활용하십시오.</string>
+    <string name="crowdnode_withdrawal_limits_error">크라우드노드 출금 한도를 초과하여 에러가 발생한 것으로 보입니다. 잠시 후 다시 시도하십시오.</string>
+    <string name="per_transaction">거래당</string>
+    <string name="per_hour">시간당</string>
+    <string name="per_day">24시간당</string>
+    <string name="read_withdrawal_policy">출금 약관 읽어보기</string>
+
 
     </resources>

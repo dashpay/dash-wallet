@@ -7,7 +7,7 @@
 
     <Button
         android:id="@+id/confirm_button"
-        style="@style/NewMontserratButton.Primary"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="54dp"
         android:layout_alignParentBottom="true"
@@ -30,14 +30,13 @@
 
             <TextView
                 android:id="@+id/title"
-                style="@style/MontserratMedium"
+                style="@style/Headline6"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="48dp"
                 android:gravity="center"
+                android:textAlignment="gravity"
                 android:text="@string/scan_private_key"
-                android:textColor="@android:color/black"
-                android:textSize="20sp"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <ImageView
@@ -45,7 +44,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="34dp"
-                android:tint="@android:color/black"
+                app:tint="@color/content_primary"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/title"
                 app:srcCompat="@drawable/ic_transaction_info" />
@@ -68,7 +67,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:tint="@android:color/black"
+                app:tint="@color/content_primary"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/text_1"
                 app:srcCompat="@drawable/ic_transaction_info" />
@@ -91,7 +90,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:tint="@android:color/black"
+                app:tint="@color/content_primary"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/text_2"
                 app:srcCompat="@drawable/ic_transaction_info" />
@@ -126,12 +125,11 @@
                 android:orientation="vertical">
 
                 <TextView
-                    style="@style/MontserratMedium.MG"
+                    style="@style/Body1.Medium.Secondary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="18dp"
-                    android:text="@string/sweep_wallet_fragment_balance"
-                    android:textSize="16sp" />
+                    android:text="@string/sweep_wallet_fragment_balance" />
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -148,13 +146,12 @@
 
                     <org.dash.wallet.common.ui.CurrencyTextView
                         android:id="@+id/sweep_wallet_fragment_balance"
-                        style="@style/MontserratRegular.DB"
+                        style="@style/Headline4.Regular"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:layout_marginLeft="8dp"
                         android:includeFontPadding="false"
-                        android:textSize="26sp"
                         tools:text="0.00" />
 
                 </LinearLayout>

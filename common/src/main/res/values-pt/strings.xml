@@ -11,7 +11,9 @@
     <string name="buy_dash">Comprar Dash</string>
     <string name="copied">Copiado</string>
     <string name="staking_title">Staking</string>
-
+    <string name="email">E-mail</string>
+    <string name="email_placeholder">por exemplo: johndoe@mail.com</string>
+    <string name="error">Erro</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Libra Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -31,7 +33,7 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dólar</string>
 
-    <!-- Generic Titles/Buttons -->
+    <!-- Generic buttons -->
     <string name="button_dismiss">Dispensar</string>
     <string name="network_unavailable_return">Voltar para a carteira</string>
     <string name="button_continue">Continuar</string>
@@ -44,14 +46,18 @@
     <string name="button_okay">Okay</string>
     <string name="button_share">Compartilhar</string>
     <string name="verify">Verificar</string>
-    <string name="error">Erro</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Buscar</string>
     <string name="permission_allow">Permitir</string>
     <string name="permission_deny">Negar</string>
     <string name="max">Máximo</string>
+    <string name="dash">Dash</string>
     <string name="select_currency">Selecione a moeda</string>
     <string name="send_coins_error_dusty_send">O valor é muito baixo para ser enviado</string>
     <string name="send_coins_error_insufficient_money">Fundos insuficientes</string>
+
+    <string name="empty_wallet_warning_title">Parece que você está esvaziando sua Carteira Dash</string>
+    <string name="empty_wallet_crowdnode_warning">Por favor, observe que você não poderá retirar seus fundos do CrowdNode para esta carteira até que aumente seu saldo para 0,0003 Dash.</string>
+    <string name="syncing">Sincronizando</string>
 </resources>

@@ -24,7 +24,6 @@
     <string name="explore_atms_title">Bankomaty</string>
     <string name="explore_atms_subtitle">Znajdź miejsce gdzie możesz kupić Dash i inne kryptowaluty.</string>
     <string name="explore_staking_subtitle">Z łatwością ulokuj swoje monety Dash i zarabiaj pasywny dochód za pomocą kilku prostych kliknięć myszką. </string>
-
     <!-- Search -->
     <string name="explore_search_results">Wyniki wyszukiwania</string>
     <string name="explore_physical_merchant">Normalne sklepy</string>
@@ -47,16 +46,16 @@
     <string name="distance_kilometers">%s kilometrów</string>
 
     <plurals name="explore_merchant_amount">
-        <item quantity="one">%d sprzedawca</item>
-        <item quantity="few">%dsprzedawcy</item>
-        <item quantity="many">%dSprzedawców</item>
-        <item quantity="other">%d sprzedawcy</item>
+        <item quantity="one">%dsprzedawcy</item>
+        <item quantity="few">%dsprzewdawców</item>
+        <item quantity="many">%dsprzedawców</item>
+        <item quantity="other">%d sprzedawców</item>
     </plurals>
 
     <plurals name="explore_atm_amount">
-        <item quantity="one">%dBankomat</item>
-        <item quantity="few">%dBankomaty</item>
-        <item quantity="many">%dBankomatów</item>
+        <item quantity="one">%d Bankomat</item>
+        <item quantity="few">%dBankomatów</item>
+        <item quantity="many">%d Bankomatów</item>
         <item quantity="other">%dBankomatów</item>
     </plurals>
 
@@ -122,17 +121,17 @@
     </string-array>
 
     <plurals name="radius_miles">
-        <item quantity="one">%d mila</item>
-        <item quantity="few">%d mile</item>
+        <item quantity="one">%dmila</item>
+        <item quantity="few">%dmile</item>
         <item quantity="many">%d mil</item>
         <item quantity="other">%d mil</item>
     </plurals>
 
     <plurals name="radius_kilometers">
-        <item quantity="one">%d kilometr</item>
+        <item quantity="one">%dkilmetr</item>
         <item quantity="few">%dkilometry</item>
         <item quantity="many">%d kilometrów</item>
-        <item quantity="other">%d kilometrów</item>
+        <item quantity="other">%dkilometrów</item>
     </plurals>
 
     <!-- Location Permission -->

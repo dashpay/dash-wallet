@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:background="@drawable/selectable_round_corners"
+    android:layout_height="wrap_content"
+    android:paddingHorizontal="15dp"
+    android:paddingVertical="10dp">
+
+    <TextView
+        android:id="@+id/pay_label"
+        style="@style/Caption.Secondary"
+        android:layout_width="wrap_content"
+        android:layout_height="46dp"
+        android:gravity="center_vertical"
+        android:text="@string/payment_method"
+        android:textAllCaps="true"
+        android:theme="@style/ListViewButtonBackground"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/payment_method_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="6dp"
+        app:layout_constraintBottom_toBottomOf="@+id/pay_label"
+        app:layout_constraintEnd_toStartOf="@id/account"
+        app:layout_constraintTop_toTopOf="@id/pay_label" />
+
+    <TextView
+        android:id="@+id/payment_method_name"
+        style="@style/Caption.Secondary"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="4dp"
+        android:gravity="end"
+        android:maxLines="1"
+        app:layout_constraintBottom_toBottomOf="@+id/pay_label"
+        app:layout_constraintEnd_toStartOf="@id/account"
+        app:layout_constraintStart_toEndOf="@id/pay_label"
+        app:layout_constraintTop_toTopOf="@id/pay_label"
+        tools:text="Chase Bank" />
+
+    <TextView
+        android:id="@+id/account"
+        style="@style/Caption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="@+id/pay_label"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/pay_label"
+        tools:text="****1234" />
+
+    <View
+        android:id="@+id/pay_method_separator"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider_color"
+        app:layout_constraintBottom_toBottomOf="@+id/pay_label" />
+
+    <TextView
+        android:id="@+id/purchase_label"
+        style="@style/Caption.Secondary"
+        android:layout_width="wrap_content"
+        android:layout_height="46dp"
+        android:gravity="center_vertical"
+        android:text="@string/purchase"
+        android:textAllCaps="true"
+        android:theme="@style/ListViewButtonBackground"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/pay_label" />
+
+
+    <TextView
+        android:id="@+id/purchase_amount"
+        style="@style/Caption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="@id/purchase_label"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/purchase_label"
+        tools:text="109.00 US$" />
+
+    <View
+        android:id="@+id/purchase_separator"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider_color"
+        app:layout_constraintBottom_toBottomOf="@+id/purchase_label" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/coinbase_fee_info_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/purchase_label"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/coinbase_fee_label"
+            style="@style/Caption.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="46dp"
+            android:textAllCaps="true"
+            android:gravity="center_vertical"
+            android:text="@string/coinbase_fee"
+            android:theme="@style/ListViewButtonBackground"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+           />
+
+        <ImageView
+            android:id="@+id/coinbase_fee_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="7dp"
+            android:src="@drawable/ic_dash_info_blue_meduim"
+            app:layout_constraintBottom_toBottomOf="@+id/coinbase_fee_label"
+            app:layout_constraintStart_toEndOf="@id/coinbase_fee_label"
+            app:layout_constraintTop_toTopOf="@id/coinbase_fee_label" />
+
+        <TextView
+            android:id="@+id/coinbase_fee_amount"
+            style="@style/Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="@id/coinbase_fee_label"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/coinbase_fee_label"
+            tools:text="10.00 US$" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <View
+        android:id="@+id/coinbase_fee_separator"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider_color"
+        app:layout_constraintBottom_toBottomOf="@+id/coinbase_fee_info_container" />
+
+    <TextView
+        android:id="@+id/total_label"
+        style="@style/Caption.Secondary"
+        android:layout_width="wrap_content"
+        android:layout_height="46dp"
+        android:gravity="center_vertical"
+        android:text="@string/total"
+        android:textAllCaps="true"
+        android:theme="@style/ListViewButtonBackground"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/coinbase_fee_info_container" />
+
+    <TextView
+        android:id="@+id/total_amount"
+        style="@style/Body2.Medium"
+        android:textSize="16sp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="@id/total_label"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/total_label"
+        tools:text="200.00 US$" />
+</androidx.constraintlayout.widget.ConstraintLayout>
+

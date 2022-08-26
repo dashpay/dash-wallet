@@ -39,12 +39,12 @@
             android:layout_marginEnd="8dp"
             android:src="@drawable/ic_dash_d_white"
             android:layout_gravity="center_vertical"
-            app:tint="@color/gray_900"
-            tools:tint="@color/gray_900" />
+            app:tint="@color/content_primary"
+            tools:tint="@color/content_primary" />
 
         <TextView
             android:id="@+id/input_amount"
-            style="@style/Headline4"
+            style="@style/Headline4.Regular"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ellipsize="middle"
@@ -59,8 +59,8 @@
             android:src="@drawable/ic_dash_d_white"
             android:layout_gravity="center_vertical"
             android:visibility="gone"
-            app:tint="@color/gray_900"
-            tools:tint="@color/gray_900" />
+            app:tint="@color/content_primary"
+            tools:tint="@color/content_primary" />
 
         <ImageButton
             android:id="@+id/input_currency_toggle"
@@ -107,7 +107,7 @@
 
         <TextView
             android:id="@+id/result_amount"
-            style="@style/Body1.SteelGray"
+            style="@style/Body1.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"

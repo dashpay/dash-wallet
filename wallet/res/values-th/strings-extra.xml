@@ -30,7 +30,7 @@
     <string name="dialog_confirm_total">ทั้งหมด</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">ทำให้กระเป๋าสตางค์ปลอดภัยตอนนี้</string>
+    <string name="shortcut_secure_now">ทำให้ Wallet ปลอดภัยตอนนี้</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">สแกนเพื่อจ่าย</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -40,9 +40,9 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">ได้รับ</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_import_key">นำเข้ากุญแจส่วนตัว</string>
+    <string name="shortcut_import_key">นำเข้าคีย์ส่วนตัว</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">เพิ่มทางลัด</string>
+    <string name="shortcut_add_shortcut">ใส่ทางลัด</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">ได้รับอย่างรวดเร็ว</string>
@@ -86,7 +86,7 @@
     <string name="payments_pay_to_clipboard_title">ส่งไปยังที่อยู่ที่คัดลอก</string>
     <string name="payments_pay_to_clipboard_sub_title">ไม่มีที่อยู่คัดลอก</string>
 
-    <string name="forgot_pin_title">ลืม PIN ใช่หรือไม่</string>
+    <string name="forgot_pin_title">ลืม PIN?</string>
     <string name="forgot_pin_message">คุณสามารถตั้งเลขรหัสส่วนตัวใหม่ได้ด้วยกลไกการข่วยเหลือของการกู้คืนวลีรหัสผ่านของคุณ</string>
     <string name="forgot_pin_instruction_1">ป้อนวลีรหัสผ่านของคุณเพื่อกู้คืนกระเป๋าสตางค์ของคุณ</string>
     <string name="forgot_pin_instruction_2">ตั้งเลขรหัสผ่านใหม่</string>
@@ -149,6 +149,18 @@
     <string name="wallet_last_attempt">ใส่ PIN ได้ครั้งสุดท้าย</string>
     <string name="wallet_last_attempt_message">หากความพยายามล้มเหลวอีกครั้งจะต้องใช้ข้อความรหัสผ่านของฉันในการกู้คืนกระเป๋าเงินของฉัน</string>
 
+    <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="other">พยายามได้อีก %d</item>
+    </plurals>
+
+    <plurals name="minute">
+        <item quantity="other">นาที</item>
+    </plurals>
+
+    <plurals name="hour">
+        <item quantity="other">ชั่วโมง</item>
+    </plurals>
+
     <string name="encrypt_new_key_chain_upgrade_button">อัพเกรด</string>
     <string name="encrypt_new_key_chain_dialog_title">อัพเกรดกระเป๋าสตางค์ของคุณ</string>
     <string name="encrypt_new_key_chain_dialog_message">กระเป๋าสตางค์ของคุณจะได้รับการอัพเกรดเพื่อรองรับการนำเข้าและส่งออกไปยังแอพพลิเคชันอื่น ๆ</string>
@@ -167,6 +179,8 @@
     <string name="notification_transactions_channel_description">รับการแจ้งเตือนเกี่ยวกับการทำธุรกรรมที่เข้ามา</string>
     <string name="notification_synchronization_channel_name">ซิงโครไนซ์</string>
     <string name="notification_synchronization_channel_description">แสดงการแจ้งเตือนเมื่อแอพพลิเคชั่นกำลังซิงโครไนซ์กับเครือข่าย</string>
+    <string name="notification_generic_channel_name">การแจ้งเตือนทั่วไป</string>
+    <string name="notification_generic_channel_description">กิจกรรมกระเป๋าเงิน Dash อื่น ๆ</string>
     <string name="notification_push_channel_name">การแจ้งเตือน</string>
     <string name="notification_push_channel_description">แสดงการแจ้งเตือนที่ส่งถึงคุณโดย Dash</string>
     <string name="notification_settings_title">การแจ้งเตือน</string>
@@ -204,7 +218,7 @@
     <string name="verify_seed_title">กรุณาเขียนลงไป</string>
     <string name="verify_seed_write_down_confirmation">ฉันได้เขียนลงไปแล้ว</string>
     <string name="verify_seed_buttons_tip">โปรดแตะที่คำจากวลีการกู้คืนของคุณในลำดับที่ถูกต้อง</string>
-    <string name="verify_seed_success_title">ตรวจสอบสำเร็จ</string>
+    <string name="verify_seed_success_title">้ตรวจสอบสำเร็จ</string>
     <string name="verify_seed_success_message">กระเป๋าสตางค์ของคุณปลอดภัยแล้ว คุณสามารถใช้วลีกู้คืนได้ทุกเวลาเพื่อกู้คืนบัญชีของคุณบนอุปกรณ์อื่น</string>
     <string name="verify_no_screenshot_title">อย่าใช้วิธีการบันทึกภาพหน้าจอ</string>
     <string name="verify_no_screenshot_message">ให้เขียนวลีการกู้คืนในที่ปลอดภัยแทน</string>
@@ -228,8 +242,7 @@
     <string name="transaction_details_sent_to">ส่งไปยัง</string>
     <string name="transaction_details_received_at">ได้รับที่</string>
     <string name="transaction_details_moved_from">เคลื่อนย้ายจาก</string>
-    <string name="transaction_details_moved_internally_to">ย้ายไปภายในแล้ว</string>
-
+    <string name="transaction_details_moved_internally_to">ย้ายไปภายแล้ว</string>
     <string name="authenticate_fingerprint_title">รับรองความน่าเชื่อถือ</string>
     <string name="authenticate_fingerprint_message">ยืนยันลายนิ้วมือเพื่อดำเนินการต่อไป</string>
     <string name="authenticate_pin_message">ป้อนเลขรหัสผ่านของคุณเพื่อดำเนินการต่อไป</string>
@@ -237,13 +250,13 @@
     <string name="authenticate_switch_to_pin">ใช้รหัส PIN</string>
 
     <string name="menu_buy_and_sell_title">ซื้อ &amp; ขาย Dash</string>
-    <string name="menu_buy_and_sell_subtitle">เชื่อมต่อกับการแลกเปลี่ยนของบุคคลที่สาม</string>
+    <string name="menu_buy_and_sell_subtitle">เชื่อมต่อกับการแลกเปลี่ยนบุคคลที่สาม</string>
     <string name="menu_security_title">ความปลอดภัย</string>
     <string name="menu_security_subtitle">ดูวลี, กระเป๋าสตางค์สำรอง...</string>
     <string name="menu_settings_title">ตั้งค่า</string>
     <string name="menu_settings_subtitle">สกุลเงินเริ่มต้น, ทางลัด, เกี่ยวกับ...</string>
     <string name="menu_tools_title">เครื่องมือ</string>
-    <string name="menu_tools_subtitle">นำเข้ากุญแจส่วนตัว</string>
+    <string name="menu_tools_subtitle">นำเข้าคีย์ส่วนตัว...</string>
     <string name="menu_local_currency">สกุลเงินท้องถิ่น</string>
     <string name="menu_rescan_blockchain">สแกน blockchain อีกครั้ง</string>
     <string name="menu_contact_support_title">ติดต่อฝ่ายสนับสนุน</string>
@@ -252,11 +265,11 @@
     <string name="menu_explore_subtitle">ซื้อสินค้าด้วย Dash ที่มีร้านค้ามากกว่า 155,000 ร้าน</string>
 
     <string name="tools_address_book">สมุดที่อยู่</string>
-    <string name="tools_import_private_key">นำเข้ากุญแจส่วนตัว</string>
+    <string name="tools_import_private_key">นำเข้าคีย์ส่วนตัว</string>
     <string name="tools_network_monitor">จอภาพเครือข่าย</string>
     <string name="tools_show_xpub">ขยาย Public key</string>
 
-    <string name="about_help_us_improve">ช่วยเราเพื่อพัฒนาประสบการณ์ของคุณ</string>
+    <string name="about_help_us_improve">ช่วยเราเพื่อพัฒนาประการณ์ของคุณ</string>
     <string name="about_review_and_rate">วิจารณ์และให้คะแนนแอพพลิเคชั่นนี้</string>
     <string name="about_contact_support">ติดต่อฝ่ายสนับสนุน</string>
     <string name="about_fork_disclaimer">นี่คือซอฟต์แวร์โอเพนซอร์ซแอพพลิเคชั่นที่แยกสาขาออกมาจากกระเป๋าสตางค์บิทคอยน์</string>
@@ -272,14 +285,14 @@
     <string name="hash">การแบ่งย่อยข้อมูลและการผสมข้อมูลย่อยทั้งหมดเข้าด้วยกัน</string>
     <string name="block_info">การบล็อกข้อมูล</string>
 
-    <string name="scan_private_key">สแกนกุญแจส่วนตัว</string>
+    <string name="scan_private_key">สแกนคีย์ส่วนตัว</string>
     <string name="scan_private_key_intro_1">คุณกำลังจะเคลื่อนย้ายเงินทุนสะสมจากกระเป๋าสตางค์กระดาษของ Dash </string>
     <string name="scan_private_key_intro_2">จะทำการย้ายเหรียญทั้งหมดมายังกระเป๋าสตางค์ของคุณบนอุปกรณ์นี้</string>
     <string name="scan_private_key_intro_3">เมื่อธุรกรรมถูกยืนยัน กระเป๋าสตางค์อื่น ๆ จะไม่มีค่าและไม่ควรนำมาใช้อีกครั้งเพื่อความปลอดภัย</string>
     <string name="confirm">ยืนยัน</string>
 
     <string name="advanced_security_security_level">เลเวลความปลอดภัย</string>
-    <string name="auto_logout">ออกจากระบบอัตโนมัติ</string>
+    <string name="auto_logout">ออกจากระแบบอัตโนมัติ</string>
     <string name="spending_confirmation">การยืนยันการใช้จ่าย</string>
     <string name="logout_after">ออกจากระบบหลังจาก</string>
     <string name="immediately">ทันที</string>
@@ -339,7 +352,6 @@
 
     <string name="syncing">กำลังซิงค์</string>
     <string name="syncing_balance">กำลังซิงค์ยอดคงเหลือ</string>
-
     <string name="all_transactions">ทั้งหมด</string>
     <string name="received_transactions">ได้รับ</string>
     <string name="sent_transactions">ส่ง</string>
@@ -349,6 +361,13 @@
     <string name="wallet_encryption_error_message">มีปัญหาในการสร้างกระเป๋าเงินโปรดรายงานสิ่งนี้ไปยังแผนกซัพพอร์ต</string>
     <string name="wallet_not_encrypted_error_message">มีปัญหาเกิดขึ้นกับกระเป๋าเงินของคุณ.\n\nIf คุณไม่มี  Dash ในกระเป๋าเงินนี้ ถอนการติดตั้งและติดตั้งแอพนี้ใหม่จากนั้นสร้างกระเป๋าเงินใหม่.\n\nIf คุณมีวลีการกู้คืนหรือไฟล์สำรองข้อมูลจากนั้นถอนการติดตั้งแอพนี้และติดตั้งใหม่.\n\nOtherwise โปรดรายงานสิ่งนี้ไปยังแผนกซัพพอร์ต</string>
 
+    <string name="reset_wallet_title">แน่ใจหรือว่าต้องการรีเซ็ตกระเป๋าเงิน?</string>
+    <string name="reset_wallet_message">หากคุณรีเซ็ตกระเป๋าเงินของคุณวิธีเดียวที่จะเข้าถึงได้คือการกู้คืนกระเป๋าเงินด้วยวลีการกู้คืน</string>
+    <string name="positive_reset_text">ใช่ รีเซ็ตกระเป๋าเงิน</string>
+    <string name="launch_reset_wallet_title">คุณมียอดคงเหลือในเชิงบวก</string>
+    <string name="launch_reset_wallet_message">หากคุณรีเซ็ตกระเป๋าเงินของคุณคุณจะสูญเสียเงินทั้งหมดหากคุณยังไม่ได้สำรองวลีการกู้คืน</string>
     <string name="continue_reset">ดำเนินการต่อ</string>
+    <string name="launch_reset_wallet_extra_message">สำรองวลีการกู้คืนของคุณ</string>
+    <string name="start_reset_wallet_title">คุณอาจสูญเสีย %s</string>
     <string name="reset_wallet_text">รีเซ็ตกระเป๋าสตางค์</string>
-</resources>
+    </resources>

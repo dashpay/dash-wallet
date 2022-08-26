@@ -30,7 +30,7 @@
 
     <TextView
         android:id="@+id/title"
-        style="@style/Headline5.Bold"
+        style="@style/Headline5"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/crowdnode_verify_api_address" />
@@ -68,7 +68,7 @@
         android:paddingBottom="8dp">
 
         <TextView
-            style="@style/Caption.SteelGray"
+            style="@style/Caption.Secondary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/primary_dash_address"
@@ -123,7 +123,7 @@
         android:paddingBottom="8dp">
 
         <TextView
-            style="@style/Caption.SteelGray"
+            style="@style/Caption.Secondary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/dash_address"
