@@ -37,11 +37,11 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
 
 class CrowdNodeAPIConfirmationForwarded(
-    params: NetworkParameters,
-    amount: Coin
+    params: NetworkParameters
 ): CoinsToAddressTxFilter(
     CrowdNodeConstants.getCrowdNodeAddress(params),
-    amount
+    CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT,
+    includeFee = true
 )
 
 open class CrowdNodeAPIConfirmationTx(

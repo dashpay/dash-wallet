@@ -31,7 +31,6 @@ import org.dash.wallet.common.data.Resource
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApiAggregator
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeWebApi
-import org.dash.wallet.integrations.crowdnode.model.IsAddressInUse
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWelcomeToApiResponse
@@ -40,7 +39,6 @@ import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.*
-import retrofit2.Response
 import kotlin.time.ExperimentalTime
 
 @FlowPreview
@@ -67,12 +65,13 @@ class CrowdNodeApiAggregatorTest {
     }
 
     private val webApi = mock<CrowdNodeWebApi> {
-        onBlocking { isAddressInUse(any()) } doReturn Response.success(IsAddressInUse(false, null))
+        onBlocking { isApiAddressInUse(any()) } doReturn Pair(false, null)
         onBlocking { resolveBalance(any()) } doReturn Resource.success(Coin.COIN)
     }
 
     private val blockchainApi = mock<CrowdNodeBlockchainApi> {
         on { getFullSignUpTxSet() } doReturn null
+        on { getApiAddressConfirmationTx() } doReturn null
     }
 
     @Before

@@ -24,12 +24,14 @@ import org.bitcoinj.script.ScriptPattern
 
 open class CoinsToAddressTxFilter(
     val toAddress: Address,
-    val coins: Coin
+    val coins: Coin,
+    val includeFee: Boolean = false
 ): TransactionFilter {
     var fromAddresses = listOf<Address>()
         private set
 
     override fun matches(tx: Transaction): Boolean {
+        val actualValue = if (includeFee && tx.fee != null) coins - tx.fee else coins
         val networkParameters = toAddress.parameters
 
         for (output in tx.outputs) {
@@ -37,7 +39,7 @@ open class CoinsToAddressTxFilter(
 
             if ((ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
                 script.getToAddress(networkParameters) == toAddress &&
-                output.value == coins
+                output.value == actualValue
             ) {
                 fromAddresses = tx.inputs.mapNotNull {
                     it.outpoint.connectedOutput?.scriptPubKey?.getToAddress(networkParameters)
