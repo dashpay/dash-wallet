@@ -191,7 +191,7 @@ open class CrowdNodeWebApi @Inject constructor(
         }
     }
 
-    suspend fun getWithdrawalLimits(address: Address?): Map<WithdrawalLimitPeriod, Coin> {
+    open suspend fun getWithdrawalLimits(address: Address?): Map<WithdrawalLimitPeriod, Coin> {
         return try {
             val response = endpoint.getWithdrawalLimits(address?.toBase58() ?: "")
 

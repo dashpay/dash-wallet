@@ -17,7 +17,6 @@
 
 package org.dash.wallet.integrations.crowdnode.api
 
-import android.util.Log
 import kotlinx.coroutines.flow.first
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -29,7 +28,6 @@ import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.transactions.ExactOutputsSelector
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.filters.CoinsReceivedTxFilter
-import org.dash.wallet.common.transactions.filters.CoinsToAddressTxFilter
 import org.dash.wallet.common.transactions.filters.LockedTransaction
 import org.dash.wallet.common.transactions.filters.TxWithinTimePeriod
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException

@@ -181,11 +181,16 @@ class CrowdNodeApiAggregator @Inject constructor(
 
             val onlineStatusOrdinal = config.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
                 ?: OnlineAccountStatus.None.ordinal
-            val onlineStatus = OnlineAccountStatus.values()[onlineStatusOrdinal]
+            var onlineStatus = OnlineAccountStatus.values()[onlineStatusOrdinal]
             val onlineAccountAddress = getOnlineAccountAddress(onlineStatus)
 
             if (onlineAccountAddress != null) {
                 accountAddress = onlineAccountAddress
+
+                if (onlineStatus == OnlineAccountStatus.None) {
+                    onlineStatus = OnlineAccountStatus.Linking
+                }
+
                 tryRestoreLinkedOnlineAccount(onlineStatus, onlineAccountAddress)
                 refreshWithdrawalLimits()
             }
@@ -598,8 +603,8 @@ class CrowdNodeApiAggregator @Inject constructor(
             }
 
             if (apiAddress != null) {
-                signUpStatus.value = SignUpStatus.LinkedOnline
                 globalConfig.crowdNodeAccountAddress = apiAddress.toBase58()
+                signUpStatus.value = SignUpStatus.LinkedOnline
                 config.setPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, OnlineAccountStatus.Linking.ordinal)
                 return apiAddress
             }
