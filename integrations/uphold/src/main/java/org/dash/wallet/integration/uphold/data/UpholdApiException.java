@@ -43,10 +43,6 @@ public class UpholdApiException extends Exception {
         }
     }
 
-    public UpholdApiException(int httpStatusCode) {
-        this.httpStatusCode = httpStatusCode;
-    }
-
     // for testing
     public UpholdApiException(String errorResponse, int httpStatusCode) {
         this.httpStatusCode = httpStatusCode;
