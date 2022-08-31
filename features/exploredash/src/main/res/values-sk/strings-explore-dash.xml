@@ -24,6 +24,8 @@
     <string name="explore_atms_title">Bankomaty</string>
     <string name="explore_atms_subtitle">Zistiť, kde za hotovosť kúpiť alebo predať DASH a iné kryptomeny.</string>
     <string name="explore_staking_subtitle">Jednoducho stávkujte Dash a získajte pasívny príjem niekoľkými jednoduchými kliknutiami.</string>
+    <string name="explore_staking_current_apy">Aktuálne APY = %s%%</string>
+
     <!-- Search -->
     <string name="explore_search_results">Výsledky vyhľadávania</string>
     <string name="explore_physical_merchant">Kamenný obchod</string>

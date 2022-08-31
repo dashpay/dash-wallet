@@ -24,6 +24,8 @@
     <string name="explore_atms_title">ATMler</string>
     <string name="explore_atms_subtitle">DASH ve diğer kripto para birimlerini nakit olarak nereden alıp satabileceğinizi bulun.</string>
     <string name="explore_staking_subtitle">Dash\'i kolayca stake edin ve birkaç basit tıklamayla pasif gelir elde edin.</string>
+    <string name="explore_staking_current_apy">Güncel YFG = %s%%</string>
+
     <!-- Search -->
     <string name="explore_search_results">Arama Sonuçları</string>
     <string name="explore_physical_merchant">Fiziki Tüccar</string>

@@ -235,6 +235,14 @@
     <string name="view_seed_done">Bitti</string>
     <string name="view_seed_title">Kurtarma Sözcük Grubu</string>
     <string name="transaction_result_view_on_explorer">Blok gezgininde görüntüle</string>
+    <string name="transaction_result_tax_category">Vergi Kategorisi</string>
+    <string name="transaction_result_tax_category_loading">Yükleniyor...</string>
+    <string-array name="transaction_result_tax_categories">
+        <item>Gelir</item>
+        <item>Gider</item>
+        <item>İçe transfer</item>
+        <item>Dışa transfer</item>
+    </string-array>
     <string name="transaction_result_paid_successfully">Başarıyla gönderildi</string>
     <string name="transaction_result_sent_to">Gönder</string>
     <string name="transaction_date_and_time">Tarih</string>
@@ -246,6 +254,8 @@
     <string name="transaction_details_received_at">Alındı</string>
     <string name="transaction_details_moved_from">Taşındı</string>
     <string name="transaction_details_moved_internally_to">Dahili olarak taşındı</string>
+    <string name="transaction_failed_details">İşlem başarısız</string>
+
     <string name="authenticate_fingerprint_title">Doğrulama</string>
     <string name="authenticate_fingerprint_message">Devam etmek için parmak iziyle onaylayın</string>
     <string name="authenticate_pin_message">Devam etmek için PİN\'inizi girin</string>
@@ -254,6 +264,8 @@
 
     <string name="menu_buy_and_sell_title">Dash Al &amp; Sat</string>
     <string name="menu_buy_and_sell_subtitle">Üçüncü parti borsalara bağlanın</string>
+    <string name="liquid_unavailable">Dash Cüzdanı ile Liquid entegrasyonu artık yok</string>
+    <string name="liquid_unavailable_details">Liquid\'deki Dash varlıklarınızla ilgili herhangi bir sorunuz varsa, lütfen Liquid destek merkezi ile iletişime geçin.</string>
     <string name="menu_security_title">Güvenlik</string>
     <string name="menu_security_subtitle">Kurtarma sözcük grubunu göster, cüzdanı yedekle...</string>
     <string name="menu_settings_title">Ayarlar</string>
@@ -353,8 +365,12 @@
     <string name="import_image_import_valid_private_key">Dash\'i içe aktarmak için geçerli bir özel anahtar kopyalayın</string>
     <string name="import_image_invalid_private">Geçersiz Özel Anahtar</string>
 
+    <string name="today">Bugün</string>
+    <string name="yesterday">Dün</string>
+
     <string name="syncing">Senkronize ediliyor</string>
     <string name="syncing_balance">Bakiye senkronize ediliyor</string>
+    <string name="transaction_count">%d işlemler</string>
     <string name="all_transactions">Hepsi</string>
     <string name="received_transactions">Alınan</string>
     <string name="sent_transactions">Gönderilen</string>
@@ -373,4 +389,14 @@
     <string name="launch_reset_wallet_extra_message">Kurtarma ifadenizi yedekleyin</string>
     <string name="start_reset_wallet_title">%s kaybedebilirsiniz</string>
     <string name="reset_wallet_text">Cüzdanı Sıfırla</string>
-    </resources>
+    <string name="reclassify_transactions_title">İşlemlerinizi Yeniden Sınıflandırın</string>
+    <string name="reclassify_transactions_title_message">Bu sınıflandırmalar, vergi raporlama hizmetlerine içe aktarılmak için kullanılabilecek CSV aktarımlarına yansıyacaktır.</string>
+    <string name="reclassify_transactions_question">Vergi kategorisini nereden değiştirebilirim?</string>
+    <string name="reclassify_transactions_outgoing_title">Giden işlemler</string>
+    <string name="reclassify_transactions_by_default_message">varsayılan olarak işaretlenecektir</string>
+    <string name="reclassify_transactions_incoming_title">Gelen işlemler</string>
+    <string name="reclassify_transactions_change_it_message">olarak değiştirebilirsiniz</string>
+    <string name="reclassify_transactions_linked_accounts_title">Bağlı hesaplar</string>
+    <string name="reclassify_transactions_linked_accounts_message">Varsayılan olarak, bağlı hesaplarınıza yapılan veya bu hesaplardan yapılan tüm işlemler (borsalar, vb.) transfer olarak işaretlenecektir.</string>
+    <string name="reclassify_transactions_change_explanation">Ana sayfadan herhangi bir işlemi seçin ve işlem ayrıntıları sayfasında kategoriyi değiştirin.</string>
+</resources>

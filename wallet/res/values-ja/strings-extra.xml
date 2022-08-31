@@ -266,6 +266,8 @@
 
     <string name="menu_buy_and_sell_title">Dashを買う &amp; 売る</string>
     <string name="menu_buy_and_sell_subtitle">サードパーティーの取引所に接続する</string>
+    <string name="liquid_unavailable">DashウォレットとのLiquid連携は終了いたしました。</string>
+    <string name="liquid_unavailable_details">Liquidで保有しているDashについてご質問がある場合は、Liquidのサポートセンターまでお問い合わせください。</string>
     <string name="menu_security_title">セキュリティ</string>
     <string name="menu_security_subtitle">パスフレーズを表示して、ウォレットをバックアップ ...</string>
     <string name="menu_settings_title">設定</string>
@@ -366,6 +368,9 @@
     <string name="import_image_no_private_key_copied">非公開キーがコピーされていません</string>
     <string name="import_image_import_valid_private_key">有効な非公開キーをコピーして、そこからDashをインポートします。</string>
     <string name="import_image_invalid_private">無効な非公開キー</string>
+
+    <string name="today">今日</string>
+    <string name="yesterday">昨日</string>
 
     <string name="syncing">同期中</string>
     <string name="syncing_balance">同期バランス</string>

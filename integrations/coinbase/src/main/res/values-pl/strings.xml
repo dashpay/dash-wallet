@@ -1,0 +1,118 @@
+<!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="coinbase">Coinbase</string>
+    <string name="last_known_balance" >Ostatnio znane saldo</string>
+    <string name="coinbase_dash_wallet_error_title">Nie znaleźliśmy Porfela Dash na twoim koncie Coinbase</string>
+    <string name="coinbase_dash_wallet_error_message">Aby kontynuować, stwórz portfel Dash na Coinbase.</string>
+    <string name="create_dash_account">Stwórz Konto Dash</string>
+    <string name="close">Zamknij</string>
+    <string name="retry">Ponów</string>
+    <string name="connected">Połączony</string>
+    <string name="disconnect_coinbase_account">Rozłącz Konto Coinbase</string>
+    <string name="receive_directly_into_dash_wallet">Otrzymaj bezpośrednio do portfela Dash</string>
+    <string name="buy_dash">Kup Dash</string>
+    <string name="balance">Saldo:</string>
+    <string name="balance_on_coinbase">Saldo na Coinbase</string>
+    <string name="sending_to">Wysyłanie do</string>
+    <string name="dash_wallet_device">Portfel Dash na tym urządzeniu</string>
+    <string name="exchange_rate_template">%1$s DASH = %2$s</string>
+    <string name="payment_method">Metoda płatności</string>
+    <string name="purchase">Kup</string>
+    <string name="coinbase_fee">Opłata Coinbase</string>
+    <string name="total">Całkowite</string>
+    <string name="order_preview">Podgląd Zamówienia</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Otrzymasz %s do portfela Dash na tym urządzeniu. Trasfer może zająć 2-3 minuty. </string>
+    <string name="amount_in_dash">Kwota w Dash</string>
+    <string name="cancel">Anuluj</string>
+    <string name="confirm_sec">Potwierdź (%ss)</string>
+    <string name="confirm">Potwierdź</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Nie znaleźliśmy żadnej metody płatności.</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Zaktualizuj swoje konto Coinbase aby móc kontynuować.</string>
+    <string name="add_payment_method">Dodaj Metodę Płatności</string>
+    <string name="error">Błąd</string>
+    <string name="cancel_transaction">Anuluj transakcję?</string>
+    <string name="yes_cancel">Tak, anuluj</string>
+    <string name="no_keep_it">Nie, kontynuuj</string>
+    <string name="purchase_successful">Zakup udany</string>
+    <string name="conversion_successful">Konwersja powiodła się</string>
+    <string name="purchase_failed">Zakup się nie udał</string>
+    <string name="transfer_failed">Transfer nie zoastała wysłana</string>
+    <string name="conversion_failed">Konwersja nie udała się</string>
+    <string name="transfer_failed_msg">Dash został pomyślnie przelany na twoje konto Coinbase, ale wystąpił błąd podczas transferu do twojego portfela Dash na tym urządzeniu. </string>
+    <string name="purchase_failed_msg">Coś poszło nie tak</string>
+    <string name="it_could_take_up_to_2_3_minutes">Transfer Dash do porfela na tym urządzeniu może zająć do 2-3 minut.</string>
+    <string name="it_could_take_up_to_5_minutes">Przekonwertowanie %s środków z konta na Coinbase do portfela Dash może zająć do 5 minut.</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">\"Przekonwertowanie Dash z twojego portfela,  na %s konto Coinbase, może zająć do 5 minut.</string>
+    <string name="contact_coinbase_support">Skontaktuj się z pomocą Coibase</string>
+    <string name="fees_in_crypto_purchase">Opłaty w kupowaniu krypto</string>
+    <string name="coinbase_fee_info_msg_content">Oprócz pokazanej opłaty Coinbase, wliczamy również mały margines błędu. Rynki Kryptowalut są dosyć zmienne, więc ten margines pozwala nam na gwarancje ceny podczas transakcji. </string>
+    <string name="learn_more">Dowiedz się więcej</string>
+    <string name="something_wrong_title">Coś poszło nie tak!</string>
+    <string name="retry_later_message">Spróbuj ponownie trochę później lub skontaktuj się z naszym centrum wsparcia, aby uzyskać pomoc</string>
+    <string name="convert_crypto">Wymień Krypto</string>
+    <string name="between_dash_wallet_and_coinbase">Pomiędzy Porfelem Dash a Coinbase</string>
+    <string name="conversion_preview">Podgląd Wymiany</string>
+    <string name="you_send">ty wysyłasz</string>
+    <string name="from_your_coinbase_account">Z twojego konta na Coinbase</string>
+    <string name="you_receive">otrzymujesz</string>
+    <string name="to_dash_wallet_on_this_device">Do portfela Dash na tym urządzeniu</string>
+    <string name="to_your_coinbase_account">Na twoje konto Coinbase</string>
+    <string name="from_dash_wallet_on_this_device">Z portfela Dash na tym urządzeniu</string>
+    <string name="you_will_receive">Otrzymasz</string>
+    <string name="we_didnt_find_any_assets" >Nie znaleźliśmy żadnych aktywów na twoim koncie Coinbase</string>
+    <string name="you_dont_own_any_crypto" >Nie posiadasz żadnych krypto monet. Kup trochę aby rozpocząć przygodę z krypto..</string>
+    <string name="buy_crypto_on_coinbase" >Kup Krypto na Coinbase</string>
+    <string name="auth_limit_description">Przekroczyłeś limit autoryzacji na Coinbase.</string>
+    <string name="debit_money">Obciąż swoje konto</string>
+    <string name="change_limit">Zmień ten limit</string>
+    <string name="set_auth_limit">Ustaw odpowiedni limit autoryzacji na Coinbase</string>
+    <string name="change_withdrawal_limit">Możesz to zmienić kiedy tylko chcesz poprzez wylogowanie się z Coinbase w portfelu Dash i zalogowaniu się ponownie.</string>
+    <string name="got_it">Rozumiem</string>
+    <string name="send_to_wallet_error">Niemożliwe jest dokonanie tej transakcji bez przekroczenia limitu aplikacji</string>
+    <string name="dont_have_any_dash">Nie posiadasz Dash w swoim portfelu Dash</string>
+    <string name="transfer_wallet_not_synced">Przelewy z portfela Dash do Coinbase jest niemożliwy do czasu zakończenia synchronizacji portfela.</string>
+    <string name="disconnected">Rozłączony</string>
+
+    <string name="insufficient_money_title">Brak wystarczających środków</string>
+    <string name="insufficient_money_msg">Ilość monet w portfelu jest zbyt mała by przetransferować środki.</string>
+    <string name="send_coins_error_msg">Problem z wysłaniem monet!</string>
+    <string name="entered_amount_is_too_low">Minimalna wielkość transakcji jest</string>
+    <string name="entered_amount_is_too_high">Maksymalna wielkość transakcji jest</string>
+    <string name="verify_continue">Zweryfikuj</string>
+    <string name="enter_auth_code">Wprowadź kod 2FA </string>
+    <string name="extra_steps_label">Ten dodatkowy krok potwierdza, że to naprawdę ty dokonujesz  tej transakcji. </string>
+    <string name="need_help">Potrzebujesz Pomocy?</string>
+    <string name="coinbase_fa_code_hint">Kod 2FA</string>
+    <string name="enter_code_details">Może to być kod z SMS-a na Twoim telefonie. Jeśli nie, wprowadź kod z aplikacji uwierzytelniającej.</string>
+    <string name="two_fa_code_incorrect">Kod jest nieprawidłowy. Spróbuj ponownie!</string>
+    <string name="invalid_code">Ten kod był nieprawidłowy. Proszę spróbuj ponownie</string>
+    <string name="verify_code">Zweryfikuj</string>
+    <string name="you_dont_have_enough_balance">Nie masz wystarczająco środków</string>
+    <string name="transfer_dash">Przetransferuj Dash</string>
+    <string name="transfer_amount">Przelej</string>
+    <string name="dash_wallet_limit_description">Kwota ta jest większa niż twoje saldo</string>
+    <string name="address_creation_failed">Nie mogliśmy utworzyć adresu dla Twojego konta, aby sfinalizować transakcję. Proszę spróbuj później.</string>
+    <string name="transaction_row_rate_not_available">Niedostępne</string>
+    <string name="transfer_dash_successful">Transfer został dokonany pomyślnie</string>
+    <string name="it_could_take_up_to_10_minutes">Wysłanie Dash z Coinbase do portfela Dash na tym urządzeniu może potrwać do 10 minut.</string>
+    <string name="it_could_take_up_to_10_minutes_to_coinbase">Przesłanie Dash z twojego portfela na konto Coinbase może zająć do 10 minut.</string>
+    <string name="transfer_dash_failed_msg">Wystąpił problem podczas transferu Dash.</string>
+    <string name="insufficient_money_to_transfer">Niewystarczająca ilość monet do przelania.</string>
+    <string name="amount_to_transfer">Otrzymasz %s %s %s</string>
+
+    </resources>

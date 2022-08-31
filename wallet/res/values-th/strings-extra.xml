@@ -232,6 +232,14 @@
     <string name="view_seed_done">เสร็จแล้ว</string>
     <string name="view_seed_title">วลีกู้คืน</string>
     <string name="transaction_result_view_on_explorer">ดูใน Block Explorer</string>
+    <string name="transaction_result_tax_category">หมวดภาษี</string>
+    <string name="transaction_result_tax_category_loading">กำลังโหลด...</string>
+    <string-array name="transaction_result_tax_categories">
+        <item>รายได้</item>
+        <item>ค่าใช้จ่าย</item>
+        <item>การโอนเข้า</item>
+        <item>การโอนออก</item>
+    </string-array>
     <string name="transaction_result_paid_successfully">ส่งสำเร็จแล้ว</string>
     <string name="transaction_result_sent_to">ส่งไปยัง</string>
     <string name="transaction_date_and_time">วันที่</string>
@@ -243,6 +251,8 @@
     <string name="transaction_details_received_at">ได้รับที่</string>
     <string name="transaction_details_moved_from">เคลื่อนย้ายจาก</string>
     <string name="transaction_details_moved_internally_to">ย้ายไปภายแล้ว</string>
+    <string name="transaction_failed_details">การทำธุรกรรมล้มเหลว</string>
+
     <string name="authenticate_fingerprint_title">รับรองความน่าเชื่อถือ</string>
     <string name="authenticate_fingerprint_message">ยืนยันลายนิ้วมือเพื่อดำเนินการต่อไป</string>
     <string name="authenticate_pin_message">ป้อนเลขรหัสผ่านของคุณเพื่อดำเนินการต่อไป</string>
@@ -352,6 +362,7 @@
 
     <string name="syncing">กำลังซิงค์</string>
     <string name="syncing_balance">กำลังซิงค์ยอดคงเหลือ</string>
+    <string name="transaction_count">%d ธุรกรรม</string>
     <string name="all_transactions">ทั้งหมด</string>
     <string name="received_transactions">ได้รับ</string>
     <string name="sent_transactions">ส่ง</string>
@@ -370,4 +381,14 @@
     <string name="launch_reset_wallet_extra_message">สำรองวลีการกู้คืนของคุณ</string>
     <string name="start_reset_wallet_title">คุณอาจสูญเสีย %s</string>
     <string name="reset_wallet_text">รีเซ็ตกระเป๋าสตางค์</string>
-    </resources>
+    <string name="reclassify_transactions_title">จัดประเภทธุรกรรมของคุณใหม่</string>
+    <string name="reclassify_transactions_title_message">การจำแนกประเภทเหล่านี้จะแสดงให้เห็นในการส่งออก CSV ที่สามารถใช้ในการนำเข้าสู่บริการรายงานภาษี</string>
+    <string name="reclassify_transactions_question">ฉันจะเปลี่ยนหมวดหมู่ภาษีได้ที่ไหน</string>
+    <string name="reclassify_transactions_outgoing_title">ธุรกรรมขาออก</string>
+    <string name="reclassify_transactions_by_default_message">โดยค่าเริ่มต้นจะถูกทำเครื่องหมายเป็น</string>
+    <string name="reclassify_transactions_incoming_title">ธุรกรรมขาเข้า</string>
+    <string name="reclassify_transactions_change_it_message">คุณสามารถเปลี่ยนเป็น</string>
+    <string name="reclassify_transactions_linked_accounts_title">บัญชีที่เชื่อมโยง</string>
+    <string name="reclassify_transactions_linked_accounts_message">โดยค่าเริ่มต้นการทำธุรกรรมทั้งหมดไปยังหรือจากบัญชีที่เชื่อมโยงของคุณ (การเทรด, staking, ฯลฯ) จะถูกทำเครื่องหมายเป็นการถ่ายโอน</string>
+    <string name="reclassify_transactions_change_explanation">เลือกธุรกรรมใด ๆ จากหน้าแรกและเปลี่ยนหมวดหมู่ในหน้ารายละเอียดการทำธุรกรรม</string>
+</resources>

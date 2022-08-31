@@ -14,6 +14,8 @@
     <string name="email">E-mail</string>
     <string name="email_placeholder">par exemple johndoe@mail.com</string>
     <string name="error">Erreur</string>
+    <string name="select_a_coin">Choisir des pièces</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">livre de Guernesey</string>
     <!-- Local Currency List: JEP -->
@@ -37,6 +39,7 @@
     <string name="button_dismiss">Ignorer</string>
     <string name="network_unavailable_return">Retourner au portefeuille</string>
     <string name="button_continue">Continuer</string>
+    <string name="get_quote">Obtenir un devis</string>
     <string name="button_close">Fermer</string>
     <string name="button_retry">Réessayer</string>
     <string name="button_send_report">Envoyer un rapport</string>
@@ -51,8 +54,15 @@
     <string name="search_hint">Chercher</string>
     <string name="permission_allow">Autoriser</string>
     <string name="permission_deny">Refuser</string>
+    <string name="pay_with">Payer avec</string>
+    <string name="choose_payment_method">Choisir une méthode de paiement</string>
+    <string name="debit_credit_card">Carte de débit ou de crédit</string>
     <string name="max">Maximum</string>
+    <string name="select_the_coin">Choisir les pièces</string>
     <string name="dash">Dash</string>
+    <string name="dash_wallet_name">Portefeuille Dash</string>
+    <string name="from">depuis</string>
+    <string name="to">vers</string>
     <string name="select_currency">Choisir la monnaie</string>
     <string name="send_coins_error_dusty_send">Le montant est trop faible pour être envoyé</string>
     <string name="send_coins_error_insufficient_money">Fonds insuffisants</string>

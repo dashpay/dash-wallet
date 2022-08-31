@@ -24,6 +24,8 @@
     <string name="explore_atms_title">เอทีเอ็ม</string>
     <string name="explore_atms_subtitle">ค้นหาสถานที่ซื้อหรือขาย Dash และ คริปโทเคเรนซีอื่น ๆ เป็นเงินสด</string>
     <string name="explore_staking_subtitle"> Stake Dash ได้อย่างง่ายดายและได้รับรายได้แบบ passive income ด้วยการคลิกง่ายๆ</string>
+    <string name="explore_staking_current_apy">APY ปัจจุบัน = %s%%</string>
+
     <!-- Search -->
     <string name="explore_search_results">ผลการค้นหา</string>
     <string name="explore_physical_merchant">ร้านค้า</string>

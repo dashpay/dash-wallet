@@ -14,6 +14,8 @@
     <string name="email">Email</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Σφάλμα</string>
+    <string name="select_a_coin">Επιλέξτε ένα νόμισμα</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Γκέρνσεϊ Λίρα</string>
     <!-- Local Currency List: JEP -->
@@ -37,6 +39,7 @@
     <string name="button_dismiss">Ματαίωση</string>
     <string name="network_unavailable_return">Επιστροφή στο Πορτοφόλι</string>
     <string name="button_continue">Συνέχεια</string>
+    <string name="get_quote">Αποκτήστε προσφορά</string>
     <string name="button_close">κλείσιμο</string>
     <string name="button_retry">Επανάληψη</string>
     <string name="button_send_report">Αποστολή αναφοράς</string>
@@ -51,8 +54,15 @@
     <string name="search_hint">Αναζήτηση</string>
     <string name="permission_allow">Επιτρέπετε</string>
     <string name="permission_deny">Απόρριψη</string>
+    <string name="pay_with">Πληρώστε με</string>
+    <string name="choose_payment_method">Επιλέξτε μέθοδο πληρωμής</string>
+    <string name="debit_credit_card">Χρεωστική/πιστωτική κάρτα</string>
     <string name="max">Μέγιστο</string>
+    <string name="select_the_coin">Επιλέξτε το νόμισμα</string>
     <string name="dash">Dash</string>
+    <string name="dash_wallet_name">Dash Πορτοφόλι</string>
+    <string name="from">από</string>
+    <string name="to">στο</string>
     <string name="select_currency">Επιλέξτε Νόμισμα</string>
     <string name="send_coins_error_dusty_send">Το ποσό είναι πολύ μικρό για να σταλθεί</string>
     <string name="send_coins_error_insufficient_money">Ανεπαρκή χρήματα</string>

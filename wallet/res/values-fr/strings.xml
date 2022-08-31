@@ -280,6 +280,8 @@
     <string name="preferences_show_disclaimer_summary">Avez-vous vraiment lu les conseils de sécurité ? Avez-vous déjà sauvegardé votre portefeuille dans un endroit sûr ?</string>
     <string name="preferences_report_issue_title">Signaler un problème</string>
     <string name="preferences_initiate_reset_title">Réanalyser la blockchain</string>
+    <string name="preferences_initiate_reset_summary">Réinitialise la chaîne de blocs, les transactions et le solde de portefeuille. Le rebalayage prendra du temps ; ne faites donc ceci qu\'en connaissance de cause.</string>
+    <string name="preferences_initiate_reset_dialog_message">Souhaitez-vous rebalayer la chaîne de blocs ?\n\nCela masquera provisoirement le solde de votre portefeuille et enlèvera les transactions. Les deux réapparaîtront à mesure qu\'avancera la synchronisation de la chaîne de blocs. Veuillez vous assurer d\'avoir une connexion Internet fiable.</string>
     <string name="preferences_initiate_reset_dialog_positive">Réanalyser</string>
     <string name="preferences_extended_public_key_title">Afficher la xpub</string>
     <string name="preferences_extended_public_key_summary">Visualisez la clé privée étendue de votre portefeuille afin qu\'elle puisse être importée dans d\'autres applications et services. Attention : ceci divulguera vos informations monétaires à cette application.</string>
@@ -382,8 +384,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">Vous n\'avez pas assez de fonds pour terminer cette transaction</string>
 
 
+    <string name="select_a_service_to_buy_and_sell_dash">Choisissez un service pour acheter et vendre les dashs.</string>
     <string name="select_a_service">Choisissez un service</string>
     <string name="activity_buy_and_sell_dash_filter">Filtre</string>
     <string name="clear_filter">Effacer le filtre</string>
     <string name="select_currency">Choisir la monnaie</string>
-    </resources>
+    <string name="reason">Raison</string>
+</resources>

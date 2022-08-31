@@ -14,6 +14,8 @@
     <string name="email">Email</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Błąd</string>
+    <string name="select_a_coin">Wybierz monetę</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Funt Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -37,6 +39,7 @@
     <string name="button_dismiss">Odrzuć</string>
     <string name="network_unavailable_return">Wróć do portfela</string>
     <string name="button_continue">Dalej</string>
+    <string name="get_quote">Otrzymaj wycenę</string>
     <string name="button_close">Zamknij</string>
     <string name="button_retry">Ponów</string>
     <string name="button_send_report">Wyślij Raport</string>
@@ -51,8 +54,15 @@
     <string name="search_hint">Szukaj</string>
     <string name="permission_allow">Pozwól</string>
     <string name="permission_deny">Odmów</string>
+    <string name="pay_with">Zapłać za pomocą</string>
+    <string name="choose_payment_method">Wybierz Metodę Płatności</string>
+    <string name="debit_credit_card">Karta Debetowa/Kredytowa</string>
     <string name="max">Max</string>
+    <string name="select_the_coin">Wybierz monetę</string>
     <string name="dash">Dash</string>
+    <string name="dash_wallet_name">Portfel Dash</string>
+    <string name="from">Od</string>
+    <string name="to">Do</string>
     <string name="select_currency">Wybierz Walutę</string>
     <string name="send_coins_error_dusty_send">Kwota jest zbyt mała, aby wysłać</string>
     <string name="send_coins_error_insufficient_money">Niewystarczająca ilość funduszy</string>

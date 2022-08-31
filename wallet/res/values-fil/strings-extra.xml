@@ -235,6 +235,14 @@
     <string name="view_seed_done">Tapos</string>
     <string name="view_seed_title">Recovery phrase</string>
     <string name="transaction_result_view_on_explorer">Tingnan sa block explorer</string>
+    <string name="transaction_result_tax_category">Kategorya ng Buwis</string>
+    <string name="transaction_result_tax_category_loading">Nagkakarga...</string>
+    <string-array name="transaction_result_tax_categories">
+        <item>Kita</item>
+        <item>Gastos</item>
+        <item>Paglipat-loob</item>
+        <item>Paglipat-labas</item>
+    </string-array>
     <string name="transaction_result_paid_successfully">Matagumpay na naipadala</string>
     <string name="transaction_result_sent_to">Pinadala kay</string>
     <string name="transaction_date_and_time">Petsa</string>
@@ -246,6 +254,8 @@
     <string name="transaction_details_received_at">Natanggap sa</string>
     <string name="transaction_details_moved_from">Ilipat mula</string>
     <string name="transaction_details_moved_internally_to">Internally ilipat sa</string>
+    <string name="transaction_failed_details">Nabigo ang Paglipat</string>
+
     <string name="authenticate_fingerprint_title">Patunayan</string>
     <string name="authenticate_fingerprint_message">Kumpirmahin ang fingerprint para magpatuloy</string>
     <string name="authenticate_pin_message">I-enter ang iyong PIN para magpatuloy</string>
@@ -355,6 +365,7 @@
 
     <string name="syncing">Nagsi-sync</string>
     <string name="syncing_balance">Syncing Balance</string>
+    <string name="transaction_count">%d mga transaksyon</string>
     <string name="all_transactions">Lahat</string>
     <string name="received_transactions">Natanggap</string>
     <string name="sent_transactions">Ipinadala</string>
@@ -373,4 +384,14 @@
     <string name="launch_reset_wallet_extra_message">I-back up ang iyong recovery phrase</string>
     <string name="start_reset_wallet_title">Baka matalo ka ng %s</string>
     <string name="reset_wallet_text">I-reset ang pitaka</string>
-    </resources>
+    <string name="reclassify_transactions_title">I-reclassify ang Iyong mga Transaksyon</string>
+    <string name="reclassify_transactions_title_message">Ang mga klasipikasyong ito ay makikita sa CSV Export na maaaring magamit upang mag-import sa mga serbisyo sa pag-uulat ng buwis.</string>
+    <string name="reclassify_transactions_question">Saan ko maaaring baguhin ang kategorya ng buwis?</string>
+    <string name="reclassify_transactions_outgoing_title">Mga papalabas na transaksyon</string>
+    <string name="reclassify_transactions_by_default_message">bilang default ay mamarkahan bilang</string>
+    <string name="reclassify_transactions_incoming_title">Mga papasok na transaksyon</string>
+    <string name="reclassify_transactions_change_it_message">Maaari mo itong palitan ng</string>
+    <string name="reclassify_transactions_linked_accounts_title">Mga naka-link na account</string>
+    <string name="reclassify_transactions_linked_accounts_message">bilang default lahat ng mga transaksyon papunta o mula sa iyong mga naka-link na account (palitan, staking, atbp) ay mamarkahan bilang mga paglilipat.</string>
+    <string name="reclassify_transactions_change_explanation">Pumili ng anumang transaksyon mula sa homepage at baguhin ang kategorya sa pahina ng mga detalye ng transaksyon.</string>
+</resources>
