@@ -1,17 +1,35 @@
-package de.schildbach.wallet.ui
+/*
+ * Copyright 2022 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.ui.payments
 
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
+import androidx.activity.viewModels
 import androidx.appcompat.widget.Toolbar
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.receive.ReceiveDetailsDialog
+import de.schildbach.wallet.ui.EnterAmountFragment
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
+
 @AndroidEntryPoint
 class ReceiveActivity : LockScreenActivity() {
 
@@ -25,7 +43,7 @@ class ReceiveActivity : LockScreenActivity() {
         }
     }
 
-    private lateinit var enterAmountSharedViewModel: EnterAmountSharedViewModel
+    private val enterAmountSharedViewModel by viewModels<EnterAmountSharedViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,16 +65,16 @@ class ReceiveActivity : LockScreenActivity() {
 
         setTitle(R.string.receive_title)
 
-        enterAmountSharedViewModel = ViewModelProvider(this)[EnterAmountSharedViewModel::class.java]
         enterAmountSharedViewModel.maxButtonVisibleData.value = false
         enterAmountSharedViewModel.buttonTextData.call(R.string.receive_title)
         enterAmountSharedViewModel.messageTextData.value = R.string.receive_enter_amount_message
-        enterAmountSharedViewModel.buttonClickEvent.observe(this, Observer {
+        enterAmountSharedViewModel.buttonClickEvent.observe(this) {
             val dashAmount = enterAmountSharedViewModel.dashAmount
             val fiatAmount = enterAmountSharedViewModel.exchangeRate?.coinToFiat(dashAmount)
-            val dialogFragment = ReceiveDetailsDialog.createDialog(dashAmount, fiatAmount)
+            val address = enterAmountSharedViewModel.receiveAddress
+            val dialogFragment = ReceiveDetailsDialog.createDialog(address, dashAmount, fiatAmount)
             dialogFragment.show(supportFragmentManager, "ReceiveDetailsDialog")
-        })
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

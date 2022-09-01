@@ -2,7 +2,6 @@ package de.schildbach.wallet.ui;
 
 import android.app.Dialog;
 import android.content.DialogInterface;
-import android.os.Build;
 import android.os.Bundle;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.FragmentActivity;
@@ -24,8 +23,8 @@ import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.service.RestartService;
-import de.schildbach.wallet.ui.send.DecryptSeedTask;
-import de.schildbach.wallet.ui.send.DeriveKeyTask;
+import de.schildbach.wallet.payments.DecryptSeedTask;
+import de.schildbach.wallet.payments.DeriveKeyTask;
 import de.schildbach.wallet.util.ParcelableChainPath;
 import de.schildbach.wallet_test.R;
 

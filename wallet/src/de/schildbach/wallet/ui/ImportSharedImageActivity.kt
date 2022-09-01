@@ -35,7 +35,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.FancyAlertDialog // TODO
 import org.slf4j.LoggerFactory
 
 /**

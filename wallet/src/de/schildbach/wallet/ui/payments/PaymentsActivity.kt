@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.payments
 
 import android.content.Context
 import android.content.Intent
@@ -23,9 +23,12 @@ import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
 import com.google.android.material.tabs.TabLayout
+import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.ui.GlobalFooterActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.*
 
+@AndroidEntryPoint
 class PaymentsActivity : GlobalFooterActivity() {
 
     companion object {

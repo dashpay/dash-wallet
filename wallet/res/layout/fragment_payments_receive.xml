@@ -4,9 +4,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="de.schildbach.wallet.ui.PaymentsPayFragment">
+    tools:context="de.schildbach.wallet.ui.payments.PaymentsPayFragment">
 
-    <de.schildbach.wallet.ui.widget.ReceiveInfoView
+    <org.dash.wallet.common.ui.receive.ReceiveInfoView
         android:id="@+id/receive_info"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

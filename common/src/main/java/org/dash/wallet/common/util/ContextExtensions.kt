@@ -47,3 +47,10 @@ fun Context.openNotificationChannelSettings(channel: String) {
         .putExtra(Settings.EXTRA_CHANNEL_ID, channel)
     startActivity(settingsIntent)
 }
+
+fun Context.shareText(textToShare: String, title: String) {
+    val intent = Intent(Intent.ACTION_SEND)
+    intent.type = "text/plain"
+    intent.putExtra(Intent.EXTRA_TEXT, textToShare)
+    startActivity(Intent.createChooser(intent, title))
+}

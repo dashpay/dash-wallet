@@ -62,7 +62,7 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.ui.CurrencyTextView;
-import org.dash.wallet.common.ui.FancyAlertDialog;
+import org.dash.wallet.common.ui.FancyAlertDialog; // TODO
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,6 +80,11 @@ import de.schildbach.wallet.data.DynamicFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
 
 import org.dash.wallet.common.ui.BaseLockScreenFragment;
+
+import de.schildbach.wallet.payments.DecodePrivateKeyTask;
+import de.schildbach.wallet.data.FeeCategory;
+import de.schildbach.wallet.payments.RequestWalletBalanceTask;
+import de.schildbach.wallet.payments.SendCoinsOfflineTask;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity;
 import de.schildbach.wallet.ui.rates.ExchangeRatesViewModel;
@@ -318,7 +323,7 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
         if (loadingDialog != null && loadingDialog.isAdded()) {
             loadingDialog.dismissAllowingStateLoss();
         }
-        loadingDialog = FancyAlertDialog.newProgress(messageResId, 0);
+        loadingDialog = FancyAlertDialog.newProgress(messageResId, 0); // TODO
         loadingDialog.show(getParentFragmentManager(), "progress");
     }
 

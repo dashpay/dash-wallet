@@ -22,6 +22,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
+import de.schildbach.wallet.ui.payments.PaymentsReceiveFragment
 import de.schildbach.wallet_test.R
 
 class QuickReceiveActivity : ShortcutComponentActivity() {

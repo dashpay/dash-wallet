@@ -6,7 +6,7 @@
     android:background="@color/background_primary"
     android:orientation="vertical"
     android:fitsSystemWindows="true"
-    tools:context="de.schildbach.wallet.ui.ReceiveActivity">
+    tools:context="de.schildbach.wallet.ui.payments.ReceiveActivity">
 
     <include
         layout="@layout/app_bar_general"

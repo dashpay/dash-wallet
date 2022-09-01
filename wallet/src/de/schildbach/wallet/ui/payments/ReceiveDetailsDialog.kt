@@ -14,40 +14,44 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui.receive
-
+package de.schildbach.wallet.ui.payments
 
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.dash_fiat_amount_layout.*
-import kotlinx.android.synthetic.main.dialog_receive_details.*
+import de.schildbach.wallet_test.databinding.DialogReceiveDetailsBinding
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
+import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 
-private const val ARG_DASH_AMOUNT = "arg_dash_amount"
-private const val ARG_FIAT_AMOUNT = "arg_fiat_amount"
-
+@AndroidEntryPoint
 class ReceiveDetailsDialog : OffsetDialogFragment() {
-
     companion object {
+        private const val ARG_DASH_AMOUNT = "arg_dash_amount"
+        private const val ARG_FIAT_AMOUNT = "arg_fiat_amount"
+        private const val ARG_ADDRESS = "arg_address"
 
         @JvmStatic
-        fun createDialog(dashAmount: Coin, fiatAmount: Fiat?): DialogFragment {
+        fun createDialog(address: Address, dashAmount: Coin, fiatAmount: Fiat?): DialogFragment {
             val dialog = ReceiveDetailsDialog()
             val bundle = Bundle()
+            bundle.putSerializable(ARG_ADDRESS, address)
             bundle.putSerializable(ARG_DASH_AMOUNT, dashAmount)
             bundle.putSerializable(ARG_FIAT_AMOUNT, fiatAmount)
             dialog.arguments = bundle
             return dialog
         }
     }
+
+    private val binding by viewBinding(DialogReceiveDetailsBinding::bind)
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_receive_details, container, false)
@@ -56,17 +60,19 @@ class ReceiveDetailsDialog : OffsetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         requireArguments().apply {
+            val address = getSerializable(ARG_ADDRESS) as Address
             val dashAmount = getSerializable(ARG_DASH_AMOUNT) as Coin
             val fiatAmount = getSerializable(ARG_FIAT_AMOUNT) as Fiat?
 
-            receive_info.amount = dashAmount
-            input_value.text = MonetaryFormat.BTC.noCode().format(dashAmount).toString()
+            binding.receiveInfo.setInfo(address, dashAmount)
+            binding.amount.inputValue.text = MonetaryFormat.BTC.noCode().format(dashAmount).toString()
+
             if (fiatAmount != null) {
-                fiat_symbol.text = GenericUtils.currencySymbol(fiatAmount.currencyCode)
-                fiat_value.text = fiatAmount.toPlainString()
+                binding.amount.fiatSymbol.text = GenericUtils.currencySymbol(fiatAmount.currencyCode)
+                binding.amount.fiatValue.text = fiatAmount.toPlainString()
             } else {
-                fiat_symbol.visibility = View.GONE
-                fiat_value.visibility = View.GONE
+                binding.amount.fiatSymbol.visibility = View.GONE
+                binding.amount.fiatValue.visibility = View.GONE
             }
         }
     }

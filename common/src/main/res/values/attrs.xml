@@ -9,11 +9,13 @@
     <attr name="action_text_color" format="reference" />
     <attr name="action_text" format="string" />
     <attr name="action_active" format="boolean" />
+
     <declare-styleable name="LockScreenButton">
         <attr name="action_icon" />
         <attr name="text" format="reference"/>
         <attr name="action_icon_padding" format="dimension" />
     </declare-styleable>
+
     <declare-styleable name="FingerprintView">
         <attr name="custom_layout" format="reference" />
     </declare-styleable>
@@ -26,6 +28,12 @@
     <declare-styleable name="NumericKeyboardView">
         <attr format="boolean" name="nk_functionEnabled" />
         <attr format="boolean" name="nk_decSeparatorEnabled" />
+    </declare-styleable>
+
+    <declare-styleable name="ReceiveInfoView">
+        <attr name="ri_show_share_action" format="boolean" />
+        <attr name="ri_show_amount_action" format="boolean" />
+        <attr name="ri_qr_code_scale" format="float" />
     </declare-styleable>
 
     <attr format="color" name="disabledBackgroundColor"/>

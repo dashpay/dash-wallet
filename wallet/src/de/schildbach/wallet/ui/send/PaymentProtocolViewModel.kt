@@ -24,9 +24,10 @@ import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.offline.DirectPaymentTask
 import de.schildbach.wallet.offline.DirectPaymentTask.HttpPaymentTask
+import de.schildbach.wallet.payments.RequestPaymentRequestTask
 import org.dash.wallet.common.data.ExchangeRate
 import de.schildbach.wallet.rates.ExchangeRatesRepository
-import de.schildbach.wallet.ui.send.RequestPaymentRequestTask.HttpRequestTask
+import de.schildbach.wallet.payments.RequestPaymentRequestTask.HttpRequestTask
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin

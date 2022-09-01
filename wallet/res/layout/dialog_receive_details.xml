@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:paddingBottom="16dp">
+    android:paddingBottom="16dp"
+    tools:context="de.schildbach.wallet.ui.payments.ReceiveDetailsDialog">
 
     <ImageView
         android:id="@+id/collapse_button"
@@ -20,22 +22,24 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:gravity="center_horizontal"
+        android:textAlignment="gravity"
         android:text="@string/receive_title" />
 
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_margin="16dp"
-        android:background="#c7c7c7" />
+        android:background="@color/divider_color" />
 
     <include
+        android:id="@+id/amount"
         layout="@layout/dash_fiat_amount_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="16dp" />
 
-    <de.schildbach.wallet.ui.widget.ReceiveInfoView
+    <org.dash.wallet.common.ui.receive.ReceiveInfoView
         android:id="@+id/receive_info"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

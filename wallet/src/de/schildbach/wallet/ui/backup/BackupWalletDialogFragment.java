@@ -74,7 +74,7 @@ import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.ui.SecurityActivity;
 import de.schildbach.wallet.security.SecurityGuard;
-import de.schildbach.wallet.ui.send.DeriveKeyTask;
+import de.schildbach.wallet.payments.DeriveKeyTask;
 import de.schildbach.wallet_test.R;
 import de.schildbach.wallet.WalletApplication;
 

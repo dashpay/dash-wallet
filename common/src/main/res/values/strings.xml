@@ -17,6 +17,7 @@
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Error</string>
     <string name="select_a_coin">Select a coin</string>
+    <string name="request_coins_share_dialog_title">Share request for Dash…</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -51,6 +52,7 @@
     <string name="button_okay">Okay</string>
     <string name="button_share">Share</string>
     <string name="verify">Verify</string>
+    <string name="receive_enter_amount_button">Specify Amount</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>

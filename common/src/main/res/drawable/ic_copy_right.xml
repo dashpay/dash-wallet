@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="15dp"
+    android:height="16dp"
+    android:viewportWidth="15"
+    android:viewportHeight="16">
+  <path
+      android:pathData="M7,0.625L12,0.625A1.375,1.375 0,0 1,13.375 2L13.375,9A1.375,1.375 0,0 1,12 10.375L7,10.375A1.375,1.375 0,0 1,5.625 9L5.625,2A1.375,1.375 0,0 1,7 0.625z"
+      android:strokeWidth="1.25"
+      android:fillColor="#ffffff"
+      android:strokeColor="#008DE4"/>
+  <path
+      android:pathData="M4,2.55L9,2.55A2.45,2.45 0,0 1,11.45 5L11.45,12A2.45,2.45 0,0 1,9 14.45L4,14.45A2.45,2.45 0,0 1,1.55 12L1.55,5A2.45,2.45 0,0 1,4 2.55z"
+      android:strokeWidth="0.9"
+      android:fillColor="#008DE4"
+      android:strokeColor="#000000"/>
+  <path
+      android:pathData="M4,2.375L9,2.375A2.625,2.625 0,0 1,11.625 5L11.625,12A2.625,2.625 0,0 1,9 14.625L4,14.625A2.625,2.625 0,0 1,1.375 12L1.375,5A2.625,2.625 0,0 1,4 2.375z"
+      android:strokeWidth="1.25"
+      android:fillColor="#008DE4"
+      android:strokeColor="#ffffff"/>
+  <path
+      android:pathData="M4,3.625L9,3.625A1.375,1.375 0,0 1,10.375 5L10.375,12A1.375,1.375 0,0 1,9 13.375L4,13.375A1.375,1.375 0,0 1,2.625 12L2.625,5A1.375,1.375 0,0 1,4 3.625z"
+      android:strokeWidth="1.25"
+      android:fillColor="#ffffff"
+      android:strokeColor="#008DE4"/>
+</vector>

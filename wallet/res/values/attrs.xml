@@ -17,11 +17,6 @@
         <attr name="pb_sub_title" format="string" />
         <attr name="pb_active" format="boolean" />
     </declare-styleable>
-    <declare-styleable name="ReceiveInfoView">
-        <attr name="ri_show_share_action" format="boolean" />
-        <attr name="ri_show_amount_action" format="boolean" />
-        <attr name="ri_qr_code_scale" format="float" />
-    </declare-styleable>
     <declare-styleable name="PinPreviewView">
         <attr name="pp_item_size" format="dimension" />
         <attr name="pp_custom_drawable" format="reference" />

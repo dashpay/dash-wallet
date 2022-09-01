@@ -7,7 +7,7 @@
     android:animateLayoutChanges="true"
     android:background="@color/background_primary"
     android:orientation="vertical"
-    tools:context="de.schildbach.wallet.ui.PaymentsActivity">
+    tools:context="de.schildbach.wallet.ui.payments.PaymentsActivity">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"

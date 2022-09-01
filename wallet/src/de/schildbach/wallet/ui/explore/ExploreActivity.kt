@@ -25,7 +25,7 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.ui.BaseMenuActivity
-import de.schildbach.wallet.ui.PaymentsActivity
+import de.schildbach.wallet.ui.payments.PaymentsActivity
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
