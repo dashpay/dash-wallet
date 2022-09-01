@@ -63,6 +63,7 @@ import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.FancyAlertDialog;
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,6 +88,7 @@ import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
 
 import static com.google.common.base.Preconditions.checkState;
 import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
@@ -458,19 +460,18 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
             public void onFail(final int messageResId, final Object... messageArgs) {
                 dismissProgress();
 
-                baseAlertDialogBuilder.setTitle(getString(R.string.sweep_wallet_fragment_request_wallet_balance_failed_title));
-                baseAlertDialogBuilder.setMessage(getString(messageResId, messageArgs));
-                baseAlertDialogBuilder.setPositiveText(getString(R.string.button_retry));
-                baseAlertDialogBuilder.setPositiveAction(
-                        () -> {
-                            requestWalletBalance();
-                            return Unit.INSTANCE;
-                        }
-                );
-                baseAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
-                baseAlertDialogBuilder.setShowIcon(true);
-                alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-                alertDialog.show();
+                AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.sweep_wallet_fragment_request_wallet_balance_failed_title),
+                        getString(messageResId, messageArgs),
+                        getString(R.string.button_close),
+                        getString(R.string.button_retry)
+                ).show(requireActivity(), (Function1<Boolean, Unit>) result -> {
+                    if (result != null && result) {
+                        requestWalletBalance();
+                    }
+                    return Unit.INSTANCE;
+                });
             }
         };
 
