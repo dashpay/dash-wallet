@@ -22,7 +22,7 @@ import org.bitcoinj.core.*
 import org.bitcoinj.params.TestNet3Params
 import org.dash.wallet.common.transactions.filters.CoinsFromAddressTxFilter
 import org.dash.wallet.common.transactions.filters.CoinsToAddressTxFilter
-import org.dashj.bls.Utils
+import org.bitcoinj.core.Utils
 import org.junit.Test
 
 class TransactionFilterTests {

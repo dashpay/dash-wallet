@@ -60,7 +60,6 @@ import com.google.common.base.Stopwatch;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
@@ -259,7 +258,7 @@ public class WalletApplication extends BaseWalletApplication
         CrashReporter.init(getCacheDir());
 
         Threading.uncaughtExceptionHandler = (thread, throwable) -> {
-            log.info(CoinDefinition.coinName + "j uncaught exception", throwable);
+            log.info("dashj uncaught exception", throwable);
             CrashReporter.saveBackgroundTrace(throwable, packageInfo);
         };
 
@@ -344,7 +343,7 @@ public class WalletApplication extends BaseWalletApplication
     }
 
     public void finalizeInitialization() {
-        wallet.getContext().initDash(true, true);
+        wallet.getContext().initDash(true, true, Constants.SYNC_FLAGS, Constants.VERIFY_FLAGS);
 
         if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {
