@@ -17,11 +17,15 @@
 <resources>
     <string name="crowdnode_get_started">Začíname s CrowdNode</string>
     <string name="crowdnode_get_started_hint">Ak chcete začať stávkovať, vytvorte si účet na CrowdNode alebo sa pripojte k existujúcemu účtu.</string>
+    <string name="crowdnode_account">Účet CrowdNode</string>
     <string name="new_account">Nový CrowdNode účet</string>
     <string name="account_create">Vytvoriť účet</string>
-    <string name="account_create_response">Vytvoriť odpoveď účtu</string>
+    <string name="accept_terms_response">Prijmite podmienky</string>
+    <string name="accept_terms">Prijať podmienky</string>
+    <string name="welcome_response">Účet vytvorený</string>
     <string name="account_link">Prepojiť existujúci účet</string>
     <string name="crowdnode_login">Prihláste sa do CrowdNode</string>
+    <string name="crowdnode_signup">Zaregistrovať sa do CrowdNode</string>
     <string name="crowdnode_link">Prepojiť existujúci CrowdNode účet</string>
     <string name="required_passphrase_backup">V Dash peňaženke si musíte zálohovať svoju prístupovú frázu </string>
     <string name="backup_passphrase">Zálohovať prístupovú frázu</string>
@@ -40,6 +44,7 @@
     <string name="privacy_policy">Zásady ochrany osobných údajov</string>
     <string name="crowdnode_account_ready">Váš účet CrowdNode je nastavený a pripravený na použitie!</string>
     <string name="notify_when_done">Zatvoriť a upozorniť, keď to bude hotové</string>
+    <string name="crowdnode_creating">Vytvára sa váš CrowdNode účet…</string>
     <string name="accepting_terms">Prijímam podmienky používania…</string>
     <string name="crowdnode_signup_error">Nepodarilo sa nám vytvoriť váš CrowdNode účet.</string>
     <string name="crowdnode_deposit_error">Nepodarilo sa nám uskutočniť vklad na váš CrowdNode účet.</string>
@@ -58,6 +63,10 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
     <string name="online_account">Online účet</string>
     <string name="online_account_create">Vytvoriť online účet</string>
+    <string name="secure_online_account">Chráňte svoje úspory</string>
+    <string name="crowdnode_signup_to_finish">Prihláste sa pre dokončenie nastavenia účtu</string>
+    <string name="online_account_create_full">Vytvorte si online CrowdNode účet</string>
+    <string name="online_account_email_privacy">Upozorňujeme, že e-mail nie je uložený v Dash peňaženke a je odoslaný iba do CrowdNode</string>
     <string name="crowdnode_support">Podpora CrowdNode</string>
     <string name="unlink_account">Odpojiť účet</string>
     <string name="online_account_title">Prečo potrebujete online účet?</string>
@@ -70,6 +79,7 @@
     <string name="payout_options">Možnosti výplaty</string>
     <string name="payout_options_details">Môžete zmeniť spôsob alebo kedy sa vám budú vyplácať vaše zárobky.</string>
     <string name="crowdnode_balance">Zostatok na CrowdNode</string>
+    <string name="crowdnode_your_address_title">Tu je adresa Dash spojená s vaším účtom CrowdNode</string>
     <string name="chain_syncing">Reťazec sa synchronizuje...</string>
     <string name="crowdnode_wait_for_sync">Počkajte, kým sa reťazec úplne zosynchronizuje, aby sme mohli skontrolovať vašu históriu transakcií. Pre prihlásenie alebo registráciu navštívte webovú stránku CrowdNode.</string>
     <string name="crowdnode_open_website">Prejdite na webovú stránku CrowdNode</string>
@@ -84,8 +94,26 @@
     <string name="crowdnode_minimum_deposit">Vložte aspoň %s, aby ste mohli začať zarábať</string>
     <string name="crowdnode_minimum_deposit_difference">Vložte %s, aby ste mohli začať zarábať</string>
     <string name="crowdnode_first_deposit">Prvý vklad by mal byť vyšší ako %s</string>
-    <string name="crowdnode_staking_info_title">Ako funguje stávkovanie</string>
+    <string name="crowdnode_staking_info_title">Ako funguje stávkovanie na CrowdNode</string>
+    <string name="crowdnode_staking_info_message_first">Sieť Dash je riadená množstvom Masternódov, čo je nevyhnutná súčasť pre uskutočnenie platieb.</string>
+    <string name="crowdnode_staking_info_message_second">Masternód potrebuje 1000 Dash ako záruku a každý Masternód je v súčasnosti odmeňovaný približne %s%% ročne.</string>
+    <string name="crowdnode_staking_apy_title">Aktuálny APY je %s%%</string>
     <string name="crowdnode_staking_info_message">Zarábať začnete, ak má váš účet CrowdNode viac ako %s</string>
+    <string name="staking_apy_title">Aktuálny APY je %s</string>
+    <string name="crowdnode_staking_current_apy_message">To predstavuje to aktuálny ročný percentuálny výnos celého Masternódu mínus 15 % poplatok CrowdNode. Nie je to zaručená miera návratnosti a môže stúpať alebo klesať v závislosti od veľkosti fondov CrowdNode a ceny Dash.</string>
+    <string name="crowdnode_staking_leave_pool_message_one">Členovia môžu voľne ukončiť členstvo a zvyčajne môžu odísť okamžite.</string>
+    <string name="crowdnode_staking_leave_pool_message_two">V prípade väčších výberov, CrowdNode vyplatí výbery do dvoch týždňov. Toto je spôsobené ich bezpečnostnými protokolmi ale najčastejšie to bude oveľa skôr.</string>
+
+    <string name="crowdnode_staking_leaving_the_pool_title">Ukončiť členstvo</string>
+    <string name="crowdnode_staking_receiving_rewards_title">Prijímané odmeny</string>
+    <string name="crowdnode_staking_receiving_rewards_message">Čiastkové platby budete dostávať automaticky a štandardne budú reinvestované, ale je tiež jednoduché nastaviť automatické výbery pre prijímanie opakujúcich sa platieb.</string>
+    <string name="crowdnode_staking_first_minimum_deposit_title">Prvý minimálny vklad</string>
+    <string name="crowdnode_staking_join_pool_message">Keďže väčšina ľudí nemá po ruke presne 1000 Dash, CrowdNode vytvoril službu, kde môžete združovaním vkladov od členov dosiahnuť výhody vlastníctva Masternódu.</string>
+    <string name="crowdnode_staking_join_pool_title">Pripojenie k členstvu</string>
+    <string name="crowdnode_staking_crowdnode_benefits_title">Výhody CrowdNode</string>
+    <string name="crowdnode_staking_connected_dash_address_title">Pripojená Dash adresa</string>
+    <string name="crowdnode_staking_connected_dash_address_message">Tu je Dash adresa určená pre váš CrowdNode účet v Dash peňaženke na tomto zariadení.</string>
+    <string name="crowdnode_staking_toast_address_copied">Adresa CrowdNode bola skopírovaná do schránky</string>
     <string name="crowdnode_verify_api_address">Overte svoju API Dash adresu</string>
     <string name="crowdnode_how_to_verify">Ako potvrdiť svoju API Dash adresu </string>
     <string name="crowdnode_how_to_verify_description1">Pošlite %s Dash zo svojej primárnej Dash adresy, ktorú momentálne používate pre svoj účet CrowdNode</string>
@@ -102,4 +130,24 @@
     <string name="crowdnode_online_account_details_title">Informácie o vašom online účte</string>
     <string name="crowdnode_online_account_details_primary">Vaša primárna Dash adresa, ktorú momentálne používate pre svoj účet CrowdNode</string>
     <string name="crowdnode_online_account_details_api">Dash adresa určená pre váš CrowdNode účet v Dash peňaženke na tomto zariadení</string>
+    <string name="crowdnode_primary_missing">Vo vašom účte chýba primárna adresa Dash. Uveďte ju na webovej stránke CrowdNode.</string>
+    <string name="crowdnode_wait_signed_email">Počkajte, kým sa váš e-mail spracuje…</string>
+    <string name="cannot_send">Nie je možné odoslať.</string>
+    <string name="crowdnode_tx_set_title">Prečo sa mi zobrazujú všetky tieto transakcie?</string>
+    <string name="crowdnode_tx_set_explainer">Váš účet CrowdNode bol vytvorený pomocou týchto transakcií.</string>
+    <string name="shuffle_coins">Miešať mince</string>
+    <string name="positive_balance_required">V Dash peňaženke by ste mali mať kladný zostatok</string>
+    <string name="withdrawal_required_balance">Ak chcete dokončiť výber, vložte do svojej Dash peňaženky aspoň 0,0003 Dash</string>
+    <string name="withdrawal_limit">Limit výberu Dash</string>
+    <string name="withdrawal_limit_details">Nemôžete vybrať viac ako %1$s Dash %2$s.</string>
+    <string name="crowdnode_withdrawal_limits_title">Limity výberu CrowdNode</string>
+    <string name="crowdnode_withdrawal_limits_message">Vzhľadom na zmluvné podmienky CrowdNode môžu používatelia vybrať maximálne:</string>
+    <string name="crowdnode_withdraw_without_limits_online">Výber bez obmedzení s online účtom na webe CrowdNode.</string>
+    <string name="crowdnode_withdrawal_limits_error">Táto chyba je s najväčšou pravdepodobnosťou spôsobená prekročením limitov výberu CrowdNode. Skúste to neskôr.</string>
+    <string name="per_transaction">za transakciu</string>
+    <string name="per_hour">za hodinu</string>
+    <string name="per_day">za 24 hodín</string>
+    <string name="read_withdrawal_policy">Prečítajte si zásady výberu</string>
+
+
     </resources>

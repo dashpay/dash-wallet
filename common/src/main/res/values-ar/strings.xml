@@ -14,6 +14,8 @@
     <string name="email">البريد الإلكتروني</string>
     <string name="email_placeholder">على سبيل المثال johndoe@mail.com</string>
     <string name="error">خطأ</string>
+    <string name="select_a_coin">اختر عملة </string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">جيرنزي جنيه</string>
     <!-- Local Currency List: JEP -->
@@ -37,6 +39,7 @@
     <string name="button_dismiss">تجاهل</string>
     <string name="network_unavailable_return">العودة إلى المحفظة</string>
     <string name="button_continue">استمر</string>
+    <string name="get_quote">احصل على السعر</string>
     <string name="button_close">اغلاق</string>
     <string name="button_retry">إعادة المحاولة</string>
     <string name="button_send_report">إرسال تقرير</string>
@@ -51,8 +54,15 @@
     <string name="search_hint">بحث</string>
     <string name="permission_allow">السماح</string>
     <string name="permission_deny">الرفض</string>
+    <string name="pay_with">ادفع من خلال</string>
+    <string name="choose_payment_method">اختر وسيلة الدفع</string>
+    <string name="debit_credit_card">بطاقة الخصم / الائتمان</string>
     <string name="max">الحد الأقصى</string>
+    <string name="select_the_coin">اختر عملة </string>
     <string name="dash">داش</string>
+    <string name="dash_wallet_name">محفظة داش</string>
+    <string name="from">من</string>
+    <string name="to">إلى</string>
     <string name="select_currency">اختر العملة</string>
     <string name="send_coins_error_dusty_send">المبلغ صغير جدا بحيث لا يمكن إرساله.</string>
     <string name="send_coins_error_insufficient_money">رصيد غير كاف</string>

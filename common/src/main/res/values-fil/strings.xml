@@ -14,6 +14,8 @@
     <string name="email">Email</string>
     <string name="email_placeholder">hal. juandelacruz@gmail.com</string>
     <string name="error">Mali</string>
+    <string name="select_a_coin">Pumili ng barya</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -37,6 +39,7 @@
     <string name="button_dismiss">Buwagin</string>
     <string name="network_unavailable_return">Bumalik sa Wallet</string>
     <string name="button_continue">Ipagpatuloy</string>
+    <string name="get_quote">Kumuha ng Quote</string>
     <string name="button_close">Sarado</string>
     <string name="button_retry">Subukang muli</string>
     <string name="button_send_report">Magpadala ng ulat</string>
@@ -51,8 +54,15 @@
     <string name="search_hint">Maghanap</string>
     <string name="permission_allow">Payagan</string>
     <string name="permission_deny">Tanggihan</string>
+    <string name="pay_with">Magbayad gamit ang</string>
+    <string name="choose_payment_method">Piliin ang Paraan ng Pagbabayad</string>
+    <string name="debit_credit_card">Debit/Credit card</string>
     <string name="max">Max</string>
+    <string name="select_the_coin">Piliin ang barya</string>
     <string name="dash">Dash</string>
+    <string name="dash_wallet_name">Dash Wallet</string>
+    <string name="from">mula kay:</string>
+    <string name="to">para kay:</string>
     <string name="select_currency">Piliin ang Pera</string>
     <string name="send_coins_error_dusty_send">Ang halaga ay sobrang liit para maipadala</string>
     <string name="send_coins_error_insufficient_money">Hindi sapat na pondo</string>

@@ -280,6 +280,8 @@
     <string name="preferences_show_disclaimer_summary">Heb je de veiligheidsinstructies echt gelezen? Heb je al een back-up van je portemonnee gemaakt op een veilige plek?</string>
     <string name="preferences_report_issue_title">Meld probleem</string>
     <string name="preferences_initiate_reset_title">Blockchain opnieuw scannen</string>
+    <string name="preferences_initiate_reset_summary">Scan de blockchain, transacties en portemonnee saldo opnieuw. Dit duurt even, dus doe dit alleen als je weet waarom.</string>
+    <string name="preferences_initiate_reset_dialog_message">Wil je de blockchain opnieuw scannen?\n\nHierdoor wordt uw portemonnee saldo tijdelijk verborgen en worden transacties verwijderd. Beide zullen herstellen naarmate de synchronisatie vordert. Zorg voor een betrouwbare internetverbinding.</string>
     <string name="preferences_initiate_reset_dialog_positive">Scan opnieuw</string>
     <string name="preferences_extended_public_key_title">Toon xpub</string>
     <string name="preferences_extended_public_key_summary">Weergeef de uitgebreide publieke sleutel van je portemonnee zodat deze geïmporteerd kan worden in andere apps en diensten. Let op: door deze actie zal je je privacy vrijgeven aan de app in kwestie.</string>
@@ -382,8 +384,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">Je hebt onvoldoende saldo om deze transactie te voltooien</string>
 
 
+    <string name="select_a_service_to_buy_and_sell_dash">Selecteer een dienst om Dash te kopen en verkopen.</string>
     <string name="select_a_service">Kies een dienst</string>
     <string name="activity_buy_and_sell_dash_filter">Filteren</string>
     <string name="clear_filter">Maak filter leeg</string>
     <string name="select_currency">Selecteer valuta</string>
-    </resources>
+    <string name="reason">Reden</string>
+</resources>

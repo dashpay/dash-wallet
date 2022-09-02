@@ -56,7 +56,6 @@
     <string name="transfer_failed_msg">I Dash sono stati depositati con successo sul tuo account Coinbase, ma si è verificato un problema durante il trasferimento nel Dash Wallet su questo dispositivo.</string>
     <string name="purchase_failed_msg">Qualcosa è andato storto</string>
     <string name="it_could_take_up_to_2_3_minutes">Il trasferimento dei Dash al tuo Dash Wallet su questo dispositivo potrebbe richiedere 2-3 minuti.</string>
-    <string name="it_could_take_up_to_5_minutes">Potrebbero essere necessari fino a 5 minuti per convertire DASH da Dash Wallet su questo dispositivo a Y nel tuo account Coinbase..</string>
     <string name="contact_coinbase_support">Contatta il supporto di Coinbase</string>
     <string name="fees_in_crypto_purchase">Commissioni negli acquisti di criptovalute</string>
     <string name="coinbase_fee_info_msg_content">Oltre alla commissione Coinbase visualizzata, includiamo uno spread nel prezzo. I mercati delle criptovalute sono volatili e questo ci consente di bloccare temporaneamente un prezzo per l\'esecuzione degli scambi.</string>

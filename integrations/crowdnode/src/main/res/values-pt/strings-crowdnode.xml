@@ -17,10 +17,15 @@
 <resources>
     <string name="crowdnode_get_started">Introdução ao CrowdNode</string>
     <string name="crowdnode_get_started_hint">Para iniciar as operações de staking, crie uma conta no CrowdNode ou conecte-se a uma existente.</string>
+    <string name="crowdnode_account">Conta CrowdNode</string>
     <string name="new_account">Nova conta CrowdNode</string>
     <string name="account_create">Criar Conta</string>
+    <string name="accept_terms_response">Por favor, aceitar termos</string>
+    <string name="accept_terms">Aceitar Termos</string>
+    <string name="welcome_response">Conta criada</string>
     <string name="account_link">Vincular Conta Existente</string>
     <string name="crowdnode_login">Faça login no CrowdNode</string>
+    <string name="crowdnode_signup">Inscreva-se no CrowdNode</string>
     <string name="crowdnode_link">Vincular Conta Existente no CrowdNode</string>
     <string name="required_passphrase_backup">Você precisa fazer backup da sua frase de recuperação na Dash Wallet</string>
     <string name="backup_passphrase">Backup da frase de recuperação</string>
@@ -39,6 +44,7 @@
     <string name="privacy_policy">Política de Privacidade</string>
     <string name="crowdnode_account_ready">Sua conta CrowdNode está configurada e pronta para uso!</string>
     <string name="notify_when_done">Fechar e notificar quando finalizar</string>
+    <string name="crowdnode_creating">Criando sua conta CrowdNode…</string>
     <string name="accepting_terms">Aceitando os termos de uso…</string>
     <string name="crowdnode_signup_error">Não foi possível criar sua conta CrowdNode.</string>
     <string name="crowdnode_deposit_error">Não foi possível fazer um depósito na sua conta CrowdNode.</string>
@@ -57,6 +63,10 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ Carteira Dash</string>
     <string name="online_account">Conta on-line</string>
     <string name="online_account_create">Criar conta online</string>
+    <string name="secure_online_account">Proteja suas economias</string>
+    <string name="crowdnode_signup_to_finish">Inscreva-se para concluir a configuração da conta</string>
+    <string name="online_account_create_full">Crie uma conta online do CrowdNode</string>
+    <string name="online_account_email_privacy">Por favor, observe que o e-mail não é salvo pela Carteira Dash e é enviado apenas para o CrowdNode</string>
     <string name="crowdnode_support">Suporte CrowdNode</string>
     <string name="unlink_account">Desvincular Conta</string>
     <string name="online_account_title">Por que você precisa de uma conta online?</string>
@@ -69,6 +79,7 @@
     <string name="payout_options">Opções de Pagamento</string>
     <string name="payout_options_details">Você pode alterar como / quando seus ganhos de recompensa serão pagos.</string>
     <string name="crowdnode_balance">Saldo no CrowdNode</string>
+    <string name="crowdnode_your_address_title">Aqui está o endereço Dash associado à sua conta CrowdNode</string>
     <string name="chain_syncing">A cadeia está sendo sincronizada…</string>
     <string name="crowdnode_wait_for_sync">Aguarde até que a cadeia esteja totalmente sincronizada para que possamos revisar seu histórico de transações. Visite o site do CrowdNode para fazer login ou se inscrever.</string>
     <string name="crowdnode_open_website">Acesse o site do CrowdNode</string>
@@ -83,8 +94,26 @@
     <string name="crowdnode_minimum_deposit">Deposite pelo menos %s para começar a ganhar</string>
     <string name="crowdnode_minimum_deposit_difference">Deposite %s para começar a ganhar</string>
     <string name="crowdnode_first_deposit">O primeiro depósito deve ser superior a %s</string>
-    <string name="crowdnode_staking_info_title">Como funciona o staking</string>
+    <string name="crowdnode_staking_info_title">Como funciona o staking no CrowdNode</string>
+    <string name="crowdnode_staking_info_message_first">A Rede Dash é impulsionada por vários Masternodes, o que é uma parte essencial para facilitar os pagamentos.</string>
+    <string name="crowdnode_staking_info_message_second">Um Masternode precisa de 1000 Dash como garantia e cada Masternode é atualmente recompensado aproximadamente por %s %% por ano.</string>
+    <string name="crowdnode_staking_apy_title">O APY atual é %s %%</string>
     <string name="crowdnode_staking_info_message">Você começa a ganhar se sua conta CrowdNode tiver mais de %s</string>
+    <string name="staking_apy_title">O APY atual é %s</string>
+    <string name="crowdnode_staking_current_apy_message">Isso representa o Rendimento Percentual Anual (Annual Percentage Yield - APY) atual de um Masternode completo menos a taxa de 15% do CrowdNode. Não é uma taxa de retorno garantida e pode aumentar ou diminuir com base no tamanho dos pools do CrowdNode e no preço do Dash.</string>
+    <string name="crowdnode_staking_leave_pool_message_one">Os membros são livres para sair do pool e na maioria das vezes podem sair imediatamente.</string>
+    <string name="crowdnode_staking_leave_pool_message_two">No caso de saques maiores, o CrowdNode pagará os saques dentro de duas semanas. Isso se deve aos seus protocolos de segurança e, na maioria das vezes, serão tratados muito mais rapidamente.</string>
+
+    <string name="crowdnode_staking_leaving_the_pool_title">Saindo do \"pool\"</string>
+    <string name="crowdnode_staking_receiving_rewards_title">Recebendo recompensas</string>
+    <string name="crowdnode_staking_receiving_rewards_message">Você receberá pagamentos fracionados automaticamente e eles serão reinvestidos por padrão, no entanto, também é fácil configurar saques automáticos para receber pagamentos recorrentes.</string>
+    <string name="crowdnode_staking_first_minimum_deposit_title">Primeiro Depósito Mínimo</string>
+    <string name="crowdnode_staking_join_pool_message">Como a maioria das pessoas não tem exatamente 1000 Dash em mãos, o CrowdNode criou um serviço em que, ao reunir depósitos de membros, podem obter os benefícios de possuir um Masternode.</string>
+    <string name="crowdnode_staking_join_pool_title">Entrando no \"pool\"</string>
+    <string name="crowdnode_staking_crowdnode_benefits_title">Benefícios CrowdNode</string>
+    <string name="crowdnode_staking_connected_dash_address_title">Endereço Dash conectado</string>
+    <string name="crowdnode_staking_connected_dash_address_message">Aqui está um endereço Dash designado para sua conta CrowdNode na Carteira Dash neste dispositivo.</string>
+    <string name="crowdnode_staking_toast_address_copied">Endereço do CrowdNode copiado para a área de transferência</string>
     <string name="crowdnode_verify_api_address">Verifique seu endereço de API Dash</string>
     <string name="crowdnode_how_to_verify">Como confirmar seu endereço de API Dash</string>
     <string name="crowdnode_how_to_verify_description1">Envie %s Dash do seu endereço primário Dash utilizado atualmente para sua conta CrowdNode</string>
@@ -101,4 +130,24 @@
     <string name="crowdnode_online_account_details_title">Informações sobre sua conta online</string>
     <string name="crowdnode_online_account_details_primary">Seu endereço primário Dash que você usa atualmente para sua conta CrowdNode</string>
     <string name="crowdnode_online_account_details_api">Endereço Dash designado para sua conta CrowdNode na Carteira Dash neste dispositivo</string>
+    <string name="crowdnode_primary_missing">O endereço principal Dash está ausente na sua conta. Por favor, especifique-o no site do CrowdNode.</string>
+    <string name="crowdnode_wait_signed_email">Por favor, aguarde até que seu e-mail seja processado…</string>
+    <string name="cannot_send">Não é possível enviar.</string>
+    <string name="crowdnode_tx_set_title">Por que vejo todas essas transações?</string>
+    <string name="crowdnode_tx_set_explainer">Sua conta CrowdNode foi criada usando estas transações.</string>
+    <string name="shuffle_coins">Embaralhar Moedas</string>
+    <string name="positive_balance_required">Você deve ter um saldo positivo na Carteira Dash</string>
+    <string name="withdrawal_required_balance">Deposite pelo menos 0,0003 Dash na sua Carteira para concluir um saque</string>
+    <string name="withdrawal_limit">Limite de retirada do Dash</string>
+    <string name="withdrawal_limit_details">Você não pode retirar mais que %1$s Dash %2$s.</string>
+    <string name="crowdnode_withdrawal_limits_title">Limites de retirada do CrowdNode</string>
+    <string name="crowdnode_withdrawal_limits_message">Devido aos termos de serviço do CrowdNode, os usuários não podem retirar mais do que:</string>
+    <string name="crowdnode_withdraw_without_limits_online">Saque sem limites com uma conta online no site do CrowdNode.</string>
+    <string name="crowdnode_withdrawal_limits_error">Este erro ocorre provavelmente devido a exceder os limites de retirada do CrowdNode. Tente mais tarde.</string>
+    <string name="per_transaction">por transação</string>
+    <string name="per_hour">por hora</string>
+    <string name="per_day">por 24 horas</string>
+    <string name="read_withdrawal_policy">Ler a Política de Retirada</string>
+
+
     </resources>

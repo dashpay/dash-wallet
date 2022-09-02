@@ -1,0 +1,115 @@
+<!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="coinbase">Coinbase</string>
+    <string name="last_known_balance" >ยอดคงเหลือล่าสุด</string>
+    <string name="coinbase_dash_wallet_error_title">เราไม่พบกระเป๋าเงิน Dash ในบัญชี Coinbase ของคุณ</string>
+    <string name="coinbase_dash_wallet_error_message">โปรดสร้างกระเป๋าเงิน Dash บน Coinbase เพื่อดำเนินการต่อ</string>
+    <string name="create_dash_account">สร้างบัญชี Dash</string>
+    <string name="close">ปิด</string>
+    <string name="retry">ลองอีกครั้ง</string>
+    <string name="connected">เชื่อมต่อแล้ว</string>
+    <string name="disconnect_coinbase_account">ตัดการเชื่อมต่อบัญชี Coinbase</string>
+    <string name="receive_directly_into_dash_wallet">รับโดยตรงไปยังกระเป๋า Dash </string>
+    <string name="buy_dash">ซื้อ Dash </string>
+    <string name="balance">ยอดคงเหลือ:</string>
+    <string name="balance_on_coinbase">ยอดคงเหลือบน Coinbase</string>
+    <string name="sending_to">ส่งไปยัง</string>
+    <string name="dash_wallet_device">กระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
+    <string name="exchange_rate_template">%1$s DASH = %2$s</string>
+    <string name="payment_method">วิธีการชำระเงิน</string>
+    <string name="purchase">ซื้อ</string>
+    <string name="coinbase_fee">ค่าธรรมเนียม Coinbase </string>
+    <string name="total">ทั้งหมด</string>
+    <string name="order_preview">คำสั่งซื้อตัวอย่าง</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">คุณจะได้รับ %s Dash บนกระเป๋า Dash ของคุณบนอุปกรณ์นี้ โปรดทราบว่าอาจใช้เวลาสูงสุด 2-3 นาทีในการโอน</string>
+    <string name="amount_in_dash">จำนวนเงินใน Dash</string>
+    <string name="cancel">ยกเลิก</string>
+    <string name="confirm_sec">ยืนยัน (%ss)</string>
+    <string name="confirm">ยืนยัน</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_title">เราไม่พบการชำระเงินใด ๆ</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_message">โปรดอัพเดตบัญชี Coinbase ของคุณเพื่อดำเนินการต่อ</string>
+    <string name="add_payment_method">เพิ่มวิธีการชำระเงิน</string>
+    <string name="error">ผิดพลาด</string>
+    <string name="cancel_transaction">ยกเลิกธุรกรรม?</string>
+    <string name="yes_cancel">ใช่, ยกเลิก</string>
+    <string name="no_keep_it">ไม่, เก็บไว้</string>
+    <string name="purchase_successful">ซื้อสำเร็จ</string>
+    <string name="conversion_successful">การแปลงประสบความสำเร็จ</string>
+    <string name="purchase_failed">การซื้อไม่สำเร็จ</string>
+    <string name="transfer_failed">การโอนไม่สำเร็จ</string>
+    <string name="conversion_failed">การแปลงไม่สำเร็จ</string>
+    <string name="transfer_failed_msg">Dash ถูกฝากเข้าบัญชี Coinbase ของคุณเรียบร้อยแล้ว แต่มีปัญหาในการโอนไปยังกระเป๋าเงินสำหรับอุปกรณ์นี้</string>
+    <string name="purchase_failed_msg">บางอย่างผิดพลาด</string>
+    <string name="it_could_take_up_to_2_3_minutes">อาจใช้เวลานานถึง 2-3 นาทีเพื่อให้ Dash ถูกโอนไปยังกระเป๋าเงิน Dash ของคุณบนอุปกรณ์นี้</string>
+    <string name="contact_coinbase_support">ติดต่อฝ่ายสนับสนุน Coinbase</string>
+    <string name="fees_in_crypto_purchase">ค่าธรรมเนียมในการซื้อคริปโต</string>
+    <string name="coinbase_fee_info_msg_content">นอกเหนือจากค่าธรรมเนียม Coinbase ที่แสดงแล้วเรายังรวมถึงสเปรดในราคาตลาด คริปปโตมีความผันผวนและสิ่งนี้ช่วยให้เราสามารถล็อคไว้ชั่วคราวในราคาสำหรับการดำเนินการเทรด</string>
+    <string name="learn_more">เรียนรู้เพิ่มเติม</string>
+    <string name="something_wrong_title">บางอย่างผิดพลาด!</string>
+    <string name="retry_later_message">โปรดลองอีกครั้งในภายหลังหรือติดต่อฝ่ายสนับสนุนของเราเพื่อขอความช่วยเหลือ</string>
+    <string name="convert_crypto">การแปลงคริปโต</string>
+    <string name="between_dash_wallet_and_coinbase">ระหว่างกระเป๋าเงิน Dash และ Coinbase</string>
+    <string name="conversion_preview">ตัวอย่างการแปลง</string>
+    <string name="you_send">คุณส่ง</string>
+    <string name="from_your_coinbase_account">จากบัญชี Coinbase ของคุณ</string>
+    <string name="you_receive">คุณรับ</string>
+    <string name="to_dash_wallet_on_this_device">ถึงกระเป๋าเงิน Dash ในอุปกรณ์นี้</string>
+    <string name="to_your_coinbase_account">ถึงบัญชี Coinbase ของคุณ</string>
+    <string name="from_dash_wallet_on_this_device">จากกระเป๋าเงิน Dash ในอุปกรณ์นี้</string>
+    <string name="you_will_receive">คุณจะได้รับ</string>
+    <string name="we_didnt_find_any_assets" >เราไม่พบสินทรัพย์ใด ๆ ในบัญชี Coinbase ของคุณ</string>
+    <string name="you_dont_own_any_crypto" >คุณไม่ได้เป็นเจ้าของคริปโตใด ๆ ซื้อคริปโตเลยเพื่อเริ่มต้น ..</string>
+    <string name="buy_crypto_on_coinbase" >ซื้อคริปโตบน Coinbase</string>
+    <string name="auth_limit_description">คุณทำรายการเกินขีดจำกัดการอนุญาตของ Coinbase</string>
+    <string name="debit_money">หักเงินจากบัญชีของคุณ</string>
+    <string name="change_limit">เปลี่ยนข้อจำกัดนี้</string>
+    <string name="set_auth_limit">ตรวจสอบให้แน่ใจว่าคุณตั้งค่าข้อจำกัดการอนุญาตที่ถูกต้องบน Coinbase</string>
+    <string name="change_withdrawal_limit">คุณสามารถเปลี่ยนได้ตลอดเวลาโดยการออกจากบัญชี Coinbase ของคุณในกระเป๋าเงิน Dash และเข้าสู่ระบบกลับเข้ามาใหม่อีกครั้ง</string>
+    <string name="got_it">รับทราบ</string>
+    <string name="send_to_wallet_error">ไม่สามารถส่งจำนวนนี้ได้โดยไม่ต้องเกินขีดจำกัดของแอปพลิเคชั่น</string>
+    <string name="dont_have_any_dash">คุณไม่มี Dash ในกระเป๋าเงิน Dash ของคุณ</string>
+    <string name="transfer_wallet_not_synced">การถ่ายโอนจากกระเป๋า Dash ไปยัง Coinbase เป็นไปไม่ได้จนกว่าการซิงค์กระเป๋าเงินจะเสร็จสมบูรณ์</string>
+    <string name="disconnected">ตัดการเชื่อมต่อ</string>
+
+    <string name="insufficient_money_title">เหรียญไม่เพียงพอ</string>
+    <string name="insufficient_money_msg">ปริมาณเหรียญในกระเป๋าเงินนั้นน้อยเกินไป</string>
+    <string name="send_coins_error_msg">การส่งเหรียญมีปัญหา!</string>
+    <string name="entered_amount_is_too_low">จำนวนธุรกรรมขั้นต่ำคือ</string>
+    <string name="entered_amount_is_too_high">จำนวนธุรกรรมสูงสุดคือ</string>
+    <string name="verify_continue">ตรวจสอบ</string>
+    <string name="enter_auth_code">ป้อนรหัส 2FA ของ Coinbase </string>
+    <string name="extra_steps_label">ขั้นตอนพิเศษนี้แสดงให้เห็นว่าคุณพยายามทำธุรกรรม</string>
+    <string name="need_help">ต้องการความช่วยเหลือ?</string>
+    <string name="coinbase_fa_code_hint">รหัส 2FA ของ Coinbase </string>
+    <string name="enter_code_details">อาจเป็นรหัสจาก SMS บนโทรศัพท์ของคุณ หรืออาจเป็นรหัสจากแอพ authentication</string>
+    <string name="two_fa_code_incorrect">รหัสไม่ถูกต้อง กรุณาตรวจสอบและลองอีกครั้ง!</string>
+    <string name="invalid_code">รหัสนั้นไม่ถูกต้อง กรุณาลองอีกครั้ง</string>
+    <string name="verify_code">ตรวจสอบ</string>
+    <string name="you_dont_have_enough_balance">คุณมียอดคงเหลือไม่เพียงพอ</string>
+    <string name="transfer_dash">โอน Dash</string>
+    <string name="transfer_amount">โอน</string>
+    <string name="dash_wallet_limit_description">จำนวนเงินมากกว่ายอดคงเหลือของคุณ</string>
+    <string name="address_creation_failed">เราไม่สามารถสร้างที่อยู่สำหรับบัญชีของคุณเพื่อทำธุรกรรมให้เสร็จสมบูรณ์ได้ โปรดลองอีกครั้งในภายหลัง</string>
+    <string name="transaction_row_rate_not_available">ไม่สามารถใช้ได้</string>
+    <string name="transfer_dash_successful">โอนสำเร็จ</string>
+    <string name="it_could_take_up_to_10_minutes">อาจใช้เวลานานถึง 10 นาทีในการโอน Dash จาก Coinbase ไปยังกระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
+    <string name="transfer_dash_failed_msg">มีปัญหาในการโอน Dash ไปยังกระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
+    <string name="insufficient_money_to_transfer">จำนวนเหรียญในกระเป๋าเงินนั้นน้อยเกินในการโอน</string>
+    <string name="amount_to_transfer">คุณจะได้รับ %s %s %s</string>
+
+    </resources>

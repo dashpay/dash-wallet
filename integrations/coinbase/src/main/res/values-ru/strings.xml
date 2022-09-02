@@ -56,7 +56,6 @@
     <string name="transfer_failed_msg">Dash был успешно зачислен на ваш аккаунт Coinbase. Но при переводе его на Dash Wallet на этом устройстве произошла проблема.</string>
     <string name="purchase_failed_msg">Что-то пошло не так</string>
     <string name="it_could_take_up_to_2_3_minutes">Перевод Dash на Dash Wallet на этом устройстве может занять 2-3 минуты.</string>
-    <string name="it_could_take_up_to_5_minutes">Обмен DASH из Dash Wallet на этом устройстве на Y в вашем Coinbase аккаунте может занять до 5 минут. </string>
     <string name="contact_coinbase_support">Связаться с поддержкой Coinbase</string>
     <string name="fees_in_crypto_purchase">Комиссия при покупке криптовалюты</string>
     <string name="coinbase_fee_info_msg_content">Помимо отображённой комиссии Coinbase, мы учитываем небольшой разброс цены. Криптовалютным рынкам свойственна волатильность, и таким образом мы временно замораживаем цену для совершения сделки. </string>

@@ -14,6 +14,8 @@
     <string name="email">E-Posta</string>
     <string name="email_placeholder">Örneğin. johndoe@mail.com</string>
     <string name="error">Hata</string>
+    <string name="select_a_coin">Bir koin seçin</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Lirası</string>
     <!-- Local Currency List: JEP -->
@@ -37,6 +39,7 @@
     <string name="button_dismiss">Son Ver</string>
     <string name="network_unavailable_return">Cüzdan\'a Dön</string>
     <string name="button_continue">Devam</string>
+    <string name="get_quote">Teklif Al</string>
     <string name="button_close">Kapat</string>
     <string name="button_retry">Tekrar dene</string>
     <string name="button_send_report">Rapor Gönder</string>
@@ -51,8 +54,15 @@
     <string name="search_hint">Ara</string>
     <string name="permission_allow">İzin ver</string>
     <string name="permission_deny">Reddet</string>
+    <string name="pay_with">İle öde</string>
+    <string name="choose_payment_method">Ödeme yöntemini seçin</string>
+    <string name="debit_credit_card">Banka/Kredi kartı</string>
     <string name="max">Maksimum</string>
+    <string name="select_the_coin">Koin seçin</string>
     <string name="dash">Dash</string>
+    <string name="dash_wallet_name">Dash Cüzdanı</string>
+    <string name="from">gelen</string>
+    <string name="to">giden</string>
     <string name="select_currency">Para Birimini Seçin</string>
     <string name="send_coins_error_dusty_send">Bu miktar göndermek için çok düşüktür</string>
     <string name="send_coins_error_insufficient_money">Yetersiz bakiye</string>

@@ -24,6 +24,8 @@
     <string name="explore_atms_title">ATM</string>
     <string name="explore_atms_subtitle">Βρείτε πού μπορείτε να αγοράσετε ή να πουλήσετε DASH και άλλα κρυπτονομίσματα με μετρητά.</string>
     <string name="explore_staking_subtitle">Κάντε εύκολα Stake το Dash και κερδίστε παθητικό εισόδημα με μερικά απλά κλικ.</string>
+    <string name="explore_staking_current_apy">Τρέχον APY = %s%%</string>
+
     <!-- Search -->
     <string name="explore_search_results">Αποτελέσματα αναζήτησης</string>
     <string name="explore_physical_merchant">Φυσικός έμπορος</string>

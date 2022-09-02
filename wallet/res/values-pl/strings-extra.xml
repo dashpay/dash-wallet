@@ -241,6 +241,14 @@
     <string name="view_seed_done">Zrobione</string>
     <string name="view_seed_title">Fraza Odzyskiwania</string>
     <string name="transaction_result_view_on_explorer">Zobacz na eksplorerze bloków</string>
+    <string name="transaction_result_tax_category">Kategoria Podatkowa</string>
+    <string name="transaction_result_tax_category_loading">Ładuje...</string>
+    <string-array name="transaction_result_tax_categories">
+        <item>Przychód</item>
+        <item>Wydatek</item>
+        <item>Odebranie płatności</item>
+        <item>Wysłanie płatności</item>
+    </string-array>
     <string name="transaction_result_paid_successfully">Wysłane pomyślnie</string>
     <string name="transaction_result_sent_to">Wysłane do</string>
     <string name="transaction_date_and_time">Data</string>
@@ -252,6 +260,8 @@
     <string name="transaction_details_received_at">Odebrane przez</string>
     <string name="transaction_details_moved_from">Przeniesiony z</string>
     <string name="transaction_details_moved_internally_to">Wewnętrznie przeniesiony do</string>
+    <string name="transaction_failed_details">Transfer nie powiódł się</string>
+
     <string name="authenticate_fingerprint_title">Uwierzytelnij się</string>
     <string name="authenticate_fingerprint_message">Potwierdź odciskiem palca by kontynuować</string>
     <string name="authenticate_pin_message">Wprowadź kod PIN by kontynuować </string>
@@ -260,6 +270,8 @@
 
     <string name="menu_buy_and_sell_title">Kupuj &amp; Sprzedawaj Dash</string>
     <string name="menu_buy_and_sell_subtitle">Połącz się z giełdą stron trzecich</string>
+    <string name="liquid_unavailable">Integracja portfela Dash z serwisem Liquid jest nieaktualna</string>
+    <string name="liquid_unavailable_details">Jeśli masz jakiegolwiek pytania w sprawie Dash trzymanych na serwisie Liquid, musisz skontaktować się z centrum pomocy serwisu LIquid</string>
     <string name="menu_security_title">Bezpieczeństwo</string>
     <string name="menu_security_subtitle">Wyświetl hasło, kopia zapasowa portfela…</string>
     <string name="menu_settings_title">Ustawienia</string>
@@ -359,8 +371,12 @@
     <string name="import_image_import_valid_private_key">Skopiuj ważny klucz prywatny, aby importować z niego Dash</string>
     <string name="import_image_invalid_private">Niewłaściwy Klucz Prywatny</string>
 
+    <string name="today">Dzisiaj</string>
+    <string name="yesterday">Wczoraj</string>
+
     <string name="syncing">Synchronizowanie</string>
     <string name="syncing_balance">Synchronizowanie bilansu</string>
+    <string name="transaction_count">%d transakcji</string>
     <string name="all_transactions">Całość</string>
     <string name="received_transactions">Otrzymano</string>
     <string name="sent_transactions">Wysłano</string>
@@ -379,4 +395,14 @@
     <string name="launch_reset_wallet_extra_message">Dokonaj kopii zapasowej fraz odzyskiwania</string>
     <string name="start_reset_wallet_title">Możesz stracić %s</string>
     <string name="reset_wallet_text">Resetuj portfel</string>
-    </resources>
+    <string name="reclassify_transactions_title">Zmień klasyfikację swoich transakcji</string>
+    <string name="reclassify_transactions_title_message">Te klasyfikacje zostaną odzwierciedlone w eksporcie CSV, którego można użyć do raportowania podatkowów.</string>
+    <string name="reclassify_transactions_question">Gdzie mogę zmianić kategorię?</string>
+    <string name="reclassify_transactions_outgoing_title">Transakcje wychodzące</string>
+    <string name="reclassify_transactions_by_default_message">domyślnie zostaną oznaczone jako</string>
+    <string name="reclassify_transactions_incoming_title">Transakcje przychodzące</string>
+    <string name="reclassify_transactions_change_it_message">Możesz zmienic na</string>
+    <string name="reclassify_transactions_linked_accounts_title">Połączone konta</string>
+    <string name="reclassify_transactions_linked_accounts_message">domyślnie wszystkie transakcje do lub z połączonych kont (giełdy, obstawianie itp.) będą oznaczone jako przelewy.</string>
+    <string name="reclassify_transactions_change_explanation">Wybierz dowolną transakcję ze strony głównej i zmień kategorię na stronie szczegółów transakcji.</string>
+</resources>

@@ -56,7 +56,8 @@
     <string name="transfer_failed_msg">Los Dash se depositaron con éxito en tu cuenta de Coinbase. Pero hubo un problema al transferirlo a la billetera de Dash en este dispositivo.</string>
     <string name="purchase_failed_msg">Algo salió mal</string>
     <string name="it_could_take_up_to_2_3_minutes">Los Dash podrían demorar entre 2-3 minutos en transferirse a tu billetera de Dash en este dispositivo.</string>
-    <string name="it_could_take_up_to_5_minutes">Podría tomar hasta 5 minutos convertir tus DASH de la billetera de Dash en este dispositivo a Y en tu cuenta de Coinbase.</string>
+    <string name="it_could_take_up_to_5_minutes">Podría tomar hasta 5 minutos convertir %s desde la cuenta de Coinbase a Dash en tu billetera de Dash en este dispositivo..</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">“Podría tomar hasta 5 minutos convertir Dash de la billetera de Dash en este dispositivo a %s en tu cuenta de Coinbase.</string>
     <string name="contact_coinbase_support">Ponte en contacto con el soporte de Coinbase</string>
     <string name="fees_in_crypto_purchase">Comisiones en compras de criptomonedas</string>
     <string name="coinbase_fee_info_msg_content">Además de la tarifa de Coinbase mostrada, incluimos un diferencial en el precio. Los mercados de criptomonedas son volátiles y esto nos permite fijar temporalmente un precio para la ejecución de operaciones.</string>
@@ -109,6 +110,7 @@
     <string name="transaction_row_rate_not_available">No disponible</string>
     <string name="transfer_dash_successful">Transferencia exitosa</string>
     <string name="it_could_take_up_to_10_minutes">Podría tomar hasta 10 minutos transferir Dash de Coinbase a la billetera de Dash de este dispositivo.</string>
+    <string name="it_could_take_up_to_10_minutes_to_coinbase">Podría tomar hasta 10 minutos transferir Dash desde la billetera de Dash en este dispositivo a tu cuenta de Coinbase.</string>
     <string name="transfer_dash_failed_msg">Hubo un problema al transferirlo a la billetera de Dash en este dispositivo.</string>
     <string name="insufficient_money_to_transfer">La cantidad de monedas en la billetera es demasiado pequeña para transferir.</string>
     <string name="amount_to_transfer">Tu recibirás %s %s %s</string>

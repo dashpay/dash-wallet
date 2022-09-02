@@ -17,10 +17,15 @@
 <resources>
     <string name="crowdnode_get_started">Mulai menggunakan CrowdNode</string>
     <string name="crowdnode_get_started_hint">Untuk memulai staking, buat akun di CrowdNode atau hubungkan ke akun yang sudah ada.</string>
+    <string name="crowdnode_account">Akun CrowdNode</string>
     <string name="new_account">Akun CrowdNode Baru</string>
     <string name="account_create">Buat Akun</string>
+    <string name="accept_terms_response">Harap Terima Persyaratan</string>
+    <string name="accept_terms">Terima Persyaratan</string>
+    <string name="welcome_response">Akun dibuat</string>
     <string name="account_link">Hubungkan Akun yang Sudah Ada</string>
     <string name="crowdnode_login">Masuk ke CrowdNode</string>
+    <string name="crowdnode_signup">Daftar ke CrowdNode</string>
     <string name="crowdnode_link">Tautkan Akun CrowdNode yang Ada</string>
     <string name="required_passphrase_backup">Anda harus mencadangkan frasa sandi Anda di Dash Wallet</string>
     <string name="backup_passphrase">Cadangkan Frasa Sandi</string>
@@ -39,6 +44,7 @@
     <string name="privacy_policy">Kebijakan pribadi</string>
     <string name="crowdnode_account_ready">Akun CrowdNode Anda sudah disiapkan dan siap digunakan!</string>
     <string name="notify_when_done">Tutup dan beri tahu jika sudah selesai</string>
+    <string name="crowdnode_creating">Membuat akun CrowdNode Anda…</string>
     <string name="accepting_terms">Menerima persyaratan penggunaan…</string>
     <string name="crowdnode_signup_error">Kami tidak dapat membuat akun CrowdNode Anda.</string>
     <string name="crowdnode_deposit_error">Kami tidak dapat melakukan deposit ke akun CrowdNode Anda.</string>
@@ -57,6 +63,10 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
     <string name="online_account">Akun Online</string>
     <string name="online_account_create">Buat Akun Online</string>
+    <string name="secure_online_account">Lindungi tabungan Anda</string>
+    <string name="crowdnode_signup_to_finish">Daftar untuk menyelesaikan penyiapan akun</string>
+    <string name="online_account_create_full">Buat akun CrowdNode online</string>
+    <string name="online_account_email_privacy">Harap dicatat bahwa email tidak disimpan oleh Dompet Dash dan hanya dikirim ke CrowdNode</string>
     <string name="crowdnode_support">Dukungan CrowdNode</string>
     <string name="unlink_account">Putuskan Tautan Akun</string>
     <string name="online_account_title">Mengapa Anda membutuhkan akun online?</string>
@@ -69,6 +79,7 @@
     <string name="payout_options">Opsi Pembayaran</string>
     <string name="payout_options_details">Anda dapat mengubah bagaimana / kapan penghasilan hadiah Anda dibayarkan kepada Anda.</string>
     <string name="crowdnode_balance">Saldo di CrowdNode</string>
+    <string name="crowdnode_your_address_title">Berikut adalah alamat Dash yang terkait dengan akun CrowdNode Anda</string>
     <string name="chain_syncing">Rantai sedang menyinkronkan…</string>
     <string name="crowdnode_wait_for_sync">Tunggu hingga rantai disinkronkan sepenuhnya, sehingga kami dapat meninjau riwayat transaksi Anda. Kunjungi situs web CrowdNode untuk masuk atau mendaftar.</string>
     <string name="crowdnode_open_website">Buka situs web CrowdNode</string>
@@ -83,8 +94,26 @@
     <string name="crowdnode_minimum_deposit">Setor setidaknya %s untuk mulai menghasilkan</string>
     <string name="crowdnode_minimum_deposit_difference">Setor %s untuk mulai menghasilkan</string>
     <string name="crowdnode_first_deposit">Setoran pertama harus lebih dari %s</string>
-    <string name="crowdnode_staking_info_title">Cara kerja staking</string>
+    <string name="crowdnode_staking_info_title">Cara kerja staking CrowdNode</string>
+    <string name="crowdnode_staking_info_message_first">Dash Network digerakkan oleh sejumlah Masternode yang merupakan bagian penting dalam memfasilitasi pembayaran.</string>
+    <string name="crowdnode_staking_info_message_second">Masternode membutuhkan 1000 Dash sebagai jaminan dan setiap Masternode saat ini dihargai sekitar %s%% per tahun.</string>
+    <string name="crowdnode_staking_apy_title">APY saat ini adalah %s%%</string>
     <string name="crowdnode_staking_info_message">Anda mulai menghasilkan jika akun CrowdNode Anda memiliki lebih dari %s</string>
+    <string name="staking_apy_title">APY saat ini adalah %s</string>
+    <string name="crowdnode_staking_current_apy_message">Ini mewakili Persentase Hasil Tahunan saat ini dari Masternode penuh dikurangi biaya CrowdNode 15%. Ini bukan tingkat pengembalian yang dijamin dan dapat naik atau turun berdasarkan ukuran  CrowdNode pool dan harga Dash.</string>
+    <string name="crowdnode_staking_leave_pool_message_one">Anggota bebas untuk meninggalkan pool dan paling sering dapat segera pergi.</string>
+    <string name="crowdnode_staking_leave_pool_message_two">Dalam kasus penarikan yang lebih besar, CrowdNode akan membayar penarikan dalam waktu dua minggu. Ini karena protokol keamanan mereka dan paling sering akan ditangani lebih cepat.</string>
+
+    <string name="crowdnode_staking_leaving_the_pool_title">Meninggalkan Pool</string>
+    <string name="crowdnode_staking_receiving_rewards_title">Menerima imbalan</string>
+    <string name="crowdnode_staking_receiving_rewards_message">Anda akan menerima pembayaran pecahan secara otomatis dan secara default akan diinvestasikan kembali, namun,mudah juga untuk mengatur penarikan otomatis untuk menerima pembayaran berulang.</string>
+    <string name="crowdnode_staking_first_minimum_deposit_title">Setoran Minimum Pertama</string>
+    <string name="crowdnode_staking_join_pool_message">Karena kebanyakan orang tidak memiliki 1000 Dash, CrowdNode telah membuat layanan di mana mereka dengan mengumpulkan deposit dari anggota sehingga dapat mencapai manfaat memiliki Masternode.</string>
+    <string name="crowdnode_staking_join_pool_title">Bergabung ke pool</string>
+    <string name="crowdnode_staking_crowdnode_benefits_title">Manfaat CrowdNode</string>
+    <string name="crowdnode_staking_connected_dash_address_title">Alamat Dash terhubung</string>
+    <string name="crowdnode_staking_connected_dash_address_message">Berikut adalah alamat Dash yang ditujukan untuk akun CrowdNode Anda di Dompet Dash di perangkat ini.</string>
+    <string name="crowdnode_staking_toast_address_copied">Menyalin alamat CrowdNode ke papan klip</string>
     <string name="crowdnode_verify_api_address">Verifikasi alamat API Dash Anda</string>
     <string name="crowdnode_how_to_verify">Bagaimana cara mengonfirmasi API alamat Dash Anda</string>
     <string name="crowdnode_how_to_verify_description1">Kirim %s Dash dari alamat Dash utama Anda yang saat ini Anda gunakan untuk akun CrowdNode</string>
@@ -101,4 +130,24 @@
     <string name="crowdnode_online_account_details_title">Informasi tentang akun online Anda</string>
     <string name="crowdnode_online_account_details_primary">Alamat Dash utama Anda yang saat ini  digunakan untuk akun CrowdNode Anda</string>
     <string name="crowdnode_online_account_details_api">Alamat dash yang ditujukan untuk akun CrowdNode Anda di Dompet Dash di perangkat ini</string>
+    <string name="crowdnode_primary_missing">Alamat Dash utama tidak ada di akun Anda. Harap tentukan di situs web CrowdNode.</string>
+    <string name="crowdnode_wait_signed_email">Mohon tunggu sampai email Anda diproses…</string>
+    <string name="cannot_send">Tidak dapat dikirim.</string>
+    <string name="crowdnode_tx_set_title">Mengapa saya melihat semua transaksi ini?</string>
+    <string name="crowdnode_tx_set_explainer">Akun CrowdNode Anda dibuat menggunakan transaksi ini.</string>
+    <string name="shuffle_coins">Koin Acak</string>
+    <string name="positive_balance_required">Anda harus memiliki saldo positif di Dash Wallet</string>
+    <string name="withdrawal_required_balance">Setor setidaknya 0,0003 Dash di Dash Wallet Anda untuk menyelesaikan penarikan</string>
+    <string name="withdrawal_limit">Batas penarikan Dash</string>
+    <string name="withdrawal_limit_details">Anda tidak dapat menarik lebih dari %1$s Dash %2$s.</string>
+    <string name="crowdnode_withdrawal_limits_title">Batas penarikan CrowdNode</string>
+    <string name="crowdnode_withdrawal_limits_message">Karena persyaratan layanan CrowdNode, pengguna dapat menarik tidak lebih dari:</string>
+    <string name="crowdnode_withdraw_without_limits_online">Penarikan tanpa batas dengan akun online di situs web CrowdNode.</string>
+    <string name="crowdnode_withdrawal_limits_error">Kesalahan ini kemungkinan besar karena melebihi batas penarikan CrowdNode. Coba lagi nanti.</string>
+    <string name="per_transaction">per transaksi</string>
+    <string name="per_hour">per jam</string>
+    <string name="per_day">per 24 jam</string>
+    <string name="read_withdrawal_policy">Baca Kebijakan Penarikan</string>
+
+
     </resources>

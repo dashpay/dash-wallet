@@ -17,10 +17,15 @@
 <resources>
     <string name="crowdnode_get_started">CrowdNode\'a başlayın</string>
     <string name="crowdnode_get_started_hint">Stake etmeye başlamak için CrowdNode\'da bir hesap oluşturun veya mevcut bir hesaba bağlanın.</string>
+    <string name="crowdnode_account">CrowdNode Hesabı</string>
     <string name="new_account">Yeni CrowdNode Hesabı</string>
     <string name="account_create">Hesab Oluştur</string>
+    <string name="accept_terms_response">Lütfen Şartları Kabul Edin</string>
+    <string name="accept_terms">Şartları Kabul Et</string>
+    <string name="welcome_response">Hesap oluşturuldu</string>
     <string name="account_link">Mevcut Hesabı Bağla</string>
     <string name="crowdnode_login">CrowdNode\'da oturum açın</string>
+    <string name="crowdnode_signup">CrowdNode\'a Kaydolun</string>
     <string name="crowdnode_link">Mevcut CrowdNode Hesabını Bağla</string>
     <string name="required_passphrase_backup">Dash Cüzdan\'da parolanızı yedeklemeniz gerekir</string>
     <string name="backup_passphrase">Parolayı Yedekle</string>
@@ -39,6 +44,7 @@
     <string name="privacy_policy">Gizlilik Politikası</string>
     <string name="crowdnode_account_ready">CrowdNode hesabınız kuruldu ve kullanıma hazır!</string>
     <string name="notify_when_done">Kapat ve bittiğinde haber ver</string>
+    <string name="crowdnode_creating">CrowdNode hesabınız oluşturuluyor…</string>
     <string name="accepting_terms">Kullanım şartlarını kabul etmek…</string>
     <string name="crowdnode_signup_error">CrowdNode hesabınızı oluşturamadık.</string>
     <string name="crowdnode_deposit_error">CrowdNode hesabınıza para yatıramadık.</string>
@@ -57,6 +63,10 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
     <string name="online_account">Çevrimiçi Hesap</string>
     <string name="online_account_create">Çevrimiçi Hesap Oluştur</string>
+    <string name="secure_online_account">Birikimlerinizi koruyun</string>
+    <string name="crowdnode_signup_to_finish">Hesap kurulumunu tamamlamak için kaydolun</string>
+    <string name="online_account_create_full">Çevrimiçi bir CrowdNode hesabı oluşturun</string>
+    <string name="online_account_email_privacy">Lütfen e-postanın Dash Cüzdanı tarafından kaydedilmediğini ve yalnızca CrowdNode\'a gönderildiğini unutmayın.</string>
     <string name="crowdnode_support">CrowdNode Desteği</string>
     <string name="unlink_account">Hesabın Bağlantısını Kaldır</string>
     <string name="online_account_title">Neden çevrimiçi bir hesaba ihtiyacınız var?</string>
@@ -69,6 +79,7 @@
     <string name="payout_options">Ödeme Seçenekleri</string>
     <string name="payout_options_details">Ödüllerinizin nasıl ve ne zaman ödeneceğini değiştirebilirsiniz.</string>
     <string name="crowdnode_balance">CrowdNode\'daki Bakiye</string>
+    <string name="crowdnode_your_address_title">CrowdNode hesabınızla ilişkili Dash adresi</string>
     <string name="chain_syncing">Zincir senkronize ediliyor…</string>
     <string name="crowdnode_wait_for_sync">Zincir tamamen senkronize olana kadar bekleyin, böylece işlem geçmişinizi gözden geçirebiliriz. Giriş yapmak veya kaydolmak için CrowdNode web sitesini ziyaret edin.</string>
     <string name="crowdnode_open_website">CrowdNode web sitesine gidin</string>
@@ -83,8 +94,26 @@
     <string name="crowdnode_minimum_deposit">Kazanmaya başlamak için en az %s yatırın</string>
     <string name="crowdnode_minimum_deposit_difference">Kazanmaya başlamak için %s yatırın</string>
     <string name="crowdnode_first_deposit">İlk depozito %s\'den fazla olmalıdır</string>
-    <string name="crowdnode_staking_info_title">Staking nasıl çalışır?</string>
+    <string name="crowdnode_staking_info_title">CrowdNode staking nasıl çalışır?</string>
+    <string name="crowdnode_staking_info_message_first">Dash Ağı, ödemeleri kolaylaştırmanın önemli bir parçası olan bir dizi Ana Düğüm tarafından yönetilir.</string>
+    <string name="crowdnode_staking_info_message_second">Bir Ana Düğüm teminat olarak 1000 Dash\'a ihtiyaç duyar ve her Ana Düğüm şu anda yılda yaklaşık %s%% ödüllendirilir.</string>
+    <string name="crowdnode_staking_apy_title">Güncel YFG: %s%%</string>
     <string name="crowdnode_staking_info_message">CrowdNode hesabınızda %s\'den fazla varsa kazanmaya başlarsınız</string>
+    <string name="staking_apy_title">Güncel YFG: %s</string>
+    <string name="crowdnode_staking_current_apy_message">Bu, tam bir Ana Düğümün mevcut Yıllık Faiz Getirisini CrowdNode ücretinden %15 daha az temsil eder. Garantili bir getiri oranı değildir ve CrowdNode havuzlarının boyutuna ve Dash fiyatına bağlı olarak yukarı veya aşağı yönlü değişebilir.</string>
+    <string name="crowdnode_staking_leave_pool_message_one">Üyeler havuzdan istedikleri zaman ayrılabilme özgürlüğüne sahiplerdir.</string>
+    <string name="crowdnode_staking_leave_pool_message_two">Daha fazla para çekilmesi durumunda, CrowdNode para çekme işlemini iki hafta içinde gerçekleştirecektir. Bu, güvenlik protokollerinden kaynaklanmaktadır ve çoğu zaman çok daha hızlı işlem yapmalarını sağlar.</string>
+
+    <string name="crowdnode_staking_leaving_the_pool_title">Havuzdan Ayrılmak</string>
+    <string name="crowdnode_staking_receiving_rewards_title">Ödüller alınıyor</string>
+    <string name="crowdnode_staking_receiving_rewards_message">Kısmı ödemeleri otomatik olarak alacaksınız ve bunlar yeniden yatırım için kullanılacak. Tekrarlayan ödemeleri almak için otomatik para çekme işlemlerini ayarlamak kolaydır.</string>
+    <string name="crowdnode_staking_first_minimum_deposit_title">İlk Asgari Para Yatırma</string>
+    <string name="crowdnode_staking_join_pool_message">Çoğu insanın elinde tam olarak 1000 Dash bulunmadığından, CrowdNode, üyelerden gelen mevduatları bir araya getirerek bir Ana Düğüm sahibi olmanın avantajlarını elde edebilecekleri bir hizmet yaptı.</string>
+    <string name="crowdnode_staking_join_pool_title">Havuza katılmak</string>
+    <string name="crowdnode_staking_crowdnode_benefits_title">CrowdNode avantajları</string>
+    <string name="crowdnode_staking_connected_dash_address_title">Bağlantılı Dash adresleri</string>
+    <string name="crowdnode_staking_connected_dash_address_message">Bu cihazdaki Dash Cüzdanında CrowdNode hesabınız için belirlenmiş bir Dash adresidir.</string>
+    <string name="crowdnode_staking_toast_address_copied">CrowdNode adresi panoya kopyalandı</string>
     <string name="crowdnode_verify_api_address">API Dash adresinizi doğrulayın</string>
     <string name="crowdnode_how_to_verify">API Dash adresinizi nasıl onaylarsınız?</string>
     <string name="crowdnode_how_to_verify_description1">Şu anda CrowdNode hesabınız için kullandığınız birincil Dash adresinizden %s Dash gönderin</string>
@@ -101,4 +130,24 @@
     <string name="crowdnode_online_account_details_title">Çevrimiçi hesabınızla ilgili bilgiler</string>
     <string name="crowdnode_online_account_details_primary">Şu anda CrowdNode hesabınız için kullandığınız birincil Dash adresiniz</string>
     <string name="crowdnode_online_account_details_api">Bu cihazdaki Dash Cüzdanında CrowdNode hesabınız için belirlenmiş Dash adresi</string>
+    <string name="crowdnode_primary_missing">Hesabınızdaki birincil Dash adresi eksik. Lütfen bunu CrowdNode web sitesinde belirtin.</string>
+    <string name="crowdnode_wait_signed_email">Lütfen e-postanız işlenene kadar bekleyin…</string>
+    <string name="cannot_send">Gönderilemiyor.</string>
+    <string name="crowdnode_tx_set_title">Neden tüm bu işlemleri görüyorum?</string>
+    <string name="crowdnode_tx_set_explainer">CrowdNode hesabınız bu işlemler kullanılarak oluşturulmuştur.</string>
+    <string name="shuffle_coins">Paraları Karıştır</string>
+    <string name="positive_balance_required">Dash Cüzdan\'da pozitif bir bakiyeniz olmalıdır</string>
+    <string name="withdrawal_required_balance">Para çekme işlemini tamamlamak için Dash Cüzdanınıza en az 0.0003 Dash yatırın</string>
+    <string name="withdrawal_limit">Dash çekme limiti</string>
+    <string name="withdrawal_limit_details">%1$s Dash %2$s\'den fazlasını çekemezsiniz.</string>
+    <string name="crowdnode_withdrawal_limits_title">CrowdNode para çekme limitleri</string>
+    <string name="crowdnode_withdrawal_limits_message">CrowdNode\'un hizmet koşulları nedeniyle, kullanıcılar aşağıdakilerden daha fazlasını çekemez:</string>
+    <string name="crowdnode_withdraw_without_limits_online">CrowdNode web sitesinde çevrimiçi bir hesapla sınırsız para çekin.</string>
+    <string name="crowdnode_withdrawal_limits_error">Bu hatanın nedeni büyük olasılıkla CrowdNode para çekme limitlerinin aşılmasıdır. Daha sonra tekrar deneyin.</string>
+    <string name="per_transaction">işlem başına</string>
+    <string name="per_hour">saat başına</string>
+    <string name="per_day">24 saatte</string>
+    <string name="read_withdrawal_policy">Para Çekme Politikasını Okuyun</string>
+
+
     </resources>
