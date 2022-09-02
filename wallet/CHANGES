@@ -1,4 +1,11 @@
 Dash Wallet
+v8.0
+* Home Screen does not round balance, group transactions by date
+* Crowdnode fixes
+* Remove Liquid Support
+* Support Dash Core 18 network upgrade
+* Build for Android 12
+
 v7.6.1
 * Coinbase 2FA fixes
 
