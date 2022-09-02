@@ -97,7 +97,7 @@ public class Configuration {
 
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
-    private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
+    public static final int PREFS_DEFAULT_BTC_PRECISION = 8;
     public static final String PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION = "is_dash_to_fiat_direction";
     public static final String PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER = "show_notifications_explainer";
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER = "show_tax_catagory_explainer";

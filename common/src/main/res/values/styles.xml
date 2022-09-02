@@ -324,6 +324,10 @@
         <item name="fontFamily">@font/inter_regular</item>
     </style>
 
+    <style name="Headline3.Medium">
+        <item name="fontFamily">@font/inter_medium</item>
+    </style>
+
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
         <item name="fontFamily">@font/inter_bold</item>
         <item name="android:textColor">@color/content_primary</item>

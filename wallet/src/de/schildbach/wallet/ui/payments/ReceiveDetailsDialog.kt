@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
@@ -28,9 +29,11 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class ReceiveDetailsDialog : OffsetDialogFragment() {
@@ -51,7 +54,9 @@ class ReceiveDetailsDialog : OffsetDialogFragment() {
         }
     }
 
+    override val backgroundStyle = R.style.PrimaryBackground
     private val binding by viewBinding(DialogReceiveDetailsBinding::bind)
+    @Inject lateinit var configuration: Configuration
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_receive_details, container, false)
@@ -65,14 +70,14 @@ class ReceiveDetailsDialog : OffsetDialogFragment() {
             val fiatAmount = getSerializable(ARG_FIAT_AMOUNT) as Fiat?
 
             binding.receiveInfo.setInfo(address, dashAmount)
-            binding.amount.inputValue.text = MonetaryFormat.BTC.noCode().format(dashAmount).toString()
+            binding.amount.inputValue.text = MonetaryFormat.BTC
+                .repeatOptionalDecimals(1, Configuration.PREFS_DEFAULT_BTC_PRECISION)
+                .minDecimals(0).noCode().format(dashAmount)
 
             if (fiatAmount != null) {
-                binding.amount.fiatSymbol.text = GenericUtils.currencySymbol(fiatAmount.currencyCode)
-                binding.amount.fiatValue.text = fiatAmount.toPlainString()
+                binding.amount.fiatValue.text = GenericUtils.fiatToString(fiatAmount)
             } else {
-                binding.amount.fiatSymbol.visibility = View.GONE
-                binding.amount.fiatValue.visibility = View.GONE
+                binding.amount.fiatValue.isVisible = false
             }
         }
     }

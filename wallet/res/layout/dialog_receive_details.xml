@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -8,43 +9,55 @@
     android:paddingBottom="16dp"
     tools:context="de.schildbach.wallet.ui.payments.ReceiveDetailsDialog">
 
-    <ImageView
-        android:id="@+id/collapse_button"
-        android:layout_width="48dp"
-        android:layout_height="14dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="16dp"
-        app:srcCompat="@drawable/ic_expand_less" />
-
     <TextView
-        style="@style/Subtitle1"
-        android:layout_width="match_parent"
+        android:id="@+id/title"
+        style="@style/Headline5"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1"
         android:gravity="center_horizontal"
         android:textAlignment="gravity"
-        android:text="@string/receive_title" />
+        android:text="@string/receive_title"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_margin="16dp"
-        android:background="@color/divider_color" />
+    <ImageButton
+        android:id="@+id/collapse_button"
+        style="@style/DialogCloseButton"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <include
         android:id="@+id/amount"
         layout="@layout/dash_fiat_amount_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="25dp"
+        app:layout_constraintTop_toBottomOf="@id/title"
+        app:layout_constraintBottom_toTopOf="@id/receive_info_card"
+        app:layout_constraintVertical_chainStyle="packed" />
 
-    <org.dash.wallet.common.ui.receive.ReceiveInfoView
-        android:id="@+id/receive_info"
+    <androidx.cardview.widget.CardView
+        android:id="@+id/receive_info_card"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:ri_qr_code_scale="0.6"
-        app:ri_show_amount_action="false"
-        app:ri_show_share_action="true" />
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginBottom="30dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:layout_constraintTop_toBottomOf="@id/amount"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintVertical_chainStyle="packed">
 
-</LinearLayout>
+        <org.dash.wallet.common.ui.receive.ReceiveInfoView
+            android:id="@+id/receive_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:ri_qr_code_scale="0.64"
+            app:ri_show_amount_action="false"
+            app:ri_show_share_action="true" />
+    </androidx.cardview.widget.CardView>
+</androidx.constraintlayout.widget.ConstraintLayout>
