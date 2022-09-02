@@ -978,6 +978,10 @@
         <item name="titleTextColor">@color/dash_blue</item>
     </style>
 
+    <style name="TertiaryButtonTheme.Blue.ZeroRadius">
+        <item name="cornerRadius">0dp</item>
+    </style>
+
     <style name="TertiaryButtonTheme.Red">
         <item name="titleTextColor">@color/system_red</item>
     </style>
@@ -1057,6 +1061,10 @@
 
     <style name="Button.Tertiary.Small.Blue">
         <item name="android:theme">@style/TertiaryButtonTheme.Small.Blue</item>
+    </style>
+
+    <style name="Button.Tertiary.Small.Blue.ZeroRadius">
+        <item name="android:theme">@style/TertiaryButtonTheme.Blue.ZeroRadius</item>
     </style>
 
     <style name="Button.Tertiary.Small.Red">

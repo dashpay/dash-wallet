@@ -21,21 +21,18 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.drawable.BitmapDrawable
-import android.text.SpannableString
-import android.text.style.ImageSpan
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
-import org.dash.wallet.common.util.Qr
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.ReceiveInfoViewBinding
+import org.dash.wallet.common.util.Qr
 import org.dash.wallet.common.util.shareText
 import org.slf4j.LoggerFactory
 
@@ -63,7 +60,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
 
             val qrPreviewScale = attrsArray.getFloat(R.styleable.ReceiveInfoView_ri_qr_code_scale, 1.0f)
             (binding.qrPreview.layoutParams as LayoutParams).matchConstraintPercentWidth = qrPreviewScale
-            (binding.qrDashLogo.layoutParams as LayoutParams).matchConstraintPercentWidth = (qrPreviewScale / 5.5f)
+            (binding.qrDashLogo.layoutParams as LayoutParams).matchConstraintPercentWidth = (qrPreviewScale / 4.8f)
         } finally {
             attrsArray.recycle()
         }
@@ -113,15 +110,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
 
         if (address != null) {
             binding.addressPreviewPane.isVisible = true
-            binding.addressPreview.text = address.toBase58() + "  "
-
-            val addressSpannable = SpannableString.valueOf(binding.addressPreview.text)
-            val copyIconDrawable = ContextCompat.getDrawable(context, R.drawable.ic_copy_right)!!
-            val iconSize = binding.addressPreview.lineHeight
-            copyIconDrawable.setBounds(0, 0, iconSize, iconSize)
-            val imageSpan = ImageSpan(copyIconDrawable, ImageSpan.ALIGN_BOTTOM)
-            addressSpannable.setSpan(imageSpan, addressSpannable.length - 1, addressSpannable.length, 0)
-            binding.addressPreview.text = addressSpannable
+            binding.addressPreview.text = address.toBase58()
         } else {
             binding.addressPreviewPane.isVisible = false
         }
