@@ -26,6 +26,8 @@ import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.transactions.ExactOutputsSelector
+import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.transactions.filters.CoinsReceivedTxFilter
 import org.dash.wallet.common.transactions.filters.LockedTransaction
 import org.dash.wallet.common.transactions.filters.TxWithinTimePeriod
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
@@ -186,6 +188,27 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         val filter = CrowdNodeAPIConfirmationTx(accountAddress)
         return walletData.getTransactions(filter).firstOrNull()
             ?: walletData.observeTransactions(filter).first()
+    }
+
+    open fun getApiAddressConfirmationTx(): Transaction? {
+        val apiConfirmationFilter = CoinsReceivedTxFilter(
+            walletData.transactionBag,
+            CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT
+        ) // account address is unknown at this point
+
+        val potentialApiConfirmationTxs = walletData.getTransactions(apiConfirmationFilter)
+        potentialApiConfirmationTxs.forEach { confirmationTx ->
+            val receivedTo = TransactionUtils.getWalletAddressOfReceived(confirmationTx, walletData.transactionBag)
+            val forwardedConfirmationFilter = CrowdNodeAPIConfirmationForwarded(params)
+            // There might be several matching transactions. The real one will be forwarded to CrowdNode
+            val forwardedTx = walletData.getTransactions(forwardedConfirmationFilter).firstOrNull()
+
+            if (forwardedTx != null && forwardedConfirmationFilter.fromAddresses.contains(receivedTo)) {
+                return confirmationTx
+            }
+        }
+
+        return null
     }
 
     open fun getFullSignUpTxSet(): FullCrowdNodeSignUpTxSet? {
