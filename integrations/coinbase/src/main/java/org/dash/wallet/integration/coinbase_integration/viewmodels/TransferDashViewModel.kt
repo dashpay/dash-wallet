@@ -1,5 +1,6 @@
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
+import androidx.annotation.StringRes
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,7 +14,10 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.utils.Fiat
+import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards
+import org.bitcoinj.wallet.Wallet.DustySendRequested
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.R
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.ServiceName
@@ -28,6 +32,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
+import org.dash.wallet.integration.coinbase_integration.MIN_USD_COINBASE_AMOUNT
 import org.dash.wallet.integration.coinbase_integration.TRANSACTION_TYPE_SEND
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseToDashExchangeRateUIModel
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseTransactionParams
@@ -35,7 +40,10 @@ import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToW
 import org.dash.wallet.integration.coinbase_integration.model.TransactionType
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapValueErrorType
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.*
 import javax.inject.Inject
 
@@ -66,6 +74,8 @@ class TransferDashViewModel @Inject constructor(
 
     val observeCoinbaseAddressState = SingleLiveEvent<String>()
 
+    val observeCoinbaseUserAccountAddress = SingleLiveEvent<String>()
+
     val onBuildTransactionParamsCallback = SingleLiveEvent<CoinbaseTransactionParams>()
 
     private val _sendDashToCoinbaseState = MutableLiveData<SendDashResponseState>()
@@ -78,8 +88,18 @@ class TransferDashViewModel @Inject constructor(
 
     val onFetchUserDataOnCoinbaseFailedCallback = SingleLiveEvent<Unit>()
 
+    private val _sendDashToCoinbaseError = MutableLiveData<NetworkFeeExceptionState>()
+    val sendDashToCoinbaseError: LiveData<NetworkFeeExceptionState>
+        get() = _sendDashToCoinbaseError
+
+    var minAllowedSwapDashCoin: Coin = Coin.ZERO
+    var minFaitAmount:Fiat = Fiat.valueOf(config.exchangeCurrencyCode, 0)
+
+    private var maxForDashCoinBaseAccount: Coin = Coin.ZERO
+
     init {
         getWithdrawalLimitOnCoinbase()
+        getUserAccountAddress()
         walletDataProvider.observeBalance()
             .onEach(_dashBalanceInWalletState::postValue)
             .launchIn(viewModelScope)
@@ -99,26 +119,88 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
+    private fun getUserAccountAddress() = viewModelScope.launch(Dispatchers.Main){
+        when (val response = coinBaseRepository.getUserAccountAddress()){
+            is ResponseResource.Success -> {
+                observeCoinbaseUserAccountAddress.value = response.value ?: ""
+            }
+            is ResponseResource.Failure -> {
+            }
+        }
+    }
+
     private suspend fun getCurrencyExchangeRate(currency: String): ExchangeRate {
         return exchangeRates.observeExchangeRate(currency).first()
     }
 
-    private val withdrawalLimitAsFiat: Fiat
+    private val withdrawalLimitInDash: Double
         get() {
-            return if (config.coinbaseUserWithdrawalLimitAmount.isNullOrEmpty()){
-               Fiat.valueOf(config.coinbaseSendLimitCurrency, 0)
+            return if (config.coinbaseUserWithdrawalLimitAmount.isNullOrEmpty()) {
+                0.0
             } else {
                 val formattedAmount = GenericUtils.formatFiatWithoutComma(config.coinbaseUserWithdrawalLimitAmount)
-                return try {
+                val fiatAmount = try {
                     Fiat.parseFiat(config.coinbaseSendLimitCurrency, formattedAmount)
-                }catch (x: Exception) {
+                } catch (x: Exception) {
                     Fiat.valueOf(config.coinbaseSendLimitCurrency, 0)
                 }
+                val newRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, exchangeRate?.fiat)
+                val amountInDash = newRate.fiatToCoin(fiatAmount)
+                amountInDash.toPlainString().toDoubleOrZero
             }
         }
 
-    fun isInputGreaterThanCoinbaseWithdrawalLimit(amountInDash: Fiat): Boolean {
-        return amountInDash.isGreaterThan(withdrawalLimitAsFiat)
+    private fun calculateCoinbaseMinAllowedValue(account:CoinbaseToDashExchangeRateUIModel){
+        val minFaitValue = MIN_USD_COINBASE_AMOUNT.toBigDecimal() / account.currencyToUSDExchangeRate.toBigDecimal()
+
+        val cleanedValue: BigDecimal =
+            minFaitValue * account.currencyToDashExchangeRate.toBigDecimal()
+
+        val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
+
+        val coin = try {
+            Coin.parseCoin(bd.toString())
+        } catch (x: Exception) {
+            Coin.ZERO
+        }
+
+        minAllowedSwapDashCoin = coin
+
+        val formattedAmount = GenericUtils.formatFiatWithoutComma(minFaitValue.toString())
+        minFaitAmount = try {
+            Fiat.parseFiat(config.exchangeCurrencyCode, formattedAmount)
+        } catch (x: Exception) {
+            Fiat.valueOf(config.exchangeCurrencyCode, 0)
+        }
+    }
+
+    private fun calculateCoinbaseMaxAllowedValue(account:CoinbaseToDashExchangeRateUIModel){
+        val maxCoinValue = try {
+            Coin.parseCoin(account.coinBaseUserAccountData.balance?.amount)
+        } catch (x: Exception) {
+            Coin.ZERO
+        }
+        maxForDashCoinBaseAccount = maxCoinValue
+    }
+
+
+    private fun isInputGreaterThanCoinbaseWithdrawalLimit(amountInDash: Coin): Boolean {
+        return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
+    }
+
+    fun checkEnteredAmountValue(amountInDash: Coin): SwapValueErrorType {
+        return when {
+                (amountInDash == minAllowedSwapDashCoin || amountInDash.isGreaterThan(minAllowedSwapDashCoin)) &&
+                        maxForDashCoinBaseAccount.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.NotEnoughBalance
+                amountInDash.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.LessThanMin
+                amountInDash.isGreaterThan(maxForDashCoinBaseAccount) -> SwapValueErrorType.MoreThanMax.apply {
+                    amount = userAccountOnCoinbaseState.value?.coinBaseUserAccountData?.balance?.amount
+                }
+                isInputGreaterThanCoinbaseWithdrawalLimit(amountInDash)-> {
+                    SwapValueErrorType.UnAuthorizedValue
+                }
+                else -> SwapValueErrorType.NOError
+            }
     }
 
     fun isInputGreaterThanWalletBalance(input: Coin, balanceInWallet: Coin): Boolean {
@@ -153,8 +235,28 @@ class TransferDashViewModel @Inject constructor(
         _sendDashToCoinbaseState.value = checkTransaction(dashValue, isEmptyWallet, checkConditions)
     }
 
-    suspend fun estimateNetworkFee(value: Coin, emptyWallet: Boolean): SendPaymentService.TransactionDetails {
-        return sendPaymentService.estimateNetworkFee(dashAddress, value, emptyWallet)
+    suspend fun estimateNetworkFee(value: Coin, emptyWallet: Boolean): SendPaymentService.TransactionDetails? {
+         try {
+             return sendPaymentService.estimateNetworkFee(dashAddress, value, emptyWallet)
+        } catch (exception: Exception) {
+
+             when (exception) {
+                 is DustySendRequested -> {
+                     _sendDashToCoinbaseError.value = NetworkFeeExceptionState(R.string.send_coins_error_dusty_send)
+                 }
+                 is InsufficientMoneyException -> {
+                     _sendDashToCoinbaseError.value  =NetworkFeeExceptionState( R.string.send_coins_error_insufficient_money)
+                 }
+                 is CouldNotAdjustDownwards -> {
+                     _sendDashToCoinbaseError.value  =NetworkFeeExceptionState( R.string.send_coins_error_dusty_send)
+
+                 }
+                 else -> {
+                     _sendDashToCoinbaseError.value  =NetworkFeeExceptionState( exceptionMessage =exception.toString())
+                 }
+             }
+             return null
+        }
     }
 
     private suspend fun checkTransaction(
@@ -240,6 +342,8 @@ class TransferDashViewModel @Inject constructor(
                         onFetchUserDataOnCoinbaseFailedCallback.call()
                     } else {
                         _userAccountDataWithExchangeRate.value = userData
+                        calculateCoinbaseMinAllowedValue(userData)
+                        calculateCoinbaseMaxAllowedValue(userData)
                     }
                     _loadingState.value = false
                 }
@@ -251,9 +355,8 @@ class TransferDashViewModel @Inject constructor(
             }
         }
     }
-
     val dashAddress: Address
-        get() = Address.fromString(walletDataProvider.networkParameters, (observeCoinbaseAddressState.value ?: "").trim { it <= ' ' })
+        get() = Address.fromString(walletDataProvider.networkParameters, (observeCoinbaseAddressState.value ?: observeCoinbaseUserAccountAddress.value?:"").trim { it <= ' ' })
 }
 
 sealed class SendDashResponseState{
@@ -262,3 +365,8 @@ sealed class SendDashResponseState{
     data class FailureState(val failureMessage: String): SendDashResponseState()
     object UnknownFailureState: SendDashResponseState()
 }
+
+data class NetworkFeeExceptionState(
+    @StringRes val exceptionMessageResource: Int? = null,
+    val exceptionMessage: String? = null
+)
