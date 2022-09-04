@@ -81,7 +81,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
     }
 
     private fun setError() {
-        binding.icon.setImageResource(R.drawable.ic_error_red)
+        binding.icon.setImageResource(R.drawable.ic_error)
         binding.title.text = args.title
         binding.title.setTextAppearance(R.style.Headline5_Red)
         binding.subtitle.text = args.subtitle

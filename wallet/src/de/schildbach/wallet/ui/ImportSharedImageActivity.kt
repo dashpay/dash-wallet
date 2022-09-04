@@ -154,6 +154,7 @@ class ImportSharedImageActivity : AppCompatActivity(), FancyAlertDialog.FancyAle
             }
 
             override fun handlePrivateKey(key: PrefixedChecksummedBytes) {
+                // TODO
                 SweepWalletActivity.start(this@ImportSharedImageActivity, key, false)
                 finish()
             }

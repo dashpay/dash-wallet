@@ -100,7 +100,7 @@ class CoinBaseResultDialog : DialogFragment() {
     }
 
     private fun setPurchaseError() {
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error)
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_failed)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         val errorMessage = arguments?.getString(ARG_MESSAGE)
@@ -115,7 +115,7 @@ class CoinBaseResultDialog : DialogFragment() {
     }
 
     private fun setDepositError() {
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error)
         binding.coinbaseBuyDialogTitle.setText(R.string.transfer_failed)
         val errorMessage = arguments?.getString(ARG_MESSAGE)
         when {
@@ -146,7 +146,7 @@ class CoinBaseResultDialog : DialogFragment() {
     }
 
     private fun setConversionError() {
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error)
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_failed)
         binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
@@ -157,7 +157,7 @@ class CoinBaseResultDialog : DialogFragment() {
     }
 
     private fun setSwapError() {
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error)
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_failed)
         binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
@@ -197,7 +197,7 @@ class CoinBaseResultDialog : DialogFragment() {
     }
 
     private fun setTransferDashFailure() {
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error)
         binding.coinbaseBuyDialogTitle.setText(R.string.transfer_failed)
         val errorMessage = arguments?.getString(ARG_MESSAGE)
         when {

@@ -63,6 +63,7 @@ class ToolsActivity : BaseMenuActivity() {
         }
         import_keys.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, bundleOf())
+                // TODO
             startActivity(Intent(this, SweepWalletActivity::class.java))
         }
         network_monitor.setOnClickListener {

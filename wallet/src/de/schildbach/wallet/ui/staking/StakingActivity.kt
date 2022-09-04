@@ -101,7 +101,7 @@ class StakingActivity : LockScreenActivity() {
     private fun handleCrowdNodeError(error: Exception?) {
         if (error is CrowdNodeException && error.message == CrowdNodeException.MISSING_PRIMARY) {
             AdaptiveDialog.create(
-                R.drawable.ic_error_red,
+                R.drawable.ic_error,
                 getString(org.dash.wallet.common.R.string.error),
                 getString(R.string.crowdnode_primary_missing),
                 getString(R.string.button_close)

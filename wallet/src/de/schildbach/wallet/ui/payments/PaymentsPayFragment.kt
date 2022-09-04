@@ -29,6 +29,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import androidx.core.os.bundleOf
+import androidx.fragment.app.Fragment
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.InputParser
 import de.schildbach.wallet.ui.scan.ScanActivity
@@ -39,10 +41,12 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
-import org.dash.wallet.common.ui.BaseLockScreenFragment
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import javax.inject.Inject
 
-class PaymentsPayFragment : BaseLockScreenFragment() {
+@AndroidEntryPoint
+class PaymentsPayFragment : Fragment() {
 
     companion object {
 
@@ -52,7 +56,7 @@ class PaymentsPayFragment : BaseLockScreenFragment() {
         fun newInstance() = PaymentsPayFragment()
     }
 
-    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
+    @Inject lateinit var analytics: AnalyticsService
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_payments_pay, container, false)
@@ -146,12 +150,13 @@ class PaymentsPayFragment : BaseLockScreenFragment() {
 
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
-                    alertDialog = baseAlertDialogBuilder.apply {
-                        title = getString(errorDialogTitleResId)
-                        message = getString(messageResId, *messageArgs)
-                        neutralText = getString(R.string.button_dismiss)
-                    }.buildAlertDialog()
-                    alertDialog.show()
+                    // TODO: check
+                    AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(errorDialogTitleResId),
+                        getString(messageResId, *messageArgs),
+                        getString(R.string.button_dismiss)
+                    ).show(requireActivity())
                 } else {
                     manageStateOfPayToAddressButton(null)
                 }

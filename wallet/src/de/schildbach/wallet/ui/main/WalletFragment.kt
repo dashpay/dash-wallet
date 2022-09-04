@@ -147,6 +147,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     startActivity(PaymentsActivity.createIntent(requireContext(), PaymentsActivity.ACTIVE_TAB_RECEIVE))
                 }
                 binding.shortcutsPane.importPrivateKey -> {
+                    // TODO
                     SweepWalletActivity.start(requireContext(), true)
                 }
                 binding.shortcutsPane.explore -> {
@@ -259,6 +260,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
             }
 
             override fun handlePrivateKey(key: PrefixedChecksummedBytes) {
+                // TODO
                 SweepWalletActivity.start(requireContext(), key, true)
             }
 

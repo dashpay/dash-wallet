@@ -177,7 +177,7 @@ class SecurityActivity : BaseMenuActivity() {
 
         if (walletBalance.isGreaterThan(Coin.ZERO) && viewModel.needPassphraseBackUp) {
             val resetWalletDialog = ExtraActionDialog.create(
-                R.drawable.ic_exclamation_mark_triangle,
+                R.drawable.ic_warning,
                 getString(R.string.launch_reset_wallet_title),
                 getString(R.string.launch_reset_wallet_message),
                 getString(R.string.button_cancel),
@@ -188,7 +188,7 @@ class SecurityActivity : BaseMenuActivity() {
                 onResult = {
                     if (it == true) {
                         val startResetWalletDialog = AdaptiveDialog.create(
-                            R.drawable.ic_exclamation_mark_triangle,
+                            R.drawable.ic_warning,
                             getString(R.string.start_reset_wallet_title, fiatBalanceStr.ifEmpty {
                                 walletBalance.toFriendlyString()
                             }),
