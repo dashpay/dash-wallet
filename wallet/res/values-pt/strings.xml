@@ -280,6 +280,8 @@
     <string name="preferences_show_disclaimer_summary">Você já leu as notas de segurança? Já fez o backup da sua carteira em um lugar seguro?</string>
     <string name="preferences_report_issue_title">Informar problema</string>
     <string name="preferences_initiate_reset_title">Reexaminar blockchain</string>
+    <string name="preferences_initiate_reset_summary">Varrer novamente blockchain, transações e saldo da carteira. Repetir esse processo vai demorar um pouco, então só faça isso se você souber o porquê.</string>
+    <string name="preferences_initiate_reset_dialog_message">Deseja verificar novamente o blockchain?\n\nIsso ocultará temporariamente o saldo da sua carteira e removerá as transações. Ambos serão recuperados à medida que a sincronização do blockchain progride. Certifique-se de que você tem uma conexão confiável com a Internet.</string>
     <string name="preferences_initiate_reset_dialog_positive">Reescanear</string>
     <string name="preferences_extended_public_key_title">Mostrar xpub</string>
     <string name="preferences_extended_public_key_summary">Ver a chave pública estendida de sua carteira, para que possa ser importada para outros aplicativos e serviços. Tenha cuidado: isso irá divulgar a sua privacidade monetária para o app.</string>
@@ -382,8 +384,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">Você não tem fundos suficientes para completar esta transação</string>
 
 
+    <string name="select_a_service_to_buy_and_sell_dash">Selecione um serviço para comprar e vender Dash.</string>
     <string name="select_a_service">Selecione um serviço</string>
     <string name="activity_buy_and_sell_dash_filter">Filtro</string>
     <string name="clear_filter">Limpar Filtro</string>
     <string name="select_currency">Selecione a moeda</string>
-    </resources>
+    <string name="reason">Razão</string>
+</resources>

@@ -24,6 +24,8 @@
     <string name="explore_atms_title">Банкомати</string>
     <string name="explore_atms_subtitle">Знайдіть, де купити або продати DASH та інші криптовалюти за готівку.</string>
     <string name="explore_staking_subtitle">Застейкайте Dash і отримайте пасивний дохід за кілька кліків.</string>
+    <string name="explore_staking_current_apy">Поточний APY = %s%%</string>
+
     <!-- Search -->
     <string name="explore_search_results">Результати пошуку</string>
     <string name="explore_physical_merchant">Фізичний магазин</string>

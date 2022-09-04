@@ -17,10 +17,15 @@
 <resources>
     <string name="crowdnode_get_started">الشروع في العمل مع CrowdNode</string>
     <string name="crowdnode_get_started_hint">لبدء التخزين ، أنشئ حسابًا على CrowdNode أو اتصل بحساب موجود.</string>
+    <string name="crowdnode_account">حساب CrowdNode </string>
     <string name="new_account">حساب CrowdNode جديد</string>
     <string name="account_create">إنشاء حساب</string>
+    <string name="accept_terms_response">الرجاء قبول الشروط</string>
+    <string name="accept_terms">قبول الشروط</string>
+    <string name="welcome_response">تم إنشاء الحساب</string>
     <string name="account_link">ربط حساب موجود</string>
     <string name="crowdnode_login">سجّل الدخول إلى CrowdNode</string>
+    <string name="crowdnode_signup">قم بالتسجيل في CrowdNode</string>
     <string name="crowdnode_link">ربط حساب CrowdNode الحالي</string>
     <string name="required_passphrase_backup">يجب عليك الاحتفاظ بنسخة احتياطية من عبارة مرورك في Dash Wallet</string>
     <string name="backup_passphrase">نسخة احتياطية من عبارة المرور</string>
@@ -39,6 +44,7 @@
     <string name="privacy_policy">سياسة الخصوصية</string>
     <string name="crowdnode_account_ready">تم إعداد حساب CrowdNode الخاص بك وهو جاهز للاستخدام!</string>
     <string name="notify_when_done">أغلق وأبلغ عند الانتهاء</string>
+    <string name="crowdnode_creating">إنشاء حساب CrowdNode الخاص بك ...</string>
     <string name="accepting_terms">قبول شروط الاستخدام ...</string>
     <string name="crowdnode_signup_error">لم نتمكن من إنشاء حساب CrowdNode الخاص بك.</string>
     <string name="crowdnode_deposit_error">لم نتمكن من الإيداع في حساب CrowdNode الخاص بك.</string>
@@ -57,6 +63,10 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
     <string name="online_account">حساب على الانترنت</string>
     <string name="online_account_create">إنشاء حساب على الإنترنت</string>
+    <string name="secure_online_account">حماية مدخراتك</string>
+    <string name="crowdnode_signup_to_finish">قم بالتسجيل للانتهاء من إنشاء الحساب</string>
+    <string name="online_account_create_full">قم بإنشاء حساب CrowdNode عبر الإنترنت</string>
+    <string name="online_account_email_privacy">يرجى ملاحظة أن البريد الإلكتروني لا يتم حفظه بواسطة محفظة داش ويتم إرساله فقط إلى CrowdNode</string>
     <string name="crowdnode_support">دعم CrowdNode</string>
     <string name="unlink_account">إلغاء ربط الحساب</string>
     <string name="online_account_title">لماذا تحتاج إلى حساب على الإنترنت؟</string>
@@ -69,6 +79,7 @@
     <string name="payout_options">خيارات الدفع</string>
     <string name="payout_options_details">يمكنك تغيير كيفية / وقت دفع أرباح المكافآت لك.</string>
     <string name="crowdnode_balance">التوازن على CrowdNode</string>
+    <string name="crowdnode_your_address_title">هذا هو عنوان داش المرتبط بحساب CrowdNode الخاص بك</string>
     <string name="chain_syncing">السلسلة قيد المزامنة ...</string>
     <string name="crowdnode_wait_for_sync">انتظر حتى تتم مزامنة السلسلة بالكامل ، حتى نتمكن من مراجعة سجل معاملاتك. قم بزيارة موقع CrowdNode لتسجيل الدخول أو التسجيل.</string>
     <string name="crowdnode_open_website">انتقل إلى موقع CrowdNode</string>
@@ -83,8 +94,26 @@
     <string name="crowdnode_minimum_deposit">قم بإيداع %s على الأقل لبدء الكسب</string>
     <string name="crowdnode_minimum_deposit_difference">قم بإيداع %s  لبدء الكسب</string>
     <string name="crowdnode_first_deposit">يجب أن يكون الإيداع الأول أكثر من %s</string>
-    <string name="crowdnode_staking_info_title">كيف يعمل الستاكنج</string>
+    <string name="crowdnode_staking_info_title">كيف يعمل CrowdNode Staking</string>
+    <string name="crowdnode_staking_info_message_first">يتم تشغيل شبكة داش بواسطة عدد من Masternodes والتي تعد جزءًا أساسيًا من تسهيل المدفوعات.</string>
+    <string name="crowdnode_staking_info_message_second">يحتاج Masternode إلى 1000 داش كضمان ويتم حاليًا مكافأة كل Masternode %s%% سنويًا تقريبًا.</string>
+    <string name="crowdnode_staking_apy_title">APY الحالي هو %s%%</string>
     <string name="crowdnode_staking_info_message">تبدأ في الكسب إذا كان حساب CrowdNode الخاص بك يحتوي على أكثر من %s</string>
+    <string name="staking_apy_title">APY الحالي هو %s</string>
+    <string name="crowdnode_staking_current_apy_message">يمثل هذا النسبة المئوية السنوية الحالية لعائد ماسترنود كامل مطروحًا منه رسوم CrowdNode البالغة 15٪. إنه ليس معدل عائد مضمون وقد يرتفع أو ينخفض بناءً على حجم مجمعات CrowdNode وسعر داش.</string>
+    <string name="crowdnode_staking_leave_pool_message_one">الأعضاء أحرار في مغادرة المسبح ويمكنهم في أغلب الأحيان المغادرة على الفور.</string>
+    <string name="crowdnode_staking_leave_pool_message_two">في حالة عمليات السحب الكبيرة ، سيدفع CrowdNode عمليات السحب في غضون أسبوعين. هذا بسبب بروتوكولات الأمان الخاصة بهم وغالبًا ما يتم التعامل معها بشكل أسرع.</string>
+
+    <string name="crowdnode_staking_leaving_the_pool_title">مغادرة المجموعة</string>
+    <string name="crowdnode_staking_receiving_rewards_title">استلام المكافآت</string>
+    <string name="crowdnode_staking_receiving_rewards_message">ستتلقى مدفوعات جزئية تلقائيًا وسيتم إعادة استثمارها افتراضيًا ، ومع ذلك ، من السهل أيضًا إعداد عمليات سحب تلقائية لتلقي دفعات متكررة.</string>
+    <string name="crowdnode_staking_first_minimum_deposit_title">الحد الأدنى للإيداع الأول</string>
+    <string name="crowdnode_staking_join_pool_message">نظرًا لأن معظم الأشخاص ليس لديهم 1000 داش بالضبط في متناول اليد ، فقد قدم CrowdNode خدمة حيث يمكنهم من خلال تجميع الودائع من الأعضاء تحقيق فوائد امتلاك Masternode.</string>
+    <string name="crowdnode_staking_join_pool_title">الانضمام إلى المجموعة</string>
+    <string name="crowdnode_staking_crowdnode_benefits_title">فوائد CrowdNode</string>
+    <string name="crowdnode_staking_connected_dash_address_title">عنوان داش متصل</string>
+    <string name="crowdnode_staking_connected_dash_address_message">هذا هو عنوان داش المخصص لحساب CrowdNode الخاص بك في محفظة داش على هذا الجهاز.</string>
+    <string name="crowdnode_staking_toast_address_copied">تم نسخ عنوان CrowdNode إلى الحافظة</string>
     <string name="crowdnode_verify_api_address">تحقق من عنوان API Dash الخاص بك</string>
     <string name="crowdnode_how_to_verify">كيفية تأكيد عنوان API Dash الخاص بك</string>
     <string name="crowdnode_how_to_verify_description1">أرسل %s داش من عنوان داش الأساسي الذي تستخدمه حاليًا لحساب CrowdNode الخاص بك</string>
@@ -101,4 +130,24 @@
     <string name="crowdnode_online_account_details_title">معلومات حول حسابك على الإنترنت</string>
     <string name="crowdnode_online_account_details_primary">عنوان داش الأساسي الذي تستخدمه حاليًا لحساب CrowdNode الخاص بك</string>
     <string name="crowdnode_online_account_details_api">عنوان داش المخصص لحساب CrowdNode الخاص بك في محفظة داش على هذا الجهاز</string>
+    <string name="crowdnode_primary_missing">عنوان داش الأساسي مفقود من حسابك. يرجى تحديده على موقع CrowdNode.</string>
+    <string name="crowdnode_wait_signed_email">الرجاء الانتظار حتى تتم معالجة بريدك الإلكتروني ...</string>
+    <string name="cannot_send">لا يمكن أن ترسل.</string>
+    <string name="crowdnode_tx_set_title">لماذا أرى كل هذه المعاملات؟</string>
+    <string name="crowdnode_tx_set_explainer">تم إنشاء حساب CrowdNode الخاص بك باستخدام هذه المعاملات.</string>
+    <string name="shuffle_coins">عملات المراوغة</string>
+    <string name="positive_balance_required">يجب أن يكون لديك رصيد إيجابي في محفظة داش</string>
+    <string name="withdrawal_required_balance">قم بإيداع ما لا يقل عن 0.0003 داش في محفظة داش الخاصة بك لإكمال السحب</string>
+    <string name="withdrawal_limit">حد سحب داش</string>
+    <string name="withdrawal_limit_details">لا يمكنك سحب أكثر من%1$s داش %2$s.</string>
+    <string name="crowdnode_withdrawal_limits_title">حدود السحب CrowdNode</string>
+    <string name="crowdnode_withdrawal_limits_message">نظرًا لشروط خدمة CrowdNode ، لا يمكن للمستخدمين سحب أكثر من:</string>
+    <string name="crowdnode_withdraw_without_limits_online">سحب بلا حدود باستخدام حساب عبر الإنترنت على موقع CrowdNode.</string>
+    <string name="crowdnode_withdrawal_limits_error">هذا الخطأ على الأرجح بسبب تجاوز حدود سحب CrowdNode. حاول مرة أخرى في وقت لاحق.</string>
+    <string name="per_transaction">لكل معاملة</string>
+    <string name="per_hour">في الساعة</string>
+    <string name="per_day">كل 24 ساعة</string>
+    <string name="read_withdrawal_policy">قراءة سياسة السحب</string>
+
+
     </resources>

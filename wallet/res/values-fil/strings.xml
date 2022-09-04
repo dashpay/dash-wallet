@@ -280,6 +280,8 @@
     <string name="preferences_show_disclaimer_summary">Nabasa mo na ba talaga ang safety notes? Na-back up mo na ba ang wallet sa ligtas na lugar?</string>
     <string name="preferences_report_issue_title">I-report ang issue</string>
     <string name="preferences_initiate_reset_title">muling i-scan ang blockchain </string>
+    <string name="preferences_initiate_reset_summary">I-scan muli ang blockchain, mga transaksyon at balanse ng wallet. Magtatagal ang replay, kaya gawin lang ito kung alam mo kung bakit.</string>
+    <string name="preferences_initiate_reset_dialog_message">Gusto mo bang i-scan muli ang blockchain?\n\nPansamantala nitong itatago ang balanse ng iyong wallet at aalisin ang mga transaksyon. Parehong mababawi habang umuusad ang pag-sync ng blockchain. Tiyaking mayroon kang maaasahang koneksyon sa internet.</string>
     <string name="preferences_initiate_reset_dialog_positive">I-scan muli</string>
     <string name="preferences_extended_public_key_title">Ipakita ang xpub</string>
     <string name="preferences_extended_public_key_summary">Tingnan ang extended public key ng iyong wallet, para ito ay ma-import sa ibang apps at serbisyo. Mag-ingat: kapag ginawa ito ay maibubunyag ang privacy ng salapi sa app na iyon.</string>
@@ -382,8 +384,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">Wala ka nang sapat na pondo para makompleto ang transaksyong ito</string>
 
 
+    <string name="select_a_service_to_buy_and_sell_dash">Pumili ng serbisyo sa pagbili at pagbebenta ng Dash.</string>
     <string name="select_a_service">Pumili ng isang Serbisyo</string>
     <string name="activity_buy_and_sell_dash_filter">Salain</string>
     <string name="clear_filter">I-clear ang Filter</string>
     <string name="select_currency">Piliin ang Pera</string>
-    </resources>
+    <string name="reason">Dahilan</string>
+</resources>

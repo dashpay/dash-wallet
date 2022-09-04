@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="crowdnode_get_started">Початок роботи з CrowdNode</string>
+    <string name="crowdnode_get_started_hint">Щоб почати стейкінг, створіть обліковий запис на CrowdNode або підключіться до існуючого.</string>
+    <string name="crowdnode_account">Акаунт CrowdNode</string>
+    <string name="new_account">Новий акаунт CrowdNode</string>
+    <string name="account_create">Створити обліковий запис</string>
+    <string name="accept_terms_response">Будь ласка, прийміть умови</string>
+    <string name="accept_terms">Прийняти Умови</string>
+    <string name="welcome_response">Акаунт створено</string>
+    <string name="account_link">Прив\'язати Існуючий Обліковий Запис</string>
+    <string name="crowdnode_login">Ввійти в CrowdNode</string>
+    <string name="crowdnode_signup">Реєстрація в CrowdNode</string>
+    <string name="crowdnode_link">Прив\'язати Існуючий Обліковий Запис CrowdNode</string>
+    <string name="required_passphrase_backup">Вам необхідно створити резервну копію фрази відновлення Dash Wallet</string>
+    <string name="backup_passphrase">Створити резервну копію фрази</string>
+    <string name="required_dash_amount">На балансі Dash Wallet має бути хоча б %s Dash</string>
+    <string name="crowdnode_new_account_warning_1">Ця адреса використовується в CrowdNode як ваш ID. Якщо ви втратите кодову фразу, пов\'язану з цим обліковим записом, ви втратите доступ до засобів усередині цього гаманця і цей обліковий запис на CrowdNode.</string>
+    <string name="crowdnode_new_account_warning_2">Щоб переконатися, що ви дійсно власник цього гаманця, на рахунок CrowdNode будуть зараховані і списані невелика кількість Dash.</string>
+    <string name="crowdnode_link_account_description">Усі вхідні та вихідні перекази CrowdNode на цьому пристрої будуть здійснюватися з адреси Dash, яка вказана нижче.</string>
+    <string name="dash_address">Адреса Dash</string>
+    <string name="primary_dash_address">Основна Dash Адреса</string>
+    <string name="crowdnode_secure_wallet">Створіть резервну копію фрази відновлення, щоб створити обліковий запис CrowdNode</string>
+    <string name="crowdnode_secure_wallet_explainer">У випадку, якщо ви втратите кодову фразу від цього гаманця, втратите пристрій або видалите Dash Wallet, ви втратите доступ CrowdNode і коштів всередині цього гаманця.</string>
+    <string name="insufficient_funds">Недостатньо коштів для продовження</string>
+    <string name="crowdnode_minimum_dash">Ви повинні мати принаймні %s Dash, щоб продовжити верифікацію CrowdNode.</string>
+    <string name="crowdnode_agree_to_terms">Я погоджуюсь з CrowdNode %1$s і %2$s</string>
+    <string name="terms_of_use">Правила користування</string>
+    <string name="privacy_policy">Політика Конфіденційності</string>
+    <string name="crowdnode_account_ready">Ваш CrowdNode акаунт налаштований і готовий до використання</string>
+    <string name="notify_when_done">Закрити і сповістити коли готово</string>
+    <string name="crowdnode_creating">Створення вашого акаунта CrowdNode...</string>
+    <string name="accepting_terms">Прийняття умов використання…</string>
+    <string name="crowdnode_signup_error">Не вдалося створити обліковий запис CrowdNode.</string>
+    <string name="crowdnode_deposit_error">Не вдалося внести депозит на рахунок CrowdNode.</string>
+    <string name="crowdnode_withdraw_error">Не вдалося зняти кошти з вашого облікового запису CrowdNode.</string>
+    <string name="crowdnode_transfer_error">Переказ на CrowdNode невдався.</string>
+    <string name="crowdnode_deposit_received">Ваш депозит на CrowdNode отримано.</string>
+    <string name="deposit">Депозит</string>
+    <string name="deposit_sent">Депозит відправлено</string>
+    <string name="deposit_sent_message">Це може зайняти близько хвилини, доки ваш баланс буде оновлено.</string>
+    <string name="crowdnode_deposit_from_wallet">DashWallet ➝ CrowdNode</string>
+    <string name="from_wallet">з Dash Wallet</string>
+    <string name="from_crowdnode">з CrowdNode</string>
+    <string name="withdraw">Вивести</string>
+    <string name="withdrawal_requested">Запит на вивід коштів відправлено</string>
+    <string name="withdrawal_requested_message">Це може зайняти близько хвилини, доки кошти будуть зачислені.</string>
+    <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
+    <string name="online_account">Онлайн Акаунт</string>
+    <string name="online_account_create">Створити Онлайн Акаунт</string>
+    <string name="secure_online_account">Захистіть свої заощадження</string>
+    <string name="crowdnode_signup_to_finish">Зареєструйтесь, щоб завершити налаштування облікового запису</string>
+    <string name="online_account_create_full">Створити обліковий запис CrowdNode онлайн</string>
+    <string name="online_account_email_privacy">Майте на увазі, що електронна адреса не зберігається в Dash Wallet, а лише пересилається в CrowdNode</string>
+    <string name="crowdnode_support">CrowdNode Підтримка</string>
+    <string name="unlink_account">Відв\'язати обліковий запис</string>
+    <string name="online_account_title">Для чого потрібен онлайн акаунт?</string>
+    <string name="crowdnode_online_synced">Синхронізовано з Dash Wallet</string>
+    <string name="crowdnode_in_process">В процесі...</string>
+    <string name="account_recovery">Відновлення Акаунта</string>
+    <string name="crowdnode_recovery_info">Якщо ви втратите свою кодову фразу, ви можете підтвердити себе іншими способами, щоб відновити доступ до своїх коштів CrowdNode.</string>
+    <string name="transaction_history">Історія Транзакцій</string>
+    <string name="see_staking_details">Ви можете переглянути детальну інформацію про свої депозити, зняття коштів і доходи.</string>
+    <string name="payout_options">Варіанти Виплат</string>
+    <string name="payout_options_details">Ви можете налаштувати, коли та яким чином отримаєте свою винагороду.</string>
+    <string name="crowdnode_balance">Баланс на CrowdNode</string>
+    <string name="crowdnode_your_address_title">Це Dash адреса прив\'язана до вашого CrowdNode акаунта</string>
+    <string name="chain_syncing">Блокчейн синхронізується...</string>
+    <string name="crowdnode_wait_for_sync">Дочекайтеся, поки блокчейн повністю синхронізується, щоб переглянути історію транзакцій. Відвідайте веб-сайт CrowdNode для входу або реєстрації.</string>
+    <string name="crowdnode_open_website">Перейти на веб-сайт CrowdNode</string>
+    <string name="crowdnode_info_title">Стань частиною Dash Мастерноди з CrowdNode</string>
+    <string name="introducing_staking">Введення в стейкінг</string>
+    <string name="crowdnode_staking_info">Отримуйте нагороди від депозитів у Dash Мастерноди лише за 0,5 Dash.</string>
+    <string name="instant_rewards">Отримуйте винагороди миттєво</string>
+    <string name="daily_rewards_info">Отримуйте свою частину нагороди щоденно.</string>
+    <string name="crowdnode_sending_to">Відправляється на акаунт CrowdNode</string>
+    <string name="wallet_sending_to">Відправляється на Dash Wallet на цьому пристрої</string>
+    <string name="available_balance">Баланс: %s</string>
+    <string name="crowdnode_minimum_deposit">Внесіть принаймні %s щоб почати заробляти</string>
+    <string name="crowdnode_minimum_deposit_difference">Внесіть %s щоб почати заробляти</string>
+    <string name="crowdnode_first_deposit">Перший депозит має бути більшим ніж %s</string>
+    <string name="crowdnode_staking_info_title">Як працює стейкінг у CrowdNode</string>
+    <string name="crowdnode_staking_info_message_first">Dash Network Мастернодами, що є важливою частиною полегшення платежів.</string>
+    <string name="crowdnode_staking_info_message_second">Мастернода потребує 1000 Dash як забезпечення, і кожна мастернода наразі отримує приблизно %s%% на рік.</string>
+    <string name="crowdnode_staking_apy_title">Поточний APY становить %s%%</string>
+    <string name="crowdnode_staking_info_message">Ви починаєте заробляти, якщо на вашому CrowdNode акаунті більше ніж %s</string>
+    <string name="staking_apy_title">Поточний APY становить %s</string>
+    <string name="crowdnode_staking_current_apy_message">Це поточний річний відсоток прибутку повної Мастерноди мінус комісія CrowdNode у розмірі 15%. Це не гарантована норма прибутку, і вона може зростати або знижуватися залежно від розміру пулів CrowdNode і ціни Dash.</string>
+    <string name="crowdnode_staking_leave_pool_message_one">Учасники можуть вільно залишити пул і найчастіше можуть вийти негайно.</string>
+    <string name="crowdnode_staking_leave_pool_message_two">У разі більших вилучень CrowdNode виплатить зняття протягом двох тижнів. Це пов’язано з їхніми протоколами безпеки, і найчастіше обробляється набагато швидше.</string>
+
+    <string name="crowdnode_staking_leaving_the_pool_title">Вихід з пула</string>
+    <string name="crowdnode_staking_receiving_rewards_title">Отримання нагород</string>
+    <string name="crowdnode_staking_receiving_rewards_message">Ви отримуватимете дробові виплати автоматично, і за замовчуванням вони будуть реінвестовані, однак також легко налаштувати автоматичне зняття коштів для отримання регулярних виплат.</string>
+    <string name="crowdnode_staking_first_minimum_deposit_title">Перший мінімальний депозит</string>
+    <string name="crowdnode_staking_join_pool_message">Оскільки більшість людей не мають під рукою точно 1000 Dash, CrowdNode створив послугу, за допомогою якої вони, об’єднуючи депозити від учасників, можуть отримати переваги володіння Masternode.</string>
+    <string name="crowdnode_staking_join_pool_title">Приєднання до пула</string>
+    <string name="crowdnode_staking_crowdnode_benefits_title">Переваги CrowdNode</string>
+    <string name="crowdnode_staking_connected_dash_address_title">Підключена адреса Dash</string>
+    <string name="crowdnode_staking_connected_dash_address_message">Ось адреса Dash, призначена для вашого облікового запису CrowdNode у Dash Wallet на цьому пристрої.</string>
+    <string name="crowdnode_staking_toast_address_copied">Адресу CrowdNode скопійовано в буфер обміну</string>
+    <string name="crowdnode_verify_api_address">Підтвердити свою API Dash адресу</string>
+    <string name="crowdnode_how_to_verify">Як підтвердити свою API Dash адресу</string>
+    <string name="crowdnode_how_to_verify_description1">Надішліть %s Dash зі своєї основної адреси Dash, яку ви зараз використовуєте для свого облікового запису CrowdNode</string>
+    <string name="crowdnode_how_to_verify_description2">на адресу Dash, призначену для вашого облікового запису CrowdNode у Dash Wallet на цьому пристрої</string>
+    <string name="crowdnode_how_to_verify_description3">Ми автоматично побачимо цю транзакцію і переведемо ту ж суму на ваш обліковий запис на CrowdNode. Після цього ви зможете вносити та виводити кошти в Dash Wallet на цьому пристрої.</string>
+    <string name="button_show_qr">Показати QR</string>
+    <string name="scan_qr">Сканувати QR</string>
+    <string name="qr_contains_request">Цей QR вже містить запит на оплату в розмірі %s Dash</string>
+    <string name="verification_required">Потрібна Верифікація</string>
+    <string name="validating_address">Підтвердження адреси...</string>
+    <string name="crowdnode_address_validated">Вашу адресу CrowdNode підтверджено, але потрібна перевірка.</string>
+    <string name="crowdnode_address_confirmed">Вашу адресу CrowdNode підтверджено.</string>
+    <string name="crowdnode_bad_confirmation">Підтвердження надіслано з неправильної основної адреси</string>
+    <string name="crowdnode_online_account_details_title">Інформація про ваш онлайн-акаунт</string>
+    <string name="crowdnode_online_account_details_primary">Ваша основна адреса Dash, яку ви зараз використовуєте для свого облікового запису CrowdNode</string>
+    <string name="crowdnode_online_account_details_api">Адреса Dash, призначена для вашого облікового запису CrowdNode у Dash Wallet на цьому пристрої</string>
+    <string name="crowdnode_primary_missing">У вашому обліковому записі відсутня основна адреса Dash. Будь ласка, вкажіть її на сайті CrowdNode.</string>
+    <string name="crowdnode_wait_signed_email">Будь ласка зачекайте. Ваш email обробляється…</string>
+    <string name="cannot_send">Неможливо відправити.</string>
+    <string name="crowdnode_tx_set_title">Чому я бачу всі ці транзакціїї?</string>
+    <string name="crowdnode_tx_set_explainer">Ваш обліковий запис CrowdNode було створено за допомогою цих транзакцій.</string>
+    <string name="shuffle_coins">Змішати Монети</string>
+    <string name="positive_balance_required">У вас повинен бути додатній баланс Dash Wallet</string>
+    <string name="withdrawal_required_balance">Внесіть принаймні 0.0003 Dash на свій гаманець Dash Wallet, щоб завершити вивід</string>
+    <string name="withdrawal_limit">Ліміт зняття Dash</string>
+    <string name="withdrawal_limit_details">Ви не можете зняти більше ніж %1$s Dash %2$s.</string>
+    <string name="crowdnode_withdrawal_limits_title">Ліміти виведення з CrowdNode</string>
+    <string name="crowdnode_withdrawal_limits_message">Відповідно до умов обслуговування CrowdNode користувачі можуть знімати не більше ніж:</string>
+    <string name="crowdnode_withdraw_without_limits_online">Знімайте без обмежень за допомогою онлайн-облікового запису на веб-сайті CrowdNode.</string>
+    <string name="crowdnode_withdrawal_limits_error">Ця помилка, швидше за все, пов’язана з перевищенням обмежень на зняття з CrowdNode. Спробуйте ще раз пізніше.</string>
+    <string name="per_transaction">за транзакцію</string>
+    <string name="per_hour">за годину</string>
+    <string name="per_day">за 24 години</string>
+    <string name="read_withdrawal_policy">Прочитати Політику виведення коштів</string>
+
+
+    </resources>

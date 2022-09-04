@@ -242,9 +242,12 @@
     <string name="view_seed_title">Фраза відновлення</string>
     <string name="transaction_result_view_on_explorer">Подивитися в Block Explorer</string>
     <string name="transaction_result_tax_category">Податкова категорія</string>
+    <string name="transaction_result_tax_category_loading">Завантаження...</string>
     <string-array name="transaction_result_tax_categories">
         <item>Дохід</item>
         <item>Витрата</item>
+        <item>Трансфер в</item>
+        <item>Трансфер з</item>
     </string-array>
     <string name="transaction_result_paid_successfully">Успішно відправлено</string>
     <string name="transaction_result_sent_to">Відправити</string>
@@ -257,6 +260,8 @@
     <string name="transaction_details_received_at">Отримано на</string>
     <string name="transaction_details_moved_from">Переміщено з</string>
     <string name="transaction_details_moved_internally_to">Внутрішньо переміщено в</string>
+    <string name="transaction_failed_details">Помилка транзакції</string>
+
     <string name="authenticate_fingerprint_title">Автентифікувати</string>
     <string name="authenticate_fingerprint_message">Підтвердіть відбиток пальця, щоб продовжити</string>
     <string name="authenticate_pin_message">Введіть PIN-код, щоб продовжити</string>
@@ -265,6 +270,8 @@
 
     <string name="menu_buy_and_sell_title">Купити &amp; Продати Dash</string>
     <string name="menu_buy_and_sell_subtitle">Підключитися до сторонніх бірж</string>
+    <string name="liquid_unavailable">Інтеграція Liquid з Dash Wallet більше недоступна</string>
+    <string name="liquid_unavailable_details">Якщо у вас виникли запитання щодо ваших збережень Dash у Liquid, зверніться до центру підтримки Liquid</string>
     <string name="menu_security_title">Безпека</string>
     <string name="menu_security_subtitle">Показати кодову фразу, зробити резервну копію гаманця.</string>
     <string name="menu_settings_title">Налаштування</string>
@@ -364,8 +371,12 @@
     <string name="import_image_import_valid_private_key">Скопіюйте дійсний приватний ключ, щоб імпортувати з нього Dash</string>
     <string name="import_image_invalid_private">Неправильний приватний ключ</string>
 
+    <string name="today">Сьогодні</string>
+    <string name="yesterday">Вчора</string>
+
     <string name="syncing">Синхронізація</string>
     <string name="syncing_balance">Синхронізація балансу</string>
+    <string name="transaction_count">%d транзакції</string>
     <string name="all_transactions">Все</string>
     <string name="received_transactions">Отримано</string>
     <string name="sent_transactions">Відправлено</string>
@@ -384,4 +395,14 @@
     <string name="launch_reset_wallet_extra_message">Зробіть резервну копію фрази відновлення</string>
     <string name="start_reset_wallet_title">Ви можете втратити %s</string>
     <string name="reset_wallet_text">Скидання гаманця</string>
-    </resources>
+    <string name="reclassify_transactions_title">Перекласифікуйте свої транзакції</string>
+    <string name="reclassify_transactions_title_message">Ці класифікації буде відображено в файлі експорту CSV, який можна використовувати для імпорту в служби податкової звітності.</string>
+    <string name="reclassify_transactions_question">Де можна змінити податкову категорію?</string>
+    <string name="reclassify_transactions_outgoing_title">Вихідні операції</string>
+    <string name="reclassify_transactions_by_default_message">за замовчуванням буде позначено як</string>
+    <string name="reclassify_transactions_incoming_title">Вхідні операції</string>
+    <string name="reclassify_transactions_change_it_message">Ви можете змінити його на</string>
+    <string name="reclassify_transactions_linked_accounts_title">Пов’язані облікові записи</string>
+    <string name="reclassify_transactions_linked_accounts_message">за замовчуванням усі транзакції до ваших пов’язаних облікових записів або з них (обміни, ставки тощо) позначатимуться як перекази.</string>
+    <string name="reclassify_transactions_change_explanation">Виберіть будь-яку транзакцію на головній сторінці та змініть категорію на сторінці з деталями транзакції.</string>
+</resources>

@@ -39,6 +39,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
+import org.dash.wallet.integration.coinbase_integration.MIN_USD_COINBASE_AMOUNT
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapValueErrorType
@@ -71,7 +72,7 @@ class ConvertViewViewModel @Inject constructor(
     var enteredConvertAmount = "0"
     var maxCoinBaseAccountAmount: String = "0"
 
-    var minAllowedSwapAmount: String = "2"
+    var minAllowedSwapAmount: String = MIN_USD_COINBASE_AMOUNT
 
     var maxForDashWalletAmount: String = "0"
     val onContinueEvent = SingleLiveEvent<SwapRequest>()
@@ -143,7 +144,7 @@ class ConvertViewViewModel @Inject constructor(
         this._selectedCryptoCurrencyAccount.value = account
 
         //To check if the user has different fiat than usd the min is 2 usd
-        val minFaitValue = "2".toBigDecimal() / account.currencyToUSDExchangeRate.toBigDecimal()
+        val minFaitValue = MIN_USD_COINBASE_AMOUNT.toBigDecimal() / account.currencyToUSDExchangeRate.toBigDecimal()
 
         val cleanedValue: BigDecimal =
             minFaitValue * account.currencyToDashExchangeRate.toBigDecimal()

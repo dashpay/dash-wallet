@@ -280,6 +280,8 @@
     <string name="preferences_show_disclaimer_summary">Güvenlik notlarını gerçekten okudun mu? Cüzdanını güvenli bir yere yedekledin mi?</string>
     <string name="preferences_report_issue_title">Sorun rapor et</string>
     <string name="preferences_initiate_reset_title">Blok zincirini tekrar tara</string>
+    <string name="preferences_initiate_reset_summary">Blok zincirini, işlemleri ve cüzdan bakiyesini yeniden tara. Eski haline gelmesi vakit alacaktır, bu yüzden bunu neden yaptığınızı biliyorsanız yapınız.</string>
+    <string name="preferences_initiate_reset_dialog_message">Blok zincirini yeniden taramak ister misiniz?\n\nBu geçici olarak bakiyenizi gizler ve işlemlerinizi kaldırır. Blok zinciri senkronize oldukça ikiside yeniden gösterilecektir. Güvenilir bir internet bağlantınız olduğundan emin olun.</string>
     <string name="preferences_initiate_reset_dialog_positive">Yeniden tara</string>
     <string name="preferences_extended_public_key_title">xpub\'ı göster</string>
     <string name="preferences_extended_public_key_summary">Başka uygulama ve servislere iç aktarım yapılabilmesi için cüzdanınızın genişletilmiş genel anahtarını gösterir. Dikkatli olun: bunu yapmanız parasal gizliliğinizi o uygulamaya ifşa edecektir.</string>
@@ -382,8 +384,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">Bu işlemi gerçekleştirmek için yeterli bakiyeniz yoktur</string>
 
 
+    <string name="select_a_service_to_buy_and_sell_dash">Dash satın alıp satmak için bir hizmet seçin.</string>
     <string name="select_a_service">Bir Hizmet Seçin</string>
     <string name="activity_buy_and_sell_dash_filter">Filtre</string>
     <string name="clear_filter">Filtreyi sıfırla</string>
     <string name="select_currency">Para Birimini Seçin</string>
-    </resources>
+    <string name="reason">Sebep</string>
+</resources>

@@ -47,8 +47,7 @@ dependencies {
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "androidx.work:work-runtime-ktx:$workRuntimeVersion"
     implementation "org.dashj:dashj-core:$dashjVersion"
-    //noinspection GradleDependency
-    implementation "org.dashj.android:dashj-bls-android:0.17.5"
+    implementation "org.dashj.android:dashj-bls-android:0.18.1"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
     implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
@@ -176,8 +175,8 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 31
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70610
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "7.6.1"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 80001
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "8.0"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true

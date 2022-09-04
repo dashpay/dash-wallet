@@ -56,7 +56,6 @@
     <string name="transfer_failed_msg">دش با موفقیت به حساب کوین‌بیس شما انتقال یافت. اما انتقال دش به دش والت روی این دستگاه موفق نبود. </string>
     <string name="purchase_failed_msg">مشکلی روی داده است</string>
     <string name="it_could_take_up_to_2_3_minutes"> انتقال دش به دش والت روی این دستگاه ممکن است بین ۲ تا ۳ دقیقه زمان ببرد. </string>
-    <string name="it_could_take_up_to_5_minutes">تبدیل دش از دش والت روی این دستگاه به والی در حساب کوین‌بیس شما..</string>
     <string name="contact_coinbase_support">با پشتیبانی کوین‌بیس تماس بگیرید</string>
     <string name="fees_in_crypto_purchase">کارمزد خرید رمزارز</string>
     <string name="coinbase_fee_info_msg_content">علاوه بر کارمزد نمایش‌داده‌شده در کوین‌بیس، ما مبلغی را به اقیمت اضافه کردیم. بازار رمزارزها نوسانات زیادی دارد و با این کار می‌توانیم قیمت را به صورت موقت برای اجرای تراکنش قفل کنیم. </string>

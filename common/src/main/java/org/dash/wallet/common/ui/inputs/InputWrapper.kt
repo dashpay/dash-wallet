@@ -19,7 +19,6 @@ package org.dash.wallet.common.ui.inputs
 
 import android.content.Context
 import android.util.AttributeSet
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
@@ -69,7 +68,6 @@ class InputWrapper(context: Context, attrs: AttributeSet): TextInputLayout(conte
             }
 
             child.doOnTextChanged { text, _, _, _ ->
-                Log.i("PRIVATEMEMO", "child height: ${child.measuredHeight}")
                 if (isCounterEnabled) {
                     setErrorEnabled((text?.length ?: 0) > counterMaxLength)
                 }
