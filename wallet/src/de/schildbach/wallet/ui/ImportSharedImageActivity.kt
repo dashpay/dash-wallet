@@ -35,7 +35,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.dash.wallet.common.ui.FancyAlertDialog // TODO
+import org.dash.wallet.common.ui.FancyAlertDialog
 import org.slf4j.LoggerFactory
 
 /**
@@ -154,7 +154,6 @@ class ImportSharedImageActivity : AppCompatActivity(), FancyAlertDialog.FancyAle
             }
 
             override fun handlePrivateKey(key: PrefixedChecksummedBytes) {
-                // TODO
                 SweepWalletActivity.start(this@ImportSharedImageActivity, key, false)
                 finish()
             }

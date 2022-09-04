@@ -105,13 +105,6 @@ public class SendCoinsFragment extends Fragment {
         return activity.isUserAuthorized() || userAuthorizedDuring;
     }
 
-    private final DialogInterface.OnClickListener activityDismissListener = new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(final DialogInterface dialog, final int which) {
-            activity.finish();
-        }
-    };
-
     @Override
     public void onAttach(@NotNull final Context context) {
         super.onAttach(context);

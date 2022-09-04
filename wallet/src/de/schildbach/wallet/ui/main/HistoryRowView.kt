@@ -21,7 +21,7 @@ import java.time.LocalDate
 
 open class HistoryRowView(
     val title: String = "",
-    val status: String = "", // TODO: need this?
+    val status: String = "",
     val localDate: LocalDate = LocalDate.now()
 ) {
     override fun equals(other: Any?): Boolean {
