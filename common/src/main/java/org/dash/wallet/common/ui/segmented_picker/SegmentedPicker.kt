@@ -48,12 +48,7 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
         }
 
     var pickedOptionIndex = 0
-        set(value) {
-            if (field != value) {
-                field = value
-                moveThumb(value, false)
-            }
-        }
+        private set
 
     val pickedOption: String
         get() = options[pickedOptionIndex]
@@ -87,6 +82,13 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
 
     fun setOnOptionPickedListener(listener: (String, Int) -> Unit) {
         optionPickedListener = listener
+    }
+
+    fun setSelectedIndex(value: Int, animate: Boolean = false) {
+        if (pickedOptionIndex != value) {
+            pickedOptionIndex = value
+            moveThumb(value, animate)
+        }
     }
 
     private fun moveThumb(index: Int, animate: Boolean = true) {

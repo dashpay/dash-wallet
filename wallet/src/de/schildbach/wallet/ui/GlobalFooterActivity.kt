@@ -45,7 +45,7 @@ open class GlobalFooterActivity : LockScreenActivity(), GlobalFooterView.OnFoote
     }
 
     override fun onGotoClick() {
-        val intent = PaymentsActivity.createIntent(this, PaymentsActivity.ACTIVE_TAB_RECENT)
+        val intent = PaymentsActivity.createIntent(this)
         startActivity(intent)
         analytics.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON, bundleOf())
     }

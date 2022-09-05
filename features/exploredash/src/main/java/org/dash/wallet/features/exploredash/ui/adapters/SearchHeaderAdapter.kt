@@ -103,7 +103,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
                     R.array.atms_filter_options
                 }).toList()
         )
-        binding.filterOptions.pickedOptionIndex = currentFilterOption
+        binding.filterOptions.setSelectedIndex(currentFilterOption)
         binding.filterOptions.setOnOptionPickedListener { _, index ->
             onFilterOptionChosen?.invoke(
                     if (topic == ExploreTopic.Merchants) {
@@ -172,7 +172,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         currentFilterOption = index
 
         if (::binding.isInitialized) {
-            binding.filterOptions.pickedOptionIndex = index
+            binding.filterOptions.setSelectedIndex(index)
         }
     }
 

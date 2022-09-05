@@ -54,11 +54,11 @@ class ExploreActivity : BaseMenuActivity() {
         viewModel.navigationCallback.observe(this) { request ->
             when (request) {
                 NavigationRequest.SendDash -> {
-                    val sendCoinsIntent = PaymentsActivity.createIntent(this, 0)
+                    val sendCoinsIntent = PaymentsActivity.createIntent(this, PaymentsActivity.ACTIVE_TAB_PAY)
                     startActivity(sendCoinsIntent)
                 }
                 NavigationRequest.ReceiveDash -> {
-                    val sendCoinsIntent = PaymentsActivity.createIntent(this, 1)
+                    val sendCoinsIntent = PaymentsActivity.createIntent(this, PaymentsActivity.ACTIVE_TAB_RECEIVE)
                     startActivity(sendCoinsIntent)
                 }
                 NavigationRequest.Staking -> {

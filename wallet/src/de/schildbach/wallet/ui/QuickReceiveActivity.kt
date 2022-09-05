@@ -19,12 +19,16 @@ package de.schildbach.wallet.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
-import androidx.appcompat.widget.Toolbar
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.payments.PaymentsReceiveFragment
 import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.ActivityQuickReceiveBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 
+@AndroidEntryPoint
+@ExperimentalCoroutinesApi
+@FlowPreview
 class QuickReceiveActivity : ShortcutComponentActivity() {
 
     companion object {
@@ -34,47 +38,24 @@ class QuickReceiveActivity : ShortcutComponentActivity() {
         }
     }
 
+    private lateinit var binding: ActivityQuickReceiveBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         if (finishIfNotInitialized()) {
             return
         }
 
-        setContentView(R.layout.activity_quick_receive)
+        binding = ActivityQuickReceiveBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        binding.closeButton.setOnClickListener { finish() }
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
                     .replace(R.id.container, PaymentsReceiveFragment.newInstance())
                     .commitNow()
         }
-
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        val actionBar = supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
-        }
-
-        setTitle(R.string.receive_title)
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.payment_options, menu)
-        return super.onCreateOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.option_close -> {
-                finish()
-                return true
-            }
-            android.R.id.home -> {
-                finish()
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
     }
 }

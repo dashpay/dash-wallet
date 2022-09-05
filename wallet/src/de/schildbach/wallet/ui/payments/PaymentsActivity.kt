@@ -19,109 +19,92 @@ package de.schildbach.wallet.ui.payments
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
-import androidx.appcompat.widget.Toolbar
-import com.google.android.material.tabs.TabLayout
+import androidx.fragment.app.Fragment
+import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.GlobalFooterActivity
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_payments.*
+import de.schildbach.wallet_test.databinding.ActivityPaymentsBinding
 
 @AndroidEntryPoint
-class PaymentsActivity : GlobalFooterActivity() {
+class PaymentsActivity : LockScreenActivity() {
 
     companion object {
         private const val PREFS_RECENT_TAB = "recent_tab"
-
         private const val EXTRA_ACTIVE_TAB = "extra_active_tab"
 
-        const val ACTIVE_TAB_RECENT = -1
-        const val ACTIVE_TAB_PAY = 0
-        const val ACTIVE_TAB_RECEIVE = 1
+        const val ACTIVE_TAB_RECEIVE = 0
+        const val ACTIVE_TAB_PAY = 1
 
         @JvmStatic
-        fun createIntent(context: Context, activeTab: Int): Intent {
+        fun createIntent(context: Context, activeTab: Int? = null): Intent {
             val intent = Intent(context, PaymentsActivity::class.java)
-            intent.putExtra(EXTRA_ACTIVE_TAB, activeTab)
+
+            if (activeTab != null) {
+                intent.putExtra(EXTRA_ACTIVE_TAB, activeTab)
+            }
+
             return intent
         }
     }
 
-    private var saveRecentTab = false
+    private lateinit var binding: ActivityPaymentsBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentViewWithFooter(R.layout.activity_payments)
-        activateGotoButton()
 
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
+        binding = ActivityPaymentsBinding.inflate(layoutInflater)
+        binding.closeButton.setOnClickListener { finish() }
 
-        setTitle(R.string.payments_title)
+        binding.tabs.provideOptions(listOf(
+            getString(R.string.payments_tab_receive_label),
+            getString(R.string.payments_tab_pay_label)
+        ))
 
-        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+        binding.tabs.setOnOptionPickedListener { _, index ->
+            binding.pager.currentItem = index
+        }
 
-            var initialReselection: Boolean = true
+        val adapter = object : FragmentStateAdapter(this) {
+            override fun getItemCount(): Int = 2
 
-            override fun onTabReselected(tab: TabLayout.Tab) {
-                if (initialReselection) {
-                    onTabSelected(tab)
+            override fun createFragment(position: Int): Fragment {
+                val fragment = when (position) {
+                    0 -> PaymentsReceiveFragment.newInstance()
+                    else -> PaymentsPayFragment.newInstance()
                 }
+                return fragment
             }
+        }
 
-            override fun onTabUnselected(tab: TabLayout.Tab) {
+        binding.pager.adapter = adapter
+        binding.pager.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+                binding.tabs.setSelectedIndex(position, true)
 
-            }
-
-            override fun onTabSelected(tab: TabLayout.Tab) {
-                initialReselection = false
-                val fragment = when (tab.position) {
-                    0 -> PaymentsPayFragment.newInstance()
-                    else -> PaymentsReceiveFragment.newInstance()
-                }
-                supportFragmentManager.beginTransaction()
-                        .replace(R.id.fragment_container, fragment)
-                        .commitNow()
-
-                if (saveRecentTab) {
+                if (!intent.hasExtra(EXTRA_ACTIVE_TAB)) {
                     val preferences = getPreferences(Context.MODE_PRIVATE)
-                    preferences.edit().putInt(PREFS_RECENT_TAB, tab.position).apply()
+                    preferences.edit().putInt(PREFS_RECENT_TAB, position).apply()
                 }
             }
-
         })
+
         activateTab()
+        setContentView(binding.root)
     }
 
     private fun activateTab() {
-        val activeTab = intent.getIntExtra(EXTRA_ACTIVE_TAB, ACTIVE_TAB_RECENT)
-        if (activeTab < 0) {
-            val preferences = getPreferences(Context.MODE_PRIVATE)
-            val recentTab = preferences.getInt(PREFS_RECENT_TAB, 0)
-            tabs.getTabAt(recentTab)!!.select()
-            saveRecentTab = true
+        val activeTab = if (intent.hasExtra(EXTRA_ACTIVE_TAB)) {
+            intent.getIntExtra(EXTRA_ACTIVE_TAB, 0)
         } else {
-            tabs.getTabAt(activeTab)!!.select()
+            val preferences = getPreferences(Context.MODE_PRIVATE)
+            preferences.getInt(PREFS_RECENT_TAB, 0)
         }
-    }
 
-    override fun onGotoClick() {
-        finish()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.payment_options, menu)
-        return super.onCreateOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.option_close -> {
-                finish()
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
+        binding.tabs.setSelectedIndex(activeTab, false)
+        binding.pager.setCurrentItem(activeTab, false)
     }
 }
+
