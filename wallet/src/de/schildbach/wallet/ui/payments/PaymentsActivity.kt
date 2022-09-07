@@ -26,6 +26,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityPaymentsBinding
+import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 
 @AndroidEntryPoint
 class PaymentsActivity : LockScreenActivity() {
@@ -58,8 +59,8 @@ class PaymentsActivity : LockScreenActivity() {
         binding.closeButton.setOnClickListener { finish() }
 
         binding.tabs.provideOptions(listOf(
-            getString(R.string.payments_tab_receive_label),
-            getString(R.string.payments_tab_pay_label)
+            SegmentedOption(getString(R.string.payments_tab_receive_label), R.drawable.ic_arrow_down),
+            SegmentedOption(getString(R.string.payments_tab_pay_label), R.drawable.ic_arrow_up)
         ))
 
         binding.tabs.setOnOptionPickedListener { _, index ->

@@ -177,7 +177,7 @@
 
             <TextView
                 android:id="@+id/item_distance"
-                style="@style/Caption.Medium.SteelGray400"
+                style="@style/Caption.Medium.Tertiary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="20dp"

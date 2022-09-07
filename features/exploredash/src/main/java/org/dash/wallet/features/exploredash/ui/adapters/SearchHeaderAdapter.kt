@@ -24,6 +24,7 @@ import android.view.inputmethod.EditorInfo
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.recyclerview.widget.RecyclerView
+import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.SearchHeaderViewBinding
 import org.dash.wallet.features.exploredash.ui.ExploreTopic
@@ -96,13 +97,14 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
     }
 
     override fun onBindViewHolder(viewHolder: RecyclerView.ViewHolder, position: Int) {
-        binding.filterOptions.provideOptions(binding.root.resources.getStringArray(
-                if (topic == ExploreTopic.Merchants) {
-                    R.array.merchants_filter_options
-                } else {
-                    R.array.atms_filter_options
-                }).toList()
-        )
+        val options = binding.root.resources.getStringArray(
+            if (topic == ExploreTopic.Merchants) {
+                R.array.merchants_filter_options
+            } else {
+                R.array.atms_filter_options
+            }
+        ).map { SegmentedOption(it) }
+        binding.filterOptions.provideOptions(options)
         binding.filterOptions.setSelectedIndex(currentFilterOption)
         binding.filterOptions.setOnOptionPickedListener { _, index ->
             onFilterOptionChosen?.invoke(
