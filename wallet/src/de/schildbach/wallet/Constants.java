@@ -56,6 +56,7 @@ public final class Constants {
     public static final NetworkParameters NETWORK_PARAMETERS;
 
     private static String FILENAME_NETWORK_SUFFIX;
+    private static String FEE_NETWORK_SUFFIX;
 
     /** Currency code for the wallet name resolver. */
     public static String WALLET_NAME_CURRENCY_CODE;
@@ -78,6 +79,7 @@ public final class Constants {
                 NETWORK_PARAMETERS = MainNetParams.get();
                 IS_PROD_BUILD = true;
                 FILENAME_NETWORK_SUFFIX = "";
+                FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "dash";
                 SUPPORTS_PLATFORM = false;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
@@ -94,6 +96,7 @@ public final class Constants {
                 NETWORK_PARAMETERS.setSupportsV18(true);
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-testnet";
+                FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
@@ -113,6 +116,7 @@ public final class Constants {
                 DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-" + devNetName;
+                FEE_NETWORK_SUFFIX = "-testnet"; // use the same fee file as testnet
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
@@ -177,10 +181,10 @@ public final class Constants {
         public static final String QRINFO_BOOTSTRAP_FILENAME = "qrinfo" + FILENAME_NETWORK_SUFFIX + ".dat";
 
         /** Filename of the fees files. */
-        public static final String FEES_FILENAME = "fees" + FILENAME_NETWORK_SUFFIX + ".txt";
+        public static final String FEES_FILENAME = "fees" + FEE_NETWORK_SUFFIX + ".txt";
 
         /** Filename of the file containing Electrum servers. */
-        public static final String ELECTRUM_SERVERS_FILENAME = "electrum-servers.txt";
+        public static final String ELECTRUM_SERVERS_FILENAME = "electrum-servers" + FILENAME_NETWORK_SUFFIX + ".txt";
 
         public static final String PROFILE_PICTURE_FILENAME = "profileimage.jpg";
 

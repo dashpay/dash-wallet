@@ -336,10 +336,10 @@ public final class RequestWalletBalanceTask {
 		if (BuildConfig.FLAVOR.equals("prod")) {
 			blockExplorers.push(new Pair<>("https://chainz.cryptoid.info/dash/api.dws?q=unspent", UnspentAPI.CryptoId));
 			blockExplorers.push(new Pair<>("https://insight.dash.org/insight-api/addr/", UnspentAPI.Insight));
-		} else if (BuildConfig.FLAVOR.equals("_testNet3")||BuildConfig.FLAVOR.equals("staging")) {
+		} else if (BuildConfig.FLAVOR.equals("_testNet3") || BuildConfig.FLAVOR.equals("staging")) {
 			blockExplorers.push(new Pair<>("https://testnet-insight.dashevo.org/insight-api/addr/", UnspentAPI.Insight));
-		} else if (BuildConfig.FLAVOR.equals("evonet")) {
-			blockExplorers.push(new Pair<>("http://insight.evonet.networks.dash.org:3001/insight-api/addr/", UnspentAPI.Insight));
+		} else if (BuildConfig.FLAVOR.equals("schnapps")) {
+			blockExplorers.push(new Pair<>(String.format("http://insight.%s.networks.dash.org:3001/insight-api/addr/", Constants.NETWORK_PARAMETERS.getDevNetName().substring("devnet-".length())), UnspentAPI.Insight));
 		}
 
 		while (!blockExplorers.empty()) {
