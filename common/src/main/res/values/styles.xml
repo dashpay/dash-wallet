@@ -261,7 +261,7 @@
 
     <style name="SegmentedPickerBackground">
         <item name="backgroundColor">@color/extra_dark_gray_0.1</item>
-        <item name="strokeColor">@color/extra_dark_gray_0.1</item>
+        <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">8dp</item>
     </style>
 
@@ -817,8 +817,8 @@
     </style>
 
     <style name="PrimaryButtonTheme.ExtraSmall.Blue">
-        <item name="backgroundColor">@color/blue_50</item>
-        <item name="strokeColor">@color/blue_50</item>
+        <item name="backgroundColor">@color/dash_blue_0.05</item>
+        <item name="strokeColor">@android:color/transparent</item>
         <item name="titleTextColor">@color/dash_blue</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
