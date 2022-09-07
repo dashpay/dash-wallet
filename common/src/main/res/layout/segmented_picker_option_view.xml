@@ -34,11 +34,11 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/name"
         app:layout_constraintHorizontal_chainStyle="packed"
-        tools:src="@drawable/ic_back_arrow" />
+        tools:src="@drawable/ic_checkmark_blue" />
 
     <TextView
         android:id="@+id/name"
-        style="@style/Body2.Medium"
+        style="@style/Overline.Medium"
         android:layout_width="wrap_content"
         android:layout_height="32dp"
         android:gravity="center"

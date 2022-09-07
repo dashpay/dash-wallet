@@ -144,4 +144,10 @@
         <item name="rippleColor">@color/button_ripple_light</item>
         <item name="cornerRadius">24dp</item>
     </style>
+
+    <style name="EncircledIconBlueTheme">
+        <item name="backgroundColor">@color/dash_blue</item>
+        <item name="strokeColor">@color/dash_blue</item>
+        <item name="cornerRadius">17dp</item>
+    </style>
 </resources>

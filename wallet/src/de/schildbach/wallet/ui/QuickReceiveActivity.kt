@@ -54,7 +54,7 @@ class QuickReceiveActivity : ShortcutComponentActivity() {
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                    .replace(R.id.container, PaymentsReceiveFragment.newInstance())
+                    .replace(R.id.container, PaymentsReceiveFragment.newInstance(false))
                     .commitNow()
         }
     }

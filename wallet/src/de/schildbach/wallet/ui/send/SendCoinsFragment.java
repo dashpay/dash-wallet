@@ -369,7 +369,7 @@ public class SendCoinsFragment extends Fragment {
             BitcoinIntegration.transactionHashToResult(resultIntent, viewModel.sentTransaction.getTxId().toString());
             activity.setResult(Activity.RESULT_OK, resultIntent);
         }
-        showTransactionResult(viewModel.sentTransaction, viewModel.getWallet());
+        showTransactionResult(viewModel.sentTransaction);
         playSentSound();
         activity.finish();
     }
@@ -417,7 +417,6 @@ public class SendCoinsFragment extends Fragment {
     }
 
     private void showEmptyWalletFailedDialog() {
-        // TODO check
         AdaptiveDialog.create(
                 R.drawable.ic_error,
                 getString(R.string.send_coins_fragment_empty_wallet_failed_title),
@@ -428,7 +427,6 @@ public class SendCoinsFragment extends Fragment {
     }
 
     private void showFailureDialog(Exception exception) {
-        // TODO check
         AdaptiveDialog.create(
                 R.drawable.ic_error,
                 getString(R.string.send_coins_error_msg),
@@ -438,7 +436,7 @@ public class SendCoinsFragment extends Fragment {
         ).show(requireActivity(), result -> Unit.INSTANCE);
     }
 
-    private void showTransactionResult(Transaction transaction, Wallet wallet) {
+    private void showTransactionResult(Transaction transaction) {
         if (!isAdded()) {
             return;
         }

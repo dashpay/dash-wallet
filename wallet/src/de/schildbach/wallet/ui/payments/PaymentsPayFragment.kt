@@ -150,7 +150,6 @@ class PaymentsPayFragment : Fragment() {
 
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
-                    // TODO: check
                     AdaptiveDialog.create(
                         R.drawable.ic_error,
                         getString(errorDialogTitleResId),

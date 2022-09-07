@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.send;
+package de.schildbach.wallet.ui.payments;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -27,7 +27,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.DialogFragment;
@@ -307,7 +306,6 @@ public class SweepWalletFragment extends Fragment {
 
                     @Override
                     protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                        // TODO: check
                         AdaptiveDialog.create(
                                 null,
                                 getString(R.string.button_scan),
@@ -540,30 +538,18 @@ public class SweepWalletFragment extends Fragment {
             return;
         }
 
-        // TODO: content view
-        View contentView = LayoutInflater.from(getActivity())
-                .inflate(R.layout.sweep_wallet_decrypt_dialog, null);
-        final TextView passwordText = contentView.findViewById(R.id.sweep_wallet_fragment_password);
-        View badPasswordView = contentView.findViewById(R.id.sweep_wallet_fragment_bad_password);
-        badPasswordView.setVisibility(badPassword ? View.VISIBLE : View.GONE);
-
-        AdaptiveDialog dialog = AdaptiveDialog.custom(
-                R.layout.sweep_wallet_decrypt_dialog,
-                null,
-                getString(R.string.sweep_wallet_fragment_encrypted),
-                "",
-                "",
-                getString(R.string.sweep_wallet_fragment_button_decrypt)
-        );
-        dialog.setCancelable(false);
-
-        if (decryptDialog != null) {
+        if (decryptDialog != null && decryptDialog.isAdded()) {
             decryptDialog.dismiss();
             decryptDialog = null;
         }
+
+        SweepWalletPasswordDialog dialog = new SweepWalletPasswordDialog();
+        dialog.setCancelable(false);
+        dialog.setBadPassword(badPassword);
+
         dialog.show(requireActivity(), result -> {
             if (result != null && result) {
-                password = passwordText.getText().toString();
+                password = dialog.getPassword();
                 handleDecrypt();
             }
 

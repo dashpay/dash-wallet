@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.payments
 import android.os.Bundle
 import android.view.View
 import androidx.core.os.bundleOf
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
@@ -35,8 +36,16 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
     private val binding by viewBinding(FragmentPaymentsReceiveBinding::bind)
 
     companion object {
+        private const val SHOW_IMPORT_PRIVATE_KEY_ARG = "show_import_private_key"
+
         @JvmStatic
-        fun newInstance() = PaymentsReceiveFragment()
+        fun newInstance(showImportPrivateKey: Boolean = true): PaymentsReceiveFragment {
+            return PaymentsReceiveFragment().apply {
+                arguments = bundleOf(
+                    SHOW_IMPORT_PRIVATE_KEY_ARG to showImportPrivateKey
+                )
+            }
+        }
     }
 
     @Inject lateinit var analytics: AnalyticsService
@@ -58,5 +67,10 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
         }
 
         binding.receiveInfo.setInfo(walletDataProvider.freshReceiveAddress(), null)
+
+        binding.importPrivateKeyBtn.isVisible = requireArguments().getBoolean(SHOW_IMPORT_PRIVATE_KEY_ARG)
+        binding.importPrivateKeyBtn.setOnClickListener {
+            SweepWalletActivity.start(requireContext(), false)
+        }
     }
 }

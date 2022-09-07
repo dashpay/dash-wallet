@@ -94,6 +94,7 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
                 }
             }
         }
+
         HttpRequestTask(backgroundHandler, requestCallback, walletApplication.httpUserAgent())
                 .requestPaymentRequest(basePaymentIntent.paymentRequestUrl)
     }

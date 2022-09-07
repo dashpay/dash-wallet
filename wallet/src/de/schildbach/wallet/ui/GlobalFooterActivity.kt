@@ -22,11 +22,15 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.payments.PaymentsActivity
 import de.schildbach.wallet.ui.widget.GlobalFooterView
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
+@FlowPreview
 @AndroidEntryPoint
+@ExperimentalCoroutinesApi
 open class GlobalFooterActivity : LockScreenActivity(), GlobalFooterView.OnFooterActionListener {
 
     private lateinit var globalFooterView: GlobalFooterView

@@ -30,7 +30,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.InputParser.StringInputParser
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
-import de.schildbach.wallet.ui.send.SweepWalletActivity
+import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction

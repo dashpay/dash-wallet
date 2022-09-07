@@ -17,7 +17,6 @@
 package de.schildbach.wallet.ui.send
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.animation.AnimationUtils
 import androidx.fragment.app.Fragment
@@ -307,9 +306,6 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private fun displayRequest(paymentIntent: PaymentIntent, sendRequest: SendRequest?) {
-        Log.i("PAYMENT", paymentIntent.memo ?: "null")
-
-
         val amount = paymentIntent.amount
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
 

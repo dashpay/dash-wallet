@@ -201,7 +201,7 @@
             android:theme="@style/My.Theme.Fullscreen"
             android:windowSoftInputMode="stateAlwaysHidden" />
         <activity
-            android:name="de.schildbach.wallet.ui.send.SweepWalletActivity"
+            android:name="de.schildbach.wallet.ui.payments.SweepWalletActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:label="@string/sweep_wallet_activity_title"
             android:theme="@style/My.Theme.ChildActivity"
