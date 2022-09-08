@@ -21,6 +21,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.drawable.BitmapDrawable
+import android.os.Build
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.widget.Toast
@@ -59,7 +60,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             binding.shareButton.isVisible = showShareAction
 
             val qrPreviewScale = attrsArray.getFloat(R.styleable.ReceiveInfoView_ri_qr_code_scale, 1.0f)
-            (binding.qrPreview.layoutParams as LayoutParams).matchConstraintPercentWidth = qrPreviewScale
+            (binding.qrPreviewBg.layoutParams as LayoutParams).matchConstraintPercentWidth = qrPreviewScale
             (binding.qrDashLogo.layoutParams as LayoutParams).matchConstraintPercentWidth = (qrPreviewScale / 4.8f)
         } finally {
             attrsArray.recycle()
@@ -79,6 +80,10 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             }
 
             refresh()
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            binding.qrPreviewBg.isForceDarkAllowed = false
         }
     }
 
