@@ -19,34 +19,43 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    tools:context="org.dash.wallet.common.ui.receive.ReceiveInfoView"
     tools:ignore="ContentDescription"
-    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
+    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout"
+    tools:context="org.dash.wallet.common.ui.receive.ReceiveInfoView">
 
-    <ImageView
-        android:id="@+id/qr_preview"
+    <FrameLayout
+        android:id="@+id/qr_preview_bg"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:scaleType="fitXY"
-        android:layout_marginTop="30dp"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/SecondaryBackground"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintWidth_percent="0.8"
-        tools:layout_width="210dp" />
+        tools:layout_width="230dp">
+
+        <ImageView
+            android:id="@+id/qr_preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="10dp"
+            android:scaleType="fitXY" />
+    </FrameLayout>
 
     <ImageView
         android:id="@+id/qr_dash_logo"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scaleType="fitXY"
-        app:layout_constraintBottom_toBottomOf="@+id/qr_preview"
+        app:layout_constraintBottom_toBottomOf="@+id/qr_preview_bg"
         app:layout_constraintDimensionRatio="1:1"
-        app:layout_constraintEnd_toEndOf="@+id/qr_preview"
-        app:layout_constraintStart_toStartOf="@+id/qr_preview"
-        app:layout_constraintTop_toTopOf="@+id/qr_preview"
-        app:layout_constraintWidth_percent="0.15"
+        app:layout_constraintEnd_toEndOf="@+id/qr_preview_bg"
+        app:layout_constraintStart_toStartOf="@+id/qr_preview_bg"
+        app:layout_constraintTop_toTopOf="@+id/qr_preview_bg"
+        app:layout_constraintWidth_percent="0.14"
         app:srcCompat="@drawable/ic_dash_d_circle" />
 
     <FrameLayout
@@ -57,10 +66,10 @@
         android:clickable="true"
         android:focusable="true"
         android:layout_marginHorizontal="4dp"
-        android:layout_marginTop="14dp"
+        android:layout_marginTop="4dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/qr_preview">
+        app:layout_constraintTop_toBottomOf="@+id/qr_preview_bg">
 
         <TextView
             android:id="@+id/address_preview"

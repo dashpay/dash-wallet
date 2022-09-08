@@ -241,8 +241,8 @@
     </style>
 
     <style name="DragIndicatorBackground">
-        <item name="backgroundColor">@color/gray_100</item>
-        <item name="strokeColor">@color/gray_100</item>
+        <item name="backgroundColor">@color/light_gray</item>
+        <item name="strokeColor">@color/light_gray</item>
         <item name="cornerRadius">2dp</item>
     </style>
 

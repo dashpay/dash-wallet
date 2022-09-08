@@ -23,7 +23,7 @@
                 android:id="@+id/receive_info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:ri_qr_code_scale="0.64"
+                app:ri_qr_code_scale="0.68"
                 app:ri_show_amount_action="true"
                 app:ri_show_share_action="true" />
         </androidx.cardview.widget.CardView>
