@@ -271,7 +271,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     R.drawable.ic_info_red,
                     getString(errorDialogTitleResId),
                     if (messageArgs.isNotEmpty()) {
-                        getString(messageResId, messageArgs)
+                        getString(messageResId, *messageArgs)
                     } else {
                         getString(messageResId)
                     },
