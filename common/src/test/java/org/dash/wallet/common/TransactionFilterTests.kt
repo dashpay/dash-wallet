@@ -20,8 +20,8 @@ package org.dash.wallet.common
 import junit.framework.TestCase.*
 import org.bitcoinj.core.*
 import org.bitcoinj.params.TestNet3Params
-import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
-import org.dash.wallet.common.transactions.CoinsToAddressTxFilter
+import org.dash.wallet.common.transactions.filters.CoinsFromAddressTxFilter
+import org.dash.wallet.common.transactions.filters.CoinsToAddressTxFilter
 import org.junit.Test
 
 class TransactionFilterTests {

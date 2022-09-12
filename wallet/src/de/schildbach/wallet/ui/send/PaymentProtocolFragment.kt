@@ -40,6 +40,8 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.protocols.payments.PaymentProtocolException
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
+import de.schildbach.wallet.ui.CheckPinSharedModel
+import kotlinx.android.synthetic.main.dialog_platform_payment_confirm.*
 import org.dash.wallet.common.ui.BaseLockScreenFragment
 import org.dash.wallet.common.util.GenericUtils
 import org.slf4j.LoggerFactory

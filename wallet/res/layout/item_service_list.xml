@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/round_corners_white_bg"
+    android:layout_marginVertical="10dp"
+    android:paddingHorizontal="15dp"
+    android:paddingVertical="15dp">
+
+    <ImageView
+        android:id="@+id/serviceImg"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:contentDescription="@string/app_name"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:srcCompat="@drawable/ic_coinbase_full" />
+
+    <TextView
+        android:id="@+id/service_name"
+        style="@style/Subtitle2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="10dp"
+        android:gravity="center"
+        android:textAlignment="gravity"
+        app:layout_constraintBottom_toBottomOf="@+id/serviceImg"
+        app:layout_constraintStart_toEndOf="@+id/serviceImg"
+        app:layout_constraintTop_toTopOf="@+id/serviceImg" />
+
+    <ImageView
+        android:id="@+id/imgArrow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:contentDescription="@string/app_name"
+        app:layout_constraintBottom_toBottomOf="@+id/serviceImg"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/serviceImg"
+        app:srcCompat="@drawable/ic_forward"
+        app:tint="@color/steel_gray_200" />
+
+    <View
+        android:id="@+id/separator"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="15dp"
+        android:background="@color/steel_gray_150"
+        app:layout_constraintTop_toBottomOf="@+id/serviceImg" />
+
+    <TextView
+        android:id="@+id/connected"
+        style="@style/Overline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:drawablePadding="5dp"
+        android:text="@string/connected"
+        android:visibility="gone"
+        app:drawableStartCompat="@drawable/ic_connected"
+        app:iconGravity="textStart"
+        app:layout_constraintBottom_toBottomOf="@+id/dash_icon"
+        app:layout_constraintStart_toStartOf="@+id/serviceImg"
+        app:layout_constraintTop_toTopOf="@+id/dash_icon" />
+
+    <TextView
+        android:id="@+id/disconnected"
+        style="@style/Overline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:drawablePadding="5dp"
+        android:text="@string/disconnected"
+        android:visibility="gone"
+        app:drawableStartCompat="@drawable/ic_disconnected"
+        app:iconGravity="textStart"
+        app:layout_constraintBottom_toBottomOf="@+id/dash_icon"
+        app:layout_constraintStart_toStartOf="@+id/serviceImg"
+        app:layout_constraintTop_toTopOf="@+id/dash_icon" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/dash_icon"
+        android:layout_width="15dp"
+        android:layout_height="15dp"
+        android:layout_gravity="center"
+        android:layout_marginTop="7dp"
+        android:layout_marginEnd="5dp"
+        app:layout_constraintEnd_toStartOf="@+id/service_balance"
+        app:layout_constraintTop_toBottomOf="@+id/separator"
+        app:srcCompat="@drawable/ic_dash_circle_filled" />
+
+    <org.dash.wallet.common.ui.CurrencyTextView
+        android:id="@+id/service_balance"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_gravity="center"
+        android:layout_marginStart="5dp"
+        android:layout_marginEnd="3dp"
+        android:includeFontPadding="false"
+        android:textColor="@color/dash_black"
+        android:textSize="10sp"
+        app:layout_constraintBottom_toBottomOf="@+id/dash_icon"
+        app:layout_constraintEnd_toStartOf="@+id/service_fiat_amount"
+        app:layout_constraintTop_toTopOf="@+id/dash_icon"
+        tools:text="0.00" />
+
+    <org.dash.wallet.common.ui.CurrencyTextView
+        android:id="@+id/service_fiat_amount"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_gravity="center"
+        android:layout_marginStart="15dp"
+        android:includeFontPadding="false"
+        android:textColor="@color/dash_gray"
+        android:textSize="10sp"
+        app:layout_constraintBottom_toBottomOf="@+id/dash_icon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/dash_icon"
+        tools:text="USD 0.00" />
+
+    <TextView
+        android:id="@+id/last_known_balance"
+        style="@style/Overline.Red"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/last_known_balance"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:layout_constraintEnd_toEndOf="@id/service_fiat_amount"
+        app:layout_constraintTop_toBottomOf="@+id/dash_icon" />
+
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/coinbase_status_group"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:constraint_referenced_ids="dash_icon,service_fiat_amount,service_balance,separator" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

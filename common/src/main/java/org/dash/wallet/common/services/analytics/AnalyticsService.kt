@@ -18,6 +18,7 @@
 package org.dash.wallet.common.services.analytics
 
 import android.os.Bundle
+import android.util.Log
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
@@ -39,6 +40,12 @@ class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
 
     override fun logEvent(event: String, params: Bundle) {
         if (BuildConfig.DEBUG) {
+            Log.i("FIREBASE", "Skip event logging in debug mode: $event")
+
+            if (!params.isEmpty) {
+                Log.i("FIREBASE", "Parameters: ${params.keySet().joinToString("; ") { "${it}: ${params[it]}" } }")
+            }
+
             return
         }
 
@@ -51,6 +58,8 @@ class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
 
     override fun logError(error: Throwable, details: String?) {
         if (BuildConfig.DEBUG) {
+            Log.i("FIREBASE", "Skip error logging in debug mode: ${error.message}")
+            details?.let { Log.i("FIREBASE", "Details: $details") }
             return
         }
 

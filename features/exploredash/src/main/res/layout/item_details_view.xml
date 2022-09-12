@@ -96,8 +96,7 @@
         android:text="@string/explore_back_to_locations"
         android:drawablePadding="8dp"
         android:drawableStart="@drawable/ic_small_back_arrow"
-        tools:visibility="visible"
-        tools:background="@color/extra_small_btn_bg" />
+        tools:visibility="visible" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -105,7 +104,7 @@
 
         <TextView
             android:id="@+id/location_hint"
-            style="@style/Caption.SteelGray400"
+            style="@style/Caption.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="@string/explore_atm_location_hint"
@@ -139,7 +138,7 @@
 
         <TextView
             android:id="@+id/item_type"
-            style="@style/Body2.SteelGray400"
+            style="@style/Body2.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
@@ -201,7 +200,6 @@
                 android:drawablePadding="8dp"
                 android:drawableRight="@drawable/ic_show_all"
                 android:visibility="gone"
-                tools:background="@color/extra_small_btn_bg"
                 tools:visibility="visible" />
 
             <LinearLayout

@@ -21,6 +21,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.LayerDrawable
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.TextUtils
@@ -29,6 +30,7 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.view.isVisible
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
@@ -46,6 +48,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.util.getMainTask
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -62,11 +65,34 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     companion object {
         private const val EXTRA_INVITE = "extra_invite"
+        private const val EXTRA_UPGRADE = "upgrade"
         private val log = LoggerFactory.getLogger(OnboardingActivity::class.java)
-
+    
         @JvmStatic
-        fun createIntent(context: Context): Intent {
-            return Intent(context, OnboardingActivity::class.java)
+        @JvmOverloads
+        fun createIntent(context: Context, upgrade: Boolean = false): Intent {
+            return Intent(context, OnboardingActivity::class.java).apply {
+                putExtra(EXTRA_UPGRADE, upgrade)
+            }
+        }
+
+        // this function removes the previous task which may still be running after an
+        // app upgrade
+        private fun removePreviousTask(activity: AppCompatActivity) {
+            log.info("do we need to remove the previous task")
+            val mainTask = activity.getMainTask()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (mainTask.taskInfo.taskId != activity.taskId) {
+                    log.info("removing previous task")
+                    mainTask.finishAndRemoveTask()
+                }
+            } else {
+                // when installing over 6.6.6 or lower, topActivity is null
+                if (mainTask.taskInfo.topActivity?.className != this::class.java.name) {
+                    log.info("removing previous task < Android Q")
+                    mainTask.finishAndRemoveTask()
+                }
+            }
         }
 
         fun createIntent(context: Context, invite: InvitationLinkData): Intent {
@@ -132,7 +158,11 @@ class OnboardingActivity : RestoreFromFileActivity() {
             }
         }
 
-
+        // during an upgrade, for some reason the previous screen is still in the recent app list
+        // this will find it and close it
+        if (intent.extras?.getBoolean(EXTRA_UPGRADE) == true) {
+            removePreviousTask(this)
+        }
     }
 
     // This is due to a wallet being created in an invalid way

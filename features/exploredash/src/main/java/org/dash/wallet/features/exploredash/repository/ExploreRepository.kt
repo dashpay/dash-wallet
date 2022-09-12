@@ -32,7 +32,6 @@ import org.dash.wallet.common.Constants
 import org.slf4j.LoggerFactory
 import java.io.*
 import java.lang.System.currentTimeMillis
-import java.lang.ref.WeakReference
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -45,14 +44,14 @@ interface ExploreRepository {
     fun getTimestamp(file: File): Long
     fun getUpdateFile(): File
     suspend fun download()
-    fun deleteOldDB(dbFile: File)
+    fun markDbForDeletion(dbFile: File)
     fun preloadFromAssetsInto(dbUpdateFile: File)
     fun finalizeUpdate()
 }
 
 @Suppress("BlockingMethodInNonBlockingContext")
 class GCExploreDatabase @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext private val context: Context,
     private val preferences: SharedPreferences,
     private val auth: FirebaseAuth,
     private val storage: FirebaseStorage
@@ -67,8 +66,6 @@ class GCExploreDatabase @Inject constructor(
 
         private val log = LoggerFactory.getLogger(GCExploreDatabase::class.java)
     }
-
-    private var contextRef: WeakReference<Context> = WeakReference(context)
 
     private var remoteDataRef: StorageReference? = null
 
@@ -106,7 +103,6 @@ class GCExploreDatabase @Inject constructor(
     override suspend fun download() {
         ensureAuthenticated()
 
-        val context = contextRef.get()!!
         val cacheDir = context.cacheDir
 
         val tmpFile = File(cacheDir, DATA_TMP_FILE_NAME)
@@ -177,10 +173,10 @@ class GCExploreDatabase @Inject constructor(
     }
 
     override fun getUpdateFile(): File {
-        return File(contextRef.get()!!.cacheDir, DATA_FILE_NAME)
+        return File(context.cacheDir, DATA_FILE_NAME)
     }
 
-    override fun deleteOldDB(dbFile: File) {
+    override fun markDbForDeletion(dbFile: File) {
         try {
             if (dbFile.exists()) {
                 dbFile.deleteOnExit()
@@ -203,7 +199,7 @@ class GCExploreDatabase @Inject constructor(
     override fun preloadFromAssetsInto(dbUpdateFile: File) {
         log.info("preloading explore db from assets ${dbUpdateFile.absolutePath}")
         try {
-            contextRef.get()!!.assets.open(DB_ASSET_FILE_NAME).use { inputStream ->
+            context.assets.open(DB_ASSET_FILE_NAME).use { inputStream ->
                 FileOutputStream(dbUpdateFile).use { outputStream ->
                     inputStream.copyTo(outputStream)
                 }

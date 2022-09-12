@@ -19,12 +19,10 @@
 
     <TextView
         android:id="@+id/display_name"
-        style="@style/MontserratSemiBold"
+        style="@style/Subtitle1"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
-        android:textColor="@android:color/black"
-        android:textSize="16sp"
         android:lines="1"
         android:ellipsize="end"
         app:layout_constraintStart_toEndOf="@id/avatar"
@@ -34,11 +32,9 @@
 
     <TextView
         android:id="@+id/username"
-        style="@style/MontserratRegular"
+        style="@style/Overline.Tertiary"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textColor="@color/gray"
-        android:textSize="12sp"
         android:lines="1"
         android:ellipsize="end"
         app:layout_constraintStart_toStartOf="@id/display_name"
@@ -67,7 +63,7 @@
             app:srcCompat="@drawable/ic_contact_added" />
 
         <TextView
-            style="@style/MontserratRegular"
+            style="@style/Overline"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical|end"
@@ -75,8 +71,7 @@
             android:gravity="end"
             android:maxLines="1"
             android:text="@string/contact_request_pending"
-            android:textColor="@color/dash_golden"
-            android:textSize="12sp" />
+            android:textColor="@color/dash_golden" />
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -86,19 +81,15 @@
 
             <Button
                 android:id="@+id/accept_contact_request"
-                style="@style/DashButton.Blue"
+                style="@style/Button.Primary.ExtraSmall.Blue"
                 android:layout_width="67dp"
                 android:layout_height="30dp"
                 android:layout_weight="1"
-                android:fontFamily="@font/montserrat_medium"
-                android:text="@string/contact_request_accept"
-                android:textAllCaps="false"
-                android:textColor="@color/white"
-                android:textSize="12sp" />
+                android:text="@string/contact_request_accept" />
 
             <ImageButton
                 android:id="@+id/ignore_contact_request"
-                style="@style/DashButton.Gray"
+                style="@style/Button.Primary.Small.Round"
                 android:layout_width="30dp"
                 android:layout_height="30dp"
                 android:layout_marginStart="5dp"
@@ -125,14 +116,13 @@
 
             <TextView
                 android:id="@+id/pending_work_text"
-                style="@style/MontserratRegular"
+                style="@style/Overline"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:text="@string/accepting_contact_request_short"
-                android:textColor="@color/dash_golden"
-                android:textSize="12sp" />
+                android:textColor="@color/dash_golden" />
 
         </LinearLayout>
 

@@ -24,13 +24,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.slf4j.LoggerFactory
-import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
@@ -48,11 +45,6 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
 
     override val backgroundStyle = R.style.PrimaryBackground
     override val forceExpand = true
-
-    @Inject
-    lateinit var walletData: WalletDataProvider
-    @Inject
-    lateinit var configuration: Configuration
 
     companion object {
 
@@ -80,8 +72,8 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
 
         if (tx != null) {
             transactionResultViewBinder = TransactionResultViewBinder(
-                walletData.wallet!!,
-                configuration.format.noCode(),
+                viewModel.wallet!!,
+                viewModel.dashFormat,
                 binding.transactionResultContainer
             )
 
@@ -114,6 +106,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         transactionResultViewBinder.bind(tx, dashPayProfile)
         contentBinding.viewOnExplorer.setOnClickListener { viewOnBlockExplorer() }
         contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
+        contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
         contentBinding.addPrivateMemoBtn.setOnClickListener {
             viewModel.transaction?.txId?.let { hash ->
                 PrivateMemoDialog().apply {
@@ -153,9 +146,15 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
 
     private fun viewOnBlockExplorer() {
         imitateUserInteraction()
-        viewModel.transaction?.let {
-            WalletUtils.viewOnBlockExplorer(activity, it.purpose, it.txId.toString())
+        val tx = viewModel.transaction
+        if (tx != null) {
+            WalletUtils.viewOnBlockExplorer(activity, tx.purpose, tx.txId.toString())
         }
+    }
+
+    private fun viewOnTaxCategory() {
+        // this should eventually trigger the observer to update the view
+        viewModel.toggleTaxCategory()
     }
 
     override fun onDismiss(dialog: DialogInterface) {

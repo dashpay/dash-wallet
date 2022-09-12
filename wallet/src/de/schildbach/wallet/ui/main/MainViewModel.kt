@@ -36,6 +36,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.*
+import org.dash.wallet.common.data.BlockchainState
+import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.ui.transactions.TransactionRowView
@@ -49,14 +51,15 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.slf4j.LoggerFactory
-import org.dash.wallet.common.transactions.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import java.util.HashMap
@@ -76,7 +79,8 @@ class MainViewModel @Inject constructor(
     appDatabase: AppDatabase,
     val platformRepo: PlatformRepo,
     private val savedStateHandle: SavedStateHandle,
-    private val metadataProvider: TransactionMetadataProvider
+    private val metadataProvider: TransactionMetadataProvider,
+    private val blockchainStateProvider: BlockchainStateProvider
 ) : BaseProfileViewModel(walletApplication, appDatabase) {
     companion object {
         private const val THROTTLE_DURATION = 500L
@@ -126,6 +130,10 @@ class MainViewModel @Inject constructor(
     val balance: LiveData<Coin>
         get() = _balance
 
+    private val _mostRecentTransaction = MutableLiveData<Transaction>()
+    val mostRecentTransaction: LiveData<Transaction>
+        get() = _mostRecentTransaction
+
     private val _hideBalance = MutableLiveData<Boolean>()
     val hideBalance: LiveData<Boolean>
         get() = _hideBalance
@@ -133,6 +141,10 @@ class MainViewModel @Inject constructor(
     private val _isNetworkUnavailable = MutableLiveData<Boolean>()
     val isNetworkUnavailable: LiveData<Boolean>
         get() = _isNetworkUnavailable
+
+    private val _stakingAPY = MutableLiveData<Double>()
+    val stakingAPY: LiveData<Double>
+        get() = _stakingAPY
 
    // DashPay
 
@@ -212,6 +224,10 @@ class MainViewModel @Inject constructor(
 
         walletData.observeBalance()
             .onEach(_balance::postValue)
+            .launchIn(viewModelScope)
+
+        walletData.observeMostRecentTransaction()
+            .onEach(_mostRecentTransaction::postValue)
             .launchIn(viewModelScope)
 
         currencyCode.filterNotNull()
@@ -302,6 +318,12 @@ class MainViewModel @Inject constructor(
 
     fun processDirectTransaction(tx: Transaction) {
         walletData.processDirectTransaction(tx)
+    }
+
+    fun getLastStakingAPY() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _stakingAPY.postValue(0.85 * blockchainStateProvider.getLastMasternodeAPY())
+        }
     }
 
     override fun onCleared() {
@@ -402,6 +424,12 @@ class MainViewModel @Inject constructor(
     private fun updateSyncStatus(state: BlockchainState) {
         if (_isBlockchainSyncFailed.value != state.isSynced()) {
             _isBlockchainSynced.postValue(state.isSynced())
+
+            if (state.isSynced()) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    _stakingAPY.postValue(0.85 * blockchainStateProvider.getMasternodeAPY())
+                }
+            }
 
             if (state.replaying) {
                 _transactions.postValue(listOf())

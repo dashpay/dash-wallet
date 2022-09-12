@@ -13,16 +13,15 @@
 
     <TextView
         android:id="@+id/layout_title"
-        style="@style/MontserratSemiBold"
+        style="@style/Headline6"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="42dp"
         android:layout_marginEnd="42dp"
         android:layout_marginBottom="6dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:text="@string/add_new_contact"
-        android:textColor="@color/black_text"
-        android:textSize="18sp"
         app:layout_constraintBottom_toTopOf="@id/find_a_user_label"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -42,7 +41,7 @@
 
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/search"
-        style="@style/MontserratRegular"
+        style="@style/Overline.Tertiary"
         android:layout_width="match_parent"
         android:layout_height="52dp"
         android:layout_marginStart="24dp"
@@ -51,15 +50,13 @@
         android:background="@drawable/round_corners_white_bg"
         android:elevation="4dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:hint="@string/search_user_input_placeholder"
         android:inputType="textEmailAddress"
         android:lines="1"
         android:paddingLeft="28dp"
         android:paddingRight="28dp"
-        android:textColor="@color/dash_gray"
-        android:textSize="12sp"
-        app:layout_constraintTop_toBottomOf="@id/find_a_user_label"
-        tools:targetApi="lollipop" />
+        app:layout_constraintTop_toBottomOf="@id/find_a_user_label" />
 
     <ImageView
         android:id="@+id/icon"

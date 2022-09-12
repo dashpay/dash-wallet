@@ -19,6 +19,7 @@ package de.schildbach.wallet.data
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
+
 class AppDatabaseMigrations {
     companion object {
         // This will handle the migration from Dash Wallet (db v11) to DashPay (db v17)

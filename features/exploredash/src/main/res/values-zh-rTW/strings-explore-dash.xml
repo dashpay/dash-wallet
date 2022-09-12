@@ -24,6 +24,7 @@
     <string name="explore_atms_title">自動提款機</string>
     <string name="explore_atms_subtitle">查找在哪裡購買或出售達世幣和其他加密貨幣以換取現金。</string>
     <string name="explore_staking_subtitle">只需點擊幾下，即可輕鬆質押達世幣並賺取被動收入。</string>
+    <string name="explore_staking_current_apy">目前的年利率 = %s%%</string>
 
     <!-- Search -->
     <string name="explore_search_results">搜索結果</string>

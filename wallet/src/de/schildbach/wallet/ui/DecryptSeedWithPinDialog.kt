@@ -57,7 +57,11 @@ class DecryptSeedWithPinDialog : CheckPinDialog() {
         viewModel.decryptSeedLiveData.observe(viewLifecycleOwner) {
             when (it.status) {
                 Status.ERROR -> {
-                    viewModel.registerFailedAttempt(it.data!!.second!!)
+                    if (viewModel.isLockedAfterAttempt(it.data!!.second!!)) {
+                        restartService.performRestart(requireActivity(), true)
+                        return@observe
+                    }
+
                     if (viewModel.isWalletLocked) {
                         val message = viewModel.getLockedMessage(requireContext().resources)
                         showLockedAlert(requireActivity(), message)

@@ -35,4 +35,16 @@ interface SendPaymentService {
         emptyWallet: Boolean = false,
         checkBalanceConditions: Boolean = true
     ): Transaction
+
+    suspend fun estimateNetworkFee(
+        address: Address,
+        amount: Coin,
+        emptyWallet: Boolean = false
+    ): TransactionDetails
+
+    data class TransactionDetails(
+        val fee: String,
+        val amountToSend: Coin,
+        val totalAmount: String
+    )
 }

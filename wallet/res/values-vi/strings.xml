@@ -276,10 +276,8 @@
     <string name="preferences_show_disclaimer_title">Hiển thị Chối bỏ trách nhiệm</string>
     <string name="preferences_show_disclaimer_summary">Bạn đã sẵn sàng đọc chú ý an toàn chưa? Bạn đã sao lưu dự phòng ví của bạn vào nơi an toàn chưa?</string>
     <string name="preferences_report_issue_title">Báo cáo về lỗi</string>
-    <string name="preferences_initiate_reset_title">Thiết đặt lại blockchain</string>
-    <string name="preferences_initiate_reset_summary">Khởi tạo lại chuỗi khối, các giao dịch và số dư trong ví. Việc tái tạo này sẽ mất một lúc, cho nên bạn chỉ nên làm điều đó khi bạn biết tại sao nên làm.</string>
-    <string name="preferences_initiate_reset_dialog_message">Bạn có muốn tái tạo lại và áp dụng chuỗi khối lại?\n\nĐiều này tạm thời sẽ làm mất số dư và xoá các giao dịch. Cả hai sẽ phục hồi trong quá trình đồng bộ lại chuỗi khối. Hãy chắc chắn rằng bạn có kết nối mạng đáng tin cậy để làm việc đó.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Thiết đặt lại</string>
+    <string name="preferences_initiate_reset_title">Quét lại blockchain</string>
+    <string name="preferences_initiate_reset_dialog_positive">Quét lại</string>
     <string name="preferences_extended_public_key_title">Hiển thị xpub</string>
     <string name="preferences_extended_public_key_summary">Xem khoá công khai mở rộng trong ví của bạn, nó có thể được nhập vào  qua các ứng dụng và dịch vụ khác. Cẩn thận: thực hiện điều này có thể làm lộ thông tin riêng tư về số tiền của bạn cho các ứng dụng đó.</string>
     <string name="bitmap_fragment_share">Chia sẻ...</string>
@@ -371,7 +369,6 @@
     <string name="payment_protocol_default_error_title">Giao dịch bị lỗi</string>
     <string name="payment_protocol_insufficient_funds_error_title">Không đủ tiền</string>
     <string name="payment_protocol_insufficient_funds_error_message">Bạn không có đủ kinh phí để hoàn tất giao dịch này</string>
-
 
 
     <string name="activity_buy_and_sell_dash_filter">Lọc</string>

@@ -279,10 +279,10 @@
     <string name="preferences_show_disclaimer_title">Показать дисклеймер</string>
     <string name="preferences_show_disclaimer_summary">Вы прочли рекомендации по безопасности? Вы уже сохранили резервную копию в безопасном месте?</string>
     <string name="preferences_report_issue_title">Сообщить о проблеме</string>
-    <string name="preferences_initiate_reset_title">Перегрузить блокчейн</string>
-    <string name="preferences_initiate_reset_summary">Сброс блокчейна, транзакций и баланса. Перезагрузка займёт некоторое время, поэтому прибегайте к этому только тогда, когда точно знаете, что Вы делаете.</string>
-    <string name="preferences_initiate_reset_dialog_message">Вы хотите сбросить и обновить блокчейн?\n\nЭто сделает временно недоступными ваши баланс и список транзакций. Они будут восстановлены в процессе синхронизации блокчейна. Убедитесь, что что у Вас надёжное подключение к интернету.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Сброс</string>
+    <string name="preferences_initiate_reset_title">Пересканировать цепочку блоков</string>
+    <string name="preferences_initiate_reset_summary">Повторное сканирование блокчейна, транзакций и баланса. Перезагрузка займёт некоторое время, поэтому прибегайте к этому только тогда, когда точно знаете, что Вы делаете.</string>
+    <string name="preferences_initiate_reset_dialog_message">Вы хотите повторно сканировать блокчейн?\n\nЭто сделает временно недоступными ваши баланс и список транзакций. Они будут восстановлены в процессе синхронизации блокчейна. Убедитесь, что у Вас надёжное подключение к интернету.</string>
+    <string name="preferences_initiate_reset_dialog_positive">Синхронизировать снова</string>
     <string name="preferences_extended_public_key_title">Показать xpub</string>
     <string name="preferences_extended_public_key_summary">Просмотр расширенного открытого ключа Вашего кошелька может быть полезен для импортирования в другие приложения и услуги. Будьте осторожны: этим Вы нарушаете свою финансовую конфиденциальность.</string>
     <string name="bitmap_fragment_share">Поделиться…</string>
@@ -384,9 +384,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">У вас недостаточно средств для завершения этой транзакции</string>
 
 
-
+    <string name="select_a_service_to_buy_and_sell_dash">Выбрать сервис для покупки и продажи Dash.</string>
     <string name="select_a_service">Выберите сервис</string>
     <string name="activity_buy_and_sell_dash_filter">Фильтр</string>
     <string name="clear_filter">Очистить фильтр</string>
     <string name="select_currency">Выберите валюту</string>
+    <string name="reason">Причина</string>
 </resources>

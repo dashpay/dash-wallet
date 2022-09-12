@@ -18,8 +18,13 @@ package de.schildbach.wallet.ui
 
 
 import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import org.dash.wallet.common.data.SingleLiveEvent
+import javax.inject.Inject
 
-open class SingleActionSharedViewModel : ViewModel() {
+// TODO: get rid of this and use the callback for reporting result
+@HiltViewModel
+open class SingleActionSharedViewModel @Inject constructor() : ViewModel() {
 
     val clickConfirmButtonEvent = SingleLiveEvent<Boolean>()
 }

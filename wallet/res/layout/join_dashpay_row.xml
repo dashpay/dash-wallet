@@ -2,7 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    style="@style/DashButton.White"
+    style="@style/Button.Primary.Large.White"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="70dp"
@@ -22,23 +22,20 @@
 
         <TextView
             android:id="@+id/title"
-            style="@style/MontserratSemiBold"
+            style="@style/Subtitle1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="2dp"
-            android:text="@string/shortcut_action_join_dashpay"
-            android:textColor="@android:color/black"
-            android:textSize="16sp" />
+            android:text="@string/shortcut_action_join_dashpay" />
 
         <TextView
             android:id="@+id/subtitle"
-            style="@style/MontserratRegular.G"
+            style="@style/Caption.Secondary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="1"
-            android:text="@string/join_dashpay_subtitle"
-            android:textSize="13sp" />
+            android:text="@string/join_dashpay_subtitle" />
 
     </LinearLayout>
 

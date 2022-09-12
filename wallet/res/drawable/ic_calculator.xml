@@ -1,0 +1,102 @@
+<!--
+  ~ Copyright (c) 2022. Dash Core Group.
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="80"
+    android:viewportHeight="80">
+  <path
+      android:pathData="M19,0L61,0A19,19 0,0 1,80 19L80,61A19,19 0,0 1,61 80L19,80A19,19 0,0 1,0 61L0,19A19,19 0,0 1,19 0z">
+    <aapt:attr name="android:fillColor">
+      <gradient 
+          android:startX="0"
+          android:startY="0"
+          android:endX="80"
+          android:endY="80"
+          android:type="linear">
+        <item android:offset="0" android:color="#FFF7F7FA"/>
+        <item android:offset="1" android:color="#FFDEDEE3"/>
+      </gradient>
+    </aapt:attr>
+  </path>
+  <path
+      android:pathData="M25,10L55,10A6,6 0,0 1,61 16L61,64A6,6 0,0 1,55 70L25,70A6,6 0,0 1,19 64L19,16A6,6 0,0 1,25 10z"
+      android:fillColor="#1C1C1C"/>
+  <path
+      android:pathData="M26,14L54,14A3,3 0,0 1,57 17L57,25A3,3 0,0 1,54 28L26,28A3,3 0,0 1,23 25L23,17A3,3 0,0 1,26 14z"
+      android:strokeAlpha="0.23"
+      android:fillColor="#ffffff"
+      android:fillAlpha="0.23"/>
+  <path
+      android:pathData="M27.25,36.25m-4.25,0a4.25,4.25 0,1 1,8.5 0a4.25,4.25 0,1 1,-8.5 0"
+      android:fillColor="#CED2D5"/>
+  <path
+      android:pathData="M27.25,49.25m-4.25,0a4.25,4.25 0,1 1,8.5 0a4.25,4.25 0,1 1,-8.5 0"
+      android:fillColor="#CED2D5"/>
+  <path
+      android:pathData="M40.25,36.25m-4.25,0a4.25,4.25 0,1 1,8.5 0a4.25,4.25 0,1 1,-8.5 0"
+      android:fillColor="#CED2D5"/>
+  <path
+      android:pathData="M40.25,49.25m-4.25,0a4.25,4.25 0,1 1,8.5 0a4.25,4.25 0,1 1,-8.5 0"
+      android:fillColor="#CED2D5"/>
+  <path
+      android:pathData="M52.75,36.25m-4.25,0a4.25,4.25 0,1 1,8.5 0a4.25,4.25 0,1 1,-8.5 0">
+    <aapt:attr name="android:fillColor">
+      <gradient 
+          android:startX="52.75"
+          android:startY="34.742"
+          android:endX="52.75"
+          android:endY="40.5"
+          android:type="linear">
+        <item android:offset="0" android:color="#FF78C4F5"/>
+        <item android:offset="1" android:color="#FF008DE4"/>
+      </gradient>
+    </aapt:attr>
+  </path>
+  <path
+      android:pathData="M52.75,49.25m-4.25,0a4.25,4.25 0,1 1,8.5 0a4.25,4.25 0,1 1,-8.5 0">
+    <aapt:attr name="android:fillColor">
+      <gradient 
+          android:startX="52.75"
+          android:startY="47.742"
+          android:endX="52.75"
+          android:endY="53.5"
+          android:type="linear">
+        <item android:offset="0" android:color="#FF78C4F5"/>
+        <item android:offset="1" android:color="#FF008DE4"/>
+      </gradient>
+    </aapt:attr>
+  </path>
+  <path
+      android:pathData="M52.75,61.75m-4.25,0a4.25,4.25 0,1 1,8.5 0a4.25,4.25 0,1 1,-8.5 0">
+    <aapt:attr name="android:fillColor">
+      <gradient 
+          android:startX="52.75"
+          android:startY="60.242"
+          android:endX="52.75"
+          android:endY="66"
+          android:type="linear">
+        <item android:offset="0" android:color="#FF78C4F5"/>
+        <item android:offset="1" android:color="#FF008DE4"/>
+      </gradient>
+    </aapt:attr>
+  </path>
+  <path
+      android:pathData="M27.25,57.5L40.25,57.5A4.25,4.25 0,0 1,44.5 61.75L44.5,61.75A4.25,4.25 0,0 1,40.25 66L27.25,66A4.25,4.25 0,0 1,23 61.75L23,61.75A4.25,4.25 0,0 1,27.25 57.5z"
+      android:fillColor="#CED2D5"/>
+</vector>

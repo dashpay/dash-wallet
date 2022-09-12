@@ -24,7 +24,6 @@
     <string name="explore_atms_title">Bankomaty</string>
     <string name="explore_atms_subtitle">Znajdź miejsce gdzie możesz kupić Dash i inne kryptowaluty.</string>
     <string name="explore_staking_subtitle">Z łatwością ulokuj swoje monety Dash i zarabiaj pasywny dochód za pomocą kilku prostych kliknięć myszką. </string>
-
     <!-- Search -->
     <string name="explore_search_results">Wyniki wyszukiwania</string>
     <string name="explore_physical_merchant">Normalne sklepy</string>

@@ -17,10 +17,15 @@
 <resources>
     <string name="crowdnode_get_started">آغاز کار با کراودنود</string>
     <string name="crowdnode_get_started_hint">برای آغاز سپرده‌گذاری، ابتدا یک حساب در کراودنود ایجاد کنید و یا به یک حساب موجود در آن متصل شوید. </string>
+    <string name="crowdnode_account">حساب کراودنود</string>
     <string name="new_account">ایجاد حساب جدید کراودنود</string>
     <string name="account_create">ایجاد حساب</string>
+    <string name="accept_terms_response">لطفا شرایط استفاده را بپذیرید</string>
+    <string name="accept_terms">پذیرش شرایط</string>
+    <string name="welcome_response">حساب ایجاد شد</string>
     <string name="account_link">اتصال به حساب موجود </string>
     <string name="crowdnode_login">ورود به کراودنود</string>
+    <string name="crowdnode_signup">ثبت‌نام برای کراودنود</string>
     <string name="crowdnode_link">اتصال به یک حساب موجود در کراودنود</string>
     <string name="required_passphrase_backup">باید از عبارت ورودی‌تان در دش والت یک نسخه پشتیبان تهیه کنید. </string>
     <string name="backup_passphrase">تهیه پشتیبان از عبارت ورودی</string>
@@ -39,6 +44,7 @@
     <string name="privacy_policy">سیاست محرمانگی</string>
     <string name="crowdnode_account_ready">حساب کراودنود شما ایجاد شده و آماده استفاده است! </string>
     <string name="notify_when_done">ببند و وقتی آماده شد، مرا مطلع کن. </string>
+    <string name="crowdnode_creating">در حال ایجاد حساب کراودنود برای شما ...</string>
     <string name="accepting_terms">پذیرش شرایط استفاده...</string>
     <string name="crowdnode_signup_error">نمی‌توانیم حساب کراودنود شما را ایجاد کنیم. </string>
     <string name="crowdnode_deposit_error">نتوانستیم به حساب کراودنود مبلغی را واریز کنیم. </string>
@@ -57,6 +63,10 @@
     <string name="crowdnode_withdraw_to_wallet">دش‌والت ➝ کراودنود</string>
     <string name="online_account">حساب آنلاین</string>
     <string name="online_account_create">ایجاد حساب آنلاین</string>
+    <string name="secure_online_account"> از پس‌اندازهایتان محافظت کنید</string>
+    <string name="crowdnode_signup_to_finish">برای تکمیل حساب‌تان ثبت‌نام کنید</string>
+    <string name="online_account_create_full">یک حساب آنلاین کراودنود ایجاد کنید</string>
+    <string name="online_account_email_privacy">دقت داشته باشید که ایمیل توسط دش والت ذخیره نمی‌شود و فقط برای کراودنود ارسال می‌شود</string>
     <string name="crowdnode_support">پشتیبانی کراودنود</string>
     <string name="unlink_account">قطع اتصال حساب</string>
     <string name="online_account_title">چرا نیاز به یک حساب آنلاین دارید؟ </string>
@@ -69,6 +79,7 @@
     <string name="payout_options">گزینه‌های پاداش</string>
     <string name="payout_options_details">می‌توانید نحوه برداشت/زمان برداشت پاداشی که به شما داده می‌شود را تغییر دهید. </string>
     <string name="crowdnode_balance">موجودی در کراودنود</string>
+    <string name="crowdnode_your_address_title">نشانی دش مربوط به حساب کراودنود شما این است</string>
     <string name="chain_syncing">بلاکچین در حال به‌روزرسانی...</string>
     <string name="crowdnode_wait_for_sync">منتظر بمانید تا بلاکچین کاملا به‌روزرسانی شود تا بتوانید سابقه تراکنش‌هایتان را ببینید. برای ورود به حساب یا ثبت‌نام به وب‌سایت کراودنود بروید. </string>
     <string name="crowdnode_open_website">رفتن به وب‌سایت کراودنود</string>
@@ -83,8 +94,26 @@
     <string name="crowdnode_minimum_deposit">برای کسب پاداش حداقل %s سپرده‌گذاری کنید</string>
     <string name="crowdnode_minimum_deposit_difference">سپرده‌گذاری %s برای آغاز دریافت پاداش </string>
     <string name="crowdnode_first_deposit">اولین واریزی باید بیشتر از %s باشد. </string>
-    <string name="crowdnode_staking_info_title">سپرده‌گذاری چطور عمل می‌کند </string>
+    <string name="crowdnode_staking_info_title">عملکرد استیکینگ کراونود</string>
+    <string name="crowdnode_staking_info_message_first">شبکه دش توسط تعدادی مسترنود اداره می‌شود که بخشی اساسی در تسهیل پرداخت‌ها هستند. </string>
+    <string name="crowdnode_staking_info_message_second">هر مسترنود باید هزار دش به عنوان وثیقه داشته باشد و هر مسترنود هر سال تقریبا %s%% پاداش می‌گیرد. </string>
+    <string name="crowdnode_staking_apy_title">بازدهی سالانه کنونی %s%%</string>
     <string name="crowdnode_staking_info_message">در صورتی می‌توانید کسب درآمد کنید که موجودی حساب کراودنود شما بیش از %s باشد. </string>
+    <string name="staking_apy_title">بازده سالانه کنونی %s</string>
+    <string name="crowdnode_staking_current_apy_message">این رقم نشانگر درصد بازدهی سالانه یک مسترنود منهای کارمزد ۱۵ درصدی کراودنود است. این نرخ بازگشت سرمایه تضمینی نیست و ممکن است بر اساس تعداد حاضران در کراودنود و قیمت دش پائین و بالا رود. </string>
+    <string name="crowdnode_staking_leave_pool_message_one">اعضا می‌توانند هر وقت که بخواهند این مجموعه را ترک کنند و در اکثر مواقع می‌توانند بلافاصله آن را ترک کنند. </string>
+    <string name="crowdnode_staking_leave_pool_message_two">در صورت برداشت‌ مبالغ بیشتر، کراودنود مبلغ مورد نظر را طی دو هفته بازمی‌گرداند. دلیلش پروتکل‌های امنیتی است و اکثر مواقع سریع‌تر صورت می‌گیرد. </string>
+
+    <string name="crowdnode_staking_leaving_the_pool_title">ترک کردن مجموعه</string>
+    <string name="crowdnode_staking_receiving_rewards_title">دریافت پاداش</string>
+    <string name="crowdnode_staking_receiving_rewards_message">مبلغی جزئی را به صورت خودکار دریافت خواهید کرد و به صورت خودکار دوباره سرمایه‌گذاری می‌شود. با این وجود، امکان تنظیم برداشت خودکار برای دریافت پرداخت‌های مکرر به سادگی امکان‌پذیر است. </string>
+    <string name="crowdnode_staking_first_minimum_deposit_title">اولین حداقل واریزی</string>
+    <string name="crowdnode_staking_join_pool_message">از آنجا که بیشتر کاربران هزار دش در اختیار ندارند، کراودنود این خدمت را فراهم کرده تا با در کنار هم قرار گرفتن موجودی‌ کاربران مختلف، همه آنها بنوانند از مزایای در اختیار داشتن یک مسترنود بهره‌مند شوند. </string>
+    <string name="crowdnode_staking_join_pool_title">پیوستن به مجموعه</string>
+    <string name="crowdnode_staking_crowdnode_benefits_title">مزایای کراودنود</string>
+    <string name="crowdnode_staking_connected_dash_address_title">اتصال به نشانی دش برقرار است</string>
+    <string name="crowdnode_staking_connected_dash_address_message">این نشانی دش اختصا‌ص‌یافته به حساب کراودنود در دش والت روی این دستگاه است. </string>
+    <string name="crowdnode_staking_toast_address_copied">نشانی کراودنود در کلیپ‌برد کپی شد</string>
     <string name="crowdnode_verify_api_address">نشانی ای‌پی‌آی دش‌تان را تائید کنید. </string>
     <string name="crowdnode_how_to_verify">چطور نشانی ای‌پی‌آی دش‌تان را تائید کنید</string>
     <string name="crowdnode_how_to_verify_description1">از نشانی اصلی دش‌تان که در حال حاضر برای حساب کراودنود  از آن استفاده می‌کنید %s دش بفرستید</string>
@@ -101,4 +130,24 @@
     <string name="crowdnode_online_account_details_title">اطلاعات درباره حساب آنلاین شما</string>
     <string name="crowdnode_online_account_details_primary">نشانی اصلی دش شما که از آن در حال حاضر برای حساب کراودنود  استفاده می‌کنید. </string>
     <string name="crowdnode_online_account_details_api">نشانی دش که برای حساب کراودنود در دش والت روی این دستگاه در نظر گرفته شده است. </string>
+    <string name="crowdnode_primary_missing">نشانی اصلی دش در حساب‌‌تان وجود ندارد. لطفا آن را در وب‌سایت کراودنود مشخص کنید. </string>
+    <string name="crowdnode_wait_signed_email">لطفا تا پردارش ایمیل‌تان منتظر بمانید...</string>
+    <string name="cannot_send">ارسال ناموفق</string>
+    <string name="crowdnode_tx_set_title">چرا همه این تراکنش‌ها را می‌بینم؟ </string>
+    <string name="crowdnode_tx_set_explainer">حساب کراودنود با استفاده از این تراکنش‌ها ایجاد شد</string>
+    <string name="shuffle_coins">گردش تصادفی سکه‌ها</string>
+    <string name="positive_balance_required">موجودی دش ولت شما باید مثبت باشد</string>
+    <string name="withdrawal_required_balance">حداقل ۰.۰۰۰۳ دش در دش ولت‌تان بگذارید تا برداشت از آن کامل شود </string>
+    <string name="withdrawal_limit">سقف برداشت دش</string>
+    <string name="withdrawal_limit_details">نمی‌توانید بیشتر از %1$s دش %2$s برداشت کنید. </string>
+    <string name="crowdnode_withdrawal_limits_title">سقف برداشت کراودنود</string>
+    <string name="crowdnode_withdrawal_limits_message">با توجه به شرایط استفاده از کراودنود کاربران نمی‌توانند بیشتر از این میزان برداشت کنند: </string>
+    <string name="crowdnode_withdraw_without_limits_online">برداشت بدون سیف با حساب آنلاین در وب‌سایت کراودنود</string>
+    <string name="crowdnode_withdrawal_limits_error">این خطا احتمالا به دلیل فراتر رفتن از سقف برداشت کراودنود بوده است. لطفا دوباره امتحان کنید. </string>
+    <string name="per_transaction">به ازای هر تراکنش</string>
+    <string name="per_hour">هر ساعت</string>
+    <string name="per_day">هر ۲۴ ساعت</string>
+    <string name="read_withdrawal_policy">شرایط برداشت را بخوانید</string>
+
+
     </resources>

@@ -23,7 +23,7 @@ import org.bitcoinj.core.*
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.services.LeftoverBalanceException
-import org.dash.wallet.common.transactions.TransactionFilter
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
 import kotlin.jvm.Throws
 
@@ -45,6 +45,8 @@ interface WalletDataProvider {
     @Deprecated("Inject Configuration instead")
     fun defaultCurrencyCode(): String
 
+    fun getWalletBalance(): Coin
+
     fun observeBalance(balanceType: Wallet.BalanceType = Wallet.BalanceType.ESTIMATED): Flow<Coin>
 
     fun observeTransactions(vararg filters: TransactionFilter): Flow<Transaction>
@@ -60,5 +62,7 @@ interface WalletDataProvider {
     fun processDirectTransaction(tx: Transaction)
 
     @Throws(LeftoverBalanceException::class)
-    fun checkSendingConditions(address: Address, amount: Coin)
+    fun checkSendingConditions(address: Address?, amount: Coin)
+
+    fun observeMostRecentTransaction(): Flow<Transaction>
 }

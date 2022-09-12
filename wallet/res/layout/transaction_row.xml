@@ -24,7 +24,7 @@
     android:focusable="true"
     android:background="?attr/selectableItemBackground"
     android:paddingEnd="15dp"
-    android:paddingVertical="14dp"
+    android:paddingVertical="18dp"
     android:tag="transaction"
     tools:context="de.schildbach.wallet.ui.main.TransactionAdapter">
 
@@ -91,14 +91,13 @@
 
     <TextView
         android:id="@+id/time"
-        style="@style/Caption.Tertiary"
+        style="@style/Overline.Tertiary"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginEnd="4dp"
         android:ellipsize="end"
         android:maxLines="1"
         android:paddingEnd="6dp"
-        android:layout_marginTop="2dp"
         app:layout_constraintTop_toBottomOf="@id/primary_status"
         app:layout_constraintBottom_toTopOf="@id/comment"
         app:layout_constraintStart_toStartOf="@id/primary_status"
@@ -143,7 +142,7 @@
         android:layout_height="wrap_content"
         android:gravity="center|end"
         android:orientation="horizontal"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@id/primary_status"
         app:layout_constraintBottom_toTopOf="@id/rate_container"
         app:layout_constraintVertical_chainStyle="packed"
         app:layout_constraintEnd_toEndOf="parent">
@@ -181,20 +180,20 @@
         android:id="@+id/rate_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/dash_amount_container"
+        app:layout_constraintTop_toTopOf="@id/time"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/fiat_view"
-            style="@style/Caption.Tertiary"
+            style="@style/Overline.Tertiary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             tools:text="350.98" />
 
         <TextView
             android:id="@+id/rate_not_available"
-            style="@style/Caption.Tertiary"
+            style="@style/Overline.Tertiary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/transaction_row_rate_not_available"

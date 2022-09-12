@@ -33,6 +33,7 @@ import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.slf4j.LoggerFactory
+import java.security.GeneralSecurityException
 import javax.inject.Inject
 import kotlin.jvm.Throws
 
@@ -66,16 +67,62 @@ class SendCoinsTaskRunner @Inject constructor(
         return sendCoins(wallet, sendRequest, scryptIterationsTarget)
     }
 
+    @Suppress("BlockingMethodInNonBlockingContext")
+    override suspend fun estimateNetworkFee(
+        address: Address,
+        amount: Coin,
+        emptyWallet: Boolean
+    ): SendPaymentService.TransactionDetails {
+        val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
+        var sendRequest = createSendRequest(address, amount, null, emptyWallet, false)
+        try {
+            val securityGuard = SecurityGuard()
+            val password = securityGuard.retrievePassword()
+            val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
+            val encryptionKey = securityFunctions.deriveKey(wallet, password, scryptIterationsTarget)
+
+            sendRequest.aesKey = encryptionKey
+
+            wallet.completeTx(sendRequest)
+            if (checkDust(sendRequest)){
+                sendRequest = createSendRequest(address, amount, null, emptyWallet)
+                wallet.completeTx(sendRequest)
+            }
+
+        } catch (e: Exception){
+            e.printStackTrace()
+        } catch (e: GeneralSecurityException){
+            e.printStackTrace()
+        }
+
+        val txFee:Coin? = sendRequest.tx.fee
+
+        val amountToSend = if (sendRequest.emptyWallet){
+            amount.minus(txFee)
+        } else {
+            amount
+        }
+
+        val totalAmount = if (sendRequest.emptyWallet||txFee==null){
+            amount.toPlainString()
+        } else {
+                amount.add(txFee).toPlainString()
+        }
+
+        return SendPaymentService.TransactionDetails(txFee?.toPlainString()?:"", amountToSend, totalAmount)
+    }
+
     @VisibleForTesting
     fun createSendRequest(
         address: Address,
         amount: Coin,
         coinSelector: CoinSelector? = null,
-        emptyWallet: Boolean = false
+        emptyWallet: Boolean = false,
+        forceMinFee: Boolean = true
     ): SendRequest {
         return SendRequest.to(address, amount).apply {
             this.feePerKb = Constants.ECONOMIC_FEE
-            this.ensureMinRequiredFee = true
+            this.ensureMinRequiredFee = forceMinFee
             this.emptyWallet = emptyWallet
 
             val selector = coinSelector ?: ZeroConfCoinSelector.get()
@@ -129,5 +176,14 @@ class SendCoinsTaskRunner @Inject constructor(
             }
             throw ex
         }
+    }
+
+    private fun checkDust(req: SendRequest): Boolean {
+        if (req.tx != null) {
+            for (output in req.tx.outputs) {
+                if (output.isDust) return true
+            }
+        }
+        return false
     }
 }

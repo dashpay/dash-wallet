@@ -62,7 +62,7 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
     val onSendCoinsOffline = MutableLiveData<Pair<SendCoinsOfflineStatus, Any?>>()
 
     protected val backgroundHandler: Handler
-    protected val callbackHandler: Handler
+    protected var callbackHandler: Handler? = null
 
     lateinit var finalSendRequest: SendRequest
 
@@ -72,7 +72,7 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
         val backgroundThread = HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND)
         backgroundThread.start()
         backgroundHandler = Handler(backgroundThread.looper)
-        callbackHandler = Handler(Looper.myLooper()!!)
+        Looper.myLooper()?.let { callbackHandler = Handler(it) }
     }
 
     fun createSendRequest(wallet: Wallet, mayEditAmount: Boolean, paymentIntent: PaymentIntent, signInputs: Boolean, forceEnsureMinRequiredFee: Boolean): SendRequest {
@@ -174,13 +174,12 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
             override fun onFailure(exception: Exception) {
                 onSendCoinsOffline.value = Pair(SendCoinsOfflineStatus.FAILURE, exception)
             }
-
         }.sendCoinsOffline(sendRequest, txAlreadyCompleted, checkBalanceConditions) // send asynchronously
     }
 
     override fun onCleared() {
         backgroundHandler.looper.quit()
-        callbackHandler.removeCallbacksAndMessages(null)
+        callbackHandler?.removeCallbacksAndMessages(null)
         super.onCleared()
     }
 }

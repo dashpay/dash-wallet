@@ -416,10 +416,9 @@
 
         <!--///////////////////////////-->
 
-
         <activity
-            android:name="de.schildbach.wallet.ui.BuyAndSellLiquidUpholdActivity"
-            android:theme="@style/LockScreenActivity.Child.Theme" />
+            android:name="de.schildbach.wallet.ui.BuyAndSellIntegrationsActivity"
+            android:theme="@style/My.Theme.ChildActivity" />
 
         <activity
             android:name="org.dash.wallet.integration.liquid.ui.BuyDashWithCreditCardActivity"
@@ -573,5 +572,16 @@
         <meta-data
             android:name="android.nfc.disable_beam_default"
             android:value="true" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.coinbase.CoinbaseActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/LockScreenActivity.Theme" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.coinbase.CoinBaseWebClientActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:exported="true" />
     </application>
 </manifest>

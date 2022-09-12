@@ -24,7 +24,7 @@
 
 
         <TextView
-            style="@style/MontserratMedium.PageTitle"
+            style="@style/Headline6"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
@@ -33,17 +33,16 @@
             android:textColor="@color/dash_black"
             android:textSize="20sp" />
 
-        <TextView
+        <Button
             android:id="@+id/txtClearFilter"
-            style="@style/MontserratRegular"
+            style="@style/Button.Tertiary.Blue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="10dp"
             android:text="@string/clear_filter"
-            android:textColor="@color/colorPrimary"
-            android:textSize="15sp"
-            android:visibility="gone" />
+            android:visibility="gone"
+            tools:visibility="visible" />
 
 
         <View

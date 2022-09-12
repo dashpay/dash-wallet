@@ -31,10 +31,11 @@ import androidx.core.os.CancellationSignal
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
+import dagger.hilt.android.AndroidEntryPoint
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
-import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.preference.PinRetryController
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
@@ -47,6 +48,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.resumeWithException
+import javax.inject.Inject
 
 @AndroidEntryPoint
 open class CheckPinDialog(
@@ -119,6 +121,9 @@ open class CheckPinDialog(
         INVALID_PIN,
         DECRYPTING
     }
+
+    @Inject
+    lateinit var restartService: RestartService
 
     constructor(): this(null)
 
@@ -197,7 +202,11 @@ open class CheckPinDialog(
         viewModel.checkPinLiveData.observe(viewLifecycleOwner) {
             when (it.status) {
                 Status.ERROR -> {
-                    viewModel.registerFailedAttempt(it.data!!)
+                    if (viewModel.isLockedAfterAttempt(it.data!!)) {
+                        restartService.performRestart(requireActivity(), true)
+                        return@observe
+                    }
+
                     if (viewModel.isWalletLocked) {
                         val message = viewModel.getLockedMessage(requireContext().resources)
                         showLockedAlert(requireActivity(), message)
@@ -251,6 +260,10 @@ open class CheckPinDialog(
                 binding.pinPreview.clear()
                 binding.pinPreview.clearBadPin()
                 binding.numericKeyboard.isEnabled = true
+                if (viewModel.getFailCount() > 0) {
+                    binding.pinPreview.badPin(viewModel.getRemainingAttemptsMessage(resources))
+                }
+                warnLastAttempt()
             }
             State.INVALID_PIN -> {
                 if (binding.pinProgressSwitcher.currentView.id == R.id.progress) {
@@ -264,6 +277,8 @@ open class CheckPinDialog(
                 }, 200)
                 pinPreview.badPin(viewModel.getRemainingAttemptsMessage(resources))
                 binding.numericKeyboard.isEnabled = true
+
+                warnLastAttempt()
             }
             State.DECRYPTING -> {
                 if (binding.pinProgressSwitcher.currentView.id != R.id.progress) {
@@ -273,6 +288,20 @@ open class CheckPinDialog(
             }
         }
         state = newState
+    }
+
+    private fun warnLastAttempt() {
+        if (viewModel.getRemainingAttempts() == 1) {
+            val dialog = AdaptiveDialog.create(
+                R.drawable.ic_info_red,
+                getString(R.string.wallet_last_attempt),
+                getString(R.string.wallet_last_attempt_message),
+                "",
+                getString(R.string.button_understand)
+            )
+            dialog.isCancelable = false
+            dialog.show(activity!!) { }
+        }
     }
 
     override fun onDismiss(dialog: DialogInterface) {

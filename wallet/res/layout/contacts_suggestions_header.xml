@@ -12,23 +12,22 @@
 
     <TextView
         android:id="@+id/suggestions_title"
-        style="@style/MontserratSemiBold"
+        style="@style/Subtitle1"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
         android:layout_marginTop="34dp"
         android:layout_marginEnd="20dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:text="@string/more_suggestions"
-        android:textColor="@color/black_text"
-        android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/suggestions_subtitle"
-        style="@style/MontserratRegular"
+        style="@style/Body2"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
@@ -36,8 +35,7 @@
         android:layout_marginEnd="15dp"
         android:layout_marginBottom="34dp"
         android:gravity="center"
-        android:textColor="@color/black_text"
-        android:textSize="14sp"
+        android:textAlignment="gravity"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

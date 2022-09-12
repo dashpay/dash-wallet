@@ -27,6 +27,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
+import androidx.annotation.CallSuper
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -40,6 +41,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
@@ -73,13 +75,14 @@ open class LockScreenActivity : SecureActivity() {
     @Inject lateinit var walletData: WalletDataProvider
     @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     @Inject lateinit var configuration: Configuration
+    @Inject lateinit var restartService: RestartService
     private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
 
     private lateinit var checkPinViewModel: CheckPinViewModel
     private lateinit var enableFingerprintViewModel: EnableFingerprintDialog.SharedViewModel
     private val pinLength by lazy { configuration.pinLength }
 
-    protected val lockScreenDisplayed: Boolean
+    val lockScreenDisplayed: Boolean
         get() = root_view_switcher.displayedChild == 0
 
     private val temporaryLockCheckHandler = Handler()
@@ -145,7 +148,7 @@ open class LockScreenActivity : SecureActivity() {
         isLocked = true
         dismissKeyboard()
         setLockState(State.USE_DEFAULT)
-        onLockScreenActivated()
+        handleLockScreenActivated()
     }
 
     open fun imitateUserInteraction() {
@@ -227,7 +230,7 @@ open class LockScreenActivity : SecureActivity() {
             if (autoLogout.isTimerActive) {
                 autoLogout.stopTimer()
             }
-            onLockScreenActivated()
+            handleLockScreenActivated()
         } else {
             root_view_switcher.displayedChild = 1
             if (!keepUnlocked) {
@@ -294,11 +297,14 @@ open class LockScreenActivity : SecureActivity() {
         checkPinViewModel.checkPinLiveData.observe(this) {
             when (it.status) {
                 Status.ERROR -> {
-                    pinRetryController.failedAttempt(it.data!!)
-                    if (pinRetryController.isLocked) {
-                        setLockState(State.LOCKED)
+                    if (pinRetryController.failedAttempt(it.data!!)) {
+                        restartService.performRestart(this, true)
                     } else {
-                        setLockState(State.INVALID_PIN)
+                        if (pinRetryController.isLocked) {
+                            setLockState(State.LOCKED)
+                        } else {
+                            setLockState(State.INVALID_PIN)
+                        }
                     }
                 }
                 Status.LOADING -> {
@@ -542,14 +548,16 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
-    open fun onLockScreenActivated() {
+    private fun handleLockScreenActivated() {
         if (this::alertDialog.isInitialized){
             alertDialog.dismissDialog()
         }
-
         lockScreenBroadcaster.activatingLockScreen.call()
         dismissDialogFragments(supportFragmentManager)
+        onLockScreenActivated()
     }
+
+    open fun onLockScreenActivated() { }
 
     open fun onLockScreenDeactivated() { }
 

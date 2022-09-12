@@ -53,8 +53,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet_test.R;
@@ -63,6 +66,7 @@ import kotlin.Unit;
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public class EncryptKeysDialogFragment extends BaseDialogFragment {
 
     private static final String FRAGMENT_TAG = EncryptKeysDialogFragment.class.getName();
@@ -113,6 +117,7 @@ public class EncryptKeysDialogFragment extends BaseDialogFragment {
     private HandlerThread backgroundThread;
     private Handler backgroundHandler;
     private FingerprintHelper fingerprintHelper;
+    @Inject RestartService restartService;
 
     private enum State {
         INPUT, CRYPTING, DONE
@@ -319,7 +324,10 @@ public class EncryptKeysDialogFragment extends BaseDialogFragment {
                                     log.info("wallet successfully decrypted");
                                 } catch (final KeyCrypterException x) {
                                     log.info("wallet decryption failed: " + x.getMessage());
-                                    pinRetryController.failedAttempt(oldPassword);
+                                    if(pinRetryController.failedAttempt(oldPassword)) {
+                                        restartService.performRestart(getActivity(), true, false);
+                                        dismiss();
+                                    }
                                     badPasswordView.setVisibility(View.VISIBLE);
                                     attemptsRemainingTextView.setVisibility(View.VISIBLE);
                                     attemptsRemainingTextView.setText(pinRetryController.getRemainingAttemptsMessage(getResources()));

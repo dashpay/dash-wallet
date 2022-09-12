@@ -17,10 +17,15 @@
 <resources>
     <string name="crowdnode_get_started">開始使用 CrowdNode</string>
     <string name="crowdnode_get_started_hint">要開始質押，請在 CrowdNode 上創建一個帳戶或連接到現有帳戶。</string>
+    <string name="crowdnode_account">CrowdNode 帳戶</string>
     <string name="new_account">新建 CrowdNode 帳戶</string>
     <string name="account_create">創建帳號</string>
+    <string name="accept_terms_response">請接受條款</string>
+    <string name="accept_terms">接受條款</string>
+    <string name="welcome_response">已創建帳戶</string>
     <string name="account_link">鏈接現有帳戶</string>
     <string name="crowdnode_login">登入到 CrowdNode</string>
+    <string name="crowdnode_signup">註冊 CrowdNode 帳戶</string>
     <string name="crowdnode_link">鏈接現有的 CrowdNode 帳戶</string>
     <string name="required_passphrase_backup">您必須在達世幣錢包中備份您的恢復詞組</string>
     <string name="backup_passphrase">備份詞組</string>
@@ -39,6 +44,7 @@
     <string name="privacy_policy">隱私政策</string>
     <string name="crowdnode_account_ready">您的 CrowdNode 帳戶已設置好並可以使用!</string>
     <string name="notify_when_done">完成後關閉並發送通知</string>
+    <string name="crowdnode_creating">正在創建您的 CrowdNode 帳戶...</string>
     <string name="accepting_terms">接受使用條款…</string>
     <string name="crowdnode_signup_error">我們無法創建您的 CrowdNode 帳戶。</string>
     <string name="crowdnode_deposit_error">我們無法向您的 CrowdNode 賬戶存款。</string>
@@ -57,6 +63,10 @@
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ 達世幣錢包</string>
     <string name="online_account">在線賬戶</string>
     <string name="online_account_create">創建在線帳戶</string>
+    <string name="secure_online_account">保護您的存款</string>
+    <string name="crowdnode_signup_to_finish">註冊以完成帳戶設定</string>
+    <string name="online_account_create_full">創建一個在線 CrowdNode 帳戶</string>
+    <string name="online_account_email_privacy">請注意，達世幣錢包不保存電子郵件，僅發送至 CrowdNode</string>
     <string name="crowdnode_support">CrowdNode 支援</string>
     <string name="unlink_account">取消帳戶鏈接</string>
     <string name="online_account_title">為什麼需要在線帳戶?</string>
@@ -69,6 +79,7 @@
     <string name="payout_options">支付選項</string>
     <string name="payout_options_details">您可以更改向您支付獎勵收入的方式/時間。</string>
     <string name="crowdnode_balance">CrowdNode 上的餘額</string>
+    <string name="crowdnode_your_address_title">這是與您的 CrowdNode 帳戶關聯的 達世幣位址</string>
     <string name="chain_syncing">區塊鏈正在同步…</string>
     <string name="crowdnode_wait_for_sync">等到區塊鏈完全同步後，我們才能查看您的交易歷史。訪問 CrowdNode 網站登錄或註冊。</string>
     <string name="crowdnode_open_website">訪問 CrowdNode 網站</string>
@@ -83,8 +94,26 @@
     <string name="crowdnode_minimum_deposit">至少存入 %s 來開始賺取收益</string>
     <string name="crowdnode_minimum_deposit_difference">存入%s 來開始賺錢</string>
     <string name="crowdnode_first_deposit">首次存款應該超過 %s</string>
-    <string name="crowdnode_staking_info_title">質押如何運作</string>
+    <string name="crowdnode_staking_info_title">CrowdNode 質押的運作原理</string>
+    <string name="crowdnode_staking_info_message_first">達世幣網絡由許多主節點驅動，這是令支付更便捷的重要組成部分。</string>
+    <string name="crowdnode_staking_info_message_second">一個主節點需要 1000 達世幣作為抵押品，每個主節點目前每年獲得大約%s%% 的獎勵。</string>
+    <string name="crowdnode_staking_apy_title">目前的年利率是 %s%%</string>
     <string name="crowdnode_staking_info_message">如果您的 CrowdNode 帳戶擁有超過 %s 就會開始賺錢</string>
+    <string name="staking_apy_title">目前的年利率是 %s</string>
+    <string name="crowdnode_staking_current_apy_message">這代表完整主節點的當前年度百分比收益率減去 15% 的 CrowdNode 費用。這不是保證回報率，可能會根據 CrowdNode 資金池的大小和達世幣價格而上升或下降。</string>
+    <string name="crowdnode_staking_leave_pool_message_one">會員可以自由離開資金池，並且通常可以立即離開。</string>
+    <string name="crowdnode_staking_leave_pool_message_two">在提款額較大的情況下，CrowdNode 將在兩週內支付該提款。這是由於它們的安全協議，並且通常處理得比這時間更快。</string>
+
+    <string name="crowdnode_staking_leaving_the_pool_title">離開資金池</string>
+    <string name="crowdnode_staking_receiving_rewards_title">領取獎勵</string>
+    <string name="crowdnode_staking_receiving_rewards_message">您將自動收到小額付款，預設情況下它們將被再投資，但是，設置自動提款以接收定期付款也很容易。</string>
+    <string name="crowdnode_staking_first_minimum_deposit_title">首次最低存款</string>
+    <string name="crowdnode_staking_join_pool_message">由於大多數人手頭上沒有 1000 達世幣，CrowdNode 提供了一項服務，他們通過匯集成員的存款來獲得擁有主節點的好處。</string>
+    <string name="crowdnode_staking_join_pool_title">加入資金池</string>
+    <string name="crowdnode_staking_crowdnode_benefits_title">CrowdNode 的好處</string>
+    <string name="crowdnode_staking_connected_dash_address_title">連接的達世幣位址</string>
+    <string name="crowdnode_staking_connected_dash_address_message">這是在此設備上的達世幣錢包中為您的 CrowdNode 帳戶指定的達世幣位址。</string>
+    <string name="crowdnode_staking_toast_address_copied">將 CrowdNode 地址複製到剪貼板</string>
     <string name="crowdnode_verify_api_address">驗證您的 API 達世幣位址</string>
     <string name="crowdnode_how_to_verify">如何確認您的 API 達世幣位址</string>
     <string name="crowdnode_how_to_verify_description1">從您當前用於 CrowdNode 帳戶的主要達世幣位址發送 %s Dash</string>
@@ -101,4 +130,24 @@
     <string name="crowdnode_online_account_details_title">有關您的在線帳戶的信息</string>
     <string name="crowdnode_online_account_details_primary">您當前用於 CrowdNode 帳戶的主要達世幣位址</string>
     <string name="crowdnode_online_account_details_api">此設備上達世幣錢包中為您的 CrowdNode 帳戶指定的達世幣位址</string>
+    <string name="crowdnode_primary_missing">您的賬戶中缺少主要的達世幣位址。請在 CrowdNode 網站上指定。</string>
+    <string name="crowdnode_wait_signed_email">請等到您的電子郵件處理完成...</string>
+    <string name="cannot_send">無法發送。</string>
+    <string name="crowdnode_tx_set_title">為什麼我會看到所有這些交易？</string>
+    <string name="crowdnode_tx_set_explainer">您的 CrowdNode 帳戶是使用這些交易創建的。</string>
+    <string name="shuffle_coins">混幣</string>
+    <string name="positive_balance_required">你的達世幣錢包上的餘額應該是一個正數</string>
+    <string name="withdrawal_required_balance">在您的達世幣錢包中至少存入 0.0003 Dash 以完成提款</string>
+    <string name="withdrawal_limit">達世幣提款限額</string>
+    <string name="withdrawal_limit_details">您的提款額不能超過 %1$s 達世幣%2$s.</string>
+    <string name="crowdnode_withdrawal_limits_title">CrowdNode 提款限額</string>
+    <string name="crowdnode_withdrawal_limits_message">由於 CrowdNode 的服務條款，用戶的提款額不能超過:</string>
+    <string name="crowdnode_withdraw_without_limits_online">使用 CrowdNode 網站上的在線帳戶可以無限制地提款。</string>
+    <string name="crowdnode_withdrawal_limits_error">此錯誤很可能是由於超出了 CrowdNode 提款上限。請稍後再試。</string>
+    <string name="per_transaction">每筆交易</string>
+    <string name="per_hour">每小時</string>
+    <string name="per_day">每 24 小時</string>
+    <string name="read_withdrawal_policy">閱讀提款政策</string>
+
+
     </resources>

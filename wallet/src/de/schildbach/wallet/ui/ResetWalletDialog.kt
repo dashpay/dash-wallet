@@ -24,16 +24,21 @@ import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import javax.inject.Inject
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.dismissDialog
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class ResetWalletDialog : DialogFragment() {
     private lateinit var alertDialog: AlertDialog
+    @Inject
     lateinit var analytics: AnalyticsService
+    @Inject
+    lateinit var restartService: RestartService
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         alertDialog = BaseAlertDialogBuilder(requireContext())
@@ -48,8 +53,7 @@ class ResetWalletDialog : DialogFragment() {
                     // 2. start OnboardingActivity
                     // 3. close the backstack (Home->More->Security)
                     WalletApplication.getInstance().triggerWipe()
-                    startActivity(OnboardingActivity.createIntent(requireContext()))
-                    activity?.finishAffinity()
+                    restartService.performRestart(requireActivity(), true)
                 }
                 positiveText = getString(android.R.string.no)
                 cancelable = false

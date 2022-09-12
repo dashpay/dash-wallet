@@ -51,7 +51,7 @@
 
             <TextView
                 android:id="@+id/explore_title"
-                style="@style/Headline4.Bold.White"
+                style="@style/Headline4.White"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="28dp"

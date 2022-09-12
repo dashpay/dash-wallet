@@ -25,8 +25,12 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.AppRestartService
+import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
+import de.schildbach.wallet.ui.send.ConfirmTransactionLauncher
+import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.LockScreenBroadcaster
@@ -65,7 +69,17 @@ abstract class AppModule {
     ): SendPaymentService
 
     @Binds
+    abstract fun bindConfirmTransactionService(
+        confirmTransactionLauncher: ConfirmTransactionLauncher
+    ): ConfirmTransactionService
+
+    @Binds
     abstract fun bindNotificationService(
         notificationService: NotificationManagerWrapper
     ): NotificationService
+
+    @Binds
+    abstract fun bindRestartService(
+        restartService: AppRestartService
+    ): RestartService
 }

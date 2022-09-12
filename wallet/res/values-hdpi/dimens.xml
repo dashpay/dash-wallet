@@ -42,6 +42,6 @@
 
     <dimen name="create_username_orbits_translation_x">100dp</dimen>
 
-    <dimen name="identity_complete_text_size">24dp</dimen>
+    <dimen name="identity_complete_text_size">24sp</dimen>
     <dimen name="invite_header_size">16sp</dimen>
 </resources>

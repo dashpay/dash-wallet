@@ -20,13 +20,11 @@
 
         <TextView
             android:id="@+id/toolbar_title"
+            style="@style/Headline6"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="@string/payments_title"
-            android:textColor="@color/dash_black"
-            android:textSize="20sp"
-            app:fontFamily="@font/montserrat_semibold" />
+            android:text="@string/payments_title" />
 
     </androidx.appcompat.widget.Toolbar>
 

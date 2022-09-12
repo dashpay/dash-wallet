@@ -14,7 +14,6 @@
     <string name="email">E-mail</string>
     <string name="email_placeholder">par exemple johndoe@mail.com</string>
     <string name="error">Erreur</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">livre de Guernesey</string>
     <!-- Local Currency List: JEP -->
@@ -53,10 +52,12 @@
     <string name="permission_allow">Autoriser</string>
     <string name="permission_deny">Refuser</string>
     <string name="max">Maximum</string>
+    <string name="dash">Dash</string>
     <string name="select_currency">Choisir la monnaie</string>
     <string name="send_coins_error_dusty_send">Le montant est trop faible pour être envoyé</string>
     <string name="send_coins_error_insufficient_money">Fonds insuffisants</string>
 
     <string name="empty_wallet_warning_title">Il semble que vous videz votre Dash Wallet</string>
     <string name="empty_wallet_crowdnode_warning">Veuillez noter que vous ne pourrez pas retirer vos fonds de CrowdNode vers ce portefeuille, sans que vous ayez un solde minimum de 0,0003 dashs.</string>
+    <string name="syncing">En synchronisation</string>
 </resources>

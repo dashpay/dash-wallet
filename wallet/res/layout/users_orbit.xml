@@ -157,12 +157,12 @@
 
             <TextView
                 android:id="@+id/username_1st_letter"
-                style="@style/MontserratRegular"
+                style="@style/Headline4.White"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center"
+                android:textAlignment="center"
                 android:textAllCaps="true"
-                android:textColor="@android:color/white"
                 android:textSize="30dp"
                 tools:ignore="SpUsage"
                 tools:text="S" />

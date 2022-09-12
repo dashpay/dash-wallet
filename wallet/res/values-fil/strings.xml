@@ -279,10 +279,8 @@
     <string name="preferences_show_disclaimer_title">Ipakita ang disclaimer</string>
     <string name="preferences_show_disclaimer_summary">Nabasa mo na ba talaga ang safety notes? Na-back up mo na ba ang wallet sa ligtas na lugar?</string>
     <string name="preferences_report_issue_title">I-report ang issue</string>
-    <string name="preferences_initiate_reset_title">i-reset ang block chain</string>
-    <string name="preferences_initiate_reset_summary">I-reset ang block chain, transaksyon at wallet balance. Magtatagal ng kaunti ang pag-replay, kaya gawin lamang ito kapag alam mo kung bakit.</string>
-    <string name="preferences_initiate_reset_dialog_message">Gusto mo bang i-reset at i-replay ang block chain?\n\nPansamantala nitong itatago ang iyong wallet balance at tatanggalin ang transaksyon. Pareho lamang itong maibabalik kapag sumulong na ang pag-sync ng block chain . Siguraduhing mayroon kang maaasahang koneksyon sa Internet.</string>
-    <string name="preferences_initiate_reset_dialog_positive">I-reset</string>
+    <string name="preferences_initiate_reset_title">muling i-scan ang blockchain </string>
+    <string name="preferences_initiate_reset_dialog_positive">I-scan muli</string>
     <string name="preferences_extended_public_key_title">Ipakita ang xpub</string>
     <string name="preferences_extended_public_key_summary">Tingnan ang extended public key ng iyong wallet, para ito ay ma-import sa ibang apps at serbisyo. Mag-ingat: kapag ginawa ito ay maibubunyag ang privacy ng salapi sa app na iyon.</string>
     <string name="bitmap_fragment_share">Ipamahagi...</string>
@@ -384,9 +382,8 @@
     <string name="payment_protocol_insufficient_funds_error_message">Wala ka nang sapat na pondo para makompleto ang transaksyong ito</string>
 
 
-
     <string name="select_a_service">Pumili ng isang Serbisyo</string>
     <string name="activity_buy_and_sell_dash_filter">Salain</string>
     <string name="clear_filter">I-clear ang Filter</string>
     <string name="select_currency">Piliin ang Pera</string>
-</resources>
+    </resources>

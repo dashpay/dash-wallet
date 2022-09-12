@@ -56,8 +56,8 @@ import org.slf4j.LoggerFactory
 @AndroidEntryPoint
 class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
-    private val regularTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_regular) }
-    private val mediumTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_medium) }
+    private val regularTypeFace by lazy { ResourcesCompat.getFont(this, R.font.inter_regular) }
+    private val mediumTypeFace by lazy { ResourcesCompat.getFont(this, R.font.inter_medium) }
     private val slideInAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.slide_in_bottom) }
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
     private lateinit var completeUsername: String

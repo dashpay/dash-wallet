@@ -24,6 +24,7 @@
     <string name="explore_atms_title">خودپردازها</string>
     <string name="explore_atms_subtitle">یافتن مراکز خرید و فروش دش و سایر رمزارزها</string>
     <string name="explore_staking_subtitle">با چند کلیک ساده، به راحتی دش را سپرده‌گذاری کرده و درآمدی جانبی برای خودتان ایجاد کنید. </string>
+    <string name="explore_staking_current_apy">بازده سالانه کنونی= %s%%</string>
 
     <!-- Search -->
     <string name="explore_search_results">نتیجه جستجو</string>

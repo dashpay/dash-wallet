@@ -56,11 +56,12 @@
 
             <TextView
                 android:id="@+id/title"
-                style="@style/MontserratMedium.BodyTitle"
+                style="@style/Body2.Medium"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:gravity="center_horizontal"
+                android:textAlignment="gravity"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/icon_pane"
@@ -68,11 +69,12 @@
 
             <TextView
                 android:id="@+id/message"
-                style="@style/MontserratMedium.BodyText"
+                style="@style/Body2.Medium"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center_horizontal"
+                android:textAlignment="gravity"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/title"
@@ -103,7 +105,7 @@
 
             <Button
                 android:id="@+id/positive_button"
-                style="@style/DashButton.Blue"
+                style="@style/Button.Primary.Blue"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:maxLines="2"
@@ -117,7 +119,7 @@
 
             <Button
                 android:id="@+id/negative_button"
-                style="@style/DashButton.Transparent.BlueText"
+                style="@style/Button.Secondary.Blue"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:maxLines="2"

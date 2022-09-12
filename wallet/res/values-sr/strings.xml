@@ -241,10 +241,7 @@
     <string name="preferences_remind_balance_title">Podsetnik stanja</string>
     <string name="preferences_remind_balance_summary">Posle par nedelja nekorišćenja, aplikacija će izbaciti notifikaciju da li u novčaniku još uvek ima novčića.</string>
     <string name="preferences_report_issue_title">Prijavi problem</string>
-    <string name="preferences_initiate_reset_title">Resetuj block chain</string>
-    <string name="preferences_initiate_reset_summary">Resetuj block chain, transakcije i stanje na novčaniku. Reprodukcija će potrajati tako da radite ovo samo ako znate zašto.</string>
-    <string name="preferences_initiate_reset_dialog_message">Da li želite da resetujete i reprodukujete block chain?\n\nOvo će privremeno sakriti stanje na vašem novčaniku i ukloniti transakcije. Oba će se vratiti kako bude napredovala sinhronizacija block chain-a. Postarajte se da imate stabilnu Internet konekciju.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Resetuj</string>
+    <string name="preferences_initiate_reset_title">Skeniraj opet blockchain</string>
     <string name="preferences_extended_public_key_title">Prikaži xpub</string>
     <string name="preferences_extended_public_key_summary">Prikažite prošireni javni ključ vašeg novčanika kako biste ga uvezli u druge aplikacije i servise. Budite pažljivi: ovim ćete aplikaciji otkriti vašu monetarnu privatnost.</string>
     <string name="bitmap_fragment_share">Podeli...</string>

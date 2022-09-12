@@ -14,7 +14,6 @@
     <string name="email">Email</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Błąd</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Funt Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -53,10 +52,12 @@
     <string name="permission_allow">Pozwól</string>
     <string name="permission_deny">Odmów</string>
     <string name="max">Max</string>
+    <string name="dash">Dash</string>
     <string name="select_currency">Wybierz Walutę</string>
     <string name="send_coins_error_dusty_send">Kwota jest zbyt mała, aby wysłać</string>
     <string name="send_coins_error_insufficient_money">Niewystarczająca ilość funduszy</string>
 
     <string name="empty_wallet_warning_title">Wygląda na to że opróżniasz swój portfel Dash</string>
     <string name="empty_wallet_crowdnode_warning">Pamiętaj, że nie będziesz mógł wypłacić środków z CrowdNode do tego portfela, dopóki nie zwiększysz salda do min. 0,0003 Dash.</string>
+    <string name="syncing">Synchronizowanie</string>
 </resources>

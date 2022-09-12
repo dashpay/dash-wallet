@@ -26,29 +26,26 @@
 
         <TextView
             android:id="@+id/title"
-            style="@style/MontserratSemiBold"
+            style="@style/Subtitle1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
             android:text="@string/profile_picture_delete_title"
-            android:textColor="@android:color/black"
-            android:textSize="18sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/avatar" />
 
         <TextView
             android:id="@+id/subtitle"
-            style="@style/MontserratRegular"
+            style="@style/Body1.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="24dp"
             android:layout_marginTop="5dp"
             android:layout_marginEnd="24dp"
             android:gravity="center"
+            android:textAlignment="gravity"
             android:text="@string/profile_picture_delete_message"
-            android:textColor="@color/dash_gray"
-            android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/title" />
@@ -66,7 +63,7 @@
 
             <Button
                 android:id="@+id/agree_btn"
-                style="@style/DashButton.Blue"
+                style="@style/Button.Primary.Large.Blue"
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="5dp"
@@ -74,7 +71,7 @@
 
             <Button
                 android:id="@+id/cancel_btn"
-                style="@style/DashButton.White.Outline"
+                style="@style/Button.Tertiary.Large"
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5dp"

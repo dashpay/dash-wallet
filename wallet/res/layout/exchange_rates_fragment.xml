@@ -59,13 +59,11 @@
 
             <TextView
                 android:id="@+id/local_currency_label"
-                style="@style/MontserratRegular"
+                style="@style/Body1.White"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:text="@string/menu_local_currency"
-                android:textColor="@color/white"
-                android:textSize="16sp"
                 app:layout_constraintBottom_toBottomOf="@id/white_back_press_btn"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -143,7 +141,7 @@
 
             <TextView
                 android:id="@+id/search_close_btn"
-                style="@style/MontserratRegular"
+                style="@style/Body2.Blue"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
@@ -153,9 +151,8 @@
                 android:paddingBottom="12dp"
                 android:text="@string/button_cancel"
                 android:textAllCaps="false"
-                android:textColor="@color/dash_blue"
                 android:visibility="gone"
-                tools:visibility="gone" />
+                tools:visibility="visible" />
         </LinearLayout>
 
         <ProgressBar

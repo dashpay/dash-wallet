@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui.invite
 
 import android.app.Activity
 import android.app.ActivityManager
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.bundleOf
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProvider
@@ -37,7 +36,7 @@ import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
-import org.dash.wallet.common.ui.FancyAlertDialogViewModel
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dashj.platform.dpp.errors.ConcensusErrorMetadata
 import org.dashj.platform.dpp.errors.concensus.ConcensusException
 import org.dashj.platform.dpp.errors.concensus.basic.identity.IdentityAssetLockTransactionOutPointAlreadyExistsException
@@ -75,28 +74,6 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
             val mainTask = getMainTask(activity)
             mainTask.moveToFront()
             activity.finish()
-        }
-
-        private fun handleDialogResult(activity: FragmentActivity) {
-            val errorDialogViewModel =
-                ViewModelProvider(activity)[FancyAlertDialogViewModel::class.java]
-            errorDialogViewModel.onPositiveButtonClick.observe(activity) {
-                handleDialogButtonClick(activity)
-            }
-            errorDialogViewModel.onNegativeButtonClick.observe(activity) {
-                handleDialogButtonClick(activity)
-            }
-        }
-
-        private fun handleDialogResult(activity: FragmentActivity, onClick : (FragmentActivity) -> Unit) {
-            val errorDialogViewModel =
-                ViewModelProvider(activity)[FancyAlertDialogViewModel::class.java]
-            errorDialogViewModel.onPositiveButtonClick.observe(activity) {
-                onClick(activity)
-            }
-            errorDialogViewModel.onNegativeButtonClick.observe(activity) {
-                onClick(activity)
-            }
         }
     }
 
@@ -157,40 +134,52 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
     }
 
     private fun showInvalidInviteDialog(displayName: String) {
-        val title = activity.getString(R.string.invitation_invalid_invite_title)
-        val message = activity.getString(R.string.invitation_invalid_invite_message, displayName)
-        val inviteErrorDialog = FancyAlertDialog.newInstance(title, message, R.drawable.ic_invalid_invite, R.string.okay, 0)
-        inviteErrorDialog.show(activity.supportFragmentManager, null)
-        handleDialogResult(activity)
+        AdaptiveDialog.create(
+            R.drawable.ic_invalid_invite,
+            activity.getString(R.string.invitation_invalid_invite_title),
+            activity.getString(R.string.invitation_invalid_invite_message, displayName),
+            activity.getString(R.string.okay)
+        ).show(activity) {
+            handleDialogButtonClick(activity)
+        }
         analytics.logEvent(AnalyticsConstants.Invites.ERROR_INVALID, bundleOf())
     }
 
     fun showUsernameAlreadyDialog() {
-        val inviteErrorDialog = FancyAlertDialog.newInstance(
-            R.string.invitation_username_already_found_title,
-            R.string.invitation_username_already_found_message,
-            R.drawable.ic_invalid_invite, R.string.okay, 0
-        )
-        inviteErrorDialog.show(activity.supportFragmentManager, null)
-        handleDialogResult(activity)
+        AdaptiveDialog.create(
+            R.drawable.ic_invalid_invite,
+            activity.getString(R.string.invitation_username_already_found_title),
+            activity.getString(R.string.invitation_username_already_found_message),
+            activity.getString(R.string.okay)
+        ).show(activity) {
+            handleDialogButtonClick(activity)
+        }
         analytics.logEvent(AnalyticsConstants.Invites.ERROR_USERNAME_TAKEN, bundleOf())
     }
 
     private fun showInviteAlreadyClaimedDialog(invite: InvitationLinkData) {
         val inviteAlreadyClaimedDialog = InviteAlreadyClaimedDialog.newInstance(activity, invite)
+        inviteAlreadyClaimedDialog.onFancyAlertButtonsClickListener = object :
+            FancyAlertDialog.FancyAlertButtonsClickListener {
+            override fun onPositiveButtonClick() {
+                handleDialogButtonClick(activity)
+            }
+
+            override fun onNegativeButtonClick() {
+                handleDialogButtonClick(activity)
+            }
+        }
         inviteAlreadyClaimedDialog.show(activity.supportFragmentManager, null)
-        handleDialogResult(activity)
         analytics.logEvent(AnalyticsConstants.Invites.ERROR_ALREADY_CLAIMED, bundleOf())
     }
 
     fun showInviteWhileOnboardingInProgressDialog() {
-        val inviteErrorDialog = FancyAlertDialog.newInstance(
-            R.string.invitation_onboarding_has_began_error_title,
-            R.string.invitation_onboarding_has_began_error,
-            R.drawable.ic_invalid_invite, R.string.okay, 0
-        )
-        inviteErrorDialog.show(activity.supportFragmentManager, null)
-        handleDialogResult(activity) {
+        AdaptiveDialog.create(
+            R.drawable.ic_invalid_invite,
+            activity.getString(R.string.invitation_onboarding_has_began_error_title),
+            activity.getString(R.string.invitation_onboarding_has_began_error),
+            activity.getString(R.string.okay)
+        ).show(activity) {
             handleMoveToFront(activity)
         }
     }

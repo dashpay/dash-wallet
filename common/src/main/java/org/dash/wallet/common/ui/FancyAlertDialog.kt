@@ -32,18 +32,19 @@ import androidx.annotation.StringRes
 import androidx.core.text.HtmlCompat
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.activityViewModels
-import kotlinx.android.synthetic.main.fancy_alert_dialog.*
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
+import org.dash.wallet.common.databinding.FancyAlertDialogBinding
 
 @Deprecated("Use AdaptiveDialog")
 open class FancyAlertDialog : DialogFragment() {
-    private val sharedViewModel by activityViewModels<FancyAlertDialogViewModel>()
+    var onFancyAlertButtonsClickListener: FancyAlertButtonsClickListener? = null
+    private val binding by viewBinding(FancyAlertDialogBinding::bind)
 
     enum class Type {
         INFO,
-        PROGRESS
+        PROGRESS,
+        ACTION
     }
 
     companion object {
@@ -104,6 +105,19 @@ open class FancyAlertDialog : DialogFragment() {
         }
 
         @JvmStatic
+        fun newAction(@StringRes title: Int, @StringRes positiveButtonText: Int, @StringRes negativeButtonText: Int): FancyAlertDialog {
+            val args = Bundle().apply {
+                putString("type", Type.ACTION.name)
+                putInt("title", title)
+                putInt("positive_text", positiveButtonText)
+                putInt("negative_text", negativeButtonText)
+            }
+            return FancyAlertDialog().apply {
+                arguments = args
+            }
+        }
+
+        @JvmStatic
         fun newProgress(@StringRes title: Int, @StringRes message: Int = 0): FancyAlertDialog {
             return FancyAlertDialog().apply {
                 arguments = createBaseArguments(Type.PROGRESS, 0, 0, 0)
@@ -130,7 +144,7 @@ open class FancyAlertDialog : DialogFragment() {
         }
         val view = inflater.inflate(R.layout.fancy_alert_dialog, container)
         if (customContentViewResId != 0) {
-//            view.findViewById<View>(R.id.default_content).visibility = View.GONE
+            view.findViewById<View>(R.id.default_content).visibility = View.GONE
             inflater.inflate(customContentViewResId, view.findViewById(R.id.custom_content))
         }
         return view
@@ -138,24 +152,24 @@ open class FancyAlertDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        val titleObj = requireArguments().get("title")
+        val titleObj = requireArguments().get("title") // TODO: check if needed
         if (titleObj is String) {
-            title.text = titleObj
+            binding.title.text = titleObj
         } else {
-            setOrHideIfEmpty(title, "title")
+            setOrHideIfEmpty(binding.title, "title")
         }
         val messageObj = requireArguments().get("message")
         if (messageObj is String) {
-            message.text = HtmlCompat.fromHtml(messageObj, HtmlCompat.FROM_HTML_MODE_COMPACT)
+            binding.message.text = HtmlCompat.fromHtml(messageObj, HtmlCompat.FROM_HTML_MODE_COMPACT)
         } else {
-            setOrHideIfEmpty(message, "message")
+            setOrHideIfEmpty(binding.message, "message")
         }
-        setOrHideIfEmpty(image, "image")
-        setOrHideIfEmpty(positive_button, "positive_text")
-        setOrHideIfEmpty(negative_button, "negative_text")
-        button_space.visibility = if (positive_button.visibility == View.VISIBLE
-                && negative_button.visibility == View.VISIBLE) View.VISIBLE else View.GONE
+        setOrHideIfEmpty(binding.image, "image")
+        setOrHideIfEmpty(binding.positiveButton, "positive_text")
+        setOrHideIfEmpty(binding.negativeButton, "negative_text")
+
+        binding.buttonSpace.visibility = if (binding.positiveButton.visibility == View.VISIBLE
+            && binding.negativeButton.visibility == View.VISIBLE) View.VISIBLE else View.GONE
 
         when (type) {
             Type.INFO -> {
@@ -163,6 +177,9 @@ open class FancyAlertDialog : DialogFragment() {
             }
             Type.PROGRESS -> {
                 setupProgress()
+            }
+            Type.ACTION -> {
+                setupAction()
             }
         }
     }
@@ -181,21 +198,36 @@ open class FancyAlertDialog : DialogFragment() {
     }
 
     private fun setupInfo() {
-        progress.visibility = View.GONE
-        positive_button.setOnClickListener {
+        binding.progress.visibility = View.GONE
+        binding.image.visibility = View.VISIBLE
+        binding.positiveButton.setOnClickListener {
             dismiss()
-            sharedViewModel.onPositiveButtonClick.call()
+            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
         }
-        negative_button.setOnClickListener {
+        binding.negativeButton.setOnClickListener {
             dismiss()
-            sharedViewModel.onPositiveButtonClick.call()
+            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
+        }
+    }
+
+    private fun setupAction() {
+        binding.progress.visibility = View.GONE
+        binding.image.visibility = View.GONE
+        binding.positiveButton.setOnClickListener {
+            dismiss()
+            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
+        }
+        binding.negativeButton.setOnClickListener {
+            dismiss()
+            onFancyAlertButtonsClickListener?.onNegativeButtonClick()
         }
     }
 
     private fun setupProgress() {
-        image.visibility = View.GONE
-        positive_button.visibility = View.GONE
-        negative_button.visibility = View.GONE
+        binding.progress.visibility = View.VISIBLE
+        binding.image.visibility = View.GONE
+        binding.positiveButton.visibility = View.GONE
+        binding.negativeButton.visibility = View.GONE
         isCancelable = false
     }
 
@@ -211,5 +243,10 @@ open class FancyAlertDialog : DialogFragment() {
                 setCanceledOnTouchOutside(false)
             }
         }
+    }
+
+    interface FancyAlertButtonsClickListener {
+        fun onPositiveButtonClick()
+        fun onNegativeButtonClick()
     }
 }

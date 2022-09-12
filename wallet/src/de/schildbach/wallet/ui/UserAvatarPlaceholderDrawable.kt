@@ -44,7 +44,7 @@ class UserAvatarPlaceholderDrawable {
             hsv[2] = 0.6f
             val bgColor = Color.HSVToColor(hsv)
             return TextDrawable.builder().beginConfig().textColor(Color.WHITE)
-                    .useFont(ResourcesCompat.getFont(context, R.font.montserrat_regular))
+                    .useFont(ResourcesCompat.getFont(context, R.font.inter_regular))
                     .fontSize(fontSize)
                     .endConfig().buildRound(usernameFirstChar.toString().toUpperCase(), bgColor)
         }

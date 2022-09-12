@@ -2,7 +2,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -11,6 +12,7 @@
         android:layout_marginBottom="10dp">
 
         <LinearLayout
+            android:id="@+id/txtAmountPanel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
@@ -25,14 +27,11 @@
 
             <TextView
                 android:id="@+id/txtAmount"
-                style="@style/MontserratRegular"
+                style="@style/Body1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="5dp"
-                android:textColor="@color/black"
-                android:textSize="15dp" />
-
-
+                tools:text="50000"/>
         </LinearLayout>
 
 
@@ -40,28 +39,24 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_toLeftOf="@+id/txtAmount"
+            android:layout_toLeftOf="@+id/txtAmountPanel"
             android:orientation="vertical">
 
             <TextView
                 android:id="@+id/txtCurrencySName"
-                style="@style/MontserratRegular"
+                style="@style/Subtitle1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="10dp"
-                android:text="@string/buy_dash"
-                android:textColor="@color/black"
-                android:textSize="18dp" />
+                android:text="@string/buy_dash" />
 
             <TextView
                 android:id="@+id/txtCurrencyFName"
-                style="@style/MontserratRegular"
+                style="@style/Overline"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="10dp"
-                android:text="@string/buy_dash"
-                android:textColor="@color/black"
-                android:textSize="12dp" />
+                android:text="@string/buy_dash" />
 
         </LinearLayout>
     </RelativeLayout>

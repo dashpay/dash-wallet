@@ -36,7 +36,7 @@
 
     <Button
         android:id="@+id/continue_button"
-        style="@style/DashButton.Blue"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_marginStart="15dp"
@@ -44,7 +44,6 @@
         android:layout_marginEnd="15dp"
         android:layout_marginBottom="25dp"
         android:text="@string/invitation_accept_continue"
-        android:textSize="18sp"
         app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

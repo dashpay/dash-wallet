@@ -43,7 +43,7 @@
 
     <TextView
         android:id="@+id/title"
-        style="@style/Headline5.Bold.Red"
+        style="@style/Headline5.Red"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"

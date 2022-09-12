@@ -18,6 +18,7 @@ public class Constants {
     public static final int REQUEST_CODE_BUY_SELL = 100;
     public static final int USER_BUY_SELL_DASH = 101;
     public static final int RESULT_CODE_GO_HOME = 100;
+    public static final int COIN_BASE_AUTH = 102;
 
     public static Coin MAX_MONEY = MainNetParams.get().getMaxMoney();
     public static final Coin ECONOMIC_FEE = Coin.valueOf(1000);

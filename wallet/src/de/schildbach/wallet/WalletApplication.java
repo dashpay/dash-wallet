@@ -45,6 +45,7 @@ import android.webkit.CookieManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.hilt.work.HiltWorkerFactory;
@@ -56,7 +57,6 @@ import androidx.work.WorkManager;
 import androidx.work.WorkRequest;
 
 import com.google.common.base.Stopwatch;
-import com.jakewharton.processphoenix.ProcessPhoenix;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
@@ -79,9 +79,11 @@ import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
-import org.dash.wallet.common.transactions.TransactionFilter;
+import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
+import org.dash.wallet.common.services.TransactionMetadataProvider;
+import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
@@ -116,17 +118,19 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import dagger.hilt.android.HiltAndroidApp;
-import de.schildbach.wallet.data.BlockchainState;
+import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.security.SecurityGuard;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
 import de.schildbach.wallet.transactions.TransactionWrapperHelper;
+import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.transactions.WalletTransactionObserver;
 import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
+import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
@@ -177,6 +181,8 @@ public class WalletApplication extends BaseWalletApplication
     private AutoLogout autoLogout;
 
     @Inject
+    RestartService restartService;
+    @Inject
     HiltWorkerFactory workerFactory;
     @Inject
     protected AnalyticsService analyticsService;
@@ -218,12 +224,14 @@ public class WalletApplication extends BaseWalletApplication
             }
 
             @Override
-            protected void onStartedAny(boolean isTheFirstOne) {
-                super.onStartedAny(isTheFirstOne);
+            protected void onStartedAny(boolean isTheFirstOne, Activity activity) {
+                super.onStartedAny(isTheFirstOne, activity);
                 // force restart if the app was updated
+                // this ensures that v6.x or previous will go through the PIN upgrade process
                 if (!BuildConfig.DEBUG && myPackageReplaced) {
+                    log.info("restarting app due to upgrade");
                     myPackageReplaced = false;
-                    ProcessPhoenix.triggerRebirth(WalletApplication.this);
+                    restartService.performRestart(activity, true, true);
                 }
             }
 
@@ -382,6 +390,10 @@ public class WalletApplication extends BaseWalletApplication
 
         config.updateLastVersionCode(packageInfo.versionCode);
 
+        if (config.getTaxCategoryInstallTime() == 0) {
+            config.setTaxCategoryInstallTime(System.currentTimeMillis());
+        }
+
         afterLoadWallet();
 
         cleanupFiles();
@@ -391,6 +403,9 @@ public class WalletApplication extends BaseWalletApplication
         }
         initUphold();
         initPlatform();
+
+        CoinBaseClientConstants.CLIENT_ID= BuildConfig.COINBASE_CLIENT_ID;
+        CoinBaseClientConstants.CLIENT_SECRET = BuildConfig.COINBASE_CLIENT_SECRET;
     }
 
     private void initUphold() {
@@ -986,6 +1001,7 @@ public class WalletApplication extends BaseWalletApplication
                 PlatformRepo.getInstance().clearDatabase(true);
             }
         });
+
         // clear data on wallet reset
         transactionMetadataProvider.clear();
         // wallet must be null for the OnboardingActivity flow
@@ -1047,6 +1063,11 @@ public class WalletApplication extends BaseWalletApplication
         return wallet.currentReceiveAddress();
     }
 
+    @NotNull
+    public Coin getWalletBalance() {
+        return wallet.getBalance(Wallet.BalanceType.ESTIMATED);
+    }
+
     @NonNull
     @Override
     public Flow<Coin> observeBalance(@NonNull Wallet.BalanceType balanceType) {
@@ -1100,6 +1121,15 @@ public class WalletApplication extends BaseWalletApplication
         );
     }
 
+    @NonNull
+    @Override
+    public Flow<Transaction> observeMostRecentTransaction() {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+        return new WalletMostRecentTransactionsObserver(wallet).observe();
+    }
+
     // wallets from v5.17.5 and earlier do not have a BIP44 path
     public boolean isWalletUpgradedToBIP44() {
         return wallet != null && wallet.hasKeyChain(Constants.BIP44_PATH);
@@ -1123,7 +1153,7 @@ public class WalletApplication extends BaseWalletApplication
 
     @Override
     public void checkSendingConditions(
-            @NonNull Address address,
+            @Nullable Address address,
             @NonNull Coin amount
     ) throws LeftoverBalanceException {
         new CrowdNodeBalanceCondition().check(

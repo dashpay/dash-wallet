@@ -279,10 +279,8 @@
     <string name="preferences_show_disclaimer_title">Pokaż zastrzeżenia</string>
     <string name="preferences_show_disclaimer_summary">Czy naprawdę przeczytałeś notatki dotyczące bezpieczeństwa? Czy dokonałeś juz kopii zapasowej portfela w bezpieczne miejsce?</string>
     <string name="preferences_report_issue_title">Zgłoś problem</string>
-    <string name="preferences_initiate_reset_title">Zresetuj łańcuch bloków</string>
-    <string name="preferences_initiate_reset_summary">Zresetuj łańcuch bloków, transakcji i balans portfela. Może to zająć chwilę, dlatego też używaj tego tylko jeśli jesteś pewien.</string>
-    <string name="preferences_initiate_reset_dialog_message">Czy chciałbyś zresetować i odtworzyć łańcuch bloków?\n\nTo tymczasowo wyzeruje stan twojego portfela i usunie transakcje. Wszystko zostanie przywrócone po synchronizacji łańcucha bloków. Upewnij się, że masz niezawodne połączenie z internetem.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Resetuj</string>
+    <string name="preferences_initiate_reset_title">Przeskanuj blockchain ponownie</string>
+    <string name="preferences_initiate_reset_dialog_positive">Ponownie zeskanuj</string>
     <string name="preferences_extended_public_key_title">Pokaż xpub</string>
     <string name="preferences_extended_public_key_summary">Sprawdź rozszerzony klucz publiczny twojego portfela, tak aby mógł być zaimportowany do innych aplikacji i usług. Bądź ostrożny: ta operacja ujawni poufne dane twojego portfela.</string>
     <string name="bitmap_fragment_share">Udostępnij…</string>
@@ -384,9 +382,8 @@
     <string name="payment_protocol_insufficient_funds_error_message">Nie posiadasz wystarczających środków aby dokonać tej transakcji</string>
 
 
-
     <string name="select_a_service">Wybierz usługę</string>
     <string name="activity_buy_and_sell_dash_filter">Filtrowanie</string>
     <string name="clear_filter">Zresetuj Filtrowanie</string>
     <string name="select_currency">Wybierz Walutę</string>
-</resources>
+    </resources>

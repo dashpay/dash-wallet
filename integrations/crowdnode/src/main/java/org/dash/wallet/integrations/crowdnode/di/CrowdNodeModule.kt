@@ -38,12 +38,12 @@ import kotlin.time.ExperimentalTime
 abstract class CrowdNodeModule {
     companion object {
         @Provides
-        fun provideWebApi(
+        fun provideEndpoint(
             remoteDataSource: RemoteDataSource,
             walletDataProvider: WalletDataProvider
-        ): CrowdNodeWebApi {
+        ): CrowdNodeEndpoint {
             val baseUrl = CrowdNodeConstants.getCrowdNodeBaseUrl(walletDataProvider.networkParameters)
-            return remoteDataSource.buildApi(CrowdNodeWebApi::class.java, baseUrl)
+            return remoteDataSource.buildApi(CrowdNodeEndpoint::class.java, baseUrl)
         }
     }
 

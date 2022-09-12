@@ -37,20 +37,18 @@
 
                 <TextView
                     android:id="@+id/join_dashpay_title"
-                    style="@style/MontserratSemiBold"
+                    style="@style/Subtitle2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
                     android:text="@string/shortcut_action_join_dashpay"
-                    android:textColor="@android:color/black"
-                    android:textSize="14sp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
                     android:id="@+id/join_dashpay_subtitle"
-                    style="@style/MontserratRegular"
+                    style="@style/Overline.Secondary"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="26dp"
@@ -58,16 +56,15 @@
                     android:layout_marginEnd="26dp"
                     android:layout_marginBottom="22dp"
                     android:gravity="center"
+                    android:textAlignment="gravity"
                     android:text="@string/join_dashpay_more_subtitle"
-                    android:textColor="@color/dash_gray"
-                    android:textSize="12sp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/join_dashpay_title" />
 
                 <Button
                     android:id="@+id/join_dashpay_btn"
-                    style="@style/DashButton.Blue"
+                    style="@style/Button.Primary.Blue"
                     android:layout_width="110dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="30dp"
@@ -121,12 +118,10 @@
 
                     <TextView
                         android:id="@+id/username1"
-                        style="@style/MontserratSemiBold"
+                        style="@style/Headline5"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="20dp"
-                        android:textColor="@android:color/black"
-                        android:textSize="24sp"
                         app:layout_constraintEnd_toEndOf="@id/dashpayUserAvatar"
                         app:layout_constraintStart_toStartOf="@id/dashpayUserAvatar"
                         app:layout_constraintTop_toBottomOf="@id/dashpayUserAvatar"
@@ -134,28 +129,22 @@
 
                     <TextView
                         android:id="@+id/username2"
-                        style="@style/MontserratRegular"
+                        style="@style/Body1.Secondary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:textColor="@color/dash_gray"
-                        android:textSize="16sp"
                         app:layout_constraintEnd_toEndOf="@id/username1"
                         app:layout_constraintStart_toStartOf="@id/username1"
                         app:layout_constraintTop_toBottomOf="@id/username1"
                         tools:text="katierennie09" />
 
-                    <TextView
+                    <Button
                         android:id="@+id/edit_profile"
-                        style="@style/MontserratRegular"
+                        style="@style/Button.Tertiary.Large.Blue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="top|center_horizontal"
-                        android:background="?attr/selectableItemBackground"
-                        android:padding="8dp"
                         android:text="@string/edit_profile"
-                        android:textColor="@color/dash_blue"
-                        android:textSize="16sp"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="@id/username2"
                         app:layout_constraintStart_toStartOf="@id/username2"
@@ -198,14 +187,14 @@
 
                     <TextView
                         android:id="@+id/invite_title"
-                        style="@style/MontserratMedium.MenuRowTitle"
+                        style="@style/MenuRowTitle"
                         android:text="@string/menu_invite_title"
                         app:layout_constraintStart_toEndOf="@+id/invite_icon"
                         app:layout_constraintTop_toTopOf="@+id/invite_icon" />
 
                     <TextView
                         android:id="@+id/invite_subtitle"
-                        style="@style/MontserratRegular.MenuRowSubTitle"
+                        style="@style/MenuRowSubTitle"
                         android:text="@string/menu_invite_subtitle"
                         app:layout_constraintStart_toStartOf="@+id/invite_title"
                         app:layout_constraintTop_toBottomOf="@+id/invite_title" />
@@ -226,14 +215,14 @@
 
                     <TextView
                         android:id="@+id/buy_dash_title"
-                        style="@style/MontserratMedium.MenuRowTitle"
+                        style="@style/MenuRowTitle"
                         android:text="@string/menu_buy_and_sell_title"
                         app:layout_constraintStart_toEndOf="@+id/buy_dash_icon"
                         app:layout_constraintTop_toTopOf="@+id/buy_dash_icon" />
 
                     <TextView
                         android:id="@+id/buy_dash_subtitle"
-                        style="@style/MontserratRegular.MenuRowSubTitle"
+                        style="@style/MenuRowSubTitle"
                         android:text="@string/menu_buy_and_sell_subtitle"
                         app:layout_constraintStart_toStartOf="@+id/buy_dash_title"
                         app:layout_constraintTop_toBottomOf="@+id/buy_dash_title" />
@@ -255,14 +244,14 @@
 
                     <TextView
                         android:id="@+id/explore_title"
-                        style="@style/MontserratMedium.MenuRowTitle"
+                        style="@style/MenuRowTitle"
                         android:text="@string/menu_explore_title"
                         app:layout_constraintStart_toEndOf="@+id/explore_icon"
                         app:layout_constraintTop_toTopOf="@+id/explore_icon" />
 
                     <TextView
                         android:id="@+id/explore_subtitle"
-                        style="@style/MontserratRegular.MenuRowSubTitle"
+                        style="@style/MenuRowSubTitle"
                         android:text="@string/menu_explore_subtitle"
                         app:layout_constraintStart_toStartOf="@+id/explore_title"
                         app:layout_constraintTop_toBottomOf="@+id/explore_title" />
@@ -282,14 +271,14 @@
 
                     <TextView
                         android:id="@+id/security_title"
-                        style="@style/MontserratMedium.MenuRowTitle"
+                        style="@style/MenuRowTitle"
                         android:text="@string/menu_security_title"
                         app:layout_constraintStart_toEndOf="@+id/security_icon"
                         app:layout_constraintTop_toTopOf="@+id/security_icon" />
 
                     <TextView
                         android:id="@+id/security_subtitle"
-                        style="@style/MontserratRegular.MenuRowSubTitle"
+                        style="@style/MenuRowSubTitle"
                         android:text="@string/menu_security_subtitle"
                         app:layout_constraintStart_toStartOf="@+id/security_title"
                         app:layout_constraintTop_toBottomOf="@+id/security_title" />
@@ -310,14 +299,14 @@
 
                     <TextView
                         android:id="@+id/settings_title"
-                        style="@style/MontserratMedium.MenuRowTitle"
+                        style="@style/MenuRowTitle"
                         android:text="@string/menu_settings_title"
                         app:layout_constraintStart_toEndOf="@+id/setting_icon"
                         app:layout_constraintTop_toTopOf="@+id/setting_icon" />
 
                     <TextView
                         android:id="@+id/settings_subtitle"
-                        style="@style/MontserratRegular.MenuRowSubTitle"
+                        style="@style/MenuRowSubTitle"
                         android:text="@string/menu_settings_subtitle"
                         app:layout_constraintStart_toStartOf="@+id/settings_title"
                         app:layout_constraintTop_toBottomOf="@+id/settings_title" />
@@ -338,14 +327,14 @@
 
                     <TextView
                         android:id="@+id/tools_title"
-                        style="@style/MontserratMedium.MenuRowTitle"
+                        style="@style/MenuRowTitle"
                         android:text="@string/menu_tools_title"
                         app:layout_constraintStart_toEndOf="@+id/tools_icon"
                         app:layout_constraintTop_toTopOf="@+id/tools_icon" />
 
                     <TextView
                         android:id="@+id/tools_subtitle"
-                        style="@style/MontserratRegular.MenuRowSubTitle"
+                        style="@style/MenuRowSubTitle"
                         android:text="@string/menu_tools_subtitle"
                         app:layout_constraintStart_toStartOf="@+id/tools_title"
                         app:layout_constraintTop_toBottomOf="@+id/tools_title" />
@@ -366,14 +355,14 @@
 
                     <TextView
                         android:id="@+id/contact_support_title"
-                        style="@style/MontserratMedium.MenuRowTitle"
+                        style="@style/MenuRowTitle"
                         android:text="@string/menu_contact_support_title"
                         app:layout_constraintStart_toEndOf="@+id/contact_support_icon"
                         app:layout_constraintTop_toTopOf="@+id/contact_support_icon" />
 
                     <TextView
                         android:id="@+id/contact_support_subtitle"
-                        style="@style/MontserratRegular.MenuRowSubTitle"
+                        style="@style/MenuRowSubTitle"
                         android:text="@string/menu_contact_support_subtitle"
                         app:layout_constraintStart_toStartOf="@+id/contact_support_title"
                         app:layout_constraintTop_toBottomOf="@+id/contact_support_title" />

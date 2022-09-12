@@ -2,7 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    style="@style/DashButton.White"
+    style="@style/Button.Primary.Large.White"
     android:layout_width="match_parent"
     android:layout_height="70dp"
     android:layout_marginBottom="10dp"
@@ -82,14 +82,13 @@
 
         <TextView
             android:id="@+id/retry_icon"
-            style="@style/DashButton.Blue"
+            style="@style/Button.Primary.Blue"
             android:layout_width="wrap_content"
             android:layout_height="38dp"
             android:drawablePadding="8dp"
             android:gravity="center_vertical"
             android:padding="5dp"
             android:text="@string/processing_error_retry"
-            android:textColor="@color/dash_white"
             android:textSize="12sp"
             app:drawableStartCompat="@drawable/ic_retry" />
 

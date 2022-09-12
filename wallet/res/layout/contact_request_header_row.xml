@@ -9,14 +9,10 @@
 
     <TextView
         android:id="@+id/contact_request_header"
-        style="@style/MontserratSemiBold"
+        style="@style/Subtitle2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/montserrat_medium"
-        android:textSize="14sp"
         android:text="@string/contacts_contact_requests"
-        android:textColor="@color/black_text"
-        android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/center_guideline"
         app:layout_constraintBottom_toBottomOf="@+id/center_guideline"
@@ -24,10 +20,9 @@
 
     <Button
         android:id="@+id/view_all_contacts"
-        style="@style/NewMontserratButton.Secondary"
+        style="@style/Button.Tertiary.ExtraSmall"
         android:layout_width="wrap_content"
-        android:layout_height="17dp"
-        android:textSize="14sp"
+        android:layout_height="wrap_content"
         android:text="@string/contacts_contact_requests_view"
         app:layout_constraintTop_toTopOf="@+id/center_guideline"
         app:layout_constraintBottom_toBottomOf="@+id/center_guideline"

@@ -92,7 +92,7 @@ class PlatformPaymentConfirmDialog : OffsetDialogFragment() {
 
         confirm.setOnClickListener {
             dismiss()
-            sharedViewModel.clickConfirmButtonEvent.call(true)
+            sharedViewModel.clickConfirmButtonEvent.value = true
         }
     }
 

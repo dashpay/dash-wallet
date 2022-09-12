@@ -54,41 +54,52 @@ class ExploreSyncWorker @AssistedInject constructor(
 
         var localDataTimestamp = 0L
         var remoteDataTimestamp = 0L
+        var preloadedDbTimestamp = 0L
+
         try {
             syncStatus.setSyncProgress(0.0)
 
             val timeInMillis = measureTimeMillis {
-                if (exploreRepository.localTimestamp <= 0L) {
+                val updateFile = exploreRepository.getUpdateFile()
+                exploreRepository.preloadFromAssetsInto(updateFile)
+                preloadedDbTimestamp = exploreRepository.getTimestamp(updateFile)
+
+                log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")
+
+                if (exploreRepository.localTimestamp == 0L ||
+                    exploreRepository.localTimestamp < preloadedDbTimestamp
+                ) {
                     // force data preloading for fresh installs
+                    // and a newer preloaded DB
                     AppExploreDatabase.getAppDatabase(
                         appContext,
                         config,
                         exploreRepository
                     )
+                } else {
+                    localDataTimestamp = exploreRepository.localTimestamp
+                    log.info("local data timestamp: $localDataTimestamp (${Date(localDataTimestamp)})")
+
+                    remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
+                    log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
+
+                    if (localDataTimestamp >= remoteDataTimestamp) {
+                        log.info("explore db is up to date, nothing to sync")
+                        syncStatus.setSyncProgress(100.0)
+                        return@withContext Result.success()
+                    }
+                    syncStatus.setSyncProgress(10.0)
+
+                    exploreRepository.download()
+
+                    syncStatus.setSyncProgress(80.0)
+
+                    AppExploreDatabase.forceUpdate(
+                        appContext,
+                        config,
+                        exploreRepository
+                    )
                 }
-
-                localDataTimestamp = exploreRepository.localTimestamp
-                log.info("local data timestamp: $localDataTimestamp (${Date(localDataTimestamp)})")
-
-                remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
-                log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
-
-                if (localDataTimestamp >= remoteDataTimestamp) {
-                    log.info("explore db is up to date, nothing to sync")
-                    syncStatus.setSyncProgress(100.0)
-                    return@withContext Result.success()
-                }
-                syncStatus.setSyncProgress(10.0)
-
-                exploreRepository.download()
-
-                syncStatus.setSyncProgress(80.0)
-
-                AppExploreDatabase.forceUpdate(
-                    appContext,
-                    config,
-                    exploreRepository
-                )
             }
 
             log.info("sync explore db finished, took $timeInMillis ms")
@@ -100,7 +111,7 @@ class ExploreSyncWorker @AssistedInject constructor(
             syncStatus.setSyncError(ex)
             return@withContext Result.failure()
         } catch (ex: Exception) {
-            analytics.logError(ex, "syncing from $localDataTimestamp, $remoteDataTimestamp")
+            analytics.logError(ex, "local: $localDataTimestamp, preloaded: ${preloadedDbTimestamp}, remote: $remoteDataTimestamp")
             log.error("sync explore db crashed ${ex.message}", ex)
             syncStatus.setSyncError(ex)
             return@withContext Result.failure()

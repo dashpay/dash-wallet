@@ -66,20 +66,22 @@
 
     <TextView
         android:id="@+id/title"
-        style="@style/MontserratMedium.BodyTitle"
+        style="@style/Body1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:gravity="center_horizontal"
+        android:textAlignment="gravity"
         android:text="@string/restore_wallet_please_wait" />
 
     <TextView
         android:id="@+id/message"
-        style="@style/MontserratMedium.BodyText"
+        style="@style/Body2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:gravity="center_horizontal"
+        android:textAlignment="gravity"
         android:text="@string/restore_wallet_restoring" />
 
 </merge>

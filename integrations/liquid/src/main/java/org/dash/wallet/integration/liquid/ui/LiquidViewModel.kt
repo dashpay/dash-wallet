@@ -17,22 +17,28 @@
 
 package org.dash.wallet.integration.liquid.ui
 
-import android.app.Application
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
-import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.ui.ConnectivityViewModel
 import androidx.lifecycle.liveData
-import androidx.preference.PreferenceManager
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.livedata.NetworkStateInt
+import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.liquid.data.LiquidClient
+import javax.inject.Inject
 import kotlin.coroutines.suspendCoroutine
 
-class LiquidViewModel(application: Application) : ConnectivityViewModel(application) {
+@ExperimentalCoroutinesApi
+@HiltViewModel
+class LiquidViewModel @Inject constructor(
+    private val config: Configuration,
+    walletDataProvider: WalletDataProvider,
+    networkState: NetworkStateInt
+) : ConnectivityViewModel(networkState) {
 
-    private val prefs = PreferenceManager.getDefaultSharedPreferences(application)
-    private val walletDataProvider = application as WalletDataProvider
     val defaultCurrency = walletDataProvider.defaultCurrencyCode()
 
     private val triggerLiquidBalanceUpdate = MutableLiveData<Unit>()
@@ -41,10 +47,11 @@ class LiquidViewModel(application: Application) : ConnectivityViewModel(applicat
         triggerLiquidBalanceUpdate.value = Unit
     }
 
-    var lastLiquidBalance: String
-        get() = prefs.getString(Configuration.PREFS_KEY_LAST_LIQUID_BALANCE, "0.00")!!
-        set(value) = prefs.edit().putString(Configuration.PREFS_KEY_LAST_LIQUID_BALANCE, value)
-            .apply()
+    var lastLiquidBalance: String?
+        get() = config.lastLiquidBalance
+        set(value) {
+            config.lastLiquidBalance = value
+        }
 
     private val liquidClient = LiquidClient.getInstance()!!
 
@@ -62,7 +69,8 @@ class LiquidViewModel(application: Application) : ConnectivityViewModel(applicat
                         override fun onError(e: Exception?) {
                             continuation.resumeWith(Result.success(Resource.error(e!!)))
                         }
-                    })
+                    }
+                )
             }
             emit(result)
         }

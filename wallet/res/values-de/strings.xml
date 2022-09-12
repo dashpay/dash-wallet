@@ -280,10 +280,8 @@
     <string name="preferences_show_disclaimer_title">Disclaimer anzeigen</string>
     <string name="preferences_show_disclaimer_summary">Hast du die Sicherheitshinweise wirklich gelesen? Hast du wirklich ein Backup für deine Wallet, das du an einem sicheren Ort aufbewahrst?</string>
     <string name="preferences_report_issue_title">Problem melden</string>
-    <string name="preferences_initiate_reset_title">Blockchain zurücksetzen</string>
-    <string name="preferences_initiate_reset_summary">Blockchain, Transaktionen und Guthaben werden zurückgesetzt. Das erneute Einspielen wird einige Zeit in Anspruch nehmen. Setze diesen Vorgang bitte nur fort, wenn Du weist warum.</string>
-    <string name="preferences_initiate_reset_dialog_message">Möchtest Du die Blockchain zurücksetzen und neu einspielen? Dabei wird Dein Guthabensstand zeitweise ausgeblendet und Deine Transaktionen werden entfernt. Beides wird während des Vorgangs wieder erscheinen. Stelle bitte sicher, dass Du über eine zuverlässige Internetverbindung verfügst.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Zurücksetzen</string>
+    <string name="preferences_initiate_reset_title">Blockchain erneut scannen</string>
+    <string name="preferences_initiate_reset_dialog_positive">Erneut scannen</string>
     <string name="preferences_extended_public_key_title">Xpub anzeigen</string>
     <string name="preferences_extended_public_key_summary">Zeigt den Extended Public Key Ihrer Wallet an, sodass er in andere Apps oder Dienste importiert werden kann. Sei dabei jedoch bitte vorsichtig, da dies Deine finanzielle Situation gegenüber jener anderen App offenlegen könnte.</string>
     <string name="bitmap_fragment_share">Teilen…</string>
@@ -385,9 +383,8 @@
     <string name="payment_protocol_insufficient_funds_error_message">Dein Guthaben reicht nicht aus, um diese Transaktion zu tätigen</string>
 
 
-
     <string name="select_a_service">Dienst auswählen</string>
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
     <string name="clear_filter">Filter leeren</string>
     <string name="select_currency">Währung auswählen</string>
-</resources>
+    </resources>

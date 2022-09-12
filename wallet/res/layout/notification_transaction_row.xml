@@ -10,18 +10,17 @@
 
     <TextView
         android:id="@+id/transaction_row_primary_status"
-        style="@style/MontserratMedium"
+        style="@style/Body2.Medium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:paddingStart="10dp"
         android:paddingEnd="6dp"
         android:textColor="@color/primary_status"
-        android:textSize="14sp"
         tools:text="Receiving" />
 
     <TextView
         android:id="@+id/transaction_row_secondary_status"
-        style="@style/MontserratMedium.B.12"
+        style="@style/Overline.Medium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignBottom="@id/transaction_row_primary_status"
@@ -32,7 +31,7 @@
 
     <TextView
         android:id="@+id/transaction_row_time"
-        style="@style/MontserratRegular.MG.12"
+        style="@style/Overline.Tertiary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/transaction_row_primary_status"
@@ -44,7 +43,6 @@
         android:lines="1"
         android:paddingLeft="10dp"
         android:paddingRight="6dp"
-        android:textColor="@color/dash_gray"
         tools:text="August 30, 11:28 AM" />
 
     <LinearLayout
@@ -61,7 +59,7 @@
 
         <TextView
             android:id="@+id/transaction_amount_signal"
-            style="@style/MontserratMedium.MG"
+            style="@style/Body1.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="2dp"
@@ -81,10 +79,9 @@
 
         <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/transaction_row_value"
-            style="@style/MontserratMedium"
+            style="@style/Body2.Medium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="14sp"
             tools:text="4.3939" />
 
     </LinearLayout>
@@ -103,19 +100,17 @@
 
         <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/transaction_row_fiat"
-            style="@style/MontserratMedium.MG.12"
+            style="@style/Overline.Tertiary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/dash_gray"
             tools:text="350.98" />
 
         <TextView
             android:id="@+id/transaction_row_rate_not_available"
-            style="@style/MontserratMedium.MG.12"
+            style="@style/Overline.Tertiary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/transaction_row_rate_not_available"
-            android:textColor="@color/dash_gray"
             tools:text="Not available"
             tools:visibility="visible" />
 

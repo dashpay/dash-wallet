@@ -42,13 +42,11 @@
 
             <TextView
                 android:id="@+id/displayNameTxt"
-                style="@style/MontserratMedium"
+                style="@style/Body1.Medium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="17dp"
-                android:textColor="@color/black_text"
-                android:textSize="16sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -56,13 +54,11 @@
 
             <TextView
                 android:id="@+id/usernameTxt"
-                style="@style/MontserratMedium"
+                style="@style/Overline.Medium.Secondary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="2dp"
-                android:textColor="@color/dash_gray"
-                android:textSize="12sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/displayNameTxt"

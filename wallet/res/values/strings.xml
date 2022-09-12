@@ -279,10 +279,10 @@
     <string name="preferences_show_disclaimer_title">Show disclaimer</string>
     <string name="preferences_show_disclaimer_summary">Have you really read the safety notes? Did you already back up your wallet to a safe place?</string>
     <string name="preferences_report_issue_title">Report issue</string>
-    <string name="preferences_initiate_reset_title">Reset block chain</string>
-    <string name="preferences_initiate_reset_summary">Reset block chain, transactions and wallet balance. Replay will take a while, so only do this if you know why.</string>
-    <string name="preferences_initiate_reset_dialog_message">Would you like to reset and replay the block chain?\n\nThis will temporarily hide your wallet balance and remove transactions. Both will recover as block chain sync progresses. Make sure you\'ve got a reliable connection to the internet.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Reset</string>
+    <string name="preferences_initiate_reset_title">Rescan blockchain</string>
+    <string name="preferences_initiate_reset_summary">Rescan blockchain, transactions and wallet balance. Replay will take a while, so only do this if you know why.</string>
+    <string name="preferences_initiate_reset_dialog_message">Would you like to rescan the blockchain?\n\nThis will temporarily hide your wallet balance and remove transactions. Both will recover as the blockchain sync progresses. Make sure you\'ve got a reliable connection to the internet.</string>
+    <string name="preferences_initiate_reset_dialog_positive">Rescan</string>
     <string name="preferences_extended_public_key_title">Show xpub</string>
     <string name="preferences_extended_public_key_summary">View the extended public key of your wallet, so it can be imported into other apps and services. Be careful: doing so will disclose your monetary privacy to that app.</string>
     <string name="bitmap_fragment_share">Share…</string>
@@ -384,7 +384,7 @@
     <string name="payment_protocol_insufficient_funds_error_message">You do not have sufficient funds to complete this transaction</string>
 
 
-
+    <string name="select_a_service_to_buy_and_sell_dash"> Select a service to buy and sell Dash.</string>
     <string name="select_a_service">Select a Service</string>
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
     <string name="clear_filter">Clear Filter</string>

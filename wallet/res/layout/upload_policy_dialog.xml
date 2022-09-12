@@ -17,13 +17,11 @@
 
         <TextView
             android:id="@+id/title"
-            style="@style/MontserratSemiBold"
+            style="@style/Headline6"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
             android:text="@string/picture_upload_policy"
-            android:textColor="@android:color/black"
-            android:textSize="22sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -40,14 +38,12 @@
 
         <TextView
             android:id="@+id/policy_text_one"
-            style="@style/MontserratRegular"
+            style="@style/Body1.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="26dp"
             android:text="@string/imgur_policy_1"
-            android:textColor="@color/medium_gray"
-            android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@id/icon_1"
             app:layout_constraintTop_toTopOf="@id/icon_1" />
@@ -64,14 +60,12 @@
 
         <TextView
             android:id="@+id/policy_text_two"
-            style="@style/MontserratRegular"
+            style="@style/Body1.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="26dp"
             android:text="@string/imgur_policy_2"
-            android:textColor="@color/medium_gray"
-            android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@id/icon_2"
             app:layout_constraintTop_toTopOf="@id/icon_2" />
@@ -88,14 +82,12 @@
 
         <TextView
             android:id="@+id/policy_text_three"
-            style="@style/MontserratRegular"
+            style="@style/Body1.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="26dp"
             android:text="@string/imgur_policy_3"
-            android:textColor="@color/medium_gray"
-            android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@id/icon_2"
             app:layout_constraintTop_toTopOf="@id/icon_3" />
@@ -113,7 +105,7 @@
 
             <Button
                 android:id="@+id/agree_btn"
-                style="@style/DashButton.Blue"
+                style="@style/Button.Primary.Blue"
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="5dp"
@@ -121,7 +113,7 @@
 
             <Button
                 android:id="@+id/cancel_btn"
-                style="@style/DashButton.White.Outline"
+                style="@style/Button.Secondary.Blue"
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5dp"

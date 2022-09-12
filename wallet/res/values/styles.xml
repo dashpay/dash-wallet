@@ -30,7 +30,7 @@
         <item name="android:activityCloseExitAnimation">@anim/fade_out</item>
     </style>
 
-    <style name="VerifySeedTextView" parent="MontserratRegular">
+    <style name="VerifySeedTextView" parent="Body1.Blue">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginStart">14dp</item>
@@ -46,16 +46,13 @@
         <item name="android:paddingBottom">24dp</item>
         <item name="android:paddingStart">38dp</item>
         <item name="android:paddingEnd">38dp</item>
-        <item name="android:textColor">@color/colorPrimary</item>
-        <item name="android:textSize">17sp</item>
     </style>
 
-    <style name="VerifySeedWord" parent="MontserratRegular">
+    <style name="VerifySeedWord" parent="Body2.Blue">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_margin">@dimen/verify_seed_word_margin</item>
         <item name="android:gravity">center</item>
-        <item name="android:textColor">@color/colorPrimary</item>
         <item name="android:textSize">@dimen/verify_seed_word_text_size</item>
     </style>
 
@@ -76,7 +73,7 @@
         <item name="android:paddingBottom">14dp</item>
     </style>
 
-    <style name="VerifySeedWordButton" parent="NewMontserratButton.Primary">
+    <style name="VerifySeedWordButton" parent="Button.Primary.Large.Blue">
         <item name="android:background">@drawable/word_button_drawable</item>
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
@@ -103,56 +100,11 @@
         <item name="android:background">@drawable/selectable_round_corners_white</item>
     </style>
 
-    <style name="MontserratMedium.MenuRowTitle">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginStart">12dp</item>
-        <item name="android:layout_marginLeft">12dp</item>
-        <item name="android:textColor">@color/black_text</item>
-        <item name="android:textSize">15sp</item>
-    </style>
-
-    <style name="MontserratRegular.MenuRowTitle">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginStart">12dp</item>
-        <item name="android:layout_marginLeft">12dp</item>
-        <item name="android:textColor">@color/black_text</item>
-        <item name="android:textSize">15sp</item>
-    </style>
-
-    <style name="MontserratRegular.MenuRowSubTitle">
-        <item name="android:lines">1</item>
-        <item name="android:ellipsize">end</item>
-        <item name="android:layout_width">0dp</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">2dp</item>
-        <item name="android:layout_marginEnd">12dp</item>
-        <item name="layout_constraintEnd_toEndOf">parent</item>
-        <item name="android:textColor">@color/dash_gray</item>
-        <item name="android:textSize">12sp</item>
-    </style>
-
     <style name="MenuRowIcon">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">36dp</item>
         <item name="android:layout_marginStart">20dp</item>
         <item name="android:layout_marginLeft">20dp</item>
-    </style>
-
-    <style name="MontserratMedium.MenuRowTitle.Internal">
-        <item name="android:layout_marginStart">20dp</item>
-        <item name="android:layout_marginEnd">20dp</item>
-        <item name="android:layout_width">0dp</item>
-        <item name="android:maxLines">2</item>
-        <item name="android:textSize">16sp</item>
-    </style>
-
-    <style name="MontserratRegular.MenuRowTitle.Internal">
-        <item name="android:layout_marginStart">20dp</item>
-        <item name="android:textSize">16sp</item>
-        <item name="android:maxLines">2</item>
-        <item name="android:ellipsize">end</item>
     </style>
 
     <style name="MenuRowArrow">
@@ -223,10 +175,30 @@
         <item name="cornerRadius">8dp</item>
     </style>
 
+    <style name="My.Widget.ActionButton" parent="@android:style/Widget.Holo.ActionButton">
+        <item name="android:minHeight">?android:attr/actionBarSize</item>
+        <item name="android:minWidth">48dp</item>
+        <item name="android:drawablePadding">4dp</item>
+    </style>
+
+    <style name="ListSeparator">
+        <item name="android:alpha">0.25</item>
+        <item name="android:background">@color/gray</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+    </style>
+
+    <style name="ProgressBar.Horizontal" parent="Base.Widget.AppCompat.ProgressBar.Horizontal">
+        <item name="android:progressDrawable">@drawable/progress_horizontal</item>
+        <item name="android:minHeight">6dp</item>
+        <item name="android:maxHeight">6dp</item>
+        <item name="android:padding">0dp</item>
+    </style>
+
     <style name="TransactionRowBackground">
         <item name="backgroundColor">@color/background_secondary</item>
         <item name="strokeColor">@color/background_secondary</item>
         <item name="rippleColor">@color/button_ripple_color</item>
-        <item name="cornerRadius">10dp</item>
+        <item name="cornerRadius">12dp</item>
     </style>
 </resources>

@@ -179,6 +179,8 @@
     <string name="notification_transactions_channel_description">들어오는 거래에 대한 알람 수신</string>
     <string name="notification_synchronization_channel_name">동기화</string>
     <string name="notification_synchronization_channel_description">어플이 네트워크와 동기화될 때 알람을 보여줍니다.</string>
+    <string name="notification_generic_channel_name">일반 알림</string>
+    <string name="notification_generic_channel_description">다른 대시 지갑 이벤트</string>
     <string name="notification_push_channel_name">알림 설정</string>
     <string name="notification_push_channel_description">대시가 보낸 푸시 알림을 보여줍니다</string>
     <string name="notification_settings_title">알림</string>
@@ -230,6 +232,14 @@
     <string name="view_seed_done">완료</string>
     <string name="view_seed_title">복원 문구</string>
     <string name="transaction_result_view_on_explorer">블록 탐색기에서 보기</string>
+    <string name="transaction_result_tax_category">세금 카테고리</string>
+    <string name="transaction_result_tax_category_loading">로딩중...</string>
+    <string-array name="transaction_result_tax_categories">
+        <item>수입</item>
+        <item>비용</item>
+        <item>송금 받기</item>
+        <item>송금하기</item>
+    </string-array>
     <string name="transaction_result_paid_successfully">성공적으로 전송되었습니다</string>
     <string name="transaction_result_sent_to">다음에 전송하였습니다</string>
     <string name="transaction_date_and_time">날짜</string>
@@ -241,6 +251,7 @@
     <string name="transaction_details_received_at">다음에서 수신하였습니다</string>
     <string name="transaction_details_moved_from">다음에서 이동</string>
     <string name="transaction_details_moved_internally_to">다음에 내부적으로 이동</string>
+    <string name="transaction_failed_details">거래에 실패하였습니다</string>
 
     <string name="authenticate_fingerprint_title">인증하기</string>
     <string name="authenticate_fingerprint_message">계속하시려면 지문을 확인하세요</string>
@@ -351,7 +362,7 @@
 
     <string name="syncing">동기화 중</string>
     <string name="syncing_balance">잔고 동기화 중</string>
-
+    <string name="transaction_count">%d 거래</string>
     <string name="all_transactions">모두</string>
     <string name="received_transactions">받음</string>
     <string name="sent_transactions">전송 완료</string>
@@ -361,6 +372,23 @@
     <string name="wallet_encryption_error_message">지갑 생성에 오류가 발생했습니다. 지원 데스크에 보고해주십시오.</string>
     <string name="wallet_not_encrypted_error_message">지갑에 문제가 발생했습니다.\n\n이 지갑에 대시가 없다면 이 어플을 지우고 다시 설치한 후 새로운 지갑을 생성하세요.\n\n복구 문구나 백업 파일이 있다면, 이 어플을 지우고 다시 설치하십시오.\n\n이에 해당되지 않는 경우 지원 데스크에 보고해주십시오.</string>
 
+    <string name="reset_wallet_title">이 지갑을 정말 리셋하시겠습니까?</string>
+    <string name="reset_wallet_message">지갑이 리셋되게 되면, 복구 문구를 통해서 지갑을 복구하여야만 접근할 수 있습니다.</string>
+    <string name="positive_reset_text">네, 지갑을 리셋합니다</string>
+    <string name="launch_reset_wallet_title">잔고가 남아있습니다</string>
+    <string name="launch_reset_wallet_message">복구 문구를 통해 지갑을 백업하지 않은 경우, 리셋 시 모든 잔고를 잃게 됩니다.</string>
     <string name="continue_reset">계속</string>
+    <string name="launch_reset_wallet_extra_message">당신의 복구 문구를 백업하세요</string>
+    <string name="start_reset_wallet_title">%s을/를 잃을 수 있습니다.</string>
     <string name="reset_wallet_text">지갑 리셋하기</string>
+    <string name="reclassify_transactions_title">당신의 거래를 재분류하십시오</string>
+    <string name="reclassify_transactions_title_message">이 분류는 세금 신고 서비스에 사용될 CSV 추출 내에 반영됩니다.</string>
+    <string name="reclassify_transactions_question">세금 카테고리는 어디에서 변경할 수 있나요?</string>
+    <string name="reclassify_transactions_outgoing_title">나가는 거래</string>
+    <string name="reclassify_transactions_by_default_message">기본값으로써 다음과 같이 표시됩니다</string>
+    <string name="reclassify_transactions_incoming_title">들어오는 거래</string>
+    <string name="reclassify_transactions_change_it_message">다음으로 변경할 수 있습니다</string>
+    <string name="reclassify_transactions_linked_accounts_title">연결된 계정</string>
+    <string name="reclassify_transactions_linked_accounts_message">귀하의 연결된 계정 (거래소, 스테이킹 외 기타) 으로 받거나 보내는 모든 거래는 기본값으로써 송금으로 표시됩니다.</string>
+    <string name="reclassify_transactions_change_explanation">홈페이지에서 거래를 선택하여 거래 세부 내역 페이지의 카테고리를 변경하세요.</string>
 </resources>

@@ -33,22 +33,18 @@
 
         <TextView
             android:id="@+id/display_name"
-            style="@style/MontserratRegular"
+            style="@style/Body2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="2"
-            android:textColor="@android:color/black"
-            android:textSize="14sp"
             tools:text="John Doe" />
 
         <TextView
             android:id="@+id/date"
-            style="@style/MontserratRegular"
+            style="@style/Overline.Secondary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/gray"
-            android:textSize="12sp"
             tools:text="johndoe_01" />
 
     </LinearLayout>
@@ -64,20 +60,18 @@
 
         <Button
             android:id="@+id/accept_contact_request"
-            style="@style/DashButton.Blue"
+            style="@style/Button.Primary.Small.Blue"
+            android:paddingHorizontal="0dp"
             android:layout_width="67dp"
             android:layout_height="30dp"
             android:layout_gravity="center_vertical"
             android:layout_weight="1"
-            android:fontFamily="@font/montserrat_medium"
             android:text="@string/contact_request_accept"
-            android:textAllCaps="false"
-            android:textColor="@color/white"
-            android:textSize="12sp" />
+            android:textAllCaps="false" />
 
         <ImageButton
             android:id="@+id/ignore_contact_request"
-            style="@style/DashButton.Gray"
+            style="@style/Button.Primary.Small.Round"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_gravity="center_vertical"

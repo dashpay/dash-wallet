@@ -19,7 +19,7 @@
 
         <Button
             android:id="@+id/skip_button"
-            style="@style/DashButton.Transparent"
+            style="@style/Button.Tertiary.Large.White"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/skip"
@@ -27,7 +27,7 @@
 
         <Button
             android:id="@+id/get_started_button"
-            style="@style/DashButton.Blue"
+            style="@style/Button.Primary.Large.Blue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingStart="8dp"
@@ -36,7 +36,7 @@
             android:paddingRight="8dp"
             android:text="@string/get_started"
             android:textSize="@dimen/welcome_screen_skip_size"
-            android:visibility="gone" />
+            android:visibility="gone"/>
 
     </FrameLayout>
 
