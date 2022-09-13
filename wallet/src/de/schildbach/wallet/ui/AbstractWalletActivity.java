@@ -37,7 +37,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractWalletActivity extends GlobalFooterActivity implements AbstractPINDialogFragment.WalletProvider {
+public abstract class AbstractWalletActivity extends LockScreenActivity implements AbstractPINDialogFragment.WalletProvider {
 
     private WalletApplication application;
 

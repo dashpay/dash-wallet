@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.about
+package de.schildbach.wallet.ui.more
 
 import androidx.core.os.bundleOf
 import androidx.lifecycle.LiveData

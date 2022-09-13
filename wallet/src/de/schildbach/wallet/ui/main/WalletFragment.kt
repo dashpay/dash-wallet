@@ -29,6 +29,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
+import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
@@ -61,7 +62,6 @@ import javax.inject.Inject
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
 class WalletFragment : Fragment(R.layout.home_content) {
-
     companion object {
         private val log = LoggerFactory.getLogger(WalletFragment::class.java)
     }
@@ -83,6 +83,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        reenterTransition = MaterialFadeThrough()
         initShortcutActions()
 
         val params = binding.appBar.layoutParams as CoordinatorLayout.LayoutParams

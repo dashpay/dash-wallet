@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.about
+package de.schildbach.wallet.ui.more
 
 import android.content.*
 import android.content.Intent.ACTION_VIEW
@@ -35,7 +35,6 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_about.*
 import org.bitcoinj.core.VersionMessage
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import java.lang.Exception
 
 @AndroidEntryPoint
 class AboutActivity : BaseMenuActivity() {

@@ -34,7 +34,12 @@ import android.telephony.TelephonyManager;
 
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavController;
+import androidx.navigation.Navigation;
+import androidx.navigation.fragment.NavHostFragment;
+import androidx.navigation.ui.NavigationUI;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
 
@@ -47,6 +52,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import java.io.IOException;
 import java.util.Currency;
 import java.util.Locale;
+import java.util.Objects;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
@@ -111,9 +117,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
         wallet = application.getWallet();
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
-        setContentViewWithFooter(R.layout.home_activity);
+        setContentView(R.layout.activity_main);
+        setupBottomNavigation();
         setSupportActionBar(findViewById(R.id.toolbar));
-        activateHomeButton();
 
         if (savedInstanceState == null) {
             checkAlerts();
@@ -147,6 +153,14 @@ public final class WalletActivity extends AbstractBindServiceActivity
         checkWalletEncryptionDialog();
         detectUserCountry();
         showBackupWalletDialogIfNeeded();
+    }
+
+    private void setupBottomNavigation() {
+        BottomNavigationView navView = findViewById(R.id.bottom_navigation);
+        navView.setItemIconTintList(null);
+        NavHostFragment navHostFragment = (NavHostFragment)getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment);
+        NavController navController = Objects.requireNonNull(navHostFragment).getNavController();
+        NavigationUI.setupWithNavController(navView, navController);
     }
 
     private void showBackupWalletDialogIfNeeded() {
@@ -649,7 +663,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void explainPushNotifications() {
         AdaptiveDialog dialog = AdaptiveDialog.create(
-                null,
+                R.drawable.ic_info_blue,
                 getString(R.string.notification_explainer_title),
                 getString(R.string.notification_explainer_message),
                 "",

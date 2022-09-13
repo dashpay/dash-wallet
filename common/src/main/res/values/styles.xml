@@ -4,7 +4,7 @@
 <!--    <style name="My.Theme" parent="Theme.AppCompat.DayNight"> &lt;!&ndash; Change to this and uncomment night mode colors to test the night mode &ndash;&gt;-->
     <style name="My.Theme" parent="Theme.AppCompat.Light.DarkActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorPrimaryDark">@color/dash_deep_blue</item>
         <item name="colorAccent">@color/colorAccent</item>
         <item name="actionMenuTextColor">@color/fg_network</item>
         <item name="android:textViewStyle">@style/TextViewStyle</item>

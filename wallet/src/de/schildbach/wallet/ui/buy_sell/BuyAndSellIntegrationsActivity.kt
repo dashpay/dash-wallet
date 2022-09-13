@@ -303,21 +303,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
         )
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.wallet_buy_and_sell, menu)
-        return super.onCreateOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressed()
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
     // TODO: can this be refactored into the uphold module>?
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

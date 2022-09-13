@@ -24,7 +24,7 @@ import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.rates.ExchangeRatesFragment.*
-import de.schildbach.wallet.ui.about.AboutActivity
+import de.schildbach.wallet.ui.more.AboutActivity
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.rates.ExchangeRatesActivity
 import de.schildbach.wallet_test.R
