@@ -56,6 +56,8 @@
     <string name="transfer_failed_msg">O Dash foi depositado com sucesso na sua conta Coinbase. Mas houve um problema ao transferi-lo para a Carteira Dash neste dispositivo.</string>
     <string name="purchase_failed_msg">Algo deu errado</string>
     <string name="it_could_take_up_to_2_3_minutes">Pode levar de 2 a 3 minutos para que o Dash seja transferido para sua Carteira Dash neste dispositivo.</string>
+    <string name="it_could_take_up_to_5_minutes">Pode levar até 5 minutos para converter %s da conta Coinbase para o Dash em sua Carteira Dash neste dispositivo.</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">“Pode levar até 5 minutos para converter o DASH da Dash Wallet neste dispositivo para %s na sua conta Coinbase.</string>
     <string name="contact_coinbase_support">Contato com o Suporte Coinbase</string>
     <string name="fees_in_crypto_purchase">Taxas em compras de criptomoedas</string>
     <string name="coinbase_fee_info_msg_content">Além da taxa Coinbase exibida, nós incluímos um spread no preço. Os mercados de criptomoedas são voláteis e isso nos permite bloquear temporariamente um preço para a execução da negociação.</string>
@@ -108,6 +110,7 @@
     <string name="transaction_row_rate_not_available">Não disponível</string>
     <string name="transfer_dash_successful">Transferência bem-sucedida</string>
     <string name="it_could_take_up_to_10_minutes">Pode levar até 10 minutos para transferir o Dash da Coinbase para a Carteira Dash deste dispositivo.</string>
+    <string name="it_could_take_up_to_10_minutes_to_coinbase">Pode levar até 10 minutos para transferir o Dash da Dash Wallet neste dispositivo para sua conta Coinbase.</string>
     <string name="transfer_dash_failed_msg">Ocorreu um problema ao transferir para a Carteira Dash neste dispositivo.</string>
     <string name="insufficient_money_to_transfer">A quantidade de moedas na carteira é muito pequena para transferir.</string>
     <string name="amount_to_transfer">Você receberá %s %s %s</string>

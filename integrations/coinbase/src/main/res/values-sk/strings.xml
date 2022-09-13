@@ -56,6 +56,8 @@
     <string name="transfer_failed_msg">Dash bol úspešne vložený na váš účet Coinbase. Pri prenose do Dash peňaženky v tomto zariadení sa však vyskytol problém.</string>
     <string name="purchase_failed_msg">Niečo sa pokazilo</string>
     <string name="it_could_take_up_to_2_3_minutes">Prenos Dash do vašej peňaženky na tomto zariadení môže trvať 2 až 3 minúty.</string>
+    <string name="it_could_take_up_to_5_minutes">Prevod %s z Coinbase účtu na Dash vo vašej Dash peňaženke na tomto zariadení,  môže trvať až 5 minút.</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">Prevod %s na váš Coinbase účet z Dash vo vašej Dash peňaženke na tomto zariadení môže trvať až 5 minút.</string>
     <string name="contact_coinbase_support">Kontaktujte podporu Coinbase</string>
     <string name="fees_in_crypto_purchase">Poplatky pri nákupoch kryptomien</string>
     <string name="coinbase_fee_info_msg_content">Okrem zobrazeného poplatku za Coinbase  započítavame aj rozpätie v cene. Trhy s kryptomenami sú volatilné, čo nám umožňuje dočasne zablokovať cenu za realizáciu obchodu.</string>
@@ -108,6 +110,7 @@
     <string name="transaction_row_rate_not_available">Nie je k dispozícií</string>
     <string name="transfer_dash_successful">Prevod bol úspešný</string>
     <string name="it_could_take_up_to_10_minutes">Prenos Dash z Coinbase do Dash peňaženky tohto zariadenia môže trvať až 10 minút.</string>
+    <string name="it_could_take_up_to_10_minutes_to_coinbase">Prenos Dash z Dash peňaženky na tomto zariadení do vášho účtu Coinbase môže trvať až 10 minút.</string>
     <string name="transfer_dash_failed_msg"> Pri prenose do Dash peňaženky na tomto zariadení sa vyskytol problém.</string>
     <string name="insufficient_money_to_transfer">Na prevod je množstvo mincí v peňaženke príliš malé.</string>
     <string name="amount_to_transfer">Dostanete %s %s%s</string>

@@ -261,6 +261,8 @@
 
     <string name="menu_buy_and_sell_title">ซื้อ &amp; ขาย Dash</string>
     <string name="menu_buy_and_sell_subtitle">เชื่อมต่อกับการแลกเปลี่ยนบุคคลที่สาม</string>
+    <string name="liquid_unavailable">ไม่มีการรวม Liquid กับกระเป๋าเงิน Dash อีกต่อไป</string>
+    <string name="liquid_unavailable_details">หากคุณมีคำถามใด ๆ เกี่ยวกับการถือครอง Dash ของคุณที่ Liquid โปรดติดต่อฝ่ายสนับสนุน Liquid</string>
     <string name="menu_security_title">ความปลอดภัย</string>
     <string name="menu_security_subtitle">ดูวลี, กระเป๋าสตางค์สำรอง...</string>
     <string name="menu_settings_title">ตั้งค่า</string>
@@ -359,6 +361,9 @@
     <string name="import_image_no_private_key_copied">ไม่มีการคัดลอกคีย์ส่วนตัว</string>
     <string name="import_image_import_valid_private_key">คัดลอกคีย์ส่วนตัวที่ถูกต้องเพื่อนำเข้า Dash</string>
     <string name="import_image_invalid_private">คีย์ส่วนตัวไม่ถูกต้อง</string>
+
+    <string name="today">วันนี้</string>
+    <string name="yesterday">เมื่อวาน</string>
 
     <string name="syncing">กำลังซิงค์</string>
     <string name="syncing_balance">กำลังซิงค์ยอดคงเหลือ</string>
