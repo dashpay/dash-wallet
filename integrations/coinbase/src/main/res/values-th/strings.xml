@@ -56,6 +56,8 @@
     <string name="transfer_failed_msg">Dash ถูกฝากเข้าบัญชี Coinbase ของคุณเรียบร้อยแล้ว แต่มีปัญหาในการโอนไปยังกระเป๋าเงินสำหรับอุปกรณ์นี้</string>
     <string name="purchase_failed_msg">บางอย่างผิดพลาด</string>
     <string name="it_could_take_up_to_2_3_minutes">อาจใช้เวลานานถึง 2-3 นาทีเพื่อให้ Dash ถูกโอนไปยังกระเป๋าเงิน Dash ของคุณบนอุปกรณ์นี้</string>
+    <string name="it_could_take_up_to_5_minutes">อาจใช้เวลานานถึง 5 นาทีในการแปลง %s จากบัญชี Coinbase เป็น Dash ในกระเป๋าเงิน Dash ของคุณบนอุปกรณ์นี้..</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">อาจใช้เวลานานถึง 5 นาทีในการแปลง Dash จาก Dash Wallet บนอุปกรณ์นี้เป็น %s ในบัญชี Coinbase ของคุณ</string>
     <string name="contact_coinbase_support">ติดต่อฝ่ายสนับสนุน Coinbase</string>
     <string name="fees_in_crypto_purchase">ค่าธรรมเนียมในการซื้อคริปโต</string>
     <string name="coinbase_fee_info_msg_content">นอกเหนือจากค่าธรรมเนียม Coinbase ที่แสดงแล้วเรายังรวมถึงสเปรดในราคาตลาด คริปปโตมีความผันผวนและสิ่งนี้ช่วยให้เราสามารถล็อคไว้ชั่วคราวในราคาสำหรับการดำเนินการเทรด</string>
@@ -108,6 +110,7 @@
     <string name="transaction_row_rate_not_available">ไม่สามารถใช้ได้</string>
     <string name="transfer_dash_successful">โอนสำเร็จ</string>
     <string name="it_could_take_up_to_10_minutes">อาจใช้เวลานานถึง 10 นาทีในการโอน Dash จาก Coinbase ไปยังกระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
+    <string name="it_could_take_up_to_10_minutes_to_coinbase">อาจใช้เวลานานถึง 10 นาทีในการถ่ายโอน Dash จากกระเป๋าเงิน Dash บนอุปกรณ์นี้ไปยังบัญชี Coinbase ของคุณ</string>
     <string name="transfer_dash_failed_msg">มีปัญหาในการโอน Dash ไปยังกระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
     <string name="insufficient_money_to_transfer">จำนวนเหรียญในกระเป๋าเงินนั้นน้อยเกินในการโอน</string>
     <string name="amount_to_transfer">คุณจะได้รับ %s %s %s</string>

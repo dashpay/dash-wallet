@@ -56,6 +56,8 @@
     <string name="transfer_failed_msg">Ang Dash ay matagumpay na nadeposito sa iyong Coinbase account. Ngunit nagkaroon ng problema sa paglilipat nito sa Dash Wallet sa device na ito.</string>
     <string name="purchase_failed_msg">May maling nangyari</string>
     <string name="it_could_take_up_to_2_3_minutes">Maaaring tumagal nang hanggang 2-3 minuto bago mailipat ang Dash sa iyong Dash Wallet sa device na ito.</string>
+    <string name="it_could_take_up_to_5_minutes">Maaaring tumagal nang hanggang 5 minuto upang ma-convert %s mula sa Coinbase account patungo sa Dash sa iyong Dash Wallet sa device na ito..</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">“Maaaring tumagal nang hanggang 5 minuto upang ma-convert ang Dash mula sa Dash Wallet sa device na ito sa %s sa iyong Coinbase account.</string>
     <string name="contact_coinbase_support">Makipag-ugnayan sa Suporta sa Coinbase</string>
     <string name="fees_in_crypto_purchase">Mga bayarin sa mga pagbili ng crypto</string>
     <string name="coinbase_fee_info_msg_content">Bilang karagdagan sa ipinapakitang bayad sa Coinbase, nagsasama kami ng spread sa presyo. Ang mga merkado ng Cryptocurrency ay pabagu-bago, at nagbibigay-daan ito sa amin na pansamantalang i-lock ang isang presyo para sa pagpapatupad ng kalakalan.</string>
@@ -108,6 +110,7 @@
     <string name="transaction_row_rate_not_available">Hindi available</string>
     <string name="transfer_dash_successful">Matagumpay ang paglipat</string>
     <string name="it_could_take_up_to_10_minutes">Maaaring tumagal ng hanggang 10 minuto upang ilipat ang Dash mula sa Coinbase patungo sa Dash wallet ng device na ito.</string>
+    <string name="it_could_take_up_to_10_minutes_to_coinbase">Maaaring tumagal ng hanggang 10 minuto upang ilipat ang Dash mula sa Dash Wallet sa device na ito patungo sa iyong Coinbase account.</string>
     <string name="transfer_dash_failed_msg">Nagkaroon ng problema sa paglilipat nito sa Dash Wallet sa device na ito.</string>
     <string name="insufficient_money_to_transfer">Ang halaga ng mga barya sa wallet ay masyadong maliit upang ilipat.</string>
     <string name="amount_to_transfer">Matatanggap mo %s %s %s</string>

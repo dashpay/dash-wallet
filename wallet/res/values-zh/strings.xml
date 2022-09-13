@@ -280,6 +280,8 @@
     <string name="preferences_show_disclaimer_summary">您是否仔细阅读了安全须知? 并且已经妥善备份了您的钱包?</string>
     <string name="preferences_report_issue_title">报告问题</string>
     <string name="preferences_initiate_reset_title">重新扫描区块链</string>
+    <string name="preferences_initiate_reset_summary">重新扫描区块链, 交易和钱包余额. 这个过程需要一点时间, 所以只有在你知道原因的状况下才这样做.</string>
+    <string name="preferences_initiate_reset_dialog_message">你想重新扫描区块链吗?\n\n这将暂时隐藏您的钱包余额并删除交易. 随着区块链同步的进行, 它们都将恢复. 在进行前请确保您有可靠网络连接.</string>
     <string name="preferences_initiate_reset_dialog_positive">重新扫描</string>
     <string name="preferences_extended_public_key_title">显示xpub</string>
     <string name="preferences_extended_public_key_summary">浏览您钱包的公钥, 这样可以将其导入其他程序或服务中. 请注意: 如此做会对其他程序暴露您的财政隐私.</string>
@@ -382,8 +384,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">您没有足够的资金来完成此次交易</string>
 
 
+    <string name="select_a_service_to_buy_and_sell_dash">选择一项服务来买卖 Dash.</string>
     <string name="select_a_service">选择服务</string>
     <string name="activity_buy_and_sell_dash_filter">过滤</string>
     <string name="clear_filter">清除过滤</string>
     <string name="select_currency">选择货币</string>
-    </resources>
+    <string name="reason">理由</string>
+</resources>
