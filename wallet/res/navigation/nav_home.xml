@@ -29,13 +29,13 @@
 
     <fragment
         android:id="@+id/paymentsFragment"
-        android:name="de.schildbach.wallet.ui.payments.PaymentsPayFragment"
-        android:label="Favourites"
-        tools:layout="@layout/fragment_payments_pay" />
+        android:name="de.schildbach.wallet.ui.payments.PaymentsFragment"
+        android:label="Payments"
+        tools:layout="@layout/fragment_payments" />
 
     <fragment
         android:id="@+id/moreFragment"
         android:name="de.schildbach.wallet.ui.more.MoreFragment"
-        android:label="Albums"
+        android:label="More"
         tools:layout="@layout/fragment_more" />
 </navigation>

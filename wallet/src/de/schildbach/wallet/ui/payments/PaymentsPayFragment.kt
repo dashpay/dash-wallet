@@ -190,6 +190,7 @@ class PaymentsPayFragment : Fragment() {
                 }
             }
         }
+        // TODO NPE (scan to pay)
         pay_to_address.setActive(false)
         pay_to_address.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
     }

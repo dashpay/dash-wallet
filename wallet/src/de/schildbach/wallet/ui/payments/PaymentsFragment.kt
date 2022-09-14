@@ -17,19 +17,20 @@
 package de.schildbach.wallet.ui.payments
 
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
+import android.view.View
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.ActivityPaymentsBinding
+import de.schildbach.wallet_test.databinding.FragmentPaymentsBinding
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
+import org.dash.wallet.common.ui.viewBinding
 
 @AndroidEntryPoint
-class PaymentsActivity : LockScreenActivity() {
+class PaymentsFragment : Fragment(R.layout.fragment_payments) {
 
     companion object {
         private const val PREFS_RECENT_TAB = "recent_tab"
@@ -39,24 +40,21 @@ class PaymentsActivity : LockScreenActivity() {
         const val ACTIVE_TAB_PAY = 1
 
         @JvmStatic
-        fun createIntent(context: Context, activeTab: Int? = null): Intent {
-            val intent = Intent(context, PaymentsActivity::class.java)
+        fun newInstance(activeTab: Int? = null): PaymentsFragment {
+            val instance = PaymentsFragment()
 
             if (activeTab != null) {
-                intent.putExtra(EXTRA_ACTIVE_TAB, activeTab)
+                instance.arguments = bundleOf(EXTRA_ACTIVE_TAB to activeTab)
             }
 
-            return intent
+            return instance
         }
     }
 
-    private lateinit var binding: ActivityPaymentsBinding
+    private val binding by viewBinding(FragmentPaymentsBinding::bind)
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        binding = ActivityPaymentsBinding.inflate(layoutInflater)
-        binding.closeButton.setOnClickListener { finish() }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         binding.tabs.provideOptions(listOf(
             SegmentedOption(getString(R.string.payments_tab_receive_label), R.drawable.ic_arrow_down),
@@ -85,22 +83,21 @@ class PaymentsActivity : LockScreenActivity() {
                 super.onPageSelected(position)
                 binding.tabs.setSelectedIndex(position, true)
 
-                if (!intent.hasExtra(EXTRA_ACTIVE_TAB)) {
-                    val preferences = getPreferences(Context.MODE_PRIVATE)
+                if (arguments?.containsKey(EXTRA_ACTIVE_TAB) != true) {
+                    val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
                     preferences.edit().putInt(PREFS_RECENT_TAB, position).apply()
                 }
             }
         })
 
         activateTab()
-        setContentView(binding.root)
     }
 
     private fun activateTab() {
-        val activeTab = if (intent.hasExtra(EXTRA_ACTIVE_TAB)) {
-            intent.getIntExtra(EXTRA_ACTIVE_TAB, 0)
+        val activeTab = if (arguments?.containsKey(EXTRA_ACTIVE_TAB) == true) {
+            requireArguments().getInt(EXTRA_ACTIVE_TAB, 0)
         } else {
-            val preferences = getPreferences(Context.MODE_PRIVATE)
+            val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
             preferences.getInt(PREFS_RECENT_TAB, 0)
         }
 
@@ -108,4 +105,3 @@ class PaymentsActivity : LockScreenActivity() {
         binding.pager.setCurrentItem(activeTab, false)
     }
 }
-

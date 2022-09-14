@@ -36,7 +36,7 @@ import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.InputParser.StringInputParser
 import de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsActivity
 import de.schildbach.wallet.ui.explore.ExploreActivity
-import de.schildbach.wallet.ui.payments.PaymentsActivity
+import de.schildbach.wallet.ui.payments.PaymentsFragment
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
@@ -145,7 +145,8 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 }
                 binding.shortcutsPane.receiveButton -> {
                     viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE)
-                    startActivity(PaymentsActivity.createIntent(requireContext(), PaymentsActivity.ACTIVE_TAB_RECEIVE))
+                    // TODO
+//                    startActivity(PaymentsFragment.createIntent(requireContext(), PaymentsFragment.ACTIVE_TAB_RECEIVE))
                 }
                 binding.shortcutsPane.importPrivateKey -> {
                     SweepWalletActivity.start(requireContext(), true)
