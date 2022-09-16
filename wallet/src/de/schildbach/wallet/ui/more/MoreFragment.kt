@@ -21,6 +21,8 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
+import androidx.navigation.NavOptions
+import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
@@ -33,7 +35,6 @@ import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.viewBinding
-import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @FlowPreview
@@ -44,13 +45,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     @Inject lateinit var analytics: AnalyticsService
     @Inject lateinit var walletApplication: WalletApplication
 
-    companion object {
-        private val log = LoggerFactory.getLogger(MoreFragment::class.java)
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         enterTransition = MaterialFadeThrough()
+        reenterTransition = MaterialFadeThrough()
 
         binding.appBar.toolbar.title = getString(R.string.more_title)
 
@@ -58,7 +56,13 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             startBuyAndSellActivity()
         }
         binding.explore.setOnClickListener {
-//            (requireActivity() as WalletFragment.OnSelectPaymentTabListener).onSelectExploreTab() TODO Better way?
+            findNavController().navigate(
+                R.id.exploreFragment,
+                bundleOf(),
+                NavOptions.Builder()
+                    .setEnterAnim(R.anim.slide_in_bottom)
+                    .build()
+            )
         }
         binding.security.setOnClickListener {
             startActivity(Intent(requireContext(), SecurityActivity::class.java))

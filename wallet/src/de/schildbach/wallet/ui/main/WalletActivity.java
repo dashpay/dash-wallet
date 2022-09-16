@@ -34,12 +34,7 @@ import android.telephony.TelephonyManager;
 
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
-import androidx.navigation.fragment.NavHostFragment;
-import androidx.navigation.ui.NavigationUI;
 
-import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
 
@@ -52,7 +47,6 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import java.io.IOException;
 import java.util.Currency;
 import java.util.Locale;
-import java.util.Objects;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
@@ -118,7 +112,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
         setContentView(R.layout.activity_main);
-        setupBottomNavigation();
+        WalletActivityExt.INSTANCE.setupBottomNavigation(this);
         setSupportActionBar(findViewById(R.id.toolbar));
 
         if (savedInstanceState == null) {
@@ -153,14 +147,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         checkWalletEncryptionDialog();
         detectUserCountry();
         showBackupWalletDialogIfNeeded();
-    }
-
-    private void setupBottomNavigation() {
-        BottomNavigationView navView = findViewById(R.id.bottom_navigation);
-        navView.setItemIconTintList(null);
-        NavHostFragment navHostFragment = (NavHostFragment)getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment);
-        NavController navController = Objects.requireNonNull(navHostFragment).getNavController();
-        NavigationUI.setupWithNavController(navView, navController);
     }
 
     private void showBackupWalletDialogIfNeeded() {

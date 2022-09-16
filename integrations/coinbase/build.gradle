@@ -72,7 +72,7 @@ dependencies {
     kapt "androidx.hilt:hilt-compiler:1.0.0"
 
     // UI
-    implementation 'com.google.android.material:material:1.4.0'
+    implementation "com.google.android.material:material:$materialVersion"
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "io.coil-kt:coil:$coilVersion"

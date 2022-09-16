@@ -23,6 +23,7 @@ import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsBinding
@@ -34,9 +35,9 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
 
     companion object {
         private const val PREFS_RECENT_TAB = "recent_tab"
-        private const val EXTRA_ACTIVE_TAB = "extra_active_tab"
+        private const val EXTRA_ACTIVE_TAB = "active_tab"
 
-        const val ACTIVE_TAB_RECEIVE = 0
+        const val ACTIVE_TAB_RECEIVE = 0 // TODO: should be used
         const val ACTIVE_TAB_PAY = 1
 
         @JvmStatic
@@ -55,6 +56,7 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        enterTransition = MaterialFadeThrough()
 
         binding.tabs.provideOptions(listOf(
             SegmentedOption(getString(R.string.payments_tab_receive_label), R.drawable.ic_arrow_down),

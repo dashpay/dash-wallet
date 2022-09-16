@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,21 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui
+package de.schildbach.wallet.ui.explore
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.ui.main.MainViewModel
+import de.schildbach.wallet.ui.staking.StakingActivity
+import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentExploreBinding
+import org.dash.wallet.features.exploredash.ui.ExploreTopic
 import java.util.*
 
 @AndroidEntryPoint
@@ -37,13 +46,13 @@ import java.util.*
 @ExperimentalCoroutinesApi
 class ExploreFragment : Fragment(R.layout.fragment_explore) {
     private val binding by viewBinding(FragmentExploreBinding::bind)
-    private val viewModel: ExploreViewModel by activityViewModels()
+    private val viewModel: MainViewModel by activityViewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.titleBar.setNavigationOnClickListener {
-            requireActivity().finish()
+            findNavController().popBackStack()
         }
 
         binding.merchantsBtn.setOnClickListener {
@@ -58,15 +67,7 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
 
         binding.stakingBtn.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY)
-            viewModel.openStaking()
-        }
-
-        setAPY(0.0) // hide the APY
-        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) {
-            if (it == true) {
-                // update the APY when the blockchain is synced
-                viewModel.getStakingAPY()
-            }
+            handleStakingNavigation()
         }
 
         viewModel.stakingAPY.observe(viewLifecycleOwner) {
@@ -75,7 +76,27 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
 
         // load the last APY value
         viewModel.getLastStakingAPY()
-        viewModel.monitorBlockchainState()
+    }
+
+    private fun handleStakingNavigation() {
+        lifecycleScope.launch {
+            if (viewModel.isBlockchainSynced.value == true) {
+                startActivity(Intent(requireContext(), StakingActivity::class.java))
+            } else {
+                val openWebsite = AdaptiveDialog.create(
+                    null,
+                    getString(R.string.chain_syncing),
+                    getString(R.string.crowdnode_wait_for_sync),
+                    getString(R.string.button_close),
+                    getString(R.string.crowdnode_open_website)
+                ).showAsync(requireActivity())
+
+                if (openWebsite == true) {
+                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.crowdnode_website)))
+                    startActivity(browserIntent)
+                }
+            }
+        }
     }
 
     fun setAPY(apy: Double) {
