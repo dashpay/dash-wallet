@@ -24,4 +24,16 @@
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/tabs"
         app:layout_constraintBottom_toBottomOf="parent" />
+
+    <ImageButton
+        android:id="@+id/close_button"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginBottom="6dp"
+        android:src="@drawable/ic_payments_active"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/BottomActionButtonBackground"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

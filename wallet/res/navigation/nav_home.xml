@@ -39,10 +39,6 @@
         tools:layout="@layout/fragment_payments">
 
         <argument
-            android:name="ShowNavBar"
-            android:defaultValue="true" />
-
-        <argument
             android:name="active_tab"
             android:defaultValue="0"
             app:argType="integer"
