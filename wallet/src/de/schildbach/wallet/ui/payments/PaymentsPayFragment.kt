@@ -137,23 +137,27 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay) {
         object : InputParser.StringInputParser(input, true) {
 
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
-                if (fireAction) {
-                    SendCoinsInternalActivity.start(context, paymentIntent, true)
-                } else {
-                    manageStateOfPayToAddressButton(paymentIntent)
+                if (this@PaymentsPayFragment.isAdded) {
+                    if (fireAction) {
+                        SendCoinsInternalActivity.start(context, paymentIntent, true)
+                    } else {
+                        manageStateOfPayToAddressButton(paymentIntent)
+                    }
                 }
             }
 
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
-                if (fireAction) {
-                    AdaptiveDialog.create(
-                        R.drawable.ic_error,
-                        getString(errorDialogTitleResId),
-                        getString(messageResId, *messageArgs),
-                        getString(R.string.button_dismiss)
-                    ).show(requireActivity())
-                } else {
-                    manageStateOfPayToAddressButton(null)
+                if (this@PaymentsPayFragment.isAdded) {
+                    if (fireAction) {
+                        AdaptiveDialog.create(
+                            R.drawable.ic_error,
+                            getString(errorDialogTitleResId),
+                            getString(messageResId, *messageArgs),
+                            getString(R.string.button_dismiss)
+                        ).show(requireActivity())
+                    } else {
+                        manageStateOfPayToAddressButton(null)
+                    }
                 }
             }
 
