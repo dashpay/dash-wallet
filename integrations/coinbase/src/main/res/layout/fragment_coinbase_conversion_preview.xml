@@ -49,6 +49,7 @@
         android:layout_height="wrap_content"
         android:visibility="gone"
         tools:ignore="UselessLeaf" />
+        
     <TextView
         android:id="@+id/cancel_btn"
         style="@style/Subtitle2"

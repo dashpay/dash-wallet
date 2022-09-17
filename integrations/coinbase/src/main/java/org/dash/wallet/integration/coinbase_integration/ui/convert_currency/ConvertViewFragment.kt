@@ -70,6 +70,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
     var selectedCurrencyCodeExchangeRate: ExchangeRate? = null
     var currencyConversionOptionList: List<String> = emptyList()
     private var hasInternet: Boolean = true
+    
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
