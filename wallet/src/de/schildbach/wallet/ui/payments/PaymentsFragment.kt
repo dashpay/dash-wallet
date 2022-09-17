@@ -42,7 +42,7 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
 
     companion object {
         private const val PREFS_RECENT_TAB = "recent_tab"
-        private const val EXTRA_ACTIVE_TAB = "active_tab"
+        const val ARG_ACTIVE_TAB = "active_tab"
 
         const val ACTIVE_TAB_RECEIVE = 0
         const val ACTIVE_TAB_PAY = 1
@@ -52,7 +52,7 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
             val instance = PaymentsFragment()
 
             if (activeTab != null) {
-                instance.arguments = bundleOf(EXTRA_ACTIVE_TAB to activeTab)
+                instance.arguments = bundleOf(ARG_ACTIVE_TAB to activeTab)
             }
 
             return instance
@@ -103,7 +103,7 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
                 super.onPageSelected(position)
                 binding.tabs.setSelectedIndex(position, true)
 
-                if (arguments?.containsKey(EXTRA_ACTIVE_TAB) != true) {
+                if (arguments?.containsKey(ARG_ACTIVE_TAB) != true) {
                     val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
                     preferences.edit().putInt(PREFS_RECENT_TAB, position).apply()
                 }
@@ -114,8 +114,8 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
     }
 
     private fun activateTab() {
-        val activeTab = if (arguments?.containsKey(EXTRA_ACTIVE_TAB) == true) {
-            requireArguments().getInt(EXTRA_ACTIVE_TAB, ACTIVE_TAB_RECEIVE)
+        val activeTab = if (arguments?.containsKey(ARG_ACTIVE_TAB) == true) {
+            requireArguments().getInt(ARG_ACTIVE_TAB, ACTIVE_TAB_RECEIVE)
         } else {
             val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
             preferences.getInt(PREFS_RECENT_TAB, ACTIVE_TAB_RECEIVE)

@@ -472,15 +472,6 @@
 
       },
       {
-        "className": "de.schildbach.wallet.ui.widget.GlobalFooterView",
-        "recyclerViewChildPosition": -1,
-        "adapterViewChildPosition": -1,
-        "groupViewChildPosition": 0,
-        "resourceId": "hashengineering.darkcoin.wallet:id/global_footer_view",
-        "contentDescription": ""
-
-      },
-      {
         "className": "androidx.drawerlayout.widget.DrawerLayout",
         "recyclerViewChildPosition": -1,
         "adapterViewChildPosition": -1,
@@ -2374,15 +2365,6 @@
         "adapterViewChildPosition": -1,
         "groupViewChildPosition": 4,
         "resourceId": "hashengineering.darkcoin.wallet:id/home_button_view",
-        "contentDescription": ""
-
-      },
-      {
-        "className": "de.schildbach.wallet.ui.widget.GlobalFooterView",
-        "recyclerViewChildPosition": -1,
-        "adapterViewChildPosition": -1,
-        "groupViewChildPosition": 0,
-        "resourceId": "",
         "contentDescription": ""
 
       },

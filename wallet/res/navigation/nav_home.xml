@@ -40,9 +40,7 @@
 
         <argument
             android:name="active_tab"
-            android:defaultValue="0"
-            app:argType="integer"
-            app:nullable="false" />
+            app:argType="integer" />
 
         <deepLink app:uri="android-app://hashengineering.darkcoin.wallet/payments/{active_tab}"/>
     </fragment>
