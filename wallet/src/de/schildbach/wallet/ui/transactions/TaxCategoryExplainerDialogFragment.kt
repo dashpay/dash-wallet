@@ -83,10 +83,7 @@ class TaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
             }
             whereButton.setOnClickListener {
                 val dialog = ChangeTaxCategoryExplainerDialogFragment.newInstance(exampleTxId)
-                dialog.show(
-                    activity?.supportFragmentManager!!,
-                    "changeclassificationdialog"
-                )
+                dialog.show(requireActivity())
             }
         }
     }
