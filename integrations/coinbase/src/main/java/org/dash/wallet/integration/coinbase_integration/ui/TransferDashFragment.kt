@@ -96,10 +96,6 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             }
         }
 
-        parentFragmentManager.beginTransaction()
-            .replace(org.dash.wallet.common.R.id.network_status_container, NetworkUnavailableFragment.newInstance())
-            .commit()
-
         transferDashViewModel.observeLoadingState.observe(viewLifecycleOwner){
             setLoadingState(it)
         }
@@ -344,7 +340,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     }
 
     private fun setInternetAccessState(hasInternet: Boolean) {
-        binding.networkStatusContainer.isVisible = !hasInternet
+        binding.networkStatusContainer.root.isVisible = !hasInternet
         binding.transferView.isDeviceConnectedToInternet = hasInternet
         if (!binding.transferView.walletToCoinbase) {
             enterAmountToTransferViewModel.keyboardStateCallback.value = hasInternet

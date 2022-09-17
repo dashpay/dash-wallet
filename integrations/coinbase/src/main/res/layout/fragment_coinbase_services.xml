@@ -276,13 +276,13 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <FrameLayout
+    <include
         android:id="@+id/network_status_container"
-        app:layout_constraintTop_toBottomOf="@+id/convert_dash_btn"
-        app:layout_constraintBottom_toBottomOf="parent"
+        layout="@layout/network_unavailable_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        tools:ignore="UselessLeaf" />
+        app:layout_constraintTop_toBottomOf="@+id/convert_dash_btn"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <androidx.constraintlayout.widget.Group
         android:id="@+id/coinbase_services_group"

@@ -125,11 +125,11 @@
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
-    <FrameLayout
+    <include
         android:id="@+id/convert_view_network_status_container"
-        app:layout_constraintTop_toBottomOf="@+id/currency_options"
-        app:layout_constraintBottom_toBottomOf="parent"
+        layout="@layout/network_unavailable_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        tools:ignore="UselessLeaf" />
+        app:layout_constraintTop_toBottomOf="@+id/currency_options"
+        app:layout_constraintBottom_toBottomOf="parent"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

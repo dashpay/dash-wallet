@@ -106,14 +106,16 @@
                 android:visibility="gone"
                 tools:visibility="visible" />
 
-            <FrameLayout
+            <include
                 android:id="@+id/network_status_container"
-                app:layout_behavior="de.schildbach.wallet.ui.CollapsingImageBehavior"
+                layout="@layout/network_unavailable_view"
                 android:layout_width="match_parent"
+                android:layout_marginTop="50dp"
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:visibility="gone"
-                tools:ignore="UselessLeaf" />
+                app:layout_behavior="de.schildbach.wallet.ui.CollapsingImageBehavior"
+                tools:visibility="visible" />
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>

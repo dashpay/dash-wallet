@@ -45,7 +45,6 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integration.uphold.api.UpholdClient
 import org.dash.wallet.integration.uphold.data.UpholdConstants
@@ -106,10 +105,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
         loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
         initViewModel()
 
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
-            .commitNow()
-        binding.networkStatusContainer.isVisible = false
+        binding.networkStatusContainer.root.isVisible = false
 
         // check for missing keys from service.properties
         if (!UpholdConstants.hasValidCredentials()) {
@@ -271,12 +267,12 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
     }
 
     private fun setNetworkState(online: Boolean) {
-        if (online && binding.networkStatusContainer.isVisible) {
+        if (online && binding.networkStatusContainer.root.isVisible) {
             // Just got back online
             updateBalances()
         }
 
-        binding.networkStatusContainer.isVisible = !online
+        binding.networkStatusContainer.root.isVisible = !online
         setLoginStatus()
     }
 

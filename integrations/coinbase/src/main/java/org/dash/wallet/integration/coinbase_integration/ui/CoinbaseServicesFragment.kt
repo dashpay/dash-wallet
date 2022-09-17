@@ -36,7 +36,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
-import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -186,10 +185,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         viewModel.coinbaseLogOutCallback.observe(viewLifecycleOwner) {
             requireActivity().finish()
         }
-
-        parentFragmentManager.beginTransaction()
-            .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
-            .commit()
 
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ isConnected ->
             setNetworkState(isConnected)

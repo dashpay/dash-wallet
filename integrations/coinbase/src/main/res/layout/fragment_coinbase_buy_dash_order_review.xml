@@ -50,14 +50,14 @@
         android:layout_marginTop="15dp"
         app:layout_constraintTop_toBottomOf="@id/content_order_review" />
 
-    <FrameLayout
+    <include
         android:id="@+id/network_status_container"
-        app:layout_constraintTop_toBottomOf="@id/content_review_buy_order_dash_amount"
-        app:layout_constraintBottom_toBottomOf="parent"
+        layout="@layout/network_unavailable_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:visibility="gone"
-        tools:ignore="UselessLeaf" />
+        app:layout_constraintTop_toBottomOf="@id/content_review_buy_order_dash_amount"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <TextView
         android:id="@+id/cancel_btn"

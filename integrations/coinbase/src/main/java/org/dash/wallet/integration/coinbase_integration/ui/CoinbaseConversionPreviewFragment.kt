@@ -35,7 +35,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
-import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
@@ -204,14 +203,10 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                 )
             )
         }
-
-        parentFragmentManager.beginTransaction()
-            .replace(R.id.preview_network_status_container, NetworkUnavailableFragment.newInstance())
-            .commit()
     }
 
     private fun setNetworkState(hasInternet: Boolean) {
-        binding.previewNetworkStatusContainer.isVisible = !hasInternet
+        binding.previewNetworkStatusContainer.root.isVisible = !hasInternet
         binding.previewOfflineGroup.isVisible = hasInternet
     }
 

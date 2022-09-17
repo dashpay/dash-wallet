@@ -32,7 +32,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
-import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.getRoundedBackground
@@ -175,10 +174,6 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
             countDownTimer.start()
         }
 
-        parentFragmentManager.beginTransaction()
-            .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
-            .commit()
-
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
             setNetworkState(hasInternet)
         }
@@ -254,7 +249,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     }
 
     private fun setNetworkState(hasInternet: Boolean) {
-        binding.networkStatusContainer.isVisible = !hasInternet
+        binding.networkStatusContainer.root.isVisible = !hasInternet
         binding.previewOfflineGroup.isVisible = hasInternet
     }
 

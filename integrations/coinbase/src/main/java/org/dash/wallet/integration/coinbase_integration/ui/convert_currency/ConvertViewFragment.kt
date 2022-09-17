@@ -33,7 +33,6 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Constants
-import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -130,10 +129,6 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             setAmountValue(value, viewModel.enteredConvertAmount)
             viewModel.selectedPickerCurrencyCode = value
         }
-
-        parentFragmentManager.beginTransaction()
-            .replace(R.id.convert_view_network_status_container, NetworkUnavailableFragment.newInstance())
-            .commit()
     }
 
     private fun getMaxAmount(): String? {
@@ -476,7 +471,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             viewModel.selectedCryptoCurrencyAccount.value?.let {
                 binding.bottomCard.isVisible = hasInternet
             }
-            binding.convertViewNetworkStatusContainer.isVisible = !hasInternet
+            binding.convertViewNetworkStatusContainer.root.isVisible = !hasInternet
         }
     }
 }
