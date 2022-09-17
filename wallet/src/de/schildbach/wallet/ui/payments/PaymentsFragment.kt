@@ -20,7 +20,6 @@ import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.view.animation.AccelerateInterpolator
-import android.view.animation.DecelerateInterpolator
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -34,6 +33,7 @@ import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsBinding
+import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.common.ui.viewBinding
 
@@ -97,6 +97,7 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
         }
 
         binding.pager.adapter = adapter
+        viewLifecycleOwner.observeOnDestroy { binding.pager.adapter = null }
         binding.pager.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
