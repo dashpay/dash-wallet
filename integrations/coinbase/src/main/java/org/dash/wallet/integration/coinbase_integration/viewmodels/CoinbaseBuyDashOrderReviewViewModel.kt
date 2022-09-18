@@ -34,7 +34,6 @@ import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
-import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
 import java.util.*
 import javax.inject.Inject
 

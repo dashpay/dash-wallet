@@ -3,8 +3,7 @@ package org.dash.wallet.integration.coinbase_integration.model
 import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
 import kotlinx.parcelize.Parcelize
-import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
-import org.dash.wallet.integration.coinbase_integration.TRANSACTION_TYPE_SEND
+import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 
 @Parcelize
 data class BuyOrderResponse(
@@ -120,7 +119,7 @@ data class PlaceBuyOrderUIModel(
 
 data class CommitBuyOrderUIModel(
     val dashAmount: String? = "",
-    val dashCurrency: String = DASH_CURRENCY,
+    val dashCurrency: String = CoinbaseConstants.DASH_CURRENCY,
     val dashAddress: String? = "",
-    val transactionType: String = TRANSACTION_TYPE_SEND
+    val transactionType: String = CoinbaseConstants.TRANSACTION_TYPE_SEND
 )

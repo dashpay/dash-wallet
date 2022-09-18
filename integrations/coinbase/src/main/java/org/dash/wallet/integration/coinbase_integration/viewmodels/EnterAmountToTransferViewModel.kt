@@ -33,7 +33,7 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.integration.coinbase_integration.VALUE_ZERO
+import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseToDashExchangeRateUIModel
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -51,7 +51,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
 ) : ViewModel() {
 
     var coinbaseExchangeRate: CoinbaseToDashExchangeRateUIModel? = null
-    private var maxAmountInDashWalletFormatted: String = VALUE_ZERO
+    private var maxAmountInDashWalletFormatted: String = CoinbaseConstants.VALUE_ZERO
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
     val decimalSeparator =
@@ -60,7 +60,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
     var fiatAmount: Fiat? = null
     var fiatBalance: String = ""
-    var inputValue: String = VALUE_ZERO
+    var inputValue: String = CoinbaseConstants.VALUE_ZERO
     var isMaxAmountSelected: Boolean = false
     var formattedValue: String = ""
     val onContinueTransferEvent = SingleLiveEvent<Pair<Fiat, Coin>>()
@@ -135,7 +135,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
     }
 
     fun applyNewValue(value: String, monetaryCode: String): String {
-        inputValue = value.ifEmpty { VALUE_ZERO }
+        inputValue = value.ifEmpty { CoinbaseConstants.VALUE_ZERO }
         val isFraction = inputValue.indexOf(decimalSeparator) > -1
         val lengthOfDecimalPart = inputValue.length - inputValue.indexOf(decimalSeparator)
 
@@ -195,8 +195,8 @@ class EnterAmountToTransferViewModel @Inject constructor(
     private val maxAmountCoinbaseAccount: String
         get() {
             return coinbaseExchangeRate?.let {
-                it.coinBaseUserAccountData.balance?.amount ?: VALUE_ZERO
-            } ?: VALUE_ZERO
+                it.coinBaseUserAccountData.balance?.amount ?: CoinbaseConstants.VALUE_ZERO
+            } ?: CoinbaseConstants.VALUE_ZERO
         }
 
     private fun applyCoinbaseExchangeRate(amount: String): String {
@@ -204,7 +204,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
             val cleanedValue =
                 amount.toBigDecimal() / uiModel.currencyToDashExchangeRate.toBigDecimal()
             cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
-        } ?: VALUE_ZERO
+        } ?: CoinbaseConstants.VALUE_ZERO
     }
 
     fun applyExchangeRateToFiat(fiatValue: Fiat): Coin {
@@ -227,7 +227,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
             val cleanedValue = scaleValue(inputValue)
             val dashAmount = toCoin(cleanedValue)
 
-            return if (dashAmount.isZero) VALUE_ZERO.toBigDecimal()
+            return if (dashAmount.isZero) CoinbaseConstants.VALUE_ZERO.toBigDecimal()
                 .toPlainString() else cleanedValue
         }
 
@@ -270,7 +270,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
             _enteredConvertDashAmount.value = Pair(fiatAmt, dashAmt)
         } else {
             _enteredConvertDashAmount.value =
-                Pair(Fiat.parseFiat(localCurrencyCode, VALUE_ZERO), Coin.ZERO)
+                Pair(Fiat.parseFiat(localCurrencyCode, CoinbaseConstants.VALUE_ZERO), Coin.ZERO)
         }
     }
 

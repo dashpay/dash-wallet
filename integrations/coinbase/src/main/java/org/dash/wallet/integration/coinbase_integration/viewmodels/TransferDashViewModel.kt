@@ -31,9 +31,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
-import org.dash.wallet.integration.coinbase_integration.MIN_USD_COINBASE_AMOUNT
-import org.dash.wallet.integration.coinbase_integration.TRANSACTION_TYPE_SEND
+import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseToDashExchangeRateUIModel
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseTransactionParams
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams
@@ -151,7 +149,7 @@ class TransferDashViewModel @Inject constructor(
         }
 
     private fun calculateCoinbaseMinAllowedValue(account:CoinbaseToDashExchangeRateUIModel){
-        val minFaitValue = MIN_USD_COINBASE_AMOUNT.toBigDecimal() / account.currencyToUSDExchangeRate.toBigDecimal()
+        val minFaitValue = CoinbaseConstants.MIN_USD_COINBASE_AMOUNT.toBigDecimal() / account.currencyToUSDExchangeRate.toBigDecimal()
 
         val cleanedValue: BigDecimal =
             minFaitValue * account.currencyToDashExchangeRate.toBigDecimal()
@@ -291,10 +289,10 @@ class TransferDashViewModel @Inject constructor(
     fun reviewTransfer(dashValue: String) {
         val sendTransactionToWalletParams = SendTransactionToWalletParams(
             dashValue,
-            DASH_CURRENCY,
+            CoinbaseConstants.DASH_CURRENCY,
             UUID.randomUUID().toString(),
             walletDataProvider.freshReceiveAddress().toBase58(),
-            TRANSACTION_TYPE_SEND
+            CoinbaseConstants.TRANSACTION_TYPE_SEND
         )
 
         onBuildTransactionParamsCallback.value = CoinbaseTransactionParams(

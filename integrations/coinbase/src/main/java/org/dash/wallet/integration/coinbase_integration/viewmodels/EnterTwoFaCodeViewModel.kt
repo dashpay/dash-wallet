@@ -28,8 +28,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.integration.coinbase_integration.ERROR_ID_INVALID_REQUEST
-import org.dash.wallet.integration.coinbase_integration.ERROR_MSG_INVALID_REQUEST
+import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseErrorResponse
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
@@ -100,8 +99,8 @@ class EnterTwoFaCodeViewModel @Inject constructor(
                         if (result.errorCode == 400 || result.errorCode == 402 || result.errorCode == 429) {
                             error?.let { errorMsg ->
                                 val errorContent = CoinbaseErrorResponse.getErrorMessage(errorMsg)
-                                if (errorContent?.id.equals(ERROR_ID_INVALID_REQUEST, true)
-                                    && errorContent?.message?.contains(ERROR_MSG_INVALID_REQUEST) == true){
+                                if (errorContent?.id.equals(CoinbaseConstants.ERROR_ID_INVALID_REQUEST, true)
+                                    && errorContent?.message?.contains(CoinbaseConstants.ERROR_MSG_INVALID_REQUEST) == true){
                                     twoFaErrorState.call()
                                 } else {
                                     _transactionState.value = TransactionState(false, errorContent?.message)

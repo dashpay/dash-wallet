@@ -44,12 +44,10 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
+import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.R
-import org.dash.wallet.integration.coinbase_integration.VALUE_ZERO
 import org.dash.wallet.integration.coinbase_integration.databinding.TransferDashFragmentBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
-import org.dash.wallet.integration.coinbase_integration.model.getCoinBaseExchangeRateConversion
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseServiceWallet
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapValueErrorType
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
@@ -191,9 +189,9 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
             val fiatVal = it.coinBaseUserAccountData.balance?.amount?.let { amount ->
                 enterAmountToTransferViewModel.getCoinbaseBalanceInFiatFormat(amount)
-            } ?: VALUE_ZERO
+            } ?: CoinbaseConstants.VALUE_ZERO
             binding.transferView.balanceOnCoinbase = BaseServiceWallet(
-                it.coinBaseUserAccountData.balance?.amount ?: VALUE_ZERO,
+                it.coinBaseUserAccountData.balance?.amount ?: CoinbaseConstants.VALUE_ZERO,
                 fiatVal)
         }
 
@@ -212,7 +210,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             val amountFiat = dashFormat.format(it.first).toString()
             val fiatSymbol = GenericUtils.currencySymbol(it.first.currencyCode)
 
-            val formatDashValue = "$dashInStr $DASH_CURRENCY"
+            val formatDashValue = "$dashInStr ${CoinbaseConstants.DASH_CURRENCY}"
 
             val formatFiatValue = if (GenericUtils.isCurrencyFirst(it.first)) {
                 "$fiatSymbol $amountFiat"
@@ -398,7 +396,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private fun setMaxAmountError() {
         val fiatVal =  transferDashViewModel.userAccountOnCoinbaseState.value?.coinBaseUserAccountData?.balance?.amount?.let { amount ->
             enterAmountToTransferViewModel.getCoinbaseBalanceInFiatFormat(amount)
-        } ?: VALUE_ZERO
+        } ?: CoinbaseConstants.VALUE_ZERO
         binding.dashWalletLimitBanner.text = "${getString(R.string.entered_amount_is_too_high)} $fiatVal"
     }
 
