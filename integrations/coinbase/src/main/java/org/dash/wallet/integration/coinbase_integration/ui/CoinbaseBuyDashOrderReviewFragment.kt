@@ -31,7 +31,6 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.getRoundedBackground
@@ -53,7 +52,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     private val viewModel by viewModels<CoinbaseBuyDashOrderReviewViewModel>()
     private val amountViewModel by activityViewModels<EnterAmountViewModel>()
     private lateinit var selectedPaymentMethodId: String
-    private var loadingDialog: FancyAlertDialog? = null
+    private var loadingDialog: AdaptiveDialog? = null
     private var isRetrying = false
     private var newBuyOrderId: String? = null
 
@@ -209,7 +208,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
         }
-        loadingDialog = FancyAlertDialog.newProgress(messageResId, 0)
+        loadingDialog = AdaptiveDialog.progress(getString(messageResId))
         loadingDialog?.show(parentFragmentManager, "progress")
     }
 

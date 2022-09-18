@@ -25,17 +25,12 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.FancyAlertDialog
-import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -52,7 +47,7 @@ import javax.inject.Inject
 class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     private val binding by viewBinding(FragmentCoinbaseServicesBinding::bind)
     private val viewModel by viewModels<CoinbaseServicesViewModel>()
-    private var loadingDialog: FancyAlertDialog? = null
+    private var loadingDialog: AdaptiveDialog? = null
     private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
     private val sharedViewModel: CoinbaseActivityViewModel by activityViewModels()
 
@@ -74,40 +69,30 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         }
 
         binding.buyDashBtn.setOnClickListener {
-           lifecycleScope.launch {
-                    sharedViewModel.paymentMethodsUiState.collect { uiState ->
-                        // New value received
-                        when (uiState) {
-                            is PaymentMethodsUiState.Success -> {
-                                uiState.paymentMethodsList.toTypedArray().let { paymentMethodsArray ->
-                                    CoinbaseServicesFragmentDirections.servicesToBuyDash(paymentMethodsArray)
-                                }.let { navDirection -> safeNavigate(navDirection) }
-                            }
-                            is PaymentMethodsUiState.Error -> {
-                                if (uiState.isError) {
-                                    AdaptiveDialog.create(
-                                        R.drawable.ic_info_red,
-                                        getString(R.string.coinbase_dash_wallet_no_payment_methods_error_title),
-                                        getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
-                                        getString(R.string.close),
-                                        getString(R.string.add_payment_method),
-                                    ).show(requireActivity()) { addMethod ->
-                                        if (addMethod == true) {
-                                            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ADD_PAYMENT_METHOD)
-                                            openCoinbaseWebsite()
-                                        }
-                                    }
-                                }
-                            }
-                            is PaymentMethodsUiState.LoadingState ->{
-                                if (uiState.isLoading) {
-                                    showProgress(R.string.loading)
-                                } else
-                                    dismissProgress()
-                            }
+            sharedViewModel.paymentMethodsUiState.observe(viewLifecycleOwner) { uiState ->
+                // New value received
+                when (uiState) {
+                    is PaymentMethodsUiState.Success -> {
+                        val paymentMethodsArray = uiState.paymentMethodsList.toTypedArray()
+
+                        if (paymentMethodsArray.isEmpty()) {
+                            showNoPaymentMethodsError()
+                        } else {
+                            safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(paymentMethodsArray))
                         }
                     }
-
+                    is PaymentMethodsUiState.Error -> {
+                        if (uiState.isError) {
+                            showNoPaymentMethodsError()
+                        }
+                    }
+                    is PaymentMethodsUiState.LoadingState ->{
+                        if (uiState.isLoading) {
+                            showProgress(R.string.loading)
+                        } else
+                            dismissProgress()
+                    }
+                }
             }
         }
 
@@ -202,7 +187,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
         }
-        loadingDialog = newProgress(messageResId, 0)
+        loadingDialog = AdaptiveDialog.progress(getString(messageResId))
         loadingDialog?.show(parentFragmentManager, "progress")
     }
 
@@ -229,6 +214,21 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         binding.titleBar.connected.setCompoundDrawablesWithIntrinsicBounds(if (hasInternet)
             org.dash.wallet.common.R.drawable.ic_connected else
                 org.dash.wallet.common.R.drawable.ic_disconnected, 0,0,0)
+    }
+
+    private fun showNoPaymentMethodsError() {
+        AdaptiveDialog.create(
+            R.drawable.ic_info_red,
+            getString(R.string.coinbase_dash_wallet_no_payment_methods_error_title),
+            getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
+            getString(R.string.close),
+            getString(R.string.add_payment_method),
+        ).show(requireActivity()) { addMethod ->
+            if (addMethod == true) {
+                viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ADD_PAYMENT_METHOD)
+                openCoinbaseWebsite()
+            }
+        }
     }
 
     private fun openCoinbaseWebsite() {

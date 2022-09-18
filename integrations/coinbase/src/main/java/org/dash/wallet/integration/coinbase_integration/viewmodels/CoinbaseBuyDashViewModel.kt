@@ -127,7 +127,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
         }
     }
 
-    fun getActivePaymentMethods(coinbasePaymentMethods: Array<PaymentMethod>) {
+    fun setActivePaymentMethods(coinbasePaymentMethods: Array<PaymentMethod>) {
         _activePaymentMethods.value = coinbasePaymentMethods.toList()
     }
 

@@ -34,7 +34,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
@@ -53,7 +52,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     private val binding by viewBinding(FragmentCoinbaseConversionPreviewBinding::bind)
     private val viewModel by viewModels<CoinbaseConversionPreviewViewModel>()
     private lateinit var swapTradeUIModel: SwapTradeUIModel
-    private var loadingDialog: FancyAlertDialog? = null
+    private var loadingDialog: AdaptiveDialog? = null
     private var isRetrying = false
     private var transactionStateDialog: CoinBaseResultDialog? = null
     private var newSwapOrderId: String? = null
@@ -285,7 +284,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
         }
-        loadingDialog = FancyAlertDialog.newProgress(messageResId, 0)
+        loadingDialog = AdaptiveDialog.progress(getString(messageResId))
         loadingDialog?.show(parentFragmentManager, "progress")
     }
 

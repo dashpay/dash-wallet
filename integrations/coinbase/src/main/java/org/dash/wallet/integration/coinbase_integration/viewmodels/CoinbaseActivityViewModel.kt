@@ -16,13 +16,13 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
@@ -40,11 +40,13 @@ class CoinbaseActivityViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt
 ) : ViewModel() {
 
-    private val _paymentMethodsUiState = MutableStateFlow<PaymentMethodsUiState>(PaymentMethodsUiState.LoadingState(true))
-    val paymentMethodsUiState: StateFlow<PaymentMethodsUiState> = _paymentMethodsUiState
+    private val _paymentMethodsUiState = MutableLiveData<PaymentMethodsUiState>(PaymentMethodsUiState.LoadingState(true))
+    val paymentMethodsUiState: LiveData<PaymentMethodsUiState>
+        get() = _paymentMethodsUiState
 
-    private val _baseIdForFaitModelCoinBase= MutableStateFlow<BaseIdForFaitDataUIState>(BaseIdForFaitDataUIState.LoadingState(true))
-    val baseIdForFaitModelCoinBase:StateFlow<BaseIdForFaitDataUIState> = _baseIdForFaitModelCoinBase
+    private val _baseIdForFaitModelCoinBase = MutableLiveData<BaseIdForFaitDataUIState>(BaseIdForFaitDataUIState.LoadingState(true))
+    val baseIdForFaitModelCoinBase: LiveData<BaseIdForFaitDataUIState>
+        get() = _baseIdForFaitModelCoinBase
 
     fun getBaseIdForFaitModel() = viewModelScope.launch(Dispatchers.Main) {
         _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(true)

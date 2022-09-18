@@ -27,12 +27,12 @@ import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
@@ -51,7 +51,8 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
     private val binding by viewBinding(FragmentCoinbaseBuyDashBinding::bind)
     private val viewModel by viewModels<CoinbaseBuyDashViewModel>()
     private val amountViewModel by activityViewModels<EnterAmountViewModel>()
-    private var loadingDialog: FancyAlertDialog? = null
+    private val args by navArgs<CoinbaseBuyDashFragmentArgs>()
+    private var loadingDialog: AdaptiveDialog? = null
     private lateinit var fragment: EnterAmountFragment
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -144,26 +145,25 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
         }
 
         monitorNetworkChanges()
-        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
+        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
             fragment.handleNetworkState(hasInternet)
         }
     }
 
     private fun setupPaymentMethodPayment() {
-        viewModel.activePaymentMethods.observe(viewLifecycleOwner){
-            binding.paymentMethodPicker.paymentMethods = it
+        viewModel.activePaymentMethods.observe(viewLifecycleOwner) {
+            if (it.isNotEmpty()) {
+                binding.paymentMethodPicker.paymentMethods = it
+            }
         }
-
-        arguments?.let {
-            viewModel.getActivePaymentMethods(CoinbaseBuyDashFragmentArgs.fromBundle(it).paymentMethods)
-        }
+        viewModel.setActivePaymentMethods(args.paymentMethods)
     }
 
     private fun showProgress(messageResId: Int) {
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
         }
-        loadingDialog = FancyAlertDialog.newProgress(messageResId, 0)
+        loadingDialog = AdaptiveDialog.progress(getString(messageResId))
         loadingDialog?.show(parentFragmentManager, "progress")
     }
 
