@@ -192,7 +192,8 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             } ?: CoinbaseConstants.VALUE_ZERO
             binding.transferView.balanceOnCoinbase = BaseServiceWallet(
                 it.coinBaseUserAccountData.balance?.amount ?: CoinbaseConstants.VALUE_ZERO,
-                fiatVal)
+                fiatVal
+            )
         }
 
         enterAmountToTransferViewModel.dashWalletEmptyCallback.observe(viewLifecycleOwner) {

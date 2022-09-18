@@ -195,14 +195,16 @@ class EnterAmountToTransferViewModel @Inject constructor(
     private val maxAmountCoinbaseAccount: String
         get() {
             return coinbaseExchangeRate?.let {
-                it.coinBaseUserAccountData.balance?.amount ?: CoinbaseConstants.VALUE_ZERO
+                it.coinBaseUserAccountData.balance?.amount
             } ?: CoinbaseConstants.VALUE_ZERO
         }
 
     private fun applyCoinbaseExchangeRate(amount: String): String {
         return coinbaseExchangeRate?.let { uiModel ->
-            val cleanedValue =
-                amount.toBigDecimal() / uiModel.currencyToDashExchangeRate.toBigDecimal()
+            val cleanedValue = amount
+                .replace(',', '.') // TODO: the amount sometimes comes here with a comma as decimal separator.
+                // TODO: it's better to identify the root of this and replace in there to prevent this problem from appearing anywhere else.
+                .toBigDecimal() / uiModel.currencyToDashExchangeRate.toBigDecimal()
             cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
         } ?: CoinbaseConstants.VALUE_ZERO
     }
@@ -276,13 +278,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
     fun getCoinbaseBalanceInFiatFormat(dashAmt: String): String {
         val fiat = getFiat(dashAmt)
-        val formatFiat = dashFormat.minDecimals(2).format(fiat).toString()
-
-        return if (GenericUtils.isCurrencyFirst(fiat)) {
-            "$localFiatSymbol $formatFiat"
-        } else {
-            "$formatFiat $localFiatSymbol"
-        }
+        return GenericUtils.fiatToString(fiat)
     }
 
     private fun scaleValue(valueToScale: String): String {
@@ -300,9 +296,6 @@ class EnterAmountToTransferViewModel @Inject constructor(
             Coin.ZERO
         }
     }
-
-    private val localFiatSymbol: String
-        get() = GenericUtils.currencySymbol(localCurrencyCode)
 
     fun getFiat(dashValue: String): Fiat {
         val rateApplied = applyCoinbaseExchangeRate(dashValue)
