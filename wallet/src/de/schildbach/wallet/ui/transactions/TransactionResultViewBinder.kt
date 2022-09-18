@@ -34,6 +34,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
@@ -80,8 +81,13 @@ class TransactionResultViewBinder(
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
     private val explorerContainer by lazy { containerView.findViewById<View>(R.id.open_explorer_card) }
 
-    private val resourceMapper =
-        TxResourceMapper()
+    private val resourceMapper = TxResourceMapper()
+    private val taxCategoryNames = mapOf(
+        TaxCategory.Income to R.string.tax_category_income,
+        TaxCategory.Expense to R.string.tax_category_expense,
+        TaxCategory.TransferIn to R.string.tax_category_transfer_in,
+        TaxCategory.TransferOut to R.string.tax_category_transfer_out
+    )
 
     fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
         val value = tx.getValue(wallet)
@@ -232,14 +238,12 @@ class TransactionResultViewBinder(
     }
 
     fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
-        val categories =
-            containerView.resources.getStringArray(R.array.transaction_result_tax_categories)
-
-        if (transactionMetadata.taxCategory != null) {
-            taxCategory.text = categories[transactionMetadata.taxCategory!!.value]
+        val strResource = if (transactionMetadata.taxCategory != null) {
+            taxCategoryNames[transactionMetadata.taxCategory!!]
         } else {
-            taxCategory.text = categories[transactionMetadata.defaultTaxCategory.value]
+            taxCategoryNames[transactionMetadata.defaultTaxCategory]
         }
+        taxCategory.text = containerView.resources.getString(strResource!!)
     }
 
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {
