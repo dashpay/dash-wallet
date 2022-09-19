@@ -26,13 +26,16 @@ import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.transactions.ExactOutputsSelector
-import org.dash.wallet.common.transactions.LockedTransaction
+import org.dash.wallet.common.transactions.filters.LockedTransaction
+import org.dash.wallet.common.transactions.filters.TxWithinTimePeriod
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.transactions.*
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
+import java.time.Instant
+import java.util.*
 import javax.inject.Inject
-import kotlin.jvm.Throws
+import kotlin.time.Duration
 
 open class CrowdNodeBlockchainApi @Inject constructor(
     private val paymentService: SendPaymentService,
@@ -220,5 +223,17 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         val filter = CrowdNodeWithdrawalReceivedTx(params)
         return walletData.getTransactions(filter).firstOrNull()
             ?: walletData.observeTransactions(filter).first()
+    }
+
+    fun getWithdrawalsForTheLast(duration: Duration): Coin {
+        val now = Instant.now()
+        val from = now.minusSeconds(duration.inWholeSeconds)
+
+        val withdrawals = walletData.getTransactions(
+            CrowdNodeWithdrawalReceivedTx(params)
+                .and(TxWithinTimePeriod(Date.from(from), Date.from(now)))
+        )
+
+        return Coin.valueOf(withdrawals.sumOf { it.getValue(walletData.transactionBag).value })
     }
 }

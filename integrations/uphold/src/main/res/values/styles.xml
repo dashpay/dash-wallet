@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="uphold_confirmation_dialog_currency_text" parent="MontserratMedium.DB.14">
+    <style name="uphold_confirmation_dialog_currency_text" parent="Body2.Medium">
         <item name="android:layout_alignParentRight">true</item>
         <item name="android:layout_alignParentEnd">true</item>
         <item name="android:layout_width">86dp</item>

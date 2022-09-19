@@ -11,14 +11,10 @@
 
     <TextView
         android:id="@+id/contacts_my_contacts"
-        style="@style/MontserratSemiBold"
+        style="@style/Subtitle1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/montserrat_medium"
         android:text="@string/invitations_history_header"
-        android:textColor="@color/black_text"
-        android:textSize="18sp"
-        android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@+id/center_guideline"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/center_guideline" />
@@ -35,12 +31,11 @@
 
         <TextView
             android:id="@+id/invite_filter_text"
+            style="@style/Overline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/montserrat_medium"
             android:text=""
             android:textColor="@color/background_primary"
-            android:textSize="12sp"
             tools:text="All" />
 
         <ImageView

@@ -46,11 +46,12 @@
 
             <TextView
                 android:id="@+id/message"
-                style="@style/MontserratMedium.Heading"
+                style="@style/Headline6"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="28dp"
                 android:gravity="center_horizontal"
+                android:textAlignment="gravity"
                 android:padding="16dp"
                 android:text="@string/forgot_pin_message"
                 android:textColor="@color/dash_gray"
@@ -74,22 +75,21 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        style="@style/MontserratMedium.BodyTitle"
+                        style="@style/Body1.Medium.White"
                         android:layout_width="28dp"
                         android:layout_height="28dp"
                         android:background="@drawable/blue_circle"
                         android:gravity="center"
+                        android:textAlignment="gravity"
                         android:text="1"
-                        android:textColor="@color/dash_white"
                         tools:ignore="HardcodedText" />
 
                     <TextView
-                        style="@style/MontserratMedium.BodyTitle"
+                        style="@style/Body1.Medium.Secondary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:padding="8dp"
-                        android:text="@string/forgot_pin_instruction_1"
-                        android:textColor="@color/dash_gray" />
+                        android:text="@string/forgot_pin_instruction_1" />
 
                 </LinearLayout>
 
@@ -99,17 +99,17 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        style="@style/MontserratMedium.BodyTitle"
+                        style="@style/Body1.Medium.White"
+                        android:textAlignment="gravity"
                         android:layout_width="28dp"
                         android:layout_height="28dp"
                         android:background="@drawable/blue_circle"
                         android:gravity="center"
                         android:text="2"
-                        android:textColor="@color/dash_white"
                         tools:ignore="HardcodedText" />
 
                     <TextView
-                        style="@style/MontserratMedium.BodyTitle"
+                        style="@style/Body1.Medium.Secondary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:lines="2"
@@ -125,17 +125,17 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        style="@style/MontserratMedium.BodyTitle"
+                        style="@style/Body1.Medium.White"
                         android:layout_width="28dp"
                         android:layout_height="28dp"
                         android:background="@drawable/blue_circle"
                         android:gravity="center"
+                        android:textAlignment="gravity"
                         android:text="3"
-                        android:textColor="@color/dash_white"
                         tools:ignore="HardcodedText" />
 
                     <TextView
-                        style="@style/MontserratMedium.BodyTitle"
+                        style="@style/Body1.Medium.Secondary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:lines="2"
@@ -149,13 +149,13 @@
 
             <TextView
                 android:id="@+id/message2"
-                style="@style/MontserratMedium.BodyText"
+                style="@style/Body2.Medium.Secondary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="center_horizontal"
+                android:textAlignment="gravity"
                 android:padding="16dp"
                 android:text="@string/forgot_pin_warning"
-                android:textColor="@color/dash_gray"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/steps" />
@@ -166,7 +166,7 @@
 
     <Button
         android:id="@+id/recovery_pin"
-        style="@style/DashButton.Blue"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"

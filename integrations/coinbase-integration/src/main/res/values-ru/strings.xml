@@ -1,0 +1,116 @@
+<!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="coinbase">Coinbase</string>
+    <string name="last_known_balance" >Последний известный баланс</string>
+    <string name="coinbase_dash_wallet_error_title">Мы не нашли Dash Wallet в вашем аккаунте Coinbase</string>
+    <string name="coinbase_dash_wallet_error_message">Для продолжения создайте Dash Wallet на Coinbase</string>
+    <string name="create_dash_account">Создать Dash аккаунт</string>
+    <string name="close">Закрыть</string>
+    <string name="retry">Повторить</string>
+    <string name="connected">Подключено</string>
+    <string name="disconnect_coinbase_account">Отключить аккаунт Coinbase</string>
+    <string name="receive_directly_into_dash_wallet">Получать напрямую на Dash Wallet.</string>
+    <string name="buy_dash">Купить Dash</string>
+    <string name="balance">Баланс:</string>
+    <string name="balance_on_coinbase">Баланс Coinbase</string>
+    <string name="sending_to">Отправка</string>
+    <string name="dash_wallet_device">Dash Wallet на этом устройстве</string>
+    <string name="exchange_rate_template">%1$s DASH = %2$s</string>
+    <string name="payment_method">Способ оплаты</string>
+    <string name="purchase">Купить</string>
+    <string name="coinbase_fee">Комиссия Coinbase</string>
+    <string name="total">Всего</string>
+    <string name="order_preview">Просмотр заказа</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Вы получите %sDash на Dash Wallet на этом устройстве. Пожалуйста, обратите внимание, что перевод займёт 2-3 минуты.</string>
+    <string name="amount_in_dash">Сумма в Dash</string>
+    <string name="cancel">Отмена</string>
+    <string name="confirm_sec">Подтвердить (%s)</string>
+    <string name="confirm">Подтвердить</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Способ оплаты не найден.</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Для продолжения обновите свой аккаунт на Coinbase.</string>
+    <string name="add_payment_method">Добавить способ оплаты</string>
+    <string name="error">Ошибка</string>
+    <string name="cancel_transaction">Отменить транзакцию?</string>
+    <string name="yes_cancel">Да, отменить</string>
+    <string name="no_keep_it">Нет, оставить</string>
+    <string name="purchase_successful">Заказ успешно оплачен</string>
+    <string name="conversion_successful">Конвертация прошла успешно</string>
+    <string name="purchase_failed">Ошибка при заказе</string>
+    <string name="transfer_failed">Ошибка при переводе</string>
+    <string name="conversion_failed">Ошибка при обмене</string>
+    <string name="transfer_failed_msg">Dash был успешно зачислен на ваш аккаунт Coinbase. Но при переводе его на Dash Wallet на этом устройстве произошла проблема.</string>
+    <string name="purchase_failed_msg">Что-то пошло не так</string>
+    <string name="it_could_take_up_to_2_3_minutes">Перевод Dash на Dash Wallet на этом устройстве может занять 2-3 минуты.</string>
+    <string name="it_could_take_up_to_5_minutes">Обмен DASH из Dash Wallet на этом устройстве на Y в вашем Coinbase аккаунте может занять до 5 минут. </string>
+    <string name="contact_coinbase_support">Связаться с поддержкой Coinbase</string>
+    <string name="fees_in_crypto_purchase">Комиссия при покупке криптовалюты</string>
+    <string name="coinbase_fee_info_msg_content">Помимо отображённой комиссии Coinbase, мы учитываем небольшой разброс цены. Криптовалютным рынкам свойственна волатильность, и таким образом мы временно замораживаем цену для совершения сделки. </string>
+    <string name="learn_more">Узнать больше</string>
+    <string name="something_wrong_title">Что-то пошло не так!</string>
+    <string name="retry_later_message">Пожалуйста, повторите попытку чуть позже или свяжитесь с нашей службой поддержки</string>
+    <string name="convert_crypto">Обменять криптовалюту</string>
+    <string name="between_dash_wallet_and_coinbase">Между Dash Wallet и Coinbase.</string>
+    <string name="conversion_preview">Предпросмотр обмена</string>
+    <string name="you_send">вы отправляете</string>
+    <string name="from_your_coinbase_account">с аккаунта Coinbase</string>
+    <string name="you_receive">вы получаете</string>
+    <string name="to_dash_wallet_on_this_device">на Dash Wallet на этом устройстве</string>
+    <string name="to_your_coinbase_account">на аккаунт Coinbase</string>
+    <string name="from_dash_wallet_on_this_device">С Dash Wallet на этом устройстве</string>
+    <string name="you_will_receive">Вы получите</string>
+    <string name="we_didnt_find_any_assets" >Мы не нашли никаких активов на вашем аккаунте Coinbase</string>
+    <string name="you_dont_own_any_crypto" >У вас нет криптовалюты. Для начала приобретите немного криптовалюты.</string>
+    <string name="buy_crypto_on_coinbase" >Купить криптовалюту на Coinbase</string>
+    <string name="auth_limit_description">Превышен лимит авторизаций на Coinbase.</string>
+    <string name="debit_money">Списать деньги с аккаунта</string>
+    <string name="change_limit">Изменить лимит</string>
+    <string name="set_auth_limit">Убедитесь, что вы задали правильный лимит авторизаций на Coinbase</string>
+    <string name="change_withdrawal_limit">Его можно изменить в любое время, выйдя из аккаунта Coinbase в Dash Wallet и зайдя обратно. </string>
+    <string name="got_it">Понятно</string>
+    <string name="send_to_wallet_error">Эту сумму нельзя отправить без превышения заявленного лимита</string>
+    <string name="dont_have_any_dash">В вашем аккаунте Dash Wallet нет Dash.</string>
+    <string name="transfer_wallet_not_synced">Переводы из Dash Wallet в Coinbase невозможны до завершения синхронизации кошелька.</string>
+    <string name="disconnected">Подключение отсутствует</string>
+
+    <string name="insufficient_money_title">Недостаточно монет</string>
+    <string name="insufficient_money_msg">Количество монет слишком мало для переноса этого кошелька.</string>
+    <string name="send_coins_error_msg">Проблема с отправкой средств!</string>
+    <string name="entered_amount_is_too_low">Минимальная сумма транзакции</string>
+    <string name="entered_amount_is_too_high">Максимальная сумма транзакции</string>
+    <string name="verify_continue">Подтвердить</string>
+    <string name="enter_auth_code">Введите 2FA код Coinbase</string>
+    <string name="extra_steps_label">Этот дополнительный шаг подтверждает, что транзакцию совершаете именно вы.</string>
+    <string name="need_help">Нужна помощь?</string>
+    <string name="coinbase_fa_code_hint">2FA код Coinbase</string>
+    <string name="enter_code_details">Это может быть SMS-код. Или код из приложения для аутентификации.</string>
+    <string name="two_fa_code_incorrect">Неверный код. Попробуйте ещё раз!</string>
+    <string name="invalid_code">Неправильный код. Пожалуйста, попробуйте ещё раз</string>
+    <string name="verify_code">Подтвердить</string>
+    <string name="you_dont_have_enough_balance">Средств на балансе недостаточно</string>
+    <string name="transfer_dash">Перевести Dash</string>
+    <string name="transfer_amount">Перевести</string>
+    <string name="dash_wallet_limit_description">Эта сумма превышает остаток на балансе</string>
+    <string name="address_creation_failed">Мы не смогли создать адрес аккаунта, чтобы завершить транзакцию. Пожалуйста, попробуйте ещё раз чуть позже.</string>
+    <string name="transaction_row_rate_not_available">Недоступно</string>
+    <string name="transfer_dash_successful">Транзакция прошла успешно</string>
+    <string name="it_could_take_up_to_10_minutes">Перевод Dash с Coinbase на Dash Wallet на этом устройстве может занять до 10 минут.</string>
+    <string name="transfer_dash_failed_msg">При переводе средств на Dash Wallet на этом устройстве возникла проблема.</string>
+    <string name="insufficient_money_to_transfer">В этом кошельке слишком мало монет для перевода.</string>
+    <string name="amount_to_transfer">Вы получите %s%s%s</string>
+
+    </resources>

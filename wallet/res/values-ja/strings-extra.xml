@@ -237,6 +237,14 @@
     <string name="view_seed_done">完了</string>
     <string name="view_seed_title">復元フレーズ</string>
     <string name="transaction_result_view_on_explorer">ブロックエクスプローラーで見る</string>
+    <string name="transaction_result_tax_category">税金の区分</string>
+    <string name="transaction_result_tax_category_loading">読み込み中</string>
+    <string-array name="transaction_result_tax_categories">
+        <item>収入</item>
+        <item>支出</item>
+        <item>入金</item>
+        <item>振替</item>
+    </string-array>
     <string name="transaction_result_paid_successfully">送金が成功しました</string>
     <string name="transaction_result_sent_to">へ送金済み</string>
     <string name="transaction_date_and_time">日付け</string>
@@ -248,6 +256,7 @@
     <string name="transaction_details_received_at">で入金済み</string>
     <string name="transaction_details_moved_from">から移動した</string>
     <string name="transaction_details_moved_internally_to">内部で移転</string>
+    <string name="transaction_failed_details">送金に失敗しました</string>
 
     <string name="authenticate_fingerprint_title">認証する</string>
     <string name="authenticate_fingerprint_message">指紋を確認して続ける</string>
@@ -307,7 +316,7 @@
     <string name="twenty_four_hours">24時間</string>
     <string name="one_minute">1分</string>
     <string name="five_minute">5分</string>
-    <string name="one_hour">１時間</string>
+    <string name="one_hour">1時間</string>
     <string name="biometric_limit">生体認証の制限</string>
     <string name="spending_confirmation_hint_zero">お支払いにはPINが必要です</string>
     <string name="spending_confirmation_hint_above_zero">以下の支払いは生体認証を使って認証できます</string>
@@ -360,7 +369,7 @@
 
     <string name="syncing">同期中</string>
     <string name="syncing_balance">同期バランス</string>
-
+    <string name="transaction_count">%d件</string>
     <string name="all_transactions">全て</string>
     <string name="received_transactions">受取済み</string>
     <string name="sent_transactions">送信済み</string>
@@ -379,4 +388,14 @@
     <string name="launch_reset_wallet_extra_message">リカバリーフレーズをバックアップする</string>
     <string name="start_reset_wallet_title">%sを失う可能性があります。</string>
     <string name="reset_wallet_text">ウォレットをリセットする</string>
+    <string name="reclassify_transactions_title">取引を再分類する</string>
+    <string name="reclassify_transactions_title_message">この分類は、CSV形式でエクスポートされ、税務申告サービスに入力する際に利用できます。</string>
+    <string name="reclassify_transactions_question">税金の区分はどこで変更できますか。</string>
+    <string name="reclassify_transactions_outgoing_title">送金取引</string>
+    <string name="reclassify_transactions_by_default_message">デフォルトではと表示されます</string>
+    <string name="reclassify_transactions_incoming_title">入金取引</string>
+    <string name="reclassify_transactions_change_it_message">に変更できます</string>
+    <string name="reclassify_transactions_linked_accounts_title">連携アカウント</string>
+    <string name="reclassify_transactions_linked_accounts_message">デフォルトでは、お客様の連携アカウントとのすべての取引（交換、ステーキングなど）は、送金と表示されます。</string>
+    <string name="reclassify_transactions_change_explanation">ホームページからいずれかの取引を選択し、取引詳細ページでカテゴリを変更します。</string>
 </resources>

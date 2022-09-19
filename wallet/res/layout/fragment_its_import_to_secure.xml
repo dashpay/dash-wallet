@@ -27,7 +27,7 @@
 
             <TextView
                 android:id="@+id/title"
-                style="@style/Headline5.Bold"
+                style="@style/Headline5"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="36dp"
@@ -45,6 +45,7 @@
                 android:layout_marginHorizontal="25dp"
                 android:lineSpacingExtra="6dp"
                 android:gravity="center"
+                android:textAlignment="gravity"
                 android:text="@string/verify_it_is_important_subtitle"
                 app:layout_constraintTop_toBottomOf="@+id/title"
                 app:layout_constraintStart_toStartOf="parent"

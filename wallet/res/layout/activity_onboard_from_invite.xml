@@ -20,23 +20,18 @@
 
             <TextView
                 android:id="@+id/subtitle"
-                style="@style/MontserratMedium.Heading"
+                style="@style/Headline6"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/onboard_from_invite_subtitle"
-                android:textColor="@color/medium_gray"
-                android:textSize="22sp" />
+                android:text="@string/onboard_from_invite_subtitle" />
 
             <TextView
                 android:id="@+id/title"
-                style="@style/MontserratMedium.Heading"
+                style="@style/Headline4"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="@string/onboard_from_invite_title"
-                android:textColor="@color/medium_gray"
-                android:textSize="28sp"
-                android:textStyle="bold" />
+                android:text="@string/onboard_from_invite_title" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -61,24 +56,19 @@
 
                     <TextView
                         android:id="@+id/step1"
-                        style="@style/MontserratMedium.BodyText"
+                        style="@style/Subtitle1.Tertiary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:drawablePadding="8dp"
                         android:text="@string/onboard_from_invite_step1"
-                        android:textColor="@color/dash_gray"
-                        android:textSize="17sp"
                         app:drawableEndCompat="@drawable/ic_onboard_from_invite_check" />
 
                     <TextView
                         android:id="@+id/title1"
-                        style="@style/MontserratMedium.BodyTitle"
+                        style="@style/Headline6"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/onboard_from_invite_step1_title"
-                        android:textColor="@color/dash_black"
-                        android:textSize="22sp"
-                        android:textStyle="bold" />
+                        android:text="@string/onboard_from_invite_step1_title" />
 
                 </LinearLayout>
 
@@ -112,23 +102,19 @@
 
                     <TextView
                         android:id="@+id/step2"
-                        style="@style/MontserratMedium.BodyText"
+                        style="@style/Subtitle1.Tertiary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:drawablePadding="8dp"
                         android:text="@string/onboard_from_invite_step2"
-                        android:textColor="@color/dash_gray"
-                        android:textSize="17sp"
                         app:drawableEndCompat="@drawable/ic_onboard_from_invite_check" />
 
                     <TextView
                         android:id="@+id/title2"
-                        style="@style/MontserratMedium.BodyTitle"
+                        style="@style/Headline6.Secondary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/onboard_from_invite_step2_title"
-                        android:textColor="@color/medium_gray"
-                        android:textSize="22sp" />
+                        android:text="@string/onboard_from_invite_step2_title" />
 
                 </LinearLayout>
 
@@ -162,23 +148,19 @@
 
                     <TextView
                         android:id="@+id/step3"
-                        style="@style/MontserratMedium.BodyText"
+                        style="@style/Subtitle1.Tertiary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:drawablePadding="8dp"
                         android:text="@string/onboard_from_invite_step3"
-                        android:textColor="@color/dash_gray"
-                        android:textSize="17sp"
                         app:drawableEndCompat="@drawable/ic_onboard_from_invite_check" />
 
                     <TextView
                         android:id="@+id/title3"
-                        style="@style/MontserratMedium.BodyTitle"
+                        style="@style/Headline6.Secondary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/onboard_from_invite_step3_title"
-                        android:textColor="@color/medium_gray"
-                        android:textSize="22sp" />
+                        android:text="@string/onboard_from_invite_step3_title" />
 
                 </LinearLayout>
 
@@ -190,14 +172,13 @@
 
     <Button
         android:id="@+id/continue_button"
-        style="@style/DashButton.Blue"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_marginStart="15dp"
         android:layout_marginTop="15dp"
         android:layout_marginEnd="15dp"
         android:layout_marginBottom="25dp"
-        android:text="@string/invitation_accept_continue"
-        android:textSize="18sp" />
+        android:text="@string/invitation_accept_continue" />
 
 </LinearLayout>

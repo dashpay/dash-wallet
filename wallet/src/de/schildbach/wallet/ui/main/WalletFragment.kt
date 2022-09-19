@@ -36,6 +36,9 @@ import de.schildbach.wallet.ui.dashpay.BottomNavFragment
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.send.SweepWalletActivity
+import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
+import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
+import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HomeContentBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,10 +47,12 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 @FlowPreview
 @AndroidEntryPoint
@@ -60,6 +65,7 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
 
     private val viewModel: MainViewModel by activityViewModels()
     private val binding by viewBinding(HomeContentBinding::bind)
+    @Inject lateinit var configuration: Configuration
 
     private val scanLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -93,6 +99,22 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
         viewModel.transactions.observe(viewLifecycleOwner) { refreshShortcutBar() }
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.isBlockchainSyncFailed.observe(viewLifecycleOwner) { updateSyncState() }
+        viewModel.mostRecentTransaction.observe(viewLifecycleOwner) { mostRecentTransaction: Transaction ->
+            log.info("most recent transaction: {}", mostRecentTransaction.txId
+            )
+            if ((activity as? LockScreenActivity)?.lockScreenDisplayed != true && !configuration.hasDisplayedTaxCategoryExplainer
+                && WalletUtils.getTransactionDate(mostRecentTransaction).time >= configuration.taxCategoryInstallTime
+            ) {
+                val dialogFragment: TaxCategoryExplainerDialogFragment =
+                    TaxCategoryExplainerDialogFragment.newInstance(mostRecentTransaction.txId)
+                dialogFragment.show(activity?.supportFragmentManager!!, "taxcategorydialog") {
+                    val transactionDetailsDialogFragment: TransactionDetailsDialogFragment =
+                        TransactionDetailsDialogFragment.newInstance(mostRecentTransaction.txId)
+                    transactionDetailsDialogFragment.show(activity?.supportFragmentManager!!, null)
+                }
+                configuration.setHasDisplayedTaxCategoryExplainer()
+            }
+        }
     }
 
     override fun onResume() {
@@ -113,7 +135,7 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
                 }
                 binding.shortcutsPane.buySellButton -> {
                     viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL)
-                    startActivity(BuyAndSellLiquidUpholdActivity.createIntent(requireContext()))
+                    startActivity(BuyAndSellIntegrationsActivity.createIntent(requireContext()))
                 }
                 binding.shortcutsPane.payToAddressButton -> {
                     handlePayToAddress()

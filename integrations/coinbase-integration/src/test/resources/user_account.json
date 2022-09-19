@@ -1,0 +1,691 @@
+{
+  "pagination": {
+    "ending_before": null,
+    "starting_after": null,
+    "previous_ending_before": null,
+    "next_starting_after": "392dd754-8993-501d-b4be-a9b04347f4e6",
+    "limit": 25,
+    "order": "desc",
+    "previous_uri": null,
+    "next_uri": "/v2/accounts?starting_after=392dd754-8993-501d-b4be-a9b04347f4e6"
+  },
+  "data": [
+    {
+      "id": "b46dba79-4506-5eb5-bead-e7ee62494fad",
+      "name": "UMA Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "UMA",
+        "name": "UMA",
+        "color": "#FF4A4A",
+        "sort_index": 146,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "003db351-767e-5656-b32d-8ce553310814",
+        "slug": "uma"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "UMA"
+      },
+      "created_at": "2021-10-26T14:36:20Z",
+      "updated_at": "2021-10-26T14:36:20Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/b46dba79-4506-5eb5-bead-e7ee62494fad",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "fff7efb1-4c69-54e9-8813-d83ad3609754",
+      "name": "TRU Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "TRU",
+        "name": "Truefi",
+        "color": "#1A5AFF",
+        "sort_index": 208,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "248c3984-79c8-5df2-a35d-bbd3a3e16e70",
+        "slug": "truefi-token"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "TRU"
+      },
+      "created_at": "2021-10-26T14:36:20Z",
+      "updated_at": "2021-10-26T14:36:20Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/fff7efb1-4c69-54e9-8813-d83ad3609754",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "16ae0120-38e6-582e-9e65-da9464ca6587",
+      "name": "STORJ Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "STORJ",
+        "name": "Storj",
+        "color": "#2683FF",
+        "sort_index": 159,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "a5c6ceac-9226-55a7-a2dc-59d9149083d6",
+        "slug": "storj"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "STORJ"
+      },
+      "created_at": "2021-10-26T14:36:20Z",
+      "updated_at": "2021-10-26T14:36:20Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/16ae0120-38e6-582e-9e65-da9464ca6587",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "ed1bf6d7-94cc-5c79-a7e3-af5241b504c0",
+      "name": "PLA Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "PLA",
+        "name": "PlayDapp",
+        "color": "#02D6B4",
+        "sort_index": 198,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "baeb8efc-a5a6-5d8a-844c-2b95e4d09c99",
+        "slug": "playdapp"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "PLA"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/ed1bf6d7-94cc-5c79-a7e3-af5241b504c0",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "2c6e6900-ae81-5a77-a9f7-c4447c545ad4",
+      "name": "SNX Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "SNX",
+        "name": "Synthetix Network Token",
+        "color": "#0A0118",
+        "sort_index": 158,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "3bd5bbea-a525-520c-9d2a-2d842e543caa",
+        "slug": "synthetix-network-token"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "SNX"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/2c6e6900-ae81-5a77-a9f7-c4447c545ad4",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "df470223-4145-56d1-a736-a3bdeac956fd",
+      "name": "MASK Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "MASK",
+        "name": "Mask Network",
+        "color": "#1C68F3",
+        "sort_index": 191,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "45ce7f01-2962-5576-8dfd-449e4a49b75d",
+        "slug": "mask-network"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "MASK"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/df470223-4145-56d1-a736-a3bdeac956fd",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "7e5670cb-daee-5468-bbc7-d8159eced977",
+      "name": "MATIC Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "MATIC",
+        "name": "Polygon",
+        "color": "#8247E5",
+        "sort_index": 162,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "026bcc1e-9163-591c-a709-34dd18b2e7a1",
+        "slug": "polygon"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "MATIC"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/7e5670cb-daee-5468-bbc7-d8159eced977",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "47d2c675-a9e3-5c40-8035-c09c319eb60e",
+      "name": "SHIB Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "SHIB",
+        "name": "Shiba Inu",
+        "color": "#1C2951",
+        "sort_index": 183,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "d6031388-71ab-59c7-8a15-a56ec20d6080",
+        "slug": "shiba-inu"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "SHIB"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/47d2c675-a9e3-5c40-8035-c09c319eb60e",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "47ad2a6b-a256-5a15-af77-b10eeb735d99",
+      "name": "JASMY Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "JASMY",
+        "name": "JasmyCoin",
+        "color": "#F7941C",
+        "sort_index": 221,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "c0158cc5-1f31-5662-9da5-c06867f2baad",
+        "slug": "jasmy"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "JASMY"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/47ad2a6b-a256-5a15-af77-b10eeb735d99",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "3cf2637a-ec61-54d7-aea7-acccc94bf606",
+      "name": "EOS Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "EOS",
+        "name": "EOS",
+        "color": "#000000",
+        "sort_index": 128,
+        "exponent": 4,
+        "type": "crypto",
+        "address_regex": "(^[a-z1-5.]{1,11}[a-z1-5]$)|(^[a-z1-5.]{12}[a-j1-5]$)",
+        "asset_id": "8d556883-6c26-5a88-9d8f-fa41fe8ed76e",
+        "destination_tag_name": "EOS Memo",
+        "destination_tag_regex": "^.{1,100}$",
+        "slug": "eos"
+      },
+      "balance": {
+        "amount": "0.0000",
+        "currency": "EOS"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/3cf2637a-ec61-54d7-aea7-acccc94bf606",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "bd302f00-dc91-58a8-b77c-18425f4529dc",
+      "name": "QUICK Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "QUICK",
+        "name": "Quickswap",
+        "color": "#418AC9",
+        "sort_index": 204,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "f04b2f59-319f-5fb5-ba88-2c33cca01901",
+        "slug": "quickswap"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "QUICK"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/bd302f00-dc91-58a8-b77c-18425f4529dc",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "07888912-c47d-574f-aafc-cddca1911b13",
+      "name": "ETC Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "ETC",
+        "name": "Ethereum Classic",
+        "color": "#59D4AF",
+        "sort_index": 103,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "c16df856-0345-5358-8a70-2a78c804e61f",
+        "slug": "ethereum-classic"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "ETC"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/07888912-c47d-574f-aafc-cddca1911b13",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "4b13b3ac-d779-5ec4-b29c-f6dbc9479f5e",
+      "name": "OXT Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "OXT",
+        "name": "Orchid",
+        "color": "#5F45BA",
+        "sort_index": 136,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "07525606-a404-5f15-a71d-ba0e40e74eca",
+        "slug": "orchid"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "OXT"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/4b13b3ac-d779-5ec4-b29c-f6dbc9479f5e",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "07d632c0-03be-593e-88ab-45f2b7d6913d",
+      "name": "RAI Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "RAI",
+        "name": "Rai Reflex Index",
+        "color": "#1FC8A7",
+        "sort_index": 199,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "8adc8071-0938-5583-b672-6033f16f2786",
+        "slug": "rai"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "RAI"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/07d632c0-03be-593e-88ab-45f2b7d6913d",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "cace3b2c-dd0e-5553-9e1c-67e3bd5ed290",
+      "name": "PAX Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "PAX",
+        "name": "Paxos Standard",
+        "color": "#2F8260",
+        "sort_index": 195,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "be4a78af-d300-59b0-9c70-ba42a93caf56",
+        "slug": "paxos-standard"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "PAX"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/cace3b2c-dd0e-5553-9e1c-67e3bd5ed290",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "e0c9c9a1-6f6d-5a7a-8183-9e265fc5e2c2",
+      "name": "RLY Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "RLY",
+        "name": "Rally",
+        "color": "#FF8A03",
+        "sort_index": 188,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "39d7d62b-c1fc-5db4-bc0e-a0465473a748",
+        "slug": "rally"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "RLY"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/e0c9c9a1-6f6d-5a7a-8183-9e265fc5e2c2",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "87ed223d-255f-5934-9446-e3750b4f3f71",
+      "name": "NU Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "NU",
+        "name": "NuCypher",
+        "color": "#1A4CF2",
+        "sort_index": 152,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "fafd5bfc-16d5-5173-bee1-07de3e105f11",
+        "slug": "nucypher"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "NU"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/87ed223d-255f-5934-9446-e3750b4f3f71",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "5a4ba81f-3937-5140-bfb3-51aa653d5280",
+      "name": "UNI Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "UNI",
+        "name": "Uniswap",
+        "color": "#FF007A",
+        "sort_index": 148,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "412832ad-59dd-5af8-8d36-99ebda3afb80",
+        "slug": "uniswap"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "UNI"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/5a4ba81f-3937-5140-bfb3-51aa653d5280",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "0c3de9d8-1818-58c4-a097-b6062876d047",
+      "name": "MLN Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "MLN",
+        "name": "Enzyme",
+        "color": "#3B82F6",
+        "sort_index": 145,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "15cbd0cf-ac58-512f-87f7-8078fa9a3f2a",
+        "slug": "enzyme"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "MLN"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/0c3de9d8-1818-58c4-a097-b6062876d047",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "4b48e335-5ec6-5bc8-a092-d460e65458f6",
+      "name": "RGT Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "RGT",
+        "name": "Rari Governance Token",
+        "color": "#000000",
+        "sort_index": 212,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "a1548f40-bf11-5f95-a1c4-13cf8ecd8f8f",
+        "slug": "rari-governance-token"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "RGT"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/4b48e335-5ec6-5bc8-a092-d460e65458f6",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "7874ac08-71c5-5a36-adf9-dcb430ef290f",
+      "name": "DOT Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "DOT",
+        "name": "Polkadot",
+        "color": "#E6007A",
+        "sort_index": 180,
+        "exponent": 10,
+        "type": "crypto",
+        "address_regex": "^[1-9A-HJ-NP-Za-km-z]{47,48}$",
+        "asset_id": "ebea861a-c0ae-5323-bbe0-46893a119a39",
+        "slug": "polkadot"
+      },
+      "balance": {
+        "amount": "0.0000000000",
+        "currency": "DOT"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/7874ac08-71c5-5a36-adf9-dcb430ef290f",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "5797fe57-e335-59f0-a906-dd165abe63a1",
+      "name": "FET Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "FET",
+        "name": "Fetch.ai",
+        "color": "#1D2743",
+        "sort_index": 194,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "3672ab4a-25e0-57a8-b029-99239c081958",
+        "slug": "fetch"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "FET"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/5797fe57-e335-59f0-a906-dd165abe63a1",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "cb8f6c3d-b638-579b-92de-97484dd299e2",
+      "name": "LRC Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "LRC",
+        "name": "Loopring",
+        "color": "#1A61FF",
+        "sort_index": 144,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "6ffa1a5b-622b-596b-893a-56cfb152beb2",
+        "slug": "loopring"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "LRC"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/cb8f6c3d-b638-579b-92de-97484dd299e2",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "51c809dd-1748-5340-b19f-fc55e053c198",
+      "name": "OGN Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "OGN",
+        "name": "Origin Protocol",
+        "color": "#1F87FB",
+        "sort_index": 169,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^(?:0x)?[0-9a-fA-F]{40}$",
+        "asset_id": "070e2e07-1f4c-5556-9b3c-22f924e9fa1a",
+        "slug": "origin-token"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "OGN"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/51c809dd-1748-5340-b19f-fc55e053c198",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    },
+    {
+      "id": "392dd754-8993-501d-b4be-a9b04347f4e6",
+      "name": "DOGE Wallet",
+      "primary": true,
+      "type": "wallet",
+      "currency": {
+        "code": "DOGE",
+        "name": "Dogecoin",
+        "color": "#BA9F33",
+        "sort_index": 129,
+        "exponent": 8,
+        "type": "crypto",
+        "address_regex": "^((D|A|9)[a-km-zA-HJ-NP-Z1-9]{25,34})$",
+        "asset_id": "d9a3edfa-1be7-589c-bd20-c034f3830b60",
+        "slug": "dogecoin"
+      },
+      "balance": {
+        "amount": "0.00000000",
+        "currency": "DOGE"
+      },
+      "created_at": "2021-10-26T14:36:19Z",
+      "updated_at": "2021-10-26T14:36:19Z",
+      "resource": "account",
+      "resource_path": "/v2/accounts/392dd754-8993-501d-b4be-a9b04347f4e6",
+      "allow_deposits": true,
+      "allow_withdrawals": true
+    }
+  ]
+}

@@ -94,7 +94,7 @@
 
         <Button
             android:id="@+id/pay_button"
-            style="@style/DashButton.Blue"
+            style="@style/Button.Primary.Blue"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_marginStart="30dp"
@@ -113,14 +113,12 @@
 
         <TextView
             android:id="@+id/request_received_pane_title"
-            style="@style/MontserratRegular"
+            style="@style/Caption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="34dp"
             android:layout_marginTop="26dp"
             android:layout_marginRight="34dp"
-            android:textColor="@android:color/black"
-            android:textSize="13sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
@@ -136,7 +134,7 @@
 
         <Button
             android:id="@+id/accept"
-            style="@style/DashButton.AquaGreen"
+            style="@style/Button.Primary.Green"
             android:layout_width="100dp"
             android:layout_height="39dp"
             android:layout_marginTop="14dp"
@@ -147,7 +145,7 @@
 
         <Button
             android:id="@+id/ignore"
-            style="@style/DashButton.MediumGray"
+            style="@style/Button.Tertiary"
             android:layout_width="100dp"
             android:layout_height="39dp"
             android:layout_marginStart="5dp"
@@ -179,7 +177,7 @@
 
         <TextView
             android:id="@+id/contact_history_disclaimer_text"
-            style="@style/MontserratRegular"
+            style="@style/Body1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="26dp"
@@ -187,8 +185,7 @@
             android:layout_marginEnd="26dp"
             android:layout_marginBottom="24dp"
             android:gravity="center"
-            android:textColor="@android:color/black"
-            android:textSize="16sp"
+            android:textAlignment="gravity"
             tools:text="Add Katie Rennie as your contact to Pay Directly to Username and Retain Mutual Transaction History" />
 
         <LinearLayout
@@ -200,6 +197,7 @@
             android:layout_marginBottom="24dp"
             android:background="@drawable/blue_outline_button_bg"
             android:gravity="center"
+            android:textAlignment="gravity"
             android:orientation="horizontal"
             tools:ignore="UseCompoundDrawables">
 

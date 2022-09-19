@@ -16,7 +16,8 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:showDividers="middle"
-            android:visibility="invisible">
+            android:visibility="invisible"
+            tools:visibility="visible">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -25,13 +26,13 @@
                 android:showDividers="middle">
 
                 <TextView
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="@dimen/list_entry_padding_vertical"
                     android:layout_marginTop="@dimen/list_entry_padding_vertical"
                     android:layout_weight="2"
                     android:text="@string/backup_to_seed_wallet_dialog_enter_pin_message"
-                    style="@style/MontserratRegular.DB.12"/>
+                    style="@style/Overline"/>
 
             </LinearLayout>
 
@@ -52,8 +53,7 @@
                     android:imeOptions="flagNoExtractUi"
                     android:inputType="numberPassword"
                     android:singleLine="true"
-                    android:textSize="@dimen/dialog_input_text_size"
-                    style="@style/MontserratMedium"/>
+                    style="@style/Body2.Medium"/>
 
                 <Button
                     android:id="@+id/backup_wallet_seed_private_key_enter"
@@ -61,7 +61,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/backup_wallet_to_seed_show_recovery_phrase"
-                    style="@style/MontserratButton"/>
+                    style="@style/Button.Primary.Blue"/>
 
             </LinearLayout>
 
@@ -70,9 +70,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/private_key_bad_password"
-                android:textColor="@color/fg_error"
-                android:textSize="12sp"
-                style="@style/MontserratSemiBold"
+                style="@style/Overline.SemiBold.Red"
                 android:visibility="gone" />
 
             <de.schildbach.wallet.ui.widget.FingerprintView
@@ -98,7 +96,7 @@
                 android:layout_marginBottom="@dimen/list_entry_padding_vertical"
                 android:layout_marginTop="@dimen/list_entry_padding_vertical"
                 android:text="@string/backup_to_seed_wallet_dialog_message"
-                style="@style/MontserratMedium.DB.12"/>
+                style="@style/Overline.Medium"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -113,9 +111,7 @@
                     android:layout_width="0px"
                     android:layout_height="wrap_content"
                     android:layout_weight="3"
-                    android:textColor="@color/colorPrimaryDark"
-                    android:textSize="14sp"
-                    style="@style/MontserratSemiBold"/>
+                    style="@style/Subtitle2"/>
 
             </LinearLayout>
 
@@ -131,10 +127,9 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="2"
                     android:text="@string/backup_wallet_dialog_password_mismatch"
-                    android:textColor="@color/fg_error"
-                    android:textStyle="bold"
                     android:visibility="invisible"
-                    style="@style/MontserratSemiBold"/>
+                    style="@style/Subtitle2.Red"
+                    tools:visibility="visible" />
 
             </LinearLayout>
 
@@ -142,9 +137,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/backup_wallet_to_seed_dialog_warning"
-                style="@style/MontserratRegular.MG.12" />
+                style="@style/Overline.Secondary" />
 
-            <de.schildbach.wallet.ui.widget.MontserratCheckBox
+            <de.schildbach.wallet.ui.widget.StyledCheckBox
                 android:id="@+id/backup_wallet_seed_private_key_written_down"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

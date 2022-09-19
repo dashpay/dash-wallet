@@ -59,6 +59,7 @@ import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
+import kotlinx.android.synthetic.main.upload_policy_dialog.*
 import org.bitcoinj.core.Sha256Hash
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -626,15 +627,25 @@ class EditProfileActivity : BaseMenuActivity() {
 
     override fun finish() {
         if (showSaveReminderDialog) {
-            SaveProfileReminderDialog().show(supportFragmentManager, null)
-            editProfileViewModel.saveReminderConfirmationLiveData.observe(this, { saveChanges ->
-                if (saveChanges) {
-                    save()
-                } else {
-                    showSaveReminderDialog = false
-                    finish()
-                }
-            })
+            // TODO
+//            SaveProfileReminderDialog().show(supportFragmentManager, null)
+//            agree_btn.setOnClickListener {
+//                dismiss()
+//                editProfileViewModel.saveReminderConfirmationLiveData.postValue(true)
+//            }
+//            cancel_btn.setOnClickListener {
+//                dismiss()
+//                editProfileViewModel.saveReminderConfirmationLiveData.postValue(false)
+//            }
+//
+//            editProfileViewModel.saveReminderConfirmationLiveData.observe(this, { saveChanges ->
+//                if (saveChanges) {
+//                    save()
+//                } else {
+//                    showSaveReminderDialog = false
+//                    finish()
+//                }
+//            })
             return
         }
         super.finish()

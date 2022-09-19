@@ -18,13 +18,12 @@
 
         <TextView
             android:layout_width="0dp"
+            style="@style/Subtitle2"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:layout_weight="1"
             android:text="@string/history_title"
-            android:textSize="@dimen/font_size_small"
-            android:textStyle="bold"
-            app:fontFamily="@font/montserrat" />
+            android:textSize="@dimen/font_size_small" />
 
         <Spinner
             android:id="@+id/history_filter"
@@ -40,14 +39,15 @@
 
     <TextView
         android:id="@+id/empty_view"
+        style="@style/Body2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="72dp"
         android:layout_marginBottom="16dp"
         android:gravity="center_horizontal"
+        android:textAlignment="gravity"
         android:text="@string/wallet_transactions_fragment_empty_text"
         android:textSize="@dimen/font_size_small"
-        android:visibility="gone"
-        app:fontFamily="@font/montserrat" />
+        android:visibility="gone"/>
 
 </FrameLayout>

@@ -17,7 +17,7 @@
 
     <TextView
         android:id="@+id/local_currency_name"
-        style="@style/MontserratSemiBold"
+        style="@style/Subtitle2"
         android:textColor="@color/content_primary"
         android:layout_width="0dp"
         app:layout_constraintWidth_default="percent"
@@ -39,13 +39,11 @@
 
     <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/price"
-        style="@style/MontserratRegular"
-        android:textColor="@color/steel_gray_400"
+        style="@style/Overline.Tertiary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginLeft="10dp"
         android:layout_marginStart="10dp"
-        android:textSize="12sp"
         app:layout_constraintTop_toBottomOf="@id/local_currency_name"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@id/local_currency_flag"
@@ -54,11 +52,9 @@
 
     <TextView
         android:id="@+id/local_currency_code"
-        style="@style/MontserratMedium"
+        style="@style/Overline.Secondary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/steel_gray_400"
-        android:textSize="13sp"
         app:layout_constraintEnd_toStartOf="@+id/checkbox"
         android:layout_marginEnd="10dp"
         app:layout_constraintBottom_toBottomOf="parent"

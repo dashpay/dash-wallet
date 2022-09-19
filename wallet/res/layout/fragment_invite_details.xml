@@ -54,40 +54,35 @@
 
                     <TextView
                         android:id="@+id/memo"
-                        style="@style/MontserratMedium.Heading"
+                        style="@style/Subtitle1.Secondary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_margin="8dp"
                         android:gravity="center_horizontal"
-                        android:textColor="@color/medium_gray"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
+                        android:textAlignment="gravity"
                         tools:text="Invitation to Wayne" />
 
                     <TextView
                         android:id="@+id/date"
-                        style="@style/MontserratMedium"
+                        style="@style/Overline.Tertiary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_margin="8dp"
                         android:gravity="center_horizontal"
+                        android:textAlignment="gravity"
                         android:text="@string/invitation_created_successfully"
-                        android:textColor="@color/medium_gray"
-                        android:textSize="12sp"
                         tools:text="Feb 19, 2021 12:34PM" />
 
                     <Button
                         android:id="@+id/preview_button"
-                        style="@style/DashButton.Transparent.BlueText"
+                        style="@style/Button.Tertiary.Blue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
                         android:layout_marginTop="16dp"
                         android:paddingStart="16dp"
                         android:paddingEnd="16dp"
-                        android:text="@string/invitation_created_preview"
-                        android:textColor="@color/dash_blue"
-                        android:textSize="15sp" />
+                        android:text="@string/invitation_created_preview" />
 
                 </LinearLayout>
 
@@ -99,17 +94,15 @@
 
                     <TextView
                         android:id="@+id/display_name_label"
-                        style="@style/MontserratRegular"
+                        style="@style/Body2.Secondary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="28dp"
-                        android:text="@string/invitation_created_tag_title"
-                        android:textColor="@color/medium_gray"
-                        android:textSize="14sp" />
+                        android:text="@string/invitation_created_tag_title" />
 
                     <EditText
                         android:id="@+id/tag_edit"
-                        style="@style/MontserratSemiBold"
+                        style="@style/Subtitle1"
                         android:layout_width="match_parent"
                         android:layout_height="52dp"
                         android:layout_marginTop="12dp"
@@ -120,13 +113,11 @@
                         android:lines="1"
                         android:paddingLeft="20dp"
                         android:paddingRight="20dp"
-                        android:textColor="@android:color/black"
-                        android:textSize="18sp"
                         tools:ignore="UnusedAttribute" />
 
                     <Button
                         android:id="@+id/copy_invitation_link"
-                        style="@style/DashButton.Transparent.BlueText"
+                        style="@style/Button.Tertiary.Large.Blue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
@@ -136,8 +127,6 @@
                         android:paddingStart="16dp"
                         android:paddingEnd="16dp"
                         android:text="@string/invitation_created_copy_link"
-                        android:textColor="@color/dash_blue"
-                        android:textSize="15sp"
                         android:visibility="gone"
                         tools:visibility="visible"/>
 
@@ -149,7 +138,7 @@
 
                     <Button
                         android:id="@+id/send_button"
-                        style="@style/DashButton.Blue"
+                        style="@style/Button.Primary.Large.Blue"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
@@ -197,12 +186,11 @@
 
                         <TextView
                             android:id="@id/display_name"
-                            style="@style/MontserratSemiBold"
+                            style="@style/Subtitle1"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:layout_marginEnd="10dp"
-                            android:textSize="17sp"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toEndOf="@+id/avatarIcon"
                             app:layout_constraintTop_toTopOf="@id/avatarIcon"
@@ -210,12 +198,11 @@
 
                         <TextView
                             android:id="@id/username"
-                            style="@style/MontserratRegular"
+                            style="@style/Overline"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:layout_marginEnd="10dp"
-                            android:textSize="12sp"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toEndOf="@+id/avatarIcon"
                             app:layout_constraintTop_toBottomOf="@id/display_name"

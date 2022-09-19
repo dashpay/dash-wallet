@@ -279,10 +279,10 @@
     <string name="preferences_show_disclaimer_title">免責事項を表示</string>
     <string name="preferences_show_disclaimer_summary">あなたは本当に安全上の注意事項を読みましたか？あなたのウォレットを安全な場所にバックアップ済みですか？</string>
     <string name="preferences_report_issue_title">問題を報告</string>
-    <string name="preferences_initiate_reset_title">ブロックチェーンのリセット</string>
-    <string name="preferences_initiate_reset_summary">ブロックチェーンと取引とウォレットの残高をリセットします。リプレイには時間がかかりますので、理由が分かっている場合のみ実施して下さい。</string>
-    <string name="preferences_initiate_reset_dialog_message">ブロックチェーンをリセットしてリプレーしますか？?\n\n一時的にウォレットの残高が見られなくなり、取引も削除されます。両方ともブロックチェーンの同期後は復元されます。必ず信頼できるインターネット接続をお使いください。</string>
-    <string name="preferences_initiate_reset_dialog_positive">リセット</string>
+    <string name="preferences_initiate_reset_title">ブロックチェーンの再スキャン</string>
+    <string name="preferences_initiate_reset_summary">ブロックチェーン、取引、ウォレット残高を再スキャンします。再スキャンにはしばらく時間がかかりますので、理由がわかっている場合のみ行ってください。</string>
+    <string name="preferences_initiate_reset_dialog_message">ブロックチェーンの再スキャンを行いますか。\n\nこれにより、一時的にウォレット残高が非表示になり、取引も削除されます。ブロックチェーンの同期が進むと、どちらも回復します。インターネットの接続が安定していることをご確認のうえ行ってください。</string>
+    <string name="preferences_initiate_reset_dialog_positive">再スキャン</string>
     <string name="preferences_extended_public_key_title">xpubを表示</string>
     <string name="preferences_extended_public_key_summary">他のアプリやサービスにインポートできるように、ウォレットの拡張公開鍵を表示します。注意：その場合アプリに金銭的なプライバシー情報を公開することになります。</string>
     <string name="bitmap_fragment_share">共有…</string>
@@ -384,9 +384,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">この取引を完了するのに十分な資金がありません</string>
 
 
-
+    <string name="select_a_service_to_buy_and_sell_dash">サービスを選択してDashを売買します。</string>
     <string name="select_a_service">サービスを選択する</string>
     <string name="activity_buy_and_sell_dash_filter">絞り込み</string>
     <string name="clear_filter">フィルターをクリアする</string>
     <string name="select_currency">通貨を選択する</string>
+    <string name="reason">理由</string>
 </resources>

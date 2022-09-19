@@ -34,7 +34,7 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.data.TransactionMetadata
-import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
 import javax.inject.Inject
@@ -63,7 +63,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             if (sentTime != null && sentTime < updateTime) {
                 updateTime = sentTime
             }
-            val isInternal = TransactionUtils.isEntirelySelf(this, walletData.wallet!!)
+            val isInternal = isEntirelySelf(this, walletData.wallet!!)
 
             val metadata = TransactionMetadata(
                 txId,
@@ -204,60 +204,55 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     private suspend fun getAddressMetadata(txId: Sha256Hash): AddressMetadata? {
-        var addressMetadata: AddressMetadata? = null
         val tx = walletData.wallet!!.getTransaction(txId)
         tx?.run {
-            if (tx.getValue(walletData.wallet!!).isNegative) {
-                // outgoing transaction, check inputs
-                for (input in inputs) {
-                    if (input.connectedOutput != null) {
-                        val output = input.connectedOutput!!
-                        val address = when {
-                            ScriptPattern.isP2PKH(output.scriptPubKey) ->
-                                Address.fromPubKeyHash(
-                                    walletData.networkParameters,
-                                    ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
-                                )
-                            else -> null // there shouldn't be other output types on our tx's
-                        }
-                        if (address != null) {
-                            val metadata =
-                                addressMetadataDao.loadSender(address.toBase58())
-                            if (metadata != null) {
-                                addressMetadata = metadata
-                                break
-                            }
-                        }
-                    }
-                }
-            } else {
-                // incoming transaction, checkout puts
-                for (output in outputs) {
+            // outgoing transaction, check inputs
+            for (input in inputs) {
+                if (input.connectedOutput != null) {
+                    val output = input.connectedOutput!!
                     val address = when {
                         ScriptPattern.isP2PKH(output.scriptPubKey) ->
                             Address.fromPubKeyHash(
                                 walletData.networkParameters,
                                 ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
                             )
-                        ScriptPattern.isP2SH(output.scriptPubKey) ->
-                            Address.fromScriptHash(
-                                walletData.networkParameters,
-                                ScriptPattern.extractHashFromP2SH(output.scriptPubKey)
-                            )
-                        else -> null // for now ignore OP_RETURN (DashPay Expense?)
+                        else -> null // there shouldn't be other output types on our tx's
                     }
                     if (address != null) {
                         val metadata =
-                            addressMetadataDao.loadRecipient(address.toBase58())
+                            addressMetadataDao.loadSender(address.toBase58())
                         if (metadata != null) {
-                            addressMetadata = metadata
-                            break;
+                            return metadata
                         }
                     }
                 }
             }
+            // incoming transaction, checkout outputs
+            for (output in outputs) {
+                log.info("metadata: $output")
+                val address = when {
+                    ScriptPattern.isP2PKH(output.scriptPubKey) ->
+                        Address.fromPubKeyHash(
+                            walletData.networkParameters,
+                            ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
+                        )
+                    ScriptPattern.isP2SH(output.scriptPubKey) ->
+                        Address.fromScriptHash(
+                            walletData.networkParameters,
+                            ScriptPattern.extractHashFromP2SH(output.scriptPubKey)
+                        )
+                    else -> null // for now ignore OP_RETURN (DashPay Expense?)
+                }
+                if (address != null) {
+                    val metadata =
+                        addressMetadataDao.loadRecipient(address.toBase58())
+                    if (metadata != null) {
+                        return metadata
+                    }
+                }
+            }
         }
-        return addressMetadata
+        return null
     }
 
     override suspend fun getAllTransactionMetadata(): List<TransactionMetadata> {
@@ -285,7 +280,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
 
     override suspend fun markAddressWithTaxCategory(
         address: String,
-        sendTo: Boolean,
+        isInput: Boolean,
         taxCategory: TaxCategory,
         service: String
     ) {
@@ -293,21 +288,21 @@ class WalletTransactionMetadataProvider @Inject constructor(
         // if it has been used before, that means the same address was used more than once
         // possibly for two different services or actions.
         // This may not matter as the default tax category is probably the same for each.
-        if (addressMetadataDao.exists(address, sendTo)) {
-            log.info("address $address/$sendTo was already added")
+        if (addressMetadataDao.exists(address, isInput)) {
+            log.info("address $address/$isInput was already added")
         }
 
-        addressMetadataDao.markAddress(address, sendTo, taxCategory, service)
+        addressMetadataDao.markAddress(address, isInput, taxCategory, service)
     }
 
     override suspend fun maybeMarkAddressWithTaxCategory(
         address: String,
-        sendTo: Boolean,
+        isInput: Boolean,
         taxCategory: TaxCategory,
         service: String
     ): Boolean {
-        return if (!addressMetadataDao.exists(address, sendTo)) {
-            addressMetadataDao.markAddress(address, sendTo, taxCategory, service)
+        return if (!addressMetadataDao.exists(address, isInput)) {
+            addressMetadataDao.markAddress(address, isInput, taxCategory, service)
             true
         } else {
             false
@@ -316,12 +311,12 @@ class WalletTransactionMetadataProvider @Inject constructor(
 
     override fun markAddressAsync(
         address: String,
-        sendTo: Boolean,
+        isInput: Boolean,
         taxCategory: TaxCategory,
         service: String
     ) {
         syncScope.launch(Dispatchers.IO) {
-            markAddressWithTaxCategory(address, sendTo, taxCategory, service)
+            markAddressWithTaxCategory(address, isInput, taxCategory, service)
         }
     }
 

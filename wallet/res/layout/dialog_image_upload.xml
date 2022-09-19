@@ -58,16 +58,13 @@
 
                 <TextView
                     android:id="@+id/please_wait"
-                    style="@style/MontserratRegular"
+                    style="@style/Subtitle1.Secondary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="8dp"
-                    android:text="@string/upload_image_please_wait"
-                    android:textColor="@color/medium_gray"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:text="@string/upload_image_please_wait" />
             </LinearLayout>
 
             <TextView
@@ -92,7 +89,7 @@
 
                 <Button
                     android:id="@+id/error_try_again"
-                    style="@style/DashButton.Blue"
+                    style="@style/Button.Primary.Blue"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/error_updating_profile_try_again"
@@ -101,7 +98,8 @@
 
                 <Button
                     android:id="@+id/cancel"
-                    style="@style/DashButton.White.BlueText.BlueBorder"
+                    style="@style/Button.Secondary.Blue"
+                    android:layout_marginStart="8dp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/button_cancel" />

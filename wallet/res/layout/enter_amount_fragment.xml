@@ -75,36 +75,33 @@
 
                 <TextView
                     android:id="@+id/left_input_symbol"
-                    style="@style/MontserratRegular"
+                    style="@style/Headline3.Regular"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="8dp"
                     android:layout_marginRight="8dp"
                     tools:text="$"
-                    android:textColor="@color/content_primary"
                     android:textSize="@dimen/pay_input_symbol_text_size" />
 
                 <TextView
                     android:id="@+id/input_amount"
-                    style="@style/MontserratRegular"
+                    style="@style/Headline3.Regular"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
                     android:ellipsize="middle"
                     android:hint="0"
                     android:singleLine="true"
-                    android:textColor="@color/content_primary"
                     android:textSize="@dimen/pay_input_symbol_text_size" />
 
                 <TextView
                     android:id="@+id/right_input_symbol"
-                    style="@style/MontserratRegular"
+                    style="@style/Headline3.Regular"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginLeft="8dp"
                     tools:text="$"
                     android:visibility="gone"
-                    android:textColor="@color/content_primary"
                     android:textSize="@dimen/pay_input_symbol_text_size" />
 
                 <ImageView
@@ -138,33 +135,30 @@
 
                 <TextView
                     android:id="@+id/left_calc_amount_symbol"
-                    style="@style/MontserratRegular"
+                    style="@style/Headline6.Regular.Tertiary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="4dp"
                     android:layout_marginRight="4dp"
                     android:hint="$"
-                    android:textColor="@color/dash_gray"
                     android:textSize="@dimen/pay_calc_amount_symbol_size" />
 
                 <TextView
                     android:id="@+id/calc_amount"
-                    style="@style/MontserratRegular"
+                    style="@style/Headline6.Regular.Tertiary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="0.00"
-                    android:textColor="@color/dash_gray"
                     android:textSize="@dimen/pay_calc_amount_symbol_size" />
 
                 <TextView
                     android:id="@+id/right_calc_amount_symbol"
-                    style="@style/MontserratRegular"
+                    style="@style/Headline6.Regular.Tertiary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginLeft="4dp"
                     android:hint="$"
                     android:visibility="gone"
-                    android:textColor="@color/dash_gray"
                     android:textSize="@dimen/pay_calc_amount_symbol_size" />
 
                 <ImageView
@@ -179,7 +173,7 @@
 
             <TextView
                 android:id="@+id/max_button"
-                style="@style/MontserratRegular"
+                style="@style/Body2.Blue"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -189,7 +183,6 @@
                 android:paddingEnd="12dp"
                 android:paddingBottom="5dp"
                 android:text="@string/max"
-                android:textColor="@color/dash_blue"
                 app:layout_constraintEnd_toEndOf="@+id/v_center_guideline"
                 app:layout_constraintStart_toStartOf="@+id/v_center_guideline"
                 app:layout_constraintTop_toBottomOf="@+id/calc_pane" />
@@ -200,14 +193,16 @@
 
     <TextView
         android:id="@+id/message"
-        style="@style/MontserratRegular"
+        style="@style/Body2.Tertiary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/top_bottom_separator"
         android:gravity="center_horizontal"
+        android:textAlignment="gravity"
         android:paddingTop="8dp"
         android:paddingBottom="8dp"
-        android:textSize="@dimen/transaction_fee_text_size" />
+        android:textSize="@dimen/transaction_fee_text_size"
+        tools:text="some message" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/userinfo"
@@ -262,7 +257,7 @@
 
     <Button
         android:id="@+id/confirm_button"
-        style="@style/DashButton.Blue"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"

@@ -16,6 +16,7 @@
         android:layout_marginStart="25dp"
         android:layout_marginEnd="25dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:padding="12dp"
         android:text="@string/invitation_notifications_hint1_or" />
 
@@ -33,6 +34,7 @@
         android:layout_marginStart="25dp"
         android:layout_marginEnd="25dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:padding="12dp"
         android:text="@string/invitation_notifications_hint1"
         android:textColor="@color/dash_blue" />

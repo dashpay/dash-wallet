@@ -23,7 +23,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
+import kotlinx.android.synthetic.main.dash_fiat_amount_layout.*
 import kotlinx.android.synthetic.main.dialog_receive_details.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
@@ -62,14 +62,14 @@ class ReceiveDetailsDialog : OffsetDialogFragment() {
             val dashAmount = getSerializable(ARG_DASH_AMOUNT) as Coin
             val fiatAmount = getSerializable(ARG_FIAT_AMOUNT) as Fiat?
             receive_info.amount = dashAmount
-            dash_amount_view.text = MonetaryFormat.BTC.noCode().format(dashAmount).toString()
+            input_value.text = MonetaryFormat.BTC.noCode().format(dashAmount).toString()
 
             if (fiatAmount != null) {
-                fiat_symbol_view.text = GenericUtils.currencySymbol(fiatAmount.currencyCode)
-                fiat_amount_view.text = fiatAmount.toPlainString()
+                fiat_symbol.text = GenericUtils.currencySymbol(fiatAmount.currencyCode)
+                fiat_value.text = fiatAmount.toPlainString()
             } else {
-                fiat_symbol_view.visibility = View.GONE
-                fiat_amount_view.visibility = View.GONE
+                fiat_symbol.visibility = View.GONE
+                fiat_value.visibility = View.GONE
             }
         }
     }

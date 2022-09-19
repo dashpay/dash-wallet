@@ -81,6 +81,7 @@ class TransactionResultViewBinder(
     private val payeeSecuredBy by lazy { containerView.findViewById<TextView>(R.id.payee_secured_by) }
     private val errorContainer by lazy { containerView.findViewById<View>(R.id.error_container) }
     private val errorDescription by lazy { containerView.findViewById<TextView>(R.id.error_description) }
+    private val taxCategory by lazy { containerView.findViewById<TextView>(R.id.tax_category) }
 
     private val reportIssueContainer by lazy { containerView.findViewById<View>(R.id.report_issue_card) }
     private val privateMemoContainer by lazy { containerView.findViewById<View>(R.id.private_memo) }
@@ -296,6 +297,27 @@ class TransactionResultViewBinder(
         feeRow.visibility = if (isFeeAvailable(transaction.fee)) View.VISIBLE else View.GONE
     }
 
+    fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
+        val categories =
+            containerView.resources.getStringArray(R.array.transaction_result_tax_categories)
+
+        if (transactionMetadata.taxCategory != null) {
+            taxCategory.text = categories[transactionMetadata.taxCategory!!.value]
+        } else {
+            taxCategory.text = categories[transactionMetadata.defaultTaxCategory.value]
+        }
+
+        privateMemoText.text = transactionMetadata.memo
+
+        if (transactionMetadata.memo.isNotEmpty()) {
+            privateMemoText.isVisible = true
+            addPrivateMemoBtn.setText(R.string.edit_note)
+        } else {
+            privateMemoText.isVisible = false
+            addPrivateMemoBtn.setText(R.string.add_note)
+        }
+    }
+
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {
         return transactionFee != null && transactionFee.isPositive
     }
@@ -321,18 +343,6 @@ class TransactionResultViewBinder(
                 outputsAddressesContainer, false) as TextView
             addressView.text = it.toBase58()
             outputsAddressesContainer.addView(addressView)
-        }
-    }
-
-    fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
-        privateMemoText.text = transactionMetadata.memo
-
-        if (transactionMetadata.memo.isNotEmpty()) {
-            privateMemoText.isVisible = true
-            addPrivateMemoBtn.setText(R.string.edit_note)
-        } else {
-            privateMemoText.isVisible = false
-            addPrivateMemoBtn.setText(R.string.add_note)
         }
     }
 }

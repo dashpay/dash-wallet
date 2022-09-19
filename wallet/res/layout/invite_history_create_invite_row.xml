@@ -34,21 +34,19 @@
 
         <TextView
             android:id="@+id/title"
-            style="@style/MontserratSemiBold"
+            style="@style/Subtitle2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="1"
             android:text="@string/invite_history_create_new_invite"
-            android:textColor="@android:color/black"
             android:gravity="start"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            android:textSize="14sp"/>
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/date"
-            style="@style/MontserratRegular"
+            style="@style/Overline.Tertiary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textAlignment="textStart"
@@ -56,8 +54,6 @@
             android:ellipsize="end"
             android:maxLines="2"
             android:text="@string/invitation_notification_text"
-            android:textColor="@color/gray"
-            android:textSize="12sp"
             app:layout_constraintTop_toBottomOf="@id/title"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="@id/title"

@@ -10,25 +10,20 @@
 
     <TextView
         android:id="@+id/contacts_my_contacts"
-        style="@style/MontserratSemiBold"
+        style="@style/Subtitle1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/montserrat_medium"
         android:text="@string/contacts_my_contacts"
-        android:textColor="@color/black_text"
-        android:textSize="18sp"
-        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/center_guideline"
         app:layout_constraintBottom_toBottomOf="@+id/center_guideline" />
 
     <TextView
         android:id="@+id/contacts_sort_order"
+        style="@style/Overline.Medium.White"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/montserrat_medium"
-        android:textSize="12sp"
         android:text="@string/contacts_sort_order"
-        android:textColor="@color/background_primary"
         app:layout_constraintEnd_toStartOf="@id/sort_filter"
         app:layout_constraintTop_toTopOf="@+id/center_guideline"
         app:layout_constraintBottom_toBottomOf="@+id/center_guideline" />

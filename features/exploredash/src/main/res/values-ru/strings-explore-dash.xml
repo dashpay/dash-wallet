@@ -24,6 +24,7 @@
     <string name="explore_atms_title">Банкоматы</string>
     <string name="explore_atms_subtitle">Найдите, где купить или продать DASH и другие криптовалюты за наличные.</string>
     <string name="explore_staking_subtitle">Застейкайте Dash и получите пассивный доход всего за несколько кликов.</string>
+    <string name="explore_staking_current_apy">Текущий APY = %s%%</string>
 
     <!-- Search -->
     <string name="explore_search_results">Результаты поиска</string>

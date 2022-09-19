@@ -16,6 +16,7 @@
     <string name="email">Email</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Error</string>
+    <string name="select_a_coin">Select a coin</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -40,6 +41,7 @@
     <string name="button_dismiss">Dismiss</string>
     <string name="network_unavailable_return">Return to Wallet</string>
     <string name="button_continue">Continue</string>
+    <string name="get_quote">Get Quote</string>
     <string name="button_close">Close</string>
     <string name="button_retry">Retry</string>
     <string name="button_send_report">Send Report</string>
@@ -54,7 +56,15 @@
     <string name="search_hint">Search</string>
     <string name="permission_allow">Allow</string>
     <string name="permission_deny">Deny</string>
+    <string name="pay_with">Pay with</string>
+    <string name="choose_payment_method">Choose Payment Method</string>
+    <string name="debit_credit_card">Debit/Credit card</string>
     <string name="max">Max</string>
+    <string name="select_the_coin">Select the coin</string>
+    <string name="dash">Dash</string>
+    <string name="dash_wallet_name">Dash Wallet</string>
+    <string name="from">from</string>
+    <string name="to">to</string>
     <string name="select_currency">Select Currency</string>
     <string name="exchange_rate_template" translatable="false">%1$s DASH = %2$s</string>
     <string name="send_coins_error_dusty_send">The amount is too small to send</string>
@@ -62,4 +72,5 @@
 
     <string name="empty_wallet_warning_title">Looks like you are emptying your Dash Wallet</string>
     <string name="empty_wallet_crowdnode_warning">Please note, you will not be able to withdraw your funds from CrowdNode to this wallet until you increase your balance to 0.0003 Dash.</string>
+    <string name="syncing">Syncing</string>
 </resources>

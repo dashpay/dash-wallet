@@ -14,14 +14,11 @@
 
         <TextView
             android:id="@+id/title"
-            style="@style/MontserratSemiBold"
+            style="@style/Subtitle1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:text="@string/contacts_contact_requests"
-            android:textColor="@color/black_text"
-            android:textSize="18sp"
-            android:textStyle="bold"
             tools:text="New or Earlier" />
 
         <ImageView

@@ -88,20 +88,9 @@ class ExploreViewModelTest {
         on { addTransportType(TRANSPORT_WIFI) } doReturn mock
     }
 
-
     @Before
     fun before() {
         networkRequestBuilder.addTransportType(TRANSPORT_WIFI)
-       // MockitoAnnotations.openMocks(this)
-
-        //`when`(mockContext.getSystemService(Context.CONNECTIVITY_SERVICE)).thenReturn(
-        //    mockConnectivityManager
-        //)
-        //`when`(mockConnectivityManager.activeNetworkInfo).thenReturn(mockNetworkInfo)
-        //`when`(mockNetworkInfo.isConnectedOrConnecting()).thenReturn(true)
-        //`when`( mockConnectivityManager.getNetworkInfo( ConnectivityManager.TYPE_WIFI )).thenReturn( mockNetworkInfo );
-        //`when`( mockNetworkInfo.isAvailable() ).thenReturn( true );
-        //`when`( mockNetworkInfo.isConnected() ).thenReturn( true );
     }
 
     @Test

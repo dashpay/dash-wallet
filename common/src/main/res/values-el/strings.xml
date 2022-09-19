@@ -11,8 +11,9 @@
     <string name="buy_dash">Αγορά Dash</string>
     <string name="copied">Αντιγράφηκε</string>
     <string name="staking_title">Staking</string>
+    <string name="email">Email</string>
+    <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Σφάλμα</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Γκέρνσεϊ Λίρα</string>
     <!-- Local Currency List: JEP -->
@@ -51,8 +52,12 @@
     <string name="permission_allow">Επιτρέπετε</string>
     <string name="permission_deny">Απόρριψη</string>
     <string name="max">Μέγιστο</string>
+    <string name="dash">Dash</string>
     <string name="select_currency">Επιλέξτε Νόμισμα</string>
     <string name="send_coins_error_dusty_send">Το ποσό είναι πολύ μικρό για να σταλθεί</string>
     <string name="send_coins_error_insufficient_money">Ανεπαρκή χρήματα</string>
 
-    </resources>
+    <string name="empty_wallet_warning_title">Φαίνεται ότι αδειάζετε το Dash Πορτοφόλι σας</string>
+    <string name="empty_wallet_crowdnode_warning">Σημειώστε ότι δεν θα μπορείτε να κάνετε ανάληψη των χρημάτων σας από το CrowdNode σε αυτό το πορτοφόλι μέχρι να αυξήσετε το υπόλοιπό σας σε 0,0003 Dash.</string>
+    <string name="syncing">Συγχρονισμός</string>
+</resources>

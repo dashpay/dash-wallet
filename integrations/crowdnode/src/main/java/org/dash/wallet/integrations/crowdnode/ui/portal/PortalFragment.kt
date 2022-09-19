@@ -37,7 +37,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.copy
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentPortalBinding
@@ -48,6 +47,7 @@ import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.ConfirmationDialog
 import org.dash.wallet.integrations.crowdnode.ui.dialogs.OnlineAccountDetailsDialog
+import org.dash.wallet.integrations.crowdnode.ui.dialogs.StakingDialog
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 @AndroidEntryPoint
@@ -215,7 +215,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         if (isEnabled) {
             binding.withdrawIcon.setImageResource(R.drawable.ic_left_right_arrows)
             binding.withdrawTitle.setTextColor(resources.getColor(R.color.content_primary, null))
-            binding.withdrawSubtitle.setTextColor(resources.getColor(R.color.content_secondary, null))
+            binding.withdrawSubtitle.setTextColor(resources.getColor(R.color.content_tertiary, null))
         } else {
             binding.withdrawIcon.setImageResource(R.drawable.ic_withdraw_disabled)
             binding.withdrawTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
@@ -230,7 +230,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         if (isEnabled) {
             binding.depositIcon.setImageResource(R.drawable.ic_deposit_enabled)
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_primary, null))
-            binding.depositSubtitle.setTextColor(resources.getColor(R.color.content_secondary, null))
+            binding.depositSubtitle.setTextColor(resources.getColor(R.color.content_tertiary, null))
         } else {
             binding.depositIcon.setImageResource(R.drawable.ic_deposit_disabled)
             binding.depositTitle.setTextColor(resources.getColor(R.color.content_disabled, null))
@@ -345,17 +345,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         if (viewModel.signUpStatus == SignUpStatus.LinkedOnline) {
             OnlineAccountDetailsDialog().show(parentFragmentManager, "online_account_details")
         } else {
-            AdaptiveDialog.create(
-                R.drawable.ic_info_blue_encircled,
-                getString(R.string.crowdnode_your_address_title),
-                viewModel.accountAddress.value?.toBase58() ?: "",
-                getString(R.string.button_close),
-                getString(R.string.button_copy_address)
-            ).show(requireActivity()) { toCopy ->
-                if (toCopy == true) {
-                    viewModel.accountAddress.value?.toBase58()?.copy(requireActivity(), "dash address")
-                }
-            }
+            StakingDialog().show(parentFragmentManager, "staking")
         }
     }
 

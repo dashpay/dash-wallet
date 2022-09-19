@@ -279,10 +279,8 @@
     <string name="preferences_show_disclaimer_title">แสดงการปฏิเสธความรับผิดชอบ</string>
     <string name="preferences_show_disclaimer_summary">คุณได้อ่านบันทึกความปลอดภัยหรือยัง?  คุณสำรอง wallet ของคุณไปยังที่ปลอดภัยหรือยัง?</string>
     <string name="preferences_report_issue_title">รายงานปัญหา</string>
-    <string name="preferences_initiate_reset_title">รีเซ็ต block chain</string>
-    <string name="preferences_initiate_reset_summary">รีเซ็ต block chain,  ธุรกรรม และ ยอดคงเหลือ wallet  การทำซ้ำนี้จะใช้เวลาสักพัก  ดังนั้นทำเมื่อทราบสาเหตุเท่านั้น</string>
-    <string name="preferences_initiate_reset_dialog_message">คุณต้องการจะรีเซ็ต block chain หรือไม่? \n\n นี่จะเป็นการซ่อนยอดคงเหลือของ wallet ของคุณไว้ชั่วคราวและลบธุรกรรมออก ทั้งสองอย่างจะคืนสภาพอย่าการซิ้งค์ block chain   ตรวจสอบให้แน่ใจว่าคุณมีการเชื่อมต่ออินเทอร์เน็ตที่เชื่อถือได้</string>
-    <string name="preferences_initiate_reset_dialog_positive">ตั้งค่า</string>
+    <string name="preferences_initiate_reset_title">สแกน blockchain อีกครั้ง</string>
+    <string name="preferences_initiate_reset_dialog_positive">สแกนอีกครั้ง</string>
     <string name="preferences_extended_public_key_title">แสดง xpub</string>
     <string name="preferences_extended_public_key_summary">ดูส่วนขยาย public key  wallet ของคุณ  มันสามารถนำเข้าไปยังแอพพลิเคชั่นและบริการอื่น ๆ ได้   โปรดระวัง: การทำเช่นนี้จะเป็นการเปิดเผยข้อมูลทางการเงินส่วนบุคคลของคุณไปยังแอพพลิเคชั่นนั้น</string>
     <string name="bitmap_fragment_share">แบ่งปัน...</string>
@@ -384,9 +382,8 @@
     <string name="payment_protocol_insufficient_funds_error_message">คุณมีเงินทุนไม่เพียงพอที่จะดำเนินการทางธุรกรรมได้สำเร็จ</string>
 
 
-
     <string name="select_a_service">เลือกบริการ</string>
     <string name="activity_buy_and_sell_dash_filter">กรอง</string>
     <string name="clear_filter">ล้างตัวกรอง</string>
     <string name="select_currency">เลือกสกุลเงิน</string>
-</resources>
+    </resources>

@@ -47,19 +47,18 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/upgrade"
-            style="@style/MontserratButton"/>
+            style="@style/Button.Primary.Blue"/>
 
     </LinearLayout>
 
     <TextView
         android:id="@+id/bad_pin"
-        tools:visibility="visible"
+        style="@style/Subtitle2.Red"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/private_key_bad_password"
-        android:textColor="@color/fg_error"
-        android:textStyle="bold"
-        android:visibility="invisible" />
+        android:visibility="invisible"
+        tools:visibility="visible" />
 
     <de.schildbach.wallet.ui.widget.FingerprintView
         android:id="@+id/fingerprint_view"

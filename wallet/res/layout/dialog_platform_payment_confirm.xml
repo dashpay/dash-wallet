@@ -16,14 +16,13 @@
         app:srcCompat="@drawable/ic_expand_less" />
 
     <TextView
-        style="@style/TextViewStyle.Title"
+        style="@style/Subtitle1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:gravity="center_horizontal"
-        android:text="@string/dialog_confirm_confirm"
-        android:textColor="@color/dash_black"
-        android:textSize="18sp" />
+        android:textAlignment="gravity"
+        android:text="@string/dialog_confirm_confirm" />
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -45,13 +44,13 @@
 
             <TextView
                 android:id="@+id/title_view"
-                style="@style/TextViewStyle.Body"
+                style="@style/Body1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
+                android:textAlignment="gravity"
                 android:paddingBottom="16dp"
-                android:text="@string/dashpay_upgrade_fee"
-                android:textColor="@color/dash_black" />
+                android:text="@string/dashpay_upgrade_fee" />
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -70,13 +69,12 @@
 
                 <TextView
                     android:id="@+id/dash_amount_view"
-                    style="@style/MontserratRegular"
+                    style="@style/Headline3.Regular"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
-                    android:text="0.00"
-                    android:textColor="@color/dash_black"
-                    android:textSize="36sp" />
+                    android:textAlignment="gravity"
+                    android:text="0.00" />
 
             </LinearLayout>
 
@@ -88,21 +86,17 @@
 
                 <TextView
                     android:id="@+id/fiat_symbol_view"
-                    style="@style/MontserratRegular"
+                    style="@style/Headline6.Regular.Tertiary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="$"
-                    android:textColor="@color/dash_gray"
-                    android:textSize="24sp" />
+                    android:text="$" />
 
                 <TextView
                     android:id="@+id/fiat_amount_view"
-                    style="@style/MontserratRegular"
+                    style="@style/Headline6.Regular.Tertiary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0.00"
-                    android:textColor="@color/dash_gray"
-                    android:textSize="24sp" />
+                    android:text="0.00" />
 
             </LinearLayout>
 
@@ -121,15 +115,15 @@
 
     <TextView
         android:id="@+id/message_view"
-        style="@style/TextViewStyle.Body"
+        style="@style/Body2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:padding="16dp"
-        android:textColor="@color/dash_black"
         tools:text="You have chose “Johndoe” as your username. Username cannot be changed once it is registered." />
 
-    <de.schildbach.wallet.ui.widget.MontserratCheckBox
+    <de.schildbach.wallet.ui.widget.StyledCheckBox
         android:id="@+id/agree_check"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -141,7 +135,7 @@
 
     <Button
         android:id="@+id/confirm"
-        style="@style/DashButton.Blue"
+        style="@style/Button.Primary.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"

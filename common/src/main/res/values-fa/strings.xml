@@ -11,7 +11,10 @@
     <string name="buy_dash">خرید دش</string>
     <string name="copied">کپی شد</string>
     <string name="staking_title">سپرده‌گذاری</string>
+    <string name="email">ایمیل</string>
+    <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">خطا</string>
+    <string name="select_a_coin">یک رمزارز را انتخاب کنید</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">گرنزی پاوند</string>
@@ -36,6 +39,7 @@
     <string name="button_dismiss">متوجه شدم!</string>
     <string name="network_unavailable_return">بازگشت به کیف‌ پول</string>
     <string name="button_continue">ادامه</string>
+    <string name="get_quote">دریافت قیمت تخمینی</string>
     <string name="button_close">بستن</string>
     <string name="button_retry">تلاش دوباره</string>
     <string name="button_send_report">ارسال گزارش</string>
@@ -50,9 +54,20 @@
     <string name="search_hint">جستجو</string>
     <string name="permission_allow">اجازه می‌دهم</string>
     <string name="permission_deny">اجازه نمی‌دهم</string>
+    <string name="pay_with">پرداخت با</string>
+    <string name="choose_payment_method">انتخاب روش پرداخت </string>
+    <string name="debit_credit_card">کارت نقدی/اعتباری</string>
     <string name="max">حداکثر</string>
+    <string name="select_the_coin">یک رمزارز انتخاب کنید</string>
+    <string name="dash">دش</string>
+    <string name="dash_wallet_name">دش والت</string>
+    <string name="from">از</string>
+    <string name="to">به</string>
     <string name="select_currency">واحد پول‌تان را انتخاب کنید</string>
     <string name="send_coins_error_dusty_send">مبلغ مورد نظر، بیش از حد کم است</string>
     <string name="send_coins_error_insufficient_money">موجودی ناکافی</string>
 
-    </resources>
+    <string name="empty_wallet_warning_title">به نظر می‌رسد موجودی دش والت‌تان را خالی می‌کنید</string>
+    <string name="empty_wallet_crowdnode_warning">لطفا دقت داشته باشید که تا وقتی موجودی آن را به ۰.۰۰۰۳ دش افزایش نداده‌اید، نمی‌توانید از این کیف پول از کراودنود چیزی برداشت کنید. </string>
+    <string name="syncing">در حال همزمان‌سازی</string>
+</resources>

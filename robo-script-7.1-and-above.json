@@ -1543,7 +1543,7 @@
     "canScrollTo": false,
     "elementDescriptors": [
       {
-        "className": "de.schildbach.wallet.ui.widget.MontserratCheckBox",
+        "className": "de.schildbach.wallet.ui.widget.StyledCheckBox",
         "recyclerViewChildPosition": -1,
         "adapterViewChildPosition": -1,
         "groupViewChildPosition": 1,
@@ -2729,7 +2729,7 @@
     "canScrollTo": false,
     "elementDescriptors": [
       {
-        "className": "de.schildbach.wallet.ui.widget.MontserratCheckBox",
+        "className": "de.schildbach.wallet.ui.widget.StyledCheckBox",
         "recyclerViewChildPosition": -1,
         "adapterViewChildPosition": -1,
         "groupViewChildPosition": 3,

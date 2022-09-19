@@ -34,15 +34,14 @@
             app:srcCompat="@drawable/ic_gravatar" />
 
         <TextView
-            style="@style/MontserratRegular"
+            style="@style/Body1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:layout_marginEnd="31dp"
             android:ellipsize="end"
             android:maxLines="2"
-            android:text="@string/gravatar"
-            android:textSize="16sp" />
+            android:text="@string/gravatar" />
 
     </LinearLayout>
 
@@ -70,15 +69,14 @@
             app:srcCompat="@drawable/ic_external_url" />
 
         <TextView
-            style="@style/MontserratRegular"
+            style="@style/Body1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:layout_marginEnd="31dp"
             android:ellipsize="end"
             android:maxLines="2"
-            android:text="@string/edit_profile_public_url"
-            android:textSize="16sp" />
+            android:text="@string/edit_profile_public_url" />
 
     </LinearLayout>
 
@@ -107,15 +105,14 @@
             app:srcCompat="@drawable/ic_take_picture" />
 
         <TextView
-            style="@style/MontserratRegular"
+            style="@style/Body1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:layout_marginEnd="31dp"
             android:ellipsize="end"
             android:maxLines="2"
-            android:text="@string/edit_profile_take_picture"
-            android:textSize="16sp" />
+            android:text="@string/edit_profile_take_picture" />
 
     </LinearLayout>
 
@@ -143,13 +140,12 @@
             app:srcCompat="@drawable/ic_select_image" />
 
         <TextView
-            style="@style/MontserratRegular"
+            style="@style/Body1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:layout_marginEnd="31dp"
-            android:text="@string/edit_profile_choose_picture"
-            android:textSize="16sp" />
+            android:text="@string/edit_profile_choose_picture" />
 
     </LinearLayout>
 

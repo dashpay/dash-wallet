@@ -31,7 +31,7 @@ import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.BlockchainState;
+import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.rates.ExchangeRatesActivity;
 import de.schildbach.wallet.ui.WalletBalanceLoader;
@@ -81,7 +81,7 @@ public final class WalletBalanceFragment extends Fragment {
     @Nullable
     private ExchangeRate exchangeRate = null;
     @Nullable
-    private de.schildbach.wallet.data.BlockchainState blockchainState = null;
+    private BlockchainState blockchainState = null;
 
     private static final int ID_BALANCE_LOADER = 0;
     private static final int ID_RATE_LOADER = 1;

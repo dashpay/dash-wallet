@@ -22,10 +22,13 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.core.os.bundleOf
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.staking.StakingActivity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -37,12 +40,14 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentExploreBinding
 import org.dash.wallet.features.exploredash.ui.ExploreTopic
+import java.util.*
 import javax.inject.Inject
 
 @AndroidEntryPoint
 @FlowPreview
 @ExperimentalCoroutinesApi
 class ExploreFragment : Fragment(R.layout.fragment_explore) {
+    private val viewModel by activityViewModels<MainViewModel>()
     private val binding by viewBinding(FragmentExploreBinding::bind)
     @Inject
     lateinit var blockChainDao: BlockchainStateDao
@@ -71,6 +76,15 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
             val intent = ExploreActivity.createIntent(requireContext(), ExploreTopic.Faucet)
             startActivity(intent)
         }
+
+        setAPY(0.0) // hide the APY
+
+        viewModel.stakingAPY.observe(viewLifecycleOwner) {
+            setAPY(it)
+        }
+
+        // load the last APY value
+        viewModel.getLastStakingAPY()
     }
 
     private fun handleStakingNavigation() {
@@ -98,5 +112,18 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
         val blockChainState = blockChainDao.get()
 
         return blockChainState != null && blockChainState.isSynced()
+    }
+
+    fun setAPY(apy: Double) {
+        if (apy != 0.0) {
+            binding.stakingApyContainer.isVisible = true
+            binding.stakingApy.text = getString(
+                R.string.explore_staking_current_apy,
+                String.format(Locale.getDefault(), "%.1f", apy)
+            )
+        } else {
+            // hide the APY container if we don't have a value yet
+            binding.stakingApyContainer.isVisible = false
+        }
     }
 }

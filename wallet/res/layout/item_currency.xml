@@ -3,23 +3,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
-    <!--style="@style/DashButton.White"-->
-
+    android:orientation="vertical"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <RelativeLayout
         android:id="@+id/rlCurrency"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="15dp"
-        style="@style/DashButton.White"
+        style="@style/Button.Primary.Large.Blue"
         android:background="@color/white"
         android:paddingTop="20dp"
         android:paddingBottom="20dp">
 
         <ImageView
             android:id="@+id/imgCheckBox"
-            style="@style/MontserratRegular"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
@@ -36,23 +34,21 @@
 
             <TextView
                 android:id="@+id/txtCurrency"
-                style="@style/MontserratRegular"
+                style="@style/Subtitle2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="25dp"
-                android:textColor="@color/black_liquid"
-                android:textSize="18dp" />
+                android:layout_marginStart="15dp"
+                tools:text="100000.00" />
 
             <TextView
                 android:id="@+id/txtCurrencyName"
-                style="@style/MontserratRegular"
+                style="@style/Body2.Secondary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:gravity="center"
-                android:textColor="@color/grey_liquid"
-                android:textSize="14dp" />
-
+                android:textAlignment="gravity"
+                tools:text="USD" />
         </LinearLayout>
     </RelativeLayout>
 </LinearLayout>

@@ -47,16 +47,14 @@
 
             <TextView
                 android:id="@+id/notifications"
+                style="@style/Overline.Blue"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/notifications_button"
-                android:fontFamily="@font/montserrat"
                 android:paddingStart="13dp"
                 android:paddingTop="5dp"
                 android:paddingEnd="13dp"
                 android:paddingBottom="5dp"
-                android:textColor="@color/dash_blue"
-                android:textSize="12sp"
                 app:layout_constraintBottom_toBottomOf="@id/dashpay_user_avatar"
                 app:layout_constraintEnd_toEndOf="@id/horizontal_guideline"
                 app:layout_constraintStart_toStartOf="@id/horizontal_guideline"
@@ -73,10 +71,11 @@
 
         <TextView
             android:id="@+id/caption"
-            style="@style/TextViewStyle.Body"
+            style="@style/Body2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:textAlignment="gravity"
             android:text="@string/home_available_balance" />
 
         <LinearLayout
@@ -100,13 +99,13 @@
 
                     <TextView
                         android:id="@+id/balance_syncing_indicator"
-                        style="@style/MontserratRegular"
+                        style="@style/Overline.White"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:alpha="0.8"
                         android:gravity="center"
+                        android:textAlignment="gravity"
                         android:text="@string/syncing_balance"
-                        android:textColor="@android:color/white"
                         android:textSize="10sp"
                         android:visibility="gone"
                         tools:visibility="visible" />
@@ -128,25 +127,21 @@
 
                         <org.dash.wallet.common.ui.CurrencyTextView
                             android:id="@+id/wallet_balance_dash"
+                            style="@style/Headline5.Regular.White"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:ellipsize="end"
-                            android:maxLength="7"
-                            android:textColor="@color/white"
-                            android:textSize="24sp"
-                            app:fontFamily="@font/montserrat_regular" />
+                            android:maxLength="7" />
 
                     </LinearLayout>
 
                     <org.dash.wallet.common.ui.CurrencyTextView
                         android:id="@+id/wallet_balance_local"
+                        style="@style/Body2.LightGray"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_horizontal"
-                        android:textColor="@color/dash_light_gray"
-                        android:textSize="14sp"
-                        app:fontFamily="@font/montserrat_regular"
-                        app:prefixColor="@color/dash_light_gray" />
+                        app:prefixColor="@color/light_gray" />
 
                 </LinearLayout>
 

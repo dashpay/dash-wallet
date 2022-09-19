@@ -16,7 +16,7 @@
 
         <androidx.appcompat.widget.AppCompatEditText
             android:id="@+id/search"
-            style="@style/MontserratMedium"
+            style="@style/Body1.Medium"
             android:layout_width="match_parent"
             android:layout_height="45dp"
             android:layout_marginStart="15dp"
@@ -29,10 +29,7 @@
             android:paddingStart="60dp"
             android:paddingLeft="28dp"
             android:paddingRight="28dp"
-            android:textColor="@android:color/black"
-            android:textSize="16sp"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:targetApi="lollipop" />
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
             android:id="@+id/icon"

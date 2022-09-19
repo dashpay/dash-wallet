@@ -1,4 +1,26 @@
 Dash Wallet
+v7.6.1
+* Coinbase 2FA fixes
+
+v7.6
+* Add support for Coinbase
+    * Buy DASH
+    * Convert other cryto currency to DASH
+    * Transfer DASH to/From Coinbase
+* CrowdNode Improvements
+    * Show current APY
+    * Show messages about withdrawal limits
+* Tax Category Improvements
+    * Allow setting category on each transaction
+    * CrowdNode and exchange transactions are transfers by default
+* Show alerts on last pin attempt
+* UI improvements: fonts
+* Update Translations
+* Update checkpoints
+* Explore DB Sync Improvement
+* update to dashj 0.17.13 (minimal Dash Core 18 support)
+* refactoring of Home Screen to align with DashPay
+
 v7.5.2
 * Fix CrowdNode issues
 * New UI for the transaction list and transaction details

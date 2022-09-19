@@ -36,31 +36,27 @@
 
                 <TextView
                     android:id="@+id/public_url_title"
-                    style="@style/MontserratRegular"
+                    style="@style/Subtitle1.Secondary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:layout_marginBottom="10dp"
-                    android:text="@string/edit_profile_public_url"
-                    android:textColor="@color/medium_gray"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:text="@string/edit_profile_public_url" />
 
                 <TextView
                     android:id="@+id/public_url_enter_url"
-                    style="@style/MontserratRegular"
+                    style="@style/Body2.Secondary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="8dp"
                     android:text="@string/public_url_enter_url"
-                    android:textAlignment="center"
-                    android:textColor="@color/medium_gray"
-                    android:textSize="14sp" />
+                    android:gravity="center"
+                    android:textAlignment="gravity" />
 
                 <EditText
                     android:id="@+id/input"
-                    style="@style/MontserratMedium"
+                    style="@style/Body2"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@drawable/round_corners_white_bg_borders"
@@ -68,23 +64,20 @@
                     android:inputType="textMultiLine"
                     android:maxLines="8"
                     android:padding="20dp"
-                    android:textColor="@android:color/black"
-                    android:textSize="14sp"
-                    android:textAlignment="center"
-                    tools:targetApi="lollipop"
+                    android:gravity="center"
+                    android:textAlignment="gravity"
                     tools:text="https://images.theconversation.com/files/304864/original/file-20191203-67028-qfiw3k.jpeg?ixlib=rb-1.1.0" />
 
                 <TextView
-                    style="@style/MontserratRegular"
+                    style="@style/Overline.Secondary"
                     android:id="@+id/public_url_message"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="19dp"
                     android:layout_marginBottom="8dp"
                     android:text="@string/public_url_message"
-                    android:textAlignment="center"
-                    android:textColor="@color/medium_gray"
-                    android:textSize="12sp" />
+                    android:gravity="center"
+                    android:textAlignment="gravity" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -96,7 +89,7 @@
 
                     <Button
                         android:id="@+id/ok"
-                        style="@style/DashButton.Blue"
+                        style="@style/Button.Primary.Large.Blue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/button_ok"
@@ -105,7 +98,7 @@
 
                     <Button
                         android:id="@+id/cancel"
-                        style="@style/DashButton.White.Outline"
+                        style="@style/Button.Tertiary.Large.Blue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="9dp"
@@ -157,7 +150,7 @@
 
                 <Button
                     android:id="@+id/cancel_fetching"
-                    style="@style/DashButton.White.Outline"
+                    style="@style/Button.Tertiary.Large.Blue"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="40dp"
@@ -179,14 +172,12 @@
             tools:visibility="visible">
 
             <TextView
-                style="@style/MontserratRegular"
+                style="@style/Body2.Secondary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="8dp"
-                android:text="Preview"
-                android:textColor="@color/medium_gray"
-                android:textSize="14sp" />
+                android:text="Preview" />
 
             <FrameLayout
                 android:layout_width="match_parent"

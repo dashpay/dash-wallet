@@ -10,7 +10,7 @@
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintTop_toTopOf="parent"
-    tools:visibilty="visible">
+    tools:visibility="visible">
 
     <ImageView
         android:id="@+id/search_loading_icon"
@@ -24,12 +24,11 @@
 
     <TextView
         android:id="@+id/search_loading_label"
-        style="@style/MontserratMedium"
+        style="@style/Subtitle1"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:textColor="@android:color/black"
-        android:textSize="18sp"
+        android:textAlignment="gravity"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/search_loading_icon"

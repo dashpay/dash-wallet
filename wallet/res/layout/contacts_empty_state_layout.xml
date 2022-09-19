@@ -25,7 +25,7 @@
 
         <TextView
             android:id="@+id/layout_title"
-            style="@style/MontserratSemiBold"
+            style="@style/Headline6"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
@@ -33,9 +33,7 @@
             android:layout_marginEnd="42dp"
             android:layout_marginBottom="6dp"
             android:gravity="center"
-            android:text="@string/add_new_contact"
-            android:textColor="@color/black_text"
-            android:textSize="18sp" />
+            android:text="@string/add_new_contact" />
 
         <TextView
             android:id="@+id/find_a_user_label"

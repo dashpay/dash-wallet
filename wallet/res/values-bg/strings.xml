@@ -276,10 +276,8 @@
     <string name="preferences_show_disclaimer_title">Показване на отказ </string>
     <string name="preferences_show_disclaimer_summary">Наистина ли прочетохте инструкциите за безопасност? Архивирахте ли вече портфейла си на безопасно място?</string>
     <string name="preferences_report_issue_title">Докладвай проблем</string>
-    <string name="preferences_initiate_reset_title">Нулирай блок верига</string>
-    <string name="preferences_initiate_reset_summary">Ресет на блок-верига,транзакции и баланс на портфейла. Преглеждането ще отнеме време, така че правете това само ако е необходимо.</string>
-    <string name="preferences_initiate_reset_dialog_message">Бихте ли желали да направите ресет и преглед на блок-веригата?\n\nТова временно ще скрие вашият баланс и ще премахне транзакциите.Ще бъдат възстановени при синхронизирането на блок-веригата. Уверете се, че Интернет връзката е надеждна.</string>
-    <string name="preferences_initiate_reset_dialog_positive">Нулиране</string>
+    <string name="preferences_initiate_reset_title">Повторно сканиране на блок-веригата</string>
+    <string name="preferences_initiate_reset_dialog_positive">Повторно сканиране</string>
     <string name="preferences_extended_public_key_title">Показване на xpub</string>
     <string name="preferences_extended_public_key_summary">Вижте разширения публичен ключ от вашият портфейл, така ще можете да го импортирате в друго приложение или услуга. Бъдете внимателни: това ще разкрие вашата парична неприкосновеност на това приложение.</string>
     <string name="bitmap_fragment_share">Сподели…</string>
@@ -371,7 +369,6 @@
     <string name="payment_protocol_default_error_title">Грешка при плащане</string>
     <string name="payment_protocol_insufficient_funds_error_title">Недостатъчни средства</string>
     <string name="payment_protocol_insufficient_funds_error_message">Нямате достатъчно средства за да извършите тази транзакция</string>
-
 
 
     <string name="activity_buy_and_sell_dash_filter">Филтър</string>

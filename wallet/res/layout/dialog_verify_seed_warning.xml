@@ -21,7 +21,7 @@
 
     <TextView
         android:id="@+id/title"
-        style="@style/Headline5.Bold"
+        style="@style/Headline5"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="36dp"
@@ -38,6 +38,7 @@
         android:layout_marginHorizontal="25dp"
         android:layout_marginTop="4dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:lineSpacingExtra="6dp"
         android:text="@string/verify_warning_message"
         app:layout_constraintEnd_toEndOf="parent"

@@ -24,6 +24,7 @@
     <string name="explore_atms_title">ATMs</string>
     <string name="explore_atms_subtitle">Trova dove acquistare o vendere DASH e altre criptovalute per contanti.</string>
     <string name="explore_staking_subtitle">Vincola facilmente Dash e guadagna entrate passive con pochi semplici clic.</string>
+    <string name="explore_staking_current_apy">APY attuale = %s %%</string>
 
     <!-- Search -->
     <string name="explore_search_results">Risultati di ricerca</string>

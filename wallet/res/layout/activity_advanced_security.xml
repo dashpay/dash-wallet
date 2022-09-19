@@ -34,25 +34,24 @@
 
             <TextView
                 android:id="@+id/security_level_label"
-                style="@style/MontserratRegular"
+                style="@style/Body2.Tertiary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="20dp"
                 android:text="@string/advanced_security_security_level"
-                android:textColor="@color/dash_gray"
                 tools:ignore="ContentDescription" />
 
             <TextView
                 android:id="@+id/security_level"
-                style="@style/MontserratRegular"
+                style="@style/Headline6.Regular"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="26dp"
-                android:textSize="20sp"
-                tools:ignore="ContentDescription" />
+                tools:ignore="ContentDescription"
+                tools:text="Super High"/>
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/spending_confirmation"
@@ -69,8 +68,10 @@
 
                 <TextView
                     android:id="@+id/auto_logout_label"
-                    style="@style/MontserratRegular.MenuRowTitle.Internal"
+                    style="@style/Body1"
+                    android:layout_height="wrap_content"
                     android:layout_width="0dp"
+                    android:layout_marginStart="20dp"
                     android:layout_marginEnd="10dp"
                     android:layout_marginBottom="20dp"
                     android:text="@string/auto_logout"
@@ -109,13 +110,13 @@
 
                     <TextView
                         android:id="@+id/logout_after_label"
-                        style="@style/MontserratRegular.MenuRowTitle.Internal"
+                        style="@style/Body2"
                         android:layout_width="0dp"
-                        android:layout_marginStart="0dp"
+                        android:layout_height="wrap_content"
                         android:layout_marginTop="28dp"
                         android:gravity="center"
+                        android:textAlignment="gravity"
                         android:text="@string/logout_after"
-                        android:textSize="14sp"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/auto_logout_separator"
@@ -123,37 +124,35 @@
 
                     <TextView
                         android:id="@+id/logout_after_time"
-                        style="@style/MontserratRegular.MenuRowTitle.Internal"
+                        style="@style/Headline5.Regular"
+                        android:layout_height="wrap_content"
+                        android:layout_width="wrap_content"
                         android:layout_marginStart="0dp"
                         android:layout_marginTop="14dp"
                         android:text="@string/immediately"
-                        android:textSize="24sp"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/logout_after_label" />
 
                     <TextView
                         android:id="@+id/immediately"
-                        style="@style/MontserratRegular.MenuRowTitle.Internal"
+                        style="@style/Overline.Tertiary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
                         android:layout_marginTop="40dp"
                         android:text="@string/immediately"
-                        android:textColor="@color/old_gray"
-                        android:textSize="12sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/logout_after_time"
                         tools:ignore="HardcodedText" />
 
                     <TextView
                         android:id="@+id/auto_logout_max_time"
-                        style="@style/MontserratRegular.MenuRowTitle.Internal"
+                        style="@style/Overline.Tertiary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="18dp"
                         android:text="@string/twenty_four_hours"
-                        android:textColor="@color/old_gray"
-                        android:textSize="12sp"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="@id/immediately"
                         tools:ignore="HardcodedText" />
@@ -193,8 +192,10 @@
 
                 <TextView
                     android:id="@+id/spending_confirmation_label"
-                    style="@style/MontserratRegular.MenuRowTitle.Internal"
+                    style="@style/Body1"
                     android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="20dp"
                     android:layout_marginTop="20dp"
                     android:layout_marginBottom="20dp"
                     android:text="@string/spending_confirmation"
@@ -234,20 +235,24 @@
 
                     <TextView
                         android:id="@+id/biometric_limit_label"
-                        style="@style/MontserratRegular.MenuRowTitle.Internal"
+                        android:layout_height="wrap_content"
+                        android:layout_width="0dp"
+                        style="@style/Body2"
+                        android:layout_marginStart="20dp"
                         android:layout_marginTop="28dp"
                         android:text="@string/biometric_limit"
-                        android:textSize="14sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/spending_confirmation_separator"
                         tools:ignore="ContentDescription" />
 
                     <TextView
                         android:id="@+id/biometric_limit_value"
-                        style="@style/MontserratRegular.MenuRowTitle.Internal"
+                        style="@style/Headline6.Regular"
+                        android:layout_height="wrap_content"
+                        android:layout_width="0dp"
+                        android:layout_marginStart="20dp"
                         android:layout_marginEnd="22dp"
                         android:layout_marginRight="22dp"
-                        android:textSize="22sp"
                         app:layout_constraintBottom_toBottomOf="@id/biometric_limit_label"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="@id/biometric_limit_label" />
@@ -278,12 +283,10 @@
 
                     <TextView
                         android:id="@+id/biometric_limit_min"
-                        style="@style/MontserratRegular"
+                        style="@style/Overline.Tertiary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
-                        android:textColor="@color/old_gray"
-                        android:textSize="12sp"
                         app:layout_constraintBottom_toBottomOf="@id/biometric_limit_icon_min"
                         app:layout_constraintStart_toEndOf="@id/biometric_limit_icon_min"
                         app:layout_constraintTop_toTopOf="@id/biometric_limit_icon_min"
@@ -291,14 +294,12 @@
 
                     <TextView
                         android:id="@+id/biometric_limit_max"
-                        style="@style/MontserratRegular"
+                        style="@style/Overline.Tertiary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="18dp"
                         android:layout_marginRight="18dp"
                         android:text="5"
-                        android:textColor="@color/old_gray"
-                        android:textSize="12sp"
                         app:layout_constraintBottom_toBottomOf="@id/biometric_limit_min"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="@id/biometric_limit_min"
@@ -335,6 +336,7 @@
 
                     <TextView
                         android:id="@+id/spending_confirmation_hint"
+                        style="@style/Body2.Tertiary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="18dp"
@@ -351,17 +353,13 @@
 
             <Button
                 android:id="@+id/reset_to_default"
-                style="@style/DashButton.Transparent"
+                style="@style/Button.Tertiary.Blue"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:layout_marginTop="50dp"
                 android:layout_marginBottom="25dp"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:text="@string/reset_to_default"
-                android:textColor="@color/dash_blue"
-                android:textSize="15sp" />
+                android:text="@string/reset_to_default" />
 
         </LinearLayout>
 

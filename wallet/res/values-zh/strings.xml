@@ -279,10 +279,8 @@
     <string name="preferences_show_disclaimer_title">显示免责声明</string>
     <string name="preferences_show_disclaimer_summary">您是否仔细阅读了安全须知? 并且已经妥善备份了您的钱包?</string>
     <string name="preferences_report_issue_title">报告问题</string>
-    <string name="preferences_initiate_reset_title">重置区块链 (blockchain)</string>
-    <string name="preferences_initiate_reset_summary">重置区块链, 交易, 以及钱包余额. 此步骤需要等待一段时间, 使用前请务必了解此功能用途.</string>
-    <string name="preferences_initiate_reset_dialog_message">您是否想重置区块链?/n/n这样做会暂时隐藏您的钱包余额和交易记录. 区块链同步完成后会恢复. 请确保您已联入了可靠的网络.</string>
-    <string name="preferences_initiate_reset_dialog_positive">重置</string>
+    <string name="preferences_initiate_reset_title">重新扫描区块链</string>
+    <string name="preferences_initiate_reset_dialog_positive">重新扫描</string>
     <string name="preferences_extended_public_key_title">显示xpub</string>
     <string name="preferences_extended_public_key_summary">浏览您钱包的公钥, 这样可以将其导入其他程序或服务中. 请注意: 如此做会对其他程序暴露您的财政隐私.</string>
     <string name="bitmap_fragment_share">分享...</string>
@@ -384,9 +382,8 @@
     <string name="payment_protocol_insufficient_funds_error_message">您没有足够的资金来完成此次交易</string>
 
 
-
     <string name="select_a_service">选择服务</string>
     <string name="activity_buy_and_sell_dash_filter">过滤</string>
     <string name="clear_filter">清除过滤</string>
     <string name="select_currency">选择货币</string>
-</resources>
+    </resources>

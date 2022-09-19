@@ -102,9 +102,6 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
     private PinRetryController pinRetryController;
     private Configuration config;
 
-    @Nullable
-    private AlertDialog dialog;
-
     private TextView seedView;
     private View privateKeyPasswordViewGroup;
     private EditText privateKeyPasswordView;
@@ -198,7 +195,6 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
 
     @Override
     public void onDismiss(final DialogInterface dialog) {
-        this.dialog = null;
         if (fingerprintCancellationSignal != null) {
             fingerprintCancellationSignal.cancel();
         }

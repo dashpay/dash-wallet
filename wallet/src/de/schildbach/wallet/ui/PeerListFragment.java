@@ -227,8 +227,8 @@ public final class PeerListFragment extends Fragment {
         @NonNull
         @Override
         public PeerViewHolder onCreateViewHolder(@NonNull final ViewGroup parent, final int viewType) {
-            defaultTypeFace = ResourcesCompat.getFont(parent.getContext(), R.font.montserrat_medium);
-            boldTypeFace = ResourcesCompat.getFont(parent.getContext(), R.font.montserrat_semibold);
+            defaultTypeFace = ResourcesCompat.getFont(parent.getContext(), R.font.inter_medium);
+            boldTypeFace = ResourcesCompat.getFont(parent.getContext(), R.font.inter_semibold);
             return new PeerViewHolder(inflater.inflate(R.layout.peer_list_row, parent, false));
         }
 

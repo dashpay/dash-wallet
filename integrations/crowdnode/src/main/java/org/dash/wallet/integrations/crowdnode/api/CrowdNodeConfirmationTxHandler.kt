@@ -19,22 +19,16 @@ package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Intent
 import android.content.res.Resources
-import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.services.NotificationService
-import org.dash.wallet.common.services.SendPaymentService
-import org.dash.wallet.common.transactions.CoinsToAddressTxFilter
-import org.dash.wallet.common.transactions.ExactOutputsSelector
+import org.dash.wallet.common.transactions.filters.CoinsToAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
-import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeErrorResponse
-import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWelcomeToApiResponse
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory

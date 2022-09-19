@@ -63,24 +63,22 @@
 
                 <TextView
                     android:id="@+id/choose_username_title"
-                    style="@style/MontserratMedium.Heading"
+                    style="@style/Headline6"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
                     android:gravity="center_horizontal"
-                    android:text="@string/invitation_init_header"
-                    android:textColor="@color/medium_gray"
-                    android:textSize="22sp"
-                    android:textStyle="bold" />
+                    android:textAlignment="gravity"
+                    android:text="@string/invitation_init_header" />
 
                 <TextView
                     android:id="@+id/identity_complete_text"
-                    style="@style/MontserratMedium.BodyTitle"
+                    style="@style/Body1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_horizontal"
-                    android:text="@string/invitation_init_message"
-                    android:textSize="17sp" />
+                    android:textAlignment="gravity"
+                    android:text="@string/invitation_init_message" />
 
             </LinearLayout>
 
@@ -90,7 +88,7 @@
 
     <Button
         android:id="@+id/create_invitation_button"
-        style="@style/DashButton.Blue"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_marginStart="15dp"
@@ -98,7 +96,6 @@
         android:layout_marginEnd="15dp"
         android:layout_marginBottom="25dp"
         android:text="@string/invitation_init_button_text"
-        android:textSize="18sp"
         app:layout_constraintBottom_toBottomOf="parent" />
 
 </LinearLayout>

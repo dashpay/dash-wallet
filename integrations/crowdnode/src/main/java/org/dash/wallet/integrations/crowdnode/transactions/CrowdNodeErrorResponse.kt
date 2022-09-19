@@ -23,7 +23,7 @@ import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.script.Script
 import org.bitcoinj.script.ScriptPattern
-import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
+import org.dash.wallet.common.transactions.filters.CoinsFromAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 class CrowdNodeErrorResponse(

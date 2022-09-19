@@ -14,19 +14,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:srcCompat="@drawable/ic_notification_new_empty"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
     <TextView
         android:id="@+id/description"
-        style="@style/MontserratSemiBold"
+        style="@style/Body2.Medium.Tertiary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="29dp"
-        android:fontFamily="@font/montserrat_medium"
-        android:textSize="14sp"
         android:text="@string/contacts_contact_requests"
-        android:textColor="@color/dash_medium_gray"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/image"

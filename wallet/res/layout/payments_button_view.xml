@@ -28,16 +28,15 @@
 
         <TextView
             android:id="@+id/title_view"
-            style="@style/TitleTextView.Secondary"
+            style="@style/Body2.Tertiary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/payments_pay_by_qr_title"
-            android:textColor="@color/dash_gray"
             android:textSize="14sp" />
 
         <TextView
             android:id="@+id/sub_title_view"
-            style="@style/TitleTextView.Primary"
+            style="@style/Overline.SemiBold"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ellipsize="middle"

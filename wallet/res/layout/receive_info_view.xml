@@ -82,13 +82,12 @@
 
             <TextView
                 android:id="@+id/username_1"
-                style="@style/MontserratMedium"
+                style="@style/Headline5"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:gravity="center"
-                android:textColor="@color/black_text"
-                android:textSize="24sp"
+                android:textAlignment="gravity"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -96,13 +95,11 @@
 
             <TextView
                 android:id="@+id/username_2"
-                style="@style/MontserratRegular"
+                style="@style/Body2.Secondary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:gravity="center"
-                android:textColor="@color/dash_gray"
-                android:textSize="14sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/username_1"
@@ -128,7 +125,7 @@
 
             <Button
                 android:id="@+id/specify_amount_button"
-                style="@style/DashButton.Blue"
+                style="@style/Button.Primary.Blue"
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_marginEnd="4dp"
@@ -138,7 +135,7 @@
 
             <Button
                 android:id="@+id/share_button"
-                style="@style/DashButton.Blue"
+                style="@style/Button.Primary.Blue"
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_marginStart="4dp"
@@ -163,16 +160,15 @@
 
             <TextView
                 android:id="@+id/address_preview"
-                style="@style/TitleTextView.Secondary"
+                style="@style/Caption.Secondary"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:layout_marginEnd="4dp"
                 android:ellipsize="middle"
                 android:gravity="center"
+                android:textAlignment="gravity"
                 android:singleLine="true"
-                android:textColor="@color/dash_gray"
-                android:textSize="13sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -183,7 +179,7 @@
 
         <Button
             android:id="@+id/share_button2"
-            style="@style/DashButton.Blue"
+            style="@style/Button.Primary.Blue"
             android:layout_width="140dp"
             android:layout_height="40dp"
             android:layout_marginStart="4dp"

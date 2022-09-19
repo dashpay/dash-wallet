@@ -1,3 +1,20 @@
+/*
+ * Copyright 2021 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.dash.wallet.integration.liquid.ui
 
 import android.app.Activity
@@ -8,15 +25,15 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
+import androidx.activity.viewModels
 import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
@@ -38,7 +55,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
-import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
@@ -50,8 +66,9 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
+@ExperimentalCoroutinesApi
 @AndroidEntryPoint
-class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
+class LiquidBuyAndSellDashActivity : InteractionAwareActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
 
     companion object {
         val log: Logger = LoggerFactory.getLogger(LiquidBuyAndSellDashActivity::class.java)
@@ -67,10 +84,9 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     private var returnHome: Boolean = false
     private var liquidClient: LiquidClient? = null
-    private lateinit var viewModel: LiquidViewModel
+    private val viewModel by viewModels<LiquidViewModel>()
     private lateinit var viewBinding: ActivityLiquidBuyAndSellDashBinding
-    @Inject
-    lateinit var analytics: AnalyticsService
+    @Inject lateinit var analytics: AnalyticsService
     private var countrySupportDialog: CountrySupportDialog? = null
     private lateinit var context: Context
     private var loadingDialog: ProgressDialog? = null
@@ -133,10 +149,10 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                  intent.putExtra("extra_max_amount", "17")
                  startActivityForResult(intent, 101)*/
                 getUserLiquidAccountAddress()
-                    /*val walletDataProvider = application as WalletDataProvider
+                    /*
                 val address = Address.fromBase58(MainNetParams.get(), "yTgh4Z1RrMXbJrbkbS7Lgk8NEZERJigMsy")
                 val amount = Coin.CENT
-                walletDataProvider.startSendCoinsForResult(this, 1234, address, amount)*/
+                sendPaymentService.sendCoins(this, 1234, address, amount)*/
             }
 
         }
@@ -155,8 +171,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     }
 
     fun initViewModel() {
-        viewModel = ViewModelProvider(this)[LiquidViewModel::class.java]
-        viewModel.connectivityLiveData.observe(this) { isConnected ->
+        viewModel.isDeviceConnectedToInternet.observe(this) { isConnected ->
             if (isConnected != null) {
                 setConnectivityState(isConnected)
             }
@@ -166,7 +181,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                 when (it.status) {
                     Status.LOADING -> {
                         loadingDialog!!.show()
-                        showLiquidBalance(viewModel.lastLiquidBalance)
+                        viewModel.lastLiquidBalance?.let { it1 -> showLiquidBalance(it1) }
                     }
                     Status.SUCCESS -> {
                         log.info("liquid: get user balance successful")
@@ -179,17 +194,9 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                         log.error("liquid: cannot obtain user balance: ${it.exception?.message}")
                         if (!isFinishing) {
                             loadingDialog!!.hide()
-                            showLiquidBalance(viewModel.lastLiquidBalance)
+                            viewModel.lastLiquidBalance?.let { it1 -> showLiquidBalance(it1) }
                         }
                         if (it.exception is LiquidUnauthorizedException) {
-                            val viewModel =
-                                ViewModelProvider(this@LiquidBuyAndSellDashActivity)[FancyAlertDialogViewModel::class.java]
-                            viewModel.onPositiveButtonClick.observe(
-                                this@LiquidBuyAndSellDashActivity,
-                                Observer {
-                                    startActivity(LiquidSplashActivity.createIntent(this@LiquidBuyAndSellDashActivity))
-                                    finish()
-                                })
                             FancyAlertDialog.newInstance(
                                 R.string.liquid_logout_title, R.string.liquid_forced_logout,
                                 R.drawable.ic_liquid_icon, android.R.string.ok, 0
@@ -199,7 +206,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                     Status.CANCELED -> {
                         if (!isFinishing) {
                             loadingDialog!!.hide()
-                            showLiquidBalance(viewModel.lastLiquidBalance)
+                            viewModel.lastLiquidBalance?.let { it1 -> showLiquidBalance(it1) }
                         }
                     }
                 }
@@ -366,10 +373,10 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                     if (payloadObject.length() != 0) {
                         payloadObject.getString("send_to_btc_address")
                     }
-                    /*val walletDataProvider = application as WalletDataProvider
+                    /*
                     val address = Address.fromBase58(MainNetParams.get(), payloadObject.getString("send_to_btc_address"))
                     val amount = Coin.CENT
-                    walletDataProvider.startSendCoinsForResult(this@LiquidBuyAndSellDashActivity, 1234, address, amount)*/
+                    SendPaymentService.sendCoins(this@LiquidBuyAndSellDashActivity, 1234, address, amount)*/
                 }
 
                 override fun onError(e: Exception?) {
@@ -516,6 +523,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     override fun onResume() {
         super.onResume()
         super.turnOnAutoLogout()
+        viewModel.monitorNetworkStateChange()
         viewModel.updateLiquidBalance()
         if (isClickLogoutButton) {
             isClickLogoutButton = false
@@ -615,4 +623,11 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         countrySupportDialog?.dismiss()
         super.onDestroy()
     }
+
+    override fun onPositiveButtonClick() {
+        startActivity(LiquidSplashActivity.createIntent(this@LiquidBuyAndSellDashActivity))
+        finish()
+    }
+
+    override fun onNegativeButtonClick() {}
 }

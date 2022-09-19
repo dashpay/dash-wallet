@@ -38,7 +38,6 @@ import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
-
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity.ACTION_SEND_FROM_WALLET_URI
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -146,6 +145,12 @@ class TransactionResultActivity : AbstractWalletActivity() {
                     transactionResultViewBinder.setTransactionMetadata(it)
                 }
             }
+
+            viewModel.transactionMetadata.observe(this) {
+                if(it != null) {
+                    transactionResultViewBinder.setTransactionMetadata(it)
+                }
+            }
         } else {
             log.error("Transaction not found. TxId:", txId)
             finish()
@@ -191,6 +196,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
         }
         view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
         report_issue_card.setOnClickListener { showReportIssue() }
+        tax_category_layout.setOnClickListener { viewOnTaxCategory()}
         add_private_memo_btn.setOnClickListener {
             viewModel.transaction?.txId?.let { hash ->
                 PrivateMemoDialog().apply {
@@ -205,6 +211,11 @@ class TransactionResultActivity : AbstractWalletActivity() {
             check_icon.visibility = View.VISIBLE
             (check_icon.drawable as Animatable).start()
         }, 400)
+    }
+
+    private fun viewOnTaxCategory() {
+        // this should eventually trigger the observer to update the view
+        viewModel.toggleTaxCategory()
     }
 
     private fun showReportIssue() {

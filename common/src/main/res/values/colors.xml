@@ -24,7 +24,6 @@
     <color name="secondary_status">#E78010</color>
     <color name="primary_status">#4A4A4A</color>
     <color name="light_blue_38pct">#61A6D7F5</color>
-    <color name="light_blue">#A6D7F5</color>
     <color name="strong_blue">#1c75bc</color>
     <color name="strong_blue_bis">#295290</color>
     <color name="dark_blue">#1e487c</color>
@@ -74,7 +73,6 @@
     <color name="content_tertiary">@color/dark_gray</color>
     <color name="content_disabled">#92929C</color>
     <color name="content_warning">@color/system_red</color>
-    <color name="light_gray">#DEDEE3</color>
     <color name="input_hint_gray">#c5c6c7</color>
 
     <!-- Background -->
@@ -85,6 +83,7 @@
     <color name="background_explore">@color/blue_700</color>
     <color name="background_accuracy_circle">#26008DE4</color>
     <color name="button_ripple_color">#1f000000</color>
+    <color name="button_ripple_light">#40B0B6BC</color>
     <color name="disabled_button_bg">#eeeeee</color>
     <color name="max_button_bg">#ebebeb</color>
     <color name="text_highlight_blue_bg">#14008DE4</color>
@@ -101,26 +100,34 @@
 
     <!-- Palette -->
     <color name="dash_blue">#008DE4</color>
+    <color name="deep_blue">#0052FF</color>
     <color name="dash_black">#191C1F</color>
     <color name="extra_dark_gray">#525C66</color>
     <color name="dark_gray">#75808A</color>
     <color name="gray">#B0B6BC</color>
+    <color name="light_gray">#CED2D5</color>
     <color name="extra_light_gray">#EBEDEE</color>
     <color name="system_red">#E85C4A</color>
     <color name="system_green">#3CB878</color>
     <color name="tangerine">#FA9269</color>
 
     <color name="dash_black_0.7">#B30C0C0D</color>
+    <color name="system_green_0.1">#1A3CB878</color>
+    <color name="dash_blue_0.1">#1A008DE4</color>
 
     <color name="blue_50">#F0F8FE</color>
     <color name="blue_300">#3CA9EE</color>
     <color name="blue_700">#003470</color>
+    <color name="light_blue">#1A008DE4</color>
 
     <color name="gray_40">#F2F3F5</color>
     <color name="gray_50">#EBEDF0</color>
     <color name="gray_100">#E1E3E6</color>
     <color name="gray_200">#C4C8CC</color>
+    <color name="gray_300">#AAAEB3</color>
+    <color name="gray_400">#909499</color>
     <color name="gray_600">#5D5F61</color>
+    <color name="gray_900">#0C0C0D</color>
 
     <color name="steel_gray_40">#F3F5F6</color>
     <color name="steel_gray_150">#B8C1CC</color>

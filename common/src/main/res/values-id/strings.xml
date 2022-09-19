@@ -11,8 +11,9 @@
     <string name="buy_dash">Beli Dash</string>
     <string name="copied">Disalin</string>
     <string name="staking_title">Staking</string>
+    <string name="email">Email</string>
+    <string name="email_placeholder">misalnya johndoe@mail.com</string>
     <string name="error">Kesalahan</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Pound Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -51,8 +52,12 @@
     <string name="permission_allow">Izinkan</string>
     <string name="permission_deny">Tolak</string>
     <string name="max">Max</string>
+    <string name="dash">Dash</string>
     <string name="select_currency">Pilih mata uang</string>
     <string name="send_coins_error_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
     <string name="send_coins_error_insufficient_money">Dana tidak mencukupi</string>
 
-    </resources>
+    <string name="empty_wallet_warning_title">Sepertinya Anda sedang mengosongkan Dompet Dash Anda</string>
+    <string name="empty_wallet_crowdnode_warning">Harap dicatat, Anda tidak akan dapat menarik dana Anda dari CrowdNode ke dompet ini sampai saldo Anda meningkat menjadi 0,0003 Dash.</string>
+    <string name="syncing">Menyingkronkan:</string>
+</resources>

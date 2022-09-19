@@ -30,39 +30,37 @@
 
     <TextView
         android:id="@+id/title"
-        style="@style/MontserratMedium"
+        style="@style/Body2.White"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="40dp"
         android:layout_marginEnd="40dp"
         android:layout_marginBottom="60dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:text="@string/image_cropper_title"
-        android:textColor="@android:color/white"
         app:layout_constraintBottom_toTopOf="@+id/circle_crop"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/cancel_btn"
-        style="@style/DashButton.Transparent"
+        style="@style/Button.Tertiary.Large"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_marginLeft="15dp"
         android:layout_marginRight="15dp"
         android:layout_marginBottom="25dp"
         android:text="@string/button_cancel"
-        android:textSize="18sp"
         app:layout_constraintBottom_toBottomOf="parent" />
 
     <Button
         android:id="@+id/select_btn"
-        style="@style/DashButton.Blue"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_margin="15dp"
         android:text="@string/select"
-        android:textSize="18sp"
         app:layout_constraintBottom_toTopOf="@id/cancel_btn" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

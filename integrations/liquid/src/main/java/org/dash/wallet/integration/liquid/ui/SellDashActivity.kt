@@ -31,6 +31,10 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @AndroidEntryPoint
+// TODO: update this class to be similar to BuyDashWithCreditCardActivity
+//   * network connectivity
+//   * mark walletAddress address as TransferIn with successful transfer
+
 class SellDashActivity : InteractionAwareActivity() {
     @Inject
     lateinit var analytics: AnalyticsService

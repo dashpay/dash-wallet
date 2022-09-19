@@ -22,12 +22,10 @@
 
     <TextView
         android:id="@+id/display_name"
-        style="@style/MontserratSemiBold"
+        style="@style/Subtitle1"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
-        android:textColor="@android:color/black"
-        android:textSize="16sp"
         app:layout_constraintEnd_toStartOf="@id/buttons"
         app:layout_constraintStart_toEndOf="@id/avatar"
         app:layout_constraintTop_toTopOf="@id/avatar"
@@ -37,11 +35,9 @@
 
     <TextView
         android:id="@+id/username"
-        style="@style/MontserratRegular"
+        style="@style/Overline.Tertiary"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textColor="@color/gray"
-        android:textSize="12sp"
         app:layout_constraintStart_toStartOf="@id/display_name"
         app:layout_constraintEnd_toStartOf="@id/buttons"
         app:layout_constraintTop_toBottomOf="@id/display_name"
@@ -58,14 +54,12 @@
 
         <Button
             android:id="@+id/accept_contact_request"
+            style="@style/Button.Primary.Small.Blue"
+            android:paddingHorizontal="0dp"
             android:layout_width="67dp"
             android:layout_height="30dp"
-            android:fontFamily="@font/montserrat_medium"
-            android:textSize="12sp"
             android:layout_weight="1"
             android:textAllCaps="false"
-            android:textColor="@color/white"
-            style="@style/DashButton.Blue"
             android:text="@string/contact_request_accept" />
 
         <ImageButton
@@ -76,7 +70,7 @@
             android:layout_marginEnd="20dp"
             android:layout_weight="1"
             app:srcCompat="@drawable/ic_ignore_x"
-            style="@style/DashButton.Gray" />
+            style="@style/Button.Primary.Small.Round" />
     </LinearLayout>
 
     <androidx.constraintlayout.widget.Guideline

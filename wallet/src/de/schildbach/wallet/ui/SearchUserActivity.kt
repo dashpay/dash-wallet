@@ -40,7 +40,7 @@ import androidx.transition.Transition
 import androidx.transition.TransitionManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
-import de.schildbach.wallet.data.BlockchainState
+import org.dash.wallet.common.data.BlockchainState
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.observeOnce
@@ -181,7 +181,7 @@ class SearchUserActivity : LockScreenActivity(), ContactViewHolder.OnItemClickLi
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             val searchPadding = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 60f, resources.displayMetrics).toInt()
             setPadding(searchPadding, 0, 0, 0)
-            typeface = ResourcesCompat.getFont(this@SearchUserActivity, R.font.montserrat_semibold)
+            typeface = ResourcesCompat.getFont(this@SearchUserActivity, R.font.inter_semibold)
         }
     }
 

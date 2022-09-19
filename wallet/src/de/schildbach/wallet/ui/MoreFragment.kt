@@ -27,7 +27,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.observeOnce
@@ -251,7 +250,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
 
     private fun startBuyAndSellActivity() {
         analytics.logEvent(AnalyticsConstants.Liquid.BUY_SELL_MORE, bundleOf())
-        startActivityForResult(BuyAndSellLiquidUpholdActivity.createIntent(requireContext()), REQUEST_CODE_BUY_SELL);
+        startActivityForResult(BuyAndSellIntegrationsActivity.createIntent(requireContext()), REQUEST_CODE_BUY_SELL);
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <LinearLayout
         android:id="@+id/wallet_balance"
@@ -24,10 +25,9 @@
             android:layout_marginLeft="@dimen/list_entry_padding_horizontal"
             android:layout_marginRight="@dimen/list_entry_padding_horizontal_cram"
             android:text="@string/wallet_balance_fragment_too_much"
-            android:textColor="@color/white"
             android:textSize="@dimen/font_size_tiny"
             android:visibility="gone"
-            style="@style/MontserratMedium"/>
+            style="@style/Body2.Medium.White"/>
 
         <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/wallet_balance_local"
@@ -40,12 +40,12 @@
 
     <TextView
         android:id="@+id/wallet_balance_progress"
+        style="@style/Body2.White"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_marginLeft="@dimen/space_medium"
         android:layout_marginRight="@dimen/space_medium"
-        android:textColor="@color/white"
         android:textSize="@dimen/font_size_small"
         android:visibility="gone" />
 

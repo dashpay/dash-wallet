@@ -28,7 +28,7 @@
 
         <TextView
             android:id="@+id/firstItem"
-            style="@style/MontserratRegular"
+            style="@style/Body1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginEnd="10dp"
@@ -36,8 +36,8 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:layout_gravity="center_vertical|center_horizontal"
-            android:textAlignment="center"
-            android:textSize="16sp"
+            android:gravity="center"
+            android:textAlignment="gravity"
             tools:text="First Item" />
 
     </LinearLayout>
@@ -57,15 +57,16 @@
 
         <TextView
             android:id="@+id/secondItem"
-            style="@style/MontserratRegular"
+            style="@style/Body1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical|center_horizontal"
-            android:textAlignment="center"
+            android:gravity="center"
+            android:textAlignment="gravity"
             android:layout_marginEnd="10dp"
-            android:layout_marginStart="10dp"            android:ellipsize="end"
+            android:layout_marginStart="10dp"
+            android:ellipsize="end"
             android:maxLines="1"
-            android:textSize="16sp"
             tools:text="Second Item"/>
 
     </LinearLayout>
@@ -86,15 +87,16 @@
 
         <TextView
             android:id="@+id/thirdItem"
-            style="@style/MontserratRegular"
+            style="@style/Body1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical|center_horizontal"
-            android:textAlignment="center"
+            android:gravity="center"
+            android:textAlignment="gravity"
             android:layout_marginEnd="10dp"
-            android:layout_marginStart="10dp"            android:ellipsize="end"
+            android:layout_marginStart="10dp"
+            android:ellipsize="end"
             android:maxLines="1"
-            android:textSize="16sp"
             tools:text="Third Item" />
 
     </LinearLayout>

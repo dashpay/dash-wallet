@@ -87,8 +87,9 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dashj.platform.dapiclient.DapiClient;
 import org.dash.wallet.common.services.NotificationService;
-import org.dash.wallet.common.transactions.NotFromAddressTxFilter;
-import org.dash.wallet.common.transactions.TransactionFilter;
+import org.dash.wallet.common.transactions.filters.NotFromAddressTxFilter;
+import org.dash.wallet.common.transactions.filters.TransactionFilter;
+import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.transactions.TransactionUtils;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationHandler;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi;
@@ -125,7 +126,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
-import de.schildbach.wallet.data.BlockchainState;
+import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 import de.schildbach.wallet.ui.OnboardingActivity;
@@ -138,7 +139,6 @@ import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
-import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
@@ -294,6 +294,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         public void onCoinsSent(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
+            
             if(CreditFundingTransaction.isCreditFundingTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
                 // Handle credit function transactions (username creation, topup, invites)
                 CreditFundingTransaction cftx = wallet.getCreditFundingTransaction(tx);
@@ -303,6 +304,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     platformRepo.handleSentCreditFundingTransaction(cftx, blockChainHeadTime);
                 }
             }
+
             handleMetadata(tx);
             updateAppWidget();
         }

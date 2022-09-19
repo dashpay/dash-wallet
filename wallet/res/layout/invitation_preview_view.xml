@@ -12,13 +12,12 @@
 
     <TextView
         android:id="@+id/custom_title"
-        style="@style/MontserratMedium.PageTitle"
+        style="@style/Headline6.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:gravity="center_horizontal"
-        android:text="@string/invitation_preview_title"
-        android:textColor="@color/dash_blue"
-        android:textStyle="bold" />
+        android:textAlignment="gravity"
+        android:text="@string/invitation_preview_title" />
 
 </LinearLayout>

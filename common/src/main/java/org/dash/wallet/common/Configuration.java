@@ -33,6 +33,7 @@ import com.google.common.base.Strings;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.data.CurrencyInfo;
+import org.dash.wallet.common.util.GenericUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,10 +101,24 @@ public class Configuration {
     public static final String PREFS_KEY_LAST_LIQUID_BALANCE = "last_liquid_balance";
     public static final String PREFS_KEY_LAST_UPHOLD_BALANCE = "last_uphold_balance";
 
+    // Coinbase
+
+    public static final String PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN = "last_coinbase_access_token";
+    public static final String PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN = "last_coinbase_refresh_token";
+    public static final String PREFS_KEY_LAST_COINBASE_BALANCE = "last_coinbase_balance";
+    public static final String PREFS_KEY_COINBASE_USER_ACCOUNT_ID = "coinbase_account_id";
+    public static final String PREFS_KEY_COINBASE_AUTH_INFO_SHOWN = "coinbase_auth_info_shown";
+    public static final String PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT = "withdrawal_limit";
+    public static final String PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY = "send_limit_currency";
+
+
+
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
     public static final String PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION = "is_dash_to_fiat_direction";
     public static final String PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER = "show_notifications_explainer";
+    public static final String PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER = "show_tax_catagory_explainer";
+    public static final String PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME = "show_tax_catagory_install_time";
 
     private static final long DISABLE_NOTIFICATIONS = -1;
 
@@ -115,6 +130,7 @@ public class Configuration {
     // CrowdNode
     public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
     public static final String PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS = "crowdnode_primary_address";
+    public static final String PREFS_KEY_CROWDNODE_STAKING_APY = "crowdnode_staking_apy_last";
 
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
@@ -163,6 +179,7 @@ public class Configuration {
             throw new IllegalStateException("cannot handle shift: " + shift);
     }
 
+    @NonNull
     public MonetaryFormat getFormat() {
         final int shift = PREFS_DEFAULT_BTC_SHIFT;
         final int minPrecision = 2;
@@ -585,9 +602,16 @@ public class Configuration {
         prefs.edit().putString(PREFS_KEY_LAST_UPHOLD_BALANCE, balance).apply();
     }
 
-    @NonNull
     public String getLastUpholdBalance() {
-        return prefs.getString(PREFS_KEY_LAST_UPHOLD_BALANCE, "0.00");
+        return prefs.getString(PREFS_KEY_LAST_UPHOLD_BALANCE, null);
+    }
+
+    public void setLastLiquidBalance(String balance) {
+        prefs.edit().putString(PREFS_KEY_LAST_LIQUID_BALANCE, balance).apply();
+    }
+
+    public String getLastLiquidBalance() {
+        return prefs.getString(PREFS_KEY_LAST_LIQUID_BALANCE, null);
     }
 
     public Boolean isDashToFiatDirection() {
@@ -606,6 +630,23 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER, needToShow).apply();
     }
 
+    // Tax Categories
+
+    public boolean getHasDisplayedTaxCategoryExplainer() {
+        return prefs.getBoolean(PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER, false);
+    }
+
+    public void setHasDisplayedTaxCategoryExplainer() {
+        prefs.edit().putBoolean(PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER, true).apply();
+    }
+
+    public long getTaxCategoryInstallTime() {
+        return prefs.getLong(PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME, 0L);
+    }
+
+    public void setTaxCategoryInstallTime(long time) {
+        prefs.edit().putLong(PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME, time).apply();
+    }
 
     // Explore Dash
 
@@ -636,6 +677,65 @@ public class Configuration {
         return prefs.getString(PREFS_KEY_EXPLORE_DATABASE_NAME, "explore-database");
     }
 
+    // Coinbase
+
+    public void setLastCoinBaseAccessToken(String token) {
+        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, token).apply();
+    }
+
+    public String getLastCoinbaseAccessToken() {
+        return prefs.getString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, null);
+    }
+
+    public void setLastCoinBaseRefreshToken(String token) {
+        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN, token).apply();
+    }
+
+    public String getLastCoinbaseRefreshToken() {
+        return prefs.getString(PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN, null);
+    }
+
+    public void setLastCoinBaseBalance(String balance) {
+        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_BALANCE, balance).apply();
+    }
+
+    @Nullable
+    public String getLastCoinbaseBalance() {
+        return prefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, null);
+    }
+
+    public Boolean getHasCoinbaseAuthInfoBeenShown() {
+        return prefs.getBoolean(PREFS_KEY_COINBASE_AUTH_INFO_SHOWN, false);
+    }
+
+    public void setHasCoinbaseAuthInfoBeenShown(boolean isShown) {
+        prefs.edit().putBoolean(PREFS_KEY_COINBASE_AUTH_INFO_SHOWN, isShown).apply();
+    }
+
+    public void setCoinBaseUserAccountId(String accountId) {
+        prefs.edit().putString(PREFS_KEY_COINBASE_USER_ACCOUNT_ID, accountId).apply();
+    }
+
+    public String getCoinbaseUserAccountId(){
+        return prefs.getString(PREFS_KEY_COINBASE_USER_ACCOUNT_ID, null);
+    }
+
+    public void setCoinbaseUserWithdrawalLimitAmount(String amount){
+        prefs.edit().putString(PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT, amount).apply();
+    }
+
+    public String getCoinbaseUserWithdrawalLimitAmount() {
+        return prefs.getString(PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT, null);
+    }
+
+    public void setCoinbaseSendLimitCurrency(String currency){
+        prefs.edit().putString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, currency).apply();
+    }
+
+    public String getCoinbaseSendLimitCurrency() {
+        return prefs.getString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, GenericUtils.getLocaleCurrencyCode());
+    }
+
     // CrowdNode
 
     @NonNull
@@ -654,5 +754,14 @@ public class Configuration {
 
     public void setCrowdNodePrimaryAddress(@NonNull String address) {
         prefs.edit().putString(PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS, address).apply();
+    }
+
+    @NonNull
+    public Float getPrefsKeyCrowdNodeStakingApy() {
+        return prefs.getFloat(PREFS_KEY_CROWDNODE_STAKING_APY, 0.0f);
+    }
+
+    public void setPrefsKeyCrowdNodeStakingApy(@NonNull float apy) {
+        prefs.edit().putFloat(PREFS_KEY_CROWDNODE_STAKING_APY, apy).apply();
     }
 }

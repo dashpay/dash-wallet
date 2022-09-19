@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">Прив\'язати акаунт Liquid</string>
+    <string name="buy_dash_with_liquid_account">Купити Dash за допомогою кредитної картки</string>
+    <string name="liquid_logout">Вийти</string>
+    <string name="liquid_logout_title">Вийти з Liquid</string>
+    <string name="liquid_forced_logout">Посилання на ваш обліковий запис Liquid не працює. Будь ласка, виберіть Прив\'язати обліковий запис Liquid на наступному екрані.</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Обміняти Dash на інші криптовалюти</string>
+    <string name="transfer_dash_to_and_from_account">Внести або вивести Dash з вашого акаунта Liquid</string>
+
+    <string name="cryptocurrency">Криптовалюта</string>
+    <string name="credit_card">Кредитна картка</string>
+
+    <string name="buy">Купити</string>
+    <string name="sell_dash">Продати Dash</string>
+    <string name="buy_sell_dash_">Купити &amp; Продати Dash</string>
+    <string name="button_cancel">Відміна</string>
+    <string name="choose_your_payment_method">Оберіть засіб платежу</string>
+    <string name="crypto_support">Крипто Підтримка</string>
+    <string name="credit_card_support">Підтримка кредитних карток</string>
+    <string name="okay">Згода</string>
+    <string name="list_of_countries">Список країн, що не підтримуються.</string>
+    <string name="buying_dash_not_supported_credit_cards">Купівля Dash кредитною карткою не підтримується в деяких країнах.</string>
+    <string name="buying_dash_not_supported_crypto">Купівля Dash за криптовалюту не підтримується в деяких країнах.</string>
+    <string name="buying_dash_success_message">Цей екран можна закрити, Dash буде надіслано на ваш гаманець.</string>
+
+    <string name="confirm">Підтвердити</string>
+    <string name="card_fees">Комісії платіжної картки</string>
+    <string name="conversion_rate">Курс конвертації</string>
+    <string name="network_fee">Комісія мережі</string>
+    <string name="total">Всього</string>
+    <string name="connect">Підключитися</string>
+    <string name="connected">Підключено</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="buy_sell_dash">Купити &amp; продати Dash або створити новий акаунт</string>
+
+
+    <string name="transfer_to_liquid">Переказати на Liquid</string>
+    <string name="transfer_from_liquid">Переказати з Liquid</string>
+    <string name="disconnect">Відключити</string>
+    <string name="select_crypto_currency">Виберіть криптовалюту</string>
+    <string name="select_sell_currency">Виберіть криптовалюту для продажу</string>
+    <string name="select_buy_currency">Виберіть криптовалюту для покупки</string>
+    <string name="select_fiat_currency">Виберіть фіатну валюту</string>
+    <string name="show_payment_qr_code">Показати QR-код платежу</string>
+    <string name="pay_with_btc_from_liquid">Сплатити BTC з Liquid</string>
+    <string name="or">або</string>
+
+    <string name="internet_connected">Будь ласка, підключіться до Інтернету</string>
+    <string name="please_enter_amount">Будь ласка, введіть суму</string>
+
+    <string name="choose_what_you_receive">Виберіть, що ви отримаєте</string>
+    <string name="fiat_currency">Фіатна валюта</string>
+
+    <string name="liquid">Liquid</string>
+    <string name="transfer">Переказати</string>
+    <string name="filter_by">Відфільтровано за:</string>
+</resources>
