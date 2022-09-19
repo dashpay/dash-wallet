@@ -55,8 +55,8 @@ import java.util.List;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
-import de.schildbach.wallet.ui.send.DecryptSeedTask;
-import de.schildbach.wallet.ui.send.DeriveKeyTask;
+import de.schildbach.wallet.payments.DecryptSeedTask;
+import de.schildbach.wallet.payments.DeriveKeyTask;
 import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.FingerprintHelper;

@@ -50,6 +50,7 @@ import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.hilt.work.HiltWorkerFactory;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.multidex.MultiDexApplication;
 import androidx.work.BackoffPolicy;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
@@ -143,7 +144,7 @@ import kotlinx.coroutines.flow.FlowKt;
  */
 @HiltAndroidApp
 @ExperimentalCoroutinesApi
-public class WalletApplication extends BaseWalletApplication
+public class WalletApplication extends MultiDexApplication
         implements androidx.work.Configuration.Provider, AutoLogoutTimerHandler, WalletDataProvider {
     private static WalletApplication instance;
     private Configuration config;
@@ -493,7 +494,6 @@ public class WalletApplication extends BaseWalletApplication
         rollingPolicy.start();
 
 
-        PreferenceManager.setDefaultValues(this, R.xml.preference_settings, false);
         fileAppender.setEncoder(filePattern);
         fileAppender.setRollingPolicy(rollingPolicy);
         fileAppender.start();
@@ -989,12 +989,6 @@ public class WalletApplication extends BaseWalletApplication
     @Override
     public Address freshReceiveAddress() {
         return wallet.freshReceiveAddress();
-    }
-
-    @NotNull
-    @Override
-    public Address currentReceiveAddress() {
-        return wallet.currentReceiveAddress();
     }
 
     @NotNull

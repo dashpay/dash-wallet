@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.send;
+package de.schildbach.wallet.payments;
 
 import java.io.BufferedReader;
 import java.io.IOException;

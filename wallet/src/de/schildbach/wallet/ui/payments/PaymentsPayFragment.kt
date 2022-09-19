@@ -1,20 +1,21 @@
 /*
- * Copyright 2020 Dash Core Group
+ * Copyright 2022 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.payments
 
 import android.app.Activity
 import android.content.ClipDescription
@@ -28,7 +29,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import androidx.core.os.bundleOf
+import androidx.fragment.app.Fragment
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.ui.InputParser
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
@@ -37,11 +41,12 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
-import org.dash.wallet.common.ui.BaseLockScreenFragment
-import org.dash.wallet.common.ui.formatString
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import javax.inject.Inject
 
-class PaymentsPayFragment : BaseLockScreenFragment() {
+@AndroidEntryPoint
+class PaymentsPayFragment : Fragment() {
 
     companion object {
 
@@ -51,7 +56,7 @@ class PaymentsPayFragment : BaseLockScreenFragment() {
         fun newInstance() = PaymentsPayFragment()
     }
 
-    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
+    @Inject lateinit var analytics: AnalyticsService
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_payments_pay, container, false)
@@ -145,12 +150,12 @@ class PaymentsPayFragment : BaseLockScreenFragment() {
 
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
-                    alertDialog = baseAlertDialogBuilder.apply {
-                        title = getString(errorDialogTitleResId)
-                        message = getString(messageResId, *messageArgs)
-                        neutralText = getString(R.string.button_dismiss)
-                    }.buildAlertDialog()
-                    alertDialog.show()
+                    AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(errorDialogTitleResId),
+                        getString(messageResId, *messageArgs),
+                        getString(R.string.button_dismiss)
+                    ).show(requireActivity())
                 } else {
                     manageStateOfPayToAddressButton(null)
                 }

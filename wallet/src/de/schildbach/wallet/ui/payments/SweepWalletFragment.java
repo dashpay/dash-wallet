@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,10 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.send;
+package de.schildbach.wallet.ui.payments;
 
 import android.app.Activity;
-import android.app.Dialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -28,9 +27,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
@@ -62,7 +62,7 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.ui.CurrencyTextView;
-import org.dash.wallet.common.ui.FancyAlertDialog;
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,7 +79,10 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.DynamicFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
 
-import org.dash.wallet.common.ui.BaseLockScreenFragment;
+import de.schildbach.wallet.payments.DecodePrivateKeyTask;
+import de.schildbach.wallet.data.FeeCategory;
+import de.schildbach.wallet.payments.RequestWalletBalanceTask;
+import de.schildbach.wallet.payments.SendCoinsOfflineTask;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity;
 import de.schildbach.wallet.ui.rates.ExchangeRatesViewModel;
@@ -89,12 +92,11 @@ import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
 import static com.google.common.base.Preconditions.checkState;
-import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
 
 /**
  * @author Andreas Schildbach
  */
-public class SweepWalletFragment extends BaseLockScreenFragment {
+public class SweepWalletFragment extends Fragment {
     private SweepWalletActivity activity;
     private WalletApplication application;
     private Configuration config;
@@ -114,7 +116,7 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
     private View introductionGroup;
     private View balanceGroup;
     private CurrencyTextView balanceView;
-    private Dialog decryptDialog;
+    private DialogFragment decryptDialog;
     private Button viewGo;
     private ExchangeRate currentExchangeRate;
 
@@ -124,7 +126,7 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
 
     private static final int REQUEST_CODE_SCAN = 0;
 
-    private FancyAlertDialog loadingDialog;
+    private DialogFragment loadingDialog;
 
     private enum State {
         INTRO,
@@ -136,24 +138,25 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
     private static final Logger log = LoggerFactory.getLogger(SweepWalletFragment.class);
 
     private final LoaderManager.LoaderCallbacks<Map<FeeCategory, Coin>> dynamicFeesLoaderCallbacks = new LoaderManager.LoaderCallbacks<Map<FeeCategory, Coin>>() {
+        @NonNull
         @Override
         public Loader<Map<FeeCategory, Coin>> onCreateLoader(final int id, final Bundle args) {
             return new DynamicFeeLoader(activity);
         }
 
         @Override
-        public void onLoadFinished(final Loader<Map<FeeCategory, Coin>> loader, final Map<FeeCategory, Coin> data) {
+        public void onLoadFinished(@NonNull final Loader<Map<FeeCategory, Coin>> loader, final Map<FeeCategory, Coin> data) {
             fees = data;
             updateView();
         }
 
         @Override
-        public void onLoaderReset(final Loader<Map<FeeCategory, Coin>> loader) {
+        public void onLoaderReset(@NonNull final Loader<Map<FeeCategory, Coin>> loader) {
         }
     };
 
     @Override
-    public void onAttach(final Activity activity) {
+    public void onAttach(@NonNull final Activity activity) {
         super.onAttach(activity);
 
         this.activity = (SweepWalletActivity) activity;
@@ -303,11 +306,13 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
 
                     @Override
                     protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                        baseAlertDialogBuilder.setTitle(getString(R.string.button_scan));
-                        baseAlertDialogBuilder.setMessage(formatString(requireActivity(), messageResId, messageArgs));
-                        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-                        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-                        alertDialog.show();
+                        AdaptiveDialog.create(
+                                null,
+                                getString(R.string.button_scan),
+                                getString(messageResId, messageArgs),
+                                getString(R.string.button_dismiss),
+                                null
+                        ).show(requireActivity(), result -> Unit.INSTANCE);
                     }
                 }.parse();
             }
@@ -318,7 +323,7 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
         if (loadingDialog != null && loadingDialog.isAdded()) {
             loadingDialog.dismissAllowingStateLoss();
         }
-        loadingDialog = FancyAlertDialog.newProgress(messageResId, 0);
+        loadingDialog = AdaptiveDialog.progress(getString(messageResId));
         loadingDialog.show(getParentFragmentManager(), "progress");
     }
 
@@ -332,12 +337,7 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
         startActivityForResult(new Intent(activity, ScanActivity.class), REQUEST_CODE_SCAN);
     }
 
-    private final Runnable maybeDecodeKeyRunnable = new Runnable() {
-        @Override
-        public void run() {
-            maybeDecodeKey();
-        }
-    };
+    private final Runnable maybeDecodeKeyRunnable = this::maybeDecodeKey;
 
     private void maybeDecodeKey() {
         checkState(state == State.DECODE_KEY);
@@ -458,19 +458,19 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
             public void onFail(final int messageResId, final Object... messageArgs) {
                 dismissProgress();
 
-                baseAlertDialogBuilder.setTitle(getString(R.string.sweep_wallet_fragment_request_wallet_balance_failed_title));
-                baseAlertDialogBuilder.setMessage(getString(messageResId, messageArgs));
-                baseAlertDialogBuilder.setPositiveText(getString(R.string.button_retry));
-                baseAlertDialogBuilder.setPositiveAction(
-                        () -> {
-                            requestWalletBalance();
-                            return Unit.INSTANCE;
-                        }
-                );
-                baseAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
-                baseAlertDialogBuilder.setShowIcon(true);
-                alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-                alertDialog.show();
+                AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.sweep_wallet_fragment_request_wallet_balance_failed_title),
+                        getString(messageResId, messageArgs),
+                        getString(R.string.button_dismiss),
+                        getString(R.string.button_retry)
+                ).show(requireActivity(), result -> {
+                    if (result != null && result) {
+                        requestWalletBalance();
+                    }
+
+                    return Unit.INSTANCE;
+                });
             }
         };
 
@@ -499,8 +499,8 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
 
         if (state == State.DECODE_KEY && privateKeyToSweep != null) {
             showDecryptDialog();
-        } else if (decryptDialog != null && decryptDialog.isShowing()) {
-            decryptDialog.cancel();
+        } else if (decryptDialog != null && decryptDialog.isAdded()) {
+            decryptDialog.dismiss();
             decryptDialog = null;
         }
 
@@ -537,31 +537,25 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
         if (!isAdded()) {
             return;
         }
-        View contentView = LayoutInflater.from(getActivity())
-                .inflate(R.layout.sweep_wallet_decrypt_dialog, null);
-        final TextView passwordText = contentView.findViewById(R.id.sweep_wallet_fragment_password);
-        View badPasswordView = contentView.findViewById(R.id.sweep_wallet_fragment_bad_password);
-        badPasswordView.setVisibility(badPassword ? View.VISIBLE : View.GONE);
 
-        baseAlertDialogBuilder.setTitle(getString(R.string.sweep_wallet_fragment_encrypted));
-        baseAlertDialogBuilder.setView(contentView);
-        baseAlertDialogBuilder.setPositiveText(getString(R.string.sweep_wallet_fragment_button_decrypt));
-        baseAlertDialogBuilder.setPositiveAction(
-                () -> {
-                    password = passwordText.getText().toString();
-                    handleDecrypt();
-                    return Unit.INSTANCE;
-                }
-        );
-        baseAlertDialogBuilder.setCancelable(false);
-
-        if (decryptDialog != null) {
-            decryptDialog.cancel();
+        if (decryptDialog != null && decryptDialog.isAdded()) {
+            decryptDialog.dismiss();
             decryptDialog = null;
         }
-        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-        alertDialog.show();
-        decryptDialog = alertDialog;
+
+        SweepWalletPasswordDialog dialog = new SweepWalletPasswordDialog();
+        dialog.setCancelable(false);
+        dialog.setBadPassword(badPassword);
+
+        dialog.show(requireActivity(), result -> {
+            if (result != null && result) {
+                password = dialog.getPassword();
+                handleDecrypt();
+            }
+
+            return Unit.INSTANCE;
+        });
+        decryptDialog = dialog;
     }
 
     private void handleDecrypt() {
@@ -614,12 +608,13 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
             @Override
             protected void onFailure(final Exception exception) {
                 setState(State.FAILED);
-                baseAlertDialogBuilder.setTitle(getString(R.string.send_coins_error_msg));
-                baseAlertDialogBuilder.setMessage(exception.toString());
-                baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-                baseAlertDialogBuilder.setShowIcon(true);
-                alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-                alertDialog.show();
+                AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.send_coins_error_msg),
+                        exception.toString(),
+                        getString(R.string.button_dismiss),
+                        null
+                ).show(requireActivity(), result -> Unit.INSTANCE);
             }
 
             @Override
@@ -628,12 +623,13 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
             }
 
             private void showInsufficientMoneyDialog() {
-                baseAlertDialogBuilder.setTitle(getString(R.string.sweep_wallet_fragment_insufficient_money_title));
-                baseAlertDialogBuilder.setMessage(getString(R.string.sweep_wallet_fragment_insufficient_money_msg));
-                baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-                baseAlertDialogBuilder.setShowIcon(true);
-                alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-                alertDialog.show();
+                AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.sweep_wallet_fragment_insufficient_money_title),
+                        getString(R.string.sweep_wallet_fragment_insufficient_money_msg),
+                        getString(R.string.button_dismiss),
+                        null
+                ).show(requireActivity(), result -> Unit.INSTANCE);
             }
         }.sendCoinsOffline(sendRequest, false, false); // send asynchronously
     }

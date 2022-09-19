@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.send;
+package de.schildbach.wallet.payments;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
@@ -36,14 +36,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.util.WalletUtils;
 
 import android.os.Handler;
 import android.os.Looper;
 
 import androidx.annotation.NonNull;
-
-import java.util.List;
 
 /**
  * @author Andreas Schildbach

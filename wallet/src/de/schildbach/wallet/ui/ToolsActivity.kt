@@ -26,7 +26,7 @@ import androidx.activity.viewModels
 import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.send.SweepWalletActivity
+import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import org.dash.wallet.common.util.Qr
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R

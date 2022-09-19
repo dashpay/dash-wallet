@@ -220,6 +220,12 @@
         <item name="cornerRadius">12dp</item>
     </style>
 
+    <style name="TertiaryBackground">
+        <item name="backgroundColor">@color/background_tertiary</item>
+        <item name="strokeColor">@color/background_tertiary</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
     <style name="InputErrorBackground">
         <item name="backgroundColor">@color/input_error_background</item>
         <item name="strokeColor">@android:color/transparent</item>
@@ -235,8 +241,8 @@
     </style>
 
     <style name="DragIndicatorBackground">
-        <item name="backgroundColor">@color/gray_100</item>
-        <item name="strokeColor">@color/gray_100</item>
+        <item name="backgroundColor">@color/light_gray</item>
+        <item name="strokeColor">@color/light_gray</item>
         <item name="cornerRadius">2dp</item>
     </style>
 
@@ -253,7 +259,9 @@
         <item name="cornerRadius">8dp</item>
     </style>
 
-    <style name="SegmentedPickerBackground" parent="GrayBackground">
+    <style name="SegmentedPickerBackground">
+        <item name="backgroundColor">@color/extra_dark_gray_0.1</item>
+        <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">8dp</item>
     </style>
 
@@ -322,6 +330,10 @@
 
     <style name="Headline3.Regular">
         <item name="fontFamily">@font/inter_regular</item>
+    </style>
+
+    <style name="Headline3.Medium">
+        <item name="fontFamily">@font/inter_medium</item>
     </style>
 
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
@@ -620,10 +632,6 @@
         <item name="android:textColor">@color/content_secondary</item>
     </style>
 
-    <style name="Caption.Medium.SteelGray400">
-        <item name="android:textColor">@color/steel_gray_400</item>
-    </style>
-
     <style name="Caption.SemiBold">
         <item name="fontFamily">@font/inter_semibold</item>
     </style>
@@ -809,8 +817,8 @@
     </style>
 
     <style name="PrimaryButtonTheme.ExtraSmall.Blue">
-        <item name="backgroundColor">@color/blue_50</item>
-        <item name="strokeColor">@color/blue_50</item>
+        <item name="backgroundColor">@color/dash_blue_0.05</item>
+        <item name="strokeColor">@android:color/transparent</item>
         <item name="titleTextColor">@color/dash_blue</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
@@ -978,6 +986,10 @@
         <item name="titleTextColor">@color/dash_blue</item>
     </style>
 
+    <style name="TertiaryButtonTheme.Blue.ZeroRadius">
+        <item name="cornerRadius">0dp</item>
+    </style>
+
     <style name="TertiaryButtonTheme.Red">
         <item name="titleTextColor">@color/system_red</item>
     </style>
@@ -1057,6 +1069,10 @@
 
     <style name="Button.Tertiary.Small.Blue">
         <item name="android:theme">@style/TertiaryButtonTheme.Small.Blue</item>
+    </style>
+
+    <style name="Button.Tertiary.Small.Blue.ZeroRadius">
+        <item name="android:theme">@style/TertiaryButtonTheme.Blue.ZeroRadius</item>
     </style>
 
     <style name="Button.Tertiary.Small.Red">

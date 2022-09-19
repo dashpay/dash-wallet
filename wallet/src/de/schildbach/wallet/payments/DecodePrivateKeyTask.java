@@ -15,15 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.send;
+package de.schildbach.wallet.payments;
 
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.crypto.BIP38PrivateKey;
-import org.dashj.bls.Utils;
 
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 
 /**
  * @author Andreas Schildbach

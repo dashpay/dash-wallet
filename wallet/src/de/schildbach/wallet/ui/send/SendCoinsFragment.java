@@ -37,6 +37,7 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
@@ -53,6 +54,7 @@ import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
 import org.bitcoinj.wallet.Wallet.DustySendRequested;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.dash.wallet.common.util.GenericUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -68,7 +70,6 @@ import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.livedata.Resource;
-import org.dash.wallet.common.ui.BaseLockScreenFragment;
 import de.schildbach.wallet.ui.CheckPinDialog;
 import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
@@ -77,7 +78,7 @@ import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
 @AndroidEntryPoint
-public class SendCoinsFragment extends BaseLockScreenFragment {
+public class SendCoinsFragment extends Fragment {
 
     protected SendCoinsActivity activity;
     private Configuration config;
@@ -103,13 +104,6 @@ public class SendCoinsFragment extends BaseLockScreenFragment {
     private boolean isUserAuthorized() {
         return activity.isUserAuthorized() || userAuthorizedDuring;
     }
-
-    private final DialogInterface.OnClickListener activityDismissListener = new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(final DialogInterface dialog, final int which) {
-            activity.finish();
-        }
-    };
 
     @Override
     public void onAttach(@NotNull final Context context) {
@@ -143,16 +137,19 @@ public class SendCoinsFragment extends BaseLockScreenFragment {
                     }
                     case ERROR: {
                         String errorMessage = paymentIntentResource.getMessage();
-                        baseAlertDialogBuilder.setMessage(errorMessage);
-                        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-                        baseAlertDialogBuilder.setNeutralAction(
-                                () -> {
-                                    requireActivity().finish();
-                                    return Unit.INSTANCE;
-                                }
-                        );
-                        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-                        alertDialog.show();
+
+                        if (errorMessage == null) {
+                            errorMessage = getString(R.string.error);
+                        }
+
+                        AdaptiveDialog.simple(
+                                errorMessage,
+                                getString(R.string.button_dismiss),
+                                ""
+                        ).show(requireActivity(), result -> {
+                            requireActivity().finish();
+                            return Unit.INSTANCE;
+                        });
                         break;
                     }
                 }
@@ -372,7 +369,7 @@ public class SendCoinsFragment extends BaseLockScreenFragment {
             BitcoinIntegration.transactionHashToResult(resultIntent, viewModel.sentTransaction.getTxId().toString());
             activity.setResult(Activity.RESULT_OK, resultIntent);
         }
-        showTransactionResult(viewModel.sentTransaction, viewModel.getWallet());
+        showTransactionResult(viewModel.sentTransaction);
         playSentSound();
         activity.finish();
     }
@@ -394,44 +391,52 @@ public class SendCoinsFragment extends BaseLockScreenFragment {
         if (viewModel.getBasePaymentIntentValue().mayEditAmount())
             msg.append("\n\n").append(getString(R.string.send_coins_fragment_insufficient_money_msg2));
 
-        baseAlertDialogBuilder.setTitle(getString(R.string.send_coins_fragment_insufficient_money_title));
-        baseAlertDialogBuilder.setMessage(msg);
-        if (viewModel.getBasePaymentIntentValue().mayEditAmount()){
-            baseAlertDialogBuilder.setPositiveText(getString(R.string.send_coins_options_empty));
-            baseAlertDialogBuilder.setPositiveAction(
-                    () -> {
-                        handleEmpty();
-                        return Unit.INSTANCE;
-                    }
-            );
-            baseAlertDialogBuilder.setNegativeText(getString(R.string.button_cancel));
+        boolean mayEditAmount = viewModel.getBasePaymentIntentValue().mayEditAmount();
+        String positiveAction = "";
+        String negativeAction = "";
+
+        if (mayEditAmount) {
+            positiveAction = getString(R.string.send_coins_options_empty);
+            negativeAction = getString(R.string.button_cancel);
         } else {
-            baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+            negativeAction = getString(R.string.button_dismiss);
         }
-        baseAlertDialogBuilder.setShowIcon(true);
-        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-        alertDialog.show();
+
+        AdaptiveDialog.create(
+                R.drawable.ic_warning_filled,
+                getString(R.string.send_coins_fragment_insufficient_money_title),
+                msg.toString(),
+                negativeAction,
+                positiveAction
+        ).show(requireActivity(), result -> {
+            if (mayEditAmount && result != null && result) {
+                handleEmpty();
+            }
+            return Unit.INSTANCE;
+        });
     }
 
     private void showEmptyWalletFailedDialog() {
-        baseAlertDialogBuilder.setTitle(getString(R.string.send_coins_fragment_empty_wallet_failed_title));
-        baseAlertDialogBuilder.setMessage(getString(R.string.send_coins_fragment_hint_empty_wallet_failed));
-        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-        baseAlertDialogBuilder.setShowIcon(true);
-        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-        alertDialog.show();
+        AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.send_coins_fragment_empty_wallet_failed_title),
+                getString(R.string.send_coins_fragment_hint_empty_wallet_failed),
+                getString(R.string.button_dismiss),
+                null
+        ).show(requireActivity(), result -> Unit.INSTANCE);
     }
 
     private void showFailureDialog(Exception exception) {
-        baseAlertDialogBuilder.setTitle(getString(R.string.send_coins_error_msg));
-        baseAlertDialogBuilder.setMessage(exception.toString());
-        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-        baseAlertDialogBuilder.setShowIcon(true);
-        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-        alertDialog.show();
+        AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.send_coins_error_msg),
+                exception.toString(),
+                getString(R.string.button_dismiss),
+                null
+        ).show(requireActivity(), result -> Unit.INSTANCE);
     }
 
-    private void showTransactionResult(Transaction transaction, Wallet wallet) {
+    private void showTransactionResult(Transaction transaction) {
         if (!isAdded()) {
             return;
         }
