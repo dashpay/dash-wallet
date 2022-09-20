@@ -182,6 +182,7 @@
     <string name="notification_transactions_channel_description">Benachrichtigungen zu eingehenden Transaktionen erhalten.</string>
     <string name="notification_synchronization_channel_name">Synchronisierung</string>
     <string name="notification_synchronization_channel_description">Eine Benachrichtigung anzeigen, wenn die App sich mit dem Netzwerk synchronisiert.</string>
+    <string name="notification_generic_channel_name">Allgemeine Benachrichtigungen</string>
     <string name="notification_push_channel_name">Push-Benachrichtigungen</string>
     <string name="notification_push_channel_description">Zeigt Push-Benachrichtigungen an, die dir von Dash gesendet wurden</string>
     <string name="notification_settings_title">Benachrichtigungen</string>
@@ -233,6 +234,14 @@
     <string name="view_seed_done">Fertig</string>
     <string name="view_seed_title">Wiederherstellungs-Wortfolge</string>
     <string name="transaction_result_view_on_explorer">Im Blockexplorer ansehen</string>
+    <string name="transaction_result_tax_category">Steuerliche Kategorie</string>
+    <string name="transaction_result_tax_category_loading">Laden...</string>
+    <string-array name="transaction_result_tax_categories">
+        <item>Einnahmen</item>
+        <item>Ausgaben</item>
+        <item>Einkommende Überweisung</item>
+        <item>Ausgehende Überweisung</item>
+    </string-array>
     <string name="transaction_result_paid_successfully">Erfolgreich gesendet</string>
     <string name="transaction_result_sent_to">Senden an</string>
     <string name="transaction_date_and_time">Datum</string>
@@ -244,6 +253,8 @@
     <string name="transaction_details_received_at">Empfangen bei</string>
     <string name="transaction_details_moved_from">Verschoben von</string>
     <string name="transaction_details_moved_internally_to">Intern verschoben nach</string>
+    <string name="transaction_failed_details">Transaktion fehlgeschlagen</string>
+
     <string name="authenticate_fingerprint_title">Authentifizieren</string>
     <string name="authenticate_fingerprint_message">Fingerabdruck zum Fortfahren bestätigen</string>
     <string name="authenticate_pin_message">PIN zum Fortfahren eingeben</string>
@@ -252,6 +263,8 @@
 
     <string name="menu_buy_and_sell_title">Kaufe &amp; Verkaufe Dash</string>
     <string name="menu_buy_and_sell_subtitle">Mit Drittanbieter-Börsen verknüpfen</string>
+    <string name="liquid_unavailable">Die Integrierung von Liquid in der Dash Wallet ist nicht mehr verfügbar</string>
+    <string name="liquid_unavailable_details">Wenn du Fragen zu deinem Dash Bestand bei Liquid hast, kontaktiere bitte das Liquid Support Center</string>
     <string name="menu_security_title">Sicherheit</string>
     <string name="menu_security_subtitle">Passphrase anzeigen, Wallet sichern...</string>
     <string name="menu_settings_title">Einstellungen</string>
@@ -351,8 +364,12 @@
     <string name="import_image_import_valid_private_key">Kopiere einen gültigen privaten Schlüssel, um Dash von ihm zu importieren</string>
     <string name="import_image_invalid_private">Ungültiger privater Schlüssel</string>
 
+    <string name="today">Heute</string>
+    <string name="yesterday">Gestern</string>
+
     <string name="syncing">Synchronisiere</string>
     <string name="syncing_balance">Synchronisiere Guthaben</string>
+    <string name="transaction_count">%d Transaktionen</string>
     <string name="all_transactions">Alles</string>
     <string name="received_transactions">Erhalten</string>
     <string name="sent_transactions">Gesendet</string>
@@ -362,6 +379,22 @@
     <string name="wallet_encryption_error_message">Es gibt ein Problem bei der Erstellung der Wallet. Bitte melde dies an den Support Desk.</string>
     <string name="wallet_not_encrypted_error_message">Es liegt ein Problem mit deiner Wallet vor.\n\nWenn du kein Dash in dieser Wallet hast, dann deinstalliere die App und installiere sie neu. Anschließend erstellst du eine neue Wallet.\n\nWenn du eine Wiederherstellungsphrase oder eine Sicherungsdatei hast, deinstalliere diese App und installiere sie neu.\n\nAnsonsten melde dies bitte dem Support Desk.</string>
 
+    <string name="reset_wallet_title">Möchtest du die Wallet wirklich zurücksetzen?</string>
+    <string name="reset_wallet_message">Wenn du die Wallet zurücksetzt, kannst du die Wallet nur über die Wiederherstellungsphrase wiederherstellen.</string>
+    <string name="positive_reset_text">Ja, Wallet zurücksetzen</string>
+    <string name="launch_reset_wallet_title">Du hast einen positiven Kontostand</string>
+    <string name="launch_reset_wallet_message">Wenn du deine Wallet zurücksetzt ohne deine Wiederherstellungsphrase zu sichern, wirst du dein komplettes Guthaben verlieren.</string>
     <string name="continue_reset">Fortfahren</string>
+    <string name="launch_reset_wallet_extra_message">Sichere deine Wiederherstellungsphrase</string>
+    <string name="start_reset_wallet_title">Du könntest %s verlieren</string>
     <string name="reset_wallet_text">Wallet zurücksetzen</string>
-    </resources>
+    <string name="reclassify_transactions_title">Transaktionen neu klassifizieren</string>
+    <string name="reclassify_transactions_title_message">Diese Klassifizierungen werden in den CSV-Export übernommen, der für den Import in Steuererklärungs-Software verwendet werden kann.</string>
+    <string name="reclassify_transactions_question">Wo kann ich die Steuerkategorie ändern?</string>
+    <string name="reclassify_transactions_outgoing_title">Ausgehende Transaktionen</string>
+    <string name="reclassify_transactions_by_default_message">standardmäßig markiert als</string>
+    <string name="reclassify_transactions_incoming_title">Eingehende Transaktionen</string>
+    <string name="reclassify_transactions_change_it_message">Du kannst es ändern zu</string>
+    <string name="reclassify_transactions_linked_accounts_title">Verknüpfte Konten</string>
+    <string name="reclassify_transactions_change_explanation">Wähle eine beliebige Transaktion von der Webseite und ändere die Kategorie auf der Seite mit den Transaktionsdetails.</string>
+</resources>

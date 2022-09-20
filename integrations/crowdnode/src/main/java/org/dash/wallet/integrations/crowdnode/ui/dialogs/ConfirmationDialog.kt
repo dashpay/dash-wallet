@@ -30,6 +30,7 @@ import org.bitcoinj.uri.BitcoinURI
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.shareText
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentConfirmationBinding
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
@@ -84,14 +85,7 @@ class ConfirmationDialog: OffsetDialogFragment() {
         binding.shareUrlBtn.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING_SHARE_BUTTON)
             val paymentRequestUri = BitcoinURI.convertToBitcoinURI(accountAddress, amount, "", "")
-            val sendIntent = Intent().apply {
-                action = Intent.ACTION_SEND
-                putExtra(Intent.EXTRA_TEXT, paymentRequestUri)
-                type = "text/plain"
-            }
-
-            val shareIntent = Intent.createChooser(sendIntent, null)
-            startActivity(shareIntent)
+            requireContext().shareText("", paymentRequestUri)
         }
 
         viewModel.setConfirmationDialogShown(true)

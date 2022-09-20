@@ -25,7 +25,7 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.ui.BaseMenuActivity
-import de.schildbach.wallet.ui.PaymentsActivity
+import de.schildbach.wallet.ui.payments.PaymentsActivity
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -54,11 +54,11 @@ class ExploreActivity : BaseMenuActivity() {
         viewModel.navigationCallback.observe(this) { request ->
             when (request) {
                 NavigationRequest.SendDash -> {
-                    val sendCoinsIntent = PaymentsActivity.createIntent(this, 0)
+                    val sendCoinsIntent = PaymentsActivity.createIntent(this, PaymentsActivity.ACTIVE_TAB_PAY)
                     startActivity(sendCoinsIntent)
                 }
                 NavigationRequest.ReceiveDash -> {
-                    val sendCoinsIntent = PaymentsActivity.createIntent(this, 1)
+                    val sendCoinsIntent = PaymentsActivity.createIntent(this, PaymentsActivity.ACTIVE_TAB_RECEIVE)
                     startActivity(sendCoinsIntent)
                 }
                 NavigationRequest.Staking -> {

@@ -1,0 +1,118 @@
+<!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="coinbase">Coinbase</string>
+    <string name="last_known_balance" >最后已知余额</string>
+    <string name="coinbase_dash_wallet_error_title">我们没有在您的 Coinbase账户上找到 Dash钱包.</string>
+    <string name="coinbase_dash_wallet_error_message">请在 Coinbase上创建一个Dash 钱包以继续.</string>
+    <string name="create_dash_account">创建 Dash账户</string>
+    <string name="close">关闭</string>
+    <string name="retry">重试</string>
+    <string name="connected">已连接</string>
+    <string name="disconnect_coinbase_account">取消 Coinbase账户的关联</string>
+    <string name="receive_directly_into_dash_wallet">直接从 Dash钱包收款.</string>
+    <string name="buy_dash">购买Dash</string>
+    <string name="balance">余额:</string>
+    <string name="balance_on_coinbase">Coinbase的余额</string>
+    <string name="sending_to">正在发送至</string>
+    <string name="dash_wallet_device">此设备的 Dash钱包</string>
+    <string name="exchange_rate_template">%1$s DASH = %2$s</string>
+    <string name="payment_method">付款方式</string>
+    <string name="purchase">购买</string>
+    <string name="coinbase_fee">Coinbase 费用</string>
+    <string name="total">总计</string>
+    <string name="order_preview">订单预览</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">您将会在此设备的钱包中收到%sDash. 请注意, 完成转账最多可能需要2-3分钟.</string>
+    <string name="amount_in_dash">Dash 金额</string>
+    <string name="cancel">取消</string>
+    <string name="confirm_sec">确认 (%ss)</string>
+    <string name="confirm">确认</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_title">我们没有找到任何付款方式.</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_message">请更新您的 Coinbase账户以继续.</string>
+    <string name="add_payment_method">添加付款方式</string>
+    <string name="error">错误</string>
+    <string name="cancel_transaction">取消交易?</string>
+    <string name="yes_cancel">是的, 取消</string>
+    <string name="no_keep_it">不, 保留</string>
+    <string name="purchase_successful">购买成功</string>
+    <string name="conversion_successful">兑换成功</string>
+    <string name="purchase_failed">购买失败</string>
+    <string name="transfer_failed">转账失败</string>
+    <string name="conversion_failed">兑换失败</string>
+    <string name="transfer_failed_msg">Dash已成功存入您的 Coinbase账户. 但是把 Dash转账到此设备上的 Dash钱包时出错.</string>
+    <string name="purchase_failed_msg">出错了</string>
+    <string name="it_could_take_up_to_2_3_minutes">最多可能需要2-3分钟才能把 Dash转账到此设备的 Dash钱包.</string>
+    <string name="it_could_take_up_to_5_minutes">从 Coinbase账户中的%s转换为此设备 Dash钱包中的 Dash最多可能需要5分钟...</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">“最多可能需要 5 分钟才能将 Dash从此设备上的 Dash钱包转换为您在 Coinbase账户中的 %s.</string>
+    <string name="contact_coinbase_support">联系 Coinbase客服</string>
+    <string name="fees_in_crypto_purchase">购买加密货币的费用</string>
+    <string name="coinbase_fee_info_msg_content">除了显示的 Coinbase费用外, 我们还包括价格差. 加密货币市场是不稳定的, 这使我们能够暂时锁定交易执行的价格.</string>
+    <string name="learn_more">了解更多</string>
+    <string name="something_wrong_title">出错了!</string>
+    <string name="retry_later_message">请稍后重试或联系我们的客服中心以获得帮助</string>
+    <string name="convert_crypto">兑换加密货币</string>
+    <string name="between_dash_wallet_and_coinbase">在 Dash钱包和 Coinbase之间.</string>
+    <string name="conversion_preview">兑换预览</string>
+    <string name="you_send">您发送</string>
+    <string name="from_your_coinbase_account">从您的 Coinbase账户</string>
+    <string name="you_receive">您收到</string>
+    <string name="to_dash_wallet_on_this_device">到此设备的 Dash钱包</string>
+    <string name="to_your_coinbase_account">到您的 Coinbase账户</string>
+    <string name="from_dash_wallet_on_this_device">从此设备的 Dash钱包</string>
+    <string name="you_will_receive">您将收到</string>
+    <string name="we_didnt_find_any_assets" >我们没有在您的 Coinbase账户中找到任何资产.</string>
+    <string name="you_dont_own_any_crypto" >您未拥有任何加密货币. 购买一些加密货币以开始...</string>
+    <string name="buy_crypto_on_coinbase" >在 Coinbase上购买加密货币</string>
+    <string name="auth_limit_description">您超出了 Coinbase的授权限制.</string>
+    <string name="debit_money">从您的账户中借记</string>
+    <string name="change_limit">更改此限制</string>
+    <string name="set_auth_limit">确保在 Coinbase上设置正确的授权限制</string>
+    <string name="change_withdrawal_limit">您可以随时通过在 Dash钱包中登出您的 Coinbase账户并重新登录来更改它.</string>
+    <string name="got_it">明白了</string>
+    <string name="send_to_wallet_error">您所设置的金额超过软件的限制, 因此无法发送此金额</string>
+    <string name="dont_have_any_dash">您的 Dash钱包中没有任何 Dash.</string>
+    <string name="transfer_wallet_not_synced">在钱包同步完成前, 无法从 Dash钱包转账到 Coinbase.</string>
+    <string name="disconnected">连接断开</string>
+
+    <string name="insufficient_money_title">Dash不足</string>
+    <string name="insufficient_money_msg">该钱包上的Dash金额太小, 无法交换.</string>
+    <string name="send_coins_error_msg">支付Dash时出现了问题!</string>
+    <string name="entered_amount_is_too_low">最小交易金额为</string>
+    <string name="entered_amount_is_too_high">最大交易金额为</string>
+    <string name="verify_continue">验证</string>
+    <string name="enter_auth_code">输入 Coinbase 2次验证码</string>
+    <string name="extra_steps_label">此额外步骤用来证明真的是您在尝试进行交易.</string>
+    <string name="need_help">需要帮助吗?</string>
+    <string name="coinbase_fa_code_hint">Coinbase 2次验证码</string>
+    <string name="enter_code_details">它可能是您手机短信中的验证码. 如果没有, 请输入身份验证应用程序中的验证码.</string>
+    <string name="two_fa_code_incorrect">验证码不正确. 请检查并重试!</string>
+    <string name="invalid_code">该验证码无效. 请再试一次</string>
+    <string name="verify_code">验证</string>
+    <string name="you_dont_have_enough_balance">您没有足够的余额</string>
+    <string name="transfer_dash">转账 Dash</string>
+    <string name="transfer_amount">转账</string>
+    <string name="dash_wallet_limit_description">金额高于您的余额</string>
+    <string name="address_creation_failed">我们无法为您的账户创建地址以完成您的交易. 请稍后再试.</string>
+    <string name="transaction_row_rate_not_available">不可用</string>
+    <string name="transfer_dash_successful">转账成功</string>
+    <string name="it_could_take_up_to_10_minutes">将 Dash从 Coinbase转账到此设备的 Dash钱包最多可能需要10分钟.</string>
+    <string name="it_could_take_up_to_10_minutes_to_coinbase">将 Dash从此设备上的 Dash钱包转移到您的 Coinbase账户的话最多可能需要 10分钟.</string>
+    <string name="transfer_dash_failed_msg">将资金转账到此设备的 Dash钱包时出错.</string>
+    <string name="insufficient_money_to_transfer">钱包余额不足, 因此无法进行转账.</string>
+    <string name="amount_to_transfer">您将会收到%s%s%s</string>
+
+    </resources>

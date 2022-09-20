@@ -24,6 +24,8 @@
     <string name="explore_atms_title">自动提款机</string>
     <string name="explore_atms_subtitle">查找在哪里购买或出售Dash和其他加密货币以换取现金.</string>
     <string name="explore_staking_subtitle">只需点击几下, 即可轻松质押Dash并赚取被动收益.</string>
+    <string name="explore_staking_current_apy">目前的年利率 = %s%%</string>
+
     <!-- Search -->
     <string name="explore_search_results">搜索结果</string>
     <string name="explore_physical_merchant">实体商户</string>

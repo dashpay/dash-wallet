@@ -452,7 +452,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
             )
             setSpan(
-                context?.resources?.getColor(R.color.gray_900)
+                context?.resources?.getColor(R.color.content_primary)
                     ?.let { ForegroundColorSpan(it) },
                 from,
                 to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE

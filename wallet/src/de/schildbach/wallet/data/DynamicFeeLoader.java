@@ -39,7 +39,6 @@ import com.squareup.okhttp.internal.http.HttpDate;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.ui.send.FeeCategory;
 import de.schildbach.wallet.util.Io;
 
 import android.content.Context;

@@ -104,7 +104,7 @@
 
         <TextView
             android:id="@+id/location_hint"
-            style="@style/Caption.Secondary"
+            style="@style/Caption.Tertiary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="@string/explore_atm_location_hint"
@@ -138,7 +138,7 @@
 
         <TextView
             android:id="@+id/item_type"
-            style="@style/Body2.Secondary"
+            style="@style/Body2.Tertiary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
@@ -177,7 +177,7 @@
 
             <TextView
                 android:id="@+id/item_distance"
-                style="@style/Caption.Medium.SteelGray400"
+                style="@style/Caption.Medium.Tertiary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="20dp"
@@ -242,6 +242,7 @@
             android:layout_marginTop="28dp"
             android:layout_marginBottom="18dp"
             android:drawableStart="@drawable/ic_dash"
+            android:drawableTint="@color/dash_white"
             android:paddingStart="92dp"
             android:paddingEnd="76dp"
             android:text="@string/explore_pay_with_dash"

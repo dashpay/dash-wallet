@@ -11,11 +11,11 @@
     tools:visibility="visible">
 
     <ImageView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
         android:layout_gravity="center_vertical"
         android:layout_marginStart="7dp"
-        app:srcCompat="@drawable/ic_warning_yellow"/>
+        app:srcCompat="@drawable/ic_warning"/>
 
     <TextView
         android:layout_width="wrap_content"

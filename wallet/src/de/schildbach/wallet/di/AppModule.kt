@@ -30,7 +30,7 @@ import de.schildbach.wallet.service.AppRestartService
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
-import de.schildbach.wallet.ui.send.ConfirmTransactionLauncher
+import de.schildbach.wallet.payments.ConfirmTransactionLauncher
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
