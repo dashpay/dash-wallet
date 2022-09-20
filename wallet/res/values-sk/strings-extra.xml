@@ -270,6 +270,8 @@
 
     <string name="menu_buy_and_sell_title">Kúpiť a predať Dash</string>
     <string name="menu_buy_and_sell_subtitle">Spojiť s burzami tretích strán</string>
+    <string name="liquid_unavailable">Liquid integrácia s Dash peňaženkou už nie je k dispozícii</string>
+    <string name="liquid_unavailable_details">Ak máte akékoľvek otázky týkajúce sa vašich Dash v Liquid, kontaktujte centrum podpory Liquid</string>
     <string name="menu_security_title">Bezpečnosť</string>
     <string name="menu_security_subtitle">Zobraziť prístupové heslo, zálohovať peňaženku...</string>
     <string name="menu_settings_title">Nastavenia</string>
@@ -368,6 +370,9 @@
     <string name="import_image_no_private_key_copied">Nebol skopírovaný žiadny súkromný kľúč</string>
     <string name="import_image_import_valid_private_key">Pre import Dashu skopírujte platný súkromný kľúč</string>
     <string name="import_image_invalid_private">Neplatný privátny kľúč</string>
+
+    <string name="today">Dnes</string>
+    <string name="yesterday">Včera</string>
 
     <string name="syncing">Synchronizuje sa</string>
     <string name="syncing_balance">Synchronizuje sa zostatok</string>

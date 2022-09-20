@@ -17,11 +17,12 @@
 <resources>
     <string name="crowdnode_get_started">开始使用CrowdNode</string>
     <string name="crowdnode_get_started_hint">开始质押前, 需要创建一个CrowdNode账户或连接到现有账户.</string>
+    <string name="crowdnode_account">CrowdNode 账户</string>
     <string name="new_account">新的CrowdNode账户</string>
     <string name="account_create">创建账户</string>
-    <string name="account_create_response">创建账户响应</string>
+    <string name="accept_terms_response">请接受条款</string>
     <string name="accept_terms">接受条款</string>
-    <string name="accept_terms_response">接受条款响应</string>
+    <string name="welcome_response">已创建账户</string>
     <string name="account_link">连接现有账户</string>
     <string name="crowdnode_login">登录到CrowdNode</string>
     <string name="crowdnode_signup">注册CrowdNode</string>
@@ -65,7 +66,7 @@
     <string name="secure_online_account">保护您的存款</string>
     <string name="crowdnode_signup_to_finish">注册以完成账户设置</string>
     <string name="online_account_create_full">创建一个线上CrowdNode账户</string>
-    <string name="online_account_email_privacy">请注意, 邮件不会被Dash钱包存储, 它只会发送到CrowdNode</string>
+    <string name="online_account_email_privacy">请注意, Dash钱包不保存电子邮件, 仅发送至 CrowdNode</string>
     <string name="crowdnode_support">CrowdNode帮助</string>
     <string name="unlink_account">解绑账户</string>
     <string name="online_account_title">为什么您需要线上账户?</string>
@@ -93,8 +94,26 @@
     <string name="crowdnode_minimum_deposit">至少存入 %s 来开始赚取收益</string>
     <string name="crowdnode_minimum_deposit_difference">存入 %s 来开始赚取收益</string>
     <string name="crowdnode_first_deposit">首次存款应该超过 %s</string>
-    <string name="crowdnode_staking_info_title">质押如何运作</string>
+    <string name="crowdnode_staking_info_title">CrowdNode 质押的运作原理</string>
+    <string name="crowdnode_staking_info_message_first">Dash网络由众多主节点驱动, 这是令支付更便捷的重要组成部分.</string>
+    <string name="crowdnode_staking_info_message_second">一个主节点需要 1000 Dash作为抵押, 每个主节点目前每年获得大约%s%%的奖励.</string>
+    <string name="crowdnode_staking_apy_title">目前的年利率是%s%%</string>
     <string name="crowdnode_staking_info_message">如果您的CrowdNode账户拥有超过%s就会开始赚取收益</string>
+    <string name="staking_apy_title">目前的年利率是%s</string>
+    <string name="crowdnode_staking_current_apy_message">这代表完整主节点当前年度百分比收益减去15%的CrowdNode费用. 这不是保证回报率, 可能会根据CrowdNode资金池的大小和Dash价格而上下浮动.</string>
+    <string name="crowdnode_staking_leave_pool_message_one">会员可以自由离开资金池, 并且通常可以立刻离开.</string>
+    <string name="crowdnode_staking_leave_pool_message_two">在提款额度较大的情况下, CrowdNode将在两周内支付该提款. 这是由于它们的安全协议, 并且通常处理得比这个时间要快.</string>
+
+    <string name="crowdnode_staking_leaving_the_pool_title">离开资金池</string>
+    <string name="crowdnode_staking_receiving_rewards_title">领取奖励</string>
+    <string name="crowdnode_staking_receiving_rewards_message">您将自动收到小额付款, 默认下它们将被再次投资, 但是设置自动提款以接收定期付款也很容易.</string>
+    <string name="crowdnode_staking_first_minimum_deposit_title">首次最低存款</string>
+    <string name="crowdnode_staking_join_pool_message">由于大多数人手中没有 1000个 Dash, CrowdNode提供了一项服务, 他们通过汇集成员的存款来帮助成员获得主节点的收益.</string>
+    <string name="crowdnode_staking_join_pool_title">加入资金池</string>
+    <string name="crowdnode_staking_crowdnode_benefits_title">CrowdNode 的福利</string>
+    <string name="crowdnode_staking_connected_dash_address_title">连接的 Dash地址</string>
+    <string name="crowdnode_staking_connected_dash_address_message">这是在此设备上的 Dash钱包中为您的 CrowdNode账户指定的 Dash地址.</string>
+    <string name="crowdnode_staking_toast_address_copied">已将CrowdNode地址复制到剪切板</string>
     <string name="crowdnode_verify_api_address">验证您的API Dash地址</string>
     <string name="crowdnode_how_to_verify">如何确认您的API Dash地址</string>
     <string name="crowdnode_how_to_verify_description1">从您当前用于CrowdNode账户的主要Dash地址发送%sDash</string>
@@ -119,5 +138,16 @@
     <string name="shuffle_coins">混币</string>
     <string name="positive_balance_required">您Dash钱包的余额应该是正的</string>
     <string name="withdrawal_required_balance">向您Dash钱包存储至少 0.0003 Dash以完成提币</string>
+    <string name="withdrawal_limit">Dash 提款限额</string>
+    <string name="withdrawal_limit_details">您的提款额不能超过%1$s Dash%2$s.</string>
+    <string name="crowdnode_withdrawal_limits_title">CrowdNode 提款限额</string>
+    <string name="crowdnode_withdrawal_limits_message">由于 CrowdNode的服务条款, 用户的提款额不能超过:</string>
+    <string name="crowdnode_withdraw_without_limits_online">使用 CrowdNode网站上的在线账户可以无限制地提款.</string>
+    <string name="crowdnode_withdrawal_limits_error">此错误很可能是由于超出了 CrowdNode提款上限. 请稍后再试.</string>
+    <string name="per_transaction">每笔交易</string>
+    <string name="per_hour">每小时</string>
+    <string name="per_day">每24小时</string>
+    <string name="read_withdrawal_policy">阅读提款政策</string>
+
 
     </resources>

@@ -23,6 +23,9 @@
     <string name="explore_merchants_subtitle">Finde Händler, die Dash als Zahlungsmethode akzeptieren.</string>
     <string name="explore_atms_title">ATMs</string>
     <string name="explore_atms_subtitle">Hier kannst du DASH und andere Kryptowährungen gegen Bargeld kaufen oder verkaufen.</string>
+    <string name="explore_staking_subtitle">Dash staken und passives Einkommen generieren.</string>
+    <string name="explore_staking_current_apy">Derzeitige APY = %s %%</string>
+
     <!-- Search -->
     <string name="explore_search_results">Suchergebnisse</string>
     <string name="explore_physical_merchant">Physisches Geschäft</string>
