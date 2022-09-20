@@ -6,9 +6,7 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -66,6 +64,8 @@ class TransferDashViewModel @Inject constructor(
     val dashBalanceInWalletState: LiveData<Coin>
         get() = _dashBalanceInWalletState
 
+
+    private var withdrawalLimitCurrency = MutableStateFlow(config.exchangeCurrencyCode)
     private var exchangeRate: ExchangeRate? = null
 
     val onAddressCreationFailedCallback = SingleLiveEvent<Unit>()
@@ -101,13 +101,20 @@ class TransferDashViewModel @Inject constructor(
         walletDataProvider.observeBalance()
             .onEach(_dashBalanceInWalletState::postValue)
             .launchIn(viewModelScope)
+
+        withdrawalLimitCurrency
+            .filterNotNull()
+            .flatMapLatest { code ->
+                exchangeRates.observeExchangeRate(code)
+            }
+            .onEach { exchangeRate = it }
+            .launchIn(viewModelScope)
     }
 
     private fun getWithdrawalLimitOnCoinbase() = viewModelScope.launch(Dispatchers.Main){
         when (val response = coinBaseRepository.getWithdrawalLimit()){
             is ResponseResource.Success -> {
-                val withdrawalLimit = response.value
-                exchangeRate = getCurrencyExchangeRate(withdrawalLimit.currency)
+                withdrawalLimitCurrency.value = response.value.currency
                 getUserData()
             }
             is ResponseResource.Failure -> {
@@ -127,10 +134,6 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getCurrencyExchangeRate(currency: String): ExchangeRate {
-        return exchangeRates.observeExchangeRate(currency).first()
-    }
-
     private val withdrawalLimitInDash: Double
         get() {
             return if (config.coinbaseUserWithdrawalLimitAmount.isNullOrEmpty()) {
@@ -142,9 +145,12 @@ class TransferDashViewModel @Inject constructor(
                 } catch (x: Exception) {
                     Fiat.valueOf(config.coinbaseSendLimitCurrency, 0)
                 }
-                val newRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, exchangeRate?.fiat)
-                val amountInDash = newRate.fiatToCoin(fiatAmount)
-                amountInDash.toPlainString().toDoubleOrZero
+
+                exchangeRate?.fiat?.let { fiat ->
+                    val newRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat)
+                    val amountInDash = newRate.fiatToCoin(fiatAmount)
+                    amountInDash.toPlainString().toDoubleOrZero
+                } ?: 0.0
             }
         }
 
