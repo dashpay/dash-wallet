@@ -82,16 +82,7 @@ class ConfirmationDialog: OffsetDialogFragment() {
             qrDialog?.show(parentFragmentManager, "qr_dialog")
         }
         binding.shareUrlBtn.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING_SHARE_BUTTON)
-            val paymentRequestUri = BitcoinURI.convertToBitcoinURI(accountAddress, amount, "", "")
-            val sendIntent = Intent().apply {
-                action = Intent.ACTION_SEND
-                putExtra(Intent.EXTRA_TEXT, paymentRequestUri)
-                type = "text/plain"
-            }
-
-            val shareIntent = Intent.createChooser(sendIntent, null)
-            startActivity(shareIntent)
+            viewModel.shareConfirmationPaymentUrl()
         }
 
         viewModel.setConfirmationDialogShown(true)

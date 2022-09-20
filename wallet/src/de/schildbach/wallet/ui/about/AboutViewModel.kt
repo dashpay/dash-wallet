@@ -25,7 +25,9 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.WalletApplication
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import javax.inject.Inject
@@ -33,7 +35,9 @@ import javax.inject.Inject
 @HiltViewModel
 class AboutViewModel @Inject constructor(
     private val analytics: AnalyticsService,
-    private val exploreRepository: ExploreRepository
+    private val exploreRepository: ExploreRepository,
+    val walletApplication: WalletApplication,
+    private val systemActionsService: SystemActionsService
 ): ViewModel() {
 
     private val _exploreRemoteTimestamp = MutableLiveData<Long>()
@@ -78,5 +82,25 @@ class AboutViewModel @Inject constructor(
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             _firebaseCloudMessagingToken.value = if (task.isSuccessful) task.result else ""
         }
+    }
+
+    fun copyFCMToken() {
+        val fcmToken = _firebaseCloudMessagingToken.value
+
+        if (!fcmToken.isNullOrEmpty()) {
+            systemActionsService.copyText(fcmToken, "FCM token")
+        }
+    }
+
+    fun copyFirebaseInstallationId() {
+        val firebaseId = _firebaseInstallationId.value
+
+        if (!firebaseId.isNullOrEmpty()) {
+            systemActionsService.copyText(firebaseId, "Firebase Installation Id")
+        }
+    }
+
+    fun reviewApp() {
+        systemActionsService.reviewApp()
     }
 }
