@@ -58,6 +58,13 @@
     <style name="My.Theme.NoActionBar" parent="@style/My.Theme">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+
+    <style name="My.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="android:elevation">0dp</item>
+        <item name="elevation">0dp</item>
+        <item name="android:windowTranslucentStatus">true</item>
     </style>
 
     <style name="My.PopupOverlay" parent="ThemeOverlay.AppCompat.Light">
