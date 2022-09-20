@@ -106,7 +106,7 @@ class CryptoWalletsDialog(
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 val inputManager = requireContext()
                     .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                inputManager.toggleSoftInput(0, 0)
+                inputManager.hideSoftInputFromWindow(binding.searchQuery.windowToken, 0)
             }
 
             true
@@ -132,7 +132,7 @@ class CryptoWalletsDialog(
 
     fun handleNetworkState(hasInternet: Boolean) {
         lifecycleScope.launchWhenStarted {
-            binding.dialogNetworkStatusContainer.root.isVisible = !hasInternet
+            binding.dialogNetworkStatusStub.isVisible = !hasInternet
             binding.searchBox.isVisible = hasInternet
             binding.contentList.isVisible = hasInternet
         }

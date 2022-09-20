@@ -248,7 +248,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     }
 
     private fun setNetworkState(hasInternet: Boolean) {
-        binding.networkStatusContainer.root.isVisible = !hasInternet
+        binding.networkStatusStub.isVisible = !hasInternet
         binding.previewOfflineGroup.isVisible = hasInternet
     }
 

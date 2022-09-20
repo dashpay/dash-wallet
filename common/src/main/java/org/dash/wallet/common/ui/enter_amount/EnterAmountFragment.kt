@@ -218,7 +218,7 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     fun handleNetworkState(hasInternet: Boolean) {
         lifecycleScope.launchWhenStarted {
             binding.bottomCard.isVisible = hasInternet
-            binding.networkStatusContainer.root.isVisible = !hasInternet
+            binding.networkStatusStub.isVisible = !hasInternet
         }
     }
 }

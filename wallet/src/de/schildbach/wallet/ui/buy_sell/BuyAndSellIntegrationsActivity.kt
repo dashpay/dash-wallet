@@ -105,8 +105,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
         loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
         initViewModel()
 
-        binding.networkStatusContainer.root.isVisible = false
-
         // check for missing keys from service.properties
         if (!UpholdConstants.hasValidCredentials()) {
             binding.keysMissingError.isVisible = true
@@ -267,12 +265,12 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
     }
 
     private fun setNetworkState(online: Boolean) {
-        if (online && binding.networkStatusContainer.root.isVisible) {
+        if (online && binding.networkStatusStub.isVisible) {
             // Just got back online
             updateBalances()
         }
 
-        binding.networkStatusContainer.root.isVisible = !online
+        binding.networkStatusStub.isVisible = !online
         setLoginStatus()
     }
 

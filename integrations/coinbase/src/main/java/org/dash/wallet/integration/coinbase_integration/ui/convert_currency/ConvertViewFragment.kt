@@ -470,7 +470,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             viewModel.selectedCryptoCurrencyAccount.value?.let {
                 binding.bottomCard.isVisible = hasInternet
             }
-            binding.convertViewNetworkStatusContainer.root.isVisible = !hasInternet
+            binding.convertViewNetworkStatusStub.isVisible = !hasInternet
         }
     }
 }

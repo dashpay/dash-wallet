@@ -96,9 +96,10 @@
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
-    <include
-        android:id="@+id/network_status_container"
-        layout="@layout/network_unavailable_view"
+    <ViewStub
+        android:id="@+id/network_status_stub"
+        android:layout="@layout/network_unavailable_view"
+        android:inflatedId="@+id/network_status_container"
         app:layout_constraintTop_toBottomOf="@id/amount_view"
         app:layout_constraintBottom_toBottomOf="parent"
         android:layout_width="match_parent"

@@ -210,7 +210,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     }
 
     private fun setNetworkState(hasInternet: Boolean) {
-        binding.previewNetworkStatusContainer.root.isVisible = !hasInternet
+        binding.previewNetworkStatusStub.isVisible = !hasInternet
         binding.previewOfflineGroup.isVisible = hasInternet
     }
 

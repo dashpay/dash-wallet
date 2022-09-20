@@ -208,7 +208,8 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     }
 
     private fun setNetworkState(hasInternet: Boolean){
-        binding.coinbaseServicesOfflineGroup.isVisible = !hasInternet
+        binding.lastKnownBalance.isVisible = !hasInternet
+        binding.networkStatusStub.isVisible = !hasInternet
         binding.coinbaseServicesGroup.isVisible = hasInternet
         binding.titleBar.connected.setText(if (hasInternet) R.string.connected else R.string.disconnected)
         binding.titleBar.connected.setCompoundDrawablesWithIntrinsicBounds(if (hasInternet)

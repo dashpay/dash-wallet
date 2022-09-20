@@ -246,7 +246,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 getString(R.string.change_withdrawal_limit),
                 "",
                 getString(R.string.got_it)
-            ).show(requireActivity()) { }
+            ).show(requireActivity())
         }
 
         transferDashViewModel.observeCoinbaseAddressState.observe(viewLifecycleOwner){ address ->
@@ -339,7 +339,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     }
 
     private fun setInternetAccessState(hasInternet: Boolean) {
-        binding.networkStatusContainer.root.isVisible = !hasInternet
+        binding.networkStatusStub.isVisible = !hasInternet
         binding.transferView.isDeviceConnectedToInternet = hasInternet
         if (!binding.transferView.walletToCoinbase) {
             enterAmountToTransferViewModel.keyboardStateCallback.value = hasInternet

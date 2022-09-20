@@ -276,9 +276,10 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <include
-        android:id="@+id/network_status_container"
-        layout="@layout/network_unavailable_view"
+    <ViewStub
+        android:id="@+id/network_status_stub"
+        android:layout="@layout/network_unavailable_view"
+        android:inflatedId="@+id/network_status_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@+id/convert_dash_btn"
@@ -291,11 +292,4 @@
         app:constraint_referenced_ids="buy_dash_btn, convert_dash_btn, disconnect_layout"
         />
 
-    <androidx.constraintlayout.widget.Group
-        android:id="@+id/coinbase_services_offline_group"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        app:constraint_referenced_ids="network_status_container, last_known_balance"
-        />
 </androidx.constraintlayout.widget.ConstraintLayout>

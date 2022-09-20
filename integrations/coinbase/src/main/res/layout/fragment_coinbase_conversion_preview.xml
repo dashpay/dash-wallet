@@ -41,15 +41,16 @@
         android:layout_marginTop="30dp"
         app:layout_constraintTop_toBottomOf="@id/toolbar" />
 
-    <include
-        android:id="@+id/preview_network_status_container"
-        layout="@layout/network_unavailable_view"
+    <ViewStub
+        android:id="@+id/preview_network_status_stub"
+        android:layout="@layout/network_unavailable_view"
+        android:inflatedId="@+id/preview_network_status_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@id/content_order_review"
         app:layout_constraintBottom_toBottomOf="parent" />
-        
+
     <TextView
         android:id="@+id/cancel_btn"
         style="@style/Subtitle2"

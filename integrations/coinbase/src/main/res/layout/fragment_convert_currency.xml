@@ -125,9 +125,10 @@
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
-    <include
-        android:id="@+id/convert_view_network_status_container"
-        layout="@layout/network_unavailable_view"
+    <ViewStub
+        android:id="@+id/convert_view_network_status_stub"
+        android:layout="@layout/network_unavailable_view"
+        android:inflatedId="@+id/convert_view_network_status_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@+id/currency_options"
