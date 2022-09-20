@@ -51,6 +51,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         reenterTransition = MaterialFadeThrough()
 
         binding.appBar.toolbar.title = getString(R.string.more_title)
+        binding.appBar.toolbar.setNavigationOnClickListener {
+            findNavController().popBackStack()
+        }
 
         binding.buyAndSell.setOnClickListener {
             startBuyAndSellActivity()

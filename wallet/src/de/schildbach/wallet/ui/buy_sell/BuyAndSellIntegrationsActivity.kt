@@ -94,15 +94,11 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
         log.info("starting Buy and Sell Dash activity")
         binding = ActivityBuyAndSellIntegrationsBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        setSupportActionBar(binding.toolbar)
 
-        val actionBar = supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
+        binding.toolbar.setNavigationOnClickListener {
+            finish()
         }
 
-        title = ""
         loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
         initViewModel()
 
