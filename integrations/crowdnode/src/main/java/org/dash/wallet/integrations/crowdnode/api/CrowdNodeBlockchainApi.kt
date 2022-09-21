@@ -51,7 +51,7 @@ open class CrowdNodeBlockchainApi @Inject constructor(
 
     suspend fun topUpAddress(accountAddress: Address, amount: Coin, emptyWallet: Boolean = false): Transaction {
         val topUpTx = paymentService.sendCoins(accountAddress, amount, null, emptyWallet)
-        return walletData.observeTransactions(LockedTransaction(topUpTx.txId)).first()
+        return walletData.observeTransactionsWithConfidence(LockedTransaction(topUpTx.txId)).first()
     }
 
     suspend fun makeSignUpRequest(accountAddress: Address): Transaction {

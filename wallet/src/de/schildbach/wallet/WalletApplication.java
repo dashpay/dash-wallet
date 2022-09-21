@@ -1019,7 +1019,17 @@ public class WalletApplication extends BaseWalletApplication
             return FlowKt.emptyFlow();
         }
 
-        return new WalletTransactionObserver(wallet).observe(filters);
+        return new WalletTransactionObserver(wallet, false).observe(filters);
+    }
+
+    @NonNull
+    @Override
+    public Flow<Transaction> observeTransactionsWithConfidence(@NonNull TransactionFilter... filters) {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+
+        return new WalletTransactionObserver(wallet, true).observe(filters);
     }
 
     @NonNull
