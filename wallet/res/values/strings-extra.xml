@@ -299,6 +299,8 @@
     <string name="about_fcm_token">Firebase cloud messaging token</string>
     <string name="about_last_explore_dash_update_error">cannot fetch</string>
     <string name="about_last_explore_dash_sync_never">never</string>
+    <string name="about_explore_failed_sync">Failed to sync on %s</string>
+    <string name="about_explore_preloaded_on">Pre-loaded on %s</string>
 
     <string name="block">Block</string>
     <string name="time">Time</string>

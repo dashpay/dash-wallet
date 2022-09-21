@@ -6,6 +6,7 @@
 <!--    <color name="content_secondary">@color/extra_light_gray</color>-->
 <!--    <color name="content_tertiary">@color/light_gray</color>-->
 <!--    <color name="content_warning">@color/system_red</color>-->
+<!--    <color name="content_loading_track">#14171A</color>-->
 
 <!--    &lt;!&ndash; Strokes &ndash;&gt;-->
 <!--    <color name="divider_color">@color/extra_dark_gray</color>-->

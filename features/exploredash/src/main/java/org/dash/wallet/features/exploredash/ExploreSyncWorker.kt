@@ -17,7 +17,6 @@
 
 package org.dash.wallet.features.exploredash
 
-import android.annotation.SuppressLint
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -30,7 +29,7 @@ import kotlinx.coroutines.withContext
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
-import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
+import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
 import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.system.measureTimeMillis
@@ -41,14 +40,13 @@ class ExploreSyncWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val analytics: AnalyticsService,
     private val exploreRepository: ExploreRepository,
-    private val syncStatus: DataSyncStatusService,
+    private val syncStatus: ExploreDataSyncStatus,
     private val config: Configuration
 ): CoroutineWorker(appContext, workerParams) {
     companion object {
         private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
     }
 
-    @SuppressLint("CommitPrefEdits")
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         log.info("sync explore db started")
 
@@ -66,8 +64,8 @@ class ExploreSyncWorker @AssistedInject constructor(
 
                 log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")
 
-                if (exploreRepository.localTimestamp == 0L ||
-                    exploreRepository.localTimestamp < preloadedDbTimestamp
+                if (exploreRepository.localDatabaseTimestamp == 0L ||
+                    exploreRepository.localDatabaseTimestamp < preloadedDbTimestamp
                 ) {
                     // force data preloading for fresh installs
                     // and a newer preloaded DB
@@ -76,8 +74,9 @@ class ExploreSyncWorker @AssistedInject constructor(
                         config,
                         exploreRepository
                     )
+                    exploreRepository.preloadedOnTimestamp = System.currentTimeMillis()
                 } else {
-                    localDataTimestamp = exploreRepository.localTimestamp
+                    localDataTimestamp = exploreRepository.localDatabaseTimestamp
                     log.info("local data timestamp: $localDataTimestamp (${Date(localDataTimestamp)})")
 
                     remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
@@ -86,6 +85,7 @@ class ExploreSyncWorker @AssistedInject constructor(
                     if (localDataTimestamp >= remoteDataTimestamp) {
                         log.info("explore db is up to date, nothing to sync")
                         syncStatus.setSyncProgress(100.0)
+                        exploreRepository.failedSyncAttempts = 0
                         return@withContext Result.success()
                     }
                     syncStatus.setSyncProgress(10.0)
@@ -114,9 +114,11 @@ class ExploreSyncWorker @AssistedInject constructor(
             analytics.logError(ex, "local: $localDataTimestamp, preloaded: ${preloadedDbTimestamp}, remote: $remoteDataTimestamp")
             log.error("sync explore db crashed ${ex.message}", ex)
             syncStatus.setSyncError(ex)
+            exploreRepository.failedSyncAttempts += 1
             return@withContext Result.failure()
         }
 
+        exploreRepository.failedSyncAttempts = 0
         return@withContext Result.success()
     }
 }

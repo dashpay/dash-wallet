@@ -23,6 +23,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.text.format.DateUtils
 import androidx.activity.viewModels
+import androidx.core.view.isVisible
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
@@ -59,8 +60,8 @@ class AboutActivity : LockScreenActivity() {
             handleReportIssue()
         }
 
-        showFirebaseIds()
         showExploreDashSyncStatus()
+        showFirebaseIds()
 
         setContentView(binding.root)
     }
@@ -81,6 +82,9 @@ class AboutActivity : LockScreenActivity() {
         val formatFlags = DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or DateUtils.FORMAT_SHOW_TIME
 
         viewModel.exploreRemoteTimestamp.observe(this) { timestamp ->
+            binding.lastExploreUpdateLoadingIndicator.isVisible = false
+            binding.exploreDashLastServerUpdate.isVisible = true
+
             val formattedUpdateTime = if (timestamp <= 0L) {
                 getString(R.string.about_last_explore_dash_update_error)
             } else {
@@ -90,13 +94,23 @@ class AboutActivity : LockScreenActivity() {
             binding.exploreDashLastServerUpdate.text = formattedUpdateTime
         }
 
-        val formattedSyncTime = if (viewModel.exploreLastSync <= 0L) {
-            getString(R.string.about_last_explore_dash_sync_never)
-        } else {
-            DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSync, formatFlags)
+        viewModel.exploreIsSyncing.observe(this) { isSyncing ->
+            binding.exploreDashLastDeviceSync.text = if (isSyncing) {
+                "${getString(R.string.syncing)}…"
+            } else if (viewModel.exploreIsSyncFailed) {
+                getString(
+                    R.string.about_explore_failed_sync,
+                    DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSyncAttempt, formatFlags)
+                )
+            } else if (viewModel.explorePreloadedTimestamp > viewModel.exploreLastSyncAttempt) {
+                getString(
+                    R.string.about_explore_preloaded_on,
+                    DateUtils.formatDateTime(applicationContext, viewModel.explorePreloadedTimestamp, formatFlags)
+                )
+            } else {
+                DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSyncAttempt, formatFlags)
+            }
         }
-
-        binding.exploreDashLastDeviceSync.text = formattedSyncTime
     }
 
     override fun finish() {

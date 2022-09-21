@@ -121,6 +121,8 @@ public abstract class AppExploreDatabase extends RoomDatabase {
         RoomDatabase.Callback onOpenCallback = new RoomDatabase.Callback() {
             @Override
             public void onOpen(@NonNull SupportSQLiteDatabase db) {
+                log.info("onOpen callback");
+
                 try {
                     if (hasExpectedData(db)) {
                         repository.finalizeUpdate();

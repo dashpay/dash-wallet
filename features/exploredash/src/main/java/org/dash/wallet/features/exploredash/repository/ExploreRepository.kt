@@ -37,8 +37,11 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 interface ExploreRepository {
-    val localTimestamp: Long
-    val lastSyncTimestamp: Long
+    val localDatabaseTimestamp: Long
+    val lastSyncAttemptTimestamp: Long
+    var preloadedOnTimestamp: Long
+    var failedSyncAttempts: Int
+
     suspend fun getRemoteTimestamp(): Long
     fun getDatabaseInputStream(file: File): InputStream?
     fun getTimestamp(file: File): Long
@@ -63,6 +66,8 @@ class GCExploreDatabase @Inject constructor(
         private const val DB_ASSET_FILE_NAME = "explore/$DATA_FILE_NAME"
         private const val PREFS_LOCAL_DB_TIMESTAMP_KEY = "local_db_timestamp"
         private const val LAST_SYNC_TIMESTAMP_KEY = "last_sync_timestamp"
+        private const val PRELOADED_ON_TIMESTAMP_KEY = "preloaded_on"
+        private const val FAILED_SYNC_ATTEMPTS_KEY = "failed_sync_attempts"
 
         private val log = LoggerFactory.getLogger(GCExploreDatabase::class.java)
     }
@@ -71,7 +76,7 @@ class GCExploreDatabase @Inject constructor(
 
     private var updateTimestampCache = -1L
 
-    override var localTimestamp: Long
+    override var localDatabaseTimestamp: Long
         get() = preferences.getLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, 0)
         private set(value) {
             preferences.edit().apply {
@@ -79,11 +84,27 @@ class GCExploreDatabase @Inject constructor(
             }.apply()
         }
 
-    override var lastSyncTimestamp: Long
+    override var lastSyncAttemptTimestamp: Long
         get() = preferences.getLong(LAST_SYNC_TIMESTAMP_KEY, 0)
         private set(value) {
             preferences.edit().apply {
                 putLong(LAST_SYNC_TIMESTAMP_KEY, value)
+            }.apply()
+        }
+
+    override var preloadedOnTimestamp: Long
+        get() = preferences.getLong(PRELOADED_ON_TIMESTAMP_KEY, 0)
+        set(value) {
+            preferences.edit().apply {
+                putLong(PRELOADED_ON_TIMESTAMP_KEY, value)
+            }.apply()
+        }
+
+    override var failedSyncAttempts: Int
+        get() = preferences.getInt(FAILED_SYNC_ATTEMPTS_KEY, 0)
+        set(value) {
+            preferences.edit().apply {
+                putInt(FAILED_SYNC_ATTEMPTS_KEY, value)
             }.apply()
         }
 
@@ -102,6 +123,7 @@ class GCExploreDatabase @Inject constructor(
 
     override suspend fun download() {
         ensureAuthenticated()
+        lastSyncAttemptTimestamp = currentTimeMillis()
 
         val cacheDir = context.cacheDir
 
@@ -113,7 +135,6 @@ class GCExploreDatabase @Inject constructor(
         val result = remoteDataRef!!.getFile(tmpFile).await()
         val totalTime = (currentTimeMillis() - startTime).toFloat() / 1000
         log.info("downloaded $remoteDataRef (${result.bytesTransferred} as $tmpFile [$totalTime s]")
-        lastSyncTimestamp = currentTimeMillis()
 
         val updateFile = File(cacheDir, DATA_FILE_NAME)
         val updateFileDelete = updateFile.delete()
@@ -210,6 +231,7 @@ class GCExploreDatabase @Inject constructor(
     }
 
     override fun finalizeUpdate() {
-        localTimestamp = updateTimestampCache
+        log.info("finalizing update: $updateTimestampCache")
+        localDatabaseTimestamp = updateTimestampCache
     }
 }
