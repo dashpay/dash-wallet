@@ -34,14 +34,12 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.FancyAlertDialog
-import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
+import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseConversionPreviewBinding
 import org.dash.wallet.integration.coinbase_integration.model.*
@@ -54,7 +52,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     private val binding by viewBinding(FragmentCoinbaseConversionPreviewBinding::bind)
     private val viewModel by viewModels<CoinbaseConversionPreviewViewModel>()
     private lateinit var swapTradeUIModel: SwapTradeUIModel
-    private var loadingDialog: FancyAlertDialog? = null
+    private var loadingDialog: AdaptiveDialog? = null
     private var isRetrying = false
     private var transactionStateDialog: CoinBaseResultDialog? = null
     private var newSwapOrderId: String? = null
@@ -153,7 +151,12 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         viewModel.commitSwapTradeSuccessState.observe(viewLifecycleOwner) { params ->
-           val walletName= if( swapTradeUIModel.inputCurrency == DASH_CURRENCY)swapTradeUIModel.inputCurrencyName else swapTradeUIModel.outputCurrencyName
+            val walletName = if (swapTradeUIModel.inputCurrency == CoinbaseConstants.DASH_CURRENCY) {
+                swapTradeUIModel.inputCurrencyName
+            } else {
+                swapTradeUIModel.outputCurrencyName
+            }
+
             safeNavigate(
                 CoinbaseConversionPreviewFragmentDirections.conversionPreviewToTwoFaCode(
                     CoinbaseTransactionParams(params, TransactionType.BuySwap,walletName)
@@ -204,14 +207,10 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                 )
             )
         }
-
-        parentFragmentManager.beginTransaction()
-            .replace(R.id.preview_network_status_container, NetworkUnavailableFragment.newInstance())
-            .commit()
     }
 
     private fun setNetworkState(hasInternet: Boolean) {
-        binding.previewNetworkStatusContainer.isVisible = !hasInternet
+        binding.previewNetworkStatusStub.isVisible = !hasInternet
         binding.previewOfflineGroup.isVisible = hasInternet
     }
 
@@ -229,7 +228,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         binding.contentOrderReview.inputAccountSubtitle.text = this.inputCurrency
         binding.contentOrderReview.convertOutputSubtitle.text = this.outputCurrency
 
-        if (this.inputCurrency == DASH_CURRENCY) {
+        if (this.inputCurrency == CoinbaseConstants.DASH_CURRENCY) {
             binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_dash_wallet_on_this_device)
             binding.contentOrderReview.outputAccountHintLabel.setText(R.string.to_your_coinbase_account)
         } else {
@@ -285,7 +284,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
         }
-        loadingDialog = FancyAlertDialog.newProgress(messageResId, 0)
+        loadingDialog = AdaptiveDialog.progress(getString(messageResId))
         loadingDialog?.show(parentFragmentManager, "progress")
     }
 
@@ -299,7 +298,10 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         if (transactionStateDialog?.dialog?.isShowing == true)
             transactionStateDialog?.dismissAllowingStateLoss()
 
-        transactionStateDialog = CoinBaseResultDialog.newInstance(type, responseMessage , dashToCoinbase = swapTradeUIModel.inputCurrency == DASH_CURRENCY).apply {
+        transactionStateDialog = CoinBaseResultDialog.newInstance(
+            type, responseMessage,
+            dashToCoinbase = swapTradeUIModel.inputCurrency == CoinbaseConstants.DASH_CURRENCY
+        ).apply {
             this.onCoinBaseResultDialogButtonsClickListener = object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
                     when (type) {
@@ -365,7 +367,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         binding.confirmBtn.text = getString(R.string.retry)
         binding.retryIcon.visibility = View.VISIBLE
         isRetrying = true
-        setConfirmBtnStyle(org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_TransparentBlue, org.dash.wallet.common.R.color.dash_blue)
+        setConfirmBtnStyle(R.style.PrimaryButtonTheme_Large_TransparentBlue, R.color.dash_blue)
     }
 
     private fun setConfirmBtnStyle(@StyleRes buttonStyle: Int, @ColorRes colorRes: Int) {

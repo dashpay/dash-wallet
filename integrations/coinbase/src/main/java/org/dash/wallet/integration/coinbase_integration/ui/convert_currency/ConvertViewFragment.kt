@@ -33,15 +33,13 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Constants
-import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
+import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentConvertCurrencyBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
-import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -70,6 +68,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
     var selectedCurrencyCodeExchangeRate: ExchangeRate? = null
     var currencyConversionOptionList: List<String> = emptyList()
     private var hasInternet: Boolean = true
+    
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -129,10 +128,6 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             setAmountValue(value, viewModel.enteredConvertAmount)
             viewModel.selectedPickerCurrencyCode = value
         }
-
-        parentFragmentManager.beginTransaction()
-            .replace(R.id.convert_view_network_status_container, NetworkUnavailableFragment.newInstance())
-            .commit()
     }
 
     private fun getMaxAmount(): String? {
@@ -153,9 +148,9 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
     private fun resetViewSelection(it: CoinBaseUserAccountDataUIModel?) {
         it?.coinBaseUserAccountData?.balance?.currency?.let { currencyCode ->
             currencyConversionOptionList = if (viewModel.dashToCrypto.value == true)
-                listOf(DASH_CURRENCY, viewModel.selectedLocalCurrencyCode, currencyCode)
+                listOf(CoinbaseConstants.DASH_CURRENCY, viewModel.selectedLocalCurrencyCode, currencyCode)
             else
-                listOf(currencyCode, viewModel.selectedLocalCurrencyCode, DASH_CURRENCY)
+                listOf(currencyCode, viewModel.selectedLocalCurrencyCode, CoinbaseConstants.DASH_CURRENCY)
             binding.currencyOptions.apply {
                 pickedOptionIndex = 0
                 provideOptions(currencyConversionOptionList)
@@ -404,7 +399,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 selectedCurrencyCodeExchangeRate?.let { rate ->
 
                     val dashAmount = when {
-                        (it.coinBaseUserAccountData.balance?.currency == currencyCode && it.coinBaseUserAccountData.balance.currency != DASH_CURRENCY) -> {
+                        (it.coinBaseUserAccountData.balance?.currency == currencyCode && it.coinBaseUserAccountData.balance.currency != CoinbaseConstants.DASH_CURRENCY) -> {
                             val bd =
                                 viewModel.toDashValue(balance, it, true)
                             try {
@@ -413,7 +408,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                                 Coin.ZERO
                             }
                         }
-                        (viewModel.selectedLocalCurrencyCode == currencyCode && it.coinBaseUserAccountData.balance?.currency != DASH_CURRENCY) -> {
+                        (viewModel.selectedLocalCurrencyCode == currencyCode && it.coinBaseUserAccountData.balance?.currency != CoinbaseConstants.DASH_CURRENCY) -> {
                             // USD
                             val bd =
                                 viewModel.toDashValue(balance, it)
@@ -475,7 +470,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             viewModel.selectedCryptoCurrencyAccount.value?.let {
                 binding.bottomCard.isVisible = hasInternet
             }
-            binding.convertViewNetworkStatusContainer.isVisible = !hasInternet
+            binding.convertViewNetworkStatusStub.isVisible = !hasInternet
         }
     }
 }

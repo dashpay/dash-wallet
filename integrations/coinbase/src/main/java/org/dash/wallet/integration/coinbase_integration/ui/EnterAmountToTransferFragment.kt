@@ -35,9 +35,7 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
-import org.dash.wallet.integration.coinbase_integration.DEFAULT_CURRENCY_USD
-import org.dash.wallet.integration.coinbase_integration.VALUE_ZERO
+import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.EnterAmountToTransferFragmentBinding
 import org.dash.wallet.integration.coinbase_integration.viewmodels.EnterAmountToTransferViewModel
@@ -61,10 +59,10 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
         viewModel.isMaxAmountSelected = false
         binding.currencyOptions.apply {
             pickedOptionIndex = 0
-            provideOptions(listOf(DASH_CURRENCY, viewModel.localCurrencyCode))
+            provideOptions(listOf(CoinbaseConstants.DASH_CURRENCY, viewModel.localCurrencyCode))
         }
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
-        formatTransferredAmount(VALUE_ZERO)
+        formatTransferredAmount(CoinbaseConstants.VALUE_ZERO)
 
         binding.currencyOptions.setOnOptionPickedListener { value, index ->
             viewModel.isFiatSelected = index == 1
@@ -79,13 +77,13 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             if (viewModel.isFiatSelected){
                 fiatAmount = exchangeRate?.let { rate ->
                     Fiat.parseFiat(rate.fiat.currencyCode, cleanedInput)
-                } ?: Fiat.parseFiat(DEFAULT_CURRENCY_USD, VALUE_ZERO)
+                } ?: Fiat.parseFiat(CoinbaseConstants.DEFAULT_CURRENCY_USD, CoinbaseConstants.VALUE_ZERO)
                 dashAmount = viewModel.applyExchangeRateToFiat(fiatAmount)
             } else {
                 dashAmount = Coin.parseCoin(cleanedInput)
                 fiatAmount = exchangeRate?.let { rate ->
                     rate.coinToFiat(dashAmount)
-                } ?: Fiat.parseFiat(DEFAULT_CURRENCY_USD, VALUE_ZERO)
+                } ?: Fiat.parseFiat(CoinbaseConstants.DEFAULT_CURRENCY_USD, CoinbaseConstants.VALUE_ZERO)
             }
 
             viewModel.onContinueTransferEvent.value = Pair(fiatAmount, dashAmount)
@@ -155,7 +153,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
                     binding.inputAmount.text.split(" ")
                         .first { it != binding.currencyOptions.pickedOption }
                 }
-            if (inputValue != VALUE_ZERO)
+            if (inputValue != CoinbaseConstants.VALUE_ZERO)
                 value.append(inputValue)
         }
 
@@ -172,7 +170,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
 
         override fun onNumber(number: Int) {
             refreshValue()
-            if (value.toString() == VALUE_ZERO) {
+            if (value.toString() == CoinbaseConstants.VALUE_ZERO) {
                 value.clear()
             }
             val formattedValue = value.toString()
@@ -211,7 +209,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             refreshValue()
             if (value.indexOf(DECIMAL_SEPARATOR) < 0) {
                 if (value.isEmpty()) {
-                    value.append(VALUE_ZERO)
+                    value.append(CoinbaseConstants.VALUE_ZERO)
                 }
                 value.append(DECIMAL_SEPARATOR)
             }

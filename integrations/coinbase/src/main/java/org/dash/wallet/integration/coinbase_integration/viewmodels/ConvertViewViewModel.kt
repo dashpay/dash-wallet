@@ -38,8 +38,7 @@ import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
-import org.dash.wallet.integration.coinbase_integration.MIN_USD_COINBASE_AMOUNT
+import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapValueErrorType
@@ -72,7 +71,7 @@ class ConvertViewViewModel @Inject constructor(
     var enteredConvertAmount = "0"
     var maxCoinBaseAccountAmount: String = "0"
 
-    var minAllowedSwapAmount: String = MIN_USD_COINBASE_AMOUNT
+    var minAllowedSwapAmount: String = CoinbaseConstants.MIN_USD_COINBASE_AMOUNT
 
     var maxForDashWalletAmount: String = "0"
     val onContinueEvent = SingleLiveEvent<SwapRequest>()
@@ -144,7 +143,7 @@ class ConvertViewViewModel @Inject constructor(
         this._selectedCryptoCurrencyAccount.value = account
 
         //To check if the user has different fiat than usd the min is 2 usd
-        val minFaitValue = MIN_USD_COINBASE_AMOUNT.toBigDecimal() / account.currencyToUSDExchangeRate.toBigDecimal()
+        val minFaitValue = CoinbaseConstants.MIN_USD_COINBASE_AMOUNT.toBigDecimal() / account.currencyToUSDExchangeRate.toBigDecimal()
 
         val cleanedValue: BigDecimal =
             minFaitValue * account.currencyToDashExchangeRate.toBigDecimal()
@@ -334,7 +333,7 @@ class ConvertViewViewModel @Inject constructor(
         val account = selectedCryptoCurrencyAccount.value
 
         return when {
-            (account?.coinBaseUserAccountData?.balance?.currency?.lowercase() == DASH_CURRENCY.lowercase()) -> {
+            (account?.coinBaseUserAccountData?.balance?.currency?.lowercase() == CoinbaseConstants.DASH_CURRENCY.lowercase()) -> {
                 CurrencyInputType.Dash
             }
             (account?.coinBaseUserAccountData?.balance?.currency?.lowercase() == currencyCode.lowercase()) -> {

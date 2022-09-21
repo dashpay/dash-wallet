@@ -251,8 +251,14 @@
         <item name="strokeColor">@color/gray_40</item>
     </style>
 
-    <style name="ExampleBackground" parent="GrayBackground">
-        <item name="cornerRadius">20dp</item>
+    <style name="TaxCategoryExampleBackground">
+        <item name="backgroundColor">@color/tx_category_example_background</item>
+        <item name="strokeColor">@color/tx_category_example_background</item>
+        <item name="cornerRadius">25dp</item>
+    </style>
+
+    <style name="TaxCategoryExampleContentBackground" parent="PrimaryBackground">
+        <item name="cornerRadius">25dp</item>
     </style>
 
     <style name="SearchInputBackground" parent="GrayBackground">
@@ -1183,7 +1189,7 @@
     </style>
 
     <style name="TertiaryTextHighlight">
-        <item name="backgroundColor">@color/ultra_light_gray</item>
+        <item name="backgroundColor">@color/tertiary_text_highlight</item>
         <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">5dp</item>
     </style>

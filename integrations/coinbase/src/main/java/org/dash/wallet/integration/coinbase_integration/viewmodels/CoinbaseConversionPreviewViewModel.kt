@@ -37,12 +37,10 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
-import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
-import org.dash.wallet.integration.coinbase_integration.TRANSACTION_TYPE_SEND
+import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
-import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
 import java.util.*
 import javax.inject.Inject
 
@@ -88,7 +86,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     commitSwapTradeFailureState.call()
                 } else {
-                    if (inputCurrency == DASH_CURRENCY) {
+                    if (inputCurrency == CoinbaseConstants.DASH_CURRENCY) {
                         try {
                             val coin = Coin.parseCoin(inputAmount)
                             sellDashToCoinBase(coin)
@@ -101,7 +99,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                             currency = result.value.displayInputCurrency,
                             idem = UUID.randomUUID().toString(),
                             to = walletDataProvider.freshReceiveAddress().toBase58(),
-                            type = TRANSACTION_TYPE_SEND
+                            type = CoinbaseConstants.TRANSACTION_TYPE_SEND
                         ).apply {
                             commitSwapTradeSuccessState.value = this
                             transactionMetadataProvider.markAddressAsTransferInAsync(to!!, ServiceName.Coinbase)

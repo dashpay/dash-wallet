@@ -39,7 +39,6 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.databinding.DialogOptionPickerBinding
-import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.radio_group.IconSelectMode
@@ -107,7 +106,7 @@ class CryptoWalletsDialog(
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 val inputManager = requireContext()
                     .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                inputManager.toggleSoftInput(0, 0)
+                inputManager.hideSoftInputFromWindow(binding.searchQuery.windowToken, 0)
             }
 
             true
@@ -125,10 +124,6 @@ class CryptoWalletsDialog(
             binding.progressRing.isVisible = false
             refreshItems(viewModel.exchangeRate.value, data)
         }
-
-        childFragmentManager.beginTransaction()
-            .replace(R.id.dialog_network_status_container, NetworkUnavailableFragment.newInstance())
-            .commit()
     }
 
     fun submitList(accounts: List<CoinBaseUserAccountDataUIModel>) {
@@ -137,7 +132,7 @@ class CryptoWalletsDialog(
 
     fun handleNetworkState(hasInternet: Boolean) {
         lifecycleScope.launchWhenStarted {
-            binding.dialogNetworkStatusContainer.isVisible = !hasInternet
+            binding.dialogNetworkStatusStub.isVisible = !hasInternet
             binding.searchBox.isVisible = hasInternet
             binding.contentList.isVisible = hasInternet
         }

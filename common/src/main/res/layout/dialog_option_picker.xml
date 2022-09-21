@@ -115,8 +115,10 @@
         tools:itemCount="5"
         tools:listitem="@layout/radiobutton_row" />
 
-    <FrameLayout
-        android:id="@+id/dialog_network_status_container"
+    <ViewStub
+        android:id="@+id/dialog_network_status_stub"
+        android:layout="@layout/network_unavailable_view"
+        android:inflatedId="@+id/dialog_network_status_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:visibility="gone"
@@ -124,7 +126,6 @@
         app:layout_constraintTop_toBottomOf="@+id/search_layout"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        tools:ignore="UselessLeaf" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

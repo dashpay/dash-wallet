@@ -33,7 +33,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
@@ -57,7 +56,6 @@ import org.dash.wallet.integration.coinbase_integration.ui.dialogs.crypto_wallet
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseActivityViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseConvertCryptoViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
-
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
@@ -259,31 +257,29 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
         monitorNetworkChanges()
 
-        lifecycleScope.launch {
-            sharedViewModel.baseIdForFaitModelCoinBase.collect { uiState ->
-                // New value received
-                when (uiState) {
-                    is BaseIdForFaitDataUIState.Success -> {
-                        uiState.baseIdForFaitDataList.let { list ->
-                            viewModel.setBaseIdForFaitModelCoinBase(list)
-                        }
+        sharedViewModel.baseIdForFaitModelCoinBase.observe(viewLifecycleOwner) { uiState ->
+            // New value received
+            when (uiState) {
+                is BaseIdForFaitDataUIState.Success -> {
+                    uiState.baseIdForFaitDataList.let { list ->
+                        viewModel.setBaseIdForFaitModelCoinBase(list)
                     }
+                }
 
-                    is BaseIdForFaitDataUIState.LoadingState ->{
-                        if (uiState.isLoading) {
-                            showProgress(R.string.loading)
-                        } else
-                            dismissProgress()
+                is BaseIdForFaitDataUIState.LoadingState ->{
+                    if (uiState.isLoading) {
+                        showProgress(R.string.loading)
+                    } else {
+                        dismissProgress()
                     }
-                    is BaseIdForFaitDataUIState.Error ->{
-                        if (uiState.isError) {
-                            //TODO retry in case of error
-                            sharedViewModel.getBaseIdForFaitModel()
-                        }
+                }
+                is BaseIdForFaitDataUIState.Error ->{
+                    if (uiState.isError) {
+                        //TODO retry in case of error
+                        sharedViewModel.getBaseIdForFaitModel()
                     }
                 }
             }
-
         }
     }
 
