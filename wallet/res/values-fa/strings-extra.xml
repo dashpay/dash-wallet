@@ -266,6 +266,8 @@
 
     <string name="menu_buy_and_sell_title">خرید &amp;؛ فروش دش </string>
     <string name="menu_buy_and_sell_subtitle">ارتباط با صرافی‌های طرف سوم</string>
+    <string name="liquid_unavailable">امکان ادغام لیکوئید با دش والت دیگر امکان‌پذیر نیست</string>
+    <string name="liquid_unavailable_details">اگر هر سئوالی درباره موجودی دش‌‌تان در لیکوئید دارید، لطفا با مرکز پشتیبانی لیکوئید تماس بگیرید. </string>
     <string name="menu_security_title">امنیت</string>
     <string name="menu_security_subtitle">مشاهده گذرواژه، کیف پول پشتیبان ...</string>
     <string name="menu_settings_title">تنظیمات</string>
@@ -364,6 +366,9 @@
     <string name="import_image_no_private_key_copied">هیچ کلید خصوصی کپی نشد</string>
     <string name="import_image_import_valid_private_key">کلید خصوصی را برای برداشت دش از آن کپی کنید</string>
     <string name="import_image_invalid_private">کلید خصوصی نامعتبر است</string>
+
+    <string name="today">امروز</string>
+    <string name="yesterday">دیروز</string>
 
     <string name="syncing">در حال همزمان‌سازی</string>
     <string name="syncing_balance">در حال همزمان‌سازی موجودی </string>

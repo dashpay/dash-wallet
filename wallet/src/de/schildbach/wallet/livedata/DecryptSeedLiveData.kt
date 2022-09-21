@@ -22,8 +22,8 @@ import android.os.Process
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.SecurityGuard
-import de.schildbach.wallet.ui.send.DecryptSeedTask
-import de.schildbach.wallet.ui.send.DeriveKeyTask
+import de.schildbach.wallet.payments.DecryptSeedTask
+import de.schildbach.wallet.payments.DeriveKeyTask
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bouncycastle.crypto.params.KeyParameter
 

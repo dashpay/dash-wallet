@@ -267,6 +267,8 @@
 
     <string name="menu_buy_and_sell_title">Compra &amp; Vendi Dash</string>
     <string name="menu_buy_and_sell_subtitle">Connetti a Exchanges esterni</string>
+    <string name="liquid_unavailable">L\'integrazione Liquid con Dash Wallet non è più disponibile</string>
+    <string name="liquid_unavailable_details">In caso di domande relative alle partecipazioni in Dash presso Liquid, contattare il centro di assistenza Liquid</string>
     <string name="menu_security_title">Sicurezza</string>
     <string name="menu_security_subtitle">Visualizza frase di recupero, portafoglio di backup</string>
     <string name="menu_settings_title">Impostazioni</string>
@@ -365,6 +367,9 @@
     <string name="import_image_no_private_key_copied">Nessuna chiave privata copiata</string>
     <string name="import_image_import_valid_private_key">Copia una chiave privata valida per importare Dash </string>
     <string name="import_image_invalid_private">Chiave privata non valida</string>
+
+    <string name="today">In data odierna</string>
+    <string name="yesterday">Ieri</string>
 
     <string name="syncing">Sincronizzazione</string>
     <string name="syncing_balance">Sincronizzazione bilancio</string>

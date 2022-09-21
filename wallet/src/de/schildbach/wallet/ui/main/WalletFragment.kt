@@ -35,9 +35,10 @@ import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.InputParser.StringInputParser
 import de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsActivity
 import de.schildbach.wallet.ui.explore.ExploreActivity
+import de.schildbach.wallet.ui.payments.PaymentsActivity
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
-import de.schildbach.wallet.ui.send.SweepWalletActivity
+import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.util.WalletUtils

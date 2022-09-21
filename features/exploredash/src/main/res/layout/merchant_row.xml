@@ -50,7 +50,7 @@
 
     <TextView
         android:id="@+id/subtitle"
-        style="@style/Caption.Medium.Secondary"
+        style="@style/Caption.Medium.Tertiary"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="14dp"

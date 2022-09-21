@@ -1,4 +1,10 @@
 Dash Wallet
+v8.0.1
+* Fix to show errors on Home Screen when scanning invalid QR codes
+* Recover linked Crowdnode account after restoring recovery phrase
+* Improve error handling on Coinbase
+* update to dashj 0.18.1 to fix sync issues
+
 v8.0
 * Home Screen does not round balance, group transactions by date
 * Crowdnode fixes

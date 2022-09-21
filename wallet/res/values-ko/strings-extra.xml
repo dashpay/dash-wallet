@@ -261,6 +261,8 @@
 
     <string name="menu_buy_and_sell_title">대시 매수 &amp; 매도</string>
     <string name="menu_buy_and_sell_subtitle">제3자 거래소에 연결</string>
+    <string name="liquid_unavailable">대시 지갑 내 리퀴드 통합은 더이상 지원되지 않습니다.</string>
+    <string name="liquid_unavailable_details">리퀴드 내 대시 소지에 관하여 궁금하신 내용이 있는 경우에는 리퀴드 지원 센터에 연락해주십시오</string>
     <string name="menu_security_title">보안</string>
     <string name="menu_security_subtitle">비밀문구, 백업 지갑 보기....</string>
     <string name="menu_settings_title">설정</string>
@@ -359,6 +361,9 @@
     <string name="import_image_no_private_key_copied">복사된 개인 키가 없습니다</string>
     <string name="import_image_import_valid_private_key">대시를 가져올 유효한 개인 키를 복사해주십시오</string>
     <string name="import_image_invalid_private">유효하지 않은 개인 키</string>
+
+    <string name="today">오늘</string>
+    <string name="yesterday">어제</string>
 
     <string name="syncing">동기화 중</string>
     <string name="syncing_balance">잔고 동기화 중</string>

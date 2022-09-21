@@ -24,6 +24,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
+import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat.animate
 import androidx.core.view.doOnLayout
@@ -31,13 +32,20 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.SegmentedPickerBinding
+import org.dash.wallet.common.ui.getRoundedBackground
 import kotlin.math.max
 import kotlin.math.min
 
+data class SegmentedOption(
+    val title: String,
+    @DrawableRes val icon: Int? = null
+)
+
 class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(context, attrs) {
     private val binding = SegmentedPickerBinding.inflate(LayoutInflater.from(context), this)
-    private lateinit var options: List<String>
-    private var optionPickedListener: ((String, Int) -> Unit)? = null
+    private lateinit var options: List<SegmentedOption>
+    private var adapter: PickerOptionsAdapter? = null
+    private var optionPickedListener: ((SegmentedOption, Int) -> Unit)? = null
     private val dividerDrawable = ContextCompat.getDrawable(
         context, R.drawable.segmented_picker_divider)!!
 
@@ -48,18 +56,13 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
         }
 
     var pickedOptionIndex = 0
-        set(value) {
-            if (field != value) {
-                field = value
-                moveThumb(value, false)
-            }
-        }
+        private set
 
-    val pickedOption: String
+    val pickedOption: SegmentedOption
         get() = options[pickedOptionIndex]
 
     init {
-        setBackgroundResource(R.drawable.segmented_picker_background)
+        background = resources.getRoundedBackground(R.style.SegmentedPickerBackground)
         binding.options.layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, false)
 
         doOnLayout {
@@ -72,9 +75,9 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
         }
     }
 
-    fun provideOptions(options: List<String>) {
+    fun provideOptions(options: List<SegmentedOption>) {
         this.options = options
-        val adapter = PickerOptionsAdapter(options) { option, index ->
+        this.adapter = PickerOptionsAdapter(options) { option, index ->
             moveThumb(index)
 
             if (pickedOptionIndex != index) {
@@ -85,11 +88,19 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
         binding.options.adapter = adapter
     }
 
-    fun setOnOptionPickedListener(listener: (String, Int) -> Unit) {
+    fun setOnOptionPickedListener(listener: (SegmentedOption, Int) -> Unit) {
         optionPickedListener = listener
     }
 
+    fun setSelectedIndex(value: Int, animate: Boolean = false) {
+        if (pickedOptionIndex != value) {
+            pickedOptionIndex = value
+            moveThumb(value, animate)
+        }
+    }
+
     private fun moveThumb(index: Int, animate: Boolean = true) {
+        adapter?.selectedIndex = index
         val optionsParams = binding.options.layoutParams as LayoutParams
         // Allows animating a thumb that's bigger than option size
         val optionWidth = trackWidth / options.size
@@ -117,6 +128,8 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+
+        // Draw vertical separators
         val width = trackWidth
 
         for (i in 1 until options.size) {

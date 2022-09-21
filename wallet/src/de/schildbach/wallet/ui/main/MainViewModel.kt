@@ -127,6 +127,7 @@ class MainViewModel @Inject constructor(
                     .debounce(THROTTLE_DURATION)
                     .onEach { refreshTransactions(filter) }
             }
+            .catch { analytics.logError(it, "is wallet null: ${walletData.wallet == null}") }
             .launchIn(viewModelWorkerScope)
 
         blockchainStateDao.observeState()

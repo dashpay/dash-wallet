@@ -212,10 +212,9 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
 
     @Override
     public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
-        if (Configuration.PREFS_KEY_EXCHANGE_CURRENCY.equals(key))
+        if (Configuration.PREFS_KEY_EXCHANGE_CURRENCY.equals(key)) {
             adapter.setDefaultCurrency(config.getExchangeCurrencyCode());
-        else if (Configuration.PREFS_KEY_BTC_PRECISION.equals(key))
-            adapter.setRateBase(config.getBtcBase());
+        }
     }
 
     private void showOnly(View view) {

@@ -58,7 +58,7 @@ class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
 
     override fun logError(error: Throwable, details: String?) {
         if (BuildConfig.DEBUG) {
-            Log.i("FIREBASE", "Skip error logging in debug mode: ${error.message}")
+            Log.i("FIREBASE", "Skip error logging in debug mode: $error")
             details?.let { Log.i("FIREBASE", "Details: $details") }
             return
         }

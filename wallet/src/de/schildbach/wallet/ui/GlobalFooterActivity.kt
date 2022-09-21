@@ -20,6 +20,7 @@ import android.content.Intent
 import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.main.WalletActivity
+import de.schildbach.wallet.ui.payments.PaymentsActivity
 import de.schildbach.wallet.ui.widget.GlobalFooterView
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -48,7 +49,7 @@ open class GlobalFooterActivity : LockScreenActivity(), GlobalFooterView.OnFoote
     }
 
     override fun onGotoClick() {
-        val intent = PaymentsActivity.createIntent(this, PaymentsActivity.ACTIVE_TAB_RECENT)
+        val intent = PaymentsActivity.createIntent(this)
         startActivity(intent)
         analytics.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON, bundleOf())
     }

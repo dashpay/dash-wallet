@@ -1876,7 +1876,7 @@
 
       },
       {
-        "className": "de.schildbach.wallet.ui.widget.ReceiveInfoView",
+        "className": "org.dash.wallet.common.ui.receive.ReceiveInfoView",
         "recyclerViewChildPosition": -1,
         "adapterViewChildPosition": -1,
         "groupViewChildPosition": 0,
@@ -2182,7 +2182,7 @@
 
       },
       {
-        "className": "de.schildbach.wallet.ui.widget.ReceiveInfoView",
+        "className": "org.dash.wallet.common.ui.receive.ReceiveInfoView",
         "recyclerViewChildPosition": -1,
         "adapterViewChildPosition": -1,
         "groupViewChildPosition": 0,

@@ -22,7 +22,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.main.WalletFragment
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
-import de.schildbach.wallet.ui.send.SweepWalletActivity
+import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue

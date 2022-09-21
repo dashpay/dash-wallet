@@ -67,7 +67,7 @@
     <color name="background_secondary">@android:color/white</color>
     <color name="background_tertiary">#F2F2F2</color>
     <color name="overlay_primary">#B3000000</color>
-    <color name="background_explore">@color/blue_700</color>
+    <color name="background_explore">#003470</color>
     <color name="background_accuracy_circle">#26008DE4</color>
     <color name="button_ripple_color">#1f000000</color>
     <color name="button_ripple_light">#40B0B6BC</color>
@@ -100,27 +100,22 @@
 
     <color name="dash_black_0.7">#B30C0C0D</color>
     <color name="system_green_0.1">#1A3CB878</color>
+    <color name="extra_dark_gray_0.1">#1A525C66</color>
     <color name="dash_blue_0.1">#1A008DE4</color>
+    <color name="dash_blue_0.05">#0D008DE4</color>
 
     <color name="blue_50">#F0F8FE</color>
-    <color name="blue_300">#3CA9EE</color>
-    <color name="blue_700">#003470</color>
     <color name="light_blue">#1A008DE4</color>
 
     <color name="gray_40">#F2F3F5</color>
-    <color name="gray_50">#EBEDF0</color>
     <color name="gray_100">#E1E3E6</color>
     <color name="gray_200">#C4C8CC</color>
     <color name="gray_300">#AAAEB3</color>
-    <color name="gray_400">#909499</color>
     <color name="gray_600">#5D5F61</color>
-    <color name="gray_900">#0C0C0D</color>
 
-    <color name="steel_gray_40">#F3F5F6</color>
     <color name="steel_gray_150">#B8C1CC</color>
     <color name="steel_gray_200">#AEB7C2</color>
     <color name="steel_gray_250">#A3ADB8</color>
     <color name="steel_gray_300">#99A2AD</color>
-    <color name="steel_gray_400">#818C99</color>
     <color name="steel_gray_700">#434A52</color>
 </resources>
