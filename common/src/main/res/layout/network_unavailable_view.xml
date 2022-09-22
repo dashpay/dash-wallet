@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/network_error_root"
@@ -45,10 +46,10 @@
         android:gravity="center"
         android:textAlignment="gravity"
         android:maxLines="2"
+        android:text="@string/network_unavailable_check_connection"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/title"
-        tools:text="@string/network_unavailable_check_connection" />
+        app:layout_constraintTop_toBottomOf="@id/title" />
 
     <Button
         android:id="@+id/button"
@@ -56,14 +57,12 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:padding="5dp"
+        android:layout_marginTop="20dp"
+        android:visibility="gone"
+        android:text="@string/button_retry"
+        app:drawableStartCompat="@drawable/ic_arrow_left_blue"
         app:layout_constraintTop_toBottomOf="@+id/network_error_subtitle"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="20dp"
-        app:drawableStartCompat="@drawable/ic_arrow_left_blue"
-        android:visibility="gone"
-        tools:text="Button"
-        tools:visibility="visible"
-        />
-
+        tools:visibility="visible" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -41,7 +41,7 @@ class CoinBaseRepository @Inject constructor(
         val apiResponse = servicesApi.getUserAccounts()
         userAccountInfo = apiResponse?.data ?: listOf()
         val userAccountData = userAccountInfo.firstOrNull {
-            it.balance?.currency?.equals(DASH_CURRENCY) ?: false
+            it.balance?.currency?.equals(CoinbaseConstants.DASH_CURRENCY) ?: false
         }
         userAccountData?.also {
             userPreferences.setCoinBaseUserAccountId(it.id)
@@ -56,8 +56,8 @@ class CoinBaseRepository @Inject constructor(
             }
 
             val exchangeRates = servicesApi.getExchangeRates(exchangeCurrencyCode)?.data
-            val currencyToDashExchangeRate = exchangeRates?.rates?.get(DASH_CURRENCY).orEmpty()
-            val currencyToUSDExchangeRate = exchangeRates?.rates?.get(USD_CURRENCY).orEmpty()
+            val currencyToDashExchangeRate = exchangeRates?.rates?.get(CoinbaseConstants.DASH_CURRENCY).orEmpty()
+            val currencyToUSDExchangeRate = exchangeRates?.rates?.get(CoinbaseConstants.USD_CURRENCY).orEmpty()
 
             return@safeApiCall userAccountInfo.map {
                 val currencyToCryptoCurrencyExchangeRate = exchangeRates?.rates?.get(it.currency?.code).orEmpty()
@@ -162,13 +162,13 @@ class CoinBaseRepository @Inject constructor(
         }
 
         val userAccountData = userAccountInfo.firstOrNull {
-            it.balance?.currency?.equals(DASH_CURRENCY) ?: false
+            it.balance?.currency?.equals(CoinbaseConstants.DASH_CURRENCY) ?: false
         }
         val exchangeRates = userPreferences.exchangeCurrencyCode?.let { servicesApi.getExchangeRates(it)?.data }
 
         return@safeApiCall userAccountData?.let {
-            val currencyToDashExchangeRate = exchangeRates?.rates?.get(DASH_CURRENCY).orEmpty()
-            val currencyToUSDExchangeRate = exchangeRates?.rates?.get(USD_CURRENCY).orEmpty()
+            val currencyToDashExchangeRate = exchangeRates?.rates?.get(CoinbaseConstants.DASH_CURRENCY).orEmpty()
+            val currencyToUSDExchangeRate = exchangeRates?.rates?.get(CoinbaseConstants.USD_CURRENCY).orEmpty()
             CoinbaseToDashExchangeRateUIModel(
                 it,
                 currencyToDashExchangeRate,
