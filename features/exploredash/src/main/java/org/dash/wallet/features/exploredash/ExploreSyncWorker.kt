@@ -69,13 +69,17 @@ class ExploreSyncWorker @AssistedInject constructor(
                 ) {
                     // force data preloading for fresh installs
                     // and a newer preloaded DB
-                    AppExploreDatabase.getAppDatabase(
+                    ExploreDatabase.updateDatabase(
                         appContext,
                         config,
                         exploreRepository
                     )
                     exploreRepository.preloadedOnTimestamp = System.currentTimeMillis()
                 } else {
+                    if (!updateFile.delete()) {
+                        log.error("unable to delete " + updateFile.absolutePath)
+                    }
+
                     localDataTimestamp = exploreRepository.localDatabaseTimestamp
                     log.info("local data timestamp: $localDataTimestamp (${Date(localDataTimestamp)})")
 
@@ -94,7 +98,7 @@ class ExploreSyncWorker @AssistedInject constructor(
 
                     syncStatus.setSyncProgress(80.0)
 
-                    AppExploreDatabase.forceUpdate(
+                    ExploreDatabase.updateDatabase(
                         appContext,
                         config,
                         exploreRepository

@@ -39,7 +39,6 @@ import org.dash.wallet.features.exploredash.repository.GCExploreDatabase
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
-import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
