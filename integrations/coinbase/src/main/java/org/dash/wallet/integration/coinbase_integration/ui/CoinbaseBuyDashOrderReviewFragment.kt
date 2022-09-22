@@ -159,13 +159,12 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         }
 
         viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner) {
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.something_wrong_title,
-                getString(R.string.retry_later_message),
+            AdaptiveDialog.create(
                 R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseBuyDashOrderReviewToError(placeBuyOrderError))
+                getString(R.string.something_wrong_title),
+                getString(R.string.retry_later_message),
+                getString(R.string.close)
+            ).show(requireActivity())
         }
 
         viewModel.placeBuyOrder.observe(viewLifecycleOwner) {

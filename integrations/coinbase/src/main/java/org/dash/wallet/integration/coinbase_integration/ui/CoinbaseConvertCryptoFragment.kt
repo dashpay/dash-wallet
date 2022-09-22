@@ -48,7 +48,6 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseConvertCryptoBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
-import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
 import org.dash.wallet.integration.coinbase_integration.model.getCoinBaseExchangeRateConversion
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.ConvertViewFragment
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.*
@@ -152,21 +151,18 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
-            val message = if (it.isNullOrBlank())
+            val message = if (it.isNullOrBlank()) {
                 requireContext().getString(R.string.something_wrong_title)
-            else
+            } else {
                 it
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.error,
-                message,
+            }
+
+            AdaptiveDialog.create(
                 R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    placeBuyOrderError
-                )
-            )
+                getString(R.string.error),
+                message,
+                getString(R.string.close)
+            ).show(requireActivity())
         }
 
         convertViewModel.userDashAccountEmptyError.observe(viewLifecycleOwner) {
@@ -174,9 +170,8 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 R.drawable.ic_info_red,
                 getString(R.string.dont_have_any_dash),
                 "",
-                "",
                 getString(R.string.close)
-            ).show(requireActivity()) { }
+            ).show(requireActivity())
         }
 
         binding.convertView.setOnCurrencyChooserClicked {
