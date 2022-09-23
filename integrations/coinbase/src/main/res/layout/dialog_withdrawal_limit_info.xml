@@ -156,7 +156,7 @@
             android:layout_marginStart="6dp"
             android:paddingVertical="2dp"
             android:text="@string/change_limit"
-            android:textColor="@color/deep_blue"
+            android:textColor="@color/coinbase_blue"
             app:layout_constraintBottom_toBottomOf="@id/rectangle_five"
             app:layout_constraintStart_toEndOf="@id/rectangle_five"
             app:layout_constraintTop_toTopOf="@id/rectangle_five" />
