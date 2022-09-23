@@ -219,26 +219,28 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             setConvertViewInput()
         }
 
-        convertViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner) { balance ->
-            val hasBalance = !balance.isZero
-            binding.youWillReceiveLabel.isVisible = hasBalance
-            binding.youWillReceiveValue.isVisible = hasBalance
-            if (hasBalance && !binding.convertView.dashToCrypto) {
+        convertViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner) { amount ->
+            val hasAmount = !amount.isZero
+            binding.youWillReceiveLabel.isVisible = hasAmount
+            binding.youWillReceiveValue.isVisible = hasAmount
+
+            if (hasAmount && !binding.convertView.dashToCrypto) {
                 binding.youWillReceiveValue.text = context?.getString(
                     R.string.you_will_receive_dash,
-                    dashFormat.format(balance).toString()
+                    dashFormat.format(amount).toString()
                 )
             }
         }
 
-        convertViewModel.enteredConvertCryptoAmount.observe(viewLifecycleOwner) { balance ->
-            binding.youWillReceiveLabel.isVisible = balance.second.isNotEmpty()
-            binding.youWillReceiveValue.isVisible = balance.second.isNotEmpty()
+        convertViewModel.enteredConvertCryptoAmount.observe(viewLifecycleOwner) { amount ->
+            binding.youWillReceiveLabel.isVisible = amount.second.isNotEmpty()
+            binding.youWillReceiveValue.isVisible = amount.second.isNotEmpty()
+
             if (binding.convertView.dashToCrypto) {
                 binding.youWillReceiveValue.text = getString(
                     R.string.fiat_balance_with_currency,
-                    balance.first,
-                    GenericUtils.currencySymbol(balance.second)
+                    amount.first,
+                    GenericUtils.currencySymbol(amount.second)
                 )
             }
         }
