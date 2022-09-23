@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui.buy_sell
 
+import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
@@ -28,6 +29,8 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.NetworkStateInt
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
@@ -41,11 +44,12 @@ import kotlin.coroutines.suspendCoroutine
  */
 @ExperimentalCoroutinesApi
 @HiltViewModel
-class BuyAndSellViewModel
-@Inject constructor(
+class BuyAndSellViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
-    private val config: Configuration,
-    networkState: NetworkStateInt
+    val config: Configuration,
+    val analytics: AnalyticsService,
+    networkState: NetworkStateInt,
+    private val upholdClient: UpholdClient
 ): ConnectivityViewModel(networkState) {
 
     //TODO: move this into UpholdViewModel
@@ -54,8 +58,6 @@ class BuyAndSellViewModel
     fun updateUpholdBalance() {
         triggerUploadBalanceUpdate.value = Unit
     }
-
-    private val upholdClient = UpholdClient.getInstance()
 
     var shouldShowAuthInfoPopup: Boolean
         get() = !config.hasCoinbaseAuthInfoBeenShown
@@ -140,6 +142,10 @@ class BuyAndSellViewModel
     }
 
     fun showRowBalance(serviceType: BuyAndSellDashServicesModel.ServiceType, currentExchangeRate: org.dash.wallet.common.data.ExchangeRate?, amount: String) {
+        when(serviceType) {
+            BuyAndSellDashServicesModel.ServiceType.UPHOLD -> config.lastUpholdBalance = amount
+        }
+
         val list = buyAndSellDashServicesModel.toMutableList().map { model ->
             if (model.serviceType == serviceType) {
                 val balance = try {
@@ -192,10 +198,26 @@ class BuyAndSellViewModel
                 }
                 is ResponseResource.Failure -> {
                     _coinbaseBalance.value = if (!config.lastCoinbaseBalance.isNullOrEmpty()) {
-                            config.lastCoinbaseBalance
-                        } else "0.0"
-                    }
+                        config.lastCoinbaseBalance
+                    } else "0.0"
                 }
             }
         }
+    }
+
+    fun logEnterUphold() {
+        analytics.logEvent(if (upholdClient.isAuthenticated) {
+            AnalyticsConstants.Uphold.ENTER_CONNECTED
+        } else {
+            AnalyticsConstants.Uphold.ENTER_DISCONNECTED
+        }, bundleOf())
+    }
+
+    fun logEnterCoinbase() {
+        analytics.logEvent(if (coinBaseRepository.isUserConnected()) {
+            AnalyticsConstants.Coinbase.ENTER_CONNECTED
+        } else {
+            AnalyticsConstants.Coinbase.ENTER_DISCONNECTED
+        }, bundleOf())
+    }
 }

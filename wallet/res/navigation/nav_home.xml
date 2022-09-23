@@ -30,6 +30,13 @@
         <argument
             android:name="ShowNavBar"
             android:defaultValue="true" />
+
+        <action
+            android:id="@+id/home_to_buySell"
+            app:destination="@id/buySellFragment"
+            app:enterAnim="@anim/slide_in_bottom"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -74,7 +81,20 @@
         <argument
             android:name="ShowNavBar"
             android:defaultValue="true" />
+
+        <action
+            android:id="@+id/more_to_buySell"
+            app:destination="@id/buySellFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
+
+    <fragment
+        android:id="@+id/buySellFragment"
+        android:name="de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsFragment"
+        android:label="BuyAndSell"
+        tools:layout="@layout/fragment_buy_sell_integrations" />
 
     <include app:graph="@navigation/explore_dash" />
 </navigation>

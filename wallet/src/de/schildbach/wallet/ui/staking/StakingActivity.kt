@@ -26,7 +26,7 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsActivity
+import de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsFragment
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -78,7 +78,8 @@ class StakingActivity : LockScreenActivity() {
                 ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
             }
             NavigationRequest.BuyDash -> {
-                startActivity(BuyAndSellIntegrationsActivity.createIntent(this))
+                // TODO
+//                startActivity(BuyAndSellIntegrationsFragment.createIntent(this))
             }
             NavigationRequest.SendReport -> {
                 log.info("CrowdNode initiated report")

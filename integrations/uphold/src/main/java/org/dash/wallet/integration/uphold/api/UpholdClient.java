@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import kotlin.Deprecated;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -107,6 +108,7 @@ public class UpholdClient {
         return instance;
     }
 
+    @Deprecated(message = "Inject instead")
     public static UpholdClient getInstance() {
         if (instance == null) {
             throw new IllegalStateException("You must call UpholdClient#init() first");

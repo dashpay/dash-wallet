@@ -205,7 +205,7 @@
             style="@style/MenuRowIcon"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_transfer_dash"
+            android:src="@drawable/ic_transfer"
             app:layout_constraintBottom_toBottomOf="@+id/transfer_dash_subtitle"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@id/transfer_dash_title" />

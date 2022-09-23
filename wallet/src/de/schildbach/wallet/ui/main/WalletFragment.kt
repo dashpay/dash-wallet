@@ -37,7 +37,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.InputParser.StringInputParser
-import de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsActivity
 import de.schildbach.wallet.ui.payments.PaymentsFragment
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
@@ -57,6 +56,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -141,7 +141,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 }
                 binding.shortcutsPane.buySellButton -> {
                     viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL)
-                    startActivity(BuyAndSellIntegrationsActivity.createIntent(requireContext()))
+                    safeNavigate(WalletFragmentDirections.homeToBuySell())
                 }
                 binding.shortcutsPane.payToAddressButton -> {
                     handlePayToAddress()
