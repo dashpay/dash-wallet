@@ -38,6 +38,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -56,7 +57,8 @@ class MainViewModel @Inject constructor(
     blockchainStateDao: BlockchainStateDao,
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    private val blockchainStateProvider: BlockchainStateProvider
 ) : ViewModel() {
     companion object {
         private const val THROTTLE_DURATION = 500L
@@ -81,7 +83,7 @@ class MainViewModel @Inject constructor(
         get() = _transactionsDirection.value
         set(value) {
             _transactionsDirection.value = value
-            savedStateHandle.set(DIRECTION_KEY, value)
+            savedStateHandle[DIRECTION_KEY] = value
         }
 
     private val _isBlockchainSynced = MutableLiveData<Boolean>()
@@ -115,9 +117,13 @@ class MainViewModel @Inject constructor(
     val isPassphraseVerified: Boolean
         get() = !config.remindBackupSeed
 
+    private val _stakingAPY = MutableLiveData<Double>()
+    val stakingAPY: LiveData<Double>
+        get() = _stakingAPY
+
     init {
         _hideBalance.value = config.hideBalance
-        transactionsDirection = savedStateHandle.get(DIRECTION_KEY) ?: TxDirection.ALL
+        transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxDirection.ALL
 
         _transactionsDirection
             .flatMapLatest { direction ->
@@ -215,6 +221,12 @@ class MainViewModel @Inject constructor(
         walletData.processDirectTransaction(tx)
     }
 
+    fun getLastStakingAPY() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _stakingAPY.postValue(0.85 * blockchainStateProvider.getLastMasternodeAPY())
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         config.unregisterOnSharedPreferenceChangeListener(listener)
@@ -239,6 +251,12 @@ class MainViewModel @Inject constructor(
     private fun updateSyncStatus(state: BlockchainState) {
         if (_isBlockchainSyncFailed.value != state.isSynced()) {
             _isBlockchainSynced.postValue(state.isSynced())
+
+            if (state.isSynced()) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    _stakingAPY.postValue(0.85 * blockchainStateProvider.getMasternodeAPY())
+                }
+            }
 
             if (state.replaying) {
                 _transactions.postValue(listOf())

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_home"
+    app:startDestination="@id/walletFragment">
+
+    <fragment
+        android:id="@+id/walletFragment"
+        android:name="de.schildbach.wallet.ui.main.WalletFragment"
+        android:label="Home"
+        tools:layout="@layout/home_content">
+
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/paymentsFragment"
+        android:name="de.schildbach.wallet.ui.payments.PaymentsFragment"
+        android:label="Payments"
+        tools:layout="@layout/fragment_payments">
+
+        <argument
+            android:name="active_tab"
+            app:argType="integer" />
+
+        <deepLink app:uri="android-app://hashengineering.darkcoin.wallet/payments/{active_tab}"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/exploreFragment"
+        android:name="de.schildbach.wallet.ui.explore.ExploreFragment"
+        android:label="Explore"
+        tools:layout="@layout/fragment_explore">
+
+        <action
+            android:id="@+id/explore_to_search"
+            app:destination="@id/explore_dash"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left">
+
+            <argument
+                android:name="type"
+                android:defaultValue="Merchants"
+                app:argType="org.dash.wallet.features.exploredash.ui.ExploreTopic" />
+        </action>
+    </fragment>
+
+    <fragment
+        android:id="@+id/moreFragment"
+        android:name="de.schildbach.wallet.ui.more.MoreFragment"
+        android:label="More"
+        tools:layout="@layout/fragment_more">
+
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="true" />
+    </fragment>
+
+    <include app:graph="@navigation/explore_dash" />
+</navigation>

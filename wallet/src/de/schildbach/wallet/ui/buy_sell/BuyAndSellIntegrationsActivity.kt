@@ -93,15 +93,11 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
         log.info("starting Buy and Sell Dash activity")
         binding = ActivityBuyAndSellIntegrationsBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        setSupportActionBar(binding.toolbar)
 
-        val actionBar = supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
+        binding.toolbar.setNavigationOnClickListener {
+            finish()
         }
 
-        title = ""
         loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
         initViewModel()
 
@@ -295,21 +291,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity() {
             config.lastCoinbaseAccessToken.isNullOrEmpty().not(),
             UpholdClient.getInstance().isAuthenticated
         )
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.wallet_buy_and_sell, menu)
-        return super.onCreateOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressed()
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
     }
 
     // TODO: can this be refactored into the uphold module>?

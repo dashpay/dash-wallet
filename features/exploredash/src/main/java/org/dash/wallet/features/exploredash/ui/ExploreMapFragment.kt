@@ -154,9 +154,11 @@ class ExploreMapFragment : SupportMapFragment() {
 
         viewModel.selectedRadiusOption.observe(viewLifecycleOwner) {
             googleMap?.let { map ->
-                val mapCenter = map.projection.visibleRegion.latLngBounds.center
-                val radiusBounds = getRadiusBounds(mapCenter, viewModel.radius)
-                map.animateCamera(radiusBounds)
+                if ((this.view?.measuredHeight ?: 0) > 0) {
+                    val mapCenter = map.projection.visibleRegion.latLngBounds.center
+                    val radiusBounds = getRadiusBounds(mapCenter, viewModel.radius)
+                    map.animateCamera(radiusBounds)
+                }
             }
         }
     }
