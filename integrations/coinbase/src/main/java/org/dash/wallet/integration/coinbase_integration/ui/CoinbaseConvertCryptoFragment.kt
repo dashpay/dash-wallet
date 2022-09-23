@@ -91,7 +91,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
             fragment.handleNetworkState(hasInternet)
-            cryptoWalletsDialog?.handleNetworkState(hasInternet)
+            binding.convertView.isEnabled = hasInternet
         }
 
         viewModel.showLoading.observe(
@@ -189,15 +189,14 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 }
 
                 if (cryptoWalletsDialog?.isVisible == false) {
-                    viewModel.isDeviceConnectedToInternet.value?.let { hasInternet ->
-                        cryptoWalletsDialog?.handleNetworkState(hasInternet)
-                    }
-
                     cryptoWalletsDialog?.show(parentFragmentManager, "payment_method")
                     list = viewModel.getUserWalletAccounts(binding.convertView.dashToCrypto)
 
                     if (list.isEmpty()) {
-                        showNoAssetsError()
+                        if (viewModel.isDeviceConnectedToInternet.value == true) {
+                            cryptoWalletsDialog?.dismiss()
+                            showNoAssetsError()
+                        }
                     } else {
                         cryptoWalletsDialog?.submitList(list)
                     }
@@ -283,7 +282,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         if (swapValueErrorType == SwapValueErrorType.NOError) {
             if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {
                 request.fiatAmount?.let { fait ->
-                    if ((viewModel.userPreference.lastCoinbaseBalance?.toDouble() ?: 0.0) <fait.toPlainString().toDouble()) {
+                    if ((viewModel.userPreference.lastCoinbaseBalance?.toDouble() ?: 0.0) < fait.toPlainString().toDouble()) {
                         showNoAssetsError()
                     }
                 }

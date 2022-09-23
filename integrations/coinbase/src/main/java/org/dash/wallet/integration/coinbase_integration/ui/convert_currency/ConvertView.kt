@@ -79,6 +79,12 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
             }
         }
 
+    override fun setEnabled(enabled: Boolean) {
+        super.setEnabled(enabled)
+        binding.convertFromBtn.isEnabled = enabled
+        binding.convertToBtn.isEnabled = enabled
+    }
+
     init {
 
         binding.convertFromDashBalance.isVisible = input != null

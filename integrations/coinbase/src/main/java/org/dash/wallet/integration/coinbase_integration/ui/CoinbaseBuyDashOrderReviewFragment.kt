@@ -22,7 +22,6 @@ import android.view.View
 import androidx.activity.addCallback
 import androidx.annotation.ColorRes
 import androidx.annotation.StyleRes
-import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
