@@ -90,6 +90,14 @@ class ExploreSyncWorker @AssistedInject constructor(
                         log.info("explore db is up to date, nothing to sync")
                         syncStatus.setSyncProgress(100.0)
                         exploreRepository.failedSyncAttempts = 0
+
+                        if (exploreRepository.lastSyncAttemptTimestamp <= 0) {
+                            // Some devices might have this as 0 due to the bug. Need to update manually
+                            // TODO: this can be removed after some time
+                            analytics.logError(IllegalStateException("Explore db up to date but local timestamp is 0"))
+                            exploreRepository.lastSyncAttemptTimestamp = remoteDataTimestamp
+                        }
+
                         return@withContext Result.success()
                     }
                     syncStatus.setSyncProgress(10.0)

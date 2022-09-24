@@ -38,7 +38,7 @@ import kotlin.coroutines.resumeWithException
 
 interface ExploreRepository {
     val localDatabaseTimestamp: Long
-    val lastSyncAttemptTimestamp: Long
+    var lastSyncAttemptTimestamp: Long
     var preloadedOnTimestamp: Long
     var failedSyncAttempts: Int
 
@@ -86,7 +86,7 @@ class GCExploreDatabase @Inject constructor(
 
     override var lastSyncAttemptTimestamp: Long
         get() = preferences.getLong(LAST_SYNC_TIMESTAMP_KEY, 0)
-        private set(value) {
+        set(value) {
             preferences.edit().apply {
                 putLong(LAST_SYNC_TIMESTAMP_KEY, value)
             }.apply()
