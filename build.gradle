@@ -1,7 +1,7 @@
 buildscript {
     ext {
         kotlin_version = '1.6.10'
-        coroutines_version = '1.5.2'
+        coroutines_version = '1.6.1'
         ok_http_version = '4.9.1'
         dashjVersion = '0.18.1'
         hiltVersion = '2.40.1'
@@ -10,7 +10,7 @@ buildscript {
         firebaseVersion = '28.4.2'
         roomVersion = '2.3.0'
         lifecycleVersion = '2.3.1'
-        navigationVersion = '2.5.1'
+        navigationVersion = '2.5.2'
         jetpackVersion = '1.6.0'
         appCompatVersion = '1.3.1'
 
@@ -19,9 +19,9 @@ buildscript {
         desugaringLibraryVersion = '1.1.5'
 
         // UI
-        materialVersion = "1.4.0"
+        materialVersion = "1.6.1"
         browserVersion = "1.3.0"
-        constrainLayoutVersion = '2.1.2'
+        constrainLayoutVersion = '2.1.4'
         recyclerViewVersion = "1.2.1"
         glideVersion = '4.12.0'
 

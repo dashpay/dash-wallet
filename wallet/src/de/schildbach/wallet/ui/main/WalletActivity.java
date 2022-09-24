@@ -111,9 +111,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
         wallet = application.getWallet();
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
-        setContentViewWithFooter(R.layout.home_activity);
+        setContentView(R.layout.activity_main);
+        WalletActivityExt.INSTANCE.setupBottomNavigation(this);
         setSupportActionBar(findViewById(R.id.toolbar));
-        activateHomeButton();
 
         if (savedInstanceState == null) {
             checkAlerts();
@@ -649,7 +649,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void explainPushNotifications() {
         AdaptiveDialog dialog = AdaptiveDialog.create(
-                null,
+                R.drawable.ic_info_blue,
                 getString(R.string.notification_explainer_title),
                 getString(R.string.notification_explainer_message),
                 "",

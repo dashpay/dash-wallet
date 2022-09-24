@@ -69,7 +69,7 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     @Inject lateinit var baseAlertDialogBuilder: BaseAlertDialogBuilder
-    protected lateinit var alertDialog: AlertDialog
+    lateinit var alertDialog: AlertDialog
     @Inject lateinit var walletApplication: WalletApplication
     @Inject lateinit var walletData: WalletDataProvider
     @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster

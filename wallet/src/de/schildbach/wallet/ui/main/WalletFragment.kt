@@ -23,19 +23,22 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.NavOptions
+import androidx.navigation.fragment.findNavController
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
+import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.InputParser.StringInputParser
 import de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsActivity
-import de.schildbach.wallet.ui.explore.ExploreActivity
-import de.schildbach.wallet.ui.payments.PaymentsActivity
+import de.schildbach.wallet.ui.payments.PaymentsFragment
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
@@ -61,7 +64,6 @@ import javax.inject.Inject
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
 class WalletFragment : Fragment(R.layout.home_content) {
-
     companion object {
         private val log = LoggerFactory.getLogger(WalletFragment::class.java)
     }
@@ -83,6 +85,8 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        reenterTransition = MaterialFadeThrough()
         initShortcutActions()
 
         val params = binding.appBar.layoutParams as CoordinatorLayout.LayoutParams
@@ -144,13 +148,25 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 }
                 binding.shortcutsPane.receiveButton -> {
                     viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE)
-                    startActivity(PaymentsActivity.createIntent(requireContext(), PaymentsActivity.ACTIVE_TAB_RECEIVE))
+                    findNavController().navigate(
+                        R.id.paymentsFragment,
+                        bundleOf(
+                            PaymentsFragment.ARG_ACTIVE_TAB to
+                                    PaymentsFragment.ACTIVE_TAB_RECEIVE
+                        )
+                    )
                 }
                 binding.shortcutsPane.importPrivateKey -> {
                     SweepWalletActivity.start(requireContext(), true)
                 }
                 binding.shortcutsPane.explore -> {
-                    startActivity(Intent(requireContext(), ExploreActivity::class.java))
+                    findNavController().navigate(
+                        R.id.exploreFragment,
+                        bundleOf(),
+                        NavOptions.Builder()
+                            .setEnterAnim(R.anim.slide_in_bottom)
+                            .build()
+                    )
                 }
             }
         }

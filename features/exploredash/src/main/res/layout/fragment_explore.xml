@@ -20,7 +20,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_explore"
-    tools:context="org.dash.wallet.features.exploredash.ui.ExploreFragment">
+    tools:context="org.dash.wallet.features.exploredash.ExploreFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/title_bar"
