@@ -20,8 +20,10 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
+import de.schildbach.wallet.rates.ExchangeRatesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
@@ -49,15 +51,11 @@ class BuyAndSellViewModel @Inject constructor(
     val config: Configuration,
     val analytics: AnalyticsService,
     networkState: NetworkStateInt,
-    private val upholdClient: UpholdClient
+    private val upholdClient: UpholdClient,
+    private val exchangeRatesRepository: ExchangeRatesRepository
 ): ConnectivityViewModel(networkState) {
 
-    //TODO: move this into UpholdViewModel
-    private val triggerUploadBalanceUpdate = MutableLiveData<Unit>()
-
-    fun updateUpholdBalance() {
-        triggerUploadBalanceUpdate.value = Unit
-    }
+    private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
 
     var shouldShowAuthInfoPopup: Boolean
         get() = !config.hasCoinbaseAuthInfoBeenShown
@@ -83,28 +81,34 @@ class BuyAndSellViewModel @Inject constructor(
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
-    fun setLoadingState(show: Boolean){
-        _showLoading.value = show
-    }
-
     val coinbaseAuthTokenCallback = SingleLiveEvent<Boolean>()
 
-    val upholdBalanceLiveData = Transformations.switchMap(triggerUploadBalanceUpdate) {
-        liveData {
-            emit(Resource.loading())
-            val result = suspendCoroutine<Resource<BigDecimal>> { continuation ->
-                upholdClient.getDashBalance(object : UpholdClient.Callback<BigDecimal> {
-                    override fun onSuccess(data: BigDecimal) {
-                        continuation.resumeWith(Result.success(Resource.success(data)))
-                    }
 
-                    override fun onError(e: java.lang.Exception, otpRequired: Boolean) {
-                        continuation.resumeWith(Result.success(Resource.error(e)))
-                    }
-                })
+    init {
+        exchangeRatesRepository.observeExchangeRate(config.exchangeCurrencyCode!!)
+            .onEach { exchangeRate ->
+                currentExchangeRate = exchangeRate
+
+                config.lastUpholdBalance?.let { balance ->
+                    showRowBalance(
+                        BuyAndSellDashServicesModel.ServiceType.UPHOLD,
+                        currentExchangeRate,
+                        balance
+                    )
+                }
+
+                config.lastCoinbaseBalance?.let { balance ->
+                    showRowBalance(
+                        BuyAndSellDashServicesModel.ServiceType.COINBASE,
+                        currentExchangeRate,
+                        balance
+                    )
+                }
             }
-            emit(result)
-        }
+    }
+
+    fun setLoadingState(show: Boolean){
+        _showLoading.value = show
     }
 
     fun isUserConnectedToCoinbase(): Boolean = coinBaseRepository.isUserConnected()
@@ -142,9 +146,9 @@ class BuyAndSellViewModel @Inject constructor(
     }
 
     fun showRowBalance(serviceType: BuyAndSellDashServicesModel.ServiceType, currentExchangeRate: org.dash.wallet.common.data.ExchangeRate?, amount: String) {
-        when(serviceType) {
-            BuyAndSellDashServicesModel.ServiceType.UPHOLD -> config.lastUpholdBalance = amount
-        }
+//        when(serviceType) { // TODO
+//            BuyAndSellDashServicesModel.ServiceType.UPHOLD -> config.lastUpholdBalance = amount
+//        }
 
         val list = buyAndSellDashServicesModel.toMutableList().map { model ->
             if (model.serviceType == serviceType) {
@@ -177,6 +181,7 @@ class BuyAndSellViewModel @Inject constructor(
                     if (response.value){
                         _isAuthenticatedOnCoinbase.value = true
                         _coinbaseBalance.value = config.lastCoinbaseBalance
+                        showRowBalance(BuyAndSellDashServicesModel.ServiceType.COINBASE, currentExchangeRate, it)
                         coinbaseAuthTokenCallback.call()
                     } else {
                         _showLoading.value = false
@@ -203,6 +208,10 @@ class BuyAndSellViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun updateUpholdBalance() {
+
     }
 
     fun logEnterUphold() {

@@ -56,7 +56,6 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
     }
 
     private var loadingDialog: AdaptiveDialog? = null
-    private var currentExchangeRate: ExchangeRate? = null
 
     private val binding by viewBinding(FragmentBuySellIntegrationsBinding::bind)
     private val viewModel by viewModels<BuyAndSellViewModel>()
@@ -198,45 +197,12 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
             }
         }
 
-        // for getting currency exchange rates
-        exchangeRatesViewModel.getRate(
-            viewModel.config.exchangeCurrencyCode
-        ).observe(viewLifecycleOwner) { exchangeRate ->
-            if (exchangeRate != null) {
-                currentExchangeRate = exchangeRate
-
-                viewModel.config.lastUpholdBalance?.let {
-                    viewModel.showRowBalance(
-                        BuyAndSellDashServicesModel.ServiceType.UPHOLD,
-                        currentExchangeRate,
-                        viewModel.config.lastUpholdBalance
-                    )
-                }
-
-                viewModel.config.lastCoinbaseBalance
-                    ?.let {
-                        viewModel.showRowBalance(
-                            BuyAndSellDashServicesModel.ServiceType.COINBASE,
-                            currentExchangeRate,
-                            it
-                        )
-                    }
-            }
-        }
-
         viewModel.isAuthenticatedOnCoinbase.observe(viewLifecycleOwner){ setLoginStatus() }
 
         viewModel.coinbaseAuthTokenCallback.observe(viewLifecycleOwner) {
             Timer().schedule(1000) {
                 launchCoinBasePortal()
             }
-        }
-
-        viewModel.coinbaseBalance.observe(viewLifecycleOwner){ balance ->
-            balance?.let {
-                viewModel.showRowBalance(BuyAndSellDashServicesModel.ServiceType.COINBASE, currentExchangeRate, it)
-            }
-
         }
     }
 
