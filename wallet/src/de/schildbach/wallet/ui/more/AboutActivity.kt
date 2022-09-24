@@ -43,6 +43,7 @@ class AboutActivity : LockScreenActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAboutBinding.inflate(layoutInflater)
+        binding.appBar.setNavigationOnClickListener { finish() }
 
         binding.title.text = "${getString(R.string.about_title)} ${getString(R.string.app_name_short)}"
         binding.appVersionName.text = getString(R.string.about_version_name, BuildConfig.VERSION_NAME)
