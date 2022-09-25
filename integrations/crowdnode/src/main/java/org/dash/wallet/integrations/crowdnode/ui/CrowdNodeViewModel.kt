@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -36,6 +37,8 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.SystemActionsService
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
@@ -60,7 +63,8 @@ class CrowdNodeViewModel @Inject constructor(
     private val clipboardManager: ClipboardManager,
     exchangeRatesProvider: ExchangeRatesProvider,
     val analytics: AnalyticsService,
-    private val blockchainStateProvider: BlockchainStateProvider
+    private val blockchainStateProvider: BlockchainStateProvider,
+    private val systemActions: SystemActionsService
 ) : ViewModel() {
     companion object {
         const val URL_ARG = "url"
@@ -355,6 +359,15 @@ class CrowdNodeViewModel @Inject constructor(
             crowdNodeApi.getWithdrawalLimit(WithdrawalLimitPeriod.PerHour),
             crowdNodeApi.getWithdrawalLimit(WithdrawalLimitPeriod.PerDay)
         )
+    }
+
+    fun shareConfirmationPaymentUrl() {
+        val accountAddress = accountAddress.value ?: return
+        val amount = CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT
+
+        analytics.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING_SHARE_BUTTON, bundleOf())
+        val paymentRequestUri = BitcoinURI.convertToBitcoinURI(accountAddress, amount, "", "")
+        systemActions.shareText(paymentRequestUri)
     }
 
     fun logEvent(eventName: String) {

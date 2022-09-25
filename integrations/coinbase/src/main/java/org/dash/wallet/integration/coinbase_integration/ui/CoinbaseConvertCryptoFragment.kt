@@ -33,7 +33,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
@@ -57,7 +56,6 @@ import org.dash.wallet.integration.coinbase_integration.ui.dialogs.crypto_wallet
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseActivityViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseConvertCryptoViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
-
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
@@ -221,26 +219,28 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             setConvertViewInput()
         }
 
-        convertViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner) { balance ->
-            val hasBalance = !balance.isZero
-            binding.youWillReceiveLabel.isVisible = hasBalance
-            binding.youWillReceiveValue.isVisible = hasBalance
-            if (hasBalance && !binding.convertView.dashToCrypto) {
+        convertViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner) { amount ->
+            val hasAmount = !amount.isZero
+            binding.youWillReceiveLabel.isVisible = hasAmount
+            binding.youWillReceiveValue.isVisible = hasAmount
+
+            if (hasAmount && !binding.convertView.dashToCrypto) {
                 binding.youWillReceiveValue.text = context?.getString(
                     R.string.you_will_receive_dash,
-                    dashFormat.format(balance).toString()
+                    dashFormat.format(amount).toString()
                 )
             }
         }
 
-        convertViewModel.enteredConvertCryptoAmount.observe(viewLifecycleOwner) { balance ->
-            binding.youWillReceiveLabel.isVisible = balance.second.isNotEmpty()
-            binding.youWillReceiveValue.isVisible = balance.second.isNotEmpty()
+        convertViewModel.enteredConvertCryptoAmount.observe(viewLifecycleOwner) { amount ->
+            binding.youWillReceiveLabel.isVisible = amount.second.isNotEmpty()
+            binding.youWillReceiveValue.isVisible = amount.second.isNotEmpty()
+
             if (binding.convertView.dashToCrypto) {
                 binding.youWillReceiveValue.text = getString(
                     R.string.fiat_balance_with_currency,
-                    balance.first,
-                    GenericUtils.currencySymbol(balance.second)
+                    amount.first,
+                    GenericUtils.currencySymbol(amount.second)
                 )
             }
         }
@@ -259,31 +259,29 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
         monitorNetworkChanges()
 
-        lifecycleScope.launch {
-            sharedViewModel.baseIdForFaitModelCoinBase.collect { uiState ->
-                // New value received
-                when (uiState) {
-                    is BaseIdForFaitDataUIState.Success -> {
-                        uiState.baseIdForFaitDataList.let { list ->
-                            viewModel.setBaseIdForFaitModelCoinBase(list)
-                        }
+        sharedViewModel.baseIdForFaitModelCoinBase.observe(viewLifecycleOwner) { uiState ->
+            // New value received
+            when (uiState) {
+                is BaseIdForFaitDataUIState.Success -> {
+                    uiState.baseIdForFaitDataList.let { list ->
+                        viewModel.setBaseIdForFaitModelCoinBase(list)
                     }
+                }
 
-                    is BaseIdForFaitDataUIState.LoadingState ->{
-                        if (uiState.isLoading) {
-                            showProgress(R.string.loading)
-                        } else
-                            dismissProgress()
+                is BaseIdForFaitDataUIState.LoadingState ->{
+                    if (uiState.isLoading) {
+                        showProgress(R.string.loading)
+                    } else {
+                        dismissProgress()
                     }
-                    is BaseIdForFaitDataUIState.Error ->{
-                        if (uiState.isError) {
-                            //TODO retry in case of error
-                            sharedViewModel.getBaseIdForFaitModel()
-                        }
+                }
+                is BaseIdForFaitDataUIState.Error ->{
+                    if (uiState.isError) {
+                        //TODO retry in case of error
+                        sharedViewModel.getBaseIdForFaitModel()
                     }
                 }
             }
-
         }
     }
 

@@ -27,7 +27,6 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
-import androidx.annotation.CallSuper
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -76,6 +75,7 @@ open class LockScreenActivity : SecureActivity() {
     @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var restartService: RestartService
+    @Inject lateinit var pinRetryController: PinRetryController
     private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
 
     private lateinit var checkPinViewModel: CheckPinViewModel
@@ -106,7 +106,6 @@ open class LockScreenActivity : SecureActivity() {
 
     private var fingerprintHelper: FingerprintHelper? = null
     private lateinit var fingerprintCancellationSignal: CancellationSignal
-    private lateinit var pinRetryController: PinRetryController
 
     private val keepUnlocked by lazy {
         intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
@@ -126,7 +125,6 @@ open class LockScreenActivity : SecureActivity() {
         super.setContentView(R.layout.activity_lock_screen_root)
         setupKeyboardBottomMargin()
 
-        pinRetryController = PinRetryController.getInstance()
         initView()
         initViewModel()
 

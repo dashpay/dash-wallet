@@ -37,7 +37,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Constants.*
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.Status
-import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.uphold.api.UpholdClient
@@ -79,11 +78,6 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
 
         loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
         initViewModel()
-
-//        parentFragmentManager.beginTransaction()
-//            .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
-//            .commitNow()
-        binding.networkStatusContainer.isVisible = false
 
         // check for missing keys from service.properties
         if (!UpholdConstants.hasValidCredentials()) {
@@ -207,12 +201,12 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
     }
 
     private fun setNetworkState(online: Boolean) {
-        if (online && binding.networkStatusContainer.isVisible) {
+        if (online && binding.networkStatusStub.isVisible) {
             // Just got back online
             updateBalances()
         }
 
-        binding.networkStatusContainer.isVisible = !online
+        binding.networkStatusStub.isVisible = !online
         setLoginStatus()
     }
 

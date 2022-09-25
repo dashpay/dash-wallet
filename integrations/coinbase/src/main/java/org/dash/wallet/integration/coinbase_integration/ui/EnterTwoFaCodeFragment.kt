@@ -32,7 +32,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.Constants
-import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
@@ -48,7 +48,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
 
     private val binding by viewBinding(EnterTwoFaCodeFragmentBinding::bind)
     private val viewModel by viewModels<EnterTwoFaCodeViewModel>()
-    private lateinit var loadingDialog: FancyAlertDialog
+    private lateinit var loadingDialog: AdaptiveDialog
 
     companion object {
         fun newInstance() = EnterTwoFaCodeFragment()
@@ -173,7 +173,7 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
         if (::loadingDialog.isInitialized && loadingDialog.dialog?.isShowing == true){
             loadingDialog.dismissAllowingStateLoss()
         }
-        loadingDialog = FancyAlertDialog.newProgress(R.string.loading)
+        loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
         loadingDialog.show(parentFragmentManager, tag)
     }
 

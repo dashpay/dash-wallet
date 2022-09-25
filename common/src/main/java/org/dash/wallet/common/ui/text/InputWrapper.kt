@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.ui.inputs
+package org.dash.wallet.common.ui.text
 
 import android.content.Context
 import android.util.AttributeSet

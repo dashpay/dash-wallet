@@ -22,84 +22,95 @@ import android.content.Intent.ACTION_VIEW
 import android.net.Uri
 import android.os.Bundle
 import android.text.format.DateUtils
-import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.core.view.isVisible
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.BaseMenuActivity
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
-import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_about.*
+import de.schildbach.wallet_test.databinding.ActivityAboutBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.VersionMessage
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 
 @AndroidEntryPoint
-class AboutActivity : BaseMenuActivity() {
+@ExperimentalCoroutinesApi
+class AboutActivity : LockScreenActivity() {
     private val viewModel by viewModels<AboutViewModel>()
-
-    override fun getLayoutId(): Int {
-        return R.layout.activity_about
-    }
+    private lateinit var binding: ActivityAboutBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        binding = ActivityAboutBinding.inflate(layoutInflater)
+        binding.appBar.setNavigationOnClickListener { finish() }
 
-        setTitle(R.string.about_title)
-        app_version_name.text = getString(R.string.about_version_name, BuildConfig.VERSION_NAME)
-        library_version_name.text = getString(R.string.about_credits_bitcoinj_title,
+        binding.title.text = "${getString(R.string.about_title)} ${getString(R.string.app_name_short)}"
+        binding.appVersionName.text = getString(R.string.about_version_name, BuildConfig.VERSION_NAME)
+        binding.libraryVersionName.text = getString(R.string.about_credits_bitcoinj_title,
                 VersionMessage.BITCOINJ_VERSION)
 
-        github_link.setOnClickListener {
+        binding.githubLink.setOnClickListener {
             val i = Intent(ACTION_VIEW)
-            i.data = Uri.parse(github_link.text.toString())
+            i.data = Uri.parse(binding.githubLink.text.toString())
             startActivity(i)
         }
-        review_and_rate.setOnClickListener { openReviewAppIntent() }
-        contact_support.setOnClickListener {
+        binding.reviewAndRate.setOnClickListener { viewModel.reviewApp() }
+        binding.contactSupport.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT)
             handleReportIssue()
         }
 
-        showFirebaseIds()
         showExploreDashSyncStatus()
+        showFirebaseIds()
+
+        setContentView(binding.root)
     }
 
     private fun showFirebaseIds() {
-        firebase_installation_id.setCopyable("Firebase Installation ID")
-        fcm_token.setCopyable("FCM token")
-
         viewModel.firebaseInstallationId.observe(this) {
-            firebase_installation_id.isVisible = it.isNotEmpty()
-            firebase_installation_id.text = it
+            binding.firebaseInstallationId.text = it
         }
+        binding.firebaseInstallationIdItem.setOnClickListener { viewModel.copyFirebaseInstallationId() }
 
         viewModel.firebaseCloudMessagingToken.observe(this) {
-            fcm_token.isVisible = it.isNotEmpty()
-            fcm_token.text = it
+            binding.fcmToken.text = it
         }
+        binding.fcmTokenItem.setOnClickListener { viewModel.copyFCMToken() }
     }
 
     private fun showExploreDashSyncStatus() {
         val formatFlags = DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or DateUtils.FORMAT_SHOW_TIME
-        explore_dash_last_sync.setCopyable("Explore Dash last sync")
 
         viewModel.exploreRemoteTimestamp.observe(this) { timestamp ->
+            binding.lastExploreUpdateLoadingIndicator.isVisible = false
+            binding.exploreDashLastServerUpdate.isVisible = true
+
             val formattedUpdateTime = if (timestamp <= 0L) {
                 getString(R.string.about_last_explore_dash_update_error)
             } else {
                 DateUtils.formatDateTime(applicationContext, timestamp, formatFlags)
             }
 
-            val formattedSyncTime = if (viewModel.exploreLastSync <= 0L) {
-                getString(R.string.about_last_explore_dash_sync_never)
-            } else {
-                DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSync, formatFlags)
-            }
+            binding.exploreDashLastServerUpdate.text = formattedUpdateTime
+        }
 
-            explore_dash_last_sync.text = getString(R.string.about_last_explore_dash_sync, formattedUpdateTime, formattedSyncTime)
+        viewModel.exploreIsSyncing.observe(this) { isSyncing ->
+            binding.exploreDashLastDeviceSync.text = if (isSyncing) {
+                "${getString(R.string.syncing)}…"
+            } else if (viewModel.exploreIsSyncFailed) {
+                getString(
+                    R.string.about_explore_failed_sync,
+                    DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSyncAttempt, formatFlags)
+                )
+            } else if (viewModel.explorePreloadedTimestamp > viewModel.exploreLastSyncAttempt) {
+                getString(
+                    R.string.about_explore_preloaded_on,
+                    DateUtils.formatDateTime(applicationContext, viewModel.explorePreloadedTimestamp, formatFlags)
+                )
+            } else {
+                DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSyncAttempt, formatFlags)
+            }
         }
     }
 
@@ -108,35 +119,11 @@ class AboutActivity : BaseMenuActivity() {
         overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left)
     }
 
-    private fun openReviewAppIntent() {
-        val uri = Uri.parse("market://details?id=$packageName")
-        val goToMarket = Intent(ACTION_VIEW, uri)
-        // To count with Play market backstack, After pressing back button,
-        // and go back to our application, we need to add following flags to intent.
-        goToMarket.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY or
-                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-        try {
-            startActivity(goToMarket)
-        } catch (e: ActivityNotFoundException) {
-            startActivity(Intent(ACTION_VIEW,
-                    Uri.parse("http://play.google.com/store/apps/details?id=$packageName")))
-        }
-    }
-
     private fun handleReportIssue() {
         alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
             this,
-            WalletApplication.getInstance()
+            viewModel.walletApplication,
         ).buildAlertDialog()
         alertDialog.show()
-    }
-
-    private fun TextView.setCopyable(label: String) {
-        this.setOnClickListener {
-            (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).run {
-                setPrimaryClip(ClipData.newPlainText(label, this@setCopyable.text))
-            }
-            Toast(this@AboutActivity).toast(getString(R.string.copied))
-        }
     }
 }

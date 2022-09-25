@@ -16,7 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model
 
-import org.dash.wallet.integration.coinbase_integration.VALUE_ZERO
+import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 
 data class ServiceWallet(
     val cryptoWalletName: String,
@@ -28,6 +28,6 @@ data class ServiceWallet(
 ): BaseServiceWallet(balance, faitAmount)
 
 open class BaseServiceWallet(
-    open var balance: String = VALUE_ZERO,
-    open var faitAmount: String = VALUE_ZERO
+    open var balance: String = CoinbaseConstants.VALUE_ZERO,
+    open var faitAmount: String = CoinbaseConstants.VALUE_ZERO
 )

@@ -32,8 +32,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
-import org.dash.wallet.integration.coinbase_integration.VALUE_ZERO
+import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.ConvertViewBinding
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseServiceWallet
@@ -151,7 +150,7 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
             exchangeRate?.let { rate ->
                 val fiatAmount = GenericUtils.fiatToString(rate.coinToFiat(inputInDash))
                 binding.convertFromDashBalance.text = "${dashFormat
-                    .format(inputInDash)} $DASH_CURRENCY"
+                    .format(inputInDash)} ${CoinbaseConstants.DASH_CURRENCY}"
                 binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
                 if (inputInDash.isGreaterThan(Coin.ZERO)){
                     binding.convertFromDashBalance.isVisible = true
@@ -162,7 +161,7 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
         } else {
             balanceOnCoinbase?.let {
                 val balance = it.balance?: ""
-                if (balance.isNotEmpty() && balance != VALUE_ZERO){
+                if (balance.isNotEmpty() && balance != CoinbaseConstants.VALUE_ZERO){
                     val formattedAmount = GenericUtils.formatFiatWithoutComma(balance)
                     val coin = try {
                         Coin.parseCoin(formattedAmount)
@@ -172,7 +171,7 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
 
                     val formatDash = dashFormat.minDecimals(2)
                         .format(coin).toString()
-                    binding.convertFromDashBalance.text = "$formatDash $DASH_CURRENCY"
+                    binding.convertFromDashBalance.text = "$formatDash ${CoinbaseConstants.DASH_CURRENCY}"
                     binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} ${it.faitAmount}"
 
                     binding.convertFromDashBalance.isVisible = true

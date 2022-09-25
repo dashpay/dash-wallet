@@ -29,7 +29,9 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.AppRestartService
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
+import de.schildbach.wallet.service.AndroidActionsService
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
+import org.dash.wallet.common.services.*
 import de.schildbach.wallet.payments.ConfirmTransactionLauncher
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.NotificationService
@@ -86,4 +88,9 @@ abstract class AppModule {
     abstract fun bindRestartService(
         restartService: AppRestartService
     ): RestartService
+
+    @Binds
+    abstract fun bindClipboardService(
+        clipboardService: AndroidActionsService
+    ): SystemActionsService
 }

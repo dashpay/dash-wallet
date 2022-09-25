@@ -103,7 +103,8 @@
                 android:layout_height="match_parent"
                 android:layout_gravity="center_vertical"
                 android:layout_weight="1"
-                android:background="@drawable/rounded_corners_bgd_light_gray"
+                android:background="@drawable/rounded_background"
+                android:theme="@style/SearchInputBackground"
                 android:orientation="horizontal">
 
                 <EditText

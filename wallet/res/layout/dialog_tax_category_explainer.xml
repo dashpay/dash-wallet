@@ -21,7 +21,7 @@
     android:id="@+id/root_layout"
     tools:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     tools:context="de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment"
     tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
 
@@ -94,7 +94,6 @@
             android:textAlignment="gravity"
             android:padding="5dp"
             android:text="@string/reclassify_transactions_question"
-            android:textSize="13sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/explanation" />
@@ -111,7 +110,7 @@
 
         <TextView
             android:id="@+id/outgoing_title"
-            style="@style/Body2.Medium"
+            style="@style/Subtitle2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
@@ -122,11 +121,10 @@
 
         <TextView
             android:id="@+id/outgoing_default"
-            style="@style/Caption"
+            style="@style/Caption.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/reclassify_transactions_by_default_message"
-            android:textSize="13sp"
             app:layout_constraintStart_toStartOf="@+id/outgoing_title"
             app:layout_constraintTop_toBottomOf="@+id/outgoing_title" />
 
@@ -140,7 +138,6 @@
             android:background="@drawable/rounded_background"
             android:theme="@style/BlueTextHighlight"
             tools:text="Expense"
-            android:textSize="13sp"
             app:layout_constraintBottom_toBottomOf="@+id/outgoing_default"
             app:layout_constraintStart_toEndOf="@+id/outgoing_default"
             app:layout_constraintTop_toTopOf="@+id/outgoing_default"
@@ -149,11 +146,10 @@
 
         <TextView
             android:id="@+id/you_can_change_it_one"
-            style="@style/Caption"
+            style="@style/Caption.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/reclassify_transactions_change_it_message"
-            android:textSize="13sp"
             app:layout_constraintStart_toStartOf="@+id/outgoing_default"
             app:layout_constraintTop_toBottomOf="@+id/outgoing_default" />
 
@@ -167,7 +163,6 @@
             android:background="@drawable/rounded_background"
             android:theme="@style/TertiaryTextHighlight"
             tools:text="Transfer-out"
-            android:textSize="13sp"
             app:layout_constraintBottom_toBottomOf="@+id/you_can_change_it_one"
             app:layout_constraintStart_toEndOf="@+id/you_can_change_it_one"
             app:layout_constraintTop_toTopOf="@+id/you_can_change_it_one"
@@ -188,7 +183,7 @@
 
         <TextView
             android:id="@+id/incoming_title"
-            style="@style/Body2.Medium"
+            style="@style/Subtitle2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
@@ -199,11 +194,10 @@
 
         <TextView
             android:id="@+id/incoming_default"
-            style="@style/Caption"
+            style="@style/Caption.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/reclassify_transactions_by_default_message"
-            android:textSize="13sp"
             app:layout_constraintStart_toStartOf="@+id/incoming_title"
             app:layout_constraintTop_toBottomOf="@+id/incoming_title" />
 
@@ -217,7 +211,6 @@
             android:theme="@style/GreenTextHighlight"
             android:background="@drawable/rounded_background"
             tools:text="Income"
-            android:textSize="13sp"
             app:layout_constraintBottom_toBottomOf="@+id/incoming_default"
             app:layout_constraintStart_toEndOf="@+id/incoming_default"
             app:layout_constraintTop_toTopOf="@+id/incoming_default"
@@ -226,11 +219,10 @@
 
         <TextView
             android:id="@+id/you_can_change_it_two"
-            style="@style/Caption"
+            style="@style/Caption.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/reclassify_transactions_change_it_message"
-            android:textSize="13sp"
             app:layout_constraintStart_toStartOf="@+id/incoming_default"
             app:layout_constraintTop_toBottomOf="@+id/incoming_default" />
 
@@ -244,7 +236,6 @@
             android:background="@drawable/rounded_background"
             android:theme="@style/TertiaryTextHighlight"
             tools:text="Transfer-in"
-            android:textSize="13sp"
             app:layout_constraintBottom_toBottomOf="@+id/you_can_change_it_two"
             app:layout_constraintStart_toEndOf="@+id/you_can_change_it_two"
             app:layout_constraintTop_toTopOf="@+id/you_can_change_it_two"
@@ -265,7 +256,7 @@
 
         <TextView
             android:id="@+id/linked_account_title"
-            style="@style/Body2.Medium"
+            style="@style/Subtitle2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
@@ -276,36 +267,14 @@
 
         <TextView
             android:id="@+id/linked_account_description"
-            style="@style/Caption"
+            style="@style/Caption.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:text="@string/reclassify_transactions_linked_accounts_message"
-            android:textSize="13sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="@+id/linked_account_title"
             app:layout_constraintTop_toBottomOf="@+id/linked_account_title" />
-
-
-    <Button
-        android:id="@+id/second_close_btn"
-        style="@style/Button.Primary.Large.Blue"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="@id/right_guideline"
-        app:layout_constraintStart_toStartOf="@id/left_guideline"
-        app:layout_constraintTop_toBottomOf="@id/linked_account_description"
-        android:layout_marginTop="15dp"
-        android:text="@string/button_understand" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="15dp"
-        app:layout_constraintTop_toBottomOf="@id/second_close_btn"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/left_guideline"
@@ -323,5 +292,17 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     </ScrollView>
+
+    <Button
+        android:id="@+id/second_close_btn"
+        style="@style/Button.Primary.Large.Blue"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginBottom="35dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:text="@string/button_understand" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

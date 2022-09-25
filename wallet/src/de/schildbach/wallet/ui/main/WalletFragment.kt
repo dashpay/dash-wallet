@@ -106,17 +106,17 @@ class WalletFragment : Fragment(R.layout.home_content) {
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.isBlockchainSyncFailed.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.mostRecentTransaction.observe(viewLifecycleOwner) { mostRecentTransaction: Transaction ->
-            log.info("most recent transaction: {}", mostRecentTransaction.txId
-            )
+            log.info("most recent transaction: {}", mostRecentTransaction.txId)
+
             if ((activity as? LockScreenActivity)?.lockScreenDisplayed != true && !configuration.hasDisplayedTaxCategoryExplainer
                 && WalletUtils.getTransactionDate(mostRecentTransaction).time >= configuration.taxCategoryInstallTime
             ) {
                 val dialogFragment: TaxCategoryExplainerDialogFragment =
                     TaxCategoryExplainerDialogFragment.newInstance(mostRecentTransaction.txId)
-                dialogFragment.show(activity?.supportFragmentManager!!, "taxcategorydialog") {
+                dialogFragment.show(requireActivity().supportFragmentManager, "taxcategorydialog") {
                     val transactionDetailsDialogFragment: TransactionDetailsDialogFragment =
                         TransactionDetailsDialogFragment.newInstance(mostRecentTransaction.txId)
-                    transactionDetailsDialogFragment.show(activity?.supportFragmentManager!!, null)
+                    transactionDetailsDialogFragment.show(requireActivity().supportFragmentManager, null)
                 }
                 configuration.setHasDisplayedTaxCategoryExplainer()
             }

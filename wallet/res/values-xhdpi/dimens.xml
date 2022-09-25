@@ -20,9 +20,6 @@
     <dimen name="lock_screen_bottom_guideline_margin">48dp</dimen>
     <dimen name="pin_preview_textview_padding">12dp</dimen>
     <dimen name="lock_screen_content_margin_bottom">0dp</dimen>
-    <dimen name="about_logo_margin_top">45dp</dimen>
-    <dimen name="about_text_margin">28dp</dimen>
-    <dimen name="about_button_margin">20dp</dimen>
 
     <item name="pay_amount_vert_guideline_percent" format="float" type="dimen">0.5</item>
     <dimen name="pay_amount_dash_symbol_size">32dp</dimen>

@@ -33,7 +33,6 @@ import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.`is`
 import org.junit.Before
 import org.junit.Test
-import retrofit2.Response
 
 class CoinBaseRepositoryTest {
     @MockK lateinit var coinBaseServicesApi: CoinBaseServicesApi

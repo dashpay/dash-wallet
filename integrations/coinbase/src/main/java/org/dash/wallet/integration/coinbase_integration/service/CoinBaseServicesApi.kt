@@ -16,10 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.service
 
-import org.dash.wallet.integration.coinbase_integration.CB_2FA_TOKEN_KEY
-import org.dash.wallet.integration.coinbase_integration.CB_VERSION_KEY
-import org.dash.wallet.integration.coinbase_integration.CB_VERSION_VALUE
-import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
+import org.dash.wallet.integration.coinbase_integration.*
 import org.dash.wallet.integration.coinbase_integration.model.*
 import retrofit2.http.*
 
@@ -27,74 +24,74 @@ interface CoinBaseServicesApi {
 
     @GET("v2/accounts")
     suspend fun getUserAccounts(
-        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
         @Query("limit") limit: Int = 300
     ): CoinBaseUserAccountInfo?
 
     @GET("v2/exchange-rates")
     suspend fun getExchangeRates(
-        @Query("currency")currency: String = DASH_CURRENCY
+        @Query("currency")currency: String = CoinbaseConstants.DASH_CURRENCY
     ): CoinBaseExchangeRates?
 
     @GET("v2/payment-methods")
     suspend fun getActivePaymentMethods(
-        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
     ): PaymentMethodsResponse?
 
     @POST("v2/accounts/{account_id}/buys")
     suspend fun placeBuyOrder(
-        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
         @Path("account_id") accountId: String,
         @Body placeBuyOrderParams: PlaceBuyOrderParams
     ): BuyOrderResponse?
 
     @POST("v2/accounts/{account_id}/buys/{buy_id}/commit")
     suspend fun commitBuyOrder(
-        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
         @Path("account_id") accountId: String,
         @Path("buy_id") buyOrderId: String
     ): BuyOrderResponse?
 
     @POST("v2/accounts/{account_id}/transactions")
     suspend fun sendCoinsToWallet(
-        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
-        @Header(CB_2FA_TOKEN_KEY) api2FATokenVersion: String?,
+        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
+        @Header(CoinbaseConstants.CB_2FA_TOKEN_KEY) api2FATokenVersion: String?,
         @Path("account_id") accountId: String,
         @Body sendTransactionToWalletParams: SendTransactionToWalletParams
     ): SendTransactionToWalletResponse?
 
     @GET("v2/assets/prices?filter=holdable&resolution=latest")
     suspend fun getBaseIdForUSDModel(
-        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
         @Query("base") baseCurrency: String,
     ): BaseIdForUSDModel?
 
     @POST("v2/trades")
     suspend fun swapTrade(
-        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
         @Body tradesRequest: TradesRequest
     ): SwapTradeResponse?
 
     @POST("v2/trades/{trade_id}/commit")
     suspend fun commitSwapTrade(
-        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
         @Path("trade_id") tradeId: String,
     ): SwapTradeResponse?
 
     @GET("/v2/user/auth")
     suspend fun getAuthorizationInformation(
-        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE
+        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE
     ): UserAuthorizationInfoResponse?
 
     @GET("v2/accounts/{account_id}/addresses")
     suspend fun getUserAccountAddress(
         @Path("account_id") accountId: String,
-        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
     ): CoinBaseAccountAddressResponse
 
     @POST("v2/accounts/{account_id}/addresses")
     suspend fun createAddress(
-        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Header(CoinbaseConstants.CB_VERSION_KEY) apiVersion: String = CoinbaseConstants.CB_VERSION_VALUE,
         @Path("account_id") accountId: String
     ): AddressesResponse?
 }

@@ -258,8 +258,14 @@
         <item name="strokeColor">@color/gray_40</item>
     </style>
 
-    <style name="ExampleBackground" parent="GrayBackground">
-        <item name="cornerRadius">20dp</item>
+    <style name="TaxCategoryExampleBackground">
+        <item name="backgroundColor">@color/tx_category_example_background</item>
+        <item name="strokeColor">@color/tx_category_example_background</item>
+        <item name="cornerRadius">25dp</item>
+    </style>
+
+    <style name="TaxCategoryExampleContentBackground" parent="PrimaryBackground">
+        <item name="cornerRadius">25dp</item>
     </style>
 
     <style name="SearchInputBackground" parent="GrayBackground">
@@ -1190,7 +1196,7 @@
     </style>
 
     <style name="TertiaryTextHighlight">
-        <item name="backgroundColor">@color/ultra_light_gray</item>
+        <item name="backgroundColor">@color/tertiary_text_highlight</item>
         <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">5dp</item>
     </style>
@@ -1201,5 +1207,13 @@
         <item name="android:rotation">180</item>
         <item name="android:src">@drawable/ic_arrow_back</item>
         <item name="android:tint">@color/light_gray</item>
+    </style>
+
+    <style name="ContentLoadingIndicator" parent="Widget.MaterialComponents.LinearProgressIndicator">
+        <item name="android:indeterminate">true</item>
+        <item name="indicatorColor">@color/background_primary</item>
+        <item name="trackColor">@color/content_loading_track</item>
+        <item name="trackCornerRadius">2dp</item>
+        <item name="trackThickness">15dp</item>
     </style>
 </resources>
