@@ -139,7 +139,7 @@
     </style>
 
     <style name="BottomActionButtonBackground">
-        <item name="backgroundColor">@color/colorPrimary</item>
+        <item name="backgroundColor">@android:color/transparent</item>
         <item name="strokeColor">@android:color/transparent</item>
         <item name="rippleColor">@color/button_ripple_light</item>
         <item name="cornerRadius">24dp</item>

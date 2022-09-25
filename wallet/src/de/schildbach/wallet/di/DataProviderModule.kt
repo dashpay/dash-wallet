@@ -28,7 +28,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.service.WalletTransactionMetadataProvider
 import org.dash.wallet.common.WalletDataProvider
-import de.schildbach.wallet.ExploreDataSyncStatus
+import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
 import de.schildbach.wallet.service.BlockchainStateDataProvider
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
@@ -50,10 +50,6 @@ abstract class DataProviderModule {
         @Provides
         fun provideExchangeRateRepository(): ExchangeRatesProvider =
             ExchangeRatesRepository.instance
-
-        @Singleton
-        @Provides
-        fun provideDataSyncStatus(): DataSyncStatusService = ExploreDataSyncStatus()
     }
 
     @Binds

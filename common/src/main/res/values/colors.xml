@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <color name="colorPrimaryDark">#FF012060</color>
     <color name="colorAccent">#666666</color>
 
     <color name="dash_deep_blue">#012060</color>
@@ -30,8 +29,6 @@
     <color name="fg_significant">#66000000</color>
     <color name="fg_less_significant">#ff666666</color>
     <color name="fg_insignificant">#ffbbbbbb</color>
-    <color name="fg_value_positive">@color/colorPrimaryDark</color>
-    <color name="fg_value_negative">@color/colorPrimary</color>
     <color name="fg_error">#ffff0000</color>
     <color name="fg_network_significant">#ffffffff</color>
     <color name="fg_network_insignificant">#ffa0a0a0</color>
@@ -61,6 +58,7 @@
     <color name="content_disabled">#92929C</color>
     <color name="content_warning">@color/system_red</color>
     <color name="input_hint_gray">#c5c6c7</color>
+    <color name="content_loading_track">@color/background_tertiary</color>
     <color name="tertiary_text_highlight">@color/ultra_light_gray</color>
 
     <!-- Background -->
@@ -72,6 +70,7 @@
     <color name="background_accuracy_circle">#26008DE4</color>
     <color name="button_ripple_color">#1f000000</color>
     <color name="button_ripple_light">#40B0B6BC</color>
+
     <color name="disabled_button_bg">#eeeeee</color>
     <color name="max_button_bg">#ebebeb</color>
     <color name="text_highlight_blue_bg">#14008DE4</color>

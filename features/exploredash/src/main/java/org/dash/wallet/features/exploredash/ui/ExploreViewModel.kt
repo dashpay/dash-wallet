@@ -28,12 +28,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import org.dash.wallet.common.data.BlockchainState
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.livedata.ConnectionLiveData
-import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
@@ -51,10 +49,6 @@ import kotlin.math.min
 
 enum class ExploreTopic {
     Merchants, ATMs
-}
-
-enum class NavigationRequest {
-    SendDash, ReceiveDash, Staking
 }
 
 enum class FilterMode {
@@ -83,8 +77,7 @@ class ExploreViewModel @Inject constructor(
     private val exploreData: ExploreDataSource,
     private val locationProvider: UserLocationStateInt,
     private val syncStatusService: DataSyncStatusService,
-    private val analyticsService: AnalyticsService,
-    private val blockchainStateProvider: BlockchainStateProvider
+    private val analyticsService: AnalyticsService
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -99,7 +92,6 @@ class ExploreViewModel @Inject constructor(
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
     var isDialogDismissedOnCancel = false
-    val navigationCallback = SingleLiveEvent<NavigationRequest>()
     val recenterMapCallback = SingleLiveEvent<Unit>()
     private var boundedFilterJob: Job? = null
     private var pagingFilterJob: Job? = null
@@ -448,18 +440,6 @@ class ExploreViewModel @Inject constructor(
         // Cannot show nearest location if there are more than 1 in group and location is disabled
         return (nearest is Merchant && nearest.physicalAmount <= 1) ||
                 (isLocationEnabled.value == true && selectedTerritory.value?.isEmpty() == true)
-    }
-
-    fun sendDash() {
-        navigationCallback.postValue(NavigationRequest.SendDash)
-    }
-
-    fun receiveDash() {
-        navigationCallback.postValue(NavigationRequest.ReceiveDash)
-    }
-
-    fun openStaking() {
-        navigationCallback.postValue(NavigationRequest.Staking)
     }
 
     fun backFromMerchantLocation() {
@@ -840,44 +820,5 @@ class ExploreViewModel @Inject constructor(
 
     fun logEvent(event: String) {
         analyticsService.logEvent(event, bundleOf())
-    }
-
-    private val _isBlockchainSynced = MutableLiveData<Boolean>()
-    val isBlockchainSynced: LiveData<Boolean>
-        get() = _isBlockchainSynced
-
-    private val _isBlockchainSyncFailed = MutableLiveData<Boolean>()
-
-    fun monitorBlockchainState() {
-        blockchainStateProvider.observeState()
-            .filterNotNull()
-            .onEach { state ->
-                updateSyncStatus(state)
-            }
-            .launchIn(viewModelScope)
-    }
-
-    private fun updateSyncStatus(state: BlockchainState) {
-        if (_isBlockchainSyncFailed.value != state.isSynced()) {
-            _isBlockchainSynced.postValue(state.isSynced())
-        }
-
-        _isBlockchainSyncFailed.postValue(state.syncFailed())
-    }
-
-    private val _stakingAPY = MutableLiveData<Double>()
-    val stakingAPY: LiveData<Double>
-        get() = _stakingAPY
-
-    fun getStakingAPY() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _stakingAPY.postValue(0.85 * blockchainStateProvider.getMasternodeAPY())
-        }
-    }
-
-    fun getLastStakingAPY() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _stakingAPY.postValue(0.85 * blockchainStateProvider.getLastMasternodeAPY())
-        }
     }
 }

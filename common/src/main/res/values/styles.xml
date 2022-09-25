@@ -4,7 +4,7 @@
 <!--    <style name="My.Theme" parent="Theme.AppCompat.DayNight"> &lt;!&ndash; Change to this and uncomment night mode colors to test the night mode &ndash;&gt;-->
     <style name="My.Theme" parent="Theme.AppCompat.Light.DarkActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorPrimaryDark">@color/dash_deep_blue</item>
         <item name="colorAccent">@color/colorAccent</item>
         <item name="actionMenuTextColor">@color/fg_network</item>
         <item name="android:textViewStyle">@style/TextViewStyle</item>
@@ -58,6 +58,13 @@
     <style name="My.Theme.NoActionBar" parent="@style/My.Theme">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+
+    <style name="My.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="android:elevation">0dp</item>
+        <item name="elevation">0dp</item>
+        <item name="android:windowTranslucentStatus">true</item>
     </style>
 
     <style name="My.PopupOverlay" parent="ThemeOverlay.AppCompat.Light">
@@ -1200,5 +1207,13 @@
         <item name="android:rotation">180</item>
         <item name="android:src">@drawable/ic_arrow_back</item>
         <item name="android:tint">@color/light_gray</item>
+    </style>
+
+    <style name="ContentLoadingIndicator" parent="Widget.MaterialComponents.LinearProgressIndicator">
+        <item name="android:indeterminate">true</item>
+        <item name="indicatorColor">@color/background_primary</item>
+        <item name="trackColor">@color/content_loading_track</item>
+        <item name="trackCornerRadius">2dp</item>
+        <item name="trackThickness">15dp</item>
     </style>
 </resources>

@@ -24,17 +24,16 @@ import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.rates.ExchangeRatesFragment.*
-import de.schildbach.wallet.ui.about.AboutActivity
+import de.schildbach.wallet.ui.more.AboutActivity
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.rates.ExchangeRatesActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_settings.*
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.util.openAppSettings
-import org.dash.wallet.common.util.openNotificationSettings
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -48,6 +47,8 @@ class SettingsActivity : BaseMenuActivity() {
     private val log = LoggerFactory.getLogger(SettingsActivity::class.java)
     @Inject
     lateinit var analytics: AnalyticsService
+    @Inject
+    lateinit var systemActions: SystemActionsService
 
     override fun getLayoutId(): Int {
         return R.layout.activity_settings
@@ -68,14 +69,7 @@ class SettingsActivity : BaseMenuActivity() {
         }
 
         rescan_blockchain.setOnClickListener { resetBlockchain() }
-
-        notifications.setOnClickListener {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                openNotificationSettings()
-            } else {
-                openAppSettings()
-            }
-        }
+        notifications.setOnClickListener { systemActions.openNotificationSettings() }
     }
 
     override fun onStart() {

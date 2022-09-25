@@ -25,4 +25,5 @@ public class Constants {
     public static final MonetaryFormat SEND_PAYMENT_LOCAL_FORMAT = new MonetaryFormat().withLocale(GenericUtils.getDeviceLocale()).minDecimals(2).optionalDecimals();
 
     public static String EXPLORE_GC_FILE_PATH;
+    public static String DEEP_LINK_PREFIX = "android-app://hashengineering.darkcoin.wallet";
 }

@@ -100,12 +100,6 @@ public final class WalletBalanceToolbarFragment extends Fragment {
 	}
 
     @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        MenuItem walletLockMenuItem = menu.findItem(R.id.wallet_options_lock);
-        super.onCreateOptionsMenu(menu, inflater);
-    }
-
-    @Override
 	public void onAttach(final Activity activity)
 	{
 		super.onAttach(activity);

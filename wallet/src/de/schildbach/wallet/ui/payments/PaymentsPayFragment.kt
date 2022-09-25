@@ -24,9 +24,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
@@ -36,17 +34,18 @@ import de.schildbach.wallet.ui.InputParser
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_payments_pay.*
+import de.schildbach.wallet_test.databinding.FragmentPaymentsPayBinding
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class PaymentsPayFragment : Fragment() {
+class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay) {
 
     companion object {
 
@@ -57,19 +56,26 @@ class PaymentsPayFragment : Fragment() {
     }
 
     @Inject lateinit var analytics: AnalyticsService
+    private val binding by viewBinding(FragmentPaymentsPayBinding::bind)
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_payments_pay, container, false)
+    private val onWindowFocusChangeListener = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
+        if (hasFocus) {
+            handlePaste(false)
+        }
+    }
+
+    private val onPrimaryClipChangedListener = ClipboardManager.OnPrimaryClipChangedListener {
+        handlePaste(false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         //Make the whole row clickable
-        pay_by_qr_button.setOnClickListener {
+        binding.payByQrButton.setOnClickListener {
             handleScan(it)
             analytics.logEvent(AnalyticsConstants.SendReceive.SCAN_TO_SEND, bundleOf())
         }
-        pay_to_address.setOnClickListener {
+        binding.payToAddress.setOnClickListener {
             handlePaste(true)
             analytics.logEvent(AnalyticsConstants.SendReceive.SEND_TO_ADDRESS, bundleOf())
         }
@@ -90,16 +96,6 @@ class PaymentsPayFragment : Fragment() {
 
     private fun getClipboardManager(): ClipboardManager {
         return context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    }
-
-    private val onWindowFocusChangeListener = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
-        if (hasFocus) {
-            handlePaste(false)
-        }
-    }
-
-    private val onPrimaryClipChangedListener = ClipboardManager.OnPrimaryClipChangedListener {
-        handlePaste(false)
     }
 
     private fun handleScan(clickView: View) {
@@ -141,23 +137,27 @@ class PaymentsPayFragment : Fragment() {
         object : InputParser.StringInputParser(input, true) {
 
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
-                if (fireAction) {
-                    SendCoinsInternalActivity.start(context, paymentIntent, true)
-                } else {
-                    manageStateOfPayToAddressButton(paymentIntent)
+                if (this@PaymentsPayFragment.isAdded) {
+                    if (fireAction) {
+                        SendCoinsInternalActivity.start(context, paymentIntent, true)
+                    } else {
+                        manageStateOfPayToAddressButton(paymentIntent)
+                    }
                 }
             }
 
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
-                if (fireAction) {
-                    AdaptiveDialog.create(
-                        R.drawable.ic_error,
-                        getString(errorDialogTitleResId),
-                        getString(messageResId, *messageArgs),
-                        getString(R.string.button_dismiss)
-                    ).show(requireActivity())
-                } else {
-                    manageStateOfPayToAddressButton(null)
+                if (this@PaymentsPayFragment.isAdded) {
+                    if (fireAction) {
+                        AdaptiveDialog.create(
+                            R.drawable.ic_error,
+                            getString(errorDialogTitleResId),
+                            getString(messageResId, *messageArgs),
+                            getString(R.string.button_dismiss)
+                        ).show(requireActivity())
+                    } else {
+                        manageStateOfPayToAddressButton(null)
+                    }
                 }
             }
 
@@ -176,21 +176,21 @@ class PaymentsPayFragment : Fragment() {
         if (paymentIntent != null) {
             when {
                 paymentIntent.hasAddress() -> {
-                    pay_to_address.setActive(true)
-                    pay_to_address.setSubTitle(paymentIntent.address.toBase58())
+                    binding.payToAddress.setActive(true)
+                    binding.payToAddress.setSubTitle(paymentIntent.address.toBase58())
                     return
                 }
                 paymentIntent.hasPaymentRequestUrl() -> {
                     val host = Uri.parse(paymentIntent.paymentRequestUrl).host
                     if (host != null) {
-                        pay_to_address.setActive(true)
-                        pay_to_address.setSubTitle(host)
+                        binding.payToAddress.setActive(true)
+                        binding.payToAddress.setSubTitle(host)
                         return
                     }
                 }
             }
         }
-        pay_to_address.setActive(false)
-        pay_to_address.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
+        binding.payToAddress.setActive(false)
+        binding.payToAddress.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
     }
 }
