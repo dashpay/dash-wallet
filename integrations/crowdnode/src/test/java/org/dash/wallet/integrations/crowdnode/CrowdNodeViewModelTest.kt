@@ -98,7 +98,8 @@ class CrowdNodeViewModelTest {
     @Test
     fun deposit_fullBalance_setsEmptyWallet() {
         runBlocking {
-            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock, mock(), blockchainStateMock)
+            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api,
+                mock(), exchangeRatesMock, mock(), blockchainStateMock, mock())
             viewModel.deposit(balance, false)
             verify(api).deposit(balance, emptyWallet = true, checkBalanceConditions = false)
         }
@@ -108,7 +109,8 @@ class CrowdNodeViewModelTest {
     fun deposit_lessThanFullBalance_doesNotSetEmptyWallet() {
         runBlocking {
             val partial = balance.div(6)
-            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock, mock(), blockchainStateMock)
+            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api,
+                mock(), exchangeRatesMock, mock(), blockchainStateMock, mock())
             viewModel.deposit(partial, false)
             verify(api).deposit(partial, emptyWallet = false, checkBalanceConditions = false)
         }
@@ -121,7 +123,8 @@ class CrowdNodeViewModelTest {
                 onBlocking { restoreStatus() } doReturn Unit
                 on { accountAddress } doReturn null
             }
-            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(), exchangeRatesMock, mock(), blockchainStateMock)
+            val viewModel = CrowdNodeViewModel(globalConfig, mock(), walletData, api, mock(),
+                exchangeRatesMock, mock(), blockchainStateMock, mock())
             val address = Address.fromBase58(TestNet3Params.get(), "yjMvPFucZWPZXKBaEDxHzZrm5Px44UhgJs")
             api.stub {
                 on { accountAddress } doReturn address

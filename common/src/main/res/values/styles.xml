@@ -1208,4 +1208,12 @@
         <item name="android:src">@drawable/ic_arrow_back</item>
         <item name="android:tint">@color/light_gray</item>
     </style>
+
+    <style name="ContentLoadingIndicator" parent="Widget.MaterialComponents.LinearProgressIndicator">
+        <item name="android:indeterminate">true</item>
+        <item name="indicatorColor">@color/background_primary</item>
+        <item name="trackColor">@color/content_loading_track</item>
+        <item name="trackCornerRadius">2dp</item>
+        <item name="trackThickness">15dp</item>
+    </style>
 </resources>

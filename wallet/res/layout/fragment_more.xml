@@ -176,7 +176,7 @@
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_menu_contact_support" />
+                    app:srcCompat="@drawable/ic_contact_support" />
 
                 <TextView
                     android:id="@+id/contact_support_title"

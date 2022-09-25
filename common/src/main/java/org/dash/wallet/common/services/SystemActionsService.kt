@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,13 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.repository
+package org.dash.wallet.common.services
 
-import kotlinx.coroutines.flow.Flow
-import org.dash.wallet.common.data.Resource
-
-interface DataSyncStatusService {
-    suspend fun setObservedLastError()
-    fun hasObservedLastError(): Flow<Boolean>
-    fun getSyncProgressFlow(): Flow<Resource<Double>>
+interface SystemActionsService {
+    fun copyText(text: String, label: String, showToast: Boolean = true)
+    fun shareText(text: String)
+    fun reviewApp()
+    fun openAppSettings()
+    fun openNotificationChannelSettings(channel: String)
+    fun openNotificationSettings()
 }
