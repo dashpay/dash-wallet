@@ -194,7 +194,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
                     if (list.isEmpty()) {
                         if (viewModel.isDeviceConnectedToInternet.value == true) {
-                            cryptoWalletsDialog?.dismiss()
+                            cryptoWalletsDialog?.dismissAllowingStateLoss()
                             showNoAssetsError()
                         }
                     } else {
