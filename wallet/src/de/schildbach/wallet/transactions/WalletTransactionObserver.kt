@@ -31,7 +31,7 @@ import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 
 @ExperimentalCoroutinesApi
-class WalletTransactionObserver(private val wallet: Wallet) {
+class WalletTransactionObserver(private val wallet: Wallet, private val observeTxConfidence: Boolean) {
     fun observe(vararg filters: TransactionFilter): Flow<Transaction> = callbackFlow {
         Context.propagate(wallet.context)
 
@@ -80,13 +80,20 @@ class WalletTransactionObserver(private val wallet: Wallet) {
         wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener)
         wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener)
         wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
-        wallet.addTransactionConfidenceEventListener(Threading.SAME_THREAD, walletChangeListener)
+        if (observeTxConfidence) {
+            wallet.addTransactionConfidenceEventListener(
+                Threading.SAME_THREAD,
+                walletChangeListener
+            )
+        }
 
         awaitClose {
             wallet.removeChangeEventListener(walletChangeListener)
             wallet.removeCoinsSentEventListener(walletChangeListener)
             wallet.removeCoinsReceivedEventListener(walletChangeListener)
-            wallet.removeCoinsReceivedEventListener(walletChangeListener)
+            if (observeTxConfidence) {
+                wallet.removeTransactionConfidenceEventListener(walletChangeListener)
+            }
             walletChangeListener.removeCallbacks()
         }
     }
