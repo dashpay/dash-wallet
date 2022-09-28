@@ -27,9 +27,6 @@ import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.*
-<<<<<<< HEAD
-=======
->>>>>>> master
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi

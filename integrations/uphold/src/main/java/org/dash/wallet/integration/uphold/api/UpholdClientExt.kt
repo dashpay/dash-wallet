@@ -17,20 +17,39 @@
 
 package org.dash.wallet.integration.uphold.api
 
-import org.dash.wallet.common.data.Resource
+import org.dash.wallet.integration.uphold.data.UpholdConstants
 import java.lang.Exception
 import java.math.BigDecimal
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-suspend fun UpholdClient.getDashBalance() {
-    val result = suspendCoroutine<BigDecimal> { continuation ->
+val UpholdClient.hasValidCredentials
+    get() = UpholdConstants.hasValidCredentials()
+
+suspend fun UpholdClient.getDashBalance(): BigDecimal {
+    return suspendCoroutine { continuation ->
         this.getDashBalance(object : UpholdClient.Callback<BigDecimal> {
             override fun onSuccess(data: BigDecimal) {
-                continuation.resumeWith(Result.success(Resource.success(data)))
+                continuation.resume(data)
             }
 
             override fun onError(e: Exception, otpRequired: Boolean) {
-                continuation.resumeWith(Result.success(Resource.error(e)))
+                continuation.resumeWithException(e)
+            }
+        })
+    }
+}
+
+suspend fun UpholdClient.getAccessToken(code: String): String? {
+    return suspendCoroutine { continuation ->
+        this.getAccessToken(code, object : UpholdClient.Callback<String?> {
+            override fun onSuccess(dashCardId: String?) {
+                continuation.resume(dashCardId)
+            }
+
+            override fun onError(e: Exception, otpRequired: Boolean) {
+                continuation.resumeWithException(e)
             }
         })
     }

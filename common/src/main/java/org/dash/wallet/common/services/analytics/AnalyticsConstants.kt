@@ -208,7 +208,7 @@ object AnalyticsConstants {
         const val BUY_PAYMENT_METHOD = "coinbase_buy_p_method"
         const val BUY_ENTER_FIAT = "coinbase_buy_enter_amount_fiat"
         const val BUY_ENTER_DASH = "coinbase_buy_enter_amount_dash"
-        const val BUY_CHANGE_FIAT_CURRENCY = "coinbase_buy_b_change_fiat_currency" // Currency selector isn't shown in Coinbase atm.
+        const val BUY_CHANGE_FIAT_CURRENCY = "coinbase_buy_b_change_fiat_currency" // Currency selector isn't shown in Coinbase.
         const val BUY_CONTINUE = "coinbase_buy_b_continue"
         const val BUY_AUTH_LIMIT = "coinbase_buy_b_auth_limit"
 

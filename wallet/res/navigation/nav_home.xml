@@ -93,7 +93,27 @@
         android:id="@+id/buySellFragment"
         android:name="de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsFragment"
         android:label="BuyAndSell"
-        tools:layout="@layout/fragment_buy_sell_integrations" />
+        tools:layout="@layout/fragment_buy_sell_integrations">
+
+        <action
+            android:id="@+id/buySell_to_overview"
+            app:destination="@id/integrationOverviewFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/integrationOverviewFragment"
+        android:name="de.schildbach.wallet.ui.buy_sell.IntegrationOverviewFragment"
+        android:label="IntegrationOverview"
+        tools:layout="@layout/fragment_integration_overview">
+
+        <argument
+            android:name="service"
+            android:defaultValue="COINBASE"
+            app:argType="de.schildbach.wallet.data.ServiceType" />
+    </fragment>
 
     <include app:graph="@navigation/explore_dash" />
 </navigation>

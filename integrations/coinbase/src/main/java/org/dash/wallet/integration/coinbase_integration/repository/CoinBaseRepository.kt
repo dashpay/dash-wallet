@@ -22,6 +22,7 @@ import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
+import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
 import java.math.BigDecimal
 import javax.inject.Inject
@@ -37,6 +38,13 @@ class CoinBaseRepository @Inject constructor(
 ) : CoinBaseRepositoryInt {
     private var userAccountInfo: List<CoinBaseUserAccountData> = listOf()
 
+    override val hasValidCredentials: Boolean
+        get() = CoinBaseClientConstants.CLIENT_ID.isNotEmpty() &&
+                CoinBaseClientConstants.CLIENT_SECRET.isNotEmpty()
+
+    override val isAuthenticated: Boolean
+        get() = userPreferences.lastCoinbaseAccessToken.isNotEmpty()
+
     override suspend fun getUserAccount(): ResponseResource<CoinBaseUserAccountData?> = safeApiCall {
         val apiResponse = servicesApi.getUserAccounts()
         userAccountInfo = apiResponse?.data ?: listOf()
@@ -45,7 +53,7 @@ class CoinBaseRepository @Inject constructor(
         }
         userAccountData?.also {
             userPreferences.setCoinBaseUserAccountId(it.id)
-            userPreferences.setLastCoinBaseBalance(it.balance?.amount)
+            userPreferences.lastCoinbaseBalance = it.balance?.amount
         }
     }
 
@@ -82,14 +90,14 @@ class CoinBaseRepository @Inject constructor(
     override suspend fun disconnectCoinbaseAccount() {
         userPreferences.setLastCoinBaseAccessToken(null)
         userPreferences.setLastCoinBaseRefreshToken(null)
-        userPreferences.setLastCoinBaseBalance(null)
+        userPreferences.lastCoinbaseBalance = null
         userPreferences.setCoinBaseUserAccountId(null)
         safeApiCall { authApi.revokeToken() }
     }
 
     override fun saveLastCoinbaseDashAccountBalance(amount: String?) {
         amount?.let {
-            userPreferences.setLastCoinBaseBalance(it)
+            userPreferences.lastCoinbaseBalance = it
         }
     }
 
@@ -133,7 +141,7 @@ class CoinBaseRepository @Inject constructor(
     }
 
     override fun getUserLastCoinbaseBalance(): String = userPreferences.lastCoinbaseBalance ?: ""
-    override fun isUserConnected(): Boolean = userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()
+    override fun isUserConnected(): Boolean = userPreferences.lastCoinbaseAccessToken.isNotEmpty()
 
     override suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean> = safeApiCall {
         authApi.getToken(code = authorizationCode).also {
@@ -144,7 +152,7 @@ class CoinBaseRepository @Inject constructor(
                 getUserAccount()
             }
         }
-        userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()
+        userPreferences.lastCoinbaseAccessToken.isNotEmpty()
     }
 
     override suspend fun getWithdrawalLimit() = safeApiCall {
@@ -183,6 +191,9 @@ class CoinBaseRepository @Inject constructor(
 }
 
 interface CoinBaseRepositoryInt {
+    val hasValidCredentials: Boolean
+    val isAuthenticated: Boolean
+
     suspend fun getUserAccount(): ResponseResource<CoinBaseUserAccountData?>
     suspend fun getUserAccounts(exchangeCurrencyCode: String): ResponseResource<List<CoinBaseUserAccountDataUIModel>>
     suspend fun getBaseIdForUSDModel(baseCurrency: String): ResponseResource<BaseIdForUSDModel?>

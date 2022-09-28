@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.buy_sell
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -28,24 +27,17 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.adapter.BuyAndSellDashServicesAdapter
-import de.schildbach.wallet.data.BuyAndSellDashServicesModel
+import de.schildbach.wallet.data.ServiceType
 import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
-import de.schildbach.wallet.ui.rates.ExchangeRatesViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentBuySellIntegrationsBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import org.dash.wallet.common.Constants.*
-import org.dash.wallet.common.data.ExchangeRate
-import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.integration.uphold.api.UpholdClient
-import org.dash.wallet.integration.uphold.data.UpholdConstants
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.*
-import kotlin.concurrent.schedule
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
@@ -54,41 +46,39 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
         val log: Logger = LoggerFactory.getLogger(BuyAndSellIntegrationsFragment::class.java)
     }
 
-    private var loadingDialog: AdaptiveDialog? = null
-
     private val binding by viewBinding(FragmentBuySellIntegrationsBinding::bind)
     private val viewModel by viewModels<BuyAndSellViewModel>()
-    private val exchangeRatesViewModel by viewModels<ExchangeRatesViewModel>()
     private val buyAndSellDashServicesAdapter: BuyAndSellDashServicesAdapter by lazy {
-        BuyAndSellDashServicesAdapter(viewModel.config) { model ->
+        BuyAndSellDashServicesAdapter(viewModel.config.format.noCode()) { model ->
             when (model.serviceType) {
-                BuyAndSellDashServicesModel.ServiceType.UPHOLD -> onUpHoldItemClicked()
-                BuyAndSellDashServicesModel.ServiceType.COINBASE -> onCoinBaseItemClicked()
+                ServiceType.UPHOLD -> onUpholdItemClicked()
+                ServiceType.COINBASE -> onCoinbaseItemClicked()
             }
         }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        log.info("starting Buy and Sell Dash activity")
+        log.info("starting Buy and Sell Dash fragment")
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
 
-        loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
-        initViewModel()
-
         // check for missing keys from service.properties
-        if (!UpholdConstants.hasValidCredentials()) {
+        if (!viewModel.hasValidCredentials) {
             binding.keysMissingError.isVisible = true
         }
+
         binding.dashServicesList.itemAnimator = null
         binding.dashServicesList.adapter = buyAndSellDashServicesAdapter
 
-        viewModel.showLoading.observe(viewLifecycleOwner) { showDialog ->
-            if (showDialog) loadingDialog?.show(requireActivity())
-            else if (loadingDialog?.isAdded == true) loadingDialog?.dismiss()
+        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { isConnected ->
+            binding.networkStatusStub.isVisible = !isConnected
+        }
+
+        viewModel.servicesList.observe(viewLifecycleOwner) {
+            buyAndSellDashServicesAdapter.submitList(it)
         }
 
         lifecycleScope.launchWhenResumed {
@@ -96,141 +86,31 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
         }
     }
 
-    private fun onUpHoldItemClicked() {
-        if (UpholdConstants.hasValidCredentials()) {
-            viewModel.logEnterUphold()
-            startActivity(UpholdAccountActivity.createIntent(requireContext()))
-        }
-    }
+    private fun onUpholdItemClicked() {
+        viewModel.logEnterUphold()
 
-    private fun onCoinBaseItemClicked() {
-        viewModel.logEnterCoinbase()
-        if (viewModel.isUserConnectedToCoinbase()) {
-            launchCoinBasePortal()
+        if (viewModel.isUpholdAuthenticated) {
+            startActivity(Intent(requireContext(), UpholdAccountActivity::class.java))
         } else {
-
-
-//            lifecycleScope.launch {
-//              val goodToGo = if (viewModel.shouldShowAuthInfoPopup) {
-//                    AdaptiveDialog.custom(
-//                        R_coinbase.layout.dialog_withdrawal_limit_info,
-//                        null,
-//                        getString(R_coinbase.string.set_auth_limit),
-//                        getString(R_coinbase.string.change_withdrawal_limit),
-//                        "",
-//                        getString(R_coinbase.string.got_it)
-//                    ).showAsync(this@BuyAndSellIntegrationsActivity) ?: false
-//                } else true
-//
-//                if (goodToGo) {
-//                    viewModel.shouldShowAuthInfoPopup = false
-//                    startActivityForResult(
-//                        Intent(
-//                            this@BuyAndSellIntegrationsActivity,
-//                            CoinBaseWebClientActivity::class.java
-//                        ),
-//                        COIN_BASE_AUTH
-//                    )
-//
-//                }
-//            }
+            safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToOverview(ServiceType.UPHOLD))
         }
     }
 
-    fun initViewModel() {
-        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { isConnected ->
-            if (isConnected != null) {
-                buyAndSellDashServicesAdapter.updateIconState(isConnected)
-                setNetworkState(isConnected)
-            }
-        }
+    private fun onCoinbaseItemClicked() {
+        viewModel.logEnterCoinbase()
 
-        viewModel.servicesList.observe(viewLifecycleOwner) {
-            buyAndSellDashServicesAdapter.submitList(it.toMutableList())
-        }
-
-        viewModel.upholdBalanceLiveData.observe(viewLifecycleOwner) {
-            if (it != null) {
-                when (it.status) {
-                    Status.LOADING -> { }
-                    Status.SUCCESS -> {
-                        if (isAdded) {
-                            val balance = it.data.toString()
-                            viewModel.showRowBalance(
-                                BuyAndSellDashServicesModel.ServiceType.UPHOLD,
-                                currentExchangeRate,
-                                balance
-                            )
-                        }
-                    }
-                    Status.ERROR -> {
-                        if (!isAdded) {
-
-                            // TODO: if the exception is UnknownHostException and isNetworkOnline is true
-                            // then there is a problem contacting the server and we don't have
-                            // error handling for it
-                            viewModel.config.lastUpholdBalance?.let {
-                                viewModel.showRowBalance(
-                                    BuyAndSellDashServicesModel.ServiceType.UPHOLD,
-                                    currentExchangeRate,
-                                    viewModel.config.lastUpholdBalance
-                                )
-                            }
-                        }
-                    }
-                    Status.CANCELED -> {
-                        viewModel.config.lastUpholdBalance?.let {
-                            viewModel.showRowBalance(
-                                BuyAndSellDashServicesModel.ServiceType.UPHOLD,
-                                currentExchangeRate,
-                                viewModel.config.lastUpholdBalance
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        viewModel.isAuthenticatedOnCoinbase.observe(viewLifecycleOwner){ setLoginStatus() }
-
-        viewModel.coinbaseAuthTokenCallback.observe(viewLifecycleOwner) {
-            Timer().schedule(1000) {
-                launchCoinBasePortal()
-            }
-        }
-    }
-
-    private fun setNetworkState(online: Boolean) {
-        if (online && binding.networkStatusStub.isVisible) {
-            // Just got back online
-            updateBalances()
-        }
-
-        binding.networkStatusStub.isVisible = !online
-        setLoginStatus()
-    }
-
-    private fun updateBalances() {
-        if (UpholdClient.getInstance().isAuthenticated) {
-            viewModel.updateUpholdBalance()
-        }
-        if (viewModel.isUserConnectedToCoinbase()) {
-            viewModel.updateCoinbaseBalance()
+        if (viewModel.isCoinbaseAuthenticated) {
+            startActivity(Intent(requireContext(), CoinbaseActivity::class.java))
+        } else {
+            safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToOverview(ServiceType.COINBASE))
         }
     }
 
     override fun onResume() {
         super.onResume()
         viewModel.monitorNetworkStateChange()
-        setLoginStatus()
-        updateBalances()
-    }
-
-    private fun setLoginStatus() {
-        viewModel.setServicesStatus(
-            viewModel.config.lastCoinbaseAccessToken.isNullOrEmpty().not(),
-            UpholdClient.getInstance().isAuthenticated
-        )
+        viewModel.updateBalances()
+        viewModel.updateServicesStatus()
     }
 
     // TODO: can this be refactored into the uphold module>?
@@ -242,24 +122,9 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
 //            setResult(RESULT_CODE_GO_HOME)
 //            finish()
 //        } else if (requestCode == COIN_BASE_AUTH) {
-//            if (resultCode == RESULT_OK) {
-//                if (data?.hasExtra(CoinBaseWebClientActivity.RESULT_TEXT) == true) {
-//                    data?.extras?.getString(CoinBaseWebClientActivity.RESULT_TEXT)?.let { code ->
-//                        viewModel.loginToCoinbase(code)
-//                    }
-//                }
-//            }
+
 //        }
 //    }
-
-    override fun onPause() {
-        viewModel.setLoadingState(false)
-        super.onPause()
-    }
-
-    private fun launchCoinBasePortal() {
-        startActivityForResult(Intent(requireContext(), CoinbaseActivity::class.java), USER_BUY_SELL_DASH)
-    }
 
     private fun checkLiquidStatus() {
         val liquidClient = LiquidClient.getInstance()

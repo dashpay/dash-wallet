@@ -15,13 +15,14 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
-
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/background_secondary"
+    tools:context="de.schildbach.wallet.ui.buy_sell.IntegrationOverviewFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
@@ -29,7 +30,7 @@
         android:layout_height="?attr/actionBarSize"
         android:layout_marginStart="4dp"
         app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@drawable/ic_back_arrow_black" />
+        app:navigationIcon="@drawable/ic_back_arrow_primary" />
     
     <ImageView
         android:id="@+id/logo"
@@ -49,7 +50,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         style="@style/Headline5"
-        android:layout_marginTop="20dp"
+        android:layout_margin="20dp"
         android:gravity="center"
         android:textAlignment="gravity"
         android:text="@string/coinbase_link_title"
@@ -66,14 +67,17 @@
         app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
+        android:id="@+id/buy_with_fiat_text"
         android:layout_height="wrap_content"
         android:layout_width="0dp"
         android:layout_marginStart="18dp"
+        android:layout_marginEnd="20dp"
         style="@style/Subtitle2"
         android:text="@string/buy_with_fiat"
         app:layout_constraintTop_toTopOf="@id/buy_with_fiat_ic"
         app:layout_constraintBottom_toBottomOf="@id/buy_with_fiat_ic"
-        app:layout_constraintStart_toEndOf="@id/buy_with_fiat_ic" />
+        app:layout_constraintStart_toEndOf="@id/buy_with_fiat_ic"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <ImageView
         android:id="@+id/buy_convert_ic"
@@ -86,14 +90,17 @@
         app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
+        android:id="@+id/buy_convert_text"
         android:layout_height="wrap_content"
         android:layout_width="0dp"
         android:layout_marginStart="18dp"
+        android:layout_marginEnd="20dp"
         style="@style/Subtitle2"
         android:text="@string/buy_and_convert"
         app:layout_constraintTop_toTopOf="@id/buy_convert_ic"
         app:layout_constraintBottom_toBottomOf="@id/buy_convert_ic"
-        app:layout_constraintStart_toEndOf="@id/buy_convert_ic" />
+        app:layout_constraintStart_toEndOf="@id/buy_convert_ic"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <ImageView
         android:id="@+id/transfer_ic"
@@ -110,21 +117,27 @@
         android:layout_height="wrap_content"
         android:layout_width="0dp"
         android:layout_marginStart="18dp"
+        android:layout_marginEnd="20dp"
         style="@style/Subtitle2"
         android:text="@string/transfer_dash"
         app:layout_constraintTop_toTopOf="@id/transfer_ic"
         app:layout_constraintBottom_toBottomOf="@id/transfer_ic"
-        app:layout_constraintStart_toEndOf="@id/transfer_ic" />
+        app:layout_constraintStart_toEndOf="@id/transfer_ic"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <TextView
+        android:id="@+id/transfer_item_details"
         android:layout_height="wrap_content"
         android:layout_width="0dp"
+        android:layout_marginEnd="20dp"
         style="@style/Caption.Secondary"
-        android:text="@string/transfer_details"
+        android:text="@string/coinbase_transfer_details"
         app:layout_constraintTop_toBottomOf="@id/transfer_item"
-        app:layout_constraintStart_toStartOf="@id/transfer_item" />
+        app:layout_constraintStart_toStartOf="@id/transfer_item"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <Button
+        android:id="@+id/continue_btn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="15dp"

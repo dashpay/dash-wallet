@@ -63,15 +63,6 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
     @Inject
     public AnalyticsService analytics;
 
-    public static Intent createIntent(Context context) {
-        Intent intent;
-        if (UpholdClient.getInstance().isAuthenticated()) {
-            intent = new Intent(context, UpholdAccountActivity.class);
-        } else {
-            intent = new Intent(context, UpholdSplashActivity.class);
-        }
-        return intent;
-    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {

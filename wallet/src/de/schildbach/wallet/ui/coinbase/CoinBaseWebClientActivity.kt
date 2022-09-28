@@ -39,6 +39,7 @@ class CoinBaseWebClientActivity : InteractionAwareActivity() {
         initUI()
         turnOffAutoLogout()
     }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun initUI() {
         setSupportActionBar(binding.toolbar)

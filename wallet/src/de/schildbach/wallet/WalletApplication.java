@@ -365,9 +365,9 @@ public class WalletApplication extends MultiDexApplication
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannels();
         }
+
         initUphold();
-        CoinBaseClientConstants.CLIENT_ID= BuildConfig.COINBASE_CLIENT_ID;
-        CoinBaseClientConstants.CLIENT_SECRET = BuildConfig.COINBASE_CLIENT_SECRET;
+        initCoinbase();
     }
 
     private void initUphold() {
@@ -381,6 +381,11 @@ public class WalletApplication extends MultiDexApplication
         UpholdConstants.initialize(Constants.NETWORK_PARAMETERS.getId().contains("test"));
         UpholdClient.init(getApplicationContext(), authenticationHash);
         LiquidClient.Companion.init(getApplicationContext(), authenticationHash);
+    }
+
+    private void initCoinbase() {
+        CoinBaseClientConstants.CLIENT_ID = BuildConfig.COINBASE_CLIENT_ID;
+        CoinBaseClientConstants.CLIENT_SECRET = BuildConfig.COINBASE_CLIENT_SECRET;
     }
 
     @TargetApi(Build.VERSION_CODES.O)

@@ -78,6 +78,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                         if (paymentMethodsArray.isEmpty()) {
                             showNoPaymentMethodsError()
                         } else {
+                            viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_DASH)
                             safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(paymentMethodsArray))
                         }
                     }
@@ -89,8 +90,9 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                     is PaymentMethodsUiState.LoadingState ->{
                         if (uiState.isLoading) {
                             showProgress(R.string.loading)
-                        } else
+                        } else {
                             dismissProgress()
+                        }
                     }
                 }
             }

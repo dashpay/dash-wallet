@@ -89,8 +89,8 @@
     <color name="dash_blue">#008DE4</color>
     <color name="coinbase_blue">#0052FF</color>
     <color name="dash_black">#191C1F</color>
-    <color name="extra_dark_gray">#525C66</color>
     <color name="ultra_dark_gray">#2D3033</color>
+    <color name="extra_dark_gray">#525C66</color>
     <color name="dark_gray">#75808A</color>
     <color name="gray">#B0B6BC</color>
     <color name="light_gray">#CED2D5</color>
