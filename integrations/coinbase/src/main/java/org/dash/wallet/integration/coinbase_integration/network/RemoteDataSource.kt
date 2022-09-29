@@ -28,6 +28,8 @@ import org.dash.wallet.integration.coinbase_integration.service.CoinBaseTokenRef
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 class RemoteDataSource @Inject constructor(
     private val userPreferences: Configuration,
@@ -60,6 +62,9 @@ class RemoteDataSource @Inject constructor(
     private fun getRetrofitClient(authenticator: Authenticator? = null): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(HeadersInterceptor(userPreferences))
+            .connectTimeout(20.seconds.toJavaDuration())
+            .callTimeout(20.seconds.toJavaDuration())
+            .readTimeout(20.seconds.toJavaDuration())
             .also { client ->
                 authenticator?.let { client.authenticator(it) }
                 if (BuildConfig.DEBUG) {
