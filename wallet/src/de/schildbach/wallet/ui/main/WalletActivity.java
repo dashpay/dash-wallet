@@ -112,7 +112,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
         setContentView(R.layout.activity_main);
-        WalletActivityExt.INSTANCE.setupBottomNavigation(this);
+        WalletActivityExt.INSTANCE.setupBottomNavigation(this, viewModel);
         setSupportActionBar(findViewById(R.id.toolbar));
 
         if (savedInstanceState == null) {

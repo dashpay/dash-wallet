@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.buy_sell
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -32,10 +33,12 @@ import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentBuySellIntegrationsBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
+import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -54,6 +57,14 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
                 ServiceType.UPHOLD -> onUpholdItemClicked()
                 ServiceType.COINBASE -> onCoinbaseItemClicked()
             }
+        }
+    }
+
+    private val coinbaseLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Constants.RESULT_CODE_GO_HOME) {
+            findNavController().popBackStack(R.id.walletFragment, false)
         }
     }
 
@@ -92,7 +103,7 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
         if (viewModel.isUpholdAuthenticated) {
             startActivity(Intent(requireContext(), UpholdAccountActivity::class.java))
         } else {
-            safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToOverview(ServiceType.UPHOLD))
+            startActivity(Intent(requireContext(), UpholdSplashActivity::class.java))
         }
     }
 
@@ -100,7 +111,7 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
         viewModel.logEnterCoinbase()
 
         if (viewModel.isCoinbaseAuthenticated) {
-            startActivity(Intent(requireContext(), CoinbaseActivity::class.java))
+            coinbaseLauncher.launch(Intent(requireContext(), CoinbaseActivity::class.java))
         } else {
             safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToOverview(ServiceType.COINBASE))
         }
@@ -112,19 +123,6 @@ class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integ
         viewModel.updateBalances()
         viewModel.updateServicesStatus()
     }
-
-    // TODO: can this be refactored into the uphold module>?
-// todo
-//    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-//        super.onActivityResult(requestCode, resultCode, data)
-//        if (requestCode == USER_BUY_SELL_DASH && resultCode == RESULT_CODE_GO_HOME) {
-//            log.info("activity result for user buy sell dash was RESULT_CODE_GO_HOME") // TODO
-//            setResult(RESULT_CODE_GO_HOME)
-//            finish()
-//        } else if (requestCode == COIN_BASE_AUTH) {
-
-//        }
-//    }
 
     private fun checkLiquidStatus() {
         val liquidClient = LiquidClient.getInstance()

@@ -69,6 +69,13 @@
                 android:defaultValue="Merchants"
                 app:argType="org.dash.wallet.features.exploredash.ui.ExploreTopic" />
         </action>
+
+        <action
+            android:id="@+id/explore_to_buySell"
+            app:destination="@id/buySellFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -98,7 +105,7 @@
         <action
             android:id="@+id/buySell_to_overview"
             app:destination="@id/integrationOverviewFragment"
-            app:enterAnim="@anim/slide_in_right"
+            app:enterAnim="@anim/slide_in_bottom"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
     </fragment>

@@ -38,13 +38,8 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentIntegrationOverviewBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.openCustomTab
-import org.dash.wallet.integration.uphold.api.UpholdClient
-import org.dash.wallet.integration.uphold.data.UpholdConstants
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity
 
 @ExperimentalCoroutinesApi
@@ -74,6 +69,7 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
         }
 
         if (args.service == ServiceType.UPHOLD) {
+            // TODO: not used atm. Move the auth logic from UpholdSplashActivity to here.
             setupUphold()
         }
 
@@ -103,8 +99,6 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
 
     private fun continueUphold() {
         startActivity(Intent(requireContext(), UpholdSplashActivity::class.java))
-//        viewModel.logEvent(AnalyticsConstants.Uphold.LINK_ACCOUNT)
-//        openUpholdLoginUrl()
     }
 
     private fun continueCoinbase() {
@@ -149,45 +143,6 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
                 ).show(requireActivity()) { retry ->
                     if (retry == true) {
                         handleCoinbaseAuthResult(code)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun openUpholdLoginUrl() {
-        val url = String.format(
-            UpholdConstants.INITIAL_URL,
-            UpholdClient.getInstance().encryptionKey
-        )
-        requireActivity().openCustomTab(url)
-//        (requireActivity() as LockScreenActivity).turnOffAutoLogout() TODO
-    }
-
-    private fun handleUpholdAuthResult(code: String?, state: String) {
-        lifecycleScope.launchWhenResumed {
-            val success = AdaptiveDialog.withProgress(getString(R.string.loading), requireActivity()) {
-                viewModel.loginToUphold(code, state)
-            }
-
-            if (success) {
-                val intent = Intent(requireContext(), UpholdAccountActivity::class.java)
-//                val extras: Bundle = getIntent().getExtras() // TODO
-//                if (extras != null) {
-//                    intent.putExtras(extras)
-//                }
-                startActivity(intent)
-                findNavController().popBackStack()
-            } else {
-                AdaptiveDialog.create(
-                    R.drawable.ic_error,
-                    getString(R.string.login_error_title, getString(R.string.uphold_account)),
-                    getString(R.string.login_error_message, getString(R.string.uphold_account)),
-                    getString(android.R.string.cancel),
-                    getString(R.string.retry)
-                ).show(requireActivity()) { retry ->
-                    if (retry == true) {
-                        handleUpholdAuthResult(code, state)
                     }
                 }
             }

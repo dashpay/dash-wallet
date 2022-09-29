@@ -20,7 +20,6 @@ package de.schildbach.wallet.ui.buy_sell
 import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.ui.main.WalletFragment
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
@@ -61,23 +60,6 @@ class IntegrationOverviewViewModel @Inject constructor(
         }
 
         return false
-    }
-
-    suspend fun loginToUphold(code: String?, state: String): Boolean {
-        val encKeyMatch = upholdClient.encryptionKey == state
-
-        if (code == null || !encKeyMatch) {
-            log.error("Uphold login error, code: ${code ?: "null"}; enc key match: $encKeyMatch")
-            return false
-        }
-
-        return try {
-            upholdClient.getAccessToken(code)
-            true
-        } catch (ex: Exception) {
-            log.error("Uphold login error $ex")
-            false
-        }
     }
 
     fun logEvent(eventName: String) {

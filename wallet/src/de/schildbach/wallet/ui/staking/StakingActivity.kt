@@ -31,6 +31,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.ISecurityFunctions
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
@@ -78,8 +79,9 @@ class StakingActivity : LockScreenActivity() {
                 ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
             }
             NavigationRequest.BuyDash -> {
-                // TODO
-//                startActivity(BuyAndSellIntegrationsFragment.createIntent(this))
+                // TODO: replace with navController navigation when Staking is integrated into nav_home
+                setResult(Constants.USER_BUY_SELL_DASH)
+                finish()
             }
             NavigationRequest.SendReport -> {
                 log.info("CrowdNode initiated report")
