@@ -130,14 +130,6 @@ class CryptoWalletsDialog(
         viewModel.submitList(accounts)
     }
 
-    fun handleNetworkState(hasInternet: Boolean) {
-        lifecycleScope.launchWhenStarted {
-            binding.dialogNetworkStatusStub.isVisible = !hasInternet
-            binding.searchBox.isVisible = hasInternet
-            binding.contentList.isVisible = hasInternet
-        }
-    }
-
     private fun refreshItems(rate: ExchangeRate?, dataList: List<CoinBaseUserAccountDataUIModel>) {
         itemList = dataList.map {
             val icon = getFlagFromCurrencyCode(it.coinBaseUserAccountData.currency?.code ?: "")

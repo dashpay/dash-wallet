@@ -143,4 +143,9 @@ class CryptoConvertItem @JvmOverloads constructor(
         binding.selectTheCoinTitle.isVisible = false
         binding.convertFormDashArrow.isVisible = false
     }
+
+    override fun setEnabled(enabled: Boolean) {
+        super.setEnabled(enabled)
+        binding.itemConvertCl.isEnabled = enabled
+    }
 }

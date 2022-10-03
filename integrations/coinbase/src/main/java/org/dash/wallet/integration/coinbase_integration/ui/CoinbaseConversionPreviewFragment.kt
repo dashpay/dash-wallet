@@ -166,46 +166,30 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         observeNavigationCallBack()
 
         viewModel.getUserAccountAddressFailedCallback.observe(viewLifecycleOwner) {
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.error,
-                getString(R.string.error),
+            AdaptiveDialog.create(
                 R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    placeBuyOrderError
-                )
-            )
+                getString(R.string.error),
+                getString(R.string.error),
+                getString(R.string.close)
+            ).show(requireActivity())
         }
 
-
         viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.insufficient_money_title,
-                getString(R.string.insufficient_money_msg),
+            AdaptiveDialog.create(
                 R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    placeBuyOrderError
-                )
-            )
+                getString(R.string.insufficient_money_title),
+                getString(R.string.insufficient_money_msg),
+                getString(R.string.close)
+            ).show(requireActivity())
         }
 
         viewModel.onFailure.observe(viewLifecycleOwner) {
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.send_coins_error_msg,
-                getString(R.string.insufficient_money_msg),
+            AdaptiveDialog.create(
                 R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    placeBuyOrderError
-                )
-            )
+                getString(R.string.send_coins_error_msg),
+                getString(R.string.insufficient_money_msg),
+                getString(R.string.close)
+            ).show(requireActivity())
         }
     }
 

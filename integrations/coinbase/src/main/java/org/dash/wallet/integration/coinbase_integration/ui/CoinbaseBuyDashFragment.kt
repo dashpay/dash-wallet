@@ -42,7 +42,6 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseBuyDashBinding
 import org.dash.wallet.integration.coinbase_integration.databinding.KeyboardHeaderViewBinding
-import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseBuyDashViewModel
 
 @AndroidEntryPoint
@@ -118,14 +117,13 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
                 dismissProgress()
         }
 
-        viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner){
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.error,
-                it,
+        viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner) {
+            AdaptiveDialog.create(
                 R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+                getString(R.string.error),
+                it,
+                getString(R.string.close)
+            ).show(requireActivity())
         }
 
         binding.paymentMethodPicker.setOnClickListener {
@@ -141,7 +139,7 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
                 getString(R.string.change_withdrawal_limit),
                 "",
                 getString(R.string.got_it)
-            ).show(requireActivity()) { }
+            ).show(requireActivity())
         }
 
         monitorNetworkChanges()

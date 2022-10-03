@@ -17,6 +17,8 @@
 package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.activity.addCallback
@@ -47,7 +49,6 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.TransferDashFragmentBinding
-import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseServiceWallet
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapValueErrorType
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
@@ -274,14 +275,13 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             }
         }
 
-        transferDashViewModel.onAddressCreationFailedCallback.observe(viewLifecycleOwner){
-            val addressCreationError = CoinbaseGenericErrorUIModel(
-                R.string.error,
-                getString(R.string.address_creation_failed),
+        transferDashViewModel.onAddressCreationFailedCallback.observe(viewLifecycleOwner) {
+            AdaptiveDialog.create(
                 R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(addressCreationError))
+                getString(R.string.error),
+                getString(R.string.address_creation_failed),
+                getString(R.string.close)
+            ).show(requireActivity())
         }
 
         transferDashViewModel.observeSendDashToCoinbaseState.observe(viewLifecycleOwner){
@@ -300,14 +300,19 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
 
         transferDashViewModel.onFetchUserDataOnCoinbaseFailedCallback.observe(viewLifecycleOwner){
-            val failure = CoinbaseGenericErrorUIModel(
-                R.string.coinbase_dash_wallet_error_title,
-                getString(R.string.coinbase_dash_wallet_error_message),
+            AdaptiveDialog.create(
                 R.drawable.ic_info_red,
-                R.string.create_dash_account,
-                R.string.close
-            )
-            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(failure))
+                getString(R.string.coinbase_dash_wallet_error_title),
+                getString(R.string.coinbase_dash_wallet_error_message),
+                getString(R.string.close),
+                getString(R.string.create_dash_account)
+            ).show(requireActivity()) { result ->
+                if (result == true) {
+                    val defaultBrowser = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_BROWSER)
+                    defaultBrowser.data = Uri.parse(getString(R.string.coinbase_website))
+                    startActivity(defaultBrowser)
+                }
+            }
         }
     }
 
