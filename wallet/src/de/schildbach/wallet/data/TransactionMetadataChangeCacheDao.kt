@@ -1,0 +1,67 @@
+/*
+ * Copyright (c) 2022. Dash Core Group.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.data
+
+import androidx.room.*
+import kotlinx.coroutines.flow.Flow
+import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TaxCategory
+
+/**
+ * @author Eric Britten
+ */
+@Dao
+interface TransactionMetadataChangeCacheDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(transactionMetadata: TransactionMetadataCacheItem)
+
+    @Query("SELECT * FROM transaction_metadata_cache ORDER BY id")
+    suspend fun load(): List<TransactionMetadataCacheItem>
+
+    @Query("SELECT * FROM transaction_metadata_cache WHERE txId = :txId AND cacheTimestamp > :updatedAfter ORDER BY id")
+    suspend fun findAfter(txId: Sha256Hash, updatedAfter: Long): List<TransactionMetadataCacheItem>
+
+    @Query("SELECT COUNT(1) FROM transaction_metadata_cache WHERE txid = :txId;")
+    suspend fun exists(txId: Sha256Hash): Boolean
+
+    @Query("SELECT * FROM transaction_metadata_cache WHERE txid = :txId")
+    suspend fun load(txId: Sha256Hash): TransactionMetadataCacheItem?
+
+    //@Query("SELECT * FROM transaction_metadata_cache WHERE txid = :txId")
+    //fun observe(txId: Sha256Hash): Flow<TransactionMetadataCacheItem?>
+
+    //@Query("SELECT id, txId, memo FROM transaction_metadata_cache WHERE memo != NULL")
+    //fun observeMemos(): Flow<List<TransactionMetadataCacheItem>>
+
+    //@Query("SELECT * FROM transaction_metadata_cache WHERE timestamp <= :end and timestamp >= :start")
+    //fun observeByTimestampRange(start: Long, end: Long): Flow<List<TransactionMetadataCacheItem>>
+
+    @Query("INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, taxCategory) VALUES (:txId, :cacheTimestamp, :taxCategory)")
+    suspend fun insertTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory, cacheTimestamp: Long = System.currentTimeMillis())
+
+    @Query("INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, memo) VALUES(:txId, :cacheTimestamp, :memo)")
+    suspend fun insertMemo(txId: Sha256Hash, memo: String, cacheTimestamp: Long = System.currentTimeMillis())
+
+    @Query("INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, memo) VALUES(:txId, :cacheTimestamp, :service)")
+    suspend fun insertService(txId: Sha256Hash, service: String, cacheTimestamp: Long = System.currentTimeMillis())
+
+    @Query("INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, currencyCode, rate) VALUES (:txId, :cacheTimestamp, :currencyCode, :rate)")
+    suspend fun insertExchangeRate(txId: Sha256Hash, currencyCode: String, rate: String, cacheTimestamp: Long = System.currentTimeMillis())
+
+    @Query("DELETE FROM transaction_metadata_cache")
+    fun clear()
+}

@@ -27,7 +27,11 @@ import de.schildbach.wallet.data.DashPayProfileDaoAsync;
 import de.schildbach.wallet.data.Invitation;
 import de.schildbach.wallet.data.InvitationsDao;
 import de.schildbach.wallet.data.InvitationsDaoAsync;
+import de.schildbach.wallet.data.TransactionMetadataChangeCacheDao;
+import de.schildbach.wallet.data.TransactionMetadataCacheItem;
+import de.schildbach.wallet.data.TransactionMetadataDocument;
 import de.schildbach.wallet.data.TransactionMetadataDao;
+import de.schildbach.wallet.data.TransactionMetadataDocumentDao;
 import de.schildbach.wallet.data.UserAlertDao;
 import de.schildbach.wallet.data.UserAlertDaoAsync;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
@@ -46,8 +50,10 @@ import kotlin.Deprecated;
         DashPayProfile.class,
         DashPayContactRequest.class,
         UserAlert.class,
-        Invitation.class
-}, version = 17)
+        Invitation.class,
+        TransactionMetadataCacheItem.class,
+        TransactionMetadataDocument.class
+}, version = 18)
 @TypeConverters({RoomConverters.class, BlockchainStateRoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
@@ -74,6 +80,10 @@ public abstract class AppDatabase extends RoomDatabase {
 
     public abstract InvitationsDaoAsync invitationsDaoAsync();
 
+    public abstract TransactionMetadataChangeCacheDao transactionMetadataCacheDao();
+
+    public abstract TransactionMetadataDocumentDao transactionMetadataDocumentDao();
+
     public abstract UserAlertDao userAlertDao();
 
     public abstract UserAlertDaoAsync userAlertDaoAsync();
@@ -86,7 +96,8 @@ public abstract class AppDatabase extends RoomDatabase {
                     AppDatabase.class, "dash-wallet-database")
                     .addMigrations(
                             AppDatabaseMigrations.getMigration11To17(),
-                            AppDatabaseMigrations.getMigration16To17()
+                            AppDatabaseMigrations.getMigration16To17(),
+                            AppDatabaseMigrations.getMigration17To18()
                     )
                     .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7, 8, 9, 10).build();
         }

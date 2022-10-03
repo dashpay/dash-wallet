@@ -17,6 +17,8 @@
 package de.schildbach.wallet.service
 
 import de.schildbach.wallet.data.AddressMetadataDao
+import de.schildbach.wallet.data.TransactionMetadataChangeCacheDao
+import de.schildbach.wallet.data.TransactionMetadataCacheItem
 import de.schildbach.wallet.data.TransactionMetadataDao
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -42,7 +44,8 @@ import javax.inject.Inject
 class WalletTransactionMetadataProvider @Inject constructor(
     private val transactionMetadataDao: TransactionMetadataDao,
     private val addressMetadataDao: AddressMetadataDao,
-    private val walletData: WalletDataProvider
+    private val walletData: WalletDataProvider,
+    private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao
 ) : TransactionMetadataProvider {
 
     companion object {
@@ -77,6 +80,10 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 }
             )
             transactionMetadataDao.insert(metadata)
+            // only add to the change cache if some metadata exists
+            if (metadata.isNotEmpty()) {
+                transactionMetadataChangeCacheDao.insert(TransactionMetadataCacheItem(metadata))
+            }
             log.info("txmetadata: inserting $metadata")
         }
     }
@@ -101,6 +108,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory) {
         updateAndInsertIfNotExist(txId) {
             transactionMetadataDao.updateTaxCategory(txId, taxCategory)
+            transactionMetadataChangeCacheDao.insertTaxCategory(txId, taxCategory)
         }
     }
 
@@ -116,6 +124,11 @@ class WalletTransactionMetadataProvider @Inject constructor(
                     exchangeRate.currencyCode,
                     exchangeRate.rate!!
                 )
+                transactionMetadataChangeCacheDao.insertExchangeRate(
+                    txId,
+                    exchangeRate.currencyCode,
+                    exchangeRate.rate!!
+                )
             }
         }
     }
@@ -123,12 +136,14 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override suspend fun setTransactionMemo(txId: Sha256Hash, memo: String) {
         updateAndInsertIfNotExist(txId) {
             transactionMetadataDao.updateMemo(txId, memo)
+            transactionMetadataChangeCacheDao.insertMemo(txId, memo)
         }
     }
 
     override suspend fun setTransactionService(txId: Sha256Hash, service: String) {
         updateAndInsertIfNotExist(txId) {
             transactionMetadataDao.updateService(txId, service)
+            transactionMetadataChangeCacheDao.insertService(txId, service)
         }
     }
 
@@ -155,6 +170,11 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 )
             } else if (metadata.rate == null && exchangeRate != null) {
                 transactionMetadataDao.updateExchangeRate(
+                    tx.txId,
+                    exchangeRate.fiat.currencyCode,
+                    exchangeRate.fiat.value.toString()
+                )
+                transactionMetadataChangeCacheDao.insertExchangeRate(
                     tx.txId,
                     exchangeRate.fiat.currencyCode,
                     exchangeRate.fiat.value.toString()

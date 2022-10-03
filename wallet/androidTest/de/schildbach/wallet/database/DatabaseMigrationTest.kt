@@ -60,7 +60,7 @@ open class DatabaseMigrationTest {
         private val service = ServiceName.CrowdNode
     }
 
-    private val migrations = arrayOf(AppDatabaseMigrations.migration11To17)
+    private val migrations = arrayOf(AppDatabaseMigrations.migration11To17, AppDatabaseMigrations.migration17To18)
 
     @Rule
     @JvmField
