@@ -1,4 +1,13 @@
 Dash Wallet
+v8.1
+* Make QR code readable in forced dark mode
+* Redesign UI for Receive Screen to include Import Private Key
+* Redesign about page
+* Fix issues with Coinbase Convert
+* Fix several minor crashes
+* Improve slow sync times from previous v8.x versions
+* use dashj 0.18.2 which fixes other sync issues
+
 v8.0.1
 * Fix to show errors on Home Screen when scanning invalid QR codes
 * Recover linked Crowdnode account after restoring recovery phrase
