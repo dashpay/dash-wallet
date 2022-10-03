@@ -524,8 +524,9 @@ public class Configuration {
         prefs.edit().putString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, token).apply();
     }
 
+    @NonNull
     public String getLastCoinbaseAccessToken() {
-        return prefs.getString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, null);
+        return prefs.getString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, "");
     }
 
     public void setLastCoinBaseRefreshToken(String token) {
@@ -536,11 +537,10 @@ public class Configuration {
         return prefs.getString(PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN, null);
     }
 
-    public void setLastCoinBaseBalance(String balance) {
+    public void setLastCoinbaseBalance(String balance) {
         prefs.edit().putString(PREFS_KEY_LAST_COINBASE_BALANCE, balance).apply();
     }
 
-    @Nullable
     public String getLastCoinbaseBalance() {
         return prefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, null);
     }

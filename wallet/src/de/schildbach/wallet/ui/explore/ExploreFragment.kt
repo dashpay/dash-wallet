@@ -21,6 +21,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -33,6 +34,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -47,6 +49,14 @@ import java.util.*
 class ExploreFragment : Fragment(R.layout.fragment_explore) {
     private val binding by viewBinding(FragmentExploreBinding::bind)
     private val viewModel: MainViewModel by activityViewModels()
+
+    private val stakingLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Constants.USER_BUY_SELL_DASH) {
+            safeNavigate(ExploreFragmentDirections.exploreToBuySell())
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -81,7 +91,7 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
     private fun handleStakingNavigation() {
         lifecycleScope.launch {
             if (viewModel.isBlockchainSynced.value == true) {
-                startActivity(Intent(requireContext(), StakingActivity::class.java))
+                stakingLauncher.launch(Intent(requireContext(), StakingActivity::class.java))
             } else {
                 val openWebsite = AdaptiveDialog.create(
                     null,

@@ -19,18 +19,26 @@ package de.schildbach.wallet.ui.main
 
 import android.view.MenuItem
 import androidx.core.view.isVisible
-import androidx.fragment.app.FragmentActivity
 import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.NavigationUI.onNavDestinationSelected
 import androidx.navigation.ui.NavigationUI.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 
 object WalletActivityExt {
-    fun FragmentActivity.setupBottomNavigation() {
+    fun WalletActivity.setupBottomNavigation(viewModel: MainViewModel) {
         val navController = (supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment).navController
         val navView: BottomNavigationView = findViewById(R.id.bottom_navigation)
         setupWithNavController(navView, navController)
         navView.itemIconTintList = null
+        navView.setOnItemSelectedListener { item: MenuItem ->
+            if (item.itemId == R.id.paymentsFragment) {
+                viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
+            }
+            onNavDestinationSelected(item, navController)
+            true
+        }
         navView.setOnItemReselectedListener { item: MenuItem ->
             if (item.itemId == R.id.paymentsFragment) {
                 navController.navigateUp()

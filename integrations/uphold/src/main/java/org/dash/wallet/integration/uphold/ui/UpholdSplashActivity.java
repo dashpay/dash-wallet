@@ -45,6 +45,7 @@ import dagger.hilt.android.AndroidEntryPoint;
 import kotlin.Unit;
 
 @AndroidEntryPoint
+// TODO: move this into IntegrationOverviewFragment
 public class UpholdSplashActivity extends InteractionAwareActivity {
 
     public static final String FINISH_ACTION = "UpholdSplashActivity.FINISH_ACTION";
@@ -70,7 +71,7 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
         }
 
         if (actionBar != null) {
-            actionBar.setTitle(R.string.uphold_link_account);
+            actionBar.setTitle("");
         }
 
         loadingDialog = new ProgressDialog(this);

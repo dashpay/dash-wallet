@@ -65,7 +65,6 @@ class CoinbaseServicesViewModel @Inject constructor(
     val exchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
 
-    //val activePaymentMethodsFailureCallback = SingleLiveEvent<Unit>()
     val coinbaseLogOutCallback = SingleLiveEvent<Unit>()
 
     private val _latestUserBalance: MutableLiveData<String> = MutableLiveData()

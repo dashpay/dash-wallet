@@ -277,14 +277,8 @@
             android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.explore.ExploreActivity"
-            android:screenOrientation="portrait"
-            android:parentActivityName="de.schildbach.wallet.ui.OnboardingActivity"
-            android:theme="@style/LockScreenActivity.Child.Theme" />
-
-        <activity
             android:name="de.schildbach.wallet.ui.staking.StakingActivity"
-            android:parentActivityName="de.schildbach.wallet.ui.explore.ExploreActivity"
+            android:parentActivityName="de.schildbach.wallet.ui.main.WalletActivity"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/LockScreenActivity.Child.Theme" />
@@ -333,10 +327,6 @@
             android:name="de.schildbach.wallet.ui.AppUpgradeActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Theme" />
-
-        <activity
-            android:name="de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsActivity"
-            android:theme="@style/My.Theme.ChildActivity" />
 
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"

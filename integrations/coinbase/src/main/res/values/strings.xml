@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >Last known balance</string>
+    <string name="coinbase_link_title">Link your Coinbase account</string>
+    <string name="coinbase_link">Link Coinbase Account</string>
+    <string name="coinbase_transfer_details">Between Dash Wallet and your Coinbase account</string>
     <string name="coinbase_dash_wallet_error_title">We didn\'t find a Dash Wallet on your Coinbase account.</string>
     <string name="coinbase_dash_wallet_error_message"> Please create a Dash Wallet on Coinbase to proceed.</string>
     <string name="create_dash_account">Create Dash Account</string>
@@ -36,7 +39,7 @@
     <string name="coinbase_fee">Coinbase Fee</string>
     <string name="total">Total</string>
     <string name="order_preview">Order Preview</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">You will receive %s Dash on your Dash Wallet on this device. Please note that it can take up to 2-3 minutes to complete a transfer.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">You will receive %s Dash on your Dash Wallet on this device. Please note that it can take up to 2–3 minutes to complete a transfer.</string>
     <string name="amount_in_dash">Amount in Dash</string>
     <string name="cancel">Cancel</string>
     <string name="confirm_sec">Confirm (%ss)</string>
@@ -104,7 +107,6 @@
     <string name="invalid_code">That code was invalid. Please try again</string>
     <string name="verify_code">Verify</string>
     <string name="you_dont_have_enough_balance">You don’t have enough balance</string>
-    <string name="transfer_dash">Transfer Dash</string>
     <string name="transfer_amount">Transfer</string>
     <string name="dash_wallet_limit_description">The amount is higher than your balance</string>
     <string name="address_creation_failed">We could not create an address for your account to complete your transaction. Please try later.</string>

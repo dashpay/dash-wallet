@@ -14,7 +14,6 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
-
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -30,6 +29,13 @@
         <argument
             android:name="ShowNavBar"
             android:defaultValue="true" />
+
+        <action
+            android:id="@+id/home_to_buySell"
+            app:destination="@id/buySellFragment"
+            app:enterAnim="@anim/slide_in_bottom"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -63,6 +69,13 @@
                 android:defaultValue="Merchants"
                 app:argType="org.dash.wallet.features.exploredash.ui.ExploreTopic" />
         </action>
+
+        <action
+            android:id="@+id/explore_to_buySell"
+            app:destination="@id/buySellFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -74,6 +87,39 @@
         <argument
             android:name="ShowNavBar"
             android:defaultValue="true" />
+
+        <action
+            android:id="@+id/more_to_buySell"
+            app:destination="@id/buySellFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/buySellFragment"
+        android:name="de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsFragment"
+        android:label="BuyAndSell"
+        tools:layout="@layout/fragment_buy_sell_integrations">
+
+        <action
+            android:id="@+id/buySell_to_overview"
+            app:destination="@id/integrationOverviewFragment"
+            app:enterAnim="@anim/slide_in_bottom"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/integrationOverviewFragment"
+        android:name="de.schildbach.wallet.ui.buy_sell.IntegrationOverviewFragment"
+        android:label="IntegrationOverview"
+        tools:layout="@layout/fragment_integration_overview">
+
+        <argument
+            android:name="service"
+            android:defaultValue="COINBASE"
+            app:argType="de.schildbach.wallet.data.ServiceType" />
     </fragment>
 
     <include app:graph="@navigation/explore_dash" />

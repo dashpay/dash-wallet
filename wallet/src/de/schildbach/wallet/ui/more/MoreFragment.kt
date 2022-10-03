@@ -27,7 +27,6 @@ import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,6 +34,7 @@ import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 import javax.inject.Inject
 
 @FlowPreview
@@ -87,6 +87,6 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
     private fun startBuyAndSellActivity() {
         analytics.logEvent(AnalyticsConstants.MoreMenu.BUY_SELL_MORE, bundleOf())
-        startActivity(BuyAndSellIntegrationsActivity.createIntent(requireContext()))
+        safeNavigate(MoreFragmentDirections.moreToBuySell())
     }
 }

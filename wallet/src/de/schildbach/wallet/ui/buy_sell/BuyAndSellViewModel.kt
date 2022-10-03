@@ -16,120 +16,91 @@
 
 package de.schildbach.wallet.ui.buy_sell
 
-import androidx.lifecycle.*
+import androidx.core.os.bundleOf
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
-import kotlinx.coroutines.Dispatchers
+import de.schildbach.wallet.data.ServiceStatus
+import de.schildbach.wallet.data.ServiceType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.NetworkStateInt
+import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.uphold.api.UpholdClient
-import java.math.BigDecimal
+import org.dash.wallet.integration.uphold.api.getDashBalance
+import org.dash.wallet.integration.uphold.api.hasValidCredentials
 import javax.inject.Inject
-import kotlin.coroutines.suspendCoroutine
 
 /**
  * @author Eric Britten
  */
 @ExperimentalCoroutinesApi
 @HiltViewModel
-class BuyAndSellViewModel
-@Inject constructor(
+class BuyAndSellViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
-    private val config: Configuration,
-    networkState: NetworkStateInt
+    val config: Configuration,
+    val analytics: AnalyticsService,
+    private val upholdClient: UpholdClient,
+    networkState: NetworkStateInt,
+    exchangeRates: ExchangeRatesProvider
 ): ConnectivityViewModel(networkState) {
 
-    //TODO: move this into UpholdViewModel
-    private val triggerUploadBalanceUpdate = MutableLiveData<Unit>()
-
-    fun updateUpholdBalance() {
-        triggerUploadBalanceUpdate.value = Unit
+    companion object {
+        private const val ZERO_BALANCE = "0.0"
     }
 
-    private val upholdClient = UpholdClient.getInstance()
+    private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
 
-    var shouldShowAuthInfoPopup: Boolean
-        get() = !config.hasCoinbaseAuthInfoBeenShown
-        set(value) {
-            config.hasCoinbaseAuthInfoBeenShown = !value
-        }
-
-    private val _isAuthenticatedOnCoinbase: MutableLiveData<Boolean> = MutableLiveData()
-    val isAuthenticatedOnCoinbase: LiveData<Boolean>
-        get() = _isAuthenticatedOnCoinbase
-
-    private val _coinbaseBalance: MutableLiveData<String> = MutableLiveData()
-    val coinbaseBalance: LiveData<String>
-        get() = _coinbaseBalance
-
-    private val _servicesList: MutableLiveData<List<BuyAndSellDashServicesModel>> = MutableLiveData()
+    private val _servicesList = MutableLiveData(BuyAndSellDashServicesModel.getBuyAndSellDashServicesList())
     val servicesList: LiveData<List<BuyAndSellDashServicesModel>>
         get() = _servicesList
 
-    private var buyAndSellDashServicesModel = BuyAndSellDashServicesModel.getBuyAndSellDashServicesList()
+    val isUpholdAuthenticated: Boolean
+        get() = upholdClient.isAuthenticated
 
-    private var _showLoading: MutableLiveData<Boolean> = MutableLiveData()
-    val showLoading: LiveData<Boolean>
-        get() = _showLoading
+    val isCoinbaseAuthenticated: Boolean
+        get() = coinBaseRepository.isAuthenticated
 
-    fun setLoadingState(show: Boolean){
-        _showLoading.value = show
-    }
+    val hasValidCredentials: Boolean
+        get() = upholdClient.hasValidCredentials
 
-    val coinbaseAuthTokenCallback = SingleLiveEvent<Boolean>()
 
-    val upholdBalanceLiveData = Transformations.switchMap(triggerUploadBalanceUpdate) {
-        liveData {
-            emit(Resource.loading())
-            val result = suspendCoroutine<Resource<BigDecimal>> { continuation ->
-                upholdClient.getDashBalance(object : UpholdClient.Callback<BigDecimal> {
-                    override fun onSuccess(data: BigDecimal) {
-                        continuation.resumeWith(Result.success(Resource.success(data)))
-                    }
+    init {
+        exchangeRates.observeExchangeRate(config.exchangeCurrencyCode!!)
+            .onEach { exchangeRate ->
+                currentExchangeRate = exchangeRate
 
-                    override fun onError(e: java.lang.Exception, otpRequired: Boolean) {
-                        continuation.resumeWith(Result.success(Resource.error(e)))
-                    }
-                })
+                showRowBalance(ServiceType.UPHOLD, (config.lastUpholdBalance ?: "").ifEmpty { ZERO_BALANCE })
+                showRowBalance(ServiceType.COINBASE, (config.lastCoinbaseBalance ?: "").ifEmpty { ZERO_BALANCE })
             }
-            emit(result)
+            .launchIn(viewModelScope)
+
+        isDeviceConnectedToInternet.observeForever { isConnected ->
+            updateServicesStatus()
+            updateBalances()
         }
     }
 
-    fun isUserConnectedToCoinbase(): Boolean = coinBaseRepository.isUserConnected()
-
     private fun setDashServiceList(list: List<BuyAndSellDashServicesModel>) {
         _servicesList.value = list.sortedBy { it.serviceStatus }
-        buyAndSellDashServicesModel = list
     }
 
-
-    private fun changeItemStatus(clientIsAuthenticated: Boolean): BuyAndSellDashServicesModel.ServiceStatus {
-        return if (clientIsAuthenticated){
-            if (isDeviceConnectedToInternet.value == true){
-                BuyAndSellDashServicesModel.ServiceStatus.CONNECTED
-            } else {
-                BuyAndSellDashServicesModel.ServiceStatus.DISCONNECTED
-            }
-        } else BuyAndSellDashServicesModel.ServiceStatus.IDLE
-    }
-
-    fun setServicesStatus(coinBaseClientIsAuthenticated: Boolean, upHoldClientIsAuthenticated: Boolean) {
+    fun updateServicesStatus() {
         setDashServiceList(
-            buyAndSellDashServicesModel.toMutableList().map { model ->
-                val serviceStatus = when (model.serviceType) {
-                    BuyAndSellDashServicesModel.ServiceType.UPHOLD -> changeItemStatus(upHoldClientIsAuthenticated)
-                    BuyAndSellDashServicesModel.ServiceType.COINBASE -> changeItemStatus(coinBaseClientIsAuthenticated)
-                }
+            (_servicesList.value ?: listOf()).map { model ->
+                val serviceStatus = getItemStatus(model.serviceType)
                 if (serviceStatus != model.serviceStatus) {
                     model.copy(serviceStatus = serviceStatus)
                 } else {
@@ -139,18 +110,61 @@ class BuyAndSellViewModel
         )
     }
 
-    fun showRowBalance(serviceType: BuyAndSellDashServicesModel.ServiceType, currentExchangeRate: org.dash.wallet.common.data.ExchangeRate?, amount: String) {
-        val list = buyAndSellDashServicesModel.toMutableList().map { model ->
+    fun updateBalances() {
+        if (isDeviceConnectedToInternet.value == true) {
+            if (upholdClient.isAuthenticated) {
+                updateUpholdBalance()
+            }
+
+            if (coinBaseRepository.isUserConnected()) {
+                updateCoinbaseBalance()
+            }
+        }
+    }
+
+    private fun getItemStatus(service: ServiceType): ServiceStatus {
+        var isAuthenticated = false
+        var hasValidCredentials = false
+
+        when (service) {
+            ServiceType.UPHOLD -> {
+                hasValidCredentials = upholdClient.hasValidCredentials
+                isAuthenticated = upholdClient.isAuthenticated
+            }
+            ServiceType.COINBASE -> {
+                hasValidCredentials = coinBaseRepository.hasValidCredentials
+                isAuthenticated = coinBaseRepository.isAuthenticated
+            }
+        }
+
+        if (!hasValidCredentials) {
+            return ServiceStatus.IDLE_DISCONNECTED
+        }
+
+        val hasNetwork = isDeviceConnectedToInternet.value == true
+
+        return if (isAuthenticated) {
+            if (hasNetwork) ServiceStatus.CONNECTED else ServiceStatus.DISCONNECTED
+        } else {
+            if (hasNetwork) ServiceStatus.IDLE else ServiceStatus.IDLE_DISCONNECTED
+        }
+    }
+
+    private fun showRowBalance(serviceType: ServiceType, amount: String) {
+        val list = (_servicesList.value ?: listOf()).map { model ->
             if (model.serviceType == serviceType) {
                 val balance = try {
                     Coin.parseCoin(amount)
                 } catch (x: Exception) {
                     Coin.ZERO
                 }
-                if (currentExchangeRate == null) {
+
+                val currentRate = currentExchangeRate
+
+                if (currentRate == null) {
                     model.copy(balance = balance)
                 } else {
-                    val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
+                    val exchangeRate = ExchangeRate(Coin.COIN, currentRate.fiat)
                     val localValue = exchangeRate.coinToFiat(balance)
                     model.copy(balance = balance, localBalance = localValue)
                 }
@@ -161,41 +175,48 @@ class BuyAndSellViewModel
         setDashServiceList(list)
     }
 
-    fun getUserLastCoinBaseAccountBalance() = coinBaseRepository.getUserLastCoinbaseBalance()
-
-    fun loginToCoinbase(code: String) {
-        viewModelScope.launch(Dispatchers.Main) {
-            _showLoading.value = true
-            when (val response = coinBaseRepository.completeCoinbaseAuthentication(code)) {
+    private fun updateCoinbaseBalance() {
+        viewModelScope.launch {
+            when (val response = coinBaseRepository.getUserAccount()) {
                 is ResponseResource.Success -> {
-                    if (response.value){
-                        _isAuthenticatedOnCoinbase.value = true
-                        _coinbaseBalance.value = config.lastCoinbaseBalance
-                        coinbaseAuthTokenCallback.call()
-                    } else {
-                        _showLoading.value = false
-                    }
+                    response.value?.balance?.amount?.let { config.lastCoinbaseBalance = it }
+                    showRowBalance(ServiceType.COINBASE, response.value?.balance?.amount ?: config.lastCoinbaseBalance)
                 }
-
-                is ResponseResource.Failure -> { //TODO If login failed, inform the user
-                    _showLoading.value = false
+                is ResponseResource.Failure -> {
+                    showRowBalance(ServiceType.COINBASE, (config.lastCoinbaseBalance ?: "").ifEmpty { ZERO_BALANCE })
                 }
             }
         }
     }
 
-    fun updateCoinbaseBalance() {
-        viewModelScope.launch(Dispatchers.Main){
-            when (val response = coinBaseRepository.getUserAccount()) {
-                is ResponseResource.Success -> {
-                    _coinbaseBalance.value = response.value?.balance?.amount
-                }
-                is ResponseResource.Failure -> {
-                    _coinbaseBalance.value = if (!config.lastCoinbaseBalance.isNullOrEmpty()) {
-                            config.lastCoinbaseBalance
-                        } else "0.0"
-                    }
-                }
+    private fun updateUpholdBalance() {
+        viewModelScope.launch {
+            try {
+                val balance = upholdClient.getDashBalance()
+                config.lastUpholdBalance = balance.toString()
+                showRowBalance(
+                    ServiceType.UPHOLD,
+                    balance.toString()
+                )
+            } catch (ex: Exception) {
+                showRowBalance(ServiceType.UPHOLD, (config.lastUpholdBalance ?: "").ifEmpty { "0.0" })
             }
         }
+    }
+
+    fun logEnterUphold() {
+        analytics.logEvent(if (upholdClient.isAuthenticated) {
+            AnalyticsConstants.Uphold.ENTER_CONNECTED
+        } else {
+            AnalyticsConstants.Uphold.ENTER_DISCONNECTED
+        }, bundleOf())
+    }
+
+    fun logEnterCoinbase() {
+        analytics.logEvent(if (coinBaseRepository.isUserConnected()) {
+            AnalyticsConstants.Coinbase.ENTER_CONNECTED
+        } else {
+            AnalyticsConstants.Coinbase.ENTER_DISCONNECTED
+        }, bundleOf())
+    }
 }

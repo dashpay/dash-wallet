@@ -26,4 +26,10 @@
         <item name="strokeColor">@color/dash_blue</item>
         <item name="cornerRadius">10dp</item>
     </style>
+
+    <style name="CoinbaseLogoRadius19">
+        <item name="backgroundColor">@color/coinbase_blue</item>
+        <item name="strokeColor">@color/coinbase_blue</item>
+        <item name="cornerRadius">19dp</item>
+    </style>
 </resources>

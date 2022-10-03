@@ -66,6 +66,7 @@ class NotificationManagerWrapper @Inject constructor(
                 addNextIntentWithParentStack(intent)
                 getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             }
+
             notification.setContentIntent(pendingIntent).setAutoCancel(true)
         }
 

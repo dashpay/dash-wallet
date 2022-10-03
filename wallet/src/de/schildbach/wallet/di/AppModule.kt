@@ -39,6 +39,7 @@ import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.integration.uphold.api.UpholdClient
 import javax.inject.Singleton
 
 @Module
@@ -58,6 +59,9 @@ abstract class AppModule {
         fun provideClipboardManager(
             @ApplicationContext context: Context
         ) = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+
+        @Provides
+        fun provideUphold() = UpholdClient.getInstance()
     }
 
     @Binds

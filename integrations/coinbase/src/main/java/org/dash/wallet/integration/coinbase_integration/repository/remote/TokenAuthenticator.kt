@@ -50,7 +50,7 @@ class TokenAuthenticator @Inject constructor(
                 else -> {
                     userPreferences.setLastCoinBaseAccessToken(null)
                     userPreferences.setLastCoinBaseRefreshToken(null)
-                    userPreferences.setLastCoinBaseBalance(null)
+                    userPreferences.lastCoinbaseBalance = null
                     closeCoinbasePortalBroadcaster.dispatchCall()
                     null
                 }

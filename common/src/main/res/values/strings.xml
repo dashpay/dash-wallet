@@ -18,6 +18,12 @@
     <string name="error">Error</string>
     <string name="select_a_coin">Select a coin</string>
     <string name="request_coins_share_dialog_title">Share request for Dash…</string>
+    <string name="buy_with_fiat">Buy Dash with fiat</string>
+    <string name="buy_and_convert">Buy and convert Dash with another crypto</string>
+    <string name="transfer_dash">Transfer Dash</string>
+    <string name="login_error_title">Unable to log in your %s account</string>
+    <string name="login_error_message">An error occurred while logging in to your %s account.</string>
+
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
