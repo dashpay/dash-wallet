@@ -124,11 +124,13 @@ import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.WalletApplicationExt;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
 import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
+import de.schildbach.wallet.service.platform.PlatformSyncService;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener;
@@ -157,6 +159,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject BlockchainStateDao blockchainStateDao;
     @Inject ExchangeRatesDao exchangeRatesDao;
     @Inject TransactionMetadataProvider transactionMetadataProvider;
+    @Inject PlatformSyncService platformSyncService;
+    @Inject PlatformRepo platformRepo;
 
     private BlockStore blockStore;
     private BlockStore headerStore;
@@ -760,7 +764,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 // start peergroup
                 peerGroup.startAsync();
                 peerGroup.startBlockChainDownload(blockchainDownloadListener);
-                PlatformRepo.getInstance().addPreBlockProgressListener(blockchainDownloadListener);
+                platformSyncService.addPreBlockProgressListener(blockchainDownloadListener);
             } else if (!impediments.isEmpty() && peerGroup != null) {
                 application.getWallet().getContext().close();
                 log.info("stopping peergroup");
@@ -768,7 +772,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup.removeConnectedEventListener(peerConnectivityListener);
                 peerGroup.removePreBlocksDownloadedListener(preBlocksDownloadListener);
                 peerGroup.removeWallet(wallet);
-                PlatformRepo.getInstance().removePreBlockProgressListener(blockchainDownloadListener);
+                platformSyncService.removePreBlockProgressListener(blockchainDownloadListener);
                 peerGroup.stopAsync();
                 wallet.setRiskAnalyzer(defaultRiskAnalyzer);
                 riskAnalyzer.shutdown();
@@ -973,7 +977,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         if (Constants.SUPPORTS_PLATFORM) {
             PlatformRepo.getInstance().getPlatform().setMasternodeListManager(application.getWallet().getContext().masternodeListManager);
-            PlatformRepo.getInstance().resume();
+            platformSyncService.resume();// PlatformRepo.getInstance().resume();
         }
 
         updateAppWidget();
@@ -1085,14 +1089,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         unregisterReceiver(connectivityReceiver);
 
-        PlatformRepo.getInstance().shutdown();
+        platformSyncService.shutdown(); //PlatformRepo.getInstance().shutdown();
 
         if (peerGroup != null) {
             application.getWallet().getContext().close();
             peerGroup.removeDisconnectedEventListener(peerConnectivityListener);
             peerGroup.removeConnectedEventListener(peerConnectivityListener);
             peerGroup.removeWallet(application.getWallet());
-            PlatformRepo.getInstance().removePreBlockProgressListener(blockchainDownloadListener);
+            platformSyncService.removePreBlockProgressListener(blockchainDownloadListener);
             peerGroup.stop();
             application.getWallet().setRiskAnalyzer(defaultRiskAnalyzer);
             riskAnalyzer.shutdown();
@@ -1132,13 +1136,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 application.finalizeWipe();
             }
             //Clear the blockchain identity
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    // This code is not executed during a wipe, only a blockchain reset
-                    PlatformRepo.getInstance().clearDatabase(false);
-                }
-            });
+            WalletApplicationExt.INSTANCE.clearDatabases(application, false);
         }
 
         closeStream(mnlistinfoBootStrapStream);
@@ -1301,7 +1299,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         @Override
         public void onPreBlocksDownload(Peer peer) {
             log.info("onPreBlocksDownload using peer {}", peer);
-            PlatformRepo.getInstance().preBlockDownload(peerGroup.getPreBlockDownloadFuture());
+            platformSyncService.preBlockDownload(peerGroup.getPreBlockDownloadFuture());
         }
     };
 

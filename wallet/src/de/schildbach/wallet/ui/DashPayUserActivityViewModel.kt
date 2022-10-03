@@ -27,6 +27,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.NotificationsForUserLiveData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.TransactionsLiveData
@@ -41,6 +42,7 @@ import javax.inject.Inject
 @HiltViewModel
 class DashPayUserActivityViewModel @Inject constructor(
     application: Application,
+    val platformSyncService: PlatformSyncService,
     private val analytics: AnalyticsService
 ) : AndroidViewModel(application) {
 
@@ -79,7 +81,7 @@ class DashPayUserActivityViewModel @Inject constructor(
                 .enqueue()
     }
 
-    val notificationsForUser = NotificationsForUserLiveData(walletApplication, platformRepo, viewModelScope)
+    val notificationsForUser = NotificationsForUserLiveData(walletApplication, platformSyncService, platformRepo, viewModelScope)
     fun initNotificationsForUser() {
         notificationsForUser.userId = userData.dashPayProfile.userId
     }

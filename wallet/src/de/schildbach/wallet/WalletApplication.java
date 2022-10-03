@@ -105,6 +105,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -120,10 +121,13 @@ import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import dagger.hilt.android.HiltAndroidApp;
 import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
+import de.schildbach.wallet.data.TransactionMetadataChangeCacheDao;
+import de.schildbach.wallet.data.TransactionMetadataDocumentDao;
 import de.schildbach.wallet.security.SecurityGuard;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
+import de.schildbach.wallet.service.platform.PlatformSyncService;
 import de.schildbach.wallet.transactions.TransactionWrapperHelper;
 import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
@@ -193,6 +197,14 @@ public class WalletApplication extends BaseWalletApplication
 
     @Inject
     TransactionMetadataProvider transactionMetadataProvider;
+    @Inject
+    TransactionMetadataChangeCacheDao transactionMetadataChangeCacheDao;
+    @Inject
+    TransactionMetadataDocumentDao transactionMetadataDocumentDao;
+    @Inject
+    PlatformRepo platformRepo;
+    @Inject
+    PlatformSyncService platformSyncService;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -424,7 +436,8 @@ public class WalletApplication extends BaseWalletApplication
     }
 
     private void initPlatform() {
-        PlatformRepo.getInstance().initGlobal();
+        platformSyncService.initGlobal();
+        //PlatformRepo.getInstance().initGlobal();
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -995,15 +1008,8 @@ public class WalletApplication extends BaseWalletApplication
             walletBackupFile.delete();
         }
 
-        Executors.newSingleThreadExecutor().execute(new Runnable() {
-            @Override
-            public void run() {
-                PlatformRepo.getInstance().clearDatabase(true);
-            }
-        });
-
         // clear data on wallet reset
-        transactionMetadataProvider.clear();
+        WalletApplicationExt.INSTANCE.clearDatabases(this, true);
         // wallet must be null for the OnboardingActivity flow
         wallet = null;
     }

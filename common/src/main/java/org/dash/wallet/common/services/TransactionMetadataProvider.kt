@@ -99,5 +99,5 @@ interface TransactionMetadataProvider {
     }
 
     // Reset methods
-    fun clear()
+    suspend fun clear()
 }

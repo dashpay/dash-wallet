@@ -352,10 +352,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override fun clear() {
-        syncScope.launch {
-            transactionMetadataDao.clear()
-            addressMetadataDao.clear()
-        }
+    override suspend fun clear() {
+        transactionMetadataDao.clear()
+        addressMetadataDao.clear()
     }
 }

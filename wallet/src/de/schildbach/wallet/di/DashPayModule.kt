@@ -17,17 +17,45 @@
 
 package de.schildbach.wallet.di
 
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.data.TransactionMetadataChangeCacheDao
+import de.schildbach.wallet.data.TransactionMetadataDocumentDao
+import de.schildbach.wallet.service.platform.PlatformBroadcastService
+import de.schildbach.wallet.service.platform.PlatformDocumentBroadcastService
+import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.platform.PlatformSynchronizationService
+
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DashPayModule {
-    @Provides
-    @Singleton
-    fun providePlatformRepo() = PlatformRepo.getInstance()
+abstract class DashPayModule {
+    companion object {
+        @Provides
+        @Singleton
+        fun providePlatformRepo(): PlatformRepo = PlatformRepo.getInstance()
+
+        @Provides
+        fun provideTransactionMetadata(appDatabase: AppDatabase): TransactionMetadataChangeCacheDao {
+            return appDatabase.transactionMetadataCacheDao()
+        }
+
+        @Provides
+        fun provideTransactionMetadataDocumentDao(appDatabase: AppDatabase): TransactionMetadataDocumentDao {
+            return appDatabase.transactionMetadataDocumentDao()
+        }
+    }
+
+    @Singleton // only want one of PlatformSyncService created
+    @Binds
+    abstract fun bindsPlatformSyncService(platformSyncService: PlatformSynchronizationService): PlatformSyncService
+
+    @Binds
+    abstract fun bindsPlatformBroadcastService(platformBroadcastService: PlatformDocumentBroadcastService): PlatformBroadcastService
 }

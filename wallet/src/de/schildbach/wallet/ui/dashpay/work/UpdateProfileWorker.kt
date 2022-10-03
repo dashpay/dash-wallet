@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package de.schildbach.wallet.ui.dashpay.work
 
 import android.content.Context
@@ -17,6 +33,7 @@ import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -30,7 +47,8 @@ import java.util.*
 class UpdateProfileWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
-    val analytics: AnalyticsService)
+    val analytics: AnalyticsService,
+    val platformBroadcastService: PlatformBroadcastService)
     : BaseWorker(context, parameters) {
 
     companion object {
@@ -106,7 +124,7 @@ class UpdateProfileWorker @AssistedInject constructor(
         )
 
         return try {
-            val profileRequestResult = platformRepo.broadcastUpdatedProfile(dashPayProfile, encryptionKey)
+            val profileRequestResult = platformBroadcastService.broadcastUpdatedProfile(dashPayProfile, encryptionKey)
             Result.success(workDataOf(
                     KEY_USER_ID to profileRequestResult.userId
             ))

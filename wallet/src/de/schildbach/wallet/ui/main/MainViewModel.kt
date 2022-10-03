@@ -38,6 +38,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.*
 import org.dash.wallet.common.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.ui.transactions.TransactionRowView
@@ -78,6 +79,7 @@ class MainViewModel @Inject constructor(
     walletApplication: WalletApplication,
     appDatabase: AppDatabase,
     val platformRepo: PlatformRepo,
+    val platformSyncService: PlatformSyncService,
     private val savedStateHandle: SavedStateHandle,
     private val metadataProvider: TransactionMetadataProvider,
     private val blockchainStateProvider: BlockchainStateProvider
@@ -189,7 +191,7 @@ class MainViewModel @Inject constructor(
     var processingSeriousError = false
 
     val notificationCountData =
-        NotificationCountLiveData(walletApplication, platformRepo, viewModelScope)
+        NotificationCountLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
     val notificationCount: Int
         get() = notificationCountData.value ?: 0
 
@@ -341,7 +343,7 @@ class MainViewModel @Inject constructor(
     private fun forceUpdateNotificationCount() {
         notificationCountData.onContactsUpdated()
         viewModelScope.launch(Dispatchers.IO) {
-            platformRepo.updateContactRequests()
+            platformSyncService.updateContactRequests()
         }
     }
 

@@ -18,6 +18,7 @@ import de.schildbach.wallet.data.BlockchainIdentityData.CreationState
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.send.DecryptSeedTask
 import de.schildbach.wallet.ui.send.DeriveKeyTask
@@ -135,6 +136,7 @@ class CreateIdentityService : LifecycleService() {
 
     private val walletApplication by lazy { application as WalletApplication }
     private val platformRepo by lazy { PlatformRepo.getInstance() }
+    @Inject lateinit var platformSyncService: PlatformSyncService
     private lateinit var securityGuard: SecurityGuard
 
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
@@ -267,6 +269,7 @@ class CreateIdentityService : LifecycleService() {
 
         when {
             (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring) -> {
+                // TODO: handle case when blockchain reset has happened and the cftx was not found yet
                 val cftx = blockchainIdentityDataTmp.findCreditFundingTransaction(walletApplication.wallet)
                         ?: throw IllegalStateException()
 
@@ -631,7 +634,7 @@ class CreateIdentityService : LifecycleService() {
 
     private suspend fun restoreIdentity(identity: ByteArray) {
         log.info("Restoring identity and username")
-        platformRepo.updateSyncStatus(PreBlockStage.StartRecovery)
+        platformSyncService.updateSyncStatus(PreBlockStage.StartRecovery)
 
         // use an "empty" state for each
         blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null, null, true)
@@ -671,7 +674,7 @@ class CreateIdentityService : LifecycleService() {
         // this process should have been done already, otherwise the credit funding transaction
         // will not have the credit burn keys associated with it
         platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
-        platformRepo.updateSyncStatus(PreBlockStage.InitWallet)
+        platformSyncService.updateSyncStatus(PreBlockStage.InitWallet)
 
         //
         // Step 2: The credit funding registration exists, no need to create it
@@ -691,7 +694,7 @@ class CreateIdentityService : LifecycleService() {
         }
         platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
-        platformRepo.updateSyncStatus(PreBlockStage.GetIdentity)
+        platformSyncService.updateSyncStatus(PreBlockStage.GetIdentity)
 
 
         //
@@ -705,7 +708,7 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.recoverUsernamesAsync(blockchainIdentity)
         platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERED)
-        platformRepo.updateSyncStatus(PreBlockStage.GetName)
+        platformSyncService.updateSyncStatus(PreBlockStage.GetName)
 
         //
         // Step 6: Find the profile
@@ -714,7 +717,7 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.recoverDashPayProfile(blockchainIdentity)
         // blockchainIdentity hasn't changed
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
-        platformRepo.updateSyncStatus(PreBlockStage.GetProfile)
+        platformSyncService.updateSyncStatus(PreBlockStage.GetProfile)
 
         addInviteUserAlert(walletApplication.wallet!!)
 
@@ -724,7 +727,7 @@ class CreateIdentityService : LifecycleService() {
         // Complete the entire process
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE_AND_DISMISS)
 
-        platformRepo.updateSyncStatus(PreBlockStage.RecoveryComplete)
+        platformSyncService.updateSyncStatus(PreBlockStage.RecoveryComplete)
         PlatformRepo.getInstance().init()
     }
 

@@ -25,6 +25,8 @@ import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.service.platform.PlatformBroadcastService
+import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +43,9 @@ import javax.inject.Inject
 @HiltViewModel
 open class DashPayViewModel @Inject constructor(
     application: Application,
-    private val analytics: AnalyticsService
+    private val analytics: AnalyticsService,
+    val platformSyncService: PlatformSyncService,
+    val platformBroadcastService: PlatformBroadcastService
 ) : AndroidViewModel(application) {
 
     companion object {
@@ -51,14 +55,14 @@ open class DashPayViewModel @Inject constructor(
     protected val platformRepo = PlatformRepo.getInstance()
     protected val walletApplication = application as WalletApplication
 
-    private val usernameLiveData = MutableLiveData<String>()
+    private val usernameLiveData = MutableLiveData<String?>()
     private val userSearchLiveData = MutableLiveData<UserSearch>()
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
-    private val contactUserIdLiveData = MutableLiveData<String>()
+    private val contactUserIdLiveData = MutableLiveData<String?>()
 
-    val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, viewModelScope)
-    val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformRepo)
-    val frequentContactsLiveData = FrequentContactsLiveData(walletApplication, platformRepo, viewModelScope)
+    val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
+    val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformSyncService)
+    val frequentContactsLiveData = FrequentContactsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
     val blockchainStateData = AppDatabase.getAppDatabase().blockchainStateDao().load()
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
 
@@ -182,7 +186,7 @@ open class DashPayViewModel @Inject constructor(
 
     fun updateDashPayState() {
         viewModelScope.launch(Dispatchers.IO) {
-            platformRepo.updateContactRequests()
+            platformSyncService.updateContactRequests()
         }
     }
 
@@ -201,7 +205,7 @@ open class DashPayViewModel @Inject constructor(
         } else {
             recentlyModifiedContacts.add(toUserId)
         }
-        recentlyModifiedContactsLiveData.postValue(recentlyModifiedContacts)
+        recentlyModifiedContactsLiveData.postValue(recentlyModifiedContacts!!)
         SendContactRequestOperation(walletApplication)
                 .create(toUserId)
                 .enqueue()
@@ -212,7 +216,7 @@ open class DashPayViewModel @Inject constructor(
             if (it.second != null) {
                 emit(Resource.loading(null))
                 try {
-                    val result = platformRepo.sendContactRequest(it.first, it.second!!)
+                    val result = platformBroadcastService.sendContactRequest(it.first, it.second!!)
                     emit(Resource.success(result))
                 } catch (ex: Exception) {
                     emit(Resource.error(formatExceptionMessage("send contact request", ex), null))

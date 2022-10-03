@@ -20,15 +20,17 @@ package de.schildbach.wallet.ui.dashpay
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.service.platform.PlatformSyncService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.dashj.platform.dpp.identifier.Identifier
 
 class NotificationsForUserLiveData(walletApplication: WalletApplication,
-                                   platformRepo: PlatformRepo,
+                                   platformSyncService: PlatformSyncService,
+                                   val platformRepo: PlatformRepo,
                                    private val scope: CoroutineScope)
-    : ContactsBasedLiveData<Resource<List<NotificationItem>>>(walletApplication, platformRepo) {
+    : ContactsBasedLiveData<Resource<List<NotificationItem>>>(walletApplication, platformSyncService) {
 
     var userId: String? = null
         set(value) {
