@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">请Dash发送者扫描该二维码.</string>
     <string name="request_coins_fragment_initiate_request_nfc">或者靠近并轻敲已启用NFC的设备.</string>
     <string name="request_coins_clipboard_msg">Dash请求已复制到剪切板.</string>
-    <string name="request_coins_share_dialog_title">分享接收Dash的请求…</string>
     <string name="request_coins_no_local_app_msg">未找到其他Dash APP</string>
     <string name="request_coins_options_local_app_title">从本地应用程序索取</string>
     <string name="address_book_activity_title">地址簿</string>

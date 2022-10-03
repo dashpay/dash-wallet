@@ -15,6 +15,7 @@
     <string name="email_placeholder">على سبيل المثال johndoe@mail.com</string>
     <string name="error">خطأ</string>
     <string name="select_a_coin">اختر عملة </string>
+    <string name="request_coins_share_dialog_title">طلب مشاركة لـداش ...</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">جيرنزي جنيه</string>
@@ -49,6 +50,7 @@
     <string name="button_okay">اوك</string>
     <string name="button_share">مشاركة</string>
     <string name="verify">تحقق</string>
+    <string name="receive_enter_amount_button">حدد المبلغ</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">بحث</string>

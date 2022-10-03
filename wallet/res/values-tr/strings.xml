@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Bu kodu gönderen tarafından tarattırın.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Veya NFC özelliği etkinleştirilmiş bir cihaz ile dokundurtun.</string>
     <string name="request_coins_clipboard_msg">Dash talebi panoya kopyalandı</string>
-    <string name="request_coins_share_dialog_title">Dash talebini paylaş...</string>
     <string name="request_coins_no_local_app_msg">Başka Dash uygulaması bulunamadı</string>
     <string name="request_coins_options_local_app_title">Yerel uygulamadan talep et</string>
     <string name="address_book_activity_title">Adres rehberi</string>

@@ -67,8 +67,6 @@
 
     <string name="receive_title">入金</string>
     <string name="receive_enter_amount_message">受け取る金額を指定してください</string>
-    <string name="receive_enter_amount_button">金額を指定する</string>
-    <string name="receive_share_button">共有</string>
 
     <string name="pay_title">送金</string>
     <string name="history_title">履歴</string>
@@ -238,13 +236,11 @@
     <string name="view_seed_title">復元フレーズ</string>
     <string name="transaction_result_view_on_explorer">ブロックエクスプローラーで見る</string>
     <string name="transaction_result_tax_category">税金の区分</string>
-    <string name="transaction_result_tax_category_loading">読み込み中</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>収入</item>
-        <item>支出</item>
-        <item>入金</item>
-        <item>振替</item>
-    </string-array>
+    <string name="transaction_result_tax_category_loading">読み込み中…</string>
+    <string name="tax_category_income">収入</string>
+    <string name="tax_category_expense">支出</string>
+    <string name="tax_category_transfer_in">入金</string>
+    <string name="tax_category_transfer_out">振替</string>
     <string name="transaction_result_paid_successfully">送金が成功しました</string>
     <string name="transaction_result_sent_to">へ送金済み</string>
     <string name="transaction_date_and_time">日付け</string>
@@ -287,16 +283,13 @@
     <string name="tools_show_xpub">拡張公開鍵</string>
 
     <string name="about_help_us_improve">品質を向上させるためにご協力ください</string>
-    <string name="about_review_and_rate">レビュー &amp; アプリを評価する</string>
     <string name="about_contact_support">サポートへ連絡する</string>
     <string name="about_fork_disclaimer">これはビットコインウォレットからフォークしたオープンソースのアプリです</string>
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dashウォレット %s</string>
-    <string name="about_last_explore_dash_sync">%1$s\nLast sync:%2$sで更新されたDashデータを確認します</string>
     <string name="about_last_explore_dash_update_error">取り出しできません</string>
     <string name="about_last_explore_dash_sync_never">全く</string>
-
     <string name="block">ブロック</string>
     <string name="time">時間</string>
     <string name="hash">ハッシュ</string>

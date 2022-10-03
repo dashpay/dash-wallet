@@ -67,8 +67,6 @@
 
     <string name="receive_title">Terima</string>
     <string name="receive_enter_amount_message">Tentukan jumlah yang akan diterima</string>
-    <string name="receive_enter_amount_button">Tentukan Jumlah</string>
-    <string name="receive_share_button">Berbagi</string>
 
     <string name="pay_title">Kirim</string>
     <string name="history_title">Riwayat</string>
@@ -234,12 +232,10 @@
     <string name="transaction_result_view_on_explorer">Lihat di Blok Explorer</string>
     <string name="transaction_result_tax_category">Kategori Pajak</string>
     <string name="transaction_result_tax_category_loading">Memuat...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Pemasukan</item>
-        <item>pengeluaran</item>
-        <item>Transfer masuk</item>
-        <item>Transfer keluar</item>
-    </string-array>
+    <string name="tax_category_income">Pemasukan</string>
+    <string name="tax_category_expense">pengeluaran</string>
+    <string name="tax_category_transfer_in">Transfer masuk</string>
+    <string name="tax_category_transfer_out">Transfer keluar</string>
     <string name="transaction_result_paid_successfully">Pengiriman berhasil</string>
     <string name="transaction_result_sent_to">Terkirim ke</string>
     <string name="transaction_date_and_time">Tanggal</string>
@@ -282,16 +278,13 @@
     <string name="tools_show_xpub">Kunci Publik Diperpanjang</string>
 
     <string name="about_help_us_improve">Bantu kami meningkatkan pengalaman Anda</string>
-    <string name="about_review_and_rate">Ulas &amp; Beri nilai aplikasi</string>
     <string name="about_contact_support">Hubungi Dukungan</string>
     <string name="about_fork_disclaimer">Ini adalah aplikasi open source yang bercabang dari Bitcoin Wallet</string>
     <string name="about_copyright">Hak Cipta © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_dash_sync">Data Eksplorasi Dash diperbarui pada: %1$s\nSinkronisasi terakhir: %2$s</string>
     <string name="about_last_explore_dash_update_error">tidak bisa mengambil</string>
     <string name="about_last_explore_dash_sync_never">tak pernah</string>
-
     <string name="block">Blok</string>
     <string name="time">Waktu</string>
     <string name="hash">Hash</string>

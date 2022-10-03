@@ -15,6 +15,7 @@
     <string name="email_placeholder">예시 johndoe@mail.com</string>
     <string name="error">오류</string>
     <string name="select_a_coin">코인 선택</string>
+    <string name="request_coins_share_dialog_title">대시 요청을 공유합니다...</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">건지섬 파운드</string>
@@ -49,6 +50,7 @@
     <string name="button_okay">알겠습니다</string>
     <string name="button_share">공유</string>
     <string name="verify">인증하기</string>
+    <string name="receive_enter_amount_button">금액 특정하기</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">검색</string>

@@ -67,8 +67,6 @@
 
     <string name="receive_title">Отримати</string>
     <string name="receive_enter_amount_message">Вкажіть суму для отримання</string>
-    <string name="receive_enter_amount_button">Вкажіть суму</string>
-    <string name="receive_share_button">Поділитися</string>
 
     <string name="pay_title">Відправити</string>
     <string name="history_title">Історія</string>
@@ -243,12 +241,10 @@
     <string name="transaction_result_view_on_explorer">Подивитися в Block Explorer</string>
     <string name="transaction_result_tax_category">Податкова категорія</string>
     <string name="transaction_result_tax_category_loading">Завантаження...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Дохід</item>
-        <item>Витрата</item>
-        <item>Трансфер в</item>
-        <item>Трансфер з</item>
-    </string-array>
+    <string name="tax_category_income">Дохід</string>
+    <string name="tax_category_expense">Витрата</string>
+    <string name="tax_category_transfer_in">Трансфер в</string>
+    <string name="tax_category_transfer_out">Трансфер з</string>
     <string name="transaction_result_paid_successfully">Успішно відправлено</string>
     <string name="transaction_result_sent_to">Відправити</string>
     <string name="transaction_date_and_time">Дата</string>
@@ -291,16 +287,13 @@
     <string name="tools_show_xpub">Розширений публічний ключ</string>
 
     <string name="about_help_us_improve">Допоможіть нам стати кращими</string>
-    <string name="about_review_and_rate">Залишити відгук &amp; Оцінити програму</string>
     <string name="about_contact_support">Служба підтримки</string>
     <string name="about_fork_disclaimer">Це додаток з відкритим кодом, заснований на Bitcoin Wallet</string>
     <string name="about_copyright">Всі права захищено © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_dash_sync">Дані Explore Dash були оновлені %1$s\nОстання синхронізація: %2$s</string>
     <string name="about_last_explore_dash_update_error">не можу отримати</string>
     <string name="about_last_explore_dash_sync_never">ніколи</string>
-
     <string name="block">Блок</string>
     <string name="time">Час</string>
     <string name="hash">Хеш</string>

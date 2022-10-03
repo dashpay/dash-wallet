@@ -67,8 +67,6 @@
 
     <string name="receive_title">Receber</string>
     <string name="receive_enter_amount_message">Especifique o valor a ser recebido</string>
-    <string name="receive_enter_amount_button">Especificar Valor</string>
-    <string name="receive_share_button">Compartilhar</string>
 
     <string name="pay_title">Enviar</string>
     <string name="history_title">Histórico</string>
@@ -240,12 +238,10 @@
     <string name="transaction_result_view_on_explorer">Ver no Explorador de Blocos</string>
     <string name="transaction_result_tax_category">Categoria fiscal</string>
     <string name="transaction_result_tax_category_loading">Carregando…</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Receita</item>
-        <item>Despesa</item>
-        <item>Transferências de entrada</item>
-        <item>Transferências de saída</item>
-    </string-array>
+    <string name="tax_category_income">Receita</string>
+    <string name="tax_category_expense">Despesa</string>
+    <string name="tax_category_transfer_in">Transferências de entrada</string>
+    <string name="tax_category_transfer_out">Transferências de saída</string>
     <string name="transaction_result_paid_successfully">Enviado com sucesso</string>
     <string name="transaction_result_sent_to">Enviado para</string>
     <string name="transaction_date_and_time">Data</string>
@@ -288,16 +284,13 @@
     <string name="tools_show_xpub">Chave Pública Estendida</string>
 
     <string name="about_help_us_improve">Ajude-nos a melhorar a sua experiência</string>
-    <string name="about_review_and_rate">Comente ou classifique o aplicativo</string>
     <string name="about_contact_support">Contato com o Suporte</string>
     <string name="about_fork_disclaimer">Este é um aplicativo de código aberto bifurcado da Bitcoin Wallet</string>
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_dash_sync">Explore os dados atualizados do Dash em:%1$s\nÚltima sincronização:%2$s</string>
     <string name="about_last_explore_dash_update_error">não foi possível buscar</string>
     <string name="about_last_explore_dash_sync_never">nunca</string>
-
     <string name="block">Bloquear</string>
     <string name="time">Tempo</string>
     <string name="hash">Hash</string>

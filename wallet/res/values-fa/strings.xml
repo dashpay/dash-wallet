@@ -116,7 +116,6 @@
     <string name="request_coins_fragment_initiate_request_qr">از فرستنده بخواهید این کد را اسکن کند</string>
     <string name="request_coins_fragment_initiate_request_nfc">یا اینکه از یک دستگاه مجهز به فناوری ان‌اف‌سی استفاده کنید</string>
     <string name="request_coins_clipboard_msg">درخواست دش کپی شد</string>
-    <string name="request_coins_share_dialog_title">درخواست دش را به اشتراک‌ بگذارید</string>
     <string name="request_coins_no_local_app_msg">هیچ اپلیکیشن دش دیگری پیدا نشد</string>
     <string name="request_coins_options_local_app_title">درخواست از اپلیکیشن محی</string>
     <string name="address_book_activity_title">فهرست نشانی‌های منتخب</string>

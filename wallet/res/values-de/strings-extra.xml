@@ -67,8 +67,6 @@
 
     <string name="receive_title">Empfangen</string>
     <string name="receive_enter_amount_message">Zu empfangenen Betrag festsetzen</string>
-    <string name="receive_enter_amount_button">Betrag festsetzen</string>
-    <string name="receive_share_button">Teilen</string>
 
     <string name="pay_title">Senden</string>
     <string name="history_title">Verlauf</string>
@@ -183,6 +181,7 @@
     <string name="notification_synchronization_channel_name">Synchronisierung</string>
     <string name="notification_synchronization_channel_description">Eine Benachrichtigung anzeigen, wenn die App sich mit dem Netzwerk synchronisiert.</string>
     <string name="notification_generic_channel_name">Allgemeine Benachrichtigungen</string>
+    <string name="notification_generic_channel_description">Andere Dash Wallet Ereignisse</string>
     <string name="notification_push_channel_name">Push-Benachrichtigungen</string>
     <string name="notification_push_channel_description">Zeigt Push-Benachrichtigungen an, die dir von Dash gesendet wurden</string>
     <string name="notification_settings_title">Benachrichtigungen</string>
@@ -236,12 +235,10 @@
     <string name="transaction_result_view_on_explorer">Im Blockexplorer ansehen</string>
     <string name="transaction_result_tax_category">Steuerliche Kategorie</string>
     <string name="transaction_result_tax_category_loading">Laden...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Einnahmen</item>
-        <item>Ausgaben</item>
-        <item>Einkommende Überweisung</item>
-        <item>Ausgehende Überweisung</item>
-    </string-array>
+    <string name="tax_category_income">Einnahmen</string>
+    <string name="tax_category_expense">Ausgaben</string>
+    <string name="tax_category_transfer_in">Einkommende Überweisung</string>
+    <string name="tax_category_transfer_out">Ausgehende Überweisung</string>
     <string name="transaction_result_paid_successfully">Erfolgreich gesendet</string>
     <string name="transaction_result_sent_to">Senden an</string>
     <string name="transaction_date_and_time">Datum</string>
@@ -284,16 +281,13 @@
     <string name="tools_show_xpub">Extended Public Key</string>
 
     <string name="about_help_us_improve">Hilf uns, deine Erfahrung zu verbessern</string>
-    <string name="about_review_and_rate">Rezensiere &amp; bewerte die App</string>
     <string name="about_contact_support">Support kontaktieren</string>
     <string name="about_fork_disclaimer">Dies ist eine Open Source App, die von der Bitcoin Wallet geforked wurde</string>
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_dash_sync">Entdecke die aktualisierten Dash-Daten unter: %1$s\nLast sync: %2$s</string>
     <string name="about_last_explore_dash_update_error">nicht abrufbar</string>
     <string name="about_last_explore_dash_sync_never">nie</string>
-
     <string name="block">Block</string>
     <string name="time">Zeit</string>
     <string name="hash">Hash</string>
@@ -396,5 +390,6 @@
     <string name="reclassify_transactions_incoming_title">Eingehende Transaktionen</string>
     <string name="reclassify_transactions_change_it_message">Du kannst es ändern zu</string>
     <string name="reclassify_transactions_linked_accounts_title">Verknüpfte Konten</string>
+    <string name="reclassify_transactions_linked_accounts_message">Standardmäßig werden alle Transaktionen auf oder von Ihren verknüpften Konten (Tausch, Staking, usw.) als Überweisungen gekennzeichnet.</string>
     <string name="reclassify_transactions_change_explanation">Wähle eine beliebige Transaktion von der Webseite und ändere die Kategorie auf der Seite mit den Transaktionsdetails.</string>
 </resources>

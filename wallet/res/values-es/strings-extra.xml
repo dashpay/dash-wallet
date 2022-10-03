@@ -67,8 +67,6 @@
 
     <string name="receive_title">Recibir</string>
     <string name="receive_enter_amount_message">Especificar la cantidad a recibir</string>
-    <string name="receive_enter_amount_button">Especificar Monto</string>
-    <string name="receive_share_button">Compartir</string>
 
     <string name="pay_title">Enviar</string>
     <string name="history_title">Historial</string>
@@ -239,13 +237,11 @@
     <string name="view_seed_title">Frase de recuperación</string>
     <string name="transaction_result_view_on_explorer">Ver en el explorador de bloques</string>
     <string name="transaction_result_tax_category">Categoría de impuestos</string>
-    <string name="transaction_result_tax_category_loading">Cargando...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Ingreso</item>
-        <item>Gasto</item>
-        <item>Transferencia entrante</item>
-        <item>Transferencia de salida</item>
-    </string-array>
+    <string name="transaction_result_tax_category_loading">Cargando…</string>
+    <string name="tax_category_income">Ingreso</string>
+    <string name="tax_category_expense">Gasto</string>
+    <string name="tax_category_transfer_in">Transferencia entrante</string>
+    <string name="tax_category_transfer_out">Transferencia de salida</string>
     <string name="transaction_result_paid_successfully">Enviado exitosamente</string>
     <string name="transaction_result_sent_to">Enviado para</string>
     <string name="transaction_date_and_time">Fecha</string>
@@ -288,16 +284,13 @@
     <string name="tools_show_xpub">Extender llave publica</string>
 
     <string name="about_help_us_improve">Ayúdanos a mejorar tu experiencia</string>
-    <string name="about_review_and_rate">Evaluar la app</string>
     <string name="about_contact_support">Contactar Soporte</string>
     <string name="about_fork_disclaimer">Esta es una aplicación de código abierto derivada de una billetera de Bitcoin</string>
     <string name="about_copyright"> Dash Core 2022 Derechos reservados ©</string>
     <string name="about_license">Licencia pública general GNU v3.0</string>
     <string name="about_version_name">Billetera de Dash %s</string>
-    <string name="about_last_explore_dash_sync">Explorar la data de Dash actualizada el: %1$s\nÚltima sincronización: %2$s</string>
     <string name="about_last_explore_dash_update_error">No se puede recuperar</string>
     <string name="about_last_explore_dash_sync_never">Nunca</string>
-
     <string name="block">Bloque</string>
     <string name="time">Tiempo</string>
     <string name="hash">Hash</string>

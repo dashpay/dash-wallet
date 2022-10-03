@@ -15,6 +15,7 @@
     <string name="email_placeholder">ตัวอย่างเช่น johndoe@mail.com</string>
     <string name="error">ผิดพลาด</string>
     <string name="select_a_coin">เลือกเหรียญ</string>
+    <string name="request_coins_share_dialog_title">แชร์คำขอสำหรับ Dash</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -49,6 +50,7 @@
     <string name="button_okay">ตกลง</string>
     <string name="button_share">แบ่งปัน</string>
     <string name="verify">ตรวจสอบ</string>
+    <string name="receive_enter_amount_button">ระบุจำนวน</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">ค้นหา</string>

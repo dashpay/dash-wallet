@@ -15,6 +15,7 @@
     <string name="email_placeholder">Örneğin. johndoe@mail.com</string>
     <string name="error">Hata</string>
     <string name="select_a_coin">Bir koin seçin</string>
+    <string name="request_coins_share_dialog_title">Dash talebini paylaş...</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Lirası</string>
@@ -49,6 +50,7 @@
     <string name="button_okay">Tamam</string>
     <string name="button_share">Paylaş</string>
     <string name="verify">Onayla</string>
+    <string name="receive_enter_amount_button">Tutarı Belirleyin</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Ara</string>

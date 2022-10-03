@@ -67,8 +67,6 @@
 
     <string name="receive_title">Přijmout</string>
     <string name="receive_enter_amount_message">Určte částku, kterou chcete obdržet</string>
-    <string name="receive_enter_amount_button">Uvést částku</string>
-    <string name="receive_share_button">Sdílet</string>
 
     <string name="pay_title">Poslat</string>
     <string name="history_title">Historie</string>
@@ -239,6 +237,7 @@
     <string name="view_seed_done">Hotovo</string>
     <string name="view_seed_title">Fráze Pro Obnovení</string>
     <string name="transaction_result_view_on_explorer">Zobrazit ve vyhledávači</string>
+    <string name="transaction_result_tax_category_loading">Načítání...</string>
     <string name="transaction_result_paid_successfully">Úspešně odesláno</string>
     <string name="transaction_result_sent_to">Odeslat na</string>
     <string name="transaction_date_and_time">Datum</string>
@@ -277,16 +276,13 @@
     <string name="tools_show_xpub">Rozšířený veřejný klíč</string>
 
     <string name="about_help_us_improve">Pomoztne nám aplikaci vylepšit</string>
-    <string name="about_review_and_rate">Ohodnotit aplikaci</string>
     <string name="about_contact_support">Podpora</string>
     <string name="about_fork_disclaimer">Toto je aplikace s otevřeným zdrojovým kódem vycházející z bitcoinové peněženky.</string>
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_dash_sync">Data aktualizovaná v: %1$s\n Poslední synchornizace: %2$s</string>
     <string name="about_last_explore_dash_update_error">nelze načíst</string>
     <string name="about_last_explore_dash_sync_never">nikdy</string>
-
     <string name="block">Blok</string>
     <string name="time">Čas</string>
     <string name="hash">Hash</string>

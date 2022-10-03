@@ -67,8 +67,6 @@
 
     <string name="receive_title">Λήψη</string>
     <string name="receive_enter_amount_message">Καθορίστε το ποσό που θα παραληφθεί</string>
-    <string name="receive_enter_amount_button">Καθορίστε το ποσό</string>
-    <string name="receive_share_button">Μοιραστείτε</string>
 
     <string name="pay_title">Αποστολή</string>
     <string name="history_title">Ιστορικό</string>
@@ -237,12 +235,10 @@
     <string name="transaction_result_view_on_explorer">Προβολή στον Explorer των Block</string>
     <string name="transaction_result_tax_category">Φορολογική κατηγορία</string>
     <string name="transaction_result_tax_category_loading">Φορτώνει...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Εισόδημα</item>
-        <item>Έξοδα</item>
-        <item>Μεταφορά στο</item>
-        <item>Μεταφορά προς τα έξω</item>
-    </string-array>
+    <string name="tax_category_income">Εισόδημα</string>
+    <string name="tax_category_expense">Έξοδα</string>
+    <string name="tax_category_transfer_in">Μεταφορά στο</string>
+    <string name="tax_category_transfer_out">Μεταφορά προς τα έξω</string>
     <string name="transaction_result_paid_successfully">Εστάλη με επιτυχία</string>
     <string name="transaction_result_sent_to">Αποστόλη στο</string>
     <string name="transaction_date_and_time">Ημερομηνία</string>
@@ -285,16 +281,13 @@
     <string name="tools_show_xpub">Εκτεταμένο Δημόσιο Κλειδί</string>
 
     <string name="about_help_us_improve">Βοηθήστε μας να βελτιώσουμε την εμπειρία σας</string>
-    <string name="about_review_and_rate">Κρίνετε και βαθμολογήστε την εφαρμογή</string>
     <string name="about_contact_support">Επικοινωνήστε με την υποστήριξη</string>
     <string name="about_fork_disclaimer">Πρόκειται για μια εφαρμογή ανοιχτού κώδικα που διαχωρίστηκε από το Bitcoin πορτοφόλι</string>
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">Γενική Άδεια Δημόσιας Χρήσης GNU v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_dash_sync">Εξερευνήστε τα δεδομένα Dash που ενημερώνονται στο:%1$s\nΤελευταίος συγχρονισμός: %2$s</string>
     <string name="about_last_explore_dash_update_error">δεν μπορεί να λάβει</string>
     <string name="about_last_explore_dash_sync_never">ποτέ</string>
-
     <string name="block">Μπλόκ</string>
     <string name="time">Ώρα</string>
     <string name="hash">Hash</string>

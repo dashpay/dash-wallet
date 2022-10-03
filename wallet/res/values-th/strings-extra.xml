@@ -67,8 +67,6 @@
 
     <string name="receive_title">ได้รับ</string>
     <string name="receive_enter_amount_message">ระบุจำนวนที่ได้รับ</string>
-    <string name="receive_enter_amount_button">ระบุจำนวน</string>
-    <string name="receive_share_button">แบ่งปัน</string>
 
     <string name="pay_title">ส่ง</string>
     <string name="history_title">ประวัติ</string>
@@ -234,12 +232,10 @@
     <string name="transaction_result_view_on_explorer">ดูใน Block Explorer</string>
     <string name="transaction_result_tax_category">หมวดภาษี</string>
     <string name="transaction_result_tax_category_loading">กำลังโหลด...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>รายได้</item>
-        <item>ค่าใช้จ่าย</item>
-        <item>การโอนเข้า</item>
-        <item>การโอนออก</item>
-    </string-array>
+    <string name="tax_category_income">รายได้</string>
+    <string name="tax_category_expense">ค่าใช้จ่าย</string>
+    <string name="tax_category_transfer_in">การโอนเข้า</string>
+    <string name="tax_category_transfer_out">การโอนออก</string>
     <string name="transaction_result_paid_successfully">ส่งสำเร็จแล้ว</string>
     <string name="transaction_result_sent_to">ส่งไปยัง</string>
     <string name="transaction_date_and_time">วันที่</string>
@@ -282,16 +278,13 @@
     <string name="tools_show_xpub">ขยาย Public key</string>
 
     <string name="about_help_us_improve">ช่วยเราเพื่อพัฒนาประการณ์ของคุณ</string>
-    <string name="about_review_and_rate">วิจารณ์และให้คะแนนแอพพลิเคชั่นนี้</string>
     <string name="about_contact_support">ติดต่อฝ่ายสนับสนุน</string>
     <string name="about_fork_disclaimer">นี่คือซอฟต์แวร์โอเพนซอร์ซแอพพลิเคชั่นที่แยกสาขาออกมาจากกระเป๋าสตางค์บิทคอยน์</string>
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">สัญญาอนุญาตให้ใช้ซอฟต์แวร์ หรือไลเซนส์ แบบหนึ่ง ซึ่งสงวนลิขสิทธิ์ของซอฟต์แวร์นั้น แต่อนุญาตให้บุคคลใดๆทำซ้ำ เผยแพร่ และ/หรือดัดแปลงซอฟต์แวร์นั้นได้อย่างถูกต้องตามกฎหมาย และโดยเสรี เวอร์ชั่น3.0</string>
     <string name="about_version_name">กระเป๋าสตางค์ Dash%s</string>
-    <string name="about_last_explore_dash_sync">สำรวจข้อมูล DASH ที่อัปเดตได้ที่: %1$s\nอัพเดตล่าสุด: %2$s</string>
     <string name="about_last_explore_dash_update_error">ไม่สามารถดึงข้อมูลได้</string>
     <string name="about_last_explore_dash_sync_never">ไม่เคย</string>
-
     <string name="block">บล็อก</string>
     <string name="time">เวลา</string>
     <string name="hash">การแบ่งย่อยข้อมูลและการผสมข้อมูลย่อยทั้งหมดเข้าด้วยกัน</string>

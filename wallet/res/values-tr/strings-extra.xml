@@ -67,8 +67,6 @@
 
     <string name="receive_title">Al</string>
     <string name="receive_enter_amount_message">Alınacak tutarı belirtin</string>
-    <string name="receive_enter_amount_button">Tutarı Belirleyin</string>
-    <string name="receive_share_button">Paylaş</string>
 
     <string name="pay_title">Gönder</string>
     <string name="history_title">Geçmiş</string>
@@ -237,12 +235,10 @@
     <string name="transaction_result_view_on_explorer">Blok gezgininde görüntüle</string>
     <string name="transaction_result_tax_category">Vergi Kategorisi</string>
     <string name="transaction_result_tax_category_loading">Yükleniyor...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Gelir</item>
-        <item>Gider</item>
-        <item>İçe transfer</item>
-        <item>Dışa transfer</item>
-    </string-array>
+    <string name="tax_category_income">Gelir</string>
+    <string name="tax_category_expense">Gider</string>
+    <string name="tax_category_transfer_in">İçe transfer</string>
+    <string name="tax_category_transfer_out">Dışa transfer</string>
     <string name="transaction_result_paid_successfully">Başarıyla gönderildi</string>
     <string name="transaction_result_sent_to">Gönder</string>
     <string name="transaction_date_and_time">Tarih</string>
@@ -285,16 +281,13 @@
     <string name="tools_show_xpub">Genişletilmiş Genel Anahtar</string>
 
     <string name="about_help_us_improve">Deneyiminizi geliştirmemize yardımcı olun</string>
-    <string name="about_review_and_rate">Uygulamamızı değerlendirip &amp; Puanlayın</string>
     <string name="about_contact_support">Destekle İletişime Geçin</string>
     <string name="about_fork_disclaimer">Bu uygulama açık kaynak kodlu bir Bitcoin çatallanmasıdır</string>
     <string name="about_copyright">Telif Hakkı © 2022 Dash Core</string>
     <string name="about_license">GNU Genel Kamu Lisansı v3.0</string>
     <string name="about_version_name">Dash Cüzdanı %s</string>
-    <string name="about_last_explore_dash_sync">Dash verilerini keşfedin: %1$s\nSon senkronizasyon: %2$s</string>
     <string name="about_last_explore_dash_update_error">getirilemiyor</string>
     <string name="about_last_explore_dash_sync_never">asla</string>
-
     <string name="block">Blok</string>
     <string name="time">Zaman</string>
     <string name="hash">Karma</string>

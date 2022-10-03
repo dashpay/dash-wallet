@@ -15,6 +15,7 @@
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">خطا</string>
     <string name="select_a_coin">یک رمزارز را انتخاب کنید</string>
+    <string name="request_coins_share_dialog_title">درخواست دش را به اشتراک‌ بگذارید</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">گرنزی پاوند</string>
@@ -49,6 +50,7 @@
     <string name="button_okay">باشه</string>
     <string name="button_share">به اشتراک گذاری</string>
     <string name="verify">تائید</string>
+    <string name="receive_enter_amount_button">مبلغ را مشخص کنید</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">جستجو</string>

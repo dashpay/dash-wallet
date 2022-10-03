@@ -104,7 +104,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Neka pošiljalac skenira ovaj kod.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Ili dodirnite uredjaj sa NFC-om.</string>
     <string name="request_coins_clipboard_msg">Dash zahtev je prekopiran u privremeno skladište.</string>
-    <string name="request_coins_share_dialog_title">Podeli zahtev za Dash...</string>
     <string name="request_coins_no_local_app_msg">Nije pronadjena druga Dash aplikacija</string>
     <string name="request_coins_options_local_app_title">Zahtev od lokalne aplikacije</string>
     <string name="address_book_activity_title">Adresar</string>

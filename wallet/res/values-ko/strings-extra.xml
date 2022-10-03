@@ -67,8 +67,6 @@
 
     <string name="receive_title">받기</string>
     <string name="receive_enter_amount_message">받을 금액 특정하기</string>
-    <string name="receive_enter_amount_button">금액 특정하기</string>
-    <string name="receive_share_button">공유</string>
 
     <string name="pay_title">보내기</string>
     <string name="history_title">내역</string>
@@ -234,12 +232,10 @@
     <string name="transaction_result_view_on_explorer">블록 탐색기에서 보기</string>
     <string name="transaction_result_tax_category">세금 카테고리</string>
     <string name="transaction_result_tax_category_loading">로딩중...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>수입</item>
-        <item>비용</item>
-        <item>송금 받기</item>
-        <item>송금하기</item>
-    </string-array>
+    <string name="tax_category_income">수입</string>
+    <string name="tax_category_expense">비용</string>
+    <string name="tax_category_transfer_in">송금 받기</string>
+    <string name="tax_category_transfer_out">송금하기</string>
     <string name="transaction_result_paid_successfully">성공적으로 전송되었습니다</string>
     <string name="transaction_result_sent_to">다음에 전송하였습니다</string>
     <string name="transaction_date_and_time">날짜</string>
@@ -282,16 +278,13 @@
     <string name="tools_show_xpub">확장된 공개 키</string>
 
     <string name="about_help_us_improve">우리가 당신의 경험을 향상할 수 있도록 도와주세요</string>
-    <string name="about_review_and_rate">어플 리뷰 &amp; 별점 매기기</string>
     <string name="about_contact_support">고객 지원부에 문의하기</string>
     <string name="about_fork_disclaimer">이 어플은 비트코인 지갑에서 포크한 오픈 소스 어플입니다.</string>
     <string name="about_copyright">Copyright © 2022 대시 코어</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">대시 지갑 %s</string>
-    <string name="about_last_explore_dash_sync">지난 대시 탐색하기 데이터 업데이트: %1$s\n지난 동기화: %2$s</string>
     <string name="about_last_explore_dash_update_error">불러올 수 없음</string>
     <string name="about_last_explore_dash_sync_never">하지 않음</string>
-
     <string name="block">블록</string>
     <string name="time">시간</string>
     <string name="hash">해시</string>

@@ -67,8 +67,6 @@
 
     <string name="receive_title">Odbierz</string>
     <string name="receive_enter_amount_message">Podaj kwotę do otrzymania</string>
-    <string name="receive_enter_amount_button">Określ Kwotę</string>
-    <string name="receive_share_button">Udostępnij</string>
 
     <string name="pay_title">Wyślij</string>
     <string name="history_title">Historia</string>
@@ -242,13 +240,11 @@
     <string name="view_seed_title">Fraza Odzyskiwania</string>
     <string name="transaction_result_view_on_explorer">Zobacz na eksplorerze bloków</string>
     <string name="transaction_result_tax_category">Kategoria Podatkowa</string>
-    <string name="transaction_result_tax_category_loading">Ładuje...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Przychód</item>
-        <item>Wydatek</item>
-        <item>Odebranie płatności</item>
-        <item>Wysłanie płatności</item>
-    </string-array>
+    <string name="transaction_result_tax_category_loading">Ładowanie...</string>
+    <string name="tax_category_income">Przychód</string>
+    <string name="tax_category_expense">Wydatek</string>
+    <string name="tax_category_transfer_in">Odebranie płatności</string>
+    <string name="tax_category_transfer_out">Wysłanie płatności</string>
     <string name="transaction_result_paid_successfully">Wysłane pomyślnie</string>
     <string name="transaction_result_sent_to">Wysłane do</string>
     <string name="transaction_date_and_time">Data</string>
@@ -291,16 +287,13 @@
     <string name="tools_show_xpub">Wydłużony Publiczny Klucz</string>
 
     <string name="about_help_us_improve">Pomóż nam poprawić Twoje wrażenia</string>
-    <string name="about_review_and_rate">Wyraź swoją opinię o Aplikacj &amp;i Oceń ją</string>
     <string name="about_contact_support">Skontaktuj się z pomocą techniczną</string>
     <string name="about_fork_disclaimer">Jest to aplikacja typu open source opracowana na podstawie portfela Bitcoin</string>
     <string name="about_copyright">Prawa autorskie © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Portfel Dash %s</string>
-    <string name="about_last_explore_dash_sync">Informacje w Odkryj Dash zostały ostatnio zaktualizowane w: %1$s\nLast sync: %2$s</string>
     <string name="about_last_explore_dash_update_error">nie można pobrać</string>
     <string name="about_last_explore_dash_sync_never">nigdy</string>
-
     <string name="block">Blok</string>
     <string name="time">Czas</string>
     <string name="hash">Hash</string>

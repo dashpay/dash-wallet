@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">โค้ดนี้ถูกสแกนโดยผู้ส่ง</string>
     <string name="request_coins_fragment_initiate_request_nfc">หรือแตะเปิดใช้งาน NFC</string>
     <string name="request_coins_clipboard_msg">คำขอ Dash ถูกคัดลอกไปยังคลิปบอร์ดแล้ว</string>
-    <string name="request_coins_share_dialog_title">แชร์คำขอสำหรับ Dash</string>
     <string name="request_coins_no_local_app_msg">ไม่พบแอพพลิเคชั่น Dash อื่นๆ</string>
     <string name="request_coins_options_local_app_title">คำขอจากแอพพลิเคชั่นในเครื่อง</string>
     <string name="address_book_activity_title">สมุดที่อยู่</string>

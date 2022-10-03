@@ -114,7 +114,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Сканиран ли е този код от подателя.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Или докосни до устройство с NFC.</string>
     <string name="request_coins_clipboard_msg">Dash изисква копиране в клипборда</string>
-    <string name="request_coins_share_dialog_title">Споделете заявка за Dash…</string>
     <string name="request_coins_no_local_app_msg">Няма намерени други Dash приложения</string>
     <string name="request_coins_options_local_app_title">Заявка от локално приложение</string>
     <string name="address_book_activity_title">Адресна книга</string>

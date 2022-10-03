@@ -116,7 +116,6 @@
     <string name="request_coins_fragment_initiate_request_qr">قم بمسح هذا الرمز من قبل المرسل.</string>
     <string name="request_coins_fragment_initiate_request_nfc">أو اضغط على جهاز مزود بتقنية NFC.</string>
     <string name="request_coins_clipboard_msg">تم نسخ طلب داش إلى الحافظة</string>
-    <string name="request_coins_share_dialog_title">طلب مشاركة لـداش ...</string>
     <string name="request_coins_no_local_app_msg">لم يتم العثور على تطبيق داش آخر</string>
     <string name="request_coins_options_local_app_title">طلب من البرنامج المحلي</string>
     <string name="address_book_activity_title">دفتر عناوين</string>

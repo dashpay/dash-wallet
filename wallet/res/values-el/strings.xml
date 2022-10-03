@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Δώστε αυτόν τον QR-κώδικα στον αποστολέα για να τον σαρώσει.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Ή αγγίξτε μια συσκευή με δυνατότητα NFC.</string>
     <string name="request_coins_clipboard_msg">η αίτηση για Dash αντιγράφηκε στο clipboard</string>
-    <string name="request_coins_share_dialog_title">Αίτημα διαμοιρασμού των Dash</string>
     <string name="request_coins_no_local_app_msg">Δεν βρέθηκε άλλη εφαρμογή Dash</string>
     <string name="request_coins_options_local_app_title">Αίτηση από τοπική εφαρμογή</string>
     <string name="address_book_activity_title">Βιβλίο διευθύνσεων</string>

@@ -15,6 +15,7 @@
     <string name="email_placeholder">misalnya johndoe@mail.com</string>
     <string name="error">Kesalahan</string>
     <string name="select_a_coin">Pilih koin</string>
+    <string name="request_coins_share_dialog_title">Berbagi permintaan Dash…</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Pound Guernsey</string>
@@ -49,6 +50,7 @@
     <string name="button_okay">Oke</string>
     <string name="button_share">Berbagi</string>
     <string name="verify">Memeriksa</string>
+    <string name="receive_enter_amount_button">Tentukan Jumlah</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Cari</string>

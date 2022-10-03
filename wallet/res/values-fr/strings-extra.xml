@@ -67,8 +67,6 @@
 
     <string name="receive_title">Recevoir</string>
     <string name="receive_enter_amount_message">Indiquez le montant à recevoir</string>
-    <string name="receive_enter_amount_button">Indiquez le montant</string>
-    <string name="receive_share_button">Partager</string>
 
     <string name="pay_title">Envoyer</string>
     <string name="history_title">Historique</string>
@@ -239,13 +237,11 @@
     <string name="view_seed_title">Phrase de récupération</string>
     <string name="transaction_result_view_on_explorer">Voir dans l\'explorateur</string>
     <string name="transaction_result_tax_category">Catégorie de taxe</string>
-    <string name="transaction_result_tax_category_loading">Chargement…</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Revenu</item>
-        <item>Dépense</item>
-        <item>Transfert entrant</item>
-        <item>Transfert sortant</item>
-    </string-array>
+    <string name="transaction_result_tax_category_loading">Chargement...</string>
+    <string name="tax_category_income">Revenu</string>
+    <string name="tax_category_expense">Dépense</string>
+    <string name="tax_category_transfer_in">Transfert entrant</string>
+    <string name="tax_category_transfer_out">Transfert sortant</string>
     <string name="transaction_result_paid_successfully">Envoyé avec succès</string>
     <string name="transaction_result_sent_to">Envoyé à</string>
     <string name="transaction_date_and_time">Date</string>
@@ -288,16 +284,13 @@
     <string name="tools_show_xpub">Clé privée étendue</string>
 
     <string name="about_help_us_improve">Aidez-nous à améliorer votre expérience</string>
-    <string name="about_review_and_rate">Évaluer &amp; noter cette appli</string>
     <string name="about_contact_support">Contacter le service d\'aide</string>
     <string name="about_fork_disclaimer">Ceci est une application open source forkée de Bitcoin Wallet</string>
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_dash_sync">Données Dash d\'explorations mises à jour à : %1$s\nDernière synchronisation : %2$s</string>
     <string name="about_last_explore_dash_update_error">impossible d\'atteindre</string>
     <string name="about_last_explore_dash_sync_never">jamais</string>
-
     <string name="block">Bloc</string>
     <string name="time">Heure</string>
     <string name="hash">Hash</string>

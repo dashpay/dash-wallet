@@ -15,6 +15,7 @@
     <string name="email_placeholder">hal. juandelacruz@gmail.com</string>
     <string name="error">Mali</string>
     <string name="select_a_coin">Pumili ng barya</string>
+    <string name="request_coins_share_dialog_title">Ipamahagi ang hiling na Dash...</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -49,6 +50,7 @@
     <string name="button_okay">Okay</string>
     <string name="button_share">Ibahagi</string>
     <string name="verify">Kumpirmahin</string>
+    <string name="receive_enter_amount_button">Tukuyin ang halaga</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Maghanap</string>

@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Laat de verzender deze code scannen.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Of tik met een NFC-apparaat.</string>
     <string name="request_coins_clipboard_msg">Dashverzoek is gekopieerd naar klemboord</string>
-    <string name="request_coins_share_dialog_title">Deel Dashverzoek...</string>
     <string name="request_coins_no_local_app_msg">Geen andere Dashapp gevonden</string>
     <string name="request_coins_options_local_app_title">Aanvraag vanuit lokale app</string>
     <string name="address_book_activity_title">Adresboek</string>

@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Tenha o código lido pelo emissor.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Ou toque em um dispositivo NFC habilitado.</string>
     <string name="request_coins_clipboard_msg">Pedido de Dash copiado para a área de transferência</string>
-    <string name="request_coins_share_dialog_title">Compartilhar pedido de Dash…</string>
     <string name="request_coins_no_local_app_msg">Nenhum outro aplicativo Dash encontrado</string>
     <string name="request_coins_options_local_app_title">Pedir de um aplicativo local</string>
     <string name="address_book_activity_title">Livro de endereços</string>

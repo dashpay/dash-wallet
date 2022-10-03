@@ -67,8 +67,6 @@
 
     <string name="receive_title">Ontvangen</string>
     <string name="receive_enter_amount_message">Specificeer het te ontvangen bedrag</string>
-    <string name="receive_enter_amount_button">Specificeer bedrag</string>
-    <string name="receive_share_button">Delen</string>
 
     <string name="pay_title">Verzenden</string>
     <string name="history_title">Geschiedenis</string>
@@ -237,12 +235,10 @@
     <string name="transaction_result_view_on_explorer">Bekijk in Block Explorer</string>
     <string name="transaction_result_tax_category">Belastingcategorie</string>
     <string name="transaction_result_tax_category_loading">Laden...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Inkomen</item>
-        <item>Uitgaven</item>
-        <item>Inkomend</item>
-        <item>Uitgaand</item>
-    </string-array>
+    <string name="tax_category_income">Inkomen</string>
+    <string name="tax_category_expense">Uitgaven</string>
+    <string name="tax_category_transfer_in">Inkomend</string>
+    <string name="tax_category_transfer_out">Uitgaand</string>
     <string name="transaction_result_paid_successfully">Succesvol verzonden</string>
     <string name="transaction_result_sent_to">Verzonden naar</string>
     <string name="transaction_date_and_time">Datum</string>
@@ -285,16 +281,13 @@
     <string name="tools_show_xpub">Uitgebreide publieke sleutel</string>
 
     <string name="about_help_us_improve">Help ons je ervaring te verbeteren</string>
-    <string name="about_review_and_rate">Schrijf een recensie &amp; Beoordeel de app</string>
     <string name="about_contact_support">Neem contact op</string>
     <string name="about_fork_disclaimer">Dit is een open source app afgesplitst van de Bitcoin portemonnee</string>
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash portemonnee%s</string>
-    <string name="about_last_explore_dash_sync">Explore Dash gegevens bijgewerkt op: %1$s \nLaatste synchronisatie: %2$s</string>
     <string name="about_last_explore_dash_update_error">kan niet ophalen</string>
     <string name="about_last_explore_dash_sync_never">nooit</string>
-
     <string name="block">Block</string>
     <string name="time">Tijd</string>
     <string name="hash">Hash</string>
@@ -368,7 +361,7 @@
     <string name="today">Vandaag</string>
     <string name="yesterday">Gisteren</string>
 
-    <string name="syncing">Aan het synchroniseren</string>
+    <string name="syncing">synchroniseren</string>
     <string name="syncing_balance">Saldo aan het synchroniseren</string>
     <string name="transaction_count">%d transacties</string>
     <string name="all_transactions">Alles</string>

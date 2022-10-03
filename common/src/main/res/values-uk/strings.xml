@@ -15,6 +15,7 @@
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Помилка</string>
     <string name="select_a_coin">Виберіть монету</string>
+    <string name="request_coins_share_dialog_title">Поділитись запитом Dash-монет…</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Гернсійський фунт</string>
@@ -49,6 +50,7 @@
     <string name="button_okay">Згода</string>
     <string name="button_share">Поділитися</string>
     <string name="verify">Підтвердити</string>
+    <string name="receive_enter_amount_button">Вкажіть суму</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Пошук</string>

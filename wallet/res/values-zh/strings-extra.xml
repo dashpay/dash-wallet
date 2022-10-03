@@ -67,8 +67,6 @@
 
     <string name="receive_title">接收</string>
     <string name="receive_enter_amount_message">指定收款数额</string>
-    <string name="receive_enter_amount_button">指定数额</string>
-    <string name="receive_share_button">分享</string>
 
     <string name="pay_title">发送</string>
     <string name="history_title">历史</string>
@@ -234,12 +232,10 @@
     <string name="transaction_result_view_on_explorer">在区块浏览器中查看</string>
     <string name="transaction_result_tax_category">税务种类</string>
     <string name="transaction_result_tax_category_loading">加载中...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>收入</item>
-        <item>支出</item>
-        <item>转入</item>
-        <item>转出</item>
-    </string-array>
+    <string name="tax_category_income">收入</string>
+    <string name="tax_category_expense">支出</string>
+    <string name="tax_category_transfer_in">转入</string>
+    <string name="tax_category_transfer_out">转出</string>
     <string name="transaction_result_paid_successfully">发送成功</string>
     <string name="transaction_result_sent_to">发送至</string>
     <string name="transaction_date_and_time">日期</string>
@@ -282,16 +278,13 @@
     <string name="tools_show_xpub">扩展的公钥</string>
 
     <string name="about_help_us_improve">帮助我们改善您的体验</string>
-    <string name="about_review_and_rate">对app进行评论 &amp; 评分</string>
     <string name="about_contact_support">联系支持</string>
     <string name="about_fork_disclaimer">这是从比特币钱包分叉而来的开源应用程序</string>
     <string name="about_copyright">版权所有 © 2022 Dash Core</string>
     <string name="about_license">GNU 公共通用许可 v3.0</string>
     <string name="about_version_name">Dash钱包 %s</string>
-    <string name="about_last_explore_dash_sync">探索Dash数据更新于: %1$s\n上次同步: %2$s</string>
     <string name="about_last_explore_dash_update_error">无法获取</string>
     <string name="about_last_explore_dash_sync_never">从不</string>
-
     <string name="block">区块</string>
     <string name="time">时间</string>
     <string name="hash">哈希值</string>

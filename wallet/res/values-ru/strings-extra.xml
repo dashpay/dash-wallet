@@ -67,8 +67,6 @@
 
     <string name="receive_title">Получить</string>
     <string name="receive_enter_amount_message">Введите сумму для получения</string>
-    <string name="receive_enter_amount_button">Введите сумму</string>
-    <string name="receive_share_button">Поделиться</string>
 
     <string name="pay_title">Отправить</string>
     <string name="history_title">История</string>
@@ -243,12 +241,10 @@
     <string name="transaction_result_view_on_explorer">Посмотреть в Block Explorer</string>
     <string name="transaction_result_tax_category">Категория</string>
     <string name="transaction_result_tax_category_loading">Загрузка…</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Доходы</item>
-        <item>Расходы</item>
-        <item>Входящие переводы</item>
-        <item>Исходящие переводы</item>
-    </string-array>
+    <string name="tax_category_income">Доходы</string>
+    <string name="tax_category_expense">Расходы</string>
+    <string name="tax_category_transfer_in">Входящие переводы</string>
+    <string name="tax_category_transfer_out">Исходящие переводы</string>
     <string name="transaction_result_paid_successfully">Успешно отправлено</string>
     <string name="transaction_result_sent_to">Отправить</string>
     <string name="transaction_date_and_time">Дата</string>
@@ -291,16 +287,13 @@
     <string name="tools_show_xpub">Расширенный  публичный ключ</string>
 
     <string name="about_help_us_improve">Помогите нам стать лучше</string>
-    <string name="about_review_and_rate">Оставить отзыв &amp; Оценить приложение</string>
     <string name="about_contact_support">Связаться с поддержкой</string>
     <string name="about_fork_disclaimer">Это приложение с открытым кодом, основанное на Bitcoin Wallet</string>
     <string name="about_copyright">Все права защищены © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_dash_sync">Данные Explore Dash были обновлены %1$s\nПоследняя синхронизация:%2$s</string>
     <string name="about_last_explore_dash_update_error">Невозможно получить</string>
     <string name="about_last_explore_dash_sync_never">никогда</string>
-
     <string name="block">Блок</string>
     <string name="time">Время</string>
     <string name="hash">Хэш</string>

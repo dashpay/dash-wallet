@@ -15,6 +15,7 @@
     <string name="email_placeholder">例：johndoe@mail.com</string>
     <string name="error">エラー</string>
     <string name="select_a_coin">通貨を選ぶ</string>
+    <string name="request_coins_share_dialog_title">Dashのリクエストを共有…</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">ガーンジー・ポンド</string>
@@ -49,6 +50,7 @@
     <string name="button_okay">OK</string>
     <string name="button_share">共有</string>
     <string name="verify">検証する</string>
+    <string name="receive_enter_amount_button">金額を指定する</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">検索</string>

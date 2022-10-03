@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Niech nadawca zeskanuje ten kod QR</string>
     <string name="request_coins_fragment_initiate_request_nfc">Lub zbliż do siebie urządzenia z aktywnym NFC</string>
     <string name="request_coins_clipboard_msg">Prośba o Dash została skopiowana do schowka</string>
-    <string name="request_coins_share_dialog_title">Udostępnij prośbę o Dashy…</string>
     <string name="request_coins_no_local_app_msg">Nie znaleziono innej aplikacji Dash</string>
     <string name="request_coins_options_local_app_title">Żądanie z lokalnej aplikacji</string>
     <string name="address_book_activity_title">Książka adresowa</string>

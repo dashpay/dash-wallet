@@ -15,6 +15,7 @@
     <string name="email_placeholder">napr. johndoe@mail.com</string>
     <string name="error">Chyba</string>
     <string name="select_a_coin">Vyberte mincu</string>
+    <string name="request_coins_share_dialog_title">Zdieľať požiadavku na Dash…</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernseyova libra</string>
@@ -49,6 +50,7 @@
     <string name="button_okay">Dobre</string>
     <string name="button_share">Zdieľať</string>
     <string name="verify">Overiť</string>
+    <string name="receive_enter_amount_button">Zadať množstvo</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Hľadať</string>

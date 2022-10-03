@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Berikan kode untuk dipindai oleh pengirim.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Atau tempelkan pada ponsel dgn NFC</string>
     <string name="request_coins_clipboard_msg">Permintaan Dash disalin</string>
-    <string name="request_coins_share_dialog_title">Berbagi permintaan Dash…</string>
     <string name="request_coins_no_local_app_msg">Tidak ada aplikasi Dash lain yang ditemukan</string>
     <string name="request_coins_options_local_app_title">Meminta dari aplikasi lokal</string>
     <string name="address_book_activity_title">Buku Alamat</string>

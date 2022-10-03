@@ -67,8 +67,6 @@
 
     <string name="receive_title">إستقبال</string>
     <string name="receive_enter_amount_message">حدد المبلغ المراد استلامه</string>
-    <string name="receive_enter_amount_button">حدد المبلغ</string>
-    <string name="receive_share_button">مشاركة</string>
 
     <string name="pay_title">إرسال</string>
     <string name="history_title">التاريخ</string>
@@ -248,13 +246,11 @@
     <string name="view_seed_title">عبارة الاسترداد</string>
     <string name="transaction_result_view_on_explorer">عرض في بلوك إكسبلورر</string>
     <string name="transaction_result_tax_category">فئة الضريبة</string>
-    <string name="transaction_result_tax_category_loading">جار التحميل...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>دخل</item>
-        <item>مصروف</item>
-        <item>نقل في</item>
-        <item>انقله خارجا</item>
-    </string-array>
+    <string name="transaction_result_tax_category_loading">جار التحميل…</string>
+    <string name="tax_category_income">دخل</string>
+    <string name="tax_category_expense">مصروف</string>
+    <string name="tax_category_transfer_in">نقل في</string>
+    <string name="tax_category_transfer_out">انقله خارجا</string>
     <string name="transaction_result_paid_successfully">أرسلت بنجاح</string>
     <string name="transaction_result_sent_to">أرسلت الى</string>
     <string name="transaction_date_and_time">تاريخ</string>
@@ -297,16 +293,13 @@
     <string name="tools_show_xpub">مفتاح عام ممتد</string>
 
     <string name="about_help_us_improve">ساعدنا على تحسين تجربتك</string>
-    <string name="about_review_and_rate">مراجعة &amp; تقييم التطبيق</string>
     <string name="about_contact_support">اتصل بالدعم</string>
     <string name="about_fork_disclaimer">هذا هو تطبيق مفتوح المصدر متفرع من محفظة بيتكوين</string>
     <string name="about_copyright">حقوق النشر © 2022 داش كور</string>
     <string name="about_license">رخصة GNUالعمومية العامة الإصدار 3.0</string>
     <string name="about_version_name">محفظة داش %s</string>
-    <string name="about_last_explore_dash_sync">استكشاف بيانات Dash المحدثة على:%1$s \n آخر مزامنة: %2$s</string>
     <string name="about_last_explore_dash_update_error">لا يمكن جلبه</string>
     <string name="about_last_explore_dash_sync_never">مطلقا</string>
-
     <string name="block">بلوك</string>
     <string name="time">وقت</string>
     <string name="hash">هاش</string>

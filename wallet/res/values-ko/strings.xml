@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">발신자가 이 QR 코드를 스캔하도록 도와주세요.</string>
     <string name="request_coins_fragment_initiate_request_nfc">또는 주변에 NFC 활성화 장치가 있다면 이 기기를 탭하세요.</string>
     <string name="request_coins_clipboard_msg">대시 요청이 클립보드에 복사되었습니다.</string>
-    <string name="request_coins_share_dialog_title">대시 요청을 공유합니다...</string>
     <string name="request_coins_no_local_app_msg">다른 대시 어플을 찾을 수 없음</string>
     <string name="request_coins_options_local_app_title">로컬 어플로부터 요청</string>
     <string name="address_book_activity_title">주소록</string>
