@@ -52,7 +52,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
@@ -71,7 +70,6 @@ import org.slf4j.LoggerFactory
 import java.util.HashMap
 import java.util.HashSet
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
@@ -655,7 +653,7 @@ class PlatformSynchronizationService @Inject constructor(
 
             syncScope.launch {
                 items.forEach { (doc, list) ->
-                    if (!transactionMetadataDocumentDao.exists(doc.id)) {
+                    if (transactionMetadataDocumentDao.count(doc.id) == 0) {
                         val timestamp = doc.createdAt!!
                         log.info("processing TxMetadata: ${doc.id} with ${list.size} items")
                         list.forEach { metadata ->
@@ -674,63 +672,84 @@ class PlatformSynchronizationService @Inject constructor(
                                 // we need to find a new way -- how can we know that we should change something?
                                 // should we save to the DB table?
                                 val txIdAsHash = Sha256Hash.wrap(metadata.txId)
+                                val metadataDocumentRecord = TransactionMetadataDocument(doc.id, doc.createdAt!!, txIdAsHash)
+                                metadata.timestamp?.let { timestamp ->
+                                    metadataDocumentRecord.sentTimestamp = timestamp
+                                    log.info("processing TxMetadata: sent time stamp")
+                                    if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.sentTimestamp != null && it.sentTimestamp != timestamp } == null) {
+                                        log.info("processing TxMetadata: service change: changing service")
+                                        transactionMetadataProvider.setTransactionSentTime(
+                                            txIdAsHash,
+                                            timestamp,
+                                            true
+                                        )
+                                    }
+                                }
+
+
                                 metadata.service?.let { service ->
+                                    metadataDocumentRecord.service = service
                                     log.info("processing TxMetadata: service change")
-                                    if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.service != service} == null) {
+                                    if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.service != null && it.service != service} == null) {
                                         log.info("processing TxMetadata: service change: changing service")
                                         transactionMetadataProvider.setTransactionService(
                                             txIdAsHash,
-                                            service
+                                            service,
+                                            true
                                         )
                                     }
                                 }
                                 metadata.memo?.let { memo ->
-                                    log.info("processing TxMetadata: memo change: {}", cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.memo != memo})
-                                    if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.memo != memo} == null) {
+                                    metadataDocumentRecord.memo = memo
+                                    log.info("processing TxMetadata: memo change: {}", cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.memo != null && it.memo != memo})
+                                    if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.memo != null && it.memo != memo} == null) {
                                         log.info("processing TxMetadata: memo change: changing memo")
-                                        transactionMetadataProvider.setTransactionMemo(txIdAsHash, memo)
+                                        transactionMetadataProvider.setTransactionMemo(txIdAsHash, memo, true)
                                     }
                                 }
                                 metadata.taxCategory?.let { taxCategoryAsString ->
                                     TaxCategory.fromValue(taxCategoryAsString)?.let { taxCategory ->
+                                        metadataDocumentRecord.taxCategory = taxCategory
                                         log.info("processing TxMetadata: tax category change")
-                                        if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.taxCategory?.name != taxCategoryAsString} == null) {
+                                        if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.taxCategory != null && it.taxCategory?.name != taxCategoryAsString} == null) {
                                             log.info("processing TxMetadata: tax category change: changing category")
                                             transactionMetadataProvider.setTransactionTaxCategory(
                                                 txIdAsHash,
-                                                taxCategory
+                                                taxCategory,
+                                                true
                                             )
                                         }
                                     }
                                 }
                                 if (metadata.exchangeRate != null && metadata.currencyCode != null) {
-                                    val prevItem = cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    metadataDocumentRecord.rate = metadata.exchangeRate
+                                    metadataDocumentRecord.currencyCode = metadata.currencyCode
+
+                                    val prevItem = cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.currencyCode != null && it.rate != null &&
                                             (it.currencyCode != metadata.currencyCode || it.rate != metadata.exchangeRate.toString())}
                                     log.info("processing TxMetadata: exchange rate change change: $prevItem")
-                                    if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.currencyCode != null && it.rate != null &&
                                                 (it.currencyCode != metadata.currencyCode || it.rate != metadata.exchangeRate.toString())} == null) {
                                         log.info("processing TxMetadata: exchange rate change change: setting rate")
                                         transactionMetadataProvider.setTransactionExchangeRate(
                                             txIdAsHash, ExchangeRate(
                                                 metadata.currencyCode!!,
                                                 metadata.exchangeRate.toString()
-                                            )
+                                            ),
+                                            true
                                         )
                                     }
                                 }
+                                log.info("adding TxMetadataItem: {}", metadata)
+                                transactionMetadataDocumentDao.insert(metadataDocumentRecord)
+                            } else {
+                                log.info("not adding TxMetadataItem: {} since it is empty", metadata)
                             }
-                            log.info("adding TxMetadataDocument: {}", metadata)
                         }
-                        transactionMetadataDocumentDao.insert(
-                            TransactionMetadataDocument(
-                                doc.id,
-                                doc.createdAt!!,
-                                doc.document.toBuffer()
-                            )
-                        )
+
                         //configuration.txMetadataUpdateTime = doc.createdAt!!
                     } else {
-                        //log.info("TxMetadataDocument:  this item already exists ${doc.id}")
+                        log.info("TxMetadataDocument:  this item already exists ${doc.id}")
                     }
                 }
             }

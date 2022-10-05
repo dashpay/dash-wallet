@@ -1,13 +1,20 @@
 package de.schildbach.wallet.data
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
+import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TaxCategory
 
-@Entity(tableName = "transaction_metadata_platform")
+@Entity(tableName = "transaction_metadata_platform", primaryKeys = ["id", "txId"])
 class TransactionMetadataDocument(
-    @PrimaryKey val id: String,
+    val id: String,
     val timestamp: Long,
-    val documentData: ByteArray
+    var txId: Sha256Hash,
+    var sentTimestamp: Long? = null,
+    var taxCategory: TaxCategory? = null,
+    var currencyCode: String? = null,
+    var rate: Double? = null,
+    var memo: String? = null,
+    var service: String? = null
 ) {
 
 }

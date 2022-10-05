@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 18,
-    "identityHash": "58b9462c3eaaa8d97c2cb9c0d564f7aa",
+    "identityHash": "b09ba261cdc49ce124f51ac7bf14f299",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -635,7 +635,7 @@
       },
       {
         "tableName": "transaction_metadata_platform",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `documentData` BLOB NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` REAL, `memo` TEXT, `service` TEXT, PRIMARY KEY(`id`, `txId`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -650,15 +650,52 @@
             "notNull": true
           },
           {
-            "fieldPath": "documentData",
-            "columnName": "documentData",
+            "fieldPath": "txId",
+            "columnName": "txId",
             "affinity": "BLOB",
             "notNull": true
+          },
+          {
+            "fieldPath": "sentTimestamp",
+            "columnName": "sentTimestamp",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "taxCategory",
+            "columnName": "taxCategory",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "currencyCode",
+            "columnName": "currencyCode",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "rate",
+            "columnName": "rate",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "memo",
+            "columnName": "memo",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "service",
+            "columnName": "service",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {
           "columnNames": [
-            "id"
+            "id",
+            "txId"
           ],
           "autoGenerate": false
         },
@@ -669,7 +706,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '58b9462c3eaaa8d97c2cb9c0d564f7aa')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b09ba261cdc49ce124f51ac7bf14f299')"
     ]
   }
 }

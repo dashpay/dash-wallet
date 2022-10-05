@@ -17,9 +17,7 @@
 package de.schildbach.wallet.data
 
 import androidx.room.*
-import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.data.TaxCategory
 
 /**
  * @author Eric Britten
@@ -32,18 +30,69 @@ interface TransactionMetadataDocumentDao {
     @Query("SELECT * FROM transaction_metadata_platform ORDER BY timestamp")
     suspend fun load(): List<TransactionMetadataDocument>
 
-    @Query("SELECT COUNT(1) FROM transaction_metadata_platform WHERE id = :id")
-    suspend fun exists(id: String): Boolean
+    @Query("SELECT COUNT(*) FROM transaction_metadata_platform WHERE id = :id")
+    suspend fun count(id: String): Int
 
+    @Query("""
+        SELECT sentTimestamp 
+        FROM transaction_metadata_platform 
+        WHERE timestamp = (
+            SELECT MAX(timestamp) 
+            FROM transaction_metadata_platform 
+            WHERE txId = :txId
+                AND sentTimestamp is NOT NULL
+        )
+        """)
+    suspend fun getSentTimestamp(txId: Sha256Hash): Long?
 
-    //@Query("SELECT * FROM transaction_metadata_platform WHERE txid = :txId")
-    //fun observe(txId: Sha256Hash): Flow<TransactionMetadataDocument?>
+    @Query("""
+        SELECT memo 
+        FROM transaction_metadata_platform 
+        WHERE timestamp = (
+            SELECT MAX(timestamp) 
+            FROM transaction_metadata_platform 
+            WHERE txId = :txId
+                AND memo is NOT NULL
+        )
+        """)
+    suspend fun getTransactionMemo(txId: Sha256Hash): String?
 
-    //@Query("SELECT id, txId, memo FROM transaction_metadata_platform WHERE memo != NULL")
-    //fun observeMemos(): Flow<List<TransactionMetadataDocument>>
+    @Query("""
+        SELECT service 
+        FROM transaction_metadata_platform 
+        WHERE timestamp = (
+            SELECT MAX(timestamp) 
+            FROM transaction_metadata_platform 
+            WHERE txId = :txId
+                AND service is NOT NULL
+        )
+        """)
+    suspend fun getTransactionService(txId: Sha256Hash): String?
 
-    //@Query("SELECT * FROM transaction_metadata_platform WHERE timestamp <= :end and timestamp >= :start")
-    //fun observeByTimestampRange(start: Long, end: Long): Flow<List<TransactionMetadataDocument>>
+    @Query("""
+        SELECT taxCategory 
+        FROM transaction_metadata_platform 
+        WHERE timestamp = (
+            SELECT MAX(timestamp) 
+            FROM transaction_metadata_platform 
+            WHERE txId = :txId
+                AND taxCategory is NOT NULL
+        )
+        """)
+    suspend fun getTransactionTaxCategory(txId: Sha256Hash): String?
+
+    data class ExchangeRate(val currencyCode: String?, val rate: Double?)
+
+    @Query("""
+        SELECT rate, currencyCode 
+        FROM transaction_metadata_platform 
+        WHERE timestamp = (
+            SELECT MAX(timestamp) 
+            FROM transaction_metadata_platform 
+            WHERE txId = :txId AND rate IS NOT NULL AND currencyCode IS NOT NULL
+        )
+        """)
+    suspend fun getTransactionExchangeRate(txId: Sha256Hash): ExchangeRate?
 
     @Query("SELECT MAX(timestamp) FROM transaction_metadata_platform")
     fun getLastTimestamp() : Long

@@ -51,6 +51,9 @@ interface TransactionMetadataDao {
     @Query("UPDATE transaction_metadata SET taxCategory = :taxCategory WHERE txid = :txId")
     suspend fun updateTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory)
 
+    @Query("UPDATE transaction_metadata SET timestamp = :timestamp WHERE txid = :txId")
+    suspend fun updateSentTime(txId: Sha256Hash, timestamp: Long)
+
     @Query("UPDATE transaction_metadata SET memo = :memo WHERE txid = :txId")
     suspend fun updateMemo(txId: Sha256Hash, memo: String)
 

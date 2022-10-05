@@ -41,17 +41,11 @@ interface TransactionMetadataChangeCacheDao {
     @Query("SELECT * FROM transaction_metadata_cache WHERE txid = :txId")
     suspend fun load(txId: Sha256Hash): TransactionMetadataCacheItem?
 
-    //@Query("SELECT * FROM transaction_metadata_cache WHERE txid = :txId")
-    //fun observe(txId: Sha256Hash): Flow<TransactionMetadataCacheItem?>
-
-    //@Query("SELECT id, txId, memo FROM transaction_metadata_cache WHERE memo != NULL")
-    //fun observeMemos(): Flow<List<TransactionMetadataCacheItem>>
-
-    //@Query("SELECT * FROM transaction_metadata_cache WHERE timestamp <= :end and timestamp >= :start")
-    //fun observeByTimestampRange(start: Long, end: Long): Flow<List<TransactionMetadataCacheItem>>
-
     @Query("INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, taxCategory) VALUES (:txId, :cacheTimestamp, :taxCategory)")
     suspend fun insertTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory, cacheTimestamp: Long = System.currentTimeMillis())
+
+    @Query("INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, sentTimestamp) VALUES (:txId, :cacheTimestamp, :sentTimestamp)")
+    suspend fun insertSentTime(txId: Sha256Hash, sentTimestamp: Long, cacheTimestamp: Long = System.currentTimeMillis())
 
     @Query("INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, memo) VALUES(:txId, :cacheTimestamp, :memo)")
     suspend fun insertMemo(txId: Sha256Hash, memo: String, cacheTimestamp: Long = System.currentTimeMillis())

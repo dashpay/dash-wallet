@@ -20,6 +20,7 @@ import de.schildbach.wallet.data.AddressMetadataDao
 import de.schildbach.wallet.data.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.data.TransactionMetadataCacheItem
 import de.schildbach.wallet.data.TransactionMetadataDao
+import de.schildbach.wallet.data.TransactionMetadataDocumentDao
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Address
@@ -38,6 +39,7 @@ import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.slf4j.LoggerFactory
+import java.util.*
 import java.util.concurrent.Executors
 import javax.inject.Inject
 
@@ -45,7 +47,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
     private val transactionMetadataDao: TransactionMetadataDao,
     private val addressMetadataDao: AddressMetadataDao,
     private val walletData: WalletDataProvider,
-    private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao
+    private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
+    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao
 ) : TransactionMetadataProvider {
 
     companion object {
@@ -56,94 +59,150 @@ class WalletTransactionMetadataProvider @Inject constructor(
         Executors.newFixedThreadPool(5).asCoroutineDispatcher()
     )
 
-    private suspend fun insertTransactionMetadata(txId: Sha256Hash) {
+    private suspend fun insertTransactionMetadata(txId: Sha256Hash, isSyncingPlatform: Boolean) {
         val walletTx = walletData.wallet!!.getTransaction(txId)
         Context.propagate(walletData.wallet!!.context)
         walletTx?.run {
             val txValue = getValue(walletData.wallet!!) ?: Coin.ZERO
             val sentTime = confidence.sentAt?.time
             var updateTime = updateTime.time
-            if (sentTime != null && sentTime < updateTime) {
-                updateTime = sentTime
-            }
+
             val isInternal = isEntirelySelf(this, walletData.wallet!!)
+
+            // Search for items from platform
+            var hasChanges = false
+            val platformSentTimestamp = transactionMetadataDocumentDao.getSentTimestamp(txId)
+            val platformMemo = transactionMetadataDocumentDao.getTransactionMemo(txId)
+            val platformService = transactionMetadataDocumentDao.getTransactionService(txId)
+            val platformTaxCategory = transactionMetadataDocumentDao.getTransactionTaxCategory(txId)
+            val platformExchangeRate = transactionMetadataDocumentDao.getTransactionExchangeRate(txId)
+
+            var rate: String? = null
+            var code: String? = null
+
+            if (platformSentTimestamp != null) {
+                updateTime = platformSentTimestamp;
+            } else if (sentTime != null && sentTime < updateTime) {
+                updateTime = sentTime
+                hasChanges = true
+            }
+
+            if (platformExchangeRate != null) {
+                rate = platformExchangeRate.rate.toString()
+                code = platformExchangeRate.currencyCode
+                // if we are pulling from platform, then update the tx object
+                exchangeRate = org.bitcoinj.utils.ExchangeRate(Fiat.parseFiat(code, rate))
+            } else if (exchangeRate != null) {
+                rate = exchangeRate?.fiat?.let { MonetaryFormat.FIAT.noCode().format(it).toString() }
+                code = exchangeRate?.fiat?.currencyCode
+                hasChanges = true
+            }
+
+            val myMemo = when {
+                platformMemo != null -> { memo = platformMemo; platformMemo }
+                memo != null -> { hasChanges = true; memo!! }
+                else -> ""
+            }
 
             val metadata = TransactionMetadata(
                 txId,
                 updateTime,
                 txValue,
                 TransactionCategory.fromTransaction(type, txValue, isInternal),
-                taxCategory = null,
-                exchangeRate?.fiat?.currencyCode,
-                exchangeRate?.fiat?.let {
-                    MonetaryFormat.FIAT.noCode().format(it).toString()
-                }
+                taxCategory = platformTaxCategory?.let { TaxCategory.fromValue(it) },
+                currencyCode = code,
+                rate = rate,
+                memo = myMemo,
+                service = platformService
             )
             transactionMetadataDao.insert(metadata)
             // only add to the change cache if some metadata exists
-            if (metadata.isNotEmpty()) {
+            if (metadata.isNotEmpty() && !isSyncingPlatform && hasChanges) {
                 transactionMetadataChangeCacheDao.insert(TransactionMetadataCacheItem(metadata))
             }
             log.info("txmetadata: inserting $metadata")
         }
     }
 
-    private suspend fun updateAndInsertIfNotExist(txId: Sha256Hash, update: suspend () -> Unit) {
+    private suspend fun updateAndInsertIfNotExist(txId: Sha256Hash, isSyncingPlatform: Boolean, update: suspend () -> Unit) {
         if (transactionMetadataDao.exists(txId)) {
+            log.info("txmetadata for $txId exists, only do update")
             update()
         } else {
-            insertTransactionMetadata(txId)
+            log.info("txmetadata for $txId does not exist, perform insert, then update")
+            insertTransactionMetadata(txId, isSyncingPlatform)
             update()
         }
     }
 
     override suspend fun importTransactionMetadata(txId: Sha256Hash) {
-        updateAndInsertIfNotExist(txId) { }
+        updateAndInsertIfNotExist(txId, false) { }
     }
 
     override suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
         transactionMetadataDao.insert(transactionMetadata)
     }
 
-    override suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory) {
-        updateAndInsertIfNotExist(txId) {
+    override suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory, isSyncingPlatform: Boolean) {
+        updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateTaxCategory(txId, taxCategory)
-            transactionMetadataChangeCacheDao.insertTaxCategory(txId, taxCategory)
+            if (!isSyncingPlatform) {
+                transactionMetadataChangeCacheDao.insertTaxCategory(txId, taxCategory)
+            }
         }
     }
 
-    override suspend fun setTransactionType(txId: Sha256Hash, type: Int) {
+    override suspend fun setTransactionSentTime(
+        txId: Sha256Hash,
+        timestamp: Long,
+        isSyncingPlatform: Boolean
+    ) {
+        updateAndInsertIfNotExist(txId, isSyncingPlatform) {
+            transactionMetadataDao.updateSentTime(txId, timestamp)
+            if (!isSyncingPlatform) {
+                transactionMetadataChangeCacheDao.insertSentTime(txId, timestamp)
+            }
+        }
+    }
+
+    override suspend fun setTransactionType(txId: Sha256Hash, type: Int, isSyncingPlatform: Boolean) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate) {
+    override suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate, isSyncingPlatform: Boolean) {
         if (exchangeRate.rate != null) {
-            updateAndInsertIfNotExist(txId) {
+            updateAndInsertIfNotExist(txId, isSyncingPlatform) {
                 transactionMetadataDao.updateExchangeRate(
                     txId,
                     exchangeRate.currencyCode,
                     exchangeRate.rate!!
                 )
-                transactionMetadataChangeCacheDao.insertExchangeRate(
-                    txId,
-                    exchangeRate.currencyCode,
-                    exchangeRate.rate!!
-                )
+                if (!isSyncingPlatform) {
+                    transactionMetadataChangeCacheDao.insertExchangeRate(
+                        txId,
+                        exchangeRate.currencyCode,
+                        exchangeRate.rate!!
+                    )
+                }
             }
         }
     }
 
-    override suspend fun setTransactionMemo(txId: Sha256Hash, memo: String) {
-        updateAndInsertIfNotExist(txId) {
+    override suspend fun setTransactionMemo(txId: Sha256Hash, memo: String, isSyncingPlatform: Boolean) {
+        updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateMemo(txId, memo)
-            transactionMetadataChangeCacheDao.insertMemo(txId, memo)
+            if (!isSyncingPlatform) {
+                transactionMetadataChangeCacheDao.insertMemo(txId, memo)
+            }
         }
     }
 
-    override suspend fun setTransactionService(txId: Sha256Hash, service: String) {
-        updateAndInsertIfNotExist(txId) {
+    override suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncingPlatform: Boolean) {
+        updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateService(txId, service)
-            transactionMetadataChangeCacheDao.insertService(txId, service)
+            if (!isSyncingPlatform) {
+                transactionMetadataChangeCacheDao.insertService(txId, service)
+            }
         }
     }
 
@@ -198,14 +257,14 @@ class WalletTransactionMetadataProvider @Inject constructor(
         } else {
             // it does not exist, so import everything from the transaction
             log.info("sync transaction metadata not exists: ${tx.txId}")
-            insertTransactionMetadata(tx.txId)
+            insertTransactionMetadata(tx.txId, false)
         }
     }
 
     override suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata? {
         var transactionMetadata = transactionMetadataDao.load(txId)
         if (transactionMetadata == null) {
-            insertTransactionMetadata(txId)
+            insertTransactionMetadata(txId, false)
         }
 
         transactionMetadata = transactionMetadataDao.load(txId)

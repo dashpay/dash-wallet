@@ -182,6 +182,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private NotificationManager nm;
     private ConnectivityManager connectivityManager;
     private final Set<BlockchainState.Impediment> impediments = EnumSet.noneOf(BlockchainState.Impediment.class);
+    private BlockchainState blockchainState = new BlockchainState(null, 0, false, impediments, 0, 0, 0);
     private int notificationCount = 0;
     private Coin notificationAccumulatedAmount = Coin.ZERO;
     private final List<Address> notificationAddresses = new LinkedList<Address>();
@@ -243,12 +244,16 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         public void onCoinsReceived(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                 final Coin newBalance) {
 
-            final int bestChainHeight = blockChain.getBestChainHeight();
-            final boolean replaying = bestChainHeight < config.getBestChainHeightEver();
+            //final int bestChainHeight = blockChain.getBestChainHeight();
+            final boolean replaying = blockchainState.getReplaying();
 
             long now = new Date().getTime();
             long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
             boolean insideTxExchangeRateTimeThreshold = (now - blockChainHeadTime) < TX_EXCHANGE_RATE_TIME_THRESHOLD_MS;
+
+            log.info("onCoinsReceived: {}; rate: {}; replaying: {}; inside: {}, confid: {}; will update {}",
+                    tx.getTxId(), tx.getExchangeRate(), replaying, insideTxExchangeRateTimeThreshold, tx.getConfidence().getConfidenceType(),
+                    tx.getExchangeRate() == null && ((!replaying || insideTxExchangeRateTimeThreshold) || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING));
 
             if (tx.getExchangeRate() == null && ((!replaying || insideTxExchangeRateTimeThreshold) || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
                 try {
@@ -298,15 +303,18 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         public void onCoinsSent(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
-            
+
+            log.info("onCoinsSent: {}", tx.getTxId());
+
+
             if(CreditFundingTransaction.isCreditFundingTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
                 // Handle credit function transactions (username creation, topup, invites)
                 CreditFundingTransaction cftx = wallet.getCreditFundingTransaction(tx);
-                PlatformRepo platformRepo = PlatformRepo.getInstance();
-                if (platformRepo != null) {
-                    long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
-                    platformRepo.handleSentCreditFundingTransaction(cftx, blockChainHeadTime);
-                }
+
+                long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
+                platformRepo.handleSentCreditFundingTransaction(cftx, blockChainHeadTime);
+
+                // TODO: if we detect a username creation that we haven't processed, should we?
             }
 
             handleMetadata(tx);
@@ -1276,6 +1284,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
             }
         }
+        this.blockchainState = blockchainState;
     }
 
     private int percentageSync() {
