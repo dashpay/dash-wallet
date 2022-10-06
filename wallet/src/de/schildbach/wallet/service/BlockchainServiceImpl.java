@@ -984,8 +984,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         peerDiscoveryList.add(dnsDiscovery);
 
         if (Constants.SUPPORTS_PLATFORM) {
-            PlatformRepo.getInstance().getPlatform().setMasternodeListManager(application.getWallet().getContext().masternodeListManager);
-            platformSyncService.resume();// PlatformRepo.getInstance().resume();
+            platformRepo.getPlatform().setMasternodeListManager(application.getWallet().getContext().masternodeListManager);
+            platformSyncService.resume();
         }
 
         updateAppWidget();

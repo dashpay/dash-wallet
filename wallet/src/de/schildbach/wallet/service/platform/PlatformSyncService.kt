@@ -910,37 +910,12 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
-//    override fun clearDatabases(): Future<Boolean> {
-//        val future = SettableFuture.create<Boolean>()
-//        syncScope.launch(Dispatchers.IO) {
-//            try {
-//                // push all changes to platform before clearing the database tables
-//                publishChangeCache()
-//                transactionMetadataChangeCacheDao.clear()
-//                transactionMetadataDocumentDao.clear()
-//                future.set(true)
-//            } catch (_: InterruptedException) {
-//
-//            }
-//        }
-//        return future
-//    }
-
     override suspend fun clearDatabases() {
         // push all changes to platform before clearing the database tables
         publishChangeCache()
         transactionMetadataChangeCacheDao.clear()
         transactionMetadataDocumentDao.clear()
     }
-
-    /*override fun clearDatabases2() {
-        runBlocking {
-            // push all changes to platform before clearing the database tables
-            publishChangeCache()
-            transactionMetadataChangeCacheDao.clear()
-            transactionMetadataDocumentDao.clear()
-        }
-    }*/
 
     override fun addPreBlockProgressListener(listener: OnPreBlockProgressListener) {
         onPreBlockContactListeners.add(listener)
