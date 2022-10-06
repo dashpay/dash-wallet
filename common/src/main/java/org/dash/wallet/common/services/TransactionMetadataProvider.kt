@@ -26,12 +26,12 @@ import org.dash.wallet.common.data.TransactionMetadata
 interface TransactionMetadataProvider {
     suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata)
     suspend fun importTransactionMetadata(txId: Sha256Hash)
-    suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory, isSyncing: Boolean = false)
-    suspend fun setTransactionType(txId: Sha256Hash, type: Int, isSyncing: Boolean = false)
-    suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate, isSyncing: Boolean = false)
-    suspend fun setTransactionMemo(txId: Sha256Hash, memo: String, isSyncing: Boolean = false)
-    suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncing: Boolean = false)
-    suspend fun setTransactionSentTime(txId: Sha256Hash, timestamp: Long, isSyncing: Boolean = false)
+    suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionType(txId: Sha256Hash, type: Int, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionMemo(txId: Sha256Hash, memo: String, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionSentTime(txId: Sha256Hash, timestamp: Long, isSyncingPlatform: Boolean = false)
 
     /**
      * Checks for missing data in the metadata cache vs the Transaction and ensures that both
