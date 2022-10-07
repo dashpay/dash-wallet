@@ -182,6 +182,24 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    fun getWalletEncryptionKey(): KeyParameter? {
+        return if (walletApplication.wallet!!.isEncrypted) {
+            val password = try {
+                // always create a SecurityGuard when it is required
+                val securityGuard = SecurityGuard()
+                securityGuard.retrievePassword()
+            } catch (e: IllegalArgumentException) {
+                log.error("There was an error retrieving the wallet password", e)
+                analytics.logError(e, "There was an error retrieving the wallet password")
+                null
+            }
+            // Don't bother with DeriveKeyTask here, just call deriveKey
+            walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+        } else {
+            null
+        }
+    }
+
     /**
      * This method looks at all items in the database tables
      * that have existing identites and saves them for future use.
@@ -1511,12 +1529,29 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    fun getBlockchainIdentityKey(index: Int, keyParameter: KeyParameter?): ECKey? {
+
+        val authenticationChain = walletApplication.wallet!!.blockchainIdentityKeyChain
+        // decrypt keychain
+        val decryptedChain = if (walletApplication.wallet!!.isEncrypted) {
+            authenticationChain.toDecrypted(keyParameter)
+        } else {
+            authenticationChain
+        }
+        val key = decryptedChain.getKey(index) // watchingKey
+        Preconditions.checkState(key.path.last().isHardened)
+        return key
+
+    }
+
     fun getIdentityFromPublicKeyId(): Identity? {
-        val blockchainIdentityKeyChain = walletApplication.wallet!!.blockchainIdentityKeyChain
-                ?: return null
-        val fundingKey = blockchainIdentityKeyChain.watchingKey
+        if (walletApplication.wallet!!.blockchainIdentityKeyChain == null) {
+            return null
+        }
+        val encryptionKey = getWalletEncryptionKey()
+        val firstIdentityKey = getBlockchainIdentityKey(0, encryptionKey)!!
         return try {
-            val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash, true)
+            val identityBytes = platform.client.getIdentityByFirstPublicKey(firstIdentityKey.pubKeyHash, true)
             if (identityBytes != null && identityBytes.isNotEmpty()) {
                 platform.dpp.identity.createFromBuffer(identityBytes)
             } else {

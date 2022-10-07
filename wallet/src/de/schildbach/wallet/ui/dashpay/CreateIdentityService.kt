@@ -364,7 +364,9 @@ class CreateIdentityService : LifecycleService() {
             if(isRetry) {
                 val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
                 if (existingIdentity != null) {
-                    platformRepo.recoverIdentityAsync(blockchainIdentity, walletApplication.wallet!!.blockchainIdentityKeyChain.watchingKey.pubKey)
+                    val encryptionKey = platformRepo.getWalletEncryptionKey()
+                    val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
+                    platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKey)
                 }
             } else {
                 platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
@@ -490,7 +492,9 @@ class CreateIdentityService : LifecycleService() {
                 if(isRetry) {
                     val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
                     if (existingIdentity != null) {
-                        platformRepo.recoverIdentityAsync(blockchainIdentity, walletApplication.wallet!!.blockchainIdentityKeyChain.watchingKey.pubKey)
+                        val encryptionKey = platformRepo.getWalletEncryptionKey()
+                        val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
+                        platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKey)
                     }
                 } else {
                     platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
@@ -680,8 +684,10 @@ class CreateIdentityService : LifecycleService() {
         if (loadingFromCreditFundingTransaction) {
             platformRepo.recoverIdentityAsync(blockchainIdentity, creditFundingTransaction!!)
         } else {
+            val encryptionKey = platformRepo.getWalletEncryptionKey()
+            val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
             platformRepo.recoverIdentityAsync(blockchainIdentity,
-                    walletApplication.wallet!!.blockchainIdentityKeyChain.watchingKey.pubKeyHash)
+                firstIdentityKey.pubKeyHash)
         }
         platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
