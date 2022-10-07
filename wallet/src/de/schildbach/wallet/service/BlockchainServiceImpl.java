@@ -124,11 +124,13 @@ import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.WalletApplicationExt;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
 import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
+import de.schildbach.wallet.service.platform.PlatformSyncService;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener;
@@ -157,6 +159,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject BlockchainStateDao blockchainStateDao;
     @Inject ExchangeRatesDao exchangeRatesDao;
     @Inject TransactionMetadataProvider transactionMetadataProvider;
+    @Inject PlatformSyncService platformSyncService;
+    @Inject PlatformRepo platformRepo;
 
     private BlockStore blockStore;
     private BlockStore headerStore;
@@ -178,6 +182,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private NotificationManager nm;
     private ConnectivityManager connectivityManager;
     private final Set<BlockchainState.Impediment> impediments = EnumSet.noneOf(BlockchainState.Impediment.class);
+    private BlockchainState blockchainState = new BlockchainState(null, 0, false, impediments, 0, 0, 0);
     private int notificationCount = 0;
     private Coin notificationAccumulatedAmount = Coin.ZERO;
     private final List<Address> notificationAddresses = new LinkedList<Address>();
@@ -239,12 +244,16 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         public void onCoinsReceived(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                 final Coin newBalance) {
 
-            final int bestChainHeight = blockChain.getBestChainHeight();
-            final boolean replaying = bestChainHeight < config.getBestChainHeightEver();
+            //final int bestChainHeight = blockChain.getBestChainHeight();
+            final boolean replaying = blockchainState.getReplaying();
 
             long now = new Date().getTime();
             long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
             boolean insideTxExchangeRateTimeThreshold = (now - blockChainHeadTime) < TX_EXCHANGE_RATE_TIME_THRESHOLD_MS;
+
+            log.info("onCoinsReceived: {}; rate: {}; replaying: {}; inside: {}, confid: {}; will update {}",
+                    tx.getTxId(), tx.getExchangeRate(), replaying, insideTxExchangeRateTimeThreshold, tx.getConfidence().getConfidenceType(),
+                    tx.getExchangeRate() == null && ((!replaying || insideTxExchangeRateTimeThreshold) || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING));
 
             if (tx.getExchangeRate() == null && ((!replaying || insideTxExchangeRateTimeThreshold) || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
                 try {
@@ -294,15 +303,18 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         public void onCoinsSent(final Wallet wallet, final Transaction tx, final Coin prevBalance,
                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
-            
+
+            log.info("onCoinsSent: {}", tx.getTxId());
+
+
             if(CreditFundingTransaction.isCreditFundingTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
                 // Handle credit function transactions (username creation, topup, invites)
                 CreditFundingTransaction cftx = wallet.getCreditFundingTransaction(tx);
-                PlatformRepo platformRepo = PlatformRepo.getInstance();
-                if (platformRepo != null) {
-                    long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
-                    platformRepo.handleSentCreditFundingTransaction(cftx, blockChainHeadTime);
-                }
+
+                long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
+                platformRepo.handleSentCreditFundingTransaction(cftx, blockChainHeadTime);
+
+                // TODO: if we detect a username creation that we haven't processed, should we?
             }
 
             handleMetadata(tx);
@@ -760,7 +772,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 // start peergroup
                 peerGroup.startAsync();
                 peerGroup.startBlockChainDownload(blockchainDownloadListener);
-                PlatformRepo.getInstance().addPreBlockProgressListener(blockchainDownloadListener);
+                platformSyncService.addPreBlockProgressListener(blockchainDownloadListener);
             } else if (!impediments.isEmpty() && peerGroup != null) {
                 application.getWallet().getContext().close();
                 log.info("stopping peergroup");
@@ -768,7 +780,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup.removeConnectedEventListener(peerConnectivityListener);
                 peerGroup.removePreBlocksDownloadedListener(preBlocksDownloadListener);
                 peerGroup.removeWallet(wallet);
-                PlatformRepo.getInstance().removePreBlockProgressListener(blockchainDownloadListener);
+                platformSyncService.removePreBlockProgressListener(blockchainDownloadListener);
                 peerGroup.stopAsync();
                 wallet.setRiskAnalyzer(defaultRiskAnalyzer);
                 riskAnalyzer.shutdown();
@@ -972,8 +984,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         peerDiscoveryList.add(dnsDiscovery);
 
         if (Constants.SUPPORTS_PLATFORM) {
-            PlatformRepo.getInstance().getPlatform().setMasternodeListManager(application.getWallet().getContext().masternodeListManager);
-            PlatformRepo.getInstance().resume();
+            platformRepo.getPlatform().setMasternodeListManager(application.getWallet().getContext().masternodeListManager);
+            platformSyncService.resume();
         }
 
         updateAppWidget();
@@ -1085,14 +1097,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         unregisterReceiver(connectivityReceiver);
 
-        PlatformRepo.getInstance().shutdown();
+        platformSyncService.shutdown(); //PlatformRepo.getInstance().shutdown();
 
         if (peerGroup != null) {
             application.getWallet().getContext().close();
             peerGroup.removeDisconnectedEventListener(peerConnectivityListener);
             peerGroup.removeConnectedEventListener(peerConnectivityListener);
             peerGroup.removeWallet(application.getWallet());
-            PlatformRepo.getInstance().removePreBlockProgressListener(blockchainDownloadListener);
+            platformSyncService.removePreBlockProgressListener(blockchainDownloadListener);
             peerGroup.stop();
             application.getWallet().setRiskAnalyzer(defaultRiskAnalyzer);
             riskAnalyzer.shutdown();
@@ -1132,13 +1144,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 application.finalizeWipe();
             }
             //Clear the blockchain identity
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    // This code is not executed during a wipe, only a blockchain reset
-                    PlatformRepo.getInstance().clearDatabase(false);
-                }
-            });
+            WalletApplicationExt.INSTANCE.clearDatabases(application, false);
         }
 
         closeStream(mnlistinfoBootStrapStream);
@@ -1278,6 +1284,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
             }
         }
+        this.blockchainState = blockchainState;
     }
 
     private int percentageSync() {
@@ -1301,7 +1308,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         @Override
         public void onPreBlocksDownload(Peer peer) {
             log.info("onPreBlocksDownload using peer {}", peer);
-            PlatformRepo.getInstance().preBlockDownload(peerGroup.getPreBlockDownloadFuture());
+            platformSyncService.preBlockDownload(peerGroup.getPreBlockDownloadFuture());
         }
     };
 

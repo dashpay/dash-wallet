@@ -1,14 +1,14 @@
 buildscript {
     ext {
         kotlin_version = '1.6.10'
-        coroutines_version = '1.5.2'
+        coroutines_version = '1.6.4'
         ok_http_version = '4.9.1'
         dashjVersion = '0.18.2-SNAPSHOT'
         hiltVersion = '2.38.1'
         hiltWorkVersion = '1.0.0'
         workRuntimeVersion='2.6.0'
         firebaseVersion = '28.4.2'
-        roomVersion = '2.3.0'
+        roomVersion = '2.4.0-alpha03'
         lifecycleVersion = '2.3.1'
         navigationVersion = '2.3.5'
         slf4jVersion = '1.7.32'

@@ -44,5 +44,12 @@ class AppDatabaseMigrations {
                 database.execSQL("CREATE TABLE `address_metadata` (`address` TEXT NOT NULL, `isInput` INTEGER NOT NULL, `taxCategory` TEXT NOT NULL, `service` TEXT NOT NULL, PRIMARY KEY(`address`, `isInput`))")
             }
         }
+
+        @JvmStatic
+        val migration17To18 = object : Migration(17, 18) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE TABLE `transaction_metadata_cache` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `txId` BLOB NOT NULL, `timestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` TEXT, `memo` TEXT, `service` TEXT)")
+            }
+        }
     }
 }
