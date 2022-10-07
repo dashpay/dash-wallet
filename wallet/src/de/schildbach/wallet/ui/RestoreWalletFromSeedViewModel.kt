@@ -26,7 +26,9 @@ import de.schildbach.wallet.util.MnemonicCodeExt
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import org.bitcoinj.crypto.MnemonicException
+import org.bitcoinj.crypto.MnemonicException.MnemonicLengthException
 import org.slf4j.LoggerFactory
+import java.util.*
 
 class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -39,7 +41,19 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
 
     val recoverPinLiveData = RecoverPinLiveData(application)
 
+    /**
+     * Normalize - converts all letter to lowercase
+     *
+     * @param words - the recovery phrase word list
+     */
+    private fun normalize(words: MutableList<String>) {
+        for (i in words.indices) {
+            words[i] = words[i].lowercase(Locale.getDefault())
+        }
+    }
+
     fun restoreWalletFromSeed(words: MutableList<String>) {
+        normalize(words)
         if (isSeedValid(words)) {
             val wallet = WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS)
             walletApplication.setWallet(wallet)
@@ -52,19 +66,26 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
     }
 
     fun recoverPin(words: MutableList<String>) {
+        normalize(words)
         if (isSeedValid(words)) {
             recoverPinLiveData.recover(words)
         }
+    }
+
+    private fun handleException(x: MnemonicException): Boolean {
+        log.info("problem restoring wallet from seed: ", x)
+        showRestoreWalletFailureAction.call(x)
+        return false
     }
 
     private fun isSeedValid(words: MutableList<String>): Boolean {
         return try {
             MnemonicCodeExt.getInstance().check(walletApplication, words)
             true
+        } catch (x: MnemonicLengthException) {
+            handleException(x)
         } catch (x: MnemonicException) {
-            log.info("problem restoring wallet from seed: ", x)
-            showRestoreWalletFailureAction.call(x)
-            false
+            handleException(x)
         }
     }
 }
