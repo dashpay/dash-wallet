@@ -17,7 +17,6 @@
 package de.schildbach.wallet.data
 
 import androidx.room.*
-import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.TaxCategory
 
@@ -57,5 +56,5 @@ interface TransactionMetadataChangeCacheDao {
     suspend fun insertExchangeRate(txId: Sha256Hash, currencyCode: String, rate: String, cacheTimestamp: Long = System.currentTimeMillis())
 
     @Query("DELETE FROM transaction_metadata_cache")
-    fun clear()
+    suspend fun clear()
 }
