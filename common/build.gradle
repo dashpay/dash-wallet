@@ -54,12 +54,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-analytics-ktx'
     implementation 'com.google.firebase:firebase-crashlytics-ktx'
 
-    //UI
-    implementation "com.github.bumptech.glide:glide:$glideVersion"
-    kapt "com.github.bumptech.glide:compiler:$glideVersion"
-    implementation "io.coil-kt:coil:$coilVersion"
-
-    //Retrofit + OkHttp
+    // Retrofit + OkHttp
     api "com.squareup.okhttp3:okhttp:$ok_http_version"
     api "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
     api 'com.squareup.moshi:moshi:1.11.0'
@@ -77,15 +72,12 @@ dependencies {
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
     implementation "androidx.datastore:datastore-preferences:1.0.0"
+    implementation "androidx.room:room-ktx:$roomVersion"
 
     // UI
-    implementation "com.google.android.material:material:$materialVersion"
-    implementation "androidx.browser:browser:$browserVersion"
-    implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
-    //noinspection GradleDependency
-    implementation 'com.google.zxing:core:3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
-
-    // UI
+    implementation "com.github.bumptech.glide:glide:$glideVersion"
+    kapt "com.github.bumptech.glide:compiler:$glideVersion"
+    implementation "io.coil-kt:coil:$coilVersion"
     implementation "com.google.android.material:material:$materialVersion"
     implementation "androidx.browser:browser:$browserVersion"
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
@@ -95,11 +87,6 @@ dependencies {
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
     kapt "com.google.dagger:hilt-compiler:$hiltVersion"
-
-    // Database
-    api "androidx.room:room-runtime:$roomVersion"
-    api "androidx.room:room-ktx:$roomVersion"
-    kapt "androidx.room:room-compiler:$roomVersion"
 
     testImplementation "junit:junit:$junitVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
