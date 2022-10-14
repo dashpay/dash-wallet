@@ -26,7 +26,9 @@ import de.schildbach.wallet.util.MnemonicCodeExt
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import org.bitcoinj.crypto.MnemonicException
+import org.bitcoinj.crypto.MnemonicException.MnemonicLengthException
 import org.slf4j.LoggerFactory
+import java.util.*
 
 class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -39,9 +41,20 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
 
     val recoverPinLiveData = RecoverPinLiveData(application)
 
-    fun restoreWalletFromSeed(words: MutableList<String>) {
+    /**
+     * Normalize - converts all letter to lowercase and to words matching those of a BIP39 word list.
+     * Examples:
+     *   Satoshi -> satoshi (all letters become lowercase)
+     *   TODO: also handle this: medaille -> médaille
+     * @param words - the recovery phrase word list
+     */
+    private fun normalize(words: List<String>): List<String> {
+        return words.map { it.lowercase(Locale.getDefault()) }
+    }
+
+    fun restoreWalletFromSeed(words: List<String>) {
         if (isSeedValid(words)) {
-            val wallet = WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS)
+            val wallet = WalletUtils.restoreWalletFromSeed(normalize(words), Constants.NETWORK_PARAMETERS)
             walletApplication.setWallet(wallet)
             log.info("successfully restored wallet from seed")
             walletApplication.configuration.disarmBackupSeedReminder()
@@ -51,20 +64,33 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
         }
     }
 
-    fun recoverPin(words: MutableList<String>) {
+    fun recoverPin(words: List<String>) {
         if (isSeedValid(words)) {
-            recoverPinLiveData.recover(words)
+            recoverPinLiveData.recover(normalize(words))
         }
     }
 
-    private fun isSeedValid(words: MutableList<String>): Boolean {
+    private fun handleException(x: MnemonicException): Boolean {
+        log.info("problem restoring wallet from seed: ", x)
+        showRestoreWalletFailureAction.call(x)
+        return false
+    }
+
+    /**
+     * Checks to see if this seed is valid.  The validation is not case sensitive, nor does it
+     * depend on accent marks or other diacritics.
+     *
+     * @param words
+     * @return
+     */
+    private fun isSeedValid(words: List<String>): Boolean {
         return try {
             MnemonicCodeExt.getInstance().check(walletApplication, words)
             true
+        } catch (x: MnemonicLengthException) {
+            handleException(x)
         } catch (x: MnemonicException) {
-            log.info("problem restoring wallet from seed: ", x)
-            showRestoreWalletFailureAction.call(x)
-            false
+            handleException(x)
         }
     }
 }
