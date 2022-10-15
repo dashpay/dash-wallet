@@ -90,7 +90,7 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
             }
         });
 
-        if (fingerprintHelper.init()) {
+        if (fingerprintHelper.isAvailable()) {
             boolean isFingerprintEnabled = fingerprintHelper.isFingerprintEnabled();
             if (isFingerprintEnabled) {
                 fingerprintView.setVisibility(View.VISIBLE);
@@ -122,10 +122,9 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
         return alertDialog;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private void startFingerprintListener() {
         fingerprintCancellationSignal = new CancellationSignal();
-        fingerprintHelper.getPassword(fingerprintCancellationSignal, new FingerprintHelper.Callback() {
+        fingerprintHelper.getPassword(requireActivity(), fingerprintCancellationSignal, new FingerprintHelper.Callback() {
             @Override
             public void onSuccess(String savedPass) {
                 checkPassword(savedPass);

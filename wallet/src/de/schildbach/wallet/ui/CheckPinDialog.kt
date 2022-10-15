@@ -311,7 +311,7 @@ open class CheckPinDialog(
 
     private fun initFingerprint() {
         log.info("fingerprint setup for Android M and above")
-        if (viewModel.fingerprintHelper.init()) {
+        if (viewModel.fingerprintHelper.isAvailable()) {
             if (viewModel.fingerprintHelper.isFingerprintEnabled) {
                 fingerprintFlow(true)
                 startFingerprintListener()
@@ -339,7 +339,8 @@ open class CheckPinDialog(
         fingerprintCancellationSignal.setOnCancelListener {
             log.info("fingerprint cancellation signal listener triggered")
         }
-        viewModel.fingerprintHelper.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
+        viewModel.fingerprintHelper.getPassword(requireActivity(), fingerprintCancellationSignal,
+            object : FingerprintHelper.Callback {
             override fun onSuccess(savedPass: String) {
                 log.info("fingerprint scan successful")
                 onFingerprintSuccess(savedPass)

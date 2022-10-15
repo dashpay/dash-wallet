@@ -28,7 +28,6 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
-import de.schildbach.wallet.security.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_security.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -116,7 +115,7 @@ class SecurityActivity : BaseMenuActivity() {
         }
 
         //Fingerprint group and switch setup
-        if (viewModel.fingerprintHelper.init()) {
+        if (viewModel.fingerprintHelper.isAvailable()) {
             fingerprint_auth_group.visibility = VISIBLE
             fingerprint_auth_switch.isChecked = viewModel.fingerprintHelper.isFingerprintEnabled
             fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)

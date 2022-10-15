@@ -39,8 +39,8 @@ abstract class SecurityModule {
         @Provides
         fun providePinRetryController(): PinRetryController = PinRetryController.getInstance()
 
-        @Singleton
         @Provides
+        @Singleton
         fun provideFingerprintHelper(
             @ApplicationContext context: Context,
             configuration: Configuration

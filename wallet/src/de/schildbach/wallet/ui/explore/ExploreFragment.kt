@@ -28,7 +28,6 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.security.BiometricsHelper
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet_test.R
@@ -77,10 +76,8 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
         }
 
         binding.stakingBtn.setOnClickListener {
-//            viewModel.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY)
-//            handleStakingNavigation()
-
-            BiometricsHelper().doThis(requireActivity())
+            viewModel.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY)
+            handleStakingNavigation()
         }
 
         viewModel.stakingAPY.observe(viewLifecycleOwner) {

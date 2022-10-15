@@ -222,12 +222,11 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
         }
     };
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private void initFingerprintHelper() {
-        if (fingerprintHelper.init() && fingerprintHelper.isFingerprintEnabled()) {
+        if (fingerprintHelper.isAvailable() && fingerprintHelper.isFingerprintEnabled()) {
             fingerprintView.setVisibility(View.VISIBLE);
             fingerprintCancellationSignal = new CancellationSignal();
-            fingerprintHelper.getPassword(fingerprintCancellationSignal, new FingerprintHelper.Callback() {
+            fingerprintHelper.getPassword(requireActivity(), fingerprintCancellationSignal, new FingerprintHelper.Callback() {
                 @Override
                 public void onSuccess(String savedPass) {
                     privateKeyPasswordView.setText(savedPass);

@@ -445,22 +445,22 @@ open class LockScreenActivity : SecureActivity() {
     private fun initFingerprint(forceInit: Boolean): Boolean {
         log.info("initializing finger print on Android M and above(force: $forceInit)")
         var result = false
-        fingerprintHelper.run {
-            if (::fingerprintCancellationSignal.isInitialized && !fingerprintCancellationSignal.isCanceled) {
-                // we already initialized the fingerprint listener
-                log.info("fingerprint already initialized: $fingerprintCancellationSignal")
-                fingerprintCancellationSignal.cancel()
-            }
 
-            if (init() && isFingerprintEnabled) {
-                startFingerprintListener()
-                result = true
-            } else {
-                log.info("fingerprint was disabled")
-                action_login_with_fingerprint.isEnabled = false
-                action_login_with_fingerprint.alpha = 0f
-            }
+        if (::fingerprintCancellationSignal.isInitialized && !fingerprintCancellationSignal.isCanceled) {
+            // we already initialized the fingerprint listener
+            log.info("fingerprint already initialized: $fingerprintCancellationSignal")
+            fingerprintCancellationSignal.cancel()
         }
+
+        if (fingerprintHelper.isAvailable && fingerprintHelper.isFingerprintEnabled) {
+            startFingerprintListener()
+            result = true
+        } else {
+            log.info("fingerprint was disabled")
+            action_login_with_fingerprint.isEnabled = false
+            action_login_with_fingerprint.alpha = 0f
+        }
+
         return result
     }
 
@@ -473,7 +473,7 @@ open class LockScreenActivity : SecureActivity() {
         }
 
         log.info("start fingerprint listener: $fingerprintCancellationSignal")
-        fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
+        fingerprintHelper.getPassword(this, fingerprintCancellationSignal, object : FingerprintHelper.Callback {
             override fun onSuccess(savedPass: String) {
                 log.info("fingerprint scan successful")
                 fingerprint_view.hideError()
@@ -483,8 +483,8 @@ open class LockScreenActivity : SecureActivity() {
             override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
                 log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
                 if (!canceled) {
-                    if (fingerprintHelper!!.hasFingerprintKeyChanged()) {
-                        fingerprintHelper!!.resetFingerprintKeyChanged()
+                    if (fingerprintHelper.hasFingerprintKeyChanged()) {
+                        fingerprintHelper.resetFingerprintKeyChanged()
                         showFingerprintKeyChangedDialog()
                         action_login_with_fingerprint.isEnabled = false
                     } else {

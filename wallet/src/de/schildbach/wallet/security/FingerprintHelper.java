@@ -18,13 +18,10 @@ package de.schildbach.wallet.security;
 
 import static android.content.Context.KEYGUARD_SERVICE;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.hardware.biometrics.BiometricPrompt;
 import android.hardware.fingerprint.FingerprintManager;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyPermanentlyInvalidatedException;
@@ -32,9 +29,11 @@ import android.security.keystore.KeyProperties;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
 import androidx.core.hardware.fingerprint.FingerprintManagerCompat;
 import androidx.core.os.CancellationSignal;
+import androidx.fragment.app.FragmentActivity;
 
 import org.dash.wallet.common.Configuration;
 import org.slf4j.Logger;
@@ -60,8 +59,6 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 
-import de.schildbach.wallet.WalletApplication;
-
 public class FingerprintHelper {
 
     private static final Logger log = LoggerFactory.getLogger(FingerprintHelper.class);
@@ -72,11 +69,12 @@ public class FingerprintHelper {
     private static final String KEYSTORE_ALIAS = "DASH_WALLET_FINGERPRINT_KEYSTORE";
     private static final String FINGERPRINT_KEY_CHANGED = "FINGERPRINT_KEY_CHANGED";
 
-    private FingerprintManagerCompat fingerprintManager;
+    private final BiometricManager biometrictManager;
 
     private final Context context;
     private final Configuration configuration;
     private KeyStore keyStore;
+    private KeyguardManager keyguardManager;
 
     public interface Callback {
         void onSuccess(String savedPass);
@@ -89,14 +87,12 @@ public class FingerprintHelper {
     public FingerprintHelper(Context context, Configuration configuration) {
         this.context = context;
         this.configuration = configuration;
+        this.keyguardManager = (KeyguardManager) context.getSystemService(KEYGUARD_SERVICE);
+        this.biometrictManager = BiometricManager.from(context);
     }
 
-    public boolean init() {
-        KeyguardManager keyguardManager = (KeyguardManager) context.getSystemService(KEYGUARD_SERVICE);
-        fingerprintManager = FingerprintManagerCompat.from(context);
-
-        if (!fingerprintManager.isHardwareDetected()) {
-            log.info("Fingerprint hardware not detected");
+    public boolean isAvailable() {
+        if (!BiometricsHelperKt.isBiometricAvailable(biometrictManager, context)) {
             return false;
         }
 
@@ -105,19 +101,10 @@ public class FingerprintHelper {
             return false;
         }
 
-        if (!hasPermission()) {
-            log.info("User hasn't granted permission to use Fingerprint");
-            return false;
-        }
-
-        if (!fingerprintManager.hasEnrolledFingerprints()) {
-            log.info("User hasn't registered any fingerprints");
-            return false;
-        }
-
         if (!initKeyStore()) {
             return false;
         }
+
         return true;
     }
 
@@ -170,18 +157,13 @@ public class FingerprintHelper {
         return true;
     }
 
-    private void authenticate(CancellationSignal cancellationSignal, FingerprintAuthenticationListener authListener, int mode) {
+    private void authenticate(FragmentActivity activity,
+            CancellationSignal cancellationSignal, FingerprintAuthenticationListener authListener, int mode) {
         try {
-            if (hasPermission()) {
-                Cipher cipher = createCipher(mode);
-                FingerprintManagerCompat.CryptoObject crypto = new FingerprintManagerCompat.CryptoObject(cipher);
-                fingerprintManager.authenticate(crypto, 0, cancellationSignal, authListener, null);
-            } else {
-                log.warn("User hasn't granted permission to use Fingerprint");
-                authListener.getCallback()
-                        .onFailure("User hasn't granted permission to use Fingerprint",
-                                false, false);
-            }
+            Cipher cipher = createCipher(mode);
+            assert cipher != null;
+            BiometricPrompt.CryptoObject crypto = new BiometricPrompt.CryptoObject(cipher);
+            BiometricsHelperKt.authenticate(biometrictManager, activity, crypto, authListener);
         } catch (Throwable t) {
             if (t instanceof KeyPermanentlyInvalidatedException) {
                 //reset fingerprint
@@ -225,7 +207,7 @@ public class FingerprintHelper {
     }
 
     public void clear() {
-        if (init() && isFingerprintEnabled()) {
+        if (isAvailable() && isFingerprintEnabled()) {
             configuration.setRemindEnableFingerprint(true);
         }
         getSharedPreferences().edit().clear().commit();
@@ -260,17 +242,14 @@ public class FingerprintHelper {
         return context.getSharedPreferences(FINGERPRINT_PREFS_NAME, 0);
     }
 
-    private boolean hasPermission() {
-        return ActivityCompat.checkSelfPermission(context,
-                Manifest.permission.USE_FINGERPRINT) == PackageManager.PERMISSION_GRANTED;
+    public void savePassword(FragmentActivity activity,
+            @NonNull String password, CancellationSignal cancellationSignal, Callback callback) {
+        authenticate(activity, cancellationSignal, new FingerprintEncryptPasswordListener(callback, password), Cipher.ENCRYPT_MODE);
     }
 
-    public void savePassword(@NonNull String password, CancellationSignal cancellationSignal, Callback callback) {
-        authenticate(cancellationSignal, new FingerprintEncryptPasswordListener(callback, password), Cipher.ENCRYPT_MODE);
-    }
-
-    public void getPassword(CancellationSignal cancellationSignal, Callback callback) {
-        authenticate(cancellationSignal, new FingerprintDecryptPasswordListener(callback), Cipher.DECRYPT_MODE);
+    public void getPassword(FragmentActivity activity,
+            CancellationSignal cancellationSignal, Callback callback) {
+        authenticate(activity, cancellationSignal, new FingerprintDecryptPasswordListener(callback), Cipher.DECRYPT_MODE);
     }
 
     public boolean encryptPassword(Cipher cipher, String password) {
@@ -364,7 +343,7 @@ public class FingerprintHelper {
         return retVal;
     }
 
-    protected class FingerprintAuthenticationListener extends FingerprintManagerCompat.AuthenticationCallback {
+    protected class FingerprintAuthenticationListener extends BiometricPrompt.AuthenticationCallback {
 
         protected final Callback callback;
 
