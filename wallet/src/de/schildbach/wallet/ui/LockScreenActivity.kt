@@ -43,7 +43,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.PinPreviewView
-import de.schildbach.wallet.util.FingerprintHelper
+import de.schildbach.wallet.security.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
 import kotlinx.android.synthetic.main.activity_lock_screen_root.*
@@ -76,6 +76,7 @@ open class LockScreenActivity : SecureActivity() {
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var restartService: RestartService
     @Inject lateinit var pinRetryController: PinRetryController
+    @Inject lateinit var fingerprintHelper: FingerprintHelper
     private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
 
     private lateinit var checkPinViewModel: CheckPinViewModel
@@ -104,7 +105,6 @@ open class LockScreenActivity : SecureActivity() {
         USE_DEFAULT // defaults to fingerprint if available and enabled
     }
 
-    private var fingerprintHelper: FingerprintHelper? = null
     private lateinit var fingerprintCancellationSignal: CancellationSignal
 
     private val keepUnlocked by lazy {
@@ -301,7 +301,7 @@ open class LockScreenActivity : SecureActivity() {
                     setLockState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    if (EnableFingerprintDialog.shouldBeShown(this)) {
+                    if (EnableFingerprintDialog.shouldBeShown(configuration, fingerprintHelper)) {
                         EnableFingerprintDialog.show(it.data!!, supportFragmentManager)
                     } else {
                         onCorrectPin(it.data!!)
@@ -444,11 +444,8 @@ open class LockScreenActivity : SecureActivity() {
      */
     private fun initFingerprint(forceInit: Boolean): Boolean {
         log.info("initializing finger print on Android M and above(force: $forceInit)")
-        if (fingerprintHelper == null) {
-            fingerprintHelper = FingerprintHelper(this)
-        }
         var result = false
-        fingerprintHelper?.run {
+        fingerprintHelper.run {
             if (::fingerprintCancellationSignal.isInitialized && !fingerprintCancellationSignal.isCanceled) {
                 // we already initialized the fingerprint listener
                 log.info("fingerprint already initialized: $fingerprintCancellationSignal")
@@ -460,7 +457,6 @@ open class LockScreenActivity : SecureActivity() {
                 result = true
             } else {
                 log.info("fingerprint was disabled")
-                fingerprintHelper = null
                 action_login_with_fingerprint.isEnabled = false
                 action_login_with_fingerprint.alpha = 0f
             }

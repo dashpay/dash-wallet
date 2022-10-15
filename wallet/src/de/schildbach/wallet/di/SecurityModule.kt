@@ -17,13 +17,17 @@
 
 package de.schildbach.wallet.di
 
+import android.content.Context
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import de.schildbach.wallet.security.FingerprintHelper
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.security.SecurityFunctions
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.ISecurityFunctions
 import javax.inject.Singleton
 
@@ -34,10 +38,17 @@ abstract class SecurityModule {
         @Singleton
         @Provides
         fun providePinRetryController(): PinRetryController = PinRetryController.getInstance()
+
+        @Singleton
+        @Provides
+        fun provideFingerprintHelper(
+            @ApplicationContext context: Context,
+            configuration: Configuration
+        ) = FingerprintHelper(context, configuration)
     }
 
     @Binds
-    abstract fun bindSecurityModel(
+    abstract fun bindSecurityFunctions(
         securityFunctions: SecurityFunctions
     ): ISecurityFunctions
 }

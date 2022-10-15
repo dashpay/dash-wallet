@@ -22,19 +22,23 @@ import androidx.core.os.CancellationSignal;
 import androidx.fragment.app.DialogFragment;
 
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.util.KeyboardUtil;
 
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.widget.FingerprintView;
-import de.schildbach.wallet.util.FingerprintHelper;
+import de.schildbach.wallet.security.FingerprintHelper;
 import de.schildbach.wallet_test.R;
 
 /**
  * Created by Hash Engineering on 4/8/2018.
  */
-
+@AndroidEntryPoint
 public abstract class AbstractPINDialogFragment extends DialogFragment {
 
     protected DialogInterface.OnDismissListener onDismissListener;
@@ -43,7 +47,6 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
     protected WalletApplication application;
     protected Handler backgroundHandler;
     protected PinRetryController pinRetryController;
-    protected FingerprintHelper fingerprintHelper;
     protected CancellationSignal fingerprintCancellationSignal;
 
     protected EditText pinView;
@@ -54,6 +57,11 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
 
     protected int dialogLayout;
     protected int dialogTitle;
+
+    @Inject
+    public FingerprintHelper fingerprintHelper;
+    @Inject
+    public Configuration configuration;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -82,7 +90,6 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
             }
         });
 
-        fingerprintHelper = new FingerprintHelper(getActivity());
         if (fingerprintHelper.init()) {
             boolean isFingerprintEnabled = fingerprintHelper.isFingerprintEnabled();
             if (isFingerprintEnabled) {
@@ -91,8 +98,6 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
             } else {
                 fingerprintView.setText(R.string.touch_fingerprint_to_enable);
             }
-        } else {
-            fingerprintHelper = null;
         }
 
         if (walletProvider.getWallet().isEncrypted()) {

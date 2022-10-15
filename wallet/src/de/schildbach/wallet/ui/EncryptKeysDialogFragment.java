@@ -35,9 +35,9 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 
 import com.google.common.base.Strings;
@@ -46,9 +46,8 @@ import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.crypto.KeyCrypterScrypt;
 import org.bitcoinj.wallet.Wallet;
 import org.bouncycastle.crypto.params.KeyParameter;
+import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
-import org.dash.wallet.common.ui.BaseDialogFragment;
-import org.dash.wallet.common.util.KeyboardUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +58,7 @@ import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.ui.preference.PinRetryController;
-import de.schildbach.wallet.util.FingerprintHelper;
+import de.schildbach.wallet.security.FingerprintHelper;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
@@ -67,7 +66,7 @@ import kotlin.Unit;
  * @author Andreas Schildbach
  */
 @AndroidEntryPoint
-public class EncryptKeysDialogFragment extends BaseDialogFragment {
+public class EncryptKeysDialogFragment extends DialogFragment {
 
     private static final String FRAGMENT_TAG = EncryptKeysDialogFragment.class.getName();
 
@@ -116,7 +115,9 @@ public class EncryptKeysDialogFragment extends BaseDialogFragment {
     private final Handler handler = new Handler();
     private HandlerThread backgroundThread;
     private Handler backgroundHandler;
-    private FingerprintHelper fingerprintHelper;
+
+    @Inject Configuration configuration;
+    @Inject FingerprintHelper fingerprintHelper;
     @Inject RestartService restartService;
 
     private enum State {
@@ -161,12 +162,11 @@ public class EncryptKeysDialogFragment extends BaseDialogFragment {
         backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
         backgroundThread.start();
         backgroundHandler = new Handler(backgroundThread.getLooper());
-        fingerprintHelper = new FingerprintHelper(getActivity());
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, @androidx.annotation.Nullable ViewGroup container, Bundle savedInstanceState) {
-        setCancelable(getArguments() != null ? getArguments().getBoolean(CANCELABLE_ARG) : false);
+        setCancelable(getArguments() != null && getArguments().getBoolean(CANCELABLE_ARG));
         return super.onCreateView(inflater, container, savedInstanceState);
     }
 
@@ -203,7 +203,7 @@ public class EncryptKeysDialogFragment extends BaseDialogFragment {
             encryptKeysAlertDialogBuilder.setNegativeText(getString(R.string.button_cancel));
         }
         encryptKeysAlertDialogBuilder.setCancelableOnTouchOutside(false);
-        alertDialog = encryptKeysAlertDialogBuilder.buildAlertDialog();
+        AlertDialog alertDialog = encryptKeysAlertDialogBuilder.buildAlertDialog();
         alertDialog.setOnShowListener(dialogInterface -> {
             positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
             negativeButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
@@ -221,8 +221,7 @@ public class EncryptKeysDialogFragment extends BaseDialogFragment {
             updateView();
         });
 
-        return super.onCreateDialog(savedInstanceState);
-
+        return alertDialog;
     }
 
     @Override
@@ -245,8 +244,11 @@ public class EncryptKeysDialogFragment extends BaseDialogFragment {
     }
 
     @Override
-    public void onDismiss(final DialogInterface dialog) {
-        KeyboardUtil.Companion.hideKeyboard(getActivity(), oldPasswordView);
+    public void onDismiss(@NonNull final DialogInterface dialog) {
+        if (this.dialog != null && this.dialog.isShowing()) {
+            this.dialog.dismiss();
+        }
+
         this.dialog = null;
 
         oldPasswordView.removeTextChangedListener(textWatcher);
@@ -365,11 +367,10 @@ public class EncryptKeysDialogFragment extends BaseDialogFragment {
                             public void run() {
                                 dismiss();
 
-                                FragmentActivity activity = getActivity();
-
-                                if (EnableFingerprintDialog.shouldBeShown(activity) && oldPassword == null && state == State.DONE) {
-                                    //noinspection ConstantConditions
-                                    EnableFingerprintDialog.show(newPassword, activity.getSupportFragmentManager());
+                                // TODO check
+                                if (EnableFingerprintDialog.shouldBeShown(configuration, fingerprintHelper) &&
+                                        oldPassword == null && state == State.DONE) {
+                                    EnableFingerprintDialog.show(newPassword, getParentFragmentManager());
                                 }
                             }
                         }, 2000);

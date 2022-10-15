@@ -24,6 +24,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.security.FingerprintHelper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -44,7 +45,8 @@ class SecurityViewModel @Inject constructor(
     private val configuration: Configuration,
     private val walletData: WalletDataProvider,
     private val analytics: AnalyticsService,
-    private val walletApplication: WalletApplication
+    private val walletApplication: WalletApplication,
+    val fingerprintHelper: FingerprintHelper
 ): ViewModel() {
     private var selectedExchangeRate: ExchangeRate? = null
 

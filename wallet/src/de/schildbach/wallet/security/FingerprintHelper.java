@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.util;
+package de.schildbach.wallet.security;
 
 import static android.content.Context.KEYGUARD_SERVICE;
 
@@ -24,6 +24,7 @@ import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.hardware.biometrics.BiometricPrompt;
 import android.hardware.fingerprint.FingerprintManager;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyPermanentlyInvalidatedException;
@@ -35,6 +36,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.hardware.fingerprint.FingerprintManagerCompat;
 import androidx.core.os.CancellationSignal;
 
+import org.dash.wallet.common.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,6 +75,7 @@ public class FingerprintHelper {
     private FingerprintManagerCompat fingerprintManager;
 
     private final Context context;
+    private final Configuration configuration;
     private KeyStore keyStore;
 
     public interface Callback {
@@ -83,18 +86,18 @@ public class FingerprintHelper {
         void onHelp(int helpCode, String helpString);
     }
 
-    public FingerprintHelper(Context context) {
+    public FingerprintHelper(Context context, Configuration configuration) {
         this.context = context;
+        this.configuration = configuration;
     }
 
     public boolean init() {
-
         KeyguardManager keyguardManager = (KeyguardManager) context.getSystemService(KEYGUARD_SERVICE);
         fingerprintManager = FingerprintManagerCompat.from(context);
 
         if (!fingerprintManager.isHardwareDetected()) {
             log.info("Fingerprint hardware not detected");
-            return  false;
+            return false;
         }
 
         if (!keyguardManager.isKeyguardSecure()) {
@@ -223,7 +226,7 @@ public class FingerprintHelper {
 
     public void clear() {
         if (init() && isFingerprintEnabled()) {
-            WalletApplication.getInstance().getConfiguration().setRemindEnableFingerprint(true);
+            configuration.setRemindEnableFingerprint(true);
         }
         getSharedPreferences().edit().clear().commit();
     }

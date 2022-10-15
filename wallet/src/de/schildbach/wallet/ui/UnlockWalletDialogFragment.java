@@ -18,13 +18,11 @@
 package de.schildbach.wallet.ui;
 
 import android.content.DialogInterface;
-import android.os.Build;
 import android.view.View;
 
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
-import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet_test.R;
 
 public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
@@ -82,12 +80,9 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
 
                     dismissAllowingStateLoss();
 
-                    if (fingerprintHelper != null) {
-                        if (!fingerprintHelper.isFingerprintEnabled() && WalletApplication
-                                .getInstance().getConfiguration().getRemindEnableFingerprint()) {
-                            EnableFingerprintDialog.show(password,
-                                    getActivity().getSupportFragmentManager());
-                        }
+                    if (!fingerprintHelper.isFingerprintEnabled() && configuration.getRemindEnableFingerprint()) {
+                        EnableFingerprintDialog.show(password,
+                                getActivity().getSupportFragmentManager());
                     }
                 }
             }

@@ -47,9 +47,8 @@ import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
-@FlowPreview
-@ExperimentalCoroutinesApi
 class MainViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val clipboardManager: ClipboardManager,

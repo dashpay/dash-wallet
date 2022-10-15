@@ -53,19 +53,23 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.payments.DecryptSeedTask;
 import de.schildbach.wallet.payments.DeriveKeyTask;
 import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
-import de.schildbach.wallet.util.FingerprintHelper;
+import de.schildbach.wallet.security.FingerprintHelper;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
         implements SharedPreferences.OnSharedPreferenceChangeListener {
 
@@ -73,6 +77,7 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
     private static final String ARGS_IS_UPGRADING = "is_upgrading";
 
     private FingerprintView fingerprintView;
+    @Inject public FingerprintHelper fingerprintHelper;
 
     private CancellationSignal fingerprintCancellationSignal;
 
@@ -219,7 +224,6 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void initFingerprintHelper() {
-        FingerprintHelper fingerprintHelper = new FingerprintHelper(getActivity());
         if (fingerprintHelper.init() && fingerprintHelper.isFingerprintEnabled()) {
             fingerprintView.setVisibility(View.VISIBLE);
             fingerprintCancellationSignal = new CancellationSignal();

@@ -74,9 +74,7 @@ import kotlinx.coroutines.FlowPreview;
 /**
  * @author Andreas Schildbach
  */
-@FlowPreview
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
@@ -203,6 +201,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleEncryptKeysRestoredWallet() {
+        // TODO check
         EncryptKeysDialogFragment.show(false, getSupportFragmentManager(), dialog -> resetBlockchain());
     }
 

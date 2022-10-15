@@ -26,14 +26,12 @@ import android.widget.CompoundButton
 import androidx.activity.viewModels
 import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
-import de.schildbach.wallet.util.FingerprintHelper
+import de.schildbach.wallet.security.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_security.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.DeterministicSeed
 import org.dash.wallet.common.BuildConfig
@@ -45,7 +43,6 @@ import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
 @AndroidEntryPoint
 class SecurityActivity : BaseMenuActivity() {
 
-    private lateinit var fingerprintHelper: FingerprintHelper
     private val checkPinSharedModel: CheckPinSharedModel by viewModels()
     private val viewModel: SecurityViewModel by viewModels()
 
@@ -95,8 +92,8 @@ class SecurityActivity : BaseMenuActivity() {
                     }
                 }
                 FINGERPRINT_ENABLED_REQUEST_CODE -> {
-                    updateFingerprintSwitchSilently(fingerprintHelper.isFingerprintEnabled)
-                    configuration.enableFingerprint = fingerprintHelper.isFingerprintEnabled
+                    updateFingerprintSwitchSilently(viewModel.fingerprintHelper.isFingerprintEnabled)
+                    configuration.enableFingerprint = viewModel.fingerprintHelper.isFingerprintEnabled
                 }
                 AUTH_REQUEST_CODE_ADVANCED_SECURITY -> {
                     viewModel.logEvent(AnalyticsConstants.Security.ADVANCED_SECURITY)
@@ -119,12 +116,11 @@ class SecurityActivity : BaseMenuActivity() {
         }
 
         //Fingerprint group and switch setup
-        fingerprintHelper = FingerprintHelper(this)
-        if (fingerprintHelper.init()) {
+        if (viewModel.fingerprintHelper.init()) {
             fingerprint_auth_group.visibility = VISIBLE
-            fingerprint_auth_switch.isChecked = fingerprintHelper.isFingerprintEnabled
+            fingerprint_auth_switch.isChecked = viewModel.fingerprintHelper.isFingerprintEnabled
             fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
-            configuration.enableFingerprint = fingerprintHelper.isFingerprintEnabled
+            configuration.enableFingerprint = viewModel.fingerprintHelper.isFingerprintEnabled // TODO
         } else {
             fingerprint_auth_group.visibility = GONE
         }
@@ -142,7 +138,7 @@ class SecurityActivity : BaseMenuActivity() {
             updateFingerprintSwitchSilently(false)
         } else {
             viewModel.logEvent(AnalyticsConstants.Security.FINGERPRINT_OFF)
-            fingerprintHelper.clear()
+            viewModel.fingerprintHelper.clear()
             configuration.enableFingerprint = false
         }
     }

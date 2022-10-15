@@ -19,9 +19,11 @@ package de.schildbach.wallet.ui
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.DecryptSeedLiveData
+import de.schildbach.wallet.security.FingerprintHelper
 import de.schildbach.wallet.ui.preference.PinRetryController
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 /**
@@ -33,8 +35,10 @@ class DecryptSeedViewModel @Inject constructor(
     walletData: WalletDataProvider,
     pinRetryController: PinRetryController,
     walletApplication: WalletApplication,
-    configuration: Configuration
-) : CheckPinViewModel(walletData, configuration, pinRetryController) {
+    configuration: Configuration,
+    fingerprintHelper: FingerprintHelper,
+    analytics: AnalyticsService
+) : CheckPinViewModel(walletData, configuration, pinRetryController, fingerprintHelper, analytics) {
 
     internal val decryptSeedLiveData = DecryptSeedLiveData(walletApplication)
 

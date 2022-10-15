@@ -39,7 +39,7 @@ import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.preference.PinRetryController
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
-import de.schildbach.wallet.util.FingerprintHelper
+import de.schildbach.wallet.security.FingerprintHelper
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentEnterPinBinding
 import kotlin.coroutines.resume
@@ -113,7 +113,6 @@ open class CheckPinDialog(
     protected open val viewModel by viewModels<CheckPinViewModel>()
     private lateinit var state: State
 
-    protected var fingerprintHelper: FingerprintHelper? = null
     private lateinit var fingerprintCancellationSignal: CancellationSignal
 
     protected enum class State {
@@ -312,19 +311,15 @@ open class CheckPinDialog(
 
     private fun initFingerprint() {
         log.info("fingerprint setup for Android M and above")
-        fingerprintHelper = FingerprintHelper(activity)
-        fingerprintHelper?.run {
-            if (init()) {
-                if (isFingerprintEnabled) {
-                    fingerprintFlow(true)
-                    startFingerprintListener()
-                } else {
-                    binding.buttonBar.positiveButton.visibility = View.GONE
-                }
+        if (viewModel.fingerprintHelper.init()) {
+            if (viewModel.fingerprintHelper.isFingerprintEnabled) {
+                fingerprintFlow(true)
+                startFingerprintListener()
             } else {
-                fingerprintHelper = null
-                fingerprintFlow(false)
+                binding.buttonBar.positiveButton.visibility = View.GONE
             }
+        } else {
+            fingerprintFlow(false)
         }
     }
 
@@ -344,7 +339,7 @@ open class CheckPinDialog(
         fingerprintCancellationSignal.setOnCancelListener {
             log.info("fingerprint cancellation signal listener triggered")
         }
-        fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
+        viewModel.fingerprintHelper.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
             override fun onSuccess(savedPass: String) {
                 log.info("fingerprint scan successful")
                 onFingerprintSuccess(savedPass)

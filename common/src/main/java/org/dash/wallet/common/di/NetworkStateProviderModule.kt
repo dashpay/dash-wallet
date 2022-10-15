@@ -25,7 +25,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.livedata.NetworkState
 import org.dash.wallet.common.livedata.NetworkStateInt
 
@@ -39,7 +38,6 @@ object ConnectivityProviderModule {
 
 @Module
 @InstallIn(SingletonComponent::class)
-@ExperimentalCoroutinesApi
 abstract class NetworkStateProviderModule {
     @Binds
     abstract fun bindNetworkState(networkState: NetworkState) : NetworkStateInt
