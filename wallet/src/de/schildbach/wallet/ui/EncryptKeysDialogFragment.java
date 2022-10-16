@@ -362,16 +362,12 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                     }
 
                     private void delayedDismiss() {
-                        handler.postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                dismiss();
+                        handler.postDelayed(() -> {
+                            dismiss();
 
-                                // TODO check
-                                if (EnableFingerprintDialog.shouldBeShown(configuration, fingerprintHelper) &&
-                                        oldPassword == null && state == State.DONE) {
-                                    EnableFingerprintDialog.show(newPassword, getParentFragmentManager());
-                                }
+                            // TODO check
+                            if (fingerprintHelper.requiresEnabling() && oldPassword == null && state == State.DONE) {
+                                EnableFingerprintDialog.show(newPassword, requireActivity(), pin -> Unit.INSTANCE);
                             }
                         }, 2000);
                     }

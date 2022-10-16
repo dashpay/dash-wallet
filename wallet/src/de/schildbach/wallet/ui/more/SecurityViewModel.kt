@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.more
 
 import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModel
@@ -25,7 +24,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.FingerprintHelper
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
@@ -34,11 +32,11 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.GenericUtils
 import javax.inject.Inject
 
-@ExperimentalCoroutinesApi
 @HiltViewModel
 class SecurityViewModel @Inject constructor(
     private val exchangeRates: ExchangeRatesProvider,
@@ -80,5 +78,11 @@ class SecurityViewModel @Inject constructor(
 
     fun triggerWipe() {
         walletApplication.triggerWipe()
+    }
+
+    fun turnFingerprintAuthOff() {
+        analytics.logEvent(AnalyticsConstants.Security.FINGERPRINT_OFF, bundleOf())
+        fingerprintHelper.clear()
+        configuration.enableFingerprint = false
     }
 }

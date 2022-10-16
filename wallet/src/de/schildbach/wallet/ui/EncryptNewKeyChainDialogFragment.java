@@ -3,6 +3,8 @@ package de.schildbach.wallet.ui;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
@@ -21,17 +23,18 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
-import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.payments.DecryptSeedTask;
 import de.schildbach.wallet.payments.DeriveKeyTask;
 import de.schildbach.wallet.util.ParcelableChainPath;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 /**
  * Created by Hash Engineering on 4/5/2018.
  */
 @AndroidEntryPoint
+// TODO: check
 public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment {
 
     private static final String FRAGMENT_TAG = EncryptNewKeyChainDialogFragment.class.getName();
@@ -60,11 +63,12 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
         setCancelable(false);
         return super.onCreateView(inflater, container, savedInstanceState);
     }
 
+    @NonNull
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
         Dialog dialog = super.onCreateDialog(savedInstanceState);
         String message = getString(R.string.encrypt_new_key_chain_dialog_message) + "\n\n" +
@@ -92,18 +96,13 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                 handleDecryptPIN(password);
                 dismissAllowingStateLoss();
                 FragmentActivity activity = getActivity();
+
                 if (activity instanceof OnNewKeyChainEncryptedListener) {
-
-                    BackupWalletToSeedDialogFragment.show(getFragmentManager(), true);
-
+                    BackupWalletToSeedDialogFragment.show(getParentFragmentManager(), true);
                     ((OnNewKeyChainEncryptedListener) activity).onNewKeyChainEncrypted();
 
-                    if (fingerprintHelper != null) {
-                        if (!fingerprintHelper.isFingerprintEnabled() && WalletApplication
-                                .getInstance().getConfiguration().getRemindEnableFingerprint()) {
-                            EnableFingerprintDialog.show(password,
-                                    getActivity().getSupportFragmentManager());
-                        }
+                    if (fingerprintHelper.requiresEnabling()) {
+                        EnableFingerprintDialog.show(password, getActivity(), pin -> Unit.INSTANCE);
                     }
                 }
             }
@@ -114,7 +113,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                 unlockButton.setText(getText(R.string.wallet_lock_unlock));
                 pinView.setEnabled(true);
                 if(pinRetryController.failedAttempt(password)) {
-                    restartService.performRestart(getActivity(), true, false);
+                    restartService.performRestart(requireActivity(), true, false);
                     dismiss();
                 }
                 badPinView.setText(getString(R.string.wallet_lock_wrong_pin,
@@ -138,8 +137,6 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                 }
             }.deriveKey(walletProvider.getWallet(), password);
 
-        } else {
-
         }
     }
 
@@ -153,6 +150,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                 @Override
                 protected void onSuccess(final DeterministicSeed seed) {
                     pinRetryController.clearPinFailPrefs();
+                    assert getArguments() != null;
                     ParcelableChainPath parcelableChainPath = getArguments().getParcelable(ARGS_PATH);
                     handleAddKeyChain(seed, parcelableChainPath.getPath(), encryptionKey);
                     walletProvider.onWalletUpgradeComplete(password);
@@ -162,8 +160,6 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                     // can this happen?
                 }
             }.decryptSeed(wallet.getActiveKeyChain().getSeed(), wallet.getKeyCrypter(), encryptionKey);
-
-        } else {
 
         }
     }

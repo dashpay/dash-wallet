@@ -27,6 +27,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -34,7 +35,6 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
@@ -52,7 +52,6 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.LockScreenBroadcaster
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
@@ -68,7 +67,6 @@ open class LockScreenActivity : SecureActivity() {
         private val log = LoggerFactory.getLogger(LockScreenActivity::class.java)
     }
 
-    @Inject lateinit var baseAlertDialogBuilder: BaseAlertDialogBuilder
     lateinit var alertDialog: AlertDialog
     @Inject lateinit var walletApplication: WalletApplication
     @Inject lateinit var walletData: WalletDataProvider
@@ -78,9 +76,7 @@ open class LockScreenActivity : SecureActivity() {
     @Inject lateinit var pinRetryController: PinRetryController
     @Inject lateinit var fingerprintHelper: FingerprintHelper
     private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
-
-    private lateinit var checkPinViewModel: CheckPinViewModel
-    private lateinit var enableFingerprintViewModel: EnableFingerprintDialog.SharedViewModel
+    private val checkPinViewModel by viewModels<CheckPinViewModel>()
     private val pinLength by lazy { configuration.pinLength }
 
     val lockScreenDisplayed: Boolean
@@ -283,7 +279,6 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun initViewModel() {
-        checkPinViewModel = ViewModelProvider(this)[CheckPinViewModel::class.java]
         checkPinViewModel.checkPinLiveData.observe(this) {
             when (it.status) {
                 Status.ERROR -> {
@@ -301,18 +296,15 @@ open class LockScreenActivity : SecureActivity() {
                     setLockState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    if (EnableFingerprintDialog.shouldBeShown(configuration, fingerprintHelper)) {
-                        EnableFingerprintDialog.show(it.data!!, supportFragmentManager)
+                    if (fingerprintHelper.requiresEnabling()) {
+                        EnableFingerprintDialog.show(it.data!!, this) { pin ->
+                            onCorrectPin(pin)
+                        }
                     } else {
                         onCorrectPin(it.data!!)
                     }
                 }
             }
-        }
-        enableFingerprintViewModel = ViewModelProvider(this)[EnableFingerprintDialog.SharedViewModel::class.java]
-        enableFingerprintViewModel.onCorrectPinCallback.observe(this) {
-            val pin = it.second
-            onCorrectPin(pin)
         }
     }
 
@@ -511,12 +503,18 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun showFingerprintKeyChangedDialog() {
-        baseAlertDialogBuilder.apply {
-            title = getString(R.string.fingerprint_changed_title)
-            message = getString(R.string.fingerprint_changed_message)
-            positiveText = getString(android.R.string.ok)
-            positiveAction = { setLockState(State.ENTER_PIN) }
-        }.buildAlertDialog().show()
+        // TODO check
+        AdaptiveDialog.create(
+            R.drawable.ic_warning,
+            title = getString(R.string.fingerprint_changed_title),
+            message = getString(R.string.fingerprint_changed_message),
+            positiveButtonText = getString(android.R.string.ok),
+            negativeButtonText = ""
+        ).show(this) { enterPin ->
+            if (enterPin == true) {
+                setLockState(State.ENTER_PIN)
+            }
+        }
     }
 
     override fun onBackPressed() {

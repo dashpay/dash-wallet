@@ -29,14 +29,10 @@ import android.view.Window
 import androidx.annotation.RequiresApi
 import androidx.core.os.CancellationSignal
 import androidx.core.view.isVisible
-import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.*
 import dagger.hilt.android.AndroidEntryPoint
-import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.RestartService
-import de.schildbach.wallet.ui.preference.PinRetryController
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.security.FingerprintHelper
@@ -52,7 +48,7 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 open class CheckPinDialog(
-    private val onSuccessOrDismiss: ((String?) -> Unit)?
+    private var onSuccessOrDismiss: ((String?) -> Unit)?
 ) : DialogFragment() {
 
     companion object {
@@ -60,33 +56,24 @@ open class CheckPinDialog(
         internal val FRAGMENT_TAG = CheckPinDialog::class.java.simpleName
         private val log = LoggerFactory.getLogger(CheckPinDialog::class.java)
 
-        internal const val ARG_REQUEST_CODE = "arg_request_code"
         internal const val ARG_PIN_ONLY = "arg_pin_only"
 
-        private fun showDialog(checkPinDialog: CheckPinDialog, activity: FragmentActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
-            val controller = PinRetryController.getInstance()
-
-            if (controller.isLocked) {
-                val message = controller.getWalletTemporaryLockedMessage(activity.resources)
-                checkPinDialog.showLockedAlert(activity, message)
-            } else {
-                val args = Bundle()
-                args.putInt(ARG_REQUEST_CODE, requestCode)
-                args.putBoolean(ARG_PIN_ONLY, pinOnly)
-                checkPinDialog.arguments = args
-                checkPinDialog.show(activity.supportFragmentManager, FRAGMENT_TAG)
-            }
+        private fun showDialog(checkPinDialog: CheckPinDialog, activity: FragmentActivity, pinOnly: Boolean = false) {
+            val args = Bundle()
+            args.putBoolean(ARG_PIN_ONLY, pinOnly)
+            checkPinDialog.arguments = args
+            checkPinDialog.show(activity)
         }
 
         @JvmStatic
-        fun show(activity: FragmentActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
-            val checkPinDialog = CheckPinDialog()
-            showDialog(checkPinDialog, activity, requestCode, pinOnly)
+        fun show(activity: FragmentActivity, pinOnly: Boolean = false, onSuccessOrDismiss: (String?) -> Unit) {
+            val checkPinDialog = CheckPinDialog(onSuccessOrDismiss)
+            showDialog(checkPinDialog, activity, pinOnly)
         }
 
         @JvmStatic
-        fun show(activity: FragmentActivity, requestCode: Int = 0) {
-            show(activity, requestCode, false)
+        fun show(activity: FragmentActivity, onSuccessOrDismiss: (String?) -> Unit) {
+            show(activity, false, onSuccessOrDismiss)
         }
 
         suspend fun showAsync(activity: FragmentActivity, pinOnly: Boolean = false): String? {
@@ -98,7 +85,7 @@ open class CheckPinDialog(
                 }
 
                 try {
-                    showDialog(checkPinDialog, activity, 0, pinOnly)
+                    showDialog(checkPinDialog, activity, pinOnly)
                 } catch (ex: Exception) {
                     if (coroutine.isActive) {
                         coroutine.resumeWithException(ex)
@@ -109,7 +96,6 @@ open class CheckPinDialog(
     }
 
     private val binding by viewBinding(FragmentEnterPinBinding::bind)
-    protected open val sharedModel by activityViewModels<CheckPinSharedModel>()
     protected open val viewModel by viewModels<CheckPinViewModel>()
     private lateinit var state: State
 
@@ -141,7 +127,6 @@ open class CheckPinDialog(
         initViewModel()
         binding.buttonBar.negativeButton.setText(R.string.button_cancel)
         binding.buttonBar.negativeButton.setOnClickListener {
-            sharedModel.onCancelCallback.call()
             dismiss()
         }
         binding.buttonBar.positiveButton.setOnClickListener {
@@ -183,7 +168,7 @@ open class CheckPinDialog(
 
         arguments?.getBoolean(ARG_PIN_ONLY, false).let {
             if (true == it) {
-                fingerprintFlow(!it)
+                fingerprintFlow(it)
                 binding.buttonBar.positiveButton.isEnabled = false
             } else initFingerprint()
         }
@@ -228,9 +213,8 @@ open class CheckPinDialog(
         if (viewModel.isWalletLocked) {
             return
         }
-        val requestCode = requireArguments().getInt(ARG_REQUEST_CODE)
-        sharedModel.onCorrectPinCallback.value = Pair(requestCode, pin)
         onSuccessOrDismiss?.invoke(pin)
+        onSuccessOrDismiss = null
         viewModel.resetFailedPinAttempts()
         dismiss()
     }
@@ -305,13 +289,13 @@ open class CheckPinDialog(
             fingerprintCancellationSignal.cancel()
         }
         onSuccessOrDismiss?.invoke(null)
-        sharedModel.onCancelCallback.call()
+        onSuccessOrDismiss = null
         super.onDismiss(dialog)
     }
 
     private fun initFingerprint() {
         log.info("fingerprint setup for Android M and above")
-        if (viewModel.fingerprintHelper.isAvailable()) {
+        if (viewModel.fingerprintHelper.isAvailable) {
             if (viewModel.fingerprintHelper.isFingerprintEnabled) {
                 fingerprintFlow(true)
                 startFingerprintListener()
@@ -362,6 +346,15 @@ open class CheckPinDialog(
 
     protected open fun onFingerprintSuccess(savedPass: String) {
         dismiss(savedPass)
+    }
+
+    fun show(activity: FragmentActivity) {
+        if (viewModel.isWalletLocked) {
+            val message = viewModel.getLockedMessage(resources)
+            showLockedAlert(activity, message)
+        } else {
+            super.show(activity.supportFragmentManager, FRAGMENT_TAG)
+        }
     }
 
     protected open fun showLockedAlert(activity: FragmentActivity, lockedTimeMessage: String) {

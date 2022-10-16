@@ -108,6 +108,11 @@ public class FingerprintHelper {
         return true;
     }
 
+    public boolean requiresEnabling() {
+        boolean remindEnableFingerprint = configuration.getRemindEnableFingerprint();
+        return isAvailable() && !isFingerprintEnabled() && remindEnableFingerprint;
+    }
+
     @Nullable
     private Cipher createCipher(int mode) throws NoSuchPaddingException, NoSuchAlgorithmException,
             UnrecoverableKeyException, KeyStoreException, InvalidKeyException, InvalidAlgorithmParameterException {

@@ -19,8 +19,6 @@ package de.schildbach.wallet.ui.send;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ComponentName;
-import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.media.RingtoneManager;
@@ -53,7 +51,6 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
 import org.bitcoinj.wallet.Wallet.DustySendRequested;
-import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.dash.wallet.common.util.GenericUtils;
 import org.jetbrains.annotations.NotNull;
@@ -65,13 +62,11 @@ import java.util.Objects;
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
 import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.ui.CheckPinDialog;
-import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity;
 import de.schildbach.wallet_test.R;
@@ -80,13 +75,7 @@ import kotlin.Unit;
 @AndroidEntryPoint
 public class SendCoinsFragment extends Fragment {
 
-    protected SendCoinsActivity activity;
-    private Configuration config;
-
     protected final Handler handler = new Handler();
-
-    private static final int AUTH_REQUEST_CODE_MAX = 1;
-    private static final int AUTH_REQUEST_CODE_SEND = 2;
 
     private static final Logger log = LoggerFactory.getLogger(SendCoinsFragment.class);
 
@@ -102,16 +91,7 @@ public class SendCoinsFragment extends Fragment {
     private boolean handlePaymentRequest = false;
 
     private boolean isUserAuthorized() {
-        return activity.isUserAuthorized() || userAuthorizedDuring;
-    }
-
-    @Override
-    public void onAttach(@NotNull final Context context) {
-        super.onAttach(context);
-
-        this.activity = (SendCoinsActivity) context;
-        WalletApplication walletApplication = (WalletApplication) activity.getApplication();
-        this.config = walletApplication.getConfiguration();
+        return ((SendCoinsActivity)requireActivity()).isUserAuthorized() || userAuthorizedDuring;
     }
 
     @Override
@@ -164,27 +144,7 @@ public class SendCoinsFragment extends Fragment {
             }
         });
 
-        CheckPinSharedModel checkPinSharedModel = ViewModelProviders.of(activity).get(CheckPinSharedModel.class);
-        checkPinSharedModel.getOnCorrectPinCallback().observe(activity, new Observer<kotlin.Pair<Integer, String>>() {
-            @Override
-            public void onChanged(kotlin.Pair<Integer, String> data) {
-                userAuthorizedDuring = true;
-                switch (data.getFirst()) {
-                    case AUTH_REQUEST_CODE_MAX:
-                        handleEmpty();
-                        break;
-                    case AUTH_REQUEST_CODE_SEND:
-                        if (everythingPlausible() && viewModel.dryrunSendRequest != null) {
-                            showPaymentConfirmation();
-                        } else {
-                            updateView();
-                        }
-                        break;
-                }
-            }
-        });
-
-        enterAmountSharedViewModel = ViewModelProviders.of(activity).get(EnterAmountSharedViewModel.class);
+        enterAmountSharedViewModel = ViewModelProviders.of(requireActivity()).get(EnterAmountSharedViewModel.class);
         enterAmountSharedViewModel.getDashAmountData().observe(getViewLifecycleOwner(), new Observer<Coin>() {
             @Override
             public void onChanged(Coin amount) {
@@ -194,23 +154,21 @@ public class SendCoinsFragment extends Fragment {
                 handler.post(dryrunRunnable);
             }
         });
-        enterAmountSharedViewModel.getButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Coin>() {
-            @Override
-            public void onChanged(Coin coin) {
-                authenticateOrConfirm();
+        enterAmountSharedViewModel.getButtonClickEvent().observe(getViewLifecycleOwner(), coin -> authenticateOrConfirm());
+        enterAmountSharedViewModel.getMaxButtonClickEvent().observe(getViewLifecycleOwner(), unused -> {
+            if (isUserAuthorized()) {
+                handleEmpty();
+            } else {
+                CheckPinDialog.show(requireActivity(), pin -> {
+                    if (pin != null) {
+                        userAuthorizedDuring = true;
+                        handleEmpty();
+                    }
+                    return Unit.INSTANCE;
+                });
             }
         });
-        enterAmountSharedViewModel.getMaxButtonClickEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
-            @Override
-            public void onChanged(Boolean unused) {
-                if (isUserAuthorized()) {
-                    handleEmpty();
-                } else {
-                    CheckPinDialog.show(activity, AUTH_REQUEST_CODE_MAX);
-                }
-            }
-        });
-        SingleActionSharedViewModel confirmTransactionSharedViewModel = ViewModelProviders.of(activity).get(SingleActionSharedViewModel.class);
+        SingleActionSharedViewModel confirmTransactionSharedViewModel = ViewModelProviders.of(requireActivity()).get(SingleActionSharedViewModel.class);
         confirmTransactionSharedViewModel.getClickConfirmButtonEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
@@ -262,7 +220,7 @@ public class SendCoinsFragment extends Fragment {
         });
 
         if (savedInstanceState == null) {
-            final Intent intent = activity.getIntent();
+            final Intent intent = requireActivity().getIntent();
 
             Bundle extras = Objects.requireNonNull(intent.getExtras());
             final PaymentIntent paymentIntent = extras.getParcelable(SendCoinsActivity.INTENT_EXTRA_PAYMENT_INTENT);
@@ -296,14 +254,22 @@ public class SendCoinsFragment extends Fragment {
 
     private void authenticateOrConfirm() {
         if (everythingPlausible()) {
-            if (!isUserAuthorized() || config.getSpendingConfirmationEnabled()) {
+            if (!isUserAuthorized() || viewModel.isSpendingConfirmationEnabled()) {
                 Coin thresholdAmount = Coin.parseCoin(
-                        Float.valueOf(config.getBiometricLimit()).toString());
-                if (enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount)) {
-                    CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND);
-                } else {
-                    CheckPinDialog.show(activity, AUTH_REQUEST_CODE_SEND, true);
-                }
+                        Float.valueOf(viewModel.getBiometricLimit()).toString());
+                boolean withinLimit = enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount);
+                CheckPinDialog.show(requireActivity(), !withinLimit, result -> {
+                    if (result != null) {
+                        userAuthorizedDuring = true;
+                        if (everythingPlausible() && viewModel.dryrunSendRequest != null) {
+                            showPaymentConfirmation();
+                        } else {
+                            updateView();
+                        }
+                    }
+
+                    return Unit.INSTANCE;
+                });
             } else if (viewModel.dryrunException == null) {
                 showPaymentConfirmation();
             }
@@ -362,16 +328,16 @@ public class SendCoinsFragment extends Fragment {
     }
 
     private void onSignAndSendPaymentSuccess(Transaction transaction) {
-        final ComponentName callingActivity = activity.getCallingActivity();
+        final ComponentName callingActivity = requireActivity().getCallingActivity();
         if (callingActivity != null) {
             log.info("returning result to calling activity: {}", callingActivity.flattenToString());
             Intent resultIntent = new Intent();
             BitcoinIntegration.transactionHashToResult(resultIntent, viewModel.sentTransaction.getTxId().toString());
-            activity.setResult(Activity.RESULT_OK, resultIntent);
+            requireActivity().setResult(Activity.RESULT_OK, resultIntent);
         }
         showTransactionResult(viewModel.sentTransaction);
         playSentSound();
-        activity.finish();
+        requireActivity().finish();
     }
 
     private void showInsufficientMoneyDialog(Coin missing) {
@@ -381,7 +347,7 @@ public class SendCoinsFragment extends Fragment {
         final Coin available = wallet.getBalance(BalanceType.AVAILABLE);
         final Coin pending = estimated.subtract(available);
 
-        final MonetaryFormat dashFormat = config.getFormat();
+        final MonetaryFormat dashFormat = viewModel.getDashFormat();
         final StringBuilder msg = new StringBuilder();
         msg.append(getString(R.string.send_coins_fragment_insufficient_money_msg1, dashFormat.format(missing)));
 
@@ -441,8 +407,8 @@ public class SendCoinsFragment extends Fragment {
             return;
         }
 
-        Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
-                activity.getIntent().getAction(), transaction, isUserAuthorized());
+        Intent transactionResultIntent = TransactionResultActivity.createIntent(requireActivity(),
+                requireActivity().getIntent().getAction(), transaction, isUserAuthorized());
         startActivity(transactionResultIntent);
     }
 
@@ -492,7 +458,7 @@ public class SendCoinsFragment extends Fragment {
             }
 
             if (handlePaymentRequest) {
-                activity.runOnUiThread(new Runnable() {
+                requireActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         handlePaymentRequest = false;
@@ -608,11 +574,11 @@ public class SendCoinsFragment extends Fragment {
     private void playSentSound() {
         // play sound effect
         final int soundResId = getResources().getIdentifier("send_coins_broadcast_1",
-                "raw", activity.getPackageName());
+                "raw", requireActivity().getPackageName());
         if (soundResId > 0)
             RingtoneManager
-                    .getRingtone(activity, Uri.parse(
-                            "android.resource://" + activity.getPackageName() + "/" + soundResId))
+                    .getRingtone(requireActivity(), Uri.parse(
+                            "android.resource://" + requireActivity().getPackageName() + "/" + soundResId))
                     .play();
     }
 }

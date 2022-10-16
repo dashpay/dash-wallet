@@ -27,7 +27,6 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.appbar.AppBarLayout
@@ -205,13 +204,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun handleVerifySeed() {
-        val checkPinSharedModel = ViewModelProvider(requireActivity())[CheckPinSharedModel::class.java]
-        checkPinSharedModel.onCorrectPinCallback.observe(viewLifecycleOwner) { data ->
-            if (data?.second != null) {
-                startVerifySeedActivity(data.second)
-            }
+        CheckPinDialog.show(requireActivity()) { pin ->
+            pin?.let { startVerifySeedActivity(pin) }
         }
-        CheckPinDialog.show(requireActivity(), 0)
     }
 
     private fun handleScan(clickView: View?) {

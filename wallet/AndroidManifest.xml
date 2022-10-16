@@ -256,7 +256,7 @@
             android:theme="@style/My.Theme.ChildActivity" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.SecurityActivity"
+            android:name="de.schildbach.wallet.ui.more.SecurityActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme" />
 

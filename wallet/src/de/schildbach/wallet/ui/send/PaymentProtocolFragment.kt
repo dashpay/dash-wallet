@@ -21,7 +21,6 @@ import android.view.View
 import android.view.animation.AnimationUtils
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
@@ -35,7 +34,6 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.protocols.payments.PaymentProtocolException
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
-import de.schildbach.wallet.ui.CheckPinSharedModel
 import de.schildbach.wallet_test.databinding.FragmentPaymentProtocolBinding
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -94,14 +92,8 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         } else {
             val thresholdAmount = Coin.parseCoin(config.biometricLimit.toString())
             val amount = paymentProtocolModel.finalPaymentIntent!!.amount
-            if (amount.isLessThan(thresholdAmount)) {
-                CheckPinDialog.show(requireActivity(), 0, false)
-            } else {
-                CheckPinDialog.show(requireActivity(), 0, true)
-            }
-            val checkPinSharedModel = ViewModelProvider(requireActivity())[CheckPinSharedModel::class.java]
-            checkPinSharedModel.onCorrectPinCallback.observe(viewLifecycleOwner) {
-                confirmWhenAuthorizedAndNoException()
+            CheckPinDialog.show(requireActivity(), !amount.isLessThan(thresholdAmount)) { pin ->
+                pin?.let { confirmWhenAuthorizedAndNoException() }
             }
         }
     }

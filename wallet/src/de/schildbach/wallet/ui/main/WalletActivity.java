@@ -42,6 +42,7 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.CurrencyInfo;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 
 import java.io.IOException;
@@ -68,8 +69,6 @@ import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
-import kotlinx.coroutines.ExperimentalCoroutinesApi;
-import kotlinx.coroutines.FlowPreview;
 
 /**
  * @author Andreas Schildbach
@@ -98,6 +97,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private boolean isRestoringBackup;
     private boolean showBackupWalletDialog = false;
 
+    private BaseAlertDialogBuilder baseAlertDialogBuilder;
     private MainViewModel viewModel;
 
     @Override
@@ -107,11 +107,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
         application = getWalletApplication();
         config = application.getConfiguration();
         wallet = application.getWallet();
+        baseAlertDialogBuilder = new BaseAlertDialogBuilder(this);
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
         setContentView(R.layout.activity_main);
         WalletActivityExt.INSTANCE.setupBottomNavigation(this, viewModel);
-        setSupportActionBar(findViewById(R.id.toolbar));
 
         if (savedInstanceState == null) {
             checkAlerts();

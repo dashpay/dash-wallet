@@ -26,6 +26,7 @@ import android.view.View
 import android.widget.TextView
 import android.widget.ViewSwitcher
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.livedata.Status
@@ -39,6 +40,7 @@ import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import javax.inject.Inject
 
 @AndroidEntryPoint
+// TODO: check
 class SetPinActivity : InteractionAwareActivity() {
 
     private lateinit var numericKeyboardView: NumericKeyboardView
@@ -47,7 +49,7 @@ class SetPinActivity : InteractionAwareActivity() {
     private lateinit var pinPreviewView: PinPreviewView
     private lateinit var pageTitleView: TextView
     private lateinit var pageMessageView: TextView
-    private val enableFingerprintViewModel by viewModels<EnableFingerprintDialog.SharedViewModel>()
+    private var alertDialog: AlertDialog? = null
     private val viewModel by viewModels<SetPinViewModel>()
 
     @Inject
@@ -386,10 +388,16 @@ class SetPinActivity : InteractionAwareActivity() {
                     } else {
                         if (changePin) {
                             viewModel.configuration.pinLength = PinPreviewView.DEFAULT_PIN_LENGTH
-                            if (EnableFingerprintDialog.shouldBeShown(viewModel.configuration, viewModel.fingerprintHelper)
+                            if (viewModel.fingerprintHelper.requiresEnabling()
                                 && viewModel.configuration.enableFingerprint
                             ) {
-                                EnableFingerprintDialog.show(viewModel.getPinAsString(), supportFragmentManager)
+                                EnableFingerprintDialog.show(viewModel.getPinAsString(), this) {
+                                    if (initialPin != null) {
+                                        goHome()
+                                    } else {
+                                        finish()
+                                    }
+                                }
                             } else {
                                 if (initialPin != null) {
                                     viewModel.resetFailedPinAttempts()
@@ -440,13 +448,6 @@ class SetPinActivity : InteractionAwareActivity() {
                 keepLockedUntilPinEntered = false
             }
         }
-        enableFingerprintViewModel.onCorrectPinCallback.observe(this) {
-            if (initialPin != null) {
-                goHome()
-            } else {
-                finish()
-            }
-        }
     }
 
     private fun showErrorDialog(isEncryptingError: Boolean, exception: Throwable?) {
@@ -476,7 +477,7 @@ class SetPinActivity : InteractionAwareActivity() {
             if (it == true) {
                 alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
                     viewModel.walletApplication).buildAlertDialog()
-                alertDialog.show()
+                alertDialog?.show()
             }
         }
     }
@@ -515,5 +516,15 @@ class SetPinActivity : InteractionAwareActivity() {
     private fun goHome() {
         startActivity(WalletActivity.createIntent(this))
         finish()
+    }
+
+    override fun onPause() {
+        val alertDialog = this.alertDialog
+
+        if (alertDialog != null && alertDialog.isShowing) {
+            alertDialog.dismiss()
+        }
+
+        super.onPause()
     }
 }

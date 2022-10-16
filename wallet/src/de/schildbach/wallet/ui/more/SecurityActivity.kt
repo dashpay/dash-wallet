@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.more
 
 import android.app.Activity
 import android.content.Intent
@@ -26,11 +26,13 @@ import android.widget.CompoundButton
 import androidx.activity.viewModels
 import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_security.*
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.DeterministicSeed
 import org.dash.wallet.common.BuildConfig
@@ -38,21 +40,10 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
 
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class SecurityActivity : BaseMenuActivity() {
 
-    private val checkPinSharedModel: CheckPinSharedModel by viewModels()
     private val viewModel: SecurityViewModel by viewModels()
-
-    companion object {
-        private const val AUTH_REQUEST_CODE_BACKUP = 1
-        private const val ENABLE_FINGERPRINT_REQUEST_CODE = 2
-        private const val FINGERPRINT_ENABLED_REQUEST_CODE = 3
-        private const val AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE = 4
-        private const val AUTH_REQUEST_CODE_ADVANCED_SECURITY = 5
-        private const val AUTH_RECOVERY_PHASE = 0
-    }
 
     override fun getLayoutId(): Int {
         return R.layout.activity_security
@@ -75,47 +66,8 @@ class SecurityActivity : BaseMenuActivity() {
             )
         }
 
-        checkPinSharedModel.onCorrectPinCallback.observe(this) { (requestCode, pin) ->
-            when (requestCode) {
-                AUTH_REQUEST_CODE_BACKUP -> {
-                    BackupWalletDialogFragment.show(supportFragmentManager)
-                    //BackupWalletActivity.start(this)
-                }
-                ENABLE_FINGERPRINT_REQUEST_CODE -> {
-                    if (pin != null) {
-                        EnableFingerprintDialog.show(pin, FINGERPRINT_ENABLED_REQUEST_CODE,
-                                supportFragmentManager)
-                        // TODO: move to FINGERPRINT_ENABLED_REQUEST_CODE case when the bug
-                        // TODO: that's preventing it from getting called is resolved
-                        viewModel.logEvent(AnalyticsConstants.Security.FINGERPRINT_ON)
-                    }
-                }
-                FINGERPRINT_ENABLED_REQUEST_CODE -> {
-                    updateFingerprintSwitchSilently(viewModel.fingerprintHelper.isFingerprintEnabled)
-                    configuration.enableFingerprint = viewModel.fingerprintHelper.isFingerprintEnabled
-                }
-                AUTH_REQUEST_CODE_ADVANCED_SECURITY -> {
-                    viewModel.logEvent(AnalyticsConstants.Security.ADVANCED_SECURITY)
-                    startActivity(Intent(this, AdvancedSecurityActivity::class.java))
-                }
-                AUTH_RECOVERY_PHASE -> {
-                    pin?.let { VerifySeedActivity.createIntent(this, it, false) }
-                        ?.let { startActivity(it) }
-                }
-            }
-        }
-
-        val decryptSeedSharedModel : DecryptSeedSharedModel = ViewModelProvider(this)[DecryptSeedSharedModel::class.java]
-        decryptSeedSharedModel.onDecryptSeedCallback.observe(this) { (requestCode, seed) ->
-            when (requestCode) {
-                AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE -> {
-                    startViewSeedActivity(seed)
-                }
-            }
-        }
-
         //Fingerprint group and switch setup
-        if (viewModel.fingerprintHelper.isAvailable()) {
+        if (viewModel.fingerprintHelper.isAvailable) {
             fingerprint_auth_group.visibility = VISIBLE
             fingerprint_auth_switch.isChecked = viewModel.fingerprintHelper.isFingerprintEnabled
             fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
@@ -131,14 +83,20 @@ class SecurityActivity : BaseMenuActivity() {
         viewModel.init()
     }
 
-    private val fingerprintSwitchListener= CompoundButton.OnCheckedChangeListener { _, isChecked ->
+    private val fingerprintSwitchListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
         if (isChecked) {
-            CheckPinDialog.show(this, ENABLE_FINGERPRINT_REQUEST_CODE)
-            updateFingerprintSwitchSilently(false)
+            lifecycleScope.launch {
+                CheckPinDialog.showAsync(this@SecurityActivity)?.let { pin ->
+                    EnableFingerprintDialog.show(pin, this@SecurityActivity) {
+                        // TODO check
+                        viewModel.logEvent(AnalyticsConstants.Security.FINGERPRINT_ON)
+                        updateFingerprintSwitchSilently(viewModel.fingerprintHelper.isFingerprintEnabled)
+                        configuration.enableFingerprint = viewModel.fingerprintHelper.isFingerprintEnabled
+                    }
+                }
+            }
         } else {
-            viewModel.logEvent(AnalyticsConstants.Security.FINGERPRINT_OFF)
-            viewModel.fingerprintHelper.clear()
-            configuration.enableFingerprint = false
+            viewModel.turnFingerprintAuthOff()
         }
     }
 
@@ -149,20 +107,39 @@ class SecurityActivity : BaseMenuActivity() {
     }
 
     fun backupWallet(view: View) {
-        CheckPinDialog.show(this, AUTH_REQUEST_CODE_BACKUP, true)
+        lifecycleScope.launch {
+            val pin = CheckPinDialog.showAsync(this@SecurityActivity, true)
+            pin?.let { BackupWalletDialogFragment.show(supportFragmentManager) }
+        }
     }
 
     fun viewRecoveryPhrase(view: View) {
-        DecryptSeedWithPinDialog.show(this, AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE, true)
+        DecryptSeedWithPinDialog.show(this, true) { seed ->
+            if (seed != null) {
+                startViewSeedActivity(seed)
+            }
+        }
     }
 
     fun changePin(view: View) {
         viewModel.logEvent(AnalyticsConstants.Security.CHANGE_PIN)
-        startActivity(SetPinActivity.createIntent(this, R.string.wallet_options_encrypt_keys_change, true))
+        startActivity(
+            SetPinActivity.createIntent(
+                this,
+                R.string.wallet_options_encrypt_keys_change,
+                true
+            )
+        )
     }
 
     fun openAdvancedSecurity(view: View) {
-        CheckPinDialog.show(this, AUTH_REQUEST_CODE_ADVANCED_SECURITY, true)
+        lifecycleScope.launch {
+            val pin = CheckPinDialog.showAsync(this@SecurityActivity, true)
+            pin?.let {
+                viewModel.logEvent(AnalyticsConstants.Security.ADVANCED_SECURITY)
+                startActivity(Intent(this@SecurityActivity, AdvancedSecurityActivity::class.java))
+            }
+        }
     }
 
     // TODO: tests
@@ -199,7 +176,11 @@ class SecurityActivity : BaseMenuActivity() {
                     }
                 },
                 onExtraMessageAction = {
-                    CheckPinDialog.show(this, AUTH_RECOVERY_PHASE)
+                    CheckPinDialog.show(this) { pin ->
+                        pin?.let {
+                            startActivity(VerifySeedActivity.createIntent(this, pin, false))
+                        }
+                    }
                 })
         } else {
             val resetWalletDialog = AdaptiveDialog.create(

@@ -6,8 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:fillViewport="true"
-    android:scrollIndicators="top|bottom"
-    tools:targetApi="m">
+    android:scrollIndicators="top|bottom">
 
     <androidx.appcompat.widget.ButtonBarLayout
         android:layout_width="match_parent"

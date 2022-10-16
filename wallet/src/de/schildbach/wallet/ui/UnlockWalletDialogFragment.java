@@ -24,6 +24,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
 
@@ -81,8 +82,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
                     dismissAllowingStateLoss();
 
                     if (!fingerprintHelper.isFingerprintEnabled() && configuration.getRemindEnableFingerprint()) {
-                        EnableFingerprintDialog.show(password,
-                                getActivity().getSupportFragmentManager());
+                        EnableFingerprintDialog.show(password, getActivity(), pin -> Unit.INSTANCE);
                     }
                 }
             }
