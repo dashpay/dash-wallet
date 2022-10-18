@@ -33,7 +33,8 @@ import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
-import de.schildbach.wallet.security.FingerprintHelper;
+import de.schildbach.wallet.security.BiometricHelper;
+import de.schildbach.wallet.security.FingerprintStorage;
 import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
@@ -48,11 +49,11 @@ public class EnableFingerprintDialog extends DialogFragment {
     private FingerprintView fingerprintView;
     private CancellationSignal fingerprintCancellationSignal;
     private AlertDialog alertDialog;
-    @Inject public FingerprintHelper fingerprintHelper;
+    @Inject public BiometricHelper biometricHelper;
     @Inject public Configuration configuration;
 
     private static final String PASSWORD_ARG = "fingerprint_password";
-    private final Function1<String, Unit> onSuccessOrDismiss;
+    private Function1<String, Unit> onSuccessOrDismiss;
 
 
     public EnableFingerprintDialog() {
@@ -83,30 +84,26 @@ public class EnableFingerprintDialog extends DialogFragment {
         fingerprintView.setVisibility(View.VISIBLE);
         fingerprintView.setText(R.string.touch_fingerprint_to_enable);
 
-        if (fingerprintHelper.isAvailable()) {
+        if (biometricHelper.isAvailable()) {
             fingerprintCancellationSignal = new CancellationSignal();
-            fingerprintHelper.savePassword(requireActivity(), getArguments().getString(PASSWORD_ARG),
-                    fingerprintCancellationSignal, new FingerprintHelper.Callback() {
-                        @Override
-                        public void onSuccess(String savedPass) {
-                            fingerprintCancellationSignal = null;
-                            fingerprintHelper.resetFingerprintKeyChanged();
-
-                            dismiss();
-                        }
-
-                        @Override
-                        public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
-                            if (!canceled) {
-                                fingerprintView.showError(exceededMaxAttempts);
-                            }
-                        }
-
-                        @Override
-                        public void onHelp(int helpCode, String helpString) {
-                            fingerprintView.showError(false);
-                        }
-                    });
+            // TODO
+//            fingerprintHelper.savePassword(requireActivity(), getArguments().getString(PASSWORD_ARG),
+//                    fingerprintCancellationSignal, new FingerprintStorage.Callback() {
+//                        @Override
+//                        public void onSuccess(String savedPass) {
+//                            fingerprintCancellationSignal = null;
+//                            fingerprintHelper.resetFingerprintKeyChanged();
+//
+//                            dismissWithSuccess();
+//                        }
+//
+//                        @Override
+//                        public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
+//                            if (!canceled) {
+//                                fingerprintView.showError(exceededMaxAttempts);
+//                            }
+//                        }
+//                    });
         } else {
             dismiss();
         }
@@ -129,6 +126,15 @@ public class EnableFingerprintDialog extends DialogFragment {
         return alertDialog;
     }
 
+    private void dismissWithSuccess() {
+        Bundle args = getArguments();
+
+        if (onSuccessOrDismiss != null && args != null) {
+            onSuccessOrDismiss.invoke(args.getString(PASSWORD_ARG));
+            onSuccessOrDismiss = null;
+        }
+    }
+
     @Override
     public void onDismiss(@NonNull DialogInterface dialog) {
         if (fingerprintCancellationSignal != null) {
@@ -140,10 +146,10 @@ public class EnableFingerprintDialog extends DialogFragment {
         }
 
         this.alertDialog = null;
-        Bundle args = getArguments();
 
-        if (onSuccessOrDismiss != null && args != null) {
-            onSuccessOrDismiss.invoke(args.getString(PASSWORD_ARG));
+        if (onSuccessOrDismiss != null) {
+            onSuccessOrDismiss.invoke(null);
+            onSuccessOrDismiss = null;
         }
 
         super.onDismiss(dialog);

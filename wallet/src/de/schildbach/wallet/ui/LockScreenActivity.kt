@@ -21,6 +21,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.telephony.TelephonyManager
+import android.util.Log
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.View
@@ -35,18 +36,21 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.PinPreviewView
-import de.schildbach.wallet.security.FingerprintHelper
+import de.schildbach.wallet.security.FingerprintStorage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
 import kotlinx.android.synthetic.main.activity_lock_screen_root.*
+import kotlinx.coroutines.launch
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
@@ -74,7 +78,7 @@ open class LockScreenActivity : SecureActivity() {
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var restartService: RestartService
     @Inject lateinit var pinRetryController: PinRetryController
-    @Inject lateinit var fingerprintHelper: FingerprintHelper
+    @Inject lateinit var biometricHelper: BiometricHelper
     private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
     private val checkPinViewModel by viewModels<CheckPinViewModel>()
     private val pinLength by lazy { configuration.pinLength }
@@ -296,7 +300,7 @@ open class LockScreenActivity : SecureActivity() {
                     setLockState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
-                    if (fingerprintHelper.requiresEnabling()) {
+                    if (biometricHelper.requiresEnabling) {
                         EnableFingerprintDialog.show(it.data!!, this) { pin ->
                             onCorrectPin(pin)
                         }
@@ -444,7 +448,7 @@ open class LockScreenActivity : SecureActivity() {
             fingerprintCancellationSignal.cancel()
         }
 
-        if (fingerprintHelper.isAvailable && fingerprintHelper.isFingerprintEnabled) {
+        if (biometricHelper.isAvailable && biometricHelper.isEnabled) {
             startFingerprintListener()
             result = true
         } else {
@@ -464,33 +468,35 @@ open class LockScreenActivity : SecureActivity() {
             log.info("fingerprint cancellation signal listener triggered: $fingerprintCancellationSignal")
         }
 
-        log.info("start fingerprint listener: $fingerprintCancellationSignal")
-        fingerprintHelper.getPassword(this, fingerprintCancellationSignal, object : FingerprintHelper.Callback {
-            override fun onSuccess(savedPass: String) {
-                log.info("fingerprint scan successful")
-                fingerprint_view.hideError()
-                onCorrectPin(savedPass)
-            }
+        lifecycleScope.launch {
+            log.info("start fingerprint listener: $fingerprintCancellationSignal")
 
-            override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
-                log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
-                if (!canceled) {
-                    if (fingerprintHelper.hasFingerprintKeyChanged()) {
-                        fingerprintHelper.resetFingerprintKeyChanged()
-                        showFingerprintKeyChangedDialog()
-                        action_login_with_fingerprint.isEnabled = false
-                    } else {
-                        fingerprint_view.showError(exceededMaxAttempts)
-                        initFingerprint(false)
-                    }
+            try {
+                val savedPass = biometricHelper.getPassword(this@LockScreenActivity)
+
+                if (savedPass != null) {
+                    log.info("fingerprint scan successful")
+                    fingerprint_view.hideError()
+                    onCorrectPin(savedPass)
+                } else {
+
+//                    log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
+//                    if (!canceled) { TODO
+//                        if (biometricHelper.hasFingerprintKeyChanged()) { TODO
+//                            fingerprintHelper.resetFingerprintKeyChanged()
+//                            showFingerprintKeyChangedDialog()
+//                            action_login_with_fingerprint.isEnabled = false
+//                        } else {
+                            fingerprint_view.showError(false) //exceededMaxAttempts) TODO
+                            initFingerprint(false)
+//                        }
+//                    }
                 }
+            } catch(ex: Exception) {
+                // TODO
+                Log.i("FINGERPRINT", ex.message ?: "null message")
             }
-
-            override fun onHelp(helpCode: Int, helpString: String) {
-                log.info("fingerprint help (helpCode: $helpCode, helpString: $helpString")
-                fingerprint_view.showError(false)
-            }
-        })
+        }
     }
 
     override fun onDestroy() {

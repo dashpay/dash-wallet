@@ -388,16 +388,17 @@ class SetPinActivity : InteractionAwareActivity() {
                     } else {
                         if (changePin) {
                             viewModel.configuration.pinLength = PinPreviewView.DEFAULT_PIN_LENGTH
-                            if (viewModel.fingerprintHelper.requiresEnabling()
+                            if (viewModel.biometricHelper.requiresEnabling
                                 && viewModel.configuration.enableFingerprint
                             ) {
-                                EnableFingerprintDialog.show(viewModel.getPinAsString(), this) {
-                                    if (initialPin != null) {
-                                        goHome()
-                                    } else {
-                                        finish()
-                                    }
-                                }
+                                // TODO
+//                                EnableFingerprintDialog.show(viewModel.getPinAsString(), this) {
+//                                    if (initialPin != null) {
+//                                        goHome()
+//                                    } else {
+//                                        finish()
+//                                    }
+//                                }
                             } else {
                                 if (initialPin != null) {
                                     viewModel.resetFailedPinAttempts()

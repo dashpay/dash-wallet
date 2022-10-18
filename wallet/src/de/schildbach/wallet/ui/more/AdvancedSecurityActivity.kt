@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.more
 
 import android.os.Bundle
 import android.text.SpannableStringBuilder
@@ -24,19 +24,25 @@ import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.os.bundleOf
+import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.ui.BaseMenuActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_advanced_security.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
 
 enum class SecurityLevel {
     NONE, LOW, MEDIUM, HIGH, VERY_HIGH
 }
 
+@AndroidEntryPoint
 class AdvancedSecurityActivity : BaseMenuActivity() {
-    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
+    @Inject
+    lateinit var analytics: AnalyticsService
 
     private val onAutoLogoutSeekBarListener = object : OnSeekBarChangeListener {
         override fun onStopTrackingTouch(seekBar: SeekBar?) {

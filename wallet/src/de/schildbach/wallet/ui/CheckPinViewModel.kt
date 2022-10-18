@@ -20,7 +20,7 @@ import android.content.res.Resources
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.livedata.CheckPinLiveData
-import de.schildbach.wallet.security.FingerprintHelper
+import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.ui.preference.PinRetryController
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -32,7 +32,7 @@ open class CheckPinViewModel @Inject constructor(
     val walletData: WalletDataProvider,
     val configuration: Configuration,
     private val pinRetryController: PinRetryController,
-    val fingerprintHelper: FingerprintHelper,
+    val biometricHelper: BiometricHelper,
     private val analytics: AnalyticsService
 ) : ViewModel() {
 

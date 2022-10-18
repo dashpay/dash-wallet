@@ -16,7 +16,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.os.CancellationSignal;
 import androidx.fragment.app.DialogFragment;
@@ -30,9 +29,9 @@ import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.security.BiometricHelper;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.widget.FingerprintView;
-import de.schildbach.wallet.security.FingerprintHelper;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -59,7 +58,7 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
     protected int dialogTitle;
 
     @Inject
-    public FingerprintHelper fingerprintHelper;
+    public BiometricHelper biometricHelper;
     @Inject
     public Configuration configuration;
 
@@ -90,8 +89,8 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
             }
         });
 
-        if (fingerprintHelper.isAvailable()) {
-            boolean isFingerprintEnabled = fingerprintHelper.isFingerprintEnabled();
+        if (biometricHelper.isAvailable()) {
+            boolean isFingerprintEnabled = biometricHelper.isEnabled();
             if (isFingerprintEnabled) {
                 fingerprintView.setVisibility(View.VISIBLE);
                 startFingerprintListener();
@@ -124,24 +123,19 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
 
     private void startFingerprintListener() {
         fingerprintCancellationSignal = new CancellationSignal();
-        fingerprintHelper.getPassword(requireActivity(), fingerprintCancellationSignal, new FingerprintHelper.Callback() {
-            @Override
-            public void onSuccess(String savedPass) {
-                checkPassword(savedPass);
-            }
-
-            @Override
-            public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
-                if (!canceled) {
-                    fingerprintView.showError(exceededMaxAttempts);
-                }
-            }
-
-            @Override
-            public void onHelp(int helpCode, String helpString) {
-                fingerprintView.showError(false);
-            }
-        });
+//        biometricHelper.getPassword(requireActivity(), fingerprintCancellationSignal, new FingerprintStorage.Callback() {
+//            @Override
+//            public void onSuccess(String savedPass) {
+//                checkPassword(savedPass);
+//            }
+//
+//            @Override
+//            public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
+//                if (!canceled) {
+//                    fingerprintView.showError(exceededMaxAttempts);
+//                }
+//            }
+//        });
     }
 
     @Override
@@ -171,6 +165,9 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
 
     abstract protected void checkPassword(final String password);
 
+    // TODO: this needs better handling as it can be confused with the WalletDataProvider.
+    // Perhaps keep the walletBuffer from the activity in the RestoreWalletFromFileViewModel
+    // and share it across fragments
     public interface WalletProvider {
 
         Wallet getWallet();

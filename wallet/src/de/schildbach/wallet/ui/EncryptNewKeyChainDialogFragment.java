@@ -101,7 +101,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                     BackupWalletToSeedDialogFragment.show(getParentFragmentManager(), true);
                     ((OnNewKeyChainEncryptedListener) activity).onNewKeyChainEncrypted();
 
-                    if (fingerprintHelper.requiresEnabling()) {
+                    if (biometricHelper.getRequiresEnabling()) {
                         EnableFingerprintDialog.show(password, getActivity(), pin -> Unit.INSTANCE);
                     }
                 }

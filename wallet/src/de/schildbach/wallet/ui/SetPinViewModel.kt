@@ -19,7 +19,7 @@ package de.schildbach.wallet.ui
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.EncryptWalletLiveData
-import de.schildbach.wallet.security.FingerprintHelper
+import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.ui.preference.PinRetryController
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -33,9 +33,9 @@ class SetPinViewModel @Inject constructor(
     walletData: WalletDataProvider,
     configuration: Configuration,
     pinRetryController: PinRetryController,
-    fingerprintHelper: FingerprintHelper,
+    biometricHelper: BiometricHelper,
     analytics: AnalyticsService
-): CheckPinViewModel(walletData, configuration, pinRetryController, fingerprintHelper, analytics) {
+): CheckPinViewModel(walletData, configuration, pinRetryController, biometricHelper, analytics) {
 
     private val log = LoggerFactory.getLogger(SetPinViewModel::class.java)
 
@@ -45,7 +45,7 @@ class SetPinViewModel @Inject constructor(
         get() = walletData.wallet!!.isEncrypted
 
     internal val startNextActivity = SingleLiveEvent<Boolean>()
-    internal val encryptWalletLiveData = EncryptWalletLiveData(walletApplication, fingerprintHelper)
+    internal val encryptWalletLiveData = EncryptWalletLiveData(walletApplication, biometricHelper)
 
     fun setPin(pin: ArrayList<Int>) {
         this.pinArray.clear()

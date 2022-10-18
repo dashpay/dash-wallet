@@ -4,11 +4,9 @@ import android.content.DialogInterface
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.preference.PinRetryController
 import org.bitcoinj.wallet.DeterministicSeed
 
 /**
@@ -32,7 +30,7 @@ class DecryptSeedWithPinDialog(
             val args = Bundle()
             args.putBoolean(ARG_PIN_ONLY, pinOnly)
             checkPinDialog.arguments = args
-            checkPinDialog.show(activity)
+            checkPinDialog.show(activity.supportFragmentManager, "dss") // TODO
         }
 
         @JvmStatic

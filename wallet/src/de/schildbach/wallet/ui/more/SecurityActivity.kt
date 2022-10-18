@@ -16,22 +16,19 @@
 
 package de.schildbach.wallet.ui.more
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
-import android.view.View.GONE
-import android.view.View.VISIBLE
-import android.widget.CompoundButton
 import androidx.activity.viewModels
-import androidx.appcompat.widget.SwitchCompat
-import androidx.lifecycle.ViewModelProvider
+import androidx.core.os.CancellationSignal
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_security.*
+import de.schildbach.wallet_test.databinding.ActivitySecurityBinding
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.DeterministicSeed
@@ -41,69 +38,55 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
 
 @AndroidEntryPoint
-class SecurityActivity : BaseMenuActivity() {
+class SecurityActivity : LockScreenActivity() {
 
     private val viewModel: SecurityViewModel by viewModels()
-
-    override fun getLayoutId(): Int {
-        return R.layout.activity_security
-    }
+    private lateinit var binding: ActivitySecurityBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        binding = ActivitySecurityBinding.inflate(layoutInflater)
         setTitle(R.string.security_title)
-        val hideBalanceOnLaunch = findViewById<SwitchCompat>(R.id.hide_balance_switch)
-        hideBalanceOnLaunch.isChecked = configuration.hideBalance
-        hideBalanceOnLaunch.setOnCheckedChangeListener { _, hideBalanceOnLaunch ->
-            configuration.hideBalance = hideBalanceOnLaunch
-            viewModel.logEvent(
-                if (hideBalanceOnLaunch) {
-                    AnalyticsConstants.Security.AUTOHIDE_BALANCE_ON
-                } else {
-                    AnalyticsConstants.Security.AUTOHIDE_BALANCE_OFF
-                }
-            )
+
+        viewModel.hideBalance.observe(this) {
+            Log.i("FINGERPRINT", "set hide balance: ${it}")
+            binding.hideBalanceSwitch.isChecked = it
         }
 
-        //Fingerprint group and switch setup
-        if (viewModel.fingerprintHelper.isAvailable) {
-            fingerprint_auth_group.visibility = VISIBLE
-            fingerprint_auth_switch.isChecked = viewModel.fingerprintHelper.isFingerprintEnabled
-            fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
-            configuration.enableFingerprint = viewModel.fingerprintHelper.isFingerprintEnabled // TODO
-        } else {
-            fingerprint_auth_group.visibility = GONE
+        viewModel.fingerprintIsAvailable.observe(this) {
+            Log.i("FINGERPRINT", "set fingerprint available: ${it}")
+            binding.fingerprintAuthGroup.isVisible = it
         }
 
-        if (BuildConfig.DEBUG) {
-            backup_wallet.visibility = VISIBLE
+        viewModel.fingerprintIsEnabled.observe(this) {
+            Log.i("FINGERPRINT", "set fingerprint enabled: ${it}")
+            binding.fingerprintAuthSwitch.isChecked = it
         }
 
-        viewModel.init()
-    }
+        binding.hideBalanceSwitch.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setHideBalanceOnLaunch(isChecked)
+        }
 
-    private val fingerprintSwitchListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
-        if (isChecked) {
+        binding.fingerprintAuthSwitch.setOnCheckedChangeListener { _, isChecked ->
             lifecycleScope.launch {
-                CheckPinDialog.showAsync(this@SecurityActivity)?.let { pin ->
-                    EnableFingerprintDialog.show(pin, this@SecurityActivity) {
-                        // TODO check
-                        viewModel.logEvent(AnalyticsConstants.Security.FINGERPRINT_ON)
-                        updateFingerprintSwitchSilently(viewModel.fingerprintHelper.isFingerprintEnabled)
-                        configuration.enableFingerprint = viewModel.fingerprintHelper.isFingerprintEnabled
+                if (isChecked) {
+                    if (viewModel.fingerprintIsEnabled.value == true) {
+                        return@launch
+                    }
+
+                    if (setupBiometric()) {
+                        viewModel.setEnableFingerprint(true)
+                        return@launch
                     }
                 }
-            }
-        } else {
-            viewModel.turnFingerprintAuthOff()
-        }
-    }
 
-    private fun updateFingerprintSwitchSilently(checked: Boolean) {
-        fingerprint_auth_switch.setOnCheckedChangeListener(null)
-        fingerprint_auth_switch.isChecked = checked
-        fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
+                viewModel.setEnableFingerprint(false)
+            }
+        }
+
+        binding.backupWallet.isVisible = BuildConfig.DEBUG
+        viewModel.init()
+        setContentView(binding.root)
     }
 
     fun backupWallet(view: View) {
@@ -200,7 +183,6 @@ class SecurityActivity : BaseMenuActivity() {
 
     private fun doReset() {
         viewModel.logEvent(AnalyticsConstants.Security.RESET_WALLET)
-        toAbstractBindService()?.unbindServiceServiceConnection()
         viewModel.triggerWipe()
         startActivity(OnboardingActivity.createIntent(this))
         finishAffinity()
@@ -213,8 +195,20 @@ class SecurityActivity : BaseMenuActivity() {
         val intent = ViewSeedActivity.createIntent(this, seedArray)
         startActivity(intent)
     }
-}
 
-fun Activity.toAbstractBindService(): AbstractBindServiceActivity? {
-    return this as? AbstractBindServiceActivity
+    private suspend fun setupBiometric(): Boolean {
+        val pin = CheckPinDialog.showAsync(this@SecurityActivity)
+
+        if (pin != null) {
+            val cancellationSignal = CancellationSignal() // TODO
+            try {
+                return viewModel.biometricHelper.savePassword(this@SecurityActivity, pin)
+            } catch (ex: Exception) {
+                // TODO
+                Log.i("FINGERPRINT", "Error: ${ex.message}")
+            }
+        }
+
+        return false
+    }
 }

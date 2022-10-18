@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui;
 
-import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.graphics.Typeface;
@@ -44,9 +43,9 @@ import com.google.common.base.Strings;
 
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.crypto.KeyCrypterScrypt;
-import org.bitcoinj.wallet.Wallet;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,9 +55,9 @@ import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.security.BiometricHelper;
 import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.ui.preference.PinRetryController;
-import de.schildbach.wallet.security.FingerprintHelper;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
@@ -95,11 +94,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         newFragment.show(fm, FRAGMENT_TAG);
     }
 
-    private AbstractWalletActivity activity;
-    private WalletApplication application;
-    private Wallet wallet;
-    private PinRetryController pinRetryController;
-
     @Nullable
     private AlertDialog dialog;
 
@@ -117,8 +111,11 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     private Handler backgroundHandler;
 
     @Inject Configuration configuration;
-    @Inject FingerprintHelper fingerprintHelper;
+    @Inject BiometricHelper biometricHelper;
     @Inject RestartService restartService;
+    @Inject WalletApplication application;
+    @Inject WalletDataProvider walletData;
+    @Inject PinRetryController pinRetryController;
 
     private enum State {
         INPUT, CRYPTING, DONE
@@ -146,16 +143,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     };
 
     @Override
-    public void onAttach(final Activity activity) {
-        super.onAttach(activity);
-
-        this.activity = (AbstractWalletActivity) activity;
-        this.application = (WalletApplication) activity.getApplication();
-        this.wallet = application.getWallet();
-        this.pinRetryController = PinRetryController.getInstance();
-    }
-
-    @Override
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
@@ -172,7 +159,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
     @Override
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
-        final View view = LayoutInflater.from(activity).inflate(R.layout.encrypt_keys_dialog, null);
+        final View view = getLayoutInflater().inflate(R.layout.encrypt_keys_dialog, null);
 
         oldPasswordGroup = view.findViewById(R.id.encrypt_keys_dialog_password_old_group);
 
@@ -290,7 +277,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
             throw new IllegalStateException();
         }
 
-        if (wallet.isEncrypted() && pinRetryController.isLocked()) {
+        if (walletData.getWallet().isEncrypted() && pinRetryController.isLocked()) {
             return;
         }
 
@@ -303,7 +290,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
             public void run() {
                 // For the old key, we use the key crypter that was used to derive the password in the first
                 // place.
-                final KeyParameter oldKey = oldPassword != null ? wallet.getKeyCrypter().deriveKey(oldPassword) : null;
+                final KeyParameter oldKey = oldPassword != null ? walletData.getWallet().getKeyCrypter().deriveKey(oldPassword) : null;
 
                 // For the new key, we create a new key crypter according to the desired parameters.
                 final KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(application.scryptIterationsTarget());
@@ -312,14 +299,14 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-                        if (wallet.isEncrypted()) {
+                        if (walletData.getWallet().isEncrypted()) {
                             if (oldKey == null) {
                                 log.info("wallet is encrypted, but did not provide spending password");
                                 state = State.INPUT;
                                 oldPasswordView.requestFocus();
                             } else {
                                 try {
-                                    wallet.decrypt(oldKey);
+                                    walletData.getWallet().decrypt(oldKey);
 
                                     state = State.DONE;
                                     pinRetryController.clearPinFailPrefs();
@@ -340,8 +327,8 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                             }
                         }
 
-                        if (newKey != null && !wallet.isEncrypted()) {
-                            wallet.encrypt(keyCrypter, newKey);
+                        if (newKey != null && !walletData.getWallet().isEncrypted()) {
+                            walletData.getWallet().encrypt(keyCrypter, newKey);
 
                             log.info(
                                     "wallet successfully encrypted, using key derived by new spending password ({} scrypt iterations)",
@@ -353,7 +340,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                             application.backupWallet();
 
                             //Clear fingerprint data
-                            fingerprintHelper.clear();
+                            biometricHelper.clear();
                             delayedDismiss();
 
                         } else {
@@ -366,7 +353,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                             dismiss();
 
                             // TODO check
-                            if (fingerprintHelper.requiresEnabling() && oldPassword == null && state == State.DONE) {
+                            if (biometricHelper.getRequiresEnabling() && oldPassword == null && state == State.DONE) {
                                 EnableFingerprintDialog.show(newPassword, requireActivity(), pin -> Unit.INSTANCE);
                             }
                         }, 2000);
@@ -388,7 +375,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         final boolean hasOldPassword = !oldPasswordView.getText().toString().trim().isEmpty();
         final boolean hasPassword = !newPasswordView.getText().toString().trim().isEmpty();
 
-        oldPasswordGroup.setVisibility(wallet.isEncrypted() ? View.VISIBLE : View.GONE);
+        oldPasswordGroup.setVisibility(walletData.getWallet().isEncrypted() ? View.VISIBLE : View.GONE);
         oldPasswordView.setEnabled(state == State.INPUT);
 
         newPasswordView.setEnabled(state == State.INPUT);
@@ -412,7 +399,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
         showView.setEnabled(state == State.INPUT);
 
         if (state == State.INPUT) {
-            if (wallet.isEncrypted()) {
+            if (walletData.getWallet().isEncrypted()) {
                 positiveButton.setText(R.string.button_edit);
                 positiveButton.setEnabled(hasOldPassword && hasPassword);
             } else {

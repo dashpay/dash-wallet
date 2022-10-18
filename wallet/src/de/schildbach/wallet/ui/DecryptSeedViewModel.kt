@@ -19,7 +19,7 @@ package de.schildbach.wallet.ui
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.DecryptSeedLiveData
-import de.schildbach.wallet.security.FingerprintHelper
+import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.ui.preference.PinRetryController
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -36,9 +36,9 @@ class DecryptSeedViewModel @Inject constructor(
     pinRetryController: PinRetryController,
     walletApplication: WalletApplication,
     configuration: Configuration,
-    fingerprintHelper: FingerprintHelper,
+    biometricHelper: BiometricHelper,
     analytics: AnalyticsService
-) : CheckPinViewModel(walletData, configuration, pinRetryController, fingerprintHelper, analytics) {
+) : CheckPinViewModel(walletData, configuration, pinRetryController, biometricHelper, analytics) {
 
     internal val decryptSeedLiveData = DecryptSeedLiveData(walletApplication)
 

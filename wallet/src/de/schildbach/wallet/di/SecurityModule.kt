@@ -24,7 +24,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import de.schildbach.wallet.security.FingerprintHelper
+import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.security.FingerprintStorage
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.security.SecurityFunctions
 import org.dash.wallet.common.Configuration
@@ -41,10 +42,13 @@ abstract class SecurityModule {
 
         @Provides
         @Singleton
-        fun provideFingerprintHelper(
+        fun provideBiometricHelper(
             @ApplicationContext context: Context,
             configuration: Configuration
-        ) = FingerprintHelper(context, configuration)
+        ) = BiometricHelper(
+            context,
+            configuration
+        )
     }
 
     @Binds

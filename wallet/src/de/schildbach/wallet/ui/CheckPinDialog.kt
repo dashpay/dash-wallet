@@ -35,7 +35,6 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.RestartService
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
-import de.schildbach.wallet.security.FingerprintHelper
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentEnterPinBinding
 import kotlin.coroutines.resume
@@ -62,7 +61,7 @@ open class CheckPinDialog(
             val args = Bundle()
             args.putBoolean(ARG_PIN_ONLY, pinOnly)
             checkPinDialog.arguments = args
-            checkPinDialog.show(activity)
+            checkPinDialog.show(activity.supportFragmentManager, FRAGMENT_TAG)
         }
 
         @JvmStatic
@@ -95,18 +94,17 @@ open class CheckPinDialog(
         }
     }
 
-    private val binding by viewBinding(FragmentEnterPinBinding::bind)
-    protected open val viewModel by viewModels<CheckPinViewModel>()
-    private lateinit var state: State
-
-    private lateinit var fingerprintCancellationSignal: CancellationSignal
-
     protected enum class State {
         ENTER_PIN,
         INVALID_PIN,
         DECRYPTING
     }
 
+    private val binding by viewBinding(FragmentEnterPinBinding::bind)
+    protected open val viewModel by viewModels<CheckPinViewModel>()
+    private lateinit var state: State
+
+    private lateinit var fingerprintCancellationSignal: CancellationSignal
     @Inject
     lateinit var restartService: RestartService
 
@@ -119,7 +117,14 @@ open class CheckPinDialog(
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_enter_pin, container, false)
+        return if (viewModel.isWalletLocked) {
+            val message = viewModel.getLockedMessage(resources)
+            showLockedAlert(requireActivity(), message)
+            dismiss()
+            null
+        } else {
+            inflater.inflate(R.layout.fragment_enter_pin, container, false)
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -166,11 +171,13 @@ open class CheckPinDialog(
         binding.pinPreview.hideForgotPinAction()
         setState(State.ENTER_PIN)
 
-        arguments?.getBoolean(ARG_PIN_ONLY, false).let {
-            if (true == it) {
-                fingerprintFlow(it)
-                binding.buttonBar.positiveButton.isEnabled = false
-            } else initFingerprint()
+        val pinOnly = arguments?.getBoolean(ARG_PIN_ONLY, false) ?: false
+
+        if (pinOnly) {
+            fingerprintFlow(true)
+            binding.buttonBar.positiveButton.isEnabled = false
+        } else {
+            initFingerprint()
         }
     }
 
@@ -280,7 +287,7 @@ open class CheckPinDialog(
                 getString(R.string.button_understand)
             )
             dialog.isCancelable = false
-            dialog.show(activity!!) { }
+            dialog.show(requireActivity())
         }
     }
 
@@ -295,8 +302,8 @@ open class CheckPinDialog(
 
     private fun initFingerprint() {
         log.info("fingerprint setup for Android M and above")
-        if (viewModel.fingerprintHelper.isAvailable) {
-            if (viewModel.fingerprintHelper.isFingerprintEnabled) {
+        if (viewModel.biometricHelper.isAvailable) {
+            if (viewModel.biometricHelper.isEnabled) {
                 fingerprintFlow(true)
                 startFingerprintListener()
             } else {
@@ -323,38 +330,25 @@ open class CheckPinDialog(
         fingerprintCancellationSignal.setOnCancelListener {
             log.info("fingerprint cancellation signal listener triggered")
         }
-        viewModel.fingerprintHelper.getPassword(requireActivity(), fingerprintCancellationSignal,
-            object : FingerprintHelper.Callback {
-            override fun onSuccess(savedPass: String) {
-                log.info("fingerprint scan successful")
-                onFingerprintSuccess(savedPass)
-            }
-
-            override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
-                log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
-                if (!canceled) {
-                    binding.fingerprintView.showError(exceededMaxAttempts)
-                }
-            }
-
-            override fun onHelp(helpCode: Int, helpString: String) {
-                log.info("fingerprint help (helpCode: $helpCode, helpString: $helpString")
-                binding.fingerprintView.showError(false)
-            }
-        })
+        // TODO
+//        viewModel.biometricHelper.getPassword(requireActivity(), fingerprintCancellationSignal,
+//            object : FingerprintStorage.Callback {
+//            override fun onSuccess(savedPass: String) {
+//                log.info("fingerprint scan successful")
+//                onFingerprintSuccess(savedPass)
+//            }
+//
+//            override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
+//                log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
+//                if (!canceled) {
+//                    binding.fingerprintView.showError(exceededMaxAttempts)
+//                }
+//            }
+//        })
     }
 
     protected open fun onFingerprintSuccess(savedPass: String) {
         dismiss(savedPass)
-    }
-
-    fun show(activity: FragmentActivity) {
-        if (viewModel.isWalletLocked) {
-            val message = viewModel.getLockedMessage(resources)
-            showLockedAlert(activity, message)
-        } else {
-            super.show(activity.supportFragmentManager, FRAGMENT_TAG)
-        }
     }
 
     protected open fun showLockedAlert(activity: FragmentActivity, lockedTimeMessage: String) {
