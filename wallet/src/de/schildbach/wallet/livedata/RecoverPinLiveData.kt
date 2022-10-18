@@ -49,7 +49,7 @@ class RecoverPinLiveData(application: Application) : MutableLiveData<Resource<St
 
     private val securityGuard = SecurityGuard()
 
-    fun recover(words: MutableList<String>) {
+    fun recover(words: List<String>) {
         if (deriveKeyTask == null) {
             deriveKeyTask = object : DeriveKeyTask(backgroundHandler, walletApplication.scryptIterationsTarget()) {
 
