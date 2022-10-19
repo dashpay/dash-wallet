@@ -28,19 +28,21 @@ import android.widget.ViewSwitcher
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import javax.inject.Inject
 
 @AndroidEntryPoint
-// TODO: check
 class SetPinActivity : InteractionAwareActivity() {
 
     private lateinit var numericKeyboardView: NumericKeyboardView
@@ -52,8 +54,8 @@ class SetPinActivity : InteractionAwareActivity() {
     private var alertDialog: AlertDialog? = null
     private val viewModel by viewModels<SetPinViewModel>()
 
-    @Inject
-    lateinit var restartService: RestartService
+    @Inject lateinit var restartService: RestartService
+    @Inject lateinit var authManager: SecurityFunctions
 
     val pin = arrayListOf<Int>()
     var seed = listOf<String>()
@@ -391,14 +393,18 @@ class SetPinActivity : InteractionAwareActivity() {
                             if (viewModel.biometricHelper.requiresEnabling
                                 && viewModel.configuration.enableFingerprint
                             ) {
-                                // TODO
-//                                EnableFingerprintDialog.show(viewModel.getPinAsString(), this) {
-//                                    if (initialPin != null) {
-//                                        goHome()
-//                                    } else {
-//                                        finish()
-//                                    }
-//                                }
+                                lifecycleScope.launch {
+                                    viewModel.biometricHelper.enableBiometricReminder(
+                                        this@SetPinActivity,
+                                        viewModel.getPinAsString()
+                                    )
+
+                                    if (initialPin != null) {
+                                        goHome()
+                                    } else {
+                                        finish()
+                                    }
+                                }
                             } else {
                                 if (initialPin != null) {
                                     viewModel.resetFailedPinAttempts()

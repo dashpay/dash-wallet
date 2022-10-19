@@ -46,8 +46,6 @@ import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HomeContentBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PrefixedChecksummedBytes
@@ -62,9 +60,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
-@FlowPreview
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class WalletFragment : Fragment(R.layout.home_content) {
     companion object {
         private val log = LoggerFactory.getLogger(WalletFragment::class.java)
@@ -116,10 +112,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
             ) {
                 val dialogFragment: TaxCategoryExplainerDialogFragment =
                     TaxCategoryExplainerDialogFragment.newInstance(mostRecentTransaction.txId)
-                dialogFragment.show(requireActivity().supportFragmentManager, "taxcategorydialog") {
+                dialogFragment.show(requireActivity()) {
                     val transactionDetailsDialogFragment: TransactionDetailsDialogFragment =
                         TransactionDetailsDialogFragment.newInstance(mostRecentTransaction.txId)
-                    transactionDetailsDialogFragment.show(requireActivity().supportFragmentManager, null)
+                    transactionDetailsDialogFragment.show(requireActivity())
                 }
                 configuration.setHasDisplayedTaxCategoryExplainer()
             }

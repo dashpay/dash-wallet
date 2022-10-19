@@ -18,10 +18,8 @@ package de.schildbach.wallet.ui.more
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.activity.viewModels
-import androidx.core.os.CancellationSignal
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
@@ -34,7 +32,6 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.DeterministicSeed
 import org.dash.wallet.common.BuildConfig
-import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
@@ -54,17 +51,14 @@ class SecurityActivity : LockScreenActivity() {
         binding.appBar.toolbar.setNavigationOnClickListener { finish() }
 
         viewModel.hideBalance.observe(this) {
-            Log.i("FINGERPRINT", "set hide balance: ${it}")
             binding.hideBalanceSwitch.isChecked = it
         }
 
         viewModel.fingerprintIsAvailable.observe(this) {
-            Log.i("FINGERPRINT", "set fingerprint available: ${it}")
             binding.fingerprintAuthGroup.isVisible = it
         }
 
         viewModel.fingerprintIsEnabled.observe(this) {
-            Log.i("FINGERPRINT", "set fingerprint enabled: ${it}")
             binding.fingerprintAuthSwitch.isChecked = it
         }
 
@@ -164,8 +158,7 @@ class SecurityActivity : LockScreenActivity() {
                     }
                 },
                 onExtraMessageAction = {
-                    authManager.authenticate(this@SecurityActivity) { pin, error ->
-                        // TODO: error?
+                    authManager.authenticate(this@SecurityActivity) { pin ->
                         pin?.let {
                             startActivity(VerifySeedActivity.createIntent(this, pin, false))
                         }
@@ -203,15 +196,18 @@ class SecurityActivity : LockScreenActivity() {
     }
 
     private suspend fun setupBiometric(): Boolean {
-        val pin = authManager.authenticate(this@SecurityActivity, true)
-
-        if (pin != null) {
-            try {
+        try {
+            val pin = authManager.authenticate(this@SecurityActivity, true)
+            pin?.let {
                 return viewModel.biometricHelper.savePassword(this@SecurityActivity, pin)
-            } catch (ex: Exception) {
-                // TODO
-                Log.i("FINGERPRINT", "Error: ${ex.message}")
             }
+        } catch (ex: Exception) {
+            AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.error),
+                ex.localizedMessage ?: "",
+                getString(R.string.button_dismiss)
+            ).show(this)
         }
 
         return false

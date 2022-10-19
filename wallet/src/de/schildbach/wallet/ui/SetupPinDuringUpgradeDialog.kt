@@ -31,7 +31,6 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
 
 @AndroidEntryPoint
-// TODO: check
 open class SetupPinDuringUpgradeDialog(
     private var onResult: ((Boolean?, String?) -> Unit)?
 ) : CheckPinDialog() {

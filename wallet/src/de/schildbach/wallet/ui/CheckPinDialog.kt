@@ -115,14 +115,6 @@ open class CheckPinDialog(
         binding.buttonBar.negativeButton.setOnClickListener {
             dismiss()
         }
-        binding.buttonBar.positiveButton.setOnClickListener {
-            // TODO
-//            if (binding.pinPreview.visibility == View.VISIBLE) {
-//                fingerprintFlow(true)
-//            } else {
-//                fingerprintFlow(false)
-//            }
-        }
 
         binding.numericKeyboard.isFunctionEnabled = false
         binding.numericKeyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
@@ -272,7 +264,7 @@ open class CheckPinDialog(
 
     protected open fun showLockedAlert(activity: FragmentActivity, lockedTimeMessage: String) {
         AdaptiveDialog.create(
-            null,
+            R.drawable.ic_warning,
             activity.getString(R.string.wallet_lock_wallet_disabled),
             lockedTimeMessage,
             activity.getString(android.R.string.ok)

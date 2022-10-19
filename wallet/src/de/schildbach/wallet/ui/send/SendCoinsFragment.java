@@ -164,8 +164,7 @@ public class SendCoinsFragment extends Fragment {
             if (isUserAuthorized()) {
                 handleEmpty();
             } else {
-                authManager.authenticate(requireActivity(), false, (pin, error) -> {
-                    // TODO: errors?
+                authManager.authenticate(requireActivity(), false, pin -> {
                     if (pin != null) {
                         userAuthorizedDuring = true;
                         handleEmpty();
@@ -265,8 +264,7 @@ public class SendCoinsFragment extends Fragment {
                         Float.valueOf(viewModel.getBiometricLimit()).toString());
                 boolean withinLimit = enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount);
 
-                authManager.authenticate(requireActivity(), !withinLimit, (pin, error) -> {
-                    // TODO: errors?
+                authManager.authenticate(requireActivity(), !withinLimit, pin -> {
                     if (pin != null) {
                         userAuthorizedDuring = true;
                         if (everythingPlausible() && viewModel.dryrunSendRequest != null) {

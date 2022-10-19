@@ -26,7 +26,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.BiometricHelper
-import de.schildbach.wallet.security.FingerprintStorage
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
@@ -116,7 +115,7 @@ class SecurityViewModel @Inject constructor(
             configuration.enableFingerprint = isEnabled
 
             if (!isEnabled) {
-                biometricHelper.clear()
+                biometricHelper.clearBiometricInfo()
             }
         }
     }

@@ -201,7 +201,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     public void handleEncryptKeysRestoredWallet() {
-        // TODO check
         EncryptKeysDialogFragment.show(false, getSupportFragmentManager(), dialog -> resetBlockchain());
     }
 

@@ -23,9 +23,10 @@ import android.view.View;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet_test.R;
-import kotlin.Unit;
 
+@AndroidEntryPoint
 public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
 
     private static final String FRAGMENT_TAG = UnlockWalletDialogFragment.class.getName();
@@ -53,9 +54,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
 
     @Override
     public void onDismiss(DialogInterface dialog) {
-        if (fingerprintCancellationSignal != null) {
-            fingerprintCancellationSignal.cancel();
-        }
+        biometricHelper.cancelPending();
         super.onDismiss(dialog);
     }
 
@@ -82,7 +81,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
                     dismissAllowingStateLoss();
 
                     if (!biometricHelper.isEnabled() && configuration.getRemindEnableFingerprint()) {
-                        EnableFingerprintDialog.show(password, getActivity(), pin -> Unit.INSTANCE);
+                        biometricHelper.runEnableBiometricReminder(requireActivity(), password);
                     }
                 }
             }

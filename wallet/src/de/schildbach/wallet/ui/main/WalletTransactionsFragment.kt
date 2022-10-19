@@ -36,8 +36,6 @@ import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.WalletTransactionsFragmentBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.observeOnDestroy
@@ -45,8 +43,6 @@ import org.dash.wallet.common.ui.viewBinding
 import java.time.Instant
 import java.time.ZoneId
 
-@FlowPreview
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
     companion object {

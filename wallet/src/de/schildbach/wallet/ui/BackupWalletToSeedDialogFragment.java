@@ -56,6 +56,7 @@ import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.security.BiometricHelper;
+import de.schildbach.wallet.security.BiometricLockoutException;
 import de.schildbach.wallet.security.FingerprintStorage;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.payments.DecryptSeedTask;
@@ -78,7 +79,6 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
     private FingerprintView fingerprintView;
     @Inject public BiometricHelper biometricHelper;
 
-    private CancellationSignal fingerprintCancellationSignal;
 
     public static void show(final FragmentManager fm) {
         final BackupWalletToSeedDialogFragment newFragment = new BackupWalletToSeedDialogFragment();
@@ -196,9 +196,6 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
 
     @Override
     public void onDismiss(final DialogInterface dialog) {
-        if (fingerprintCancellationSignal != null) {
-            fingerprintCancellationSignal.cancel();
-        }
         if (activity instanceof DialogInterface.OnDismissListener) {
             ((DialogInterface.OnDismissListener) activity).onDismiss(getDialog());
         }
@@ -224,22 +221,16 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
     private void initFingerprintHelper() {
         if (biometricHelper.isEnabled()) {
             fingerprintView.setVisibility(View.VISIBLE);
-            fingerprintCancellationSignal = new CancellationSignal();
-            // TODO
-//            fingerprintHelper.getPassword(requireActivity(), fingerprintCancellationSignal, new FingerprintStorage.Callback() {
-//                @Override
-//                public void onSuccess(String savedPass) {
-//                    privateKeyPasswordView.setText(savedPass);
-//                    handleDecryptPIN();
-//                }
-//
-//                @Override
-//                public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
-//                    if (!canceled) {
-//                        fingerprintView.showError(exceededMaxAttempts);
-//                    }
-//                }
-//            });
+            biometricHelper.getPassword(requireActivity(), false, (savedPass, error) -> {
+                if (error != null) {
+                    fingerprintView.showError(error instanceof BiometricLockoutException);
+                } else if (savedPass != null) {
+                    privateKeyPasswordView.setText(savedPass);
+                    handleDecryptPIN();
+                }
+
+                return Unit.INSTANCE;
+            });
         }
     }
 

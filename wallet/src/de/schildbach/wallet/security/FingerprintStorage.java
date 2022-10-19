@@ -18,7 +18,6 @@ package de.schildbach.wallet.security;
 
 import static android.content.Context.KEYGUARD_SERVICE;
 
-import android.annotation.SuppressLint;
 import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -60,7 +59,6 @@ public class FingerprintStorage {
     private static final String ENCRYPTED_PASS_SHARED_PREF_KEY = "ENCRYPTED_PASS_PREFS_KEY";
     private static final String LAST_USED_IV_SHARED_PREF_KEY = "LAST_USED_IV_PREFS_KEY";
     private static final String KEYSTORE_ALIAS = "DASH_WALLET_FINGERPRINT_KEYSTORE";
-    private static final String FINGERPRINT_KEY_CHANGED = "FINGERPRINT_KEY_CHANGED";
 
     private final Context context;
     private KeyStore keyStore;
@@ -102,16 +100,11 @@ public class FingerprintStorage {
         return cipher;
     }
 
-    public boolean encryptPassword(Cipher cipher, String password) throws IOException {
+    public boolean encryptPassword(@NonNull Cipher cipher, String password) throws IOException {
         try {
             // Encrypt the text
             if(password.isEmpty()) {
                 log.info("Password is empty");
-                return false;
-            }
-
-            if (cipher == null) {
-                log.info("Could not create cipher");
                 return false;
             }
 
@@ -152,24 +145,6 @@ public class FingerprintStorage {
             retVal = new String(bytes, Charset.defaultCharset());
         }
         return retVal;
-    }
-
-    /**
-     * This method is called when the fingerprint key changes on the system level, mainly because
-     * a new finger was added, as result, we clear previous authentication data and flag the change
-     * so it can be reflected by the UI.
-     */
-    @SuppressLint("ApplySharedPref")
-    public void setFingerprintKeyChanged() {
-        getSharedPreferences().edit().putBoolean(FINGERPRINT_KEY_CHANGED, true).commit();
-    }
-
-    public boolean hasFingerprintKeyChanged() {
-        return getSharedPreferences().getBoolean(FINGERPRINT_KEY_CHANGED, false);
-    }
-
-    public void resetFingerprintKeyChanged() {
-        getSharedPreferences().edit().remove(FINGERPRINT_KEY_CHANGED).apply();
     }
 
     public boolean hasEncryptedPassword() {

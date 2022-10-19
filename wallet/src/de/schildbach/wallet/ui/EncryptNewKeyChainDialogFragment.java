@@ -28,13 +28,11 @@ import de.schildbach.wallet.payments.DecryptSeedTask;
 import de.schildbach.wallet.payments.DeriveKeyTask;
 import de.schildbach.wallet.util.ParcelableChainPath;
 import de.schildbach.wallet_test.R;
-import kotlin.Unit;
 
 /**
  * Created by Hash Engineering on 4/5/2018.
  */
 @AndroidEntryPoint
-// TODO: check
 public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment {
 
     private static final String FRAGMENT_TAG = EncryptNewKeyChainDialogFragment.class.getName();
@@ -56,9 +54,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
 
     @Override
     public void onDismiss(DialogInterface dialog) {
-        if (fingerprintCancellationSignal != null) {
-            fingerprintCancellationSignal.cancel();
-        }
+        biometricHelper.cancelPending();
         super.onDismiss(dialog);
     }
 
@@ -102,7 +98,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
                     ((OnNewKeyChainEncryptedListener) activity).onNewKeyChainEncrypted();
 
                     if (biometricHelper.getRequiresEnabling()) {
-                        EnableFingerprintDialog.show(password, getActivity(), pin -> Unit.INSTANCE);
+                        biometricHelper.runEnableBiometricReminder(requireActivity(), password);
                     }
                 }
             }

@@ -20,6 +20,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.telephony.TelephonyManager
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
@@ -33,18 +34,21 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.security.BiometricLockoutException
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
 import kotlinx.android.synthetic.main.activity_lock_screen_root.*
+import kotlinx.coroutines.launch
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
@@ -86,7 +90,7 @@ open class LockScreenActivity : SecureActivity() {
         if (pinRetryController.isLocked) {
             setLockState(State.LOCKED)
         } else {
-            setLockState(State.ENTER_PIN)
+            setLockState(State.USE_DEFAULT)
         }
     }
 
@@ -134,6 +138,7 @@ open class LockScreenActivity : SecureActivity() {
 
     private val onLogoutListener = AutoLogout.OnLogoutListener {
         dismissKeyboard()
+        biometricHelper.cancelPending()
         setLockState(State.USE_DEFAULT)
         handleLockScreenActivated()
     }
@@ -203,11 +208,14 @@ open class LockScreenActivity : SecureActivity() {
 
     override fun onStart() {
         super.onStart()
-        setupInitState()
         autoLogout.setOnLogoutListener(onLogoutListener)
 
         if (!keepUnlocked && configuration.autoLogoutEnabled && (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())) {
-            setLockState(State.USE_DEFAULT)
+            setLockState(if (pinRetryController.isLocked) {
+                State.LOCKED
+            } else {
+                State.USE_DEFAULT
+            })
             autoLogout.setAppWentBackground(false)
             if (autoLogout.isTimerActive) {
                 autoLogout.stopTimer()
@@ -293,8 +301,9 @@ open class LockScreenActivity : SecureActivity() {
                 }
                 Status.SUCCESS -> {
                     if (biometricHelper.requiresEnabling) {
-                        EnableFingerprintDialog.show(it.data!!, this) { pin ->
-                            onCorrectPin(pin)
+                        lifecycleScope.launch {
+                            biometricHelper.enableBiometricReminder(this@LockScreenActivity, it.data!!)
+                            onCorrectPin(it.data)
                         }
                     } else {
                         onCorrectPin(it.data!!)
@@ -421,24 +430,18 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
-    private fun setupInitState() {
-        if (pinRetryController.isLocked) {
-            setLockState(State.LOCKED)
-            return
-        }
-    }
-
     private fun showBiometricPrompt() {
         log.info("showing fingerprint prompt")
-        biometricHelper.getPassword(this@LockScreenActivity) { savedPass, error ->
+        biometricHelper.getPassword(this@LockScreenActivity, true) { savedPass, error ->
             if (error != null) {
-//                log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
-                if (biometricHelper.hasFingerprintKeyChanged()) {
-                    fingerprintHelper.resetFingerprintKeyChanged()
+                val exceededMaxAttempts = error is BiometricLockoutException
+                log.info("fingerprint scan failure (max attempts: $exceededMaxAttempts): ${error.message}")
+
+                if (error is KeyPermanentlyInvalidatedException) {
                     showFingerprintKeyChangedDialog()
                     action_login_with_fingerprint.isEnabled = false
                 } else {
-                    fingerprint_view.showError(false) //exceededMaxAttempts) TODO
+                    fingerprint_view.showError(exceededMaxAttempts)
                 }
             } else if (savedPass != null) {
                 log.info("fingerprint scan successful")
@@ -457,17 +460,14 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun showFingerprintKeyChangedDialog() {
-        // TODO check
         AdaptiveDialog.create(
             R.drawable.ic_warning,
             title = getString(R.string.fingerprint_changed_title),
             message = getString(R.string.fingerprint_changed_message),
             positiveButtonText = getString(android.R.string.ok),
             negativeButtonText = ""
-        ).show(this) { enterPin ->
-            if (enterPin == true) {
-                setLockState(State.ENTER_PIN)
-            }
+        ).show(this) {
+            setLockState(State.ENTER_PIN)
         }
     }
 

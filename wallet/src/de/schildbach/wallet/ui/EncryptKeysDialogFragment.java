@@ -340,7 +340,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                             application.backupWallet();
 
                             //Clear fingerprint data
-                            biometricHelper.clear();
+                            biometricHelper.clearBiometricInfo();
                             delayedDismiss();
 
                         } else {
@@ -352,9 +352,8 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                         handler.postDelayed(() -> {
                             dismiss();
 
-                            // TODO check
                             if (biometricHelper.getRequiresEnabling() && oldPassword == null && state == State.DONE) {
-                                EnableFingerprintDialog.show(newPassword, requireActivity(), pin -> Unit.INSTANCE);
+                                biometricHelper.runEnableBiometricReminder(requireActivity(), newPassword);
                             }
                         }, 2000);
                     }

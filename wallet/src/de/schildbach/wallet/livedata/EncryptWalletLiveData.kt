@@ -64,7 +64,7 @@ class EncryptWalletLiveData(
     fun changePassword(oldPin: String, newPin: String) {
         value = if (securityGuard.checkPin(oldPin)) {
             securityGuard.savePin(newPin)
-            biometricHelper.clear()
+            biometricHelper.clearBiometricInfo()
             Resource.success(walletApplication.wallet)
         } else {
             Resource.error("", null)

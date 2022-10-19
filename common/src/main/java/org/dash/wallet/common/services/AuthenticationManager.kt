@@ -21,7 +21,7 @@ import androidx.fragment.app.FragmentActivity
 import org.bitcoinj.core.Address
 
 interface AuthenticationManager {
-    fun authenticate(activity: FragmentActivity, pinOnly: Boolean = false, callback: (String?, Exception?) -> Unit)
+    fun authenticate(activity: FragmentActivity, pinOnly: Boolean = false, callback: (String?) -> Unit)
     suspend fun authenticate(activity: FragmentActivity, pinOnly: Boolean = false): String?
     suspend fun signMessage(address: Address, message: String): String
 }

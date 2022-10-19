@@ -34,7 +34,6 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @AndroidEntryPoint
-// TODO check
 class AppUpgradeActivity : AppCompatActivity() {
 
     companion object {

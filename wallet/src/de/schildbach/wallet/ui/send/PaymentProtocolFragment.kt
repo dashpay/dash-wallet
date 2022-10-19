@@ -94,8 +94,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         } else {
             val thresholdAmount = Coin.parseCoin(config.biometricLimit.toString())
             val amount = paymentProtocolModel.finalPaymentIntent!!.amount
-            authManager.authenticate(requireActivity(), !amount.isLessThan(thresholdAmount)) { pin, error ->
-                // TODO errors?
+            authManager.authenticate(requireActivity(), !amount.isLessThan(thresholdAmount)) { pin ->
                 pin?.let { confirmWhenAuthorizedAndNoException() }
             }
         }
