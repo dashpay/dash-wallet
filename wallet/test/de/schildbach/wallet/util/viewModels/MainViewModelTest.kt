@@ -116,7 +116,8 @@ class MainViewModelTest {
 
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock
+            exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock,
+            mockk()
         ))
 
         val clipboardInput = viewModel.getClipboardInput()
@@ -135,7 +136,8 @@ class MainViewModelTest {
 
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock
+            exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock,
+            mockk()
         ))
 
         every { clipboardManagerMock.primaryClip?.getItemAt(0)?.uri?.toString() } returns mockUri
@@ -167,7 +169,8 @@ class MainViewModelTest {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock
+            exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock,
+            mockk()
         ))
 
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
@@ -182,7 +185,8 @@ class MainViewModelTest {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(state)
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock
+            exchangeRatesMock, walletDataMock, savedStateMock, blockchainStateMock,
+            mockk()
         ))
 
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {

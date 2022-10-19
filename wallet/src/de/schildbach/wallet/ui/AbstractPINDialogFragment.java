@@ -17,11 +17,9 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.core.os.CancellationSignal;
 import androidx.fragment.app.DialogFragment;
 
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.util.KeyboardUtil;
 
@@ -31,7 +29,6 @@ import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.security.BiometricHelper;
 import de.schildbach.wallet.security.BiometricLockoutException;
-import de.schildbach.wallet.security.SecurityFunctions;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet_test.R;
@@ -60,7 +57,6 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
     protected int dialogTitle;
 
     @Inject public BiometricHelper biometricHelper;
-    @Inject public Configuration configuration;
 
     @Override
     public void onAttach(final Activity activity) {

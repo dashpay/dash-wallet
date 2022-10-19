@@ -23,11 +23,17 @@ import android.view.View;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
+import org.dash.wallet.common.Configuration;
+
+import javax.inject.Inject;
+
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet_test.R;
 
 @AndroidEntryPoint
 public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
+
+    @Inject Configuration configuration;
 
     private static final String FRAGMENT_TAG = UnlockWalletDialogFragment.class.getName();
 

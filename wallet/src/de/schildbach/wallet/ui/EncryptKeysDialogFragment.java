@@ -110,7 +110,6 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     private HandlerThread backgroundThread;
     private Handler backgroundHandler;
 
-    @Inject Configuration configuration;
     @Inject BiometricHelper biometricHelper;
     @Inject RestartService restartService;
     @Inject WalletApplication application;
