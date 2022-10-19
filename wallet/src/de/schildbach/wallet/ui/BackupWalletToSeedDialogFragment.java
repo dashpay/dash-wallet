@@ -222,7 +222,7 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
     };
 
     private void initFingerprintHelper() {
-        if (biometricHelper.isAvailable() && biometricHelper.isEnabled()) {
+        if (biometricHelper.isEnabled()) {
             fingerprintView.setVisibility(View.VISIBLE);
             fingerprintCancellationSignal = new CancellationSignal();
             // TODO

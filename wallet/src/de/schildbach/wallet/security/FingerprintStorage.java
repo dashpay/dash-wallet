@@ -102,7 +102,7 @@ public class FingerprintStorage {
         return cipher;
     }
 
-    public boolean encryptPassword(Cipher cipher, String password) {
+    public boolean encryptPassword(Cipher cipher, String password) throws IOException {
         try {
             // Encrypt the text
             if(password.isEmpty()) {
@@ -124,13 +124,13 @@ public class FingerprintStorage {
             saveEncryptedPassword(encodeBytes(outputStream.toByteArray()));
         } catch (Throwable t) {
             log.info("Encryption failed " + t.getMessage());
-            return false;
+            throw t;
         }
 
         return true;
     }
 
-    public String decipherPassword(Cipher cipher) throws IOException {
+    public String decipherPassword(@NonNull Cipher cipher) throws IOException {
         String retVal = null;
         String savedEncryptedPassword = getSavedEncryptedPassword();
         if (savedEncryptedPassword != null) {

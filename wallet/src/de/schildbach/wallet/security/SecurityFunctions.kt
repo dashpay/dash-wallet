@@ -17,29 +17,72 @@
 
 package de.schildbach.wallet.security
 
+import android.util.Log
+import androidx.core.os.CancellationSignal
 import androidx.fragment.app.FragmentActivity
-import com.google.common.base.Preconditions
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.ui.CheckPinDialog
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.services.ISecurityFunctions
+import org.dash.wallet.common.services.AuthenticationManager
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 class SecurityFunctions @Inject constructor(
-    private val walletApplication: WalletApplication
-): ISecurityFunctions {
+    private val walletApplication: WalletApplication,
+    private val biometricHelper: BiometricHelper
+): AuthenticationManager {
     private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
 
-    override suspend fun requestPinCode(activity: FragmentActivity): String? {
-        return CheckPinDialog.showAsync(activity)
+    override fun authenticate(
+        activity: FragmentActivity,
+        pinOnly: Boolean,
+        callback: (String?, Exception?) -> Unit
+    ) {
+        if (!pinOnly && biometricHelper.isEnabled) {
+            log.info("authenticate with biometric")
+            biometricHelper.getPassword(activity, callback)
+//            Log.e("FINGERPRINT", ex.message ?: "null")
+            // TODO:
+            //                log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
+            //                if (!canceled) {
+            //                    binding.fingerprintView.showError(exceededMaxAttempts)
+            //                }
+        } else {
+            log.info("authenticate with pin")
+            CheckPinDialog.show(activity) { pin ->
+                callback.invoke(pin, null)
+            }
+        }
+    }
+
+
+    override suspend fun authenticate(activity: FragmentActivity, pinOnly: Boolean): String? {
+        if (!pinOnly && biometricHelper.isEnabled) {
+            log.info("start fingerprint listener")
+            val fingerprintCancellationSignal = CancellationSignal()
+            fingerprintCancellationSignal.setOnCancelListener {
+                log.info("fingerprint cancellation signal listener triggered")
+            }
+
+            try {
+                return biometricHelper.getPassword(activity)
+            } catch (ex: Exception) {
+                Log.e("FINGERPRINT", ex.message ?: "null")
+                // TODO:
+                //                log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
+                //                if (!canceled) {
+                //                    binding.fingerprintView.showError(exceededMaxAttempts)
+                //                }
+                throw ex
+            }
+        } else {
+            return CheckPinDialog.showAsync(activity)
+        }
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")

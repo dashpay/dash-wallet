@@ -51,6 +51,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
 import org.bitcoinj.wallet.Wallet.DustySendRequested;
+import org.dash.wallet.common.services.AuthenticationManager;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.dash.wallet.common.util.GenericUtils;
 import org.jetbrains.annotations.NotNull;
@@ -63,6 +64,9 @@ import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import org.dash.wallet.common.data.BlockchainState;
+
+import javax.inject.Inject;
+
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.livedata.Resource;
@@ -81,6 +85,7 @@ public class SendCoinsFragment extends Fragment {
 
     private SendCoinsViewModel viewModel;
     private EnterAmountSharedViewModel enterAmountSharedViewModel;
+    @Inject AuthenticationManager authManager;
 
     private boolean wasAmountChangedByTheUser = false;
 
@@ -159,7 +164,8 @@ public class SendCoinsFragment extends Fragment {
             if (isUserAuthorized()) {
                 handleEmpty();
             } else {
-                CheckPinDialog.show(requireActivity(), pin -> {
+                authManager.authenticate(requireActivity(), false, (pin, error) -> {
+                    // TODO: errors?
                     if (pin != null) {
                         userAuthorizedDuring = true;
                         handleEmpty();
@@ -258,8 +264,10 @@ public class SendCoinsFragment extends Fragment {
                 Coin thresholdAmount = Coin.parseCoin(
                         Float.valueOf(viewModel.getBiometricLimit()).toString());
                 boolean withinLimit = enterAmountSharedViewModel.getDashAmount().isLessThan(thresholdAmount);
-                CheckPinDialog.show(requireActivity(), !withinLimit, result -> {
-                    if (result != null) {
+
+                authManager.authenticate(requireActivity(), !withinLimit, (pin, error) -> {
+                    // TODO: errors?
+                    if (pin != null) {
                         userAuthorizedDuring = true;
                         if (everythingPlausible() && viewModel.dryrunSendRequest != null) {
                             showPaymentConfirmation();

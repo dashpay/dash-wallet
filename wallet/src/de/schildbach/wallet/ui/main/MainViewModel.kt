@@ -27,6 +27,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import org.dash.wallet.common.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.ui.transactions.TransactionRowView
@@ -57,7 +58,8 @@ class MainViewModel @Inject constructor(
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
     private val savedStateHandle: SavedStateHandle,
-    private val blockchainStateProvider: BlockchainStateProvider
+    private val blockchainStateProvider: BlockchainStateProvider,
+    val biometricHelper: BiometricHelper
 ) : ViewModel() {
     companion object {
         private const val THROTTLE_DURATION = 500L

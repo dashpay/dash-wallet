@@ -40,9 +40,6 @@ open class SetupPinDuringUpgradeDialog(
         @JvmStatic
         fun show(activity: AppCompatActivity, onResult: (Boolean?, String?) -> Unit) {
             val checkPinDialogExt = SetupPinDuringUpgradeDialog(onResult)
-            val args = Bundle()
-            args.putBoolean(ARG_PIN_ONLY, true)
-            checkPinDialogExt.arguments = args
             checkPinDialogExt.show(activity.supportFragmentManager, FRAGMENT_TAG)
         }
     }

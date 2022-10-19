@@ -38,6 +38,7 @@ import de.schildbach.wallet_test.R;
  * Created by Hash Engineering on 4/8/2018.
  */
 @AndroidEntryPoint
+// TODO: check
 public abstract class AbstractPINDialogFragment extends DialogFragment {
 
     protected DialogInterface.OnDismissListener onDismissListener;

@@ -2,7 +2,6 @@ package de.schildbach.wallet.security
 
 import android.content.Context
 import android.security.keystore.KeyPermanentlyInvalidatedException
-import android.util.Log
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricPrompt
@@ -13,16 +12,16 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.Configuration
 import org.slf4j.LoggerFactory
+import java.io.IOException
 import java.security.GeneralSecurityException
 import javax.crypto.Cipher
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+open class BiometricException(val errorCode: Int, message: String): Exception(message)
+class BiometricLockoutException(val isPermanent: Boolean, errorCode: Int, message: String) : BiometricException(errorCode, message)
 
-class BiometricHelper(
-    private val context: Context,
-    private val configuration: Configuration
-) {
+class BiometricHelper(context: Context, private val configuration: Configuration) {
     companion object {
         private const val AUTH_TYPES = BIOMETRIC_STRONG
         private val log = LoggerFactory.getLogger(BiometricHelper::class.java)
@@ -33,7 +32,7 @@ class BiometricHelper(
 
     val isAvailable: Boolean
         get() {
-            if (!isBiometricAvailable(context)) {
+            if (!isBiometricAvailable()) {
                 return false
             }
 
@@ -41,121 +40,113 @@ class BiometricHelper(
         }
 
     val isEnabled: Boolean
-        get() = fingerprintStorage.hasEncryptedPassword()
+        get() = isAvailable && fingerprintStorage.hasEncryptedPassword()
 
     val requiresEnabling: Boolean
-        get() = isAvailable && !isEnabled && configuration.remindEnableFingerprint
+        get() = isAvailable && !fingerprintStorage.hasEncryptedPassword() && configuration.remindEnableFingerprint
 
     suspend fun savePassword(activity: FragmentActivity, password: String): Boolean {
         return suspendCancellableCoroutine { coroutine ->
-            this.authenticate(activity, Cipher.ENCRYPT_MODE, object: BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    try {
-                        val cipher = result.cryptoObject?.cipher
-
-                        if (fingerprintStorage.encryptPassword(cipher, password)) {
-                            log.info("password encrypted successfully")
-
-                            if (coroutine.isActive) {
-                                coroutine.resume(true)
-                            }
-                        } else {
-                            val message = "failed to encrypt password"
-                            log.info(message)
-
-                            if (coroutine.isActive) {
-                                coroutine.resumeWithException(Exception(message)) // TODO
-                            }
-                        }
-                    } catch (ex: Exception) {
-                        val message = "Encryption failed " + ex.message
-                        log.info(message)
-
-                        if (coroutine.isActive) {
-                            coroutine.resumeWithException(ex) // TODO
-                        }
+            savePassword(activity, password) { result, exception ->
+                if (coroutine.isActive) {
+                    if (exception != null) {
+                        coroutine.resumeWithException(exception)
+                    } else {
+                        coroutine.resume(result)
                     }
                 }
+            }
+        }
+    }
 
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    log.error("Authentication error [$errorCode] $errString")
+    fun savePassword(activity: FragmentActivity, password: String, callback: (Boolean, Exception?) -> Unit) {
+        val authCallback = object: BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                val cipher = result.cryptoObject?.cipher
 
-                    if (coroutine.isActive) {
-                        when (errorCode) {
-                            BiometricPrompt.ERROR_NEGATIVE_BUTTON -> coroutine.resume(false)
-                            BiometricPrompt.ERROR_USER_CANCELED -> coroutine.resume(false)
-                            BiometricPrompt.ERROR_LOCKOUT -> coroutine.resumeWithException(Exception(errString.toString()))
-                            BiometricPrompt.ERROR_LOCKOUT_PERMANENT -> coroutine.resumeWithException(Exception(errString.toString()))
-                            else -> {
-                                Log.i("FINGERPRINT", "Something else")
-                                coroutine.resume(false)
-                            }
-                        }
-                    }
+                try {
+                    val isEncrypted = fingerprintStorage.encryptPassword(cipher, password)
+                    callback.invoke(isEncrypted, null)
+                } catch (ex: IOException) {
+                    log.error("failed to encrypt password")
+                    callback.invoke(false, ex)
                 }
-            })
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                log.error("Authentication error [$errorCode] $errString")
+                val message = errString.toString()
+                val exception = getException(errorCode, message)
+                callback.invoke(false, exception)
+            }
+        }
+
+        try {
+            this.authenticate(activity, Cipher.ENCRYPT_MODE, authCallback)
+        } catch (ex: Exception) {
+            callback.invoke(false, ex)
         }
     }
 
     suspend fun getPassword(activity: FragmentActivity): String? {
         return suspendCancellableCoroutine { coroutine ->
-            this.authenticate(activity, Cipher.DECRYPT_MODE, object: BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    try {
-                        val cipher = result.cryptoObject?.cipher
-                        val password = cipher?.let { fingerprintStorage.decipherPassword(it) }
-
-                        if (password != null) {
-                            if (coroutine.isActive) {
-                                coroutine.resume(password)
-                            }
-                        } else {
-                            val message = "failed to decrypt password"
-                            log.info(message)
-
-                            if (coroutine.isActive) {
-                                coroutine.resumeWithException(Exception(message)) // TODO
-                            }
-                        }
-                    } catch (ex: Exception) {
-                        val message = "Deciphering failed " + ex.message
-                        log.info(message)
-
-                        if (coroutine.isActive) {
-                            coroutine.resumeWithException(ex)
-                        }
+            getPassword(activity) { pass, exception ->
+                if (coroutine.isActive) {
+                    if (exception != null) {
+                        coroutine.resumeWithException(exception)
+                    } else {
+                        coroutine.resume(pass)
                     }
                 }
+            }
+        }
+    }
 
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    log.error("Authentication error [$errorCode] $errString")
+    fun getPassword(activity: FragmentActivity, callback: (String?, Exception?) -> Unit) {
+        val authCallback = object: BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                val cipher = result.cryptoObject?.cipher
 
-                    if (coroutine.isActive) {
-                        when (errorCode) {
-                            BiometricPrompt.ERROR_NEGATIVE_BUTTON -> coroutine.resume(null)
-                            BiometricPrompt.ERROR_USER_CANCELED -> coroutine.resume(null)
-                            BiometricPrompt.ERROR_LOCKOUT -> coroutine.resumeWithException(Exception(errString.toString()))
-                            BiometricPrompt.ERROR_LOCKOUT_PERMANENT -> coroutine.resumeWithException(Exception(errString.toString()))
-                            else -> {
-                                Log.i("FINGERPRINT", "Something else")
-                                coroutine.resume(null)
-                            }
-                        }
-                    }
+                if (cipher == null) {
+                    val message = "Cipher is empty"
+                    log.error(message)
+                    callback.invoke(null, NullPointerException(message))
+                    return
                 }
-            })
+
+                try {
+                    val password = fingerprintStorage.decipherPassword(cipher)
+                    callback.invoke(password, null)
+                } catch (ex: IOException) {
+                    log.error("failed to decipher password")
+                    callback.invoke(null, ex)
+                }
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                log.error("Authentication error [$errorCode] $errString")
+                val message = errString.toString()
+                val exception = getException(errorCode, message)
+                callback.invoke(null, exception)
+            }
+        }
+
+        try {
+            this.authenticate(activity, Cipher.DECRYPT_MODE, authCallback)
+        } catch (ex: Exception) {
+            callback.invoke(null, ex)
         }
     }
 
     fun clear() {
-        if (isAvailable && isEnabled) {
+        if (isEnabled) {
             configuration.remindEnableFingerprint = true
         }
         fingerprintStorage.clear()
     }
 
-    private fun isBiometricAvailable(context: Context): Boolean {
-        return when (biometricManager.canAuthenticate(AUTH_TYPES)) {
+    private fun isBiometricAvailable(): Boolean {
+        return when (val result = biometricManager.canAuthenticate(AUTH_TYPES)) {
             BiometricManager.BIOMETRIC_SUCCESS -> true
             BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> {
                 log.info("Biometric hardware not detected")
@@ -170,18 +161,16 @@ class BiometricHelper(
                 false
             }
             BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
-                // Prompts the user to create credentials that your app accepts.
-//            val enrollIntent = Intent(Settings.ACTION_BIOMETRIC_ENROLL).apply {
-//                putExtra(Settings.EXTRA_BIOMETRIC_AUTHENTICATORS_ALLOWED, Companion.AUTH_TYPES)
-//            }
-//            context.startActivity(enrollIntent) // ,9999) TODO startActivityForResult here, check/change
-                false // TODO: recall isAvailable
+                log.info("No biometric credentials")
+                false
             }
-            else -> false
+            else -> {
+                log.info("Cannot authenticate: $result")
+                false
+            }
         }
     }
 
-    @Throws(GeneralSecurityException::class)
     private fun authenticate(
         activity: FragmentActivity,
         mode: Int,
@@ -195,7 +184,7 @@ class BiometricHelper(
                 // TODO cancellation
                 showPrompt(activity, crypto, authListener)
             } else {
-                // TODO
+               throw NullPointerException("cipher is empty")
             }
         } catch (t: Throwable) {
             if (t is KeyPermanentlyInvalidatedException) {
@@ -225,5 +214,15 @@ class BiometricHelper(
 
         prompt.authenticate(promptInfo, cryptoObject)
 //    prompt.cancelAuthentication() TODO
+    }
+
+    private fun getException(errorCode: Int, message: String): Exception? {
+        return when (errorCode) {
+            BiometricPrompt.ERROR_NEGATIVE_BUTTON,
+            BiometricPrompt.ERROR_USER_CANCELED -> null // User canceled is a normal outcome
+            BiometricPrompt.ERROR_LOCKOUT -> BiometricLockoutException(false, errorCode, message)
+            BiometricPrompt.ERROR_LOCKOUT_PERMANENT -> BiometricLockoutException(true, errorCode, message)
+            else -> BiometricException(errorCode, message)
+        }
     }
 }

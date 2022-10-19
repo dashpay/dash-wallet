@@ -33,7 +33,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.services.ISecurityFunctions
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.copy
@@ -52,7 +52,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
     private val args by navArgs<NewAccountFragmentArgs>()
 
     @Inject
-    lateinit var securityFunctions: ISecurityFunctions
+    lateinit var securityFunctions: AuthenticationManager
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -145,7 +145,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         viewModel.logEvent(AnalyticsConstants.CrowdNode.CREATE_ACCOUNT_BUTTON)
 
         lifecycleScope.launch {
-            securityFunctions.requestPinCode(requireActivity())?.let {
+            securityFunctions.authenticate(requireActivity())?.let {
                 viewModel.signUp()
             }
         }

@@ -36,6 +36,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
 import de.schildbach.wallet_test.databinding.FragmentPaymentProtocolBinding
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -70,6 +71,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     private val paymentProtocolModel by viewModels<PaymentProtocolViewModel>()
     private val binding by viewBinding(FragmentPaymentProtocolBinding::bind)
     @Inject lateinit var config: Configuration
+    @Inject lateinit var authManager: AuthenticationManager
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -92,7 +94,8 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         } else {
             val thresholdAmount = Coin.parseCoin(config.biometricLimit.toString())
             val amount = paymentProtocolModel.finalPaymentIntent!!.amount
-            CheckPinDialog.show(requireActivity(), !amount.isLessThan(thresholdAmount)) { pin ->
+            authManager.authenticate(requireActivity(), !amount.isLessThan(thresholdAmount)) { pin, error ->
+                // TODO errors?
                 pin?.let { confirmWhenAuthorizedAndNoException() }
             }
         }

@@ -48,6 +48,9 @@ open class CheckPinViewModel @Inject constructor(
             configuration.pinLength = value
         }
 
+    val isFingerprintEnabled: Boolean
+        get() = biometricHelper.isEnabled
+
     open fun checkPin(pin: CharSequence) {
         checkPinLiveData.checkPin(pin.toString())
     }

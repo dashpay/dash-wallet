@@ -1,8 +1,6 @@
 package de.schildbach.wallet.ui
 
 import android.content.DialogInterface
-import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
@@ -12,9 +10,8 @@ import org.bitcoinj.wallet.DeterministicSeed
 /**
  * @author:  Eric Britten
  *
- * DecryptSeedWithPinDialog uses DecryptSeedSharedModel which is derived
- * from CheckPinShared model but does not call the onCorrectPinCallback
- * event
+ * DecryptSeedWithPinDialog is derived from CheckPinDialog
+ * but uses its own onSuccessOrDismiss callback
  */
 @AndroidEntryPoint
 class DecryptSeedWithPinDialog(
@@ -22,20 +19,12 @@ class DecryptSeedWithPinDialog(
 ) : CheckPinDialog() {
 
     companion object {
-        private const val ARG_PIN_ONLY = "arg_pin_only"
+        private val FRAGMENT_TAG = DecryptSeedWithPinDialog::class.java.simpleName
 
         @JvmStatic
-        fun show(activity: FragmentActivity, pinOnly: Boolean = false, onSuccessOrDismiss: (DeterministicSeed?) -> Unit) {
+        fun show(activity: FragmentActivity, onSuccessOrDismiss: (DeterministicSeed?) -> Unit) {
             val checkPinDialog = DecryptSeedWithPinDialog(onSuccessOrDismiss)
-            val args = Bundle()
-            args.putBoolean(ARG_PIN_ONLY, pinOnly)
-            checkPinDialog.arguments = args
-            checkPinDialog.show(activity.supportFragmentManager, "dss") // TODO
-        }
-
-        @JvmStatic
-        fun show(activity: AppCompatActivity, onSuccessOrDismiss: (DeterministicSeed?) -> Unit) {
-            show(activity, false, onSuccessOrDismiss)
+            checkPinDialog.show(activity.supportFragmentManager, FRAGMENT_TAG)
         }
     }
 
@@ -83,9 +72,5 @@ class DecryptSeedWithPinDialog(
         onSuccessOrDismiss?.invoke(null)
         onSuccessOrDismiss = null
         super.onDismiss(dialog)
-    }
-
-    override fun onFingerprintSuccess(savedPass : String) {
-        viewModel.checkPin(savedPass)
     }
 }

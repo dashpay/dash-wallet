@@ -27,6 +27,7 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.appbar.AppBarLayout
@@ -47,11 +48,13 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HomeContentBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -70,6 +73,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private val viewModel: MainViewModel by activityViewModels()
     private val binding by viewBinding(HomeContentBinding::bind)
     @Inject lateinit var configuration: Configuration
+    @Inject lateinit var authManager: AuthenticationManager
 
     private val scanLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -204,7 +208,8 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun handleVerifySeed() {
-        CheckPinDialog.show(requireActivity()) { pin ->
+        lifecycleScope.launch {
+            val pin = authManager.authenticate(requireActivity())
             pin?.let { startVerifySeedActivity(pin) }
         }
     }

@@ -25,6 +25,7 @@ import androidx.core.os.CancellationSignal
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet_test.R
@@ -33,20 +34,24 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.DeterministicSeed
 import org.dash.wallet.common.BuildConfig
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class SecurityActivity : LockScreenActivity() {
 
     private val viewModel: SecurityViewModel by viewModels()
     private lateinit var binding: ActivitySecurityBinding
+    @Inject lateinit var authManager: SecurityFunctions
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySecurityBinding.inflate(layoutInflater)
-        setTitle(R.string.security_title)
+        binding.appBar.toolbar.setTitle(R.string.security_title)
+        binding.appBar.toolbar.setNavigationOnClickListener { finish() }
 
         viewModel.hideBalance.observe(this) {
             Log.i("FINGERPRINT", "set hide balance: ${it}")
@@ -91,13 +96,13 @@ class SecurityActivity : LockScreenActivity() {
 
     fun backupWallet(view: View) {
         lifecycleScope.launch {
-            val pin = CheckPinDialog.showAsync(this@SecurityActivity, true)
+            val pin = authManager.authenticate(this@SecurityActivity, true)
             pin?.let { BackupWalletDialogFragment.show(supportFragmentManager) }
         }
     }
 
     fun viewRecoveryPhrase(view: View) {
-        DecryptSeedWithPinDialog.show(this, true) { seed ->
+        DecryptSeedWithPinDialog.show(this) { seed ->
             if (seed != null) {
                 startViewSeedActivity(seed)
             }
@@ -117,7 +122,7 @@ class SecurityActivity : LockScreenActivity() {
 
     fun openAdvancedSecurity(view: View) {
         lifecycleScope.launch {
-            val pin = CheckPinDialog.showAsync(this@SecurityActivity, true)
+            val pin = authManager.authenticate(this@SecurityActivity, true)
             pin?.let {
                 viewModel.logEvent(AnalyticsConstants.Security.ADVANCED_SECURITY)
                 startActivity(Intent(this@SecurityActivity, AdvancedSecurityActivity::class.java))
@@ -159,7 +164,8 @@ class SecurityActivity : LockScreenActivity() {
                     }
                 },
                 onExtraMessageAction = {
-                    CheckPinDialog.show(this) { pin ->
+                    authManager.authenticate(this@SecurityActivity) { pin, error ->
+                        // TODO: error?
                         pin?.let {
                             startActivity(VerifySeedActivity.createIntent(this, pin, false))
                         }
@@ -197,10 +203,9 @@ class SecurityActivity : LockScreenActivity() {
     }
 
     private suspend fun setupBiometric(): Boolean {
-        val pin = CheckPinDialog.showAsync(this@SecurityActivity)
+        val pin = authManager.authenticate(this@SecurityActivity, true)
 
         if (pin != null) {
-            val cancellationSignal = CancellationSignal() // TODO
             try {
                 return viewModel.biometricHelper.savePassword(this@SecurityActivity, pin)
             } catch (ex: Exception) {

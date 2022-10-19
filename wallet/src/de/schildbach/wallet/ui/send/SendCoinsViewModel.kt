@@ -19,6 +19,7 @@ import androidx.lifecycle.MutableLiveData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.security.BiometricHelper
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.SendRequest
@@ -28,7 +29,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SendCoinsViewModel @Inject constructor(
     walletApplication: WalletApplication,
-    configuration: Configuration
+    configuration: Configuration,
+    val biometricHelper: BiometricHelper
 ) : SendCoinsBaseViewModel(walletApplication, configuration) {
 
     enum class State {

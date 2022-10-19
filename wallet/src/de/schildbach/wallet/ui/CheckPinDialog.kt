@@ -20,15 +20,11 @@ import android.app.Dialog
 import android.content.*
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
-import androidx.annotation.RequiresApi
-import androidx.core.os.CancellationSignal
-import androidx.core.view.isVisible
 import androidx.fragment.app.*
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.livedata.Status
@@ -55,27 +51,13 @@ open class CheckPinDialog(
         internal val FRAGMENT_TAG = CheckPinDialog::class.java.simpleName
         private val log = LoggerFactory.getLogger(CheckPinDialog::class.java)
 
-        internal const val ARG_PIN_ONLY = "arg_pin_only"
-
-        private fun showDialog(checkPinDialog: CheckPinDialog, activity: FragmentActivity, pinOnly: Boolean = false) {
-            val args = Bundle()
-            args.putBoolean(ARG_PIN_ONLY, pinOnly)
-            checkPinDialog.arguments = args
+        @JvmStatic
+        fun show(activity: FragmentActivity, onSuccessOrDismiss: (String?) -> Unit) {
+            val checkPinDialog = CheckPinDialog(onSuccessOrDismiss)
             checkPinDialog.show(activity.supportFragmentManager, FRAGMENT_TAG)
         }
 
-        @JvmStatic
-        fun show(activity: FragmentActivity, pinOnly: Boolean = false, onSuccessOrDismiss: (String?) -> Unit) {
-            val checkPinDialog = CheckPinDialog(onSuccessOrDismiss)
-            showDialog(checkPinDialog, activity, pinOnly)
-        }
-
-        @JvmStatic
-        fun show(activity: FragmentActivity, onSuccessOrDismiss: (String?) -> Unit) {
-            show(activity, false, onSuccessOrDismiss)
-        }
-
-        suspend fun showAsync(activity: FragmentActivity, pinOnly: Boolean = false): String? {
+        suspend fun showAsync(activity: FragmentActivity): String? {
             return suspendCancellableCoroutine { coroutine ->
                 val checkPinDialog = CheckPinDialog { pin ->
                     if (coroutine.isActive) {
@@ -84,7 +66,7 @@ open class CheckPinDialog(
                 }
 
                 try {
-                    showDialog(checkPinDialog, activity, pinOnly)
+                    checkPinDialog.show(activity.supportFragmentManager, FRAGMENT_TAG)
                 } catch (ex: Exception) {
                     if (coroutine.isActive) {
                         coroutine.resumeWithException(ex)
@@ -104,7 +86,6 @@ open class CheckPinDialog(
     protected open val viewModel by viewModels<CheckPinViewModel>()
     private lateinit var state: State
 
-    private lateinit var fingerprintCancellationSignal: CancellationSignal
     @Inject
     lateinit var restartService: RestartService
 
@@ -135,11 +116,12 @@ open class CheckPinDialog(
             dismiss()
         }
         binding.buttonBar.positiveButton.setOnClickListener {
-            if (binding.pinPreview.visibility == View.VISIBLE) {
-                fingerprintFlow(true)
-            } else {
-                fingerprintFlow(false)
-            }
+            // TODO
+//            if (binding.pinPreview.visibility == View.VISIBLE) {
+//                fingerprintFlow(true)
+//            } else {
+//                fingerprintFlow(false)
+//            }
         }
 
         binding.numericKeyboard.isFunctionEnabled = false
@@ -170,15 +152,6 @@ open class CheckPinDialog(
         binding.pinPreview.setTextColor(R.color.dash_light_gray)
         binding.pinPreview.hideForgotPinAction()
         setState(State.ENTER_PIN)
-
-        val pinOnly = arguments?.getBoolean(ARG_PIN_ONLY, false) ?: false
-
-        if (pinOnly) {
-            fingerprintFlow(true)
-            binding.buttonBar.positiveButton.isEnabled = false
-        } else {
-            initFingerprint()
-        }
     }
 
     open fun checkPin(pin: String) {
@@ -292,63 +265,9 @@ open class CheckPinDialog(
     }
 
     override fun onDismiss(dialog: DialogInterface) {
-        if (::fingerprintCancellationSignal.isInitialized) {
-            fingerprintCancellationSignal.cancel()
-        }
         onSuccessOrDismiss?.invoke(null)
         onSuccessOrDismiss = null
         super.onDismiss(dialog)
-    }
-
-    private fun initFingerprint() {
-        log.info("fingerprint setup for Android M and above")
-        if (viewModel.biometricHelper.isAvailable) {
-            if (viewModel.biometricHelper.isEnabled) {
-                fingerprintFlow(true)
-                startFingerprintListener()
-            } else {
-                binding.buttonBar.positiveButton.visibility = View.GONE
-            }
-        } else {
-            fingerprintFlow(false)
-        }
-    }
-
-    private fun fingerprintFlow(active: Boolean) {
-        binding.fingerprintView.isVisible = active
-        binding.pinPreview.isVisible = !active
-        binding.numericKeyboard.isVisible = !active
-        binding.message.setText(if (active) R.string.authenticate_fingerprint_message else R.string.authenticate_pin_message)
-        binding.buttonBar.positiveButton.setText(if (active) R.string.authenticate_switch_to_pin else R.string.authenticate_switch_to_fingerprint)
-        binding.buttonBar.positiveButton.isVisible = active
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    private fun startFingerprintListener() {
-        log.info("start fingerprint listener")
-        fingerprintCancellationSignal = CancellationSignal()
-        fingerprintCancellationSignal.setOnCancelListener {
-            log.info("fingerprint cancellation signal listener triggered")
-        }
-        // TODO
-//        viewModel.biometricHelper.getPassword(requireActivity(), fingerprintCancellationSignal,
-//            object : FingerprintStorage.Callback {
-//            override fun onSuccess(savedPass: String) {
-//                log.info("fingerprint scan successful")
-//                onFingerprintSuccess(savedPass)
-//            }
-//
-//            override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
-//                log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
-//                if (!canceled) {
-//                    binding.fingerprintView.showError(exceededMaxAttempts)
-//                }
-//            }
-//        })
-    }
-
-    protected open fun onFingerprintSuccess(savedPass: String) {
-        dismiss(savedPass)
     }
 
     protected open fun showLockedAlert(activity: FragmentActivity, lockedTimeMessage: String) {
