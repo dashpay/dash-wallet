@@ -21,6 +21,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
@@ -87,8 +88,8 @@ class TaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
         }
     }
 
-    fun show(manager: FragmentManager, tag: String?, onClickListener: () -> Unit) {
+    fun show(activity: FragmentActivity, onClickListener: () -> Unit) {
         this.onClickListener = onClickListener
-        super.show(manager, tag)
+        super.show(activity)
     }
 }
