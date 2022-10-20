@@ -37,11 +37,12 @@ interface WalletDataProvider {
 
     fun getWalletBalance(): Coin
 
+    fun observeWalletChanged(): Flow<Unit>
+
     fun observeBalance(balanceType: Wallet.BalanceType = Wallet.BalanceType.ESTIMATED): Flow<Coin>
 
-    fun observeTransactions(vararg filters: TransactionFilter): Flow<Transaction>
-
-    fun observeTransactionsWithConfidence(vararg filters: TransactionFilter): Flow<Transaction>
+    // Treat @withConfidence with care - it may produce a lot of events and affect performance.
+    fun observeTransactions(withConfidence: Boolean = false, vararg filters: TransactionFilter): Flow<Transaction>
 
     fun getTransactions(vararg filters: TransactionFilter): Collection<Transaction>
 

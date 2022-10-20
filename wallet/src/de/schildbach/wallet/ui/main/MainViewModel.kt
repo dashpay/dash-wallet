@@ -129,7 +129,7 @@ class MainViewModel @Inject constructor(
             .flatMapLatest { direction ->
                 val filter = TxDirectionFilter(direction, walletData.wallet!!)
                 refreshTransactions(filter)
-                walletData.observeTransactions(filter)
+                walletData.observeWalletChanged()
                     .debounce(THROTTLE_DURATION)
                     .onEach { refreshTransactions(filter) }
             }

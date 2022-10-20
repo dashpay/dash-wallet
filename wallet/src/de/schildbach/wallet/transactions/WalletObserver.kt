@@ -19,7 +19,6 @@ package de.schildbach.wallet.transactions
 
 import android.os.Looper
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -28,11 +27,23 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.listeners.WalletChangeEventListener
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 
-@ExperimentalCoroutinesApi
-class WalletTransactionObserver(private val wallet: Wallet, private val observeTxConfidence: Boolean) {
-    fun observe(vararg filters: TransactionFilter): Flow<Transaction> = callbackFlow {
+class WalletObserver(private val wallet: Wallet) {
+    fun observeWalletChanged(): Flow<Unit> = callbackFlow {
+        val walletChangeListener = WalletChangeEventListener {
+            trySend(Unit)
+        }
+
+        wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
+
+        awaitClose {
+            wallet.removeChangeEventListener(walletChangeListener)
+        }
+    }
+
+    fun observeTransactions(observeTxConfidence: Boolean, vararg filters: TransactionFilter): Flow<Transaction> = callbackFlow {
         Context.propagate(wallet.context)
 
         if (Looper.myLooper() == null) {

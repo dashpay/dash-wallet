@@ -56,7 +56,7 @@ class TransactionGroupViewModel @Inject constructor(
         _exchangeRate.value = transactionWrapper.transactions.last().exchangeRate
         refreshTransactions(transactionWrapper)
 
-        walletData.observeTransactions()
+        walletData.observeTransactions(true)
             .onEach { tx ->
                 if (transactionWrapper.tryInclude(tx)) {
                     refreshTransactions(transactionWrapper)

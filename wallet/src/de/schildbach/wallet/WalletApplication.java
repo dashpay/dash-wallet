@@ -124,7 +124,7 @@ import de.schildbach.wallet.service.BlockchainSyncJobService;
 import de.schildbach.wallet.transactions.TransactionWrapperHelper;
 import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
-import de.schildbach.wallet.transactions.WalletTransactionObserver;
+import de.schildbach.wallet.transactions.WalletObserver;
 import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.security.SecurityGuard;
@@ -1013,22 +1013,25 @@ public class WalletApplication extends MultiDexApplication
 
     @NonNull
     @Override
-    public Flow<Transaction> observeTransactions(@NonNull TransactionFilter... filters) {
+    public Flow<Transaction> observeTransactions(
+        boolean withConfidence,
+        @NonNull TransactionFilter... filters
+    ) {
         if (wallet == null) {
             return FlowKt.emptyFlow();
         }
 
-        return new WalletTransactionObserver(wallet, false).observe(filters);
+        return new WalletObserver(wallet).observeTransactions(withConfidence, filters);
     }
 
     @NonNull
     @Override
-    public Flow<Transaction> observeTransactionsWithConfidence(@NonNull TransactionFilter... filters) {
+    public Flow<Unit> observeWalletChanged() {
         if (wallet == null) {
             return FlowKt.emptyFlow();
         }
 
-        return new WalletTransactionObserver(wallet, true).observe(filters);
+        return new WalletObserver(wallet).observeWalletChanged();
     }
 
     @NonNull
