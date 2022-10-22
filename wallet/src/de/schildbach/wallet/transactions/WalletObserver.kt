@@ -18,16 +18,17 @@
 package de.schildbach.wallet.transactions
 
 import android.os.Looper
-import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.listeners.TransactionConfidenceEventListener
 import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.listeners.WalletChangeEventListener
+import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener
+import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 
 class WalletObserver(private val wallet: Wallet) {
@@ -36,7 +37,7 @@ class WalletObserver(private val wallet: Wallet) {
             trySend(Unit)
         }
 
-        wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
+        wallet.addChangeEventListener(Threading.USER_THREAD, walletChangeListener)
 
         awaitClose {
             wallet.removeChangeEventListener(walletChangeListener)
@@ -50,62 +51,38 @@ class WalletObserver(private val wallet: Wallet) {
             Looper.prepare()
         }
 
-        val walletChangeListener = object : ThrottlingWalletChangeListener() {
-            override fun onThrottledWalletChanged() { }
-
-            override fun onCoinsReceived(
-                wallet: Wallet?,
-                tx: Transaction?,
-                prevBalance: Coin?,
-                newBalance: Coin?
-            ) {
-                super.onCoinsReceived(wallet, tx, prevBalance, newBalance)
-
-                if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
-                    trySend(tx)
-                }
-            }
-
-            override fun onCoinsSent(
-                wallet: Wallet?,
-                tx: Transaction?,
-                prevBalance: Coin?,
-                newBalance: Coin?
-            ) {
-                super.onCoinsSent(wallet, tx, prevBalance, newBalance)
-
-                if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
-                    trySend(tx)
-                }
-            }
-
-            override fun onTransactionConfidenceChanged(wallet: Wallet?, tx: Transaction?) {
-                super.onTransactionConfidenceChanged(wallet, tx)
-
-                if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
-                    trySend(tx)
-                }
+        val coinsSentListener = WalletCoinsSentEventListener { _, tx: Transaction?, _, _ ->
+            if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
+                trySend(tx)
             }
         }
+        wallet.addCoinsSentEventListener(Threading.USER_THREAD, coinsSentListener)
 
-        wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener)
-        wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener)
-        wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
+        val coinsReceivedListener = WalletCoinsReceivedEventListener { _, tx: Transaction?, _, _ ->
+            if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
+                trySend(tx)
+            }
+        }
+        wallet.addCoinsReceivedEventListener(Threading.USER_THREAD, coinsReceivedListener)
+
+        var transactionConfidenceChangedListener: TransactionConfidenceEventListener? = null
+
         if (observeTxConfidence) {
-            wallet.addTransactionConfidenceEventListener(
-                Threading.SAME_THREAD,
-                walletChangeListener
-            )
+            transactionConfidenceChangedListener = TransactionConfidenceEventListener { _, tx: Transaction? ->
+                if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
+                    trySend(tx)
+                }
+            }
+            wallet.addTransactionConfidenceEventListener(Threading.USER_THREAD, transactionConfidenceChangedListener)
         }
 
         awaitClose {
-            wallet.removeChangeEventListener(walletChangeListener)
-            wallet.removeCoinsSentEventListener(walletChangeListener)
-            wallet.removeCoinsReceivedEventListener(walletChangeListener)
+            wallet.removeCoinsSentEventListener(coinsSentListener)
+            wallet.removeCoinsReceivedEventListener(coinsReceivedListener)
+
             if (observeTxConfidence) {
-                wallet.removeTransactionConfidenceEventListener(walletChangeListener)
+                wallet.removeTransactionConfidenceEventListener(transactionConfidenceChangedListener)
             }
-            walletChangeListener.removeCallbacks()
         }
     }
 }
