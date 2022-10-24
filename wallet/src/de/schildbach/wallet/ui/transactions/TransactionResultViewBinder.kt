@@ -43,7 +43,6 @@ import org.dash.wallet.common.ui.CurrencyTextView
 /**
  * @author Samuel Barbosa
  */
-@ExperimentalCoroutinesApi
 class TransactionResultViewBinder(
     private val wallet: Wallet,
     private val dashFormat: MonetaryFormat,

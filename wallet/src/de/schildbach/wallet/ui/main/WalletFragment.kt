@@ -27,7 +27,7 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.appbar.AppBarLayout
@@ -46,13 +46,13 @@ import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HomeContentBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -60,9 +60,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
-@FlowPreview
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class WalletFragment : Fragment(R.layout.home_content) {
     companion object {
         private val log = LoggerFactory.getLogger(WalletFragment::class.java)
@@ -71,6 +69,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private val viewModel: MainViewModel by activityViewModels()
     private val binding by viewBinding(HomeContentBinding::bind)
     @Inject lateinit var configuration: Configuration
+    @Inject lateinit var authManager: AuthenticationManager
 
     private val scanLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -113,10 +112,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
             ) {
                 val dialogFragment: TaxCategoryExplainerDialogFragment =
                     TaxCategoryExplainerDialogFragment.newInstance(mostRecentTransaction.txId)
-                dialogFragment.show(requireActivity().supportFragmentManager, "taxcategorydialog") {
+                dialogFragment.show(requireActivity()) {
                     val transactionDetailsDialogFragment: TransactionDetailsDialogFragment =
                         TransactionDetailsDialogFragment.newInstance(mostRecentTransaction.txId)
-                    transactionDetailsDialogFragment.show(requireActivity().supportFragmentManager, null)
+                    transactionDetailsDialogFragment.show(requireActivity())
                 }
                 configuration.setHasDisplayedTaxCategoryExplainer()
             }
@@ -205,13 +204,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun handleVerifySeed() {
-        val checkPinSharedModel = ViewModelProvider(requireActivity())[CheckPinSharedModel::class.java]
-        checkPinSharedModel.onCorrectPinCallback.observe(viewLifecycleOwner) { data ->
-            if (data?.second != null) {
-                startVerifySeedActivity(data.second)
-            }
+        lifecycleScope.launch {
+            val pin = authManager.authenticate(requireActivity())
+            pin?.let { startVerifySeedActivity(pin) }
         }
-        CheckPinDialog.show(requireActivity(), 0)
     }
 
     private fun handleScan(clickView: View?) {

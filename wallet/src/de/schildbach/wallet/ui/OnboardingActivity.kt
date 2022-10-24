@@ -40,10 +40,8 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.getMainTask
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -54,9 +52,7 @@ private const val RESTORE_PHRASE_REQUEST_CODE = 2
 private const val RESTORE_FILE_REQUEST_CODE = 3
 private const val UPGRADE_NONENCRYPTED_FLOW_TUTORIAL_REQUEST_CODE = 4
 
-@FlowPreview
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class OnboardingActivity : RestoreFromFileActivity() {
 
     companion object {
@@ -233,16 +229,17 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 else -> it.message!!
             }
 
-            BaseAlertDialogBuilder(this).apply {
-                title = getString(R.string.import_export_keys_dialog_failure_title)
-                this.message = getString(R.string.import_keys_dialog_failure, message)
-                positiveText = getString(R.string.button_dismiss)
-                negativeText = getString(R.string.button_retry)
-                negativeAction = {
+            AdaptiveDialog.create(
+                R.drawable.ic_error,
+                title = getString(R.string.import_export_keys_dialog_failure_title),
+                message = getString(R.string.import_keys_dialog_failure, message),
+                positiveButtonText = getString(R.string.button_dismiss),
+                negativeButtonText = getString(R.string.retry)
+            ).show(this) { dismiss ->
+                if (dismiss == false) {
                     RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
                 }
-                showIcon = true
-            }.buildAlertDialog().show()
+            }
         })
         viewModel.finishCreateNewWalletAction.observe(this) {
             startActivityForResult(SetPinActivity.createIntent(application, R.string.set_pin_create_new_wallet), SET_PIN_REQUEST_CODE)

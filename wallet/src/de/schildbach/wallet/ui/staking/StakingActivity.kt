@@ -26,13 +26,12 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.buy_sell.BuyAndSellIntegrationsFragment
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Constants
-import org.dash.wallet.common.services.ISecurityFunctions
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
@@ -54,7 +53,7 @@ class StakingActivity : LockScreenActivity() {
     private lateinit var navController: NavController
 
     @Inject
-    lateinit var securityFunctions: ISecurityFunctions
+    lateinit var securityFunctions: AuthenticationManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -115,7 +114,7 @@ class StakingActivity : LockScreenActivity() {
 
     private fun checkPinAndBackupPassphrase() {
         lifecycleScope.launch {
-            val pin = securityFunctions.requestPinCode(this@StakingActivity)
+            val pin = securityFunctions.authenticate(this@StakingActivity)
 
             if (pin != null) {
                 val intent = VerifySeedActivity.createIntent(

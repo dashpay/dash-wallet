@@ -23,17 +23,15 @@ import android.os.Handler
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_app_update.*
+import de.schildbach.wallet_test.databinding.ActivityAppUpdateBinding
 import org.dash.wallet.common.Configuration
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class AppUpgradeActivity : AppCompatActivity() {
@@ -45,8 +43,9 @@ class AppUpgradeActivity : AppCompatActivity() {
         }
     }
 
-    lateinit var configuration: Configuration
-    private lateinit var pinRetryController: PinRetryController
+    @Inject lateinit var configuration: Configuration
+    @Inject lateinit var pinRetryController: PinRetryController
+    private lateinit var binding: ActivityAppUpdateBinding
 
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
@@ -60,12 +59,9 @@ class AppUpgradeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_app_update)
-
-        configuration = WalletApplication.getInstance().configuration
+        binding = ActivityAppUpdateBinding.inflate(layoutInflater)
         configuration.pinLength = PinPreviewView.CUSTOM_PIN_LENGTH
-
-        pinRetryController = PinRetryController.getInstance()
+        setContentView(binding.root)
     }
 
     override fun onStart() {
@@ -79,23 +75,17 @@ class AppUpgradeActivity : AppCompatActivity() {
     }
 
     private fun askForPin() {
-        title_pane.visibility = View.INVISIBLE
-        dash_logo.visibility = View.INVISIBLE
-        val checkPinSharedModel = ViewModelProviders.of(this)[CheckPinSharedModel::class.java]
-        checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (_, pin) ->
-            onCorrectPin(pin!!)
-        })
-        checkPinSharedModel.onWalletEncryptedCallback.observe(this) { pin ->
-            if (pin == null) {
-                Toast.makeText(this, "Unable to encrypt wallet", Toast.LENGTH_LONG).show()
-            } else {
+        binding.titlePane.visibility = View.INVISIBLE
+        binding.dashLogo.visibility = View.INVISIBLE
+        SetupPinDuringUpgradeDialog.show(this) { success, pin ->
+            if (success == null) {
+                temporaryLockCheckRunnable.run()
+            } else if (success == true && !pin.isNullOrEmpty()) {
                 onCorrectPin(pin)
+            } else {
+                Toast.makeText(this, "Unable to encrypt wallet", Toast.LENGTH_LONG).show()
             }
         }
-        checkPinSharedModel.onCancelCallback.observe(this) {
-            temporaryLockCheckRunnable.run()
-        }
-        SetupPinDuringUpgradeDialog.show(this, 0)
     }
 
     private fun onCorrectPin(pin: String) {
@@ -104,11 +94,11 @@ class AppUpgradeActivity : AppCompatActivity() {
     }
 
     private fun walletLocked() {
-        title_pane.visibility = View.VISIBLE
-        dash_logo.visibility = View.VISIBLE
+        binding.titlePane.visibility = View.VISIBLE
+        binding.dashLogo.visibility = View.VISIBLE
         temporaryLockCheckHandler.postDelayed(temporaryLockCheckRunnable, temporaryLockCheckInterval)
-        action_title.setText(R.string.wallet_lock_wallet_disabled)
-        action_subtitle.text = pinRetryController.getWalletTemporaryLockedMessage(resources)
+        binding.actionTitle.setText(R.string.wallet_lock_wallet_disabled)
+        binding.actionSubtitle.text = pinRetryController.getWalletTemporaryLockedMessage(resources)
     }
 
     override fun finish() {

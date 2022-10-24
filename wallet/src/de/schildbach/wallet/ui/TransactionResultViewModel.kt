@@ -29,20 +29,14 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
-@FlowPreview
 @HiltViewModel
 class TransactionResultViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider,
     private val walletData: WalletDataProvider,
     configuration: Configuration
 ) : ViewModel() {
-
-    companion object {
-        val log = LoggerFactory.getLogger(TransactionResultViewModel::class.java)
-    }
 
     val dashFormat: MonetaryFormat = configuration.format.noCode()
 

@@ -27,6 +27,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.dismissDialog
@@ -35,7 +36,8 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class ResetWalletDialog : DialogFragment() {
     private lateinit var alertDialog: AlertDialog
-    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
+    @Inject
+    lateinit var analytics: AnalyticsService
     @Inject
     lateinit var restartService: RestartService
 

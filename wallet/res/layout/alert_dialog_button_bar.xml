@@ -6,8 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:fillViewport="true"
-    android:scrollIndicators="top|bottom"
-    tools:targetApi="m">
+    android:scrollIndicators="top|bottom">
 
     <androidx.appcompat.widget.ButtonBarLayout
         android:layout_width="match_parent"
@@ -48,7 +47,9 @@
             style="?attr/buttonBarPositiveButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/dash_blue" />
+            android:textColor="@color/dash_blue"
+            android:visibility="gone"
+            android:text="@string/authenticate_switch_to_fingerprint"/>
 
     </androidx.appcompat.widget.ButtonBarLayout>
 
