@@ -29,8 +29,6 @@ import de.schildbach.wallet.ui.main.TransactionAdapter
 import de.schildbach.wallet.util.currencySymbol
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionGroupDetailsBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -38,8 +36,6 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 
 @AndroidEntryPoint
-@FlowPreview
-@ExperimentalCoroutinesApi
 class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
     private val viewModel: TransactionGroupViewModel by viewModels()
     private val binding by viewBinding(TransactionGroupDetailsBinding::bind)
@@ -77,7 +73,7 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
             if (item is TransactionRowView) {
                 TransactionDetailsDialogFragment
                     .newInstance(item.txId)
-                    .show(parentFragmentManager, "transaction_details")
+                    .show(requireActivity())
             }
         }
 

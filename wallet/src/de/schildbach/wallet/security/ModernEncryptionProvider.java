@@ -1,12 +1,9 @@
 package de.schildbach.wallet.security;
 
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
-
-import androidx.annotation.RequiresApi;
 
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -18,7 +15,6 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
-@RequiresApi(api = Build.VERSION_CODES.M)
 public class ModernEncryptionProvider implements EncryptionProviderFactory.EncryptionProvider {
 
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";

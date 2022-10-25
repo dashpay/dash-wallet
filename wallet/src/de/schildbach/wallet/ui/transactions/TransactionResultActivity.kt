@@ -35,8 +35,6 @@ import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.slf4j.LoggerFactory
@@ -44,8 +42,6 @@ import org.slf4j.LoggerFactory
 /**
  * @author Samuel Barbosa
  */
-@FlowPreview
-@ExperimentalCoroutinesApi
 class TransactionResultActivity : AbstractWalletActivity() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)

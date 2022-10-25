@@ -10,7 +10,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.NFC" />
-    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -180,10 +180,6 @@
             android:configChanges="keyboard|keyboardHidden"
             android:label="@string/network_monitor_activity_title"
             android:theme="@style/LockScreenActivity.Child.Theme" />
-        <activity
-            android:name="de.schildbach.wallet.ui.backup.BackupWalletActivity"
-            android:configChanges="orientation|keyboard|keyboardHidden"
-            android:theme="@style/My.Theme.Dialog" />
 
         <activity
             android:name="de.schildbach.wallet.ui.preference.PreferenceActivity"
@@ -256,7 +252,7 @@
             android:theme="@style/My.Theme.ChildActivity" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.SecurityActivity"
+            android:name="de.schildbach.wallet.ui.more.SecurityActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme" />
 
@@ -267,7 +263,7 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.AdvancedSecurityActivity"
+            android:name="de.schildbach.wallet.ui.more.AdvancedSecurityActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme" />
 

@@ -20,16 +20,20 @@ import android.content.res.Resources
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.livedata.CheckPinLiveData
+import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.ui.preference.PinRetryController
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 @HiltViewModel
 open class CheckPinViewModel @Inject constructor(
-    walletData: WalletDataProvider,
-    private val configuration: Configuration,
-    private val pinRetryController: PinRetryController
+    val walletData: WalletDataProvider,
+    val configuration: Configuration,
+    private val pinRetryController: PinRetryController,
+    val biometricHelper: BiometricHelper,
+    private val analytics: AnalyticsService
 ) : ViewModel() {
 
     val pin = StringBuilder()
@@ -43,6 +47,9 @@ open class CheckPinViewModel @Inject constructor(
         set(value) {
             configuration.pinLength = value
         }
+
+    val isFingerprintEnabled: Boolean
+        get() = biometricHelper.isEnabled
 
     open fun checkPin(pin: CharSequence) {
         checkPinLiveData.checkPin(pin.toString())
@@ -70,5 +77,9 @@ open class CheckPinViewModel @Inject constructor(
 
     fun getFailCount(): Int {
         return pinRetryController.failCount()
+    }
+
+    fun logError(error: Throwable, message: String? = null) {
+        analytics.logError(error, message)
     }
 }

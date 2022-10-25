@@ -143,13 +143,12 @@ import kotlinx.coroutines.flow.FlowKt;
  * @author Andreas Schildbach
  */
 @HiltAndroidApp
-@ExperimentalCoroutinesApi
 public class WalletApplication extends MultiDexApplication
         implements androidx.work.Configuration.Provider, AutoLogoutTimerHandler, WalletDataProvider {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
-    private List<Function0<Unit>> wipeListeners = new ArrayList<>();
+    private final List<Function0<Unit>> wipeListeners = new ArrayList<>();
 
     private boolean basicWalletInitalizationFinished = false;
 

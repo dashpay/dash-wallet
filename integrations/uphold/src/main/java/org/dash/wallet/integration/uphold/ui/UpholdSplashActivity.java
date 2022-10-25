@@ -34,6 +34,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.dash.wallet.common.util.ActivityExtKt;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
@@ -157,16 +158,18 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
     }
 
     private void showLoadingErrorAlert() {
-        alertDialogBuilder.setMessage(getString(R.string.loading_error));
-        alertDialogBuilder.setCancelable(false);
-        alertDialogBuilder.setPositiveText(getString(android.R.string.ok));
-        alertDialogBuilder.setDismissAction(
-                () -> {
-                    finish();
-                    return Unit.INSTANCE;
-                }
+        AdaptiveDialog dialog = AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.error),
+                getString(R.string.loading_error),
+                getString(android.R.string.ok),
+                ""
         );
-        alertDialogBuilder.buildAlertDialog().show();
+        dialog.setCancelable(false);
+        dialog.show(this, result -> {
+            finish();
+            return Unit.INSTANCE;
+        });
     }
 
     private void startUpholdAccountActivity() {

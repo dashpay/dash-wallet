@@ -61,7 +61,7 @@ abstract class AppModule {
         ) = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
         @Provides
-        fun provideUphold() = UpholdClient.getInstance()
+        fun provideUphold(): UpholdClient = UpholdClient.getInstance()
     }
 
     @Binds
