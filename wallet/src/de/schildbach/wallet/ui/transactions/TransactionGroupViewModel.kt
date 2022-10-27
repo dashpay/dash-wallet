@@ -22,6 +22,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
@@ -33,11 +35,16 @@ import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
 
+@OptIn(FlowPreview::class)
 @HiltViewModel
 class TransactionGroupViewModel @Inject constructor(
     val walletData: WalletDataProvider,
     val config: Configuration
 ) : ViewModel() {
+    companion object {
+        private const val THROTTLE_DURATION = 500L
+    }
+
     val dashFormat: MonetaryFormat = config.format.noCode()
 
     private val _dashValue = MutableLiveData<Coin>()
@@ -56,7 +63,8 @@ class TransactionGroupViewModel @Inject constructor(
         _exchangeRate.value = transactionWrapper.transactions.last().exchangeRate
         refreshTransactions(transactionWrapper)
 
-        walletData.observeTransactions()
+        walletData.observeTransactions(true)
+            .debounce(THROTTLE_DURATION)
             .onEach { tx ->
                 if (transactionWrapper.tryInclude(tx)) {
                     refreshTransactions(transactionWrapper)

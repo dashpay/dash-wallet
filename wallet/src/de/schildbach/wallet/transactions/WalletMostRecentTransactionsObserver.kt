@@ -36,7 +36,7 @@ class WalletMostRecentTransactionsObserver(private val wallet: Wallet) {
                 var mostRecentTx = allTxs.first()
                 allTxs.forEach {
                     if (it.transaction.updateTime > mostRecentTx.transaction.updateTime) {
-                        mostRecentTx = it;
+                        mostRecentTx = it
                     }
                 }
                 trySend(mostRecentTx.transaction)
