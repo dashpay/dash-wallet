@@ -104,7 +104,8 @@ class AboutActivity : LockScreenActivity() {
                     DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSyncAttempt, formatFlags)
                 )
             } else if (viewModel.explorePreloadedTimestamp > viewModel.exploreLastSyncAttempt) {
-                getString(
+                val prefix = if (viewModel.isTestNetPreloaded) "Testnet DB " else ""
+                prefix + getString(
                     R.string.about_explore_preloaded_on,
                     DateUtils.formatDateTime(applicationContext, viewModel.explorePreloadedTimestamp, formatFlags)
                 )

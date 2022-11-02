@@ -44,6 +44,7 @@ class ExploreSyncWorker @AssistedInject constructor(
     private val config: Configuration
 ): CoroutineWorker(appContext, workerParams) {
     companion object {
+        const val USE_TEST_DB_KEY = "use_test_database"
         private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
     }
 
@@ -59,7 +60,8 @@ class ExploreSyncWorker @AssistedInject constructor(
 
             val timeInMillis = measureTimeMillis {
                 val updateFile = exploreRepository.getUpdateFile()
-                exploreRepository.preloadFromAssetsInto(updateFile)
+                val checkTestDB = inputData.getBoolean(USE_TEST_DB_KEY, false)
+                exploreRepository.preloadFromAssetsInto(updateFile, checkTestDB)
                 preloadedDbTimestamp = exploreRepository.getTimestamp(updateFile)
 
                 log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")

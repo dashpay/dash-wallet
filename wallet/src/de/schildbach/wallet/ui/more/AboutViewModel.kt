@@ -66,6 +66,9 @@ class AboutViewModel @Inject constructor(
     val explorePreloadedTimestamp: Long
         get() = exploreRepository.preloadedOnTimestamp
 
+    val isTestNetPreloaded: Boolean
+        get() = exploreRepository.preloadedTestDatabase
+
     private val _firebaseInstallationId = MutableLiveData<String>()
     val firebaseInstallationId: LiveData<String>
         get() = _firebaseInstallationId
