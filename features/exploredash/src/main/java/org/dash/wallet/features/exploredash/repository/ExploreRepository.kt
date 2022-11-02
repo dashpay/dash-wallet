@@ -41,6 +41,7 @@ interface ExploreRepository {
     var lastSyncAttemptTimestamp: Long
     var preloadedOnTimestamp: Long
     var failedSyncAttempts: Int
+    val preloadedTestDatabase: Boolean
 
     suspend fun getRemoteTimestamp(): Long
     fun getDatabaseInputStream(file: File): InputStream?
@@ -48,7 +49,7 @@ interface ExploreRepository {
     fun getUpdateFile(): File
     suspend fun download()
     fun markDbForDeletion(dbFile: File)
-    fun preloadFromAssetsInto(dbUpdateFile: File)
+    fun preloadFromAssetsInto(dbUpdateFile: File, checkTestDB: Boolean)
     fun finalizeUpdate()
 }
 
@@ -63,13 +64,21 @@ class GCExploreDatabase @Inject constructor(
     companion object {
         const val DATA_FILE_NAME = "explore.db"
         const val DATA_TMP_FILE_NAME = "explore.tmp"
-        private const val DB_ASSET_FILE_NAME = "explore/$DATA_FILE_NAME"
         private const val PREFS_LOCAL_DB_TIMESTAMP_KEY = "local_db_timestamp"
         private const val LAST_SYNC_TIMESTAMP_KEY = "last_sync_timestamp"
         private const val PRELOADED_ON_TIMESTAMP_KEY = "preloaded_on"
         private const val FAILED_SYNC_ATTEMPTS_KEY = "failed_sync_attempts"
+        private const val PRELOADED_TEST_DB_KEY = "preloaded_test_database"
 
         private val log = LoggerFactory.getLogger(GCExploreDatabase::class.java)
+
+        private fun getPreloadedDbFileName(isTestDB: Boolean): String {
+            return if (isTestDB) {
+                "explore/explore-testnet.db"
+            } else {
+                "explore/explore.db"
+            }
+        }
     }
 
     private var remoteDataRef: StorageReference? = null
@@ -105,6 +114,14 @@ class GCExploreDatabase @Inject constructor(
         set(value) {
             preferences.edit().apply {
                 putInt(FAILED_SYNC_ATTEMPTS_KEY, value)
+            }.apply()
+        }
+
+    override var preloadedTestDatabase: Boolean
+        get() = preferences.getBoolean(PRELOADED_TEST_DB_KEY, false)
+        set(value) {
+            preferences.edit().apply {
+                putBoolean(PRELOADED_TEST_DB_KEY, value)
             }.apply()
         }
 
@@ -217,16 +234,23 @@ class GCExploreDatabase @Inject constructor(
     }
 
     @Throws(IOException::class)
-    override fun preloadFromAssetsInto(dbUpdateFile: File) {
-        log.info("preloading explore db from assets ${dbUpdateFile.absolutePath}")
+    override fun preloadFromAssetsInto(dbUpdateFile: File, checkTestDB: Boolean) {
+        log.info("preloading explore db from assets ${dbUpdateFile.absolutePath}, test database: $checkTestDB")
+        val preloadedDbFileName = getPreloadedDbFileName(checkTestDB)
+
         try {
-            context.assets.open(DB_ASSET_FILE_NAME).use { inputStream ->
+            context.assets.open(preloadedDbFileName).use { inputStream ->
                 FileOutputStream(dbUpdateFile).use { outputStream ->
                     inputStream.copyTo(outputStream)
                 }
             }
+            preloadedTestDatabase = checkTestDB
         } catch (ex: FileNotFoundException) {
-            log.warn("missing {}, explore db will be empty", DB_ASSET_FILE_NAME)
+            if (checkTestDB) {
+                preloadFromAssetsInto(dbUpdateFile, false)
+            } else {
+                log.warn("missing {}, explore db will be empty", preloadedDbFileName)
+            }
         }
     }
 
