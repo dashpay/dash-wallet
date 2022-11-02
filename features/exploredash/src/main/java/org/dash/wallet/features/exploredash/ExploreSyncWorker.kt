@@ -75,43 +75,43 @@ class ExploreSyncWorker @AssistedInject constructor(
                         exploreRepository
                     )
                     exploreRepository.preloadedOnTimestamp = System.currentTimeMillis()
-                } else {
-                    if (!updateFile.delete()) {
-                        log.error("unable to delete " + updateFile.absolutePath)
-                    }
-
-                    localDataTimestamp = exploreRepository.localDatabaseTimestamp
-                    log.info("local data timestamp: $localDataTimestamp (${Date(localDataTimestamp)})")
-
-                    remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
-                    log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
-
-                    if (localDataTimestamp >= remoteDataTimestamp) {
-                        log.info("explore db is up to date, nothing to sync")
-                        syncStatus.setSyncProgress(100.0)
-                        exploreRepository.failedSyncAttempts = 0
-
-                        if (exploreRepository.lastSyncAttemptTimestamp <= 0) {
-                            // Some devices might have this as 0 due to the bug. Need to update manually
-                            // TODO: this can be removed after some time
-                            analytics.logError(IllegalStateException("Explore db up to date but local timestamp is 0"))
-                            exploreRepository.lastSyncAttemptTimestamp = remoteDataTimestamp
-                        }
-
-                        return@withContext Result.success()
-                    }
-                    syncStatus.setSyncProgress(10.0)
-
-                    exploreRepository.download()
-
-                    syncStatus.setSyncProgress(80.0)
-
-                    ExploreDatabase.updateDatabase(
-                        appContext,
-                        config,
-                        exploreRepository
-                    )
                 }
+
+                if (!updateFile.delete()) {
+                    log.error("unable to delete " + updateFile.absolutePath)
+                }
+
+                localDataTimestamp = exploreRepository.localDatabaseTimestamp
+                log.info("local data timestamp: $localDataTimestamp (${Date(localDataTimestamp)})")
+
+                remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
+                log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
+
+                if (localDataTimestamp >= remoteDataTimestamp) {
+                    log.info("explore db is up to date, nothing to sync")
+                    syncStatus.setSyncProgress(100.0)
+                    exploreRepository.failedSyncAttempts = 0
+
+                    if (exploreRepository.lastSyncAttemptTimestamp <= 0) {
+                        // Some devices might have this as 0 due to the bug. Need to update manually
+                        // TODO: this can be removed after some time
+                        analytics.logError(IllegalStateException("Explore db up to date but local timestamp is 0"))
+                        exploreRepository.lastSyncAttemptTimestamp = remoteDataTimestamp
+                    }
+
+                    return@withContext Result.success()
+                }
+                syncStatus.setSyncProgress(10.0)
+
+                exploreRepository.download()
+
+                syncStatus.setSyncProgress(80.0)
+
+                ExploreDatabase.updateDatabase(
+                    appContext,
+                    config,
+                    exploreRepository
+                )
             }
 
             log.info("sync explore db finished, took $timeInMillis ms")
