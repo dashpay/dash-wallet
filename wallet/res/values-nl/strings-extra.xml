@@ -281,13 +281,21 @@
     <string name="tools_show_xpub">Uitgebreide publieke sleutel</string>
 
     <string name="about_help_us_improve">Help ons je ervaring te verbeteren</string>
+    <string name="about_review_and_rate">Schrijf een recensie en beoordeel de app</string>
     <string name="about_contact_support">Neem contact op</string>
     <string name="about_fork_disclaimer">Dit is een open source app afgesplitst van de Bitcoin portemonnee</string>
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash portemonnee%s</string>
+    <string name="about_last_explore_device_sync">Laatste Explore-apparaatsynchronisatie</string>
+    <string name="about_last_explore_server_update">Laatste Explore-serverupdate</string>
+    <string name="about_firebase_installation_id">Firebase-installatie-ID</string>
+    <string name="about_fcm_token">Firebase-cloudmessagingtoken</string>
     <string name="about_last_explore_dash_update_error">kan niet ophalen</string>
     <string name="about_last_explore_dash_sync_never">nooit</string>
+    <string name="about_explore_failed_sync">Mislukt te synchroniseren op %s</string>
+    <string name="about_explore_preloaded_on">Voorgeladen op %s</string>
+
     <string name="block">Block</string>
     <string name="time">Tijd</string>
     <string name="hash">Hash</string>

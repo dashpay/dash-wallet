@@ -49,6 +49,7 @@
     <string name="button_understand">ik snap het</string>
     <string name="button_okay">Oké</string>
     <string name="button_share">Deel</string>
+    <string name="share_address">Deel adres</string>
     <string name="verify">Verifiëren</string>
     <string name="receive_enter_amount_button">Specificeer bedrag</string>
 
