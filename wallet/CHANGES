@@ -1,4 +1,11 @@
 Dash Wallet
+v8.1.1
+* Capital letters not allowed when restoring a wallet
+* Upgrade fingerprint scanner
+* fix transaction status on Home Screen
+* Won't use new exchange rates on old transactions
+* Add info dialog for services
+
 v8.1
 * Make QR code readable in forced dark mode
 * Redesign UI for Receive Screen to include Import Private Key
