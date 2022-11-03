@@ -61,22 +61,24 @@ class ExploreSyncWorker @AssistedInject constructor(
             val timeInMillis = measureTimeMillis {
                 val updateFile = exploreRepository.getUpdateFile()
                 val checkTestDB = inputData.getBoolean(USE_TEST_DB_KEY, false)
-                exploreRepository.preloadFromAssetsInto(updateFile, checkTestDB)
-                preloadedDbTimestamp = exploreRepository.getTimestamp(updateFile)
+                val hasPreloaded = exploreRepository.preloadFromAssetsInto(updateFile, checkTestDB)
 
-                log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")
+                if (hasPreloaded) {
+                    preloadedDbTimestamp = exploreRepository.getTimestamp(updateFile)
+                    log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")
 
-                if (exploreRepository.localDatabaseTimestamp == 0L ||
-                    exploreRepository.localDatabaseTimestamp < preloadedDbTimestamp
-                ) {
-                    // force data preloading for fresh installs
-                    // and a newer preloaded DB
-                    ExploreDatabase.updateDatabase(
-                        appContext,
-                        config,
-                        exploreRepository
-                    )
-                    exploreRepository.preloadedOnTimestamp = System.currentTimeMillis()
+                    if (exploreRepository.localDatabaseTimestamp == 0L ||
+                        exploreRepository.localDatabaseTimestamp < preloadedDbTimestamp
+                    ) {
+                        // force data preloading for fresh installs
+                        // and a newer preloaded DB
+                        ExploreDatabase.updateDatabase(
+                            appContext,
+                            config,
+                            exploreRepository
+                        )
+                        exploreRepository.preloadedOnTimestamp = System.currentTimeMillis()
+                    }
                 }
 
                 if (!updateFile.delete()) {

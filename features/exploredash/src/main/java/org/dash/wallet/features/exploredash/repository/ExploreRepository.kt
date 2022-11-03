@@ -49,7 +49,7 @@ interface ExploreRepository {
     fun getUpdateFile(): File
     suspend fun download()
     fun markDbForDeletion(dbFile: File)
-    fun preloadFromAssetsInto(dbUpdateFile: File, checkTestDB: Boolean)
+    fun preloadFromAssetsInto(dbUpdateFile: File, checkTestDB: Boolean): Boolean
     fun finalizeUpdate()
 }
 
@@ -234,7 +234,7 @@ class GCExploreDatabase @Inject constructor(
     }
 
     @Throws(IOException::class)
-    override fun preloadFromAssetsInto(dbUpdateFile: File, checkTestDB: Boolean) {
+    override fun preloadFromAssetsInto(dbUpdateFile: File, checkTestDB: Boolean): Boolean {
         log.info("preloading explore db from assets ${dbUpdateFile.absolutePath}, test database: $checkTestDB")
         val preloadedDbFileName = getPreloadedDbFileName(checkTestDB)
 
@@ -245,11 +245,13 @@ class GCExploreDatabase @Inject constructor(
                 }
             }
             preloadedTestDatabase = checkTestDB
+            return true
         } catch (ex: FileNotFoundException) {
-            if (checkTestDB) {
+            return if (checkTestDB) {
                 preloadFromAssetsInto(dbUpdateFile, false)
             } else {
-                log.warn("missing {}, explore db will be empty", preloadedDbFileName)
+                log.error("missing preloaded database {}", preloadedDbFileName)
+                false
             }
         }
     }

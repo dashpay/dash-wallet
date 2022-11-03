@@ -134,8 +134,9 @@ abstract class ExploreDatabase : RoomDatabase() {
                     override fun onOpenPrepackagedDatabase(db: SupportSQLiteDatabase) {} }
                 )
 
-                val onOpenCallback = object : RoomDatabase.Callback() {
+                val onOpenCallback = object : Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
+                        log.info("onOpen: ${db.path}")
                         if (!dbUpdateFile.delete()) {
                             log.error("unable to delete " + dbUpdateFile.absolutePath)
                         }
@@ -170,7 +171,11 @@ abstract class ExploreDatabase : RoomDatabase() {
                     .addCallback(onOpenCallback)
                     .build()
 
-                log.info("querying database to trigger the open callback")
+                if (database.isOpen) {
+                    log.warn("database is already open")
+                }
+
+                log.info("querying database to trigger the open callback: ${database.mDatabase?.path}")
                 database.query("SELECT * FROM sqlite_master", null)
             }
         }
