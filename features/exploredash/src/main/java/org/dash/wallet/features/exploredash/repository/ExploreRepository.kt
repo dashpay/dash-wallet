@@ -35,6 +35,7 @@ import java.lang.System.currentTimeMillis
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.math.max
 
 interface ExploreRepository {
     val localDatabaseTimestamp: Long
@@ -258,6 +259,6 @@ class GCExploreDatabase @Inject constructor(
 
     override fun finalizeUpdate() {
         log.info("finalizing update: $updateTimestampCache")
-        localDatabaseTimestamp = updateTimestampCache
+        localDatabaseTimestamp = max(localDatabaseTimestamp, updateTimestampCache)
     }
 }

@@ -131,12 +131,14 @@ abstract class ExploreDatabase : RoomDatabase() {
                 dbBuilder.createFromInputStream({
                     repository.getDatabaseInputStream(dbUpdateFile)
                 }, object : PrepackagedDatabaseCallback() {
-                    override fun onOpenPrepackagedDatabase(db: SupportSQLiteDatabase) {} }
+                    override fun onOpenPrepackagedDatabase(db: SupportSQLiteDatabase) {
+                        log.info("onOpenPrepackagedDatabase")
+                    } }
                 )
 
                 val onOpenCallback = object : Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
-                        log.info("onOpen: ${db.path}")
+                        log.info("opened database: ${db.path}")
                         if (!dbUpdateFile.delete()) {
                             log.error("unable to delete " + dbUpdateFile.absolutePath)
                         }
@@ -175,7 +177,7 @@ abstract class ExploreDatabase : RoomDatabase() {
                     log.warn("database is already open")
                 }
 
-                log.info("querying database to trigger the open callback: ${database.mDatabase?.path}")
+                log.info("querying database to trigger the open callback")
                 database.query("SELECT * FROM sqlite_master", null)
             }
         }
