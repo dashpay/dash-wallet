@@ -77,7 +77,7 @@ class ExploreSyncWorker @AssistedInject constructor(
                             config,
                             exploreRepository
                         )
-                        exploreRepository.preloadedOnTimestamp = System.currentTimeMillis()
+                        exploreRepository.preloadedOnTimestamp = preloadedDbTimestamp
                     }
                 }
 
