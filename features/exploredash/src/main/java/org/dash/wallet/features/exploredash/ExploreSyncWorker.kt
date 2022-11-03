@@ -99,7 +99,6 @@ class ExploreSyncWorker @AssistedInject constructor(
                     if (exploreRepository.lastSyncAttemptTimestamp <= 0) {
                         // Some devices might have this as 0 due to the bug. Need to update manually
                         // TODO: this can be removed after some time
-                        analytics.logError(IllegalStateException("Explore db up to date but local timestamp is 0"))
                         exploreRepository.lastSyncAttemptTimestamp = remoteDataTimestamp
                     }
 

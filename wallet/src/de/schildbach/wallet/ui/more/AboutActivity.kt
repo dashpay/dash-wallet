@@ -103,7 +103,7 @@ class AboutActivity : LockScreenActivity() {
                     R.string.about_explore_failed_sync,
                     DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSyncAttempt, formatFlags)
                 )
-            } else if (viewModel.explorePreloadedTimestamp > viewModel.exploreLastSyncAttempt) {
+            } else if (viewModel.explorePreloadedTimestamp >= viewModel.exploreLastSyncAttempt) {
                 val prefix = if (viewModel.isTestNetPreloaded) "Testnet DB " else ""
                 prefix + getString(
                     R.string.about_explore_preloaded_on,
