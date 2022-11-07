@@ -52,6 +52,7 @@ import androidx.hilt.work.HiltWorkerFactory;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 import androidx.work.BackoffPolicy;
+import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
@@ -273,6 +274,10 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void syncExploreData() {
+        Data.Builder inputData = new Data.Builder().putBoolean(
+                ExploreSyncWorker.USE_TEST_DB_KEY,
+                !Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET)
+        );
         OneTimeWorkRequest syncDataWorkRequest =
                 new OneTimeWorkRequest.Builder(ExploreSyncWorker.class)
                         .setBackoffCriteria(
@@ -280,6 +285,7 @@ public class WalletApplication extends MultiDexApplication
                                 WorkRequest.DEFAULT_BACKOFF_DELAY_MILLIS,
                                 TimeUnit.MILLISECONDS
                         )
+                        .setInputData(inputData.build())
                         .build();
 
         WorkManager.getInstance(this.getApplicationContext()).enqueueUniqueWork(

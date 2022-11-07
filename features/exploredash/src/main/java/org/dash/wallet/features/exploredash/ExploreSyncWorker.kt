@@ -44,6 +44,7 @@ class ExploreSyncWorker @AssistedInject constructor(
     private val config: Configuration
 ): CoroutineWorker(appContext, workerParams) {
     companion object {
+        const val USE_TEST_DB_KEY = "use_test_database"
         private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
     }
 
@@ -59,59 +60,61 @@ class ExploreSyncWorker @AssistedInject constructor(
 
             val timeInMillis = measureTimeMillis {
                 val updateFile = exploreRepository.getUpdateFile()
-                exploreRepository.preloadFromAssetsInto(updateFile)
-                preloadedDbTimestamp = exploreRepository.getTimestamp(updateFile)
+                val checkTestDB = inputData.getBoolean(USE_TEST_DB_KEY, false)
+                val hasPreloaded = exploreRepository.preloadFromAssetsInto(updateFile, checkTestDB)
 
-                log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")
+                if (hasPreloaded) {
+                    preloadedDbTimestamp = exploreRepository.getTimestamp(updateFile)
+                    log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")
 
-                if (exploreRepository.localDatabaseTimestamp == 0L ||
-                    exploreRepository.localDatabaseTimestamp < preloadedDbTimestamp
-                ) {
-                    // force data preloading for fresh installs
-                    // and a newer preloaded DB
-                    ExploreDatabase.updateDatabase(
-                        appContext,
-                        config,
-                        exploreRepository
-                    )
-                    exploreRepository.preloadedOnTimestamp = System.currentTimeMillis()
-                } else {
-                    if (!updateFile.delete()) {
-                        log.error("unable to delete " + updateFile.absolutePath)
+                    if (exploreRepository.localDatabaseTimestamp == 0L ||
+                        exploreRepository.localDatabaseTimestamp < preloadedDbTimestamp
+                    ) {
+                        // force data preloading for fresh installs
+                        // and a newer preloaded DB
+                        ExploreDatabase.updateDatabase(
+                            appContext,
+                            config,
+                            exploreRepository
+                        )
+                        exploreRepository.preloadedOnTimestamp = preloadedDbTimestamp
                     }
-
-                    localDataTimestamp = exploreRepository.localDatabaseTimestamp
-                    log.info("local data timestamp: $localDataTimestamp (${Date(localDataTimestamp)})")
-
-                    remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
-                    log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
-
-                    if (localDataTimestamp >= remoteDataTimestamp) {
-                        log.info("explore db is up to date, nothing to sync")
-                        syncStatus.setSyncProgress(100.0)
-                        exploreRepository.failedSyncAttempts = 0
-
-                        if (exploreRepository.lastSyncAttemptTimestamp <= 0) {
-                            // Some devices might have this as 0 due to the bug. Need to update manually
-                            // TODO: this can be removed after some time
-                            analytics.logError(IllegalStateException("Explore db up to date but local timestamp is 0"))
-                            exploreRepository.lastSyncAttemptTimestamp = remoteDataTimestamp
-                        }
-
-                        return@withContext Result.success()
-                    }
-                    syncStatus.setSyncProgress(10.0)
-
-                    exploreRepository.download()
-
-                    syncStatus.setSyncProgress(80.0)
-
-                    ExploreDatabase.updateDatabase(
-                        appContext,
-                        config,
-                        exploreRepository
-                    )
                 }
+
+                if (!updateFile.delete()) {
+                    log.error("unable to delete " + updateFile.absolutePath)
+                }
+
+                localDataTimestamp = exploreRepository.localDatabaseTimestamp
+                log.info("local data timestamp: $localDataTimestamp (${Date(localDataTimestamp)})")
+
+                remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
+                log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
+
+                if (localDataTimestamp >= remoteDataTimestamp) {
+                    log.info("explore db is up to date, nothing to sync")
+                    syncStatus.setSyncProgress(100.0)
+                    exploreRepository.failedSyncAttempts = 0
+
+                    if (exploreRepository.lastSyncAttemptTimestamp <= 0) {
+                        // Some devices might have this as 0 due to the bug. Need to update manually
+                        // TODO: this can be removed after some time
+                        exploreRepository.lastSyncAttemptTimestamp = remoteDataTimestamp
+                    }
+
+                    return@withContext Result.success()
+                }
+                syncStatus.setSyncProgress(10.0)
+
+                exploreRepository.download()
+
+                syncStatus.setSyncProgress(80.0)
+
+                ExploreDatabase.updateDatabase(
+                    appContext,
+                    config,
+                    exploreRepository
+                )
             }
 
             log.info("sync explore db finished, took $timeInMillis ms")

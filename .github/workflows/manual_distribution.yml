@@ -111,7 +111,7 @@ jobs:
       run: |
         gem install google-cloud-storage
         rm  -rf wallet/assets/explore/*
-        ruby -r ./exploredata.rb
+        ruby ./exploredata.rb "${{ github.event.inputs.flavor }}"
 
     - name: Test
       run: bundle exec fastlane test flavor:"${{ github.event.inputs.flavor }}" type:"${{ github.event.inputs.type }}" version_code:"${{ env.build_number }}" store_pass:"${{ secrets.SIGNING_STORE_PASS }}"
