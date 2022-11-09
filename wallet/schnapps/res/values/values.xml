@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">Dash Wallet Devnet</string>
+	<string name="app_name_short">Dash [devnet]</string>
+
+	<string-array name="preferences_precision_values">
+		<item>8</item>
+		<item>6</item>
+		<item>4</item>
+		<item>2/3</item>
+		<item>0/6</item>
+	</string-array>
+	<string-array name="preferences_precision_labels">
+		<item>tDASH, 8 decimal places</item>
+		<item>tDASH, 6 decimal places</item>
+		<item>tDASH, 4 decimal places</item>
+		<item>mtDASH, 2 decimal places</item>
+		<item>µtDASH, no decimal places</item>
+	</string-array>
+	<string-array name="preferences_block_explorer_values">
+		<item>https://insight.chacha.networks.dash.org:3002/insight</item>
+	</string-array>
+	<string-array name="preferences_block_explorer_labels">
+		<item>Insight Devnet Block Explorer</item>
+	</string-array>
+
+</resources>
