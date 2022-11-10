@@ -76,7 +76,7 @@ jobs:
 
     - name: Extract Secrets
       run: |
-        echo GOOGLE_SERVICES_JSON &gt;&gt; wallet/google-services.json
+        echo GOOGLE_SERVICES_JSON > wallet/google-services.json
       env:
         GOOGLE_SERVICES_JSON : ${{secrets.GOOGLE_SERVICES_JSON}}
 
