@@ -753,7 +753,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup.removeConnectedEventListener(peerConnectivityListener);
                 peerGroup.removeWallet(wallet);
                 peerGroup.stopAsync();
-                wallet.setRiskAnalyzer(defaultRiskAnalyzer);
+                // use the offline risk analyzer
+                wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestChainHeightEver(), System.currentTimeMillis()/1000));
                 riskAnalyzer.shutdown();
                 peerGroup = null;
 
