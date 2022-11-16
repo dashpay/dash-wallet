@@ -29,6 +29,8 @@ import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.params.ChaChaDevNetParams;
+import org.bitcoinj.params.JackDanielsDevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
@@ -86,6 +88,19 @@ public final class Constants {
                 NETWORK_PARAMETERS = TestNet3Params.get();
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-testnet";
+                WALLET_NAME_CURRENCY_CODE = "tdash";
+                org.dash.wallet.common.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-testnet.db";
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                break;
+            }
+            case "devnet": {
+                // Devnet
+                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
+                NETWORK_PARAMETERS = ChaChaDevNetParams.get();
+                // TODO: remove this next line when Platform Supports Core 0.18
+                DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
+                IS_PROD_BUILD = false;
+                FILENAME_NETWORK_SUFFIX = "-chacha";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 org.dash.wallet.common.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-testnet.db";
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
