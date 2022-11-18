@@ -35,7 +35,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.data.ExchangeRate
-import org.dash.wallet.common.services.ISecurityFunctions
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -71,7 +71,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
     private var balanceAnimator: ObjectAnimator? = null
 
     @Inject
-    lateinit var securityFunctions: ISecurityFunctions
+    lateinit var securityFunctions: AuthenticationManager
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -228,7 +228,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 return
             }
 
-            securityFunctions.requestPinCode(requireActivity()) ?: return
+            securityFunctions.authenticate(requireActivity()) ?: return
         }
 
         val isSuccess = AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {

@@ -15,11 +15,12 @@
  */
 package de.schildbach.wallet.ui.send
 
-import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.offline.DirectPaymentTask
@@ -34,10 +35,16 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.wallet.KeyChain.KeyPurpose
 import org.bitcoinj.wallet.SendRequest
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ExchangeRate
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
-class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewModel(application) {
+@HiltViewModel
+class PaymentProtocolViewModel @Inject constructor(
+    private val walletApplication: WalletApplication,
+    configuration: Configuration
+) : SendCoinsBaseViewModel(walletApplication, configuration) {
 
     companion object {
         val FAKE_FEE_FOR_EXCEPTIONS: Coin =
@@ -60,7 +67,7 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
         }
 
     init {
-        val currencyCode = walletApplication.configuration.exchangeCurrencyCode
+        val currencyCode = configuration.exchangeCurrencyCode
         exchangeRateData = ExchangeRatesRepository.instance.getRate(currencyCode)
     }
 
@@ -154,12 +161,12 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
                 val message = StringBuilder().apply {
                     if (BuildConfig.DEBUG && messageArgs[0] == 415) {
                         val host = Uri.parse(finalPaymentIntent!!.paymentUrl).host
-                        appendln(host)
-                        appendln(walletApplication.getString(messageResId, *messageArgs))
-                        appendln(PaymentProtocol.MIMETYPE_PAYMENT)
-                        appendln()
+                        appendLine(host)
+                        appendLine(walletApplication.getString(messageResId, *messageArgs))
+                        appendLine(PaymentProtocol.MIMETYPE_PAYMENT)
+                        appendLine()
                     }
-                    appendln(walletApplication.getString(R.string.payment_request_problem_message))
+                    appendLine(walletApplication.getString(R.string.payment_request_problem_message))
                 }
 
                 directPaymentAckLiveData.value = Resource.error(message.toString(), Pair(sendRequest, false))

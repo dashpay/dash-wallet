@@ -52,6 +52,7 @@ import androidx.hilt.work.HiltWorkerFactory;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 import androidx.work.BackoffPolicy;
+import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
@@ -124,10 +125,11 @@ import de.schildbach.wallet.service.BlockchainSyncJobService;
 import de.schildbach.wallet.transactions.TransactionWrapperHelper;
 import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
-import de.schildbach.wallet.transactions.WalletTransactionObserver;
+import de.schildbach.wallet.transactions.WalletObserver;
 import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.security.SecurityGuard;
+import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
@@ -135,7 +137,6 @@ import de.schildbach.wallet_test.R;
 import kotlin.Deprecated;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
-import kotlinx.coroutines.ExperimentalCoroutinesApi;
 import kotlinx.coroutines.flow.Flow;
 import kotlinx.coroutines.flow.FlowKt;
 
@@ -143,13 +144,12 @@ import kotlinx.coroutines.flow.FlowKt;
  * @author Andreas Schildbach
  */
 @HiltAndroidApp
-@ExperimentalCoroutinesApi
 public class WalletApplication extends MultiDexApplication
         implements androidx.work.Configuration.Provider, AutoLogoutTimerHandler, WalletDataProvider {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
-    private List<Function0<Unit>> wipeListeners = new ArrayList<>();
+    private final List<Function0<Unit>> wipeListeners = new ArrayList<>();
 
     private boolean basicWalletInitalizationFinished = false;
 
@@ -274,6 +274,10 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void syncExploreData() {
+        Data.Builder inputData = new Data.Builder().putBoolean(
+                ExploreSyncWorker.USE_TEST_DB_KEY,
+                !Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET)
+        );
         OneTimeWorkRequest syncDataWorkRequest =
                 new OneTimeWorkRequest.Builder(ExploreSyncWorker.class)
                         .setBackoffCriteria(
@@ -281,6 +285,7 @@ public class WalletApplication extends MultiDexApplication
                                 WorkRequest.DEFAULT_BACKOFF_DELAY_MILLIS,
                                 TimeUnit.MILLISECONDS
                         )
+                        .setInputData(inputData.build())
                         .build();
 
         WorkManager.getInstance(this.getApplicationContext()).enqueueUniqueWork(
@@ -578,6 +583,8 @@ public class WalletApplication extends MultiDexApplication
                 }
             }
         }
+
+        wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
 
         if (!wallet.isConsistent()) {
             Toast.makeText(this, "inconsistent wallet: " + walletFile, Toast.LENGTH_LONG).show();
@@ -1013,22 +1020,25 @@ public class WalletApplication extends MultiDexApplication
 
     @NonNull
     @Override
-    public Flow<Transaction> observeTransactions(@NonNull TransactionFilter... filters) {
+    public Flow<Transaction> observeTransactions(
+        boolean withConfidence,
+        @NonNull TransactionFilter... filters
+    ) {
         if (wallet == null) {
             return FlowKt.emptyFlow();
         }
 
-        return new WalletTransactionObserver(wallet, false).observe(filters);
+        return new WalletObserver(wallet).observeTransactions(withConfidence, filters);
     }
 
     @NonNull
     @Override
-    public Flow<Transaction> observeTransactionsWithConfidence(@NonNull TransactionFilter... filters) {
+    public Flow<Unit> observeWalletChanged() {
         if (wallet == null) {
             return FlowKt.emptyFlow();
         }
 
-        return new WalletTransactionObserver(wallet, true).observe(filters);
+        return new WalletObserver(wallet).observeWalletChanged();
     }
 
     @NonNull

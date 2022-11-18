@@ -27,6 +27,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import org.dash.wallet.common.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.ui.transactions.TransactionRowView
@@ -47,9 +48,8 @@ import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
-@FlowPreview
-@ExperimentalCoroutinesApi
 class MainViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val clipboardManager: ClipboardManager,
@@ -58,7 +58,8 @@ class MainViewModel @Inject constructor(
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
     private val savedStateHandle: SavedStateHandle,
-    private val blockchainStateProvider: BlockchainStateProvider
+    private val blockchainStateProvider: BlockchainStateProvider,
+    val biometricHelper: BiometricHelper
 ) : ViewModel() {
     companion object {
         private const val THROTTLE_DURATION = 500L
@@ -129,7 +130,7 @@ class MainViewModel @Inject constructor(
             .flatMapLatest { direction ->
                 val filter = TxDirectionFilter(direction, walletData.wallet!!)
                 refreshTransactions(filter)
-                walletData.observeTransactions(filter)
+                walletData.observeWalletChanged()
                     .debounce(THROTTLE_DURATION)
                     .onEach { refreshTransactions(filter) }
             }

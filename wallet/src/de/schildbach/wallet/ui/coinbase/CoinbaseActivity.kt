@@ -44,7 +44,7 @@ class CoinbaseActivity : BaseMenuActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-         navController = setNavigationGraph()
+        navController = setNavigationGraph()
 
         broadcaster.closeCoinbasePortal.observe(this){
             finish()

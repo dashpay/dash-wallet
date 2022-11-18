@@ -17,7 +17,6 @@
 package org.dash.wallet.integration.uphold.ui;
 
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -26,6 +25,7 @@ import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
 
 import org.bitcoinj.core.Coin;
@@ -34,7 +34,9 @@ import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.ui.CurrencyTextView;
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.dash.wallet.common.util.ActivityExtKt;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult;
@@ -55,6 +57,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
 
     public static final int REQUEST_CODE_TRANSFER = 1;
 
+    private AlertDialog alertDialog;
     private CurrencyTextView balanceView;
     private BigDecimal balance;
     private String receivingAddress;
@@ -191,10 +194,13 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         if(code == 400 || code == 403 || code >= 400)
                 messageId = R.string.uphold_error_report_issue;
 
-        alertDialogBuilder.setTitle(getString(R.string.uphold_error));
-        alertDialogBuilder.setMessage(getString(messageId));
-
-        alertDialogBuilder.buildAlertDialog().show();
+        AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.uphold_error),
+                getString(messageId),
+                getString(android.R.string.ok),
+                ""
+        ).show(this, result -> Unit.INSTANCE);
     }
 
     private void openWithdrawals() {
@@ -221,7 +227,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
     private void revokeAccessToken() {
         LayoutInflater inflater = this.getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.uphold_logout_confirm, null);
-
+        BaseAlertDialogBuilder alertDialogBuilder = new BaseAlertDialogBuilder(this);
         alertDialogBuilder.setTitle(getString(R.string.uphold_logout_title));
         alertDialogBuilder.setPositiveText(getString(R.string.uphold_go_to_website));
         alertDialogBuilder.setPositiveAction(
@@ -233,7 +239,8 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         );
         alertDialogBuilder.setNegativeText(getString(android.R.string.cancel));
         alertDialogBuilder.setView(dialogView);
-        alertDialogBuilder.buildAlertDialog().show();
+        alertDialog = alertDialogBuilder.buildAlertDialog();
+        alertDialog.show();
     }
 
     private void revokeUpholdAccessToken() {
@@ -273,17 +280,20 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
     }
 
     private void showUpholdBalanceErrorDialog() {
-        alertDialogBuilder.setTitle(getString(R.string.uphold_error));
-        alertDialogBuilder.setMessage(getString(R.string.uphold_error_not_logged_in));
-        alertDialogBuilder.setCancelable(false);
-        alertDialogBuilder.setPositiveText(getString(R.string.uphold_link_account));
-        alertDialogBuilder.setPositiveAction(
-                () -> {
-                    startUpholdSplashActivity();
-                    return Unit.INSTANCE;
-                }
+        AdaptiveDialog dialog = AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.uphold_error),
+                getString(R.string.uphold_error_not_logged_in),
+                getString(R.string.uphold_link_account),
+                ""
         );
-        alertDialogBuilder.buildAlertDialog().show();
+        dialog.setCancelable(false);
+        dialog.show(this, result -> {
+            if (result != null && result) {
+                startUpholdSplashActivity();
+            }
+            return Unit.INSTANCE;
+        });
     }
 
     private void startUpholdSplashActivity() {
@@ -296,4 +306,12 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         finish();
     }
 
+    @Override
+    protected void onPause() {
+        if (alertDialog != null && alertDialog.isShowing()) {
+            alertDialog.dismiss();
+        }
+
+        super.onPause();
+    }
 }

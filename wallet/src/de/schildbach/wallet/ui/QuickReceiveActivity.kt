@@ -27,8 +27,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
-@FlowPreview
 class QuickReceiveActivity : ShortcutComponentActivity() {
 
     companion object {

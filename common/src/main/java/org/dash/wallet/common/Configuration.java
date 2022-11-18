@@ -17,6 +17,8 @@
 
 package org.dash.wallet.common;
 
+import static java.lang.Math.max;
+
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -68,6 +70,7 @@ public class Configuration {
     private static final String PREFS_KEY_LAST_VERSION = "last_version";
     private static final String PREFS_KEY_LAST_USED = "last_used";
     private static final String PREFS_KEY_BEST_CHAIN_HEIGHT_EVER = "best_chain_height_ever";
+    private static final String PREFS_KEY_BEST_HEADER_HEIGHT_EVER = "best_header_height_ever";
     public static final String PREFS_KEY_REMIND_BACKUP = "remind_backup";
     private static final String PREFS_KEY_LAST_BACKUP = "last_backup";
     public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
@@ -381,6 +384,19 @@ public class Configuration {
     public void maybeIncrementBestChainHeightEver(final int bestChainHeightEver) {
         if (bestChainHeightEver > getBestChainHeightEver())
             prefs.edit().putInt(PREFS_KEY_BEST_CHAIN_HEIGHT_EVER, bestChainHeightEver).apply();
+    }
+
+    public int getBestHeaderHeightEver() {
+        return prefs.getInt(PREFS_KEY_BEST_HEADER_HEIGHT_EVER, 0);
+    }
+
+    public void maybeIncrementBestHeaderHeightEver(final int bestHeaderHeightEver) {
+        if (bestHeaderHeightEver > getBestHeaderHeightEver())
+            prefs.edit().putInt(PREFS_KEY_BEST_HEADER_HEIGHT_EVER, bestHeaderHeightEver).apply();
+    }
+
+    public int getBestHeightEver() {
+        return max(getBestHeaderHeightEver(), getBestChainHeightEver());
     }
 
     public boolean isRestoringBackup() {

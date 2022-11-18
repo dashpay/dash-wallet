@@ -26,8 +26,6 @@ import javax.inject.Inject
 
 @SuppressLint("Registered")
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
-@FlowPreview
 open class ShortcutComponentActivity : AppCompatActivity() {
     @Inject lateinit var walletApplication: WalletApplication
 

@@ -15,14 +15,23 @@
  */
 package de.schildbach.wallet.ui.send
 
-import android.app.Application
 import androidx.lifecycle.MutableLiveData
+import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.security.BiometricHelper
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.SendRequest
+import org.dash.wallet.common.Configuration
+import javax.inject.Inject
 
-class SendCoinsViewModel(application: Application) : SendCoinsBaseViewModel(application) {
+@HiltViewModel
+class SendCoinsViewModel @Inject constructor(
+    walletApplication: WalletApplication,
+    configuration: Configuration,
+    val biometricHelper: BiometricHelper
+) : SendCoinsBaseViewModel(walletApplication, configuration) {
 
     enum class State {
         INPUT,  // asks for confirmation

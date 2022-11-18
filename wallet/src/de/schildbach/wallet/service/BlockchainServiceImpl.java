@@ -231,13 +231,19 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                     final Coin newBalance) {
 
             final int bestChainHeight = blockChain.getBestChainHeight();
-            final boolean replaying = bestChainHeight < config.getBestChainHeightEver();
+            final boolean replaying = bestChainHeight < config.getBestChainHeightEver() || config.isRestoringBackup();
 
             long now = new Date().getTime();
             long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
             boolean insideTxExchangeRateTimeThreshold = (now - blockChainHeadTime) < TX_EXCHANGE_RATE_TIME_THRESHOLD_MS;
 
-            if (tx.getExchangeRate() == null && ((!replaying || insideTxExchangeRateTimeThreshold) || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
+            // only set an exchange rate if the tx has no exchange rate and:
+            //   1. the blockchain is not being rescanned nor the wallet is being restored OR
+            //   2. the transaction is less than three hours old OR
+            //   3. the transaction is not yet mined
+            if (tx.getExchangeRate() == null && (!replaying
+                    || insideTxExchangeRateTimeThreshold
+                    || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
                 try {
                     final org.dash.wallet.common.data.ExchangeRate exchangeRate =
                             exchangeRatesDao.getRateSync(config.getExchangeCurrencyCode());
@@ -459,6 +465,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 log.debug("Runnable % = " + syncPercentage);
 
                 config.maybeIncrementBestChainHeightEver(blockChain.getChainHead().getHeight());
+                config.maybeIncrementBestHeaderHeightEver(headerChain.getChainHead().getHeight());
                 if(config.isRestoringBackup()) {
                     long timeAgo = System.currentTimeMillis() - blockChain.getChainHead().getHeader().getTimeSeconds() * 1000;
                     //if the app was restoring a backup from a file or seed and block chain is nearly synced
@@ -747,7 +754,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup.removeConnectedEventListener(peerConnectivityListener);
                 peerGroup.removeWallet(wallet);
                 peerGroup.stopAsync();
-                wallet.setRiskAnalyzer(defaultRiskAnalyzer);
+                // use the offline risk analyzer
+                wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
                 riskAnalyzer.shutdown();
                 peerGroup = null;
 

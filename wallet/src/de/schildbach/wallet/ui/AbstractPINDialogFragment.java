@@ -16,25 +16,28 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
-import androidx.core.os.CancellationSignal;
 import androidx.fragment.app.DialogFragment;
 
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.util.KeyboardUtil;
 
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.security.BiometricHelper;
+import de.schildbach.wallet.security.BiometricLockoutException;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.widget.FingerprintView;
-import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 /**
  * Created by Hash Engineering on 4/8/2018.
  */
-
+@AndroidEntryPoint
 public abstract class AbstractPINDialogFragment extends DialogFragment {
 
     protected DialogInterface.OnDismissListener onDismissListener;
@@ -43,8 +46,6 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
     protected WalletApplication application;
     protected Handler backgroundHandler;
     protected PinRetryController pinRetryController;
-    protected FingerprintHelper fingerprintHelper;
-    protected CancellationSignal fingerprintCancellationSignal;
 
     protected EditText pinView;
     protected TextView badPinView;
@@ -54,6 +55,8 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
 
     protected int dialogLayout;
     protected int dialogTitle;
+
+    @Inject public BiometricHelper biometricHelper;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -82,17 +85,14 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
             }
         });
 
-        fingerprintHelper = new FingerprintHelper(getActivity());
-        if (fingerprintHelper.init()) {
-            boolean isFingerprintEnabled = fingerprintHelper.isFingerprintEnabled();
+        if (biometricHelper.isAvailable()) {
+            boolean isFingerprintEnabled = biometricHelper.isEnabled();
             if (isFingerprintEnabled) {
                 fingerprintView.setVisibility(View.VISIBLE);
                 startFingerprintListener();
             } else {
                 fingerprintView.setText(R.string.touch_fingerprint_to_enable);
             }
-        } else {
-            fingerprintHelper = null;
         }
 
         if (walletProvider.getWallet().isEncrypted()) {
@@ -117,26 +117,15 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
         return alertDialog;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private void startFingerprintListener() {
-        fingerprintCancellationSignal = new CancellationSignal();
-        fingerprintHelper.getPassword(fingerprintCancellationSignal, new FingerprintHelper.Callback() {
-            @Override
-            public void onSuccess(String savedPass) {
+        biometricHelper.getPassword(requireActivity(), true, (savedPass, error) -> {
+            if (error != null) {
+                fingerprintView.showError(error instanceof BiometricLockoutException);
+            } else if (savedPass != null) {
                 checkPassword(savedPass);
             }
 
-            @Override
-            public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
-                if (!canceled) {
-                    fingerprintView.showError(exceededMaxAttempts);
-                }
-            }
-
-            @Override
-            public void onHelp(int helpCode, String helpString) {
-                fingerprintView.showError(false);
-            }
+            return Unit.INSTANCE;
         });
     }
 
@@ -167,6 +156,9 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
 
     abstract protected void checkPassword(final String password);
 
+    // TODO: this needs better handling as it can be confused with the WalletDataProvider.
+    // Perhaps keep the walletBuffer from the activity in the RestoreWalletFromFileViewModel
+    // and share it across fragments
     public interface WalletProvider {
 
         Wallet getWallet();

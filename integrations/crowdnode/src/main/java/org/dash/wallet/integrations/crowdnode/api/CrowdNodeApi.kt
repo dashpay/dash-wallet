@@ -35,7 +35,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.services.ISecurityFunctions
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -98,7 +98,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     private val analyticsService: AnalyticsService,
     private val config: CrowdNodeConfig,
     private val globalConfig: Configuration,
-    private val securityFunctions: ISecurityFunctions,
+    private val securityFunctions: AuthenticationManager,
     private val transactionMetadataProvider: TransactionMetadataProvider,
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {

@@ -23,15 +23,14 @@ import android.nfc.NfcAdapter;
 import android.os.Bundle;
 import android.view.MenuItem;
 
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
 import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
-import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
@@ -56,35 +55,36 @@ public class SendCoinsActivity extends AbstractBindServiceActivity {
         }
 
         SendCoinsActivityViewModel viewModel = ViewModelProviders.of(this).get(SendCoinsActivityViewModel.class);
-        viewModel.getBasePaymentIntent().observe(this, new Observer<Resource<PaymentIntent>>() {
-            @Override
-            public void onChanged(Resource<PaymentIntent> paymentIntentResource) {
-                switch (paymentIntentResource.getStatus()) {
-                    case LOADING: {
+        viewModel.getBasePaymentIntent().observe(this, paymentIntentResource -> {
+            switch (paymentIntentResource.getStatus()) {
+                case LOADING: {
 
-                        break;
+                    break;
+                }
+                case ERROR: {
+                    // Check
+                    String message = paymentIntentResource.getMessage();
+                    if (message != null) {
+                        AdaptiveDialog.create(
+                                R.drawable.ic_error,
+                                getString(R.string.error),
+                                message,
+                                getString(R.string.button_dismiss),
+                                ""
+                        ).show(SendCoinsActivity.this, result -> {
+                            if (result != null && !result) {
+                                finish();
+                            }
+                            return Unit.INSTANCE;
+                        });
                     }
-                    case ERROR: {
-                        String message = paymentIntentResource.getMessage();
-                        if (message != null) {
-                            baseAlertDialogBuilder.setMessage(message);
-                            baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-                            baseAlertDialogBuilder.setNeutralAction(
-                                    () -> {
-                                        finish();
-                                        return Unit.INSTANCE;
-                                    });
-                            alertDialog = baseAlertDialogBuilder.buildAlertDialog();
-                            alertDialog.show();
-                        }
-                        break;
+                    break;
+                }
+                case SUCCESS: {
+                    if (paymentIntentResource.getData() != null) {
+                        initStateFromPaymentIntent(paymentIntentResource.getData());
                     }
-                    case SUCCESS: {
-                        if (paymentIntentResource.getData() != null) {
-                            initStateFromPaymentIntent(paymentIntentResource.getData());
-                        }
-                        break;
-                    }
+                    break;
                 }
             }
         });

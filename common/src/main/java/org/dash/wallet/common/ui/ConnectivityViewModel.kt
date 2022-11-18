@@ -22,14 +22,11 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.livedata.NetworkStateInt
 import javax.inject.Inject
 
-@ExperimentalCoroutinesApi
 @HiltViewModel
 open class ConnectivityViewModel @Inject constructor(private val networkStateProvider: NetworkStateInt)
     : ViewModel(){

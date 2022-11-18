@@ -38,7 +38,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.ConfirmTransactionService
-import org.dash.wallet.common.services.ISecurityFunctions
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.*
@@ -69,7 +69,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private val transferDashViewModel by activityViewModels<TransferDashViewModel>()
     private val binding by viewBinding(TransferDashFragmentBinding::bind)
     private var loadingDialog: AdaptiveDialog? = null
-    @Inject lateinit var securityFunctions: ISecurityFunctions
+    @Inject lateinit var securityFunctions: AuthenticationManager
     @Inject lateinit var confirmTransactionLauncher: ConfirmTransactionService
     private var dashValue: Coin = Coin.ZERO
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
@@ -134,7 +134,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                         val isEmptyWallet= enterAmountToTransferViewModel.isMaxAmountSelected &&
                                 binding.transferView.walletToCoinbase
                        transferDashViewModel.estimateNetworkFee(dashValue, emptyWallet = isEmptyWallet)?.let {
-                            securityFunctions.requestPinCode(requireActivity())?.let {
+                            securityFunctions.authenticate(requireActivity())?.let {
                                 transferDashViewModel.createAddressForAccount()
                             }
                        }

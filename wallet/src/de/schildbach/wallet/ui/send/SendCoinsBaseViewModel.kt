@@ -15,14 +15,14 @@
  */
 package de.schildbach.wallet.ui.send
 
-import android.app.Application
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.Process
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
@@ -33,15 +33,22 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
+import javax.inject.Inject
 
-open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+open class SendCoinsBaseViewModel @Inject constructor(
+    private val walletApplication: WalletApplication,
+    private val configuration: Configuration
+) : ViewModel() {
     enum class SendCoinsOfflineStatus {
         SENDING,
         SUCCESS,
@@ -52,7 +59,6 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
         CANCELED
     }
 
-    val walletApplication = application as WalletApplication
     val wallet = walletApplication.wallet!!
 
     val basePaymentIntent = MutableLiveData<Resource<PaymentIntent>>()
@@ -62,6 +68,12 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
         get() = basePaymentIntent.value != null
 
     val onSendCoinsOffline = MutableLiveData<Pair<SendCoinsOfflineStatus, Any?>>()
+    val isSpendingConfirmationEnabled: Boolean
+        get() = configuration.spendingConfirmationEnabled
+    val biometricLimit: Float
+        get() = configuration.biometricLimit
+    val dashFormat: MonetaryFormat
+        get() = configuration.format
 
     protected val backgroundHandler: Handler
     protected var callbackHandler: Handler? = null
