@@ -38,6 +38,7 @@ import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapRequest
@@ -172,12 +173,7 @@ class ConvertViewViewModel @Inject constructor(
         _enteredConvertDashAmount.value = value
         if (!value.isZero) {
             _selectedCryptoCurrencyAccount.value?.let {
-                val cryptoCurrency =
-                    (
-                        dashFormat.minDecimals(0)
-                            .optionalDecimals(0, 8).format(value).toString().toBigDecimal() /
-                            it.cryptoCurrencyToDashExchangeRate.toBigDecimal()
-                        )
+                val cryptoCurrency = (value.toBigDecimal() / it.cryptoCurrencyToDashExchangeRate.toBigDecimal())
                         .setScale(8, RoundingMode.HALF_UP).toString()
 
                 _enteredConvertCryptoAmount.value =
