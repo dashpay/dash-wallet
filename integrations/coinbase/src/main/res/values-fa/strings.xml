@@ -41,8 +41,8 @@
     <string name="cancel">لغو</string>
     <string name="confirm_sec">تائید (%sثانیه) </string>
     <string name="confirm">تائید</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">هیچ روش پرداختی پیدا نکردیم. </string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">برای ادامه لطفا حساب کوین‌بیس‌تان را به‌روزرسانی کنید. </string>
+    <string name="coinbase_no_payment_methods_error_title">هیچ روش پرداختی پیدا نکردیم. </string>
+    <string name="coinbase_no_payment_methods_error_message">برای ادامه لطفا حساب کوین‌بیس‌تان را به‌روزرسانی کنید. </string>
     <string name="add_payment_method">اضافه کردن روش پرداخت</string>
     <string name="error">خطا</string>
     <string name="cancel_transaction">تراکنش لغو شود؟ </string>

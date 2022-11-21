@@ -41,8 +41,8 @@
     <string name="cancel">Annuleer</string>
     <string name="confirm_sec">Bevestig (%ss)</string>
     <string name="confirm">Bevestig</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">We hebben geen betaalmethode gevonden.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Werk je Coinbase account bij om door te gaan.</string>
+    <string name="coinbase_no_payment_methods_error_title">We hebben geen betaalmethode gevonden.</string>
+    <string name="coinbase_no_payment_methods_error_message">Werk je Coinbase account bij om door te gaan.</string>
     <string name="add_payment_method">Betalingsmethode toevoegen</string>
     <string name="error">Fout</string>
     <string name="cancel_transaction">Transactie annuleren?</string>

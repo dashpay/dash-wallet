@@ -41,8 +41,8 @@
     <string name="cancel">取消</string>
     <string name="confirm_sec">确认 (%ss)</string>
     <string name="confirm">确认</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">我们没有找到任何付款方式.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">请更新您的 Coinbase账户以继续.</string>
+    <string name="coinbase_no_payment_methods_error_title">我们没有找到任何付款方式.</string>
+    <string name="coinbase_no_payment_methods_error_message">请更新您的 Coinbase账户以继续.</string>
     <string name="add_payment_method">添加付款方式</string>
     <string name="error">错误</string>
     <string name="cancel_transaction">取消交易?</string>

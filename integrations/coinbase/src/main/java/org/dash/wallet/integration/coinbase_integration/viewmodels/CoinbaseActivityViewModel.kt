@@ -78,25 +78,24 @@ class CoinbaseActivityViewModel @Inject constructor(
                 if (response.value.isEmpty()) {
                     _paymentMethodsUiState.value = PaymentMethodsUiState.Error(true)
                 } else {
-
-                        val result = response.value.filter { it.isBuyingAllowed == true }
-                            .map {
-                                val type = paymentMethodTypeFromCoinbaseType(it.type ?: "")
-                                val nameAccountPair = splitNameAndAccount(it.name, type)
-                                PaymentMethod(
-                                    it.id ?: "",
-                                    nameAccountPair.first,
-                                    nameAccountPair.second,
-                                    "", // set "Checking" to get "****1234 • Checking" in subtitle
-                                    paymentMethodType = type
-                                )
-                            }
+                    val result = response.value
+                        .map {
+                            val type = paymentMethodTypeFromCoinbaseType(it.type ?: "")
+                            val nameAccountPair = splitNameAndAccount(it.name, type)
+                            PaymentMethod(
+                                it.id ?: "",
+                                nameAccountPair.first,
+                                nameAccountPair.second,
+                                "", // set "Checking" to get "****1234 • Checking" in subtitle
+                                paymentMethodType = type,
+                                isValid = it.isBuyingAllowed ?: false
+                            )
+                        }
                     _paymentMethodsUiState.value = PaymentMethodsUiState.Success(result)
                 }
             }
             is ResponseResource.Failure -> {
                 _paymentMethodsUiState.value = PaymentMethodsUiState.Error(true)
-
             }
         }
     }

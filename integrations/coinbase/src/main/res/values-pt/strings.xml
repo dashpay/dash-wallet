@@ -41,8 +41,8 @@
     <string name="cancel">Cancelar</string>
     <string name="confirm_sec">Confirmar (%ss)</string>
     <string name="confirm">Confirmar</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Nós não encontramos nenhum método de pagamento.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Por favor, atualize sua conta Coinbase para continuar. </string>
+    <string name="coinbase_no_payment_methods_error_title">Nós não encontramos nenhum método de pagamento.</string>
+    <string name="coinbase_no_payment_methods_error_message">Por favor, atualize sua conta Coinbase para continuar. </string>
     <string name="add_payment_method">Adicionar método de pagamento</string>
     <string name="error">Erro</string>
     <string name="cancel_transaction">Cancelar transação?</string>

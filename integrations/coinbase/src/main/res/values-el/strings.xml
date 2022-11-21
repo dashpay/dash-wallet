@@ -41,8 +41,8 @@
     <string name="cancel">Ακύρωση</string>
     <string name="confirm_sec">Επιβεβαίωση(%ss)</string>
     <string name="confirm">Επιβεβαίωση</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Δεν βρήκαμε μεθόδους πληρωμής.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message"> Ενημερώστε τον Coinbase λογαριασμό σας για να προχωρήσετε.</string>
+    <string name="coinbase_no_payment_methods_error_title">Δεν βρήκαμε μεθόδους πληρωμής.</string>
+    <string name="coinbase_no_payment_methods_error_message"> Ενημερώστε τον Coinbase λογαριασμό σας για να προχωρήσετε.</string>
     <string name="add_payment_method">Προσθήκη μεθόδου πληρωμής</string>
     <string name="error">Σφάλμα</string>
     <string name="cancel_transaction">Ακύρωση συναλλαγής;</string>

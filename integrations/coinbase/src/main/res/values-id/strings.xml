@@ -41,8 +41,8 @@
     <string name="cancel">Batal</string>
     <string name="confirm_sec">Konfirmasi (%ss)</string>
     <string name="confirm">Memastikan</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Kami tidak menemukan metode pembayaran apa pun.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Harap perbarui akun Coinbase Anda untuk melanjutkan.</string>
+    <string name="coinbase_no_payment_methods_error_title">Kami tidak menemukan metode pembayaran apa pun.</string>
+    <string name="coinbase_no_payment_methods_error_message">Harap perbarui akun Coinbase Anda untuk melanjutkan.</string>
     <string name="add_payment_method">Tambahkan Metode Pembayaran</string>
     <string name="error">Kesalahan</string>
     <string name="cancel_transaction">Batalkan transaksi?</string>

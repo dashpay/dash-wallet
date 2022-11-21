@@ -41,8 +41,8 @@
     <string name="cancel">İptal et</string>
     <string name="confirm_sec">Onaylayın (%ss)</string>
     <string name="confirm">Onayla</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Herhangi bir ödeme yöntemi bulamadık.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Devam etmek için lütfen Coinbase hesabınızı güncelleyin.</string>
+    <string name="coinbase_no_payment_methods_error_title">Herhangi bir ödeme yöntemi bulamadık.</string>
+    <string name="coinbase_no_payment_methods_error_message">Devam etmek için lütfen Coinbase hesabınızı güncelleyin.</string>
     <string name="add_payment_method">Ödeme yöntemi ekle</string>
     <string name="error">Hata</string>
     <string name="cancel_transaction">İşlemi iptal et?</string>

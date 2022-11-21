@@ -73,10 +73,14 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                 // New value received
                 when (uiState) {
                     is PaymentMethodsUiState.Success -> {
-                        val paymentMethodsArray = uiState.paymentMethodsList.toTypedArray()
+                        val paymentMethodsArray = uiState.paymentMethodsList.filter { it.isValid }.toTypedArray()
 
                         if (paymentMethodsArray.isEmpty()) {
-                            showNoPaymentMethodsError()
+                            if (uiState.paymentMethodsList.isEmpty()) {
+                                showNoPaymentMethodsError()
+                            } else {
+                                showBuyingNotAllowedError()
+                            }
                         } else {
                             viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_DASH)
                             safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(paymentMethodsArray))
@@ -209,7 +213,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         viewModel.monitorNetworkStateChange()
     }
 
-    private fun setNetworkState(hasInternet: Boolean){
+    private fun setNetworkState(hasInternet: Boolean) {
         binding.lastKnownBalance.isVisible = !hasInternet
         binding.networkStatusStub.isVisible = !hasInternet
         binding.coinbaseServicesGroup.isVisible = hasInternet
@@ -222,13 +226,27 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     private fun showNoPaymentMethodsError() {
         AdaptiveDialog.create(
             R.drawable.ic_info_red,
-            getString(R.string.coinbase_dash_wallet_no_payment_methods_error_title),
-            getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
+            getString(R.string.coinbase_no_payment_methods_error_title),
+            getString(R.string.coinbase_no_payment_methods_error_message),
             getString(R.string.close),
             getString(R.string.add_payment_method),
         ).show(requireActivity()) { addMethod ->
             if (addMethod == true) {
                 viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ADD_PAYMENT_METHOD)
+                openCoinbaseWebsite()
+            }
+        }
+    }
+
+    private fun showBuyingNotAllowedError() {
+        AdaptiveDialog.create(
+            R.drawable.ic_info_red,
+            getString(R.string.coinbase_unusable_payment_method_error_title),
+            getString(R.string.coinbase_unusable_payment_method_error_message),
+            getString(R.string.close),
+            getString(R.string.coinbase_open_account),
+        ).show(requireActivity()) { addMethod ->
+            if (addMethod == true) {
                 openCoinbaseWebsite()
             }
         }
