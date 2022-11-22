@@ -41,8 +41,8 @@
     <string name="cancel">Kanselahin</string>
     <string name="confirm_sec">Kumpirmahin ang (%ss)</string>
     <string name="confirm">Kumpirmahin</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Wala kaming nakitang anumang paraan ng pagbabayad.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Mangyaring i-update ang iyong Coinbase account upang magpatuloy.</string>
+    <string name="coinbase_no_payment_methods_error_title">Wala kaming nakitang anumang paraan ng pagbabayad.</string>
+    <string name="coinbase_no_payment_methods_error_message">Mangyaring i-update ang iyong Coinbase account upang magpatuloy.</string>
     <string name="add_payment_method">Magdagdag ng Paraan ng Pagbabayad</string>
     <string name="error">Mali</string>
     <string name="cancel_transaction">Kanselahin ang transaksyon?</string>

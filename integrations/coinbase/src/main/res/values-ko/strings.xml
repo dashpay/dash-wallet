@@ -41,8 +41,8 @@
     <string name="cancel">취소</string>
     <string name="confirm_sec">확인 (%ss)</string>
     <string name="confirm">승인</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">지불 방법을 찾지 못했습니다.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">계속하시려면 코인베이스 계정을 업데이트 해주십시오.</string>
+    <string name="coinbase_no_payment_methods_error_title">지불 방법을 찾지 못했습니다.</string>
+    <string name="coinbase_no_payment_methods_error_message">계속하시려면 코인베이스 계정을 업데이트 해주십시오.</string>
     <string name="add_payment_method">지불 방법 추가하기</string>
     <string name="error">오류</string>
     <string name="cancel_transaction">거래를 취소하시겠습니까?</string>

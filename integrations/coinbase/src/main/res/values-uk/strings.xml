@@ -41,8 +41,8 @@
     <string name="cancel">Відміна</string>
     <string name="confirm_sec">Підтвердження (%s сек.)</string>
     <string name="confirm">Підтвердити</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Ми не знайшли способів оплати.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Щоб продовжити, оновіть свій обліковий запис Coinbase.</string>
+    <string name="coinbase_no_payment_methods_error_title">Ми не знайшли способів оплати.</string>
+    <string name="coinbase_no_payment_methods_error_message">Щоб продовжити, оновіть свій обліковий запис Coinbase.</string>
     <string name="add_payment_method">Додати спосіб оплати</string>
     <string name="error">Помилка</string>
     <string name="cancel_transaction">Відмінити транзакцію?</string>

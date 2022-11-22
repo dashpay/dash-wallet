@@ -41,8 +41,8 @@
     <string name="cancel">إلغاء</string>
     <string name="confirm_sec">تأكيد (%s)</string>
     <string name="confirm">تأكيد</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">لم نجد أي طرق دفع.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">يرجى تحديث حساب كوين بيس الخاص بك للمتابعة.</string>
+    <string name="coinbase_no_payment_methods_error_title">لم نجد أي طرق دفع.</string>
+    <string name="coinbase_no_payment_methods_error_message">يرجى تحديث حساب كوين بيس الخاص بك للمتابعة.</string>
     <string name="add_payment_method">إضافة طريقة دفع</string>
     <string name="error">خطأ</string>
     <string name="cancel_transaction">إلغاء الصفقة؟</string>

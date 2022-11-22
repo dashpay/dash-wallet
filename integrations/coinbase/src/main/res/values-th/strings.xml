@@ -41,8 +41,8 @@
     <string name="cancel">ยกเลิก</string>
     <string name="confirm_sec">ยืนยัน (%ss)</string>
     <string name="confirm">ยืนยัน</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">เราไม่พบการชำระเงินใด ๆ</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">โปรดอัพเดตบัญชี Coinbase ของคุณเพื่อดำเนินการต่อ</string>
+    <string name="coinbase_no_payment_methods_error_title">เราไม่พบการชำระเงินใด ๆ</string>
+    <string name="coinbase_no_payment_methods_error_message">โปรดอัพเดตบัญชี Coinbase ของคุณเพื่อดำเนินการต่อ</string>
     <string name="add_payment_method">เพิ่มวิธีการชำระเงิน</string>
     <string name="error">ผิดพลาด</string>
     <string name="cancel_transaction">ยกเลิกธุรกรรม?</string>

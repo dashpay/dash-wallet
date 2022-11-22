@@ -41,8 +41,8 @@
     <string name="cancel">Отмена</string>
     <string name="confirm_sec">Подтвердить (%s)</string>
     <string name="confirm">Подтвердить</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Способ оплаты не найден.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Для продолжения обновите свой аккаунт на Coinbase.</string>
+    <string name="coinbase_no_payment_methods_error_title">Способ оплаты не найден.</string>
+    <string name="coinbase_no_payment_methods_error_message">Для продолжения обновите свой аккаунт на Coinbase.</string>
     <string name="add_payment_method">Добавить способ оплаты</string>
     <string name="error">Ошибка</string>
     <string name="cancel_transaction">Отменить транзакцию?</string>

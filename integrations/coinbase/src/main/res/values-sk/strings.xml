@@ -41,8 +41,8 @@
     <string name="cancel">Zrušiť</string>
     <string name="confirm_sec">Potvrďte (%ss)</string>
     <string name="confirm">Potvrdiť</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Nenašli sme žiadne spôsoby platby.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Ak chcete pokračovať, aktualizujte svoj účet Coinbase.</string>
+    <string name="coinbase_no_payment_methods_error_title">Nenašli sme žiadne spôsoby platby.</string>
+    <string name="coinbase_no_payment_methods_error_message">Ak chcete pokračovať, aktualizujte svoj účet Coinbase.</string>
     <string name="add_payment_method">Pridať spôsob platby</string>
     <string name="error">Chyba</string>
     <string name="cancel_transaction">Zrušiť transakciu?</string>

@@ -41,8 +41,8 @@
     <string name="cancel">キャンセル</string>
     <string name="confirm_sec">確認 (%s秒)</string>
     <string name="confirm">確認する</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">支払い方法は見つかりませんでした。</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Coinbaseのアカウントを更新して手続きを進めてください。</string>
+    <string name="coinbase_no_payment_methods_error_title">支払い方法は見つかりませんでした。</string>
+    <string name="coinbase_no_payment_methods_error_message">Coinbaseのアカウントを更新して手続きを進めてください。</string>
     <string name="add_payment_method">支払い方法の追加</string>
     <string name="error">エラー</string>
     <string name="cancel_transaction">取引をキャンセルしますか。</string>
