@@ -91,7 +91,6 @@ public class Configuration {
 
     public static final String PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN = "last_coinbase_access_token";
     public static final String PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN = "last_coinbase_refresh_token";
-    public static final String PREFS_KEY_LAST_COINBASE_BALANCE = "last_coinbase_balance";
     public static final String PREFS_KEY_COINBASE_USER_ACCOUNT_ID = "coinbase_account_id";
     public static final String PREFS_KEY_COINBASE_AUTH_INFO_SHOWN = "coinbase_auth_info_shown";
     public static final String PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT = "withdrawal_limit";
@@ -535,6 +534,7 @@ public class Configuration {
     }
 
     // Coinbase
+    // TODO: put new preferences in the CoinbaseConfig and migrate these.
 
     public void setLastCoinBaseAccessToken(String token) {
         prefs.edit().putString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, token).apply();
@@ -551,14 +551,6 @@ public class Configuration {
 
     public String getLastCoinbaseRefreshToken() {
         return prefs.getString(PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN, null);
-    }
-
-    public void setLastCoinbaseBalance(String balance) {
-        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_BALANCE, balance).apply();
-    }
-
-    public String getLastCoinbaseBalance() {
-        return prefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, null);
     }
 
     public Boolean getHasCoinbaseAuthInfoBeenShown() {

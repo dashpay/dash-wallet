@@ -26,6 +26,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
@@ -37,6 +39,7 @@ import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
@@ -44,7 +47,8 @@ import javax.inject.Inject
 class CoinbaseServicesViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     val exchangeRatesProvider: ExchangeRatesProvider,
-    val config: Configuration,
+    val preferences: Configuration,
+    private val config: CoinbaseConfig,
     networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
 ) : ConnectivityViewModel(networkState) {
@@ -71,18 +75,23 @@ class CoinbaseServicesViewModel @Inject constructor(
     val latestUserBalance: LiveData<String>
         get() = _latestUserBalance
 
+    val balanceFormat: MonetaryFormat
+        get() = preferences.format.noCode()
+
     init {
-        exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode!!)
+        exchangeRatesProvider.observeExchangeRate(preferences.exchangeCurrencyCode!!)
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
         getUserAccountInfo()
     }
 
     private fun getUserAccountInfo() = viewModelScope.launch(Dispatchers.Main) {
-        if(config.lastCoinbaseBalance.isNullOrEmpty()) {
+        val lastBalance = config.getPreference(CoinbaseConfig.LAST_BALANCE)
+
+        if (lastBalance == null) {
             _showLoading.value = true
-        }else{
-            _latestUserBalance.value = config.lastCoinbaseBalance
+        } else {
+            _latestUserBalance.value = Coin.valueOf(lastBalance).toPlainString()
         }
         when (val response = coinBaseRepository.getUserAccount()) {
             is ResponseResource.Success -> {

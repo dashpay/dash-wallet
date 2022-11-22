@@ -283,8 +283,8 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         val swapValueErrorType = convertViewModel.checkEnteredAmountValue(checkSendingConditions)
         if (swapValueErrorType == SwapValueErrorType.NOError) {
             if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {
-                request.fiatAmount?.let { fait ->
-                    if ((viewModel.userPreference.lastCoinbaseBalance?.toDouble() ?: 0.0) < fait.toPlainString().toDouble()) {
+                lifecycleScope.launch {
+                    if (viewModel.getLastBalance() < (request.amount ?: Coin.ZERO)) {
                         showNoAssetsError()
                     }
                 }
