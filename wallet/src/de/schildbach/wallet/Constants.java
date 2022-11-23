@@ -30,8 +30,8 @@ import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.params.DevNetParams;
-import org.bitcoinj.params.JackDanielsDevNetParams;
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.params.OuzoDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
@@ -110,7 +110,7 @@ public final class Constants {
             case "schnapps": {
                 // Schnapps Devnet
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
-                NETWORK_PARAMETERS = JackDanielsDevNetParams.get();
+                NETWORK_PARAMETERS = OuzoDevNetParams.get();
                 String devNetName = ((DevNetParams)NETWORK_PARAMETERS).getDevNetName();
                 devNetName = devNetName.substring(devNetName.indexOf("-") + 1);
                 // TODO: remove this next line when Platform Supports Core 0.18
@@ -318,7 +318,7 @@ public final class Constants {
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
 
     // 100,000,000 credits
-    public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.01");
+    public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.15");
     //  10,000,000
     public static final Coin DASH_PAY_INVITE_MIN = DASH_PAY_FEE.div(10);
 
