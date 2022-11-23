@@ -122,7 +122,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
             is ResponseResource.Failure -> {
                 _showLoading.value = false
 
-                val error = result.errorBody?.string()
+                val error = result.errorBody
                 if (error.isNullOrEmpty()) {
                     swapTradeFailedCallback.call()
                 } else {

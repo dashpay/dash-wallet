@@ -85,7 +85,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
-                val error = result.errorBody?.string()
+                val error = result.errorBody
                 if (error.isNullOrEmpty()) {
                     commitBuyOrderFailureState.call()
                 } else {
@@ -120,7 +120,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
             is ResponseResource.Failure -> {
                 _showLoading.value = false
 
-                val error = result.errorBody?.string()
+                val error = result.errorBody
                 if (error.isNullOrEmpty()) {
                     placeBuyOrderFailedCallback.call()
                 } else {

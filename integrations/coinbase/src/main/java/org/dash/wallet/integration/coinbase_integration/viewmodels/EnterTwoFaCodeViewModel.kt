@@ -95,7 +95,7 @@ class EnterTwoFaCodeViewModel @Inject constructor(
                 is ResponseResource.Failure -> {
                     _loadingState.value = false
                     try {
-                        val error = result.errorBody?.string()
+                        val error = result.errorBody
                         if (result.errorCode == 400 || result.errorCode == 402 || result.errorCode == 429) {
                             error?.let { errorMsg ->
                                 val errorContent = CoinbaseErrorResponse.getErrorMessage(errorMsg)

@@ -271,7 +271,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 }
                 is BaseIdForFaitDataUIState.Error ->{
                     if (uiState.isError) {
-                        //TODO retry in case of error
+                        // Retry in case of error
                         sharedViewModel.getBaseIdForFaitModel()
                     }
                 }

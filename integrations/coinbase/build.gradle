@@ -82,6 +82,9 @@ dependencies {
 
     implementation 'com.scottyab:secure-preferences-lib:0.1.7'
 
+    // Logging
+    implementation "org.slf4j:slf4j-api:$slf4jVersion"
+
     // Tests
     testImplementation 'junit:junit:4.13.2'
     testImplementation "org.mockito:mockito-core:4.0.0"

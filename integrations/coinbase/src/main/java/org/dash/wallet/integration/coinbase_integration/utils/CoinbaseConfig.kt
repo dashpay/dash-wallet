@@ -35,9 +35,10 @@ class CoinbaseConfig @Inject constructor(private val context: Context) {
     companion object {
         private const val PREFS_KEY_LAST_COINBASE_BALANCE = "last_coinbase_balance"
         val LAST_BALANCE = longPreferencesKey("last_balance")
+        val UPDATE_BASE_IDS = booleanPreferencesKey("should_update_base_ids")
     }
 
-    private val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+    private val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
 
     private val Context.dataStore by preferencesDataStore("coinbase")
     private val dataStore = context.dataStore.data
@@ -54,13 +55,7 @@ class CoinbaseConfig @Inject constructor(private val context: Context) {
     }
 
     suspend fun <T> getPreference(key: Preferences.Key<T>): T? {
-        if (key == LAST_BALANCE && !prefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, null).isNullOrEmpty()) {
-            // TODO: finish migration of this preference
-            val balanceValue = Coin.parseCoin(prefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, "0.0")).value
-            setPreference(LAST_BALANCE, balanceValue)
-            prefs.edit().putString(PREFS_KEY_LAST_COINBASE_BALANCE, null).apply()
-        }
-
+        migrateLastBalance(key)
         return dataStore.map { preferences -> preferences[key] }.first()
     }
 
@@ -72,5 +67,14 @@ class CoinbaseConfig @Inject constructor(private val context: Context) {
 
     suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
+    }
+
+    private suspend fun <T> migrateLastBalance(key: Preferences.Key<T>) {
+        if (key == LAST_BALANCE && !sharedPrefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, null).isNullOrEmpty()) {
+            // TODO: finish migration of this preference
+            val balanceValue = Coin.parseCoin(sharedPrefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, "0.0")).value
+            setPreference(LAST_BALANCE, balanceValue)
+            sharedPrefs.edit().putString(PREFS_KEY_LAST_COINBASE_BALANCE, null).apply()
+        }
     }
 }

@@ -109,7 +109,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
-                val error = result.errorBody?.string()
+                val error = result.errorBody
                 if (error.isNullOrEmpty()) {
                     commitSwapTradeFailureState.call()
                 } else {
@@ -151,7 +151,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                 is ResponseResource.Failure -> {
                     _showLoading.value = false
 
-                    val error = result.errorBody?.string() // TODO: this is a blocking call in main thread. Better to switch contexts
+                    val error = result.errorBody
                     if (error.isNullOrEmpty()) {
                         swapTradeFailureState.call()
                     } else {

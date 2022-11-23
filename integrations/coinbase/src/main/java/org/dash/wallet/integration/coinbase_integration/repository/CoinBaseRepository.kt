@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.repository
 
+import android.content.Context
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.*
@@ -26,14 +27,17 @@ import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
+import java.io.File
 import java.math.BigDecimal
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.days
 
 class CoinBaseRepository @Inject constructor(
     private val servicesApi: CoinBaseServicesApi,
     private val authApi: CoinBaseAuthApi,
     private val userPreferences: Configuration,
     private val config: CoinbaseConfig,
+    private val context: Context,
     private val placeBuyOrderMapper: PlaceBuyOrderMapper,
     private val swapTradeMapper: SwapTradeMapper,
     private val commitBuyOrderMapper: CommitBuyOrderMapper,
