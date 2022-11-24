@@ -37,7 +37,6 @@ class CoinBaseRepository @Inject constructor(
     private val authApi: CoinBaseAuthApi,
     private val userPreferences: Configuration,
     private val config: CoinbaseConfig,
-    private val context: Context,
     private val placeBuyOrderMapper: PlaceBuyOrderMapper,
     private val swapTradeMapper: SwapTradeMapper,
     private val commitBuyOrderMapper: CommitBuyOrderMapper,
