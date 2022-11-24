@@ -46,6 +46,7 @@ class BlockchainStateDataProvider @Inject constructor(
         const val DAYS_PER_YEAR = 365.242199
         const val SECONDS_PER_DAY = 24 * 60 * 60
         val MASTERNODE_COST: Coin = Coin.valueOf(1000, 0)
+        const val MASTERNODE_COUNT = 3800
     }
 
     override suspend fun getState(): BlockchainState? {
@@ -81,12 +82,18 @@ class BlockchainStateDataProvider @Inject constructor(
                     prevBlock = mnlist.storedBlock
                 }
 
+                val validMNsCount = if (mnlist.size() != 0) {
+                    mnlist.validMNsCount
+                } else {
+                    MASTERNODE_COUNT
+                }
+
                 if (prevBlock != null) {
                     val apy = getMasternodeAPY(
                         walletDataProvider.wallet!!.params,
                         mnlist.storedBlock.height,
                         prevBlock.header.difficultyTarget,
-                        mnlist.validMNsCount
+                        validMNsCount
                     )
                     configuration.prefsKeyCrowdNodeStakingApy = apy.toFloat()
                     return apy
@@ -193,7 +200,7 @@ class BlockchainStateDataProvider @Inject constructor(
      */
     private fun getEstimatedMasternodeAPY(): Double {
         val masternodeCount = when (walletDataProvider.networkParameters.id) {
-            NetworkParameters.ID_MAINNET -> 4200
+            NetworkParameters.ID_MAINNET -> MASTERNODE_COUNT
             NetworkParameters.ID_TESTNET -> 150
             else -> {
                 walletDataProvider.networkParameters.defaultMasternodeList.size
