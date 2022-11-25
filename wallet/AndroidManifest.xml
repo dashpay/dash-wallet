@@ -378,12 +378,6 @@
         </receiver>
 
         <service
-            android:name="de.schildbach.wallet.service.UpgradeWalletService"
-            android:exported="false" />
-        <service
-            android:name="de.schildbach.wallet.service.InactivityNotificationService"
-            android:exported="false" />
-        <service
             android:name="de.schildbach.wallet.service.BlockchainSyncJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
