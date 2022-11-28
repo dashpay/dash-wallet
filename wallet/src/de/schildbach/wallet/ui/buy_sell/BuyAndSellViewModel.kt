@@ -38,6 +38,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
+import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import org.dash.wallet.integration.uphold.api.UpholdClient
 import org.dash.wallet.integration.uphold.api.getDashBalance
 import org.dash.wallet.integration.uphold.api.hasValidCredentials
@@ -51,6 +52,7 @@ import javax.inject.Inject
 class BuyAndSellViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
     val config: Configuration,
+    val coinbaseConfig: CoinbaseConfig,
     val analytics: AnalyticsService,
     private val upholdClient: UpholdClient,
     networkState: NetworkStateInt,
@@ -83,7 +85,7 @@ class BuyAndSellViewModel @Inject constructor(
                 currentExchangeRate = exchangeRate
 
                 showRowBalance(ServiceType.UPHOLD, (config.lastUpholdBalance ?: "").ifEmpty { ZERO_BALANCE })
-                showRowBalance(ServiceType.COINBASE, (config.lastCoinbaseBalance ?: "").ifEmpty { ZERO_BALANCE })
+                showRowBalance(ServiceType.COINBASE, coinbaseBalanceString())
             }
             .launchIn(viewModelScope)
 
@@ -179,11 +181,11 @@ class BuyAndSellViewModel @Inject constructor(
         viewModelScope.launch {
             when (val response = coinBaseRepository.getUserAccount()) {
                 is ResponseResource.Success -> {
-                    response.value?.balance?.amount?.let { config.lastCoinbaseBalance = it }
-                    showRowBalance(ServiceType.COINBASE, response.value?.balance?.amount ?: config.lastCoinbaseBalance)
+                    response.value?.balance?.amount?.let { coinbaseConfig.setPreference(CoinbaseConfig.LAST_BALANCE, Coin.parseCoin(it).value) }
+                    showRowBalance(ServiceType.COINBASE, response.value?.balance?.amount ?: coinbaseBalanceString())
                 }
                 is ResponseResource.Failure -> {
-                    showRowBalance(ServiceType.COINBASE, (config.lastCoinbaseBalance ?: "").ifEmpty { ZERO_BALANCE })
+                    showRowBalance(ServiceType.COINBASE, coinbaseBalanceString())
                 }
             }
         }
@@ -219,4 +221,7 @@ class BuyAndSellViewModel @Inject constructor(
             AnalyticsConstants.Coinbase.ENTER_DISCONNECTED
         }, bundleOf())
     }
+
+    private suspend fun coinbaseBalanceString(): String =
+        Coin.valueOf(coinbaseConfig.getPreference(CoinbaseConfig.LAST_BALANCE) ?: 0).toPlainString()
 }
