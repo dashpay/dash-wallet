@@ -30,7 +30,7 @@ import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.send.ConfirmTransactionDialog
-import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
+//import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
@@ -66,7 +66,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         }
     }
 
-    private lateinit var enterAmountSharedViewModel: EnterAmountSharedViewModel
+//    private lateinit var enterAmountSharedViewModel: EnterAmountSharedViewModel TODO
     @Inject lateinit var walletDataProvider: WalletDataProvider
     @Inject lateinit var transactionMetadataProvider: TransactionMetadataProvider
     private lateinit var balance: Coin
@@ -77,9 +77,10 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         setContentView(R.layout.activity_uphold_tranfser)
 
         if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                    .replace(R.id.container, EnterAmountFragment.newInstance(Coin.ZERO))
-                    .commitNow()
+//            supportFragmentManager.beginTransaction()
+//                    .replace(R.id.container, EnterAmountFragment.newInstance(Coin.ZERO))
+//                    .commitNow()
+            //TODO
         }
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
@@ -92,8 +93,9 @@ class UpholdTransferActivity : InteractionAwareActivity() {
 
         title = intent.getStringExtra(EXTRA_TITLE)
 
-        enterAmountSharedViewModel = ViewModelProvider(this).get(EnterAmountSharedViewModel::class.java)
-        enterAmountSharedViewModel.buttonTextData.call(R.string.uphold_transfer)
+//        enterAmountSharedViewModel = ViewModelProvider(this).get(EnterAmountSharedViewModel::class.java)
+//        enterAmountSharedViewModel.buttonTextData.call(R.string.uphold_transfer)
+        // TODO
 
         val balanceStr = intent.getStringExtra(EXTRA_MAX_AMOUNT)
         balance = Coin.parseCoin(balanceStr)
@@ -110,33 +112,34 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         builder.append("  ")
         builder.append(getText(R.string.enter_amount_available))
 
-        enterAmountSharedViewModel.messageTextStringData.value = SpannableString.valueOf(builder)
-        enterAmountSharedViewModel.buttonClickEvent.observe(this) {
-            UpholdWithdrawalHelper.requirementsSatisfied(this) { result ->
-                when (result) {
-                    RequirementsCheckResult.Satisfied -> {
-                        val dashAmount = enterAmountSharedViewModel.dashAmount
-                        showPaymentConfirmation(dashAmount)
-                    }
-                    RequirementsCheckResult.Resolve -> {
-                        this.openCustomTab(UpholdConstants.PROFILE_URL)
-                        super.turnOffAutoLogout()
-                    }
-                    else -> {}
-                }
-            }
-        }
-        enterAmountSharedViewModel.maxButtonVisibleData.value = true
-        enterAmountSharedViewModel.maxButtonClickEvent.observe(this) {
-            enterAmountSharedViewModel.applyMaxAmountEvent.setValue(balance)
-        }
-        enterAmountSharedViewModel.dashAmountData.observe(this) {
-            enterAmountSharedViewModel.buttonEnabledData.setValue(it.isPositive)
-        }
-        val confirmTransactionSharedViewModel: SingleActionSharedViewModel = ViewModelProvider(this).get(SingleActionSharedViewModel::class.java)
-        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this) {
-            withdrawalDialog.commitTransaction(this)
-        }
+//        enterAmountSharedViewModel.messageTextStringData.value = SpannableString.valueOf(builder)
+//        enterAmountSharedViewModel.buttonClickEvent.observe(this) {
+//            UpholdWithdrawalHelper.requirementsSatisfied(this) { result ->
+//                when (result) {
+//                    RequirementsCheckResult.Satisfied -> {
+//                        val dashAmount = enterAmountSharedViewModel.dashAmount
+//                        showPaymentConfirmation(dashAmount)
+//                    }
+//                    RequirementsCheckResult.Resolve -> {
+//                        this.openCustomTab(UpholdConstants.PROFILE_URL)
+//                        super.turnOffAutoLogout()
+//                    }
+//                    else -> {}
+//                }
+//            }
+//        }
+//        enterAmountSharedViewModel.maxButtonVisibleData.value = true
+//        enterAmountSharedViewModel.maxButtonClickEvent.observe(this) {
+//            enterAmountSharedViewModel.applyMaxAmountEvent.setValue(balance)
+//        }
+//        enterAmountSharedViewModel.dashAmountData.observe(this) {
+//            enterAmountSharedViewModel.buttonEnabledData.setValue(it.isPositive)
+//        }
+        // TODO
+//        val confirmTransactionSharedViewModel: SingleActionSharedViewModel = ViewModelProvider(this).get(SingleActionSharedViewModel::class.java)
+//        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this) {
+//        // TODO on confirm callback    withdrawalDialog.commitTransaction(this)
+//        }
     }
 
     private fun showPaymentConfirmation(amount: Coin) {
@@ -148,13 +151,14 @@ class UpholdTransferActivity : InteractionAwareActivity() {
                 val amountStr = transaction.origin.base.toPlainString()
 
                 // if the exchange rate is not available, then show "Not Available"
-                val fiatAmount = enterAmountSharedViewModel.exchangeRate?.coinToFiat(amount)
-                val amountFiat = if (fiatAmount != null) Constants.LOCAL_FORMAT.format(fiatAmount).toString() else getString(R.string.transaction_row_rate_not_available)
-                val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
+//                val fiatAmount = enterAmountSharedViewModel.exchangeRate?.coinToFiat(amount)
+//                val amountFiat = if (fiatAmount != null) Constants.LOCAL_FORMAT.format(fiatAmount).toString() else getString(R.string.transaction_row_rate_not_available)
+//                val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
 
                 val fee = transaction.origin.fee.toPlainString()
                 val total = transaction.origin.amount.toPlainString()
-                ConfirmTransactionDialog.showDialog(this@UpholdTransferActivity, address, amountStr, amountFiat, fiatSymbol, fee, total, getString(R.string.uphold_transfer))
+//                ConfirmTransactionDialog.showDialog(this@UpholdTransferActivity, address, amountStr, amountFiat, fiatSymbol, fee, total, getString(R.string.uphold_transfer))
+                // TODO
             }
 
             override fun onTransfer() {

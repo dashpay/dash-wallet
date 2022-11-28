@@ -25,7 +25,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Monetary
 import org.bitcoinj.utils.ExchangeRate
@@ -38,7 +37,6 @@ import org.dash.wallet.common.util.GenericUtils
 import java.text.DecimalFormatSymbols
 
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     companion object {
         private const val ARG_INITIAL_AMOUNT = "initial_amount"
@@ -69,7 +67,8 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     private val binding by viewBinding(FragmentEnterAmountBinding::bind)
     private val viewModel: EnterAmountViewModel by activityViewModels()
     private val decimalSeparator = DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
-    private var maxSelected: Boolean = false
+    var maxSelected: Boolean = false
+        private set
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -97,9 +96,7 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         }
 
         binding.maxButton.setOnClickListener {
-            binding.amountView.dashToFiat = true
-            binding.amountView.input = (viewModel.maxAmount.value ?: Coin.ZERO).toPlainString()
-            maxSelected = true
+            onMaxAmountButtonClick()
         }
 
         binding.amountView.setOnCurrencyToggleClicked {
@@ -136,8 +133,7 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         }
     }
 
-
-    fun setViewDetails(continueText: String, keyboardHeader: View?) {
+    fun setViewDetails(continueText: String, keyboardHeader: View? = null) {
         lifecycleScope.launchWhenStarted {
             binding.continueBtn.text = continueText
             keyboardHeader?.let {
@@ -145,6 +141,24 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
                 binding.keyboardHeaderDivider.isVisible = true
             }
         }
+    }
+
+    fun setError(errorText: String) {
+        lifecycleScope.launchWhenStarted {
+            binding.errorLabel.text = errorText
+        }
+    }
+
+    fun applyMaxAmount() {
+        lifecycleScope.launchWhenStarted {
+            onMaxAmountButtonClick()
+        }
+    }
+
+    private fun onMaxAmountButtonClick() {
+        binding.amountView.dashToFiat = true
+        binding.amountView.input = (viewModel.maxAmount.value ?: Coin.ZERO).toPlainString()
+        maxSelected = true
     }
 
     private val keyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {

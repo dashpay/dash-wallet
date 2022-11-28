@@ -28,14 +28,14 @@ import com.google.zxing.*
 import com.google.zxing.common.HybridBinarizer
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.ui.InputParser.StringInputParser
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
 
 /**
@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory
  * It search for the QR codes inside the image, decode them and try to parse
  * the decoded URI
  */
-class ImportSharedImageActivity : AppCompatActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
+class ImportSharedImageActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -114,8 +114,12 @@ class ImportSharedImageActivity : AppCompatActivity(), FancyAlertDialog.FancyAle
     }
 
     private fun showErrorDialog(title: Int, msg: Int, image: Int) {
-        val errorDialog = FancyAlertDialog.newInstance(title, msg, image, R.string.button_ok, 0)
-        errorDialog.show(supportFragmentManager, "error_dialog")
+        AdaptiveDialog.create(
+            image,
+            getString(title),
+            getString(msg),
+            getString(R.string.button_ok)
+        ).show(this)
     }
 
     /**
@@ -149,7 +153,7 @@ class ImportSharedImageActivity : AppCompatActivity(), FancyAlertDialog.FancyAle
     private fun handleQRCode(input: String) {
         object : StringInputParser(input, true) {
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
-                SendCoinsInternalActivity.start(this@ImportSharedImageActivity, intent.action, paymentIntent, false, true)
+                SendCoinsActivity.start(this@ImportSharedImageActivity, intent.action, paymentIntent, true)
                 finish()
             }
 
@@ -174,13 +178,5 @@ class ImportSharedImageActivity : AppCompatActivity(), FancyAlertDialog.FancyAle
 
     companion object {
         private val log = LoggerFactory.getLogger(ImportSharedImageActivity::class.java)
-    }
-
-    override fun onPositiveButtonClick() {
-        finish()
-    }
-
-    override fun onNegativeButtonClick() {
-        finish()
     }
 }

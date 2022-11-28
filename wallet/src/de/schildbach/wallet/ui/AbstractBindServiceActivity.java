@@ -31,7 +31,7 @@ import android.os.IBinder;
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractBindServiceActivity extends AbstractWalletActivity {
+public abstract class AbstractBindServiceActivity extends LockScreenActivity {
 
     @Nullable
     private BlockchainService blockchainService;
@@ -66,6 +66,7 @@ public abstract class AbstractBindServiceActivity extends AbstractWalletActivity
         unbindService(serviceConnection);
     }
 
+    @Nullable
     public BlockchainService getBlockchainService() {
         return blockchainService;
     }

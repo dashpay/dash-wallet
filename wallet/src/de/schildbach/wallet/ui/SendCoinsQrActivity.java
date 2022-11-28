@@ -26,18 +26,16 @@ import android.view.View;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.scan.ScanActivity;
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity;
 import de.schildbach.wallet.ui.payments.SweepWalletActivity;
+import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
-
-import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
 
 /**
  * @author Andreas Schildbach
@@ -84,8 +82,8 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
                 @Override
                 protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
                     boolean quickScan = isQuickScan();
-                    // if this is a quick scan, keepUnlock = true for SendCoinsInternalActivity
-                    SendCoinsInternalActivity.start(SendCoinsQrActivity.this, getIntent().getAction(), paymentIntent, false, quickScan);
+                    // if this is a quick scan, keepUnlock = true for SendCoinsActivity
+                    SendCoinsActivity.Companion.start(SendCoinsQrActivity.this, getIntent().getAction(), paymentIntent, quickScan);
 
                     if (quickScan) {
                         SendCoinsQrActivity.this.finish();
@@ -113,17 +111,16 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
 
                 @Override
                 protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                    BaseAlertDialogBuilder alertDialogBuilder = new BaseAlertDialogBuilder(SendCoinsQrActivity.this);
-                    alertDialogBuilder.setMessage(formatString(SendCoinsQrActivity.this, messageResId, messageArgs));
-                    alertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-                    alertDialogBuilder.setNeutralAction(
-                            () -> {
-                                if (isQuickScan()) {
-                                    SendCoinsQrActivity.this.finish();
-                                }
-                                return Unit.INSTANCE;
-                            }
-                    );
+                    AdaptiveDialog.simple(
+                            getString(messageResId, messageArgs),
+                            getString(R.string.button_dismiss),
+                            null
+                    ).show(SendCoinsQrActivity.this, result -> {
+                        if (isQuickScan()) {
+                            SendCoinsQrActivity.this.finish();
+                        }
+                        return Unit.INSTANCE;
+                    });
                 }
             }.parse();
         } else {

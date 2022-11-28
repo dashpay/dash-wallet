@@ -21,11 +21,11 @@ import android.view.View
 import android.view.animation.AnimationUtils
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
@@ -35,6 +35,7 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
 import de.schildbach.wallet_test.databinding.FragmentPaymentProtocolBinding
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -50,26 +51,15 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
 
         private val log = LoggerFactory.getLogger(PaymentProtocolFragment::class.java)
 
-        private const val ARGS_PAYMENT_INTENT = "payment_intent"
-
         private const val VIEW_LOADING = 0
         private const val VIEW_PAYMENT = 1
         private const val VIEW_ERROR = 2
-
-        @JvmStatic
-        fun newInstance(paymentIntent: PaymentIntent?): Fragment {
-            val args = Bundle().apply {
-                putParcelable(ARGS_PAYMENT_INTENT, paymentIntent)
-            }
-            val fragment = PaymentProtocolFragment()
-            fragment.arguments = args
-            return fragment
-        }
     }
 
     private var userAuthorizedDuring = false
-    private val paymentProtocolModel by viewModels<PaymentProtocolViewModel>()
+    private val viewModel by viewModels<PaymentProtocolViewModel>()
     private val binding by viewBinding(FragmentPaymentProtocolBinding::bind)
+    private val args by navArgs<PaymentProtocolFragmentArgs>()
     @Inject lateinit var config: Configuration
     @Inject lateinit var authManager: AuthenticationManager
 
@@ -86,14 +76,20 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         binding.paymentRequest.confirmPayment.setOnClickListener {
             authenticateOrConfirm()
         }
+
+        initObservers()
+
+        if (savedInstanceState == null) {
+            viewModel.initPaymentIntent(args.paymentIntent)
+        }
     }
 
     private fun authenticateOrConfirm() {
-        if (isUserAuthorized() && (!config.spendingConfirmationEnabled || paymentProtocolModel.baseSendRequest == null)) {
+        if (userAuthorizedDuring && (!config.spendingConfirmationEnabled || viewModel.baseSendRequest == null)) {
             confirmWhenAuthorizedAndNoException()
         } else {
             val thresholdAmount = Coin.parseCoin(config.biometricLimit.toString())
-            val amount = paymentProtocolModel.finalPaymentIntent!!.amount
+            val amount = viewModel.finalPaymentIntent!!.amount
             authManager.authenticate(requireActivity(), !amount.isLessThan(thresholdAmount)) { pin ->
                 pin?.let { confirmWhenAuthorizedAndNoException() }
             }
@@ -101,12 +97,15 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private fun confirmWhenAuthorizedAndNoException() {
-        if(paymentProtocolModel.finalPaymentIntent!!.expired) {
+        if(viewModel.finalPaymentIntent!!.expired) {
             showRequestExpiredMessage()
             return
         }
-        if (paymentProtocolModel.baseSendRequest != null) {
-            paymentProtocolModel.signAndSendPayment()
+
+        if (viewModel.baseSendRequest != null) {
+            lifecycleScope.launch {
+                viewModel.sendPayment()
+            }
         } else {
             handleSendRequestException()
         }
@@ -119,105 +118,52 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         binding.viewFlipper.displayedChild = VIEW_ERROR
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        initModel()
-
-        if (savedInstanceState == null) {
-            val paymentIntent = requireArguments().getParcelable<PaymentIntent>(ARGS_PAYMENT_INTENT)
-            paymentProtocolModel.basePaymentIntent.value = Resource.success(paymentIntent)
-        }
-    }
-
-    private fun initModel() {
-        paymentProtocolModel.exchangeRateData.observe(viewLifecycleOwner) {
-            if (paymentProtocolModel.finalPaymentIntent != null && it != null) {
-                displayRequest(paymentProtocolModel.finalPaymentIntent!!, null)
+    private fun initObservers() {
+        viewModel.exchangeRateData.observe(viewLifecycleOwner) {
+            if (viewModel.finalPaymentIntent != null && it != null) {
+                displayRequest(viewModel.finalPaymentIntent!!, null)
             }
         }
-        paymentProtocolModel.basePaymentIntent.observe(viewLifecycleOwner) {
+        viewModel.sendRequestLiveData.observe(viewLifecycleOwner) {
             when (it.status) {
                 Status.LOADING -> {
                     binding.viewFlipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
-                    val paymentIntent: PaymentIntent = it.data!!
-                    if (!paymentIntent.hasPaymentRequestUrl()) {
-                        throw UnsupportedOperationException(
-                            PaymentProtocolFragment::class.java.simpleName
-                                    + "class should be used to handle Payment requests (BIP70 and BIP270)"
-                        )
-                    }
-                    when {
-                        paymentIntent.isHttpPaymentRequestUrl -> {
-                            paymentProtocolModel.requestPaymentRequest(paymentIntent)
-                        }
-                        paymentIntent.isBluetoothPaymentRequestUrl -> {
-                            log.warn("PaymentRequest via Bluetooth is not supported anymore")
-                            throw UnsupportedOperationException(
-                                SendCoinsFragment::class.java.simpleName
-                                        + "class should be used to handle this type of payment $paymentIntent"
-                            )
-                        }
-                        else -> {
-                            log.warn("Incorrect payment type $paymentIntent")
-                            throw UnsupportedOperationException(
-                                SendCoinsFragment::class.java.simpleName
-                                        + "class should be used to handle this type of payment $paymentIntent"
-                            )
-                        }
-                    }
-                }
-                Status.ERROR -> {
-                    AdaptiveDialog.simple(
-                        it.message ?: getString(R.string.error),
-                        getString(R.string.button_dismiss)
-                    ).show(requireActivity()) {
-                        requireActivity().finish()
-                    }
-                }
-            }
-        }
-        paymentProtocolModel.sendRequestLiveData.observe(viewLifecycleOwner) {
-            when (it.status) {
-                Status.LOADING -> {
-                    binding.viewFlipper.displayedChild = VIEW_LOADING
-                }
-                Status.SUCCESS -> {
-                    displayRequest(paymentProtocolModel.finalPaymentIntent!!, it!!.data!!)
+                    displayRequest(viewModel.finalPaymentIntent!!, it!!.data!!)
                     binding.viewFlipper.displayedChild = VIEW_PAYMENT
                 }
                 Status.ERROR -> {
                     if (it.exception is PaymentProtocolException.Expired) {
                         showRequestExpiredMessage()
-                    } else if (paymentProtocolModel.finalPaymentIntent == null) {
+                    } else if (viewModel.finalPaymentIntent == null) {
                         // server error
                         binding.errorView.title = R.string.payment_request_unable_to_connect
                         binding.errorView.message = R.string.payment_request_please_try_again
                         binding.errorView.details = it.message
                         binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
-                            paymentProtocolModel.requestPaymentRequest(paymentProtocolModel.basePaymentIntentValue)
+                            viewModel.requestPaymentRequest(viewModel.basePaymentIntent)
                         }
                         binding.viewFlipper.displayedChild = VIEW_ERROR
                     } else {
                         // sendRequest creating error (eg InsufficientMoneyException)
-                        displayRequest(paymentProtocolModel.finalPaymentIntent!!, null)
+                        displayRequest(viewModel.finalPaymentIntent!!, null)
                         binding.viewFlipper.displayedChild = VIEW_PAYMENT
-                        if (isUserAuthorized() && (paymentProtocolModel.baseSendRequest == null)) {
+                        if (userAuthorizedDuring && (viewModel.baseSendRequest == null)) {
                             handleSendRequestException()
                         }
                     }
                 }
             }
         }
-        paymentProtocolModel.directPaymentAckLiveData.observe(viewLifecycleOwner) { ack ->
+        viewModel.directPaymentAckLiveData.observe(viewLifecycleOwner) { ack ->
             when (ack.status) {
                 Status.LOADING -> {
                     binding.viewFlipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
                     userAuthorizedDuring = true
-                    paymentProtocolModel.commitAndBroadcast(ack.data!!.first)
+                    commitSendRequest(ack.data!!.first)
                 }
                 Status.ERROR -> {
                     if (isAdded) {
@@ -225,7 +171,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         binding.errorView.title = R.string.payment_request_problem_title
                         binding.errorView.setMessage(ack.message)
                         binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
-                            paymentProtocolModel.directPay(ack.data!!.first)
+                            viewModel.directPay(ack.data!!.first)
                         }
                         binding.errorView.setOnCancelClickListener(R.string.payment_request_skip) {
                             showTransactionResult(ack.data!!.first.tx)
@@ -237,39 +183,57 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             }
         }
 
-        paymentProtocolModel.onSendCoinsOffline.observe(viewLifecycleOwner) { (status, data) ->
-            when (status) {
-                SendCoinsBaseViewModel.SendCoinsOfflineStatus.SENDING -> {
-                    binding.viewFlipper.displayedChild = VIEW_LOADING
-                }
-                SendCoinsBaseViewModel.SendCoinsOfflineStatus.SUCCESS -> {
-                    showTransactionResult((data as SendRequest).tx)
-                }
-                else -> {
-                    binding.viewFlipper.displayedChild = VIEW_ERROR
-                    binding.errorView.title = R.string.payment_request_unable_to_send
-                    binding.errorView.message = R.string.payment_request_please_try_again
-                    binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
-                        paymentProtocolModel.commitAndBroadcast(data as SendRequest)
-                    }
+        // TODO
+//        paymentProtocolModel.onSendCoinsOffline.observe(viewLifecycleOwner) { (status, data) ->
+//            when (status) {
+//                SendCoinsBaseViewModel.SendCoinsOfflineStatus.SENDING -> {
+//                    binding.viewFlipper.displayedChild = VIEW_LOADING
+//                }
+//                SendCoinsBaseViewModel.SendCoinsOfflineStatus.SUCCESS -> {
+//                    showTransactionResult((data as SendRequest).tx)
+//                }
+//                else -> {
+//                    binding.viewFlipper.displayedChild = VIEW_ERROR
+//                    binding.errorView.title = R.string.payment_request_unable_to_send
+//                    binding.errorView.message = R.string.payment_request_please_try_again
+//                    binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
+//                        paymentProtocolModel.commitAndBroadcast(data as SendRequest)
+//                    }
+//                }
+//            }
+//        }
+    }
+
+    private fun commitSendRequest(sendRequest: SendRequest) {
+        lifecycleScope.launch {
+            try {
+                binding.viewFlipper.displayedChild = VIEW_LOADING
+                val transaction = viewModel.commitAndBroadcast(sendRequest)
+                showTransactionResult(transaction)
+            } catch (ex: Exception) {
+                binding.viewFlipper.displayedChild = VIEW_ERROR
+                binding.errorView.title = R.string.payment_request_unable_to_send
+                binding.errorView.message = R.string.payment_request_please_try_again
+                binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
+                    commitSendRequest(sendRequest)
                 }
             }
         }
     }
 
     private fun showTransactionResult(transaction: Transaction) {
-        val paymentMemo = paymentProtocolModel.finalPaymentIntent!!.memo
-        val payeeVerifiedBy = paymentProtocolModel.finalPaymentIntent!!.payeeVerifiedBy
+        val paymentMemo = viewModel.finalPaymentIntent!!.memo
+        val payeeVerifiedBy = viewModel.finalPaymentIntent!!.payeeVerifiedBy
         requireActivity().run {
             val transactionResultIntent = TransactionResultActivity.createIntent(
-                    this, intent.action, transaction, isUserAuthorized(), paymentMemo, payeeVerifiedBy)
+                    this, intent.action, transaction, userAuthorizedDuring, paymentMemo, payeeVerifiedBy)
             startActivity(transactionResultIntent)
             finish()
         }
     }
 
     private fun handleSendRequestException() {
-        val exception = paymentProtocolModel.sendRequestLiveData.value!!.exception!!
+        val exception = viewModel.sendRequestLiveData.value!!.exception!!
         log.error("unable to handle payment request $exception")
         when (exception) {
             is InsufficientMoneyException -> {
@@ -303,7 +267,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         val amount = paymentIntent.amount
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
 
-        val fiatAmount = paymentProtocolModel.exchangeRate?.coinToFiat(amount)
+        val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount)
         val fiatAmountStr = if (fiatAmount != null) {
             GenericUtils.fiatToString(fiatAmount)
         } else {
@@ -325,9 +289,5 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             it.isSelected = true
         }
         binding.paymentRequest.payeeSecuredBy.setOnClickListener(forceMarqueeOnClickListener)
-    }
-
-    private fun isUserAuthorized(): Boolean {
-        return (activity as SendCoinsActivity).isUserAuthorized || userAuthorizedDuring
     }
 }

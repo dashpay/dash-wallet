@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.util
 
 import androidx.annotation.MainThread
 import androidx.lifecycle.LifecycleOwner

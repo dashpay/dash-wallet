@@ -23,9 +23,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogConfirmTransactionBinding
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -81,7 +79,7 @@ class ConfirmTransactionDialog(
 
         private fun show(confirmTransactionDialog: ConfirmTransactionDialog,
                          bundle: Bundle,
-                         activity: FragmentActivity){
+                         activity: FragmentActivity) {
             confirmTransactionDialog.arguments = bundle
             confirmTransactionDialog.show(activity.supportFragmentManager, TAG)
         }
@@ -106,7 +104,6 @@ class ConfirmTransactionDialog(
     }
 
     private val binding by viewBinding(DialogConfirmTransactionBinding::bind)
-    private val sharedViewModel by activityViewModels<SingleActionSharedViewModel>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_confirm_transaction, container, false)
@@ -144,7 +141,6 @@ class ConfirmTransactionDialog(
             dismiss()
         }
         binding.confirmPayment.setOnClickListener {
-            sharedViewModel.clickConfirmButtonEvent.call()
             onTransactionConfirmed?.invoke(true)
             dismiss()
         }

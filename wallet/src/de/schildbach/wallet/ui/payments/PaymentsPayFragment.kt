@@ -30,9 +30,9 @@ import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.ui.InputParser
+import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.ui.scan.ScanActivity
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsPayBinding
 import org.bitcoinj.core.PrefixedChecksummedBytes
@@ -139,7 +139,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay) {
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 if (this@PaymentsPayFragment.isAdded) {
                     if (fireAction) {
-                        SendCoinsInternalActivity.start(context, paymentIntent, true)
+                        SendCoinsActivity.start(requireContext(), paymentIntent)
                     } else {
                         manageStateOfPayToAddressButton(paymentIntent)
                     }

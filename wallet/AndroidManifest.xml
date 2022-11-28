@@ -126,12 +126,6 @@
         </activity-alias>
 
         <activity
-            android:name="de.schildbach.wallet.ui.send.SendCoinsInternalActivity"
-            android:label="@string/pay_title"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
-
-        <activity
             android:name="de.schildbach.wallet.ui.send.SendCoinsActivity"
             android:label="@string/pay_title"
             android:screenOrientation="portrait"

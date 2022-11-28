@@ -16,23 +16,25 @@
 
 package de.schildbach.wallet.livedata
 
-import android.app.Application
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 import androidx.lifecycle.MutableLiveData
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.payments.DecryptSeedTask
 import de.schildbach.wallet.payments.DeriveKeyTask
+import de.schildbach.wallet.security.SecurityGuard
 import org.bitcoinj.wallet.DeterministicSeed
+import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 
 /**
  * @author:  Eric Britten
  */
 
-class RecoverPinLiveData(application: Application) : MutableLiveData<Resource<String>>() {
+class RecoverPinLiveData(
+    private val wallet: Wallet,
+    private val scryptIterationsTarget: Int
+) : MutableLiveData<Resource<String>>() {
 
     val backgroundHandler: Handler
 
@@ -44,14 +46,11 @@ class RecoverPinLiveData(application: Application) : MutableLiveData<Resource<St
 
     private var decryptSeedTask: DecryptSeedTask? = null
     private var deriveKeyTask: DeriveKeyTask? = null
-
-    private var walletApplication = application as WalletApplication
-
     private val securityGuard = SecurityGuard()
 
     fun recover(words: List<String>) {
         if (deriveKeyTask == null) {
-            deriveKeyTask = object : DeriveKeyTask(backgroundHandler, walletApplication.scryptIterationsTarget()) {
+            deriveKeyTask = object : DeriveKeyTask(backgroundHandler, scryptIterationsTarget) {
 
                 override fun onSuccess(encryptionKey: KeyParameter, changed: Boolean) {
                     deriveKeyTask = null
@@ -73,12 +72,12 @@ class RecoverPinLiveData(application: Application) : MutableLiveData<Resource<St
                                 decryptSeedTask = null
                             }
                         }
-                        decryptSeedTask!!.decryptSeed(walletApplication.wallet!!.keyChainSeed, walletApplication.wallet!!.keyCrypter, encryptionKey)
+                        decryptSeedTask!!.decryptSeed(wallet.keyChainSeed, wallet.keyCrypter, encryptionKey)
                     }
                 }
             }
             value = Resource.loading(null)
-            deriveKeyTask!!.deriveKey(walletApplication.wallet, securityGuard.retrievePassword())
+            deriveKeyTask!!.deriveKey(wallet, securityGuard.retrievePassword())
         }
     }
 }

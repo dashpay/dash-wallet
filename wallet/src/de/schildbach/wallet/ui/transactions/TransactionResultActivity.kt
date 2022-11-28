@@ -26,11 +26,11 @@ import android.view.View
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.AbstractWalletActivity
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.main.WalletActivity
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity.ACTION_SEND_FROM_WALLET_URI
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory
 /**
  * @author Samuel Barbosa
  */
-class TransactionResultActivity : AbstractWalletActivity() {
+class TransactionResultActivity : LockScreenActivity() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
 
@@ -145,7 +145,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
     private fun onTransactionDetailsDismiss(){
         when {
             intent.action == Intent.ACTION_VIEW ||
-                    intent.action == ACTION_SEND_FROM_WALLET_URI -> {
+                    intent.action == SendCoinsActivity.ACTION_SEND_FROM_WALLET_URI -> {
                 finish()
             }
             intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {

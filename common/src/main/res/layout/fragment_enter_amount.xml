@@ -53,6 +53,17 @@
             tools:background="@null" />
     </FrameLayout>
 
+    <TextView
+        android:id="@+id/error_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="15dp"
+        android:textColor="@color/system_red"
+        android:gravity="center"
+        android:textAlignment="gravity"
+        app:layout_constraintTop_toBottomOf="@id/amount_view"
+        tools:text="Insufficient funds" />
+
     <androidx.cardview.widget.CardView
         android:id="@+id/bottom_card"
         style="@style/CardViewRaised.Radius15"

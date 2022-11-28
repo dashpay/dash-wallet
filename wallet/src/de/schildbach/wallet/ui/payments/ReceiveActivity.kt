@@ -23,12 +23,15 @@ import android.os.Bundle
 import android.view.MenuItem
 import androidx.activity.viewModels
 import androidx.appcompat.widget.Toolbar
+import androidx.fragment.app.commit
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.EnterAmountFragment
+//import de.schildbach.wallet.ui.EnterAmountFragment
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
+//import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
+import org.dash.wallet.integration.coinbase_integration.databinding.KeyboardHeaderViewBinding
 
 @AndroidEntryPoint
 class ReceiveActivity : LockScreenActivity() {
@@ -43,16 +46,24 @@ class ReceiveActivity : LockScreenActivity() {
         }
     }
 
-    private val enterAmountSharedViewModel by viewModels<EnterAmountSharedViewModel>()
+//    private val enterAmountSharedViewModel by viewModels<EnterAmountSharedViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_receive)
 
         if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                    .replace(R.id.container, EnterAmountFragment.newInstance(Coin.ZERO))
-                    .commitNow()
+            val fragment = EnterAmountFragment.newInstance(
+                isMaxButtonVisible = false,
+                showCurrencySelector = true
+            )
+            val headerBinding = KeyboardHeaderViewBinding.inflate(layoutInflater, null, false)
+            fragment.setViewDetails(getString(R.string.button_continue), headerBinding.root)
+
+            supportFragmentManager.commit {
+                setReorderingAllowed(true)
+                add(R.id.enter_amount_fragment_placeholder, fragment)
+            }
         }
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
@@ -65,16 +76,17 @@ class ReceiveActivity : LockScreenActivity() {
 
         setTitle(R.string.receive_title)
 
-        enterAmountSharedViewModel.maxButtonVisibleData.value = false
-        enterAmountSharedViewModel.buttonTextData.call(R.string.receive_title)
-        enterAmountSharedViewModel.messageTextData.value = R.string.receive_enter_amount_message
-        enterAmountSharedViewModel.buttonClickEvent.observe(this) {
-            val dashAmount = enterAmountSharedViewModel.dashAmount
-            val fiatAmount = enterAmountSharedViewModel.exchangeRate?.coinToFiat(dashAmount)
-            val address = enterAmountSharedViewModel.receiveAddress
-            val dialogFragment = ReceiveDetailsDialog.createDialog(address, dashAmount, fiatAmount)
-            dialogFragment.show(supportFragmentManager, "ReceiveDetailsDialog")
-        }
+//        enterAmountSharedViewModel.maxButtonVisibleData.value = false
+//        enterAmountSharedViewModel.buttonTextData.call(R.string.receive_title)
+//        enterAmountSharedViewModel.messageTextData.value = R.string.receive_enter_amount_message
+//        enterAmountSharedViewModel.buttonClickEvent.observe(this) {
+//            val dashAmount = enterAmountSharedViewModel.dashAmount
+//            val fiatAmount = enterAmountSharedViewModel.exchangeRate?.coinToFiat(dashAmount)
+//            val address = enterAmountSharedViewModel.receiveAddress
+//            val dialogFragment = ReceiveDetailsDialog.createDialog(address, dashAmount, fiatAmount)
+//            dialogFragment.show(supportFragmentManager, "ReceiveDetailsDialog")
+//        }
+        // TODO
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
