@@ -99,12 +99,12 @@ public class BootstrapReceiver extends BroadcastReceiver {
 
 
             // if the app hasn't been used for a while and contains coins, maybe show reminder
-            maybeShowInactivityNotification(application);
+            maybeShowInactivityNotification();
             application.myPackageReplaced = true;
         } else if (ACTION_DISMISS.equals(action)) {
-            dismissNotification(context, config);
+            dismissNotification(context);
         } else if (ACTION_DISMISS_FOREVER.equals(action)) {
-            dismissNotificationForever(context, config);
+            dismissNotificationForever(context);
         } else {
             throw new IllegalArgumentException(action);
         }
@@ -115,8 +115,10 @@ public class BootstrapReceiver extends BroadcastReceiver {
         log.info("maybe upgrading wallet");
 
         // Maybe upgrade wallet from basic to deterministic, and maybe upgrade to the latest script type
-        if (wallet.isDeterministicUpgradeRequired(Script.ScriptType.P2PKH) && !wallet.isEncrypted())
+        if (wallet.isDeterministicUpgradeRequired(Script.ScriptType.P2PKH) && !wallet.isEncrypted()) {
+            // upgrade from v1 wallet to v4 wallet
             wallet.upgradeToDeterministic(Script.ScriptType.P2PKH, null);
+        }
 
         // Maybe upgrade wallet to secure chain
         try {
@@ -127,11 +129,11 @@ public class BootstrapReceiver extends BroadcastReceiver {
     }
 
     @WorkerThread
-    private void maybeShowInactivityNotification(final WalletApplication application) {
+    private void maybeShowInactivityNotification() {
         if (!config.isTimeToRemindBalance())
             return;
 
-        final Wallet wallet = application.getWallet();
+        final Wallet wallet = walletDataProvider.getWallet();
         final Coin estimatedBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE);
         if (!estimatedBalance.isPositive())
             return;
@@ -171,7 +173,7 @@ public class BootstrapReceiver extends BroadcastReceiver {
     }
 
     @WorkerThread
-    private void dismissNotification(final Context context, final Configuration config) {
+    private void dismissNotification(final Context context) {
         log.info("dismissing inactivity notification");
         config.setRemindBalanceTimeIn(DateUtils.DAY_IN_MILLIS);
         final NotificationManager nm = context.getSystemService(NotificationManager.class);
@@ -179,7 +181,7 @@ public class BootstrapReceiver extends BroadcastReceiver {
     }
 
     @WorkerThread
-    private void dismissNotificationForever(final Context context, final Configuration config) {
+    private void dismissNotificationForever(final Context context) {
         log.info("dismissing inactivity notification forever");
         config.setRemindBalanceTimeIn(DateUtils.WEEK_IN_MILLIS * 52);
         config.setRemindBalance(false);
