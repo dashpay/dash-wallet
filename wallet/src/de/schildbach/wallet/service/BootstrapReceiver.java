@@ -31,9 +31,7 @@ import org.dash.wallet.common.Configuration;
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.OnboardingActivity;
-import de.schildbach.wallet.ui.main.WalletActivity;
 import de.schildbach.wallet_test.R;
 
 import android.app.NotificationManager;
@@ -41,7 +39,6 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
 
 import androidx.annotation.WorkerThread;
