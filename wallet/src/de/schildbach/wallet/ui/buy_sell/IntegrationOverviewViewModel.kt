@@ -55,7 +55,7 @@ class IntegrationOverviewViewModel @Inject constructor(
             }
 
             is ResponseResource.Failure -> {
-                log.error("Coinbase login error ${response.errorCode}: ${response.errorBody?.string() ?: "empty"}")
+                log.error("Coinbase login error ${response.errorCode}: ${response.errorBody ?: "empty"}")
             }
         }
 

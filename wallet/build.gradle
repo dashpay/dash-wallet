@@ -95,6 +95,7 @@ dependencies {
     // Prefs
     implementation 'androidx.preference:preference-ktx:1.1.1'
     implementation 'com.scottyab:secure-preferences-lib:0.1.7'
+    implementation "androidx.datastore:datastore-preferences:$datastoreVersion"
 
     implementation 'androidx.multidex:multidex:2.0.1'
 

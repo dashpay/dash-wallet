@@ -112,7 +112,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
             is ResponseResource.Failure -> {
                 _showLoading.value = false
 
-                val error = result.errorBody?.string()
+                val error = result.errorBody
                 if (error.isNullOrEmpty()) {
                     placeBuyOrderFailedCallback.call()
                 } else {

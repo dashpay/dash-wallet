@@ -40,6 +40,7 @@ import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
@@ -47,6 +48,7 @@ import javax.inject.Inject
 class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     val userPreference: Configuration,
+    private val config: CoinbaseConfig,
     private val walletDataProvider: WalletDataProvider,
     var exchangeRates: ExchangeRatesProvider,
     var networkState: NetworkStateInt,
@@ -120,7 +122,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
             is ResponseResource.Failure -> {
                 _showLoading.value = false
 
-                val error = result.errorBody?.string()
+                val error = result.errorBody
                 if (error.isNullOrEmpty()) {
                     swapTradeFailedCallback.call()
                 } else {
@@ -154,6 +156,10 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
     fun logEvent(eventName: String) {
         analyticsService.logEvent(eventName, bundleOf())
+    }
+
+    suspend fun getLastBalance(): Coin {
+        return Coin.valueOf(config.getPreference(CoinbaseConfig.LAST_BALANCE) ?: 0)
     }
 
     private fun isValidCoinBaseAccount(

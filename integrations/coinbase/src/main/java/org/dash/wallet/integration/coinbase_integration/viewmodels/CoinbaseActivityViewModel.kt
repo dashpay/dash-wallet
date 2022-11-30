@@ -24,6 +24,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
@@ -31,12 +32,14 @@ import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseIdForFaitDataUIState
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.PaymentMethodsUiState
+import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
 @HiltViewModel
 class CoinbaseActivityViewModel @Inject constructor(
-    val userPreference: Configuration,
+    private val config: CoinbaseConfig,
+    private val userPreference: Configuration,
     private val coinBaseRepository: CoinBaseRepositoryInt
 ) : ViewModel() {
 
@@ -50,6 +53,7 @@ class CoinbaseActivityViewModel @Inject constructor(
 
     fun getBaseIdForFaitModel() = viewModelScope.launch(Dispatchers.Main) {
         _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(true)
+
         when (val response = userPreference.exchangeCurrencyCode?.let {
             coinBaseRepository.getBaseIdForUSDModel(it)
         }) {
@@ -61,6 +65,7 @@ class CoinbaseActivityViewModel @Inject constructor(
             }
 
             is ResponseResource.Failure -> {
+                runBlocking { config.setPreference(CoinbaseConfig.UPDATE_BASE_IDS, true) }
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(false)
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.Error(true)
             }

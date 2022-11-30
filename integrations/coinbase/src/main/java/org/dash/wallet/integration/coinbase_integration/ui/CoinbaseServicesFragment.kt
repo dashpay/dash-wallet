@@ -112,7 +112,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             safeNavigate(CoinbaseServicesFragmentDirections.servicesToTransferDash())
         }
 
-        binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
+        binding.walletBalanceDash.setFormat(viewModel.balanceFormat)
         binding.walletBalanceDash.setApplyMarkup(false)
         binding.walletBalanceDash.setAmount(Coin.ZERO)
 

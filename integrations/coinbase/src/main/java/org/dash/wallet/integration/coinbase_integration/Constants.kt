@@ -16,7 +16,11 @@
  */
 package org.dash.wallet.integration.coinbase_integration
 
+import android.content.Context
+import java.io.File
+
 object CoinbaseConstants {
+    const val BASE_URL = "https://api.coinbase.com/"
     const val CB_VERSION_KEY = "CB-VERSION"
     const val CB_2FA_TOKEN_KEY = "CB-2FA-TOKEN"
     const val CB_VERSION_VALUE = "2021-09-07"
@@ -36,4 +40,9 @@ object CoinbaseConstants {
     const val VALUE_ZERO = "0"
     const val DEFAULT_CURRENCY_USD = "USD"
     const val MIN_USD_COINBASE_AMOUNT = "2"
+    const val BASE_IDS_REQUEST_URL = "v2/assets/prices?filter=holdable&resolution=latest"
+
+    fun getCacheDir(context: Context): File {
+        return File(context.cacheDir, "coinbase")
+    }
 }
