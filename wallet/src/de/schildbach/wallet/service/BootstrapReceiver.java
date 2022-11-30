@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 the original author or authors.
+ * Copyright the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,52 +17,172 @@
 
 package de.schildbach.wallet.service;
 
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.utils.ContextPropagatingThreadFactory;
+import org.bitcoinj.utils.MonetaryFormat;
+import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.WalletDataProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.dash.wallet.common.Configuration;
+
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet_test.R;
 
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.preference.PreferenceManager;
+import android.text.format.DateUtils;
+
+import androidx.annotation.WorkerThread;
+import androidx.core.app.NotificationCompat;
+
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
+import javax.inject.Inject;
 
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public class BootstrapReceiver extends BroadcastReceiver {
+    private final Executor executor = Executors.newSingleThreadExecutor(new ContextPropagatingThreadFactory("bootstrap"));
+
     private static final Logger log = LoggerFactory.getLogger(BootstrapReceiver.class);
+
+    private static final String ACTION_DISMISS = BootstrapReceiver.class.getPackage().getName() + ".dismiss";
+    private static final String ACTION_DISMISS_FOREVER = BootstrapReceiver.class.getPackage().getName() +
+            ".dismiss_forever";
+
+    @Inject
+    protected Configuration config;
+    @Inject
+    protected WalletDataProvider walletDataProvider;
+    @Inject
+    protected WalletApplication application;
 
     @Override
     public void onReceive(final Context context, final Intent intent) {
         log.info("got broadcast: " + intent);
+        final PendingResult result = goAsync();
+        executor.execute(() -> {
+            org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+            onAsyncReceive(context, intent);
+            result.finish();
+        });
+    }
 
-        final boolean bootCompleted = Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction());
-        final boolean packageReplaced = Intent.ACTION_MY_PACKAGE_REPLACED.equals(intent.getAction());
+    @WorkerThread
+    private void onAsyncReceive(final Context context, final Intent intent) {
+        final String action = intent.getAction();
+        final boolean bootCompleted = Intent.ACTION_BOOT_COMPLETED.equals(action);
+        final boolean packageReplaced = Intent.ACTION_MY_PACKAGE_REPLACED.equals(action);
 
-        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
-                context.getResources());
-
-        WalletApplication walletApplication = (WalletApplication) context.getApplicationContext();
-        boolean walletFileExists = walletApplication.walletFileExists();
-        if (walletFileExists && (packageReplaced || bootCompleted)) {
+        if (packageReplaced || bootCompleted) {
             // make sure wallet is upgraded to HD
-            if (packageReplaced) {
-                UpgradeWalletService.startUpgrade(context);
-            }
+            if (packageReplaced)
+                maybeUpgradeWallet(walletDataProvider.getWallet());
 
-            // make sure there is always an alarm scheduled
-            WalletApplication.scheduleStartBlockchainService(context);
+            // make sure there is always a blockchain sync scheduled
+            application.startBlockchainService(false);
+
 
             // if the app hasn't been used for a while and contains coins, maybe show reminder
-            if (config.remindBalance() && config.hasBeenUsed()
-                    && config.getLastUsedAgo() > Constants.LAST_USAGE_THRESHOLD_INACTIVE_MS) {
-                InactivityNotificationService.startMaybeShowNotification(context);
-            }
-
-            walletApplication.myPackageReplaced = true;
+            maybeShowInactivityNotification();
+            application.myPackageReplaced = true;
+        } else if (ACTION_DISMISS.equals(action)) {
+            dismissNotification(context);
+        } else if (ACTION_DISMISS_FOREVER.equals(action)) {
+            dismissNotificationForever(context);
+        } else {
+            throw new IllegalArgumentException(action);
         }
+    }
+
+    @WorkerThread
+    private void maybeUpgradeWallet(final Wallet wallet) {
+        log.info("maybe upgrading wallet");
+
+        // Maybe upgrade wallet from basic to deterministic, and maybe upgrade to the latest script type
+        if (wallet.isDeterministicUpgradeRequired(Script.ScriptType.P2PKH) && !wallet.isEncrypted()) {
+            // upgrade from v1 wallet to v4 wallet
+            wallet.upgradeToDeterministic(Script.ScriptType.P2PKH, null);
+        }
+
+        // Maybe upgrade wallet to secure chain
+        try {
+            wallet.doMaintenance(null, false);
+        } catch (final Exception x) {
+            log.error("failed doing wallet maintenance", x);
+        }
+    }
+
+    @WorkerThread
+    private void maybeShowInactivityNotification() {
+        if (!config.isTimeToRemindBalance())
+            return;
+
+        final Wallet wallet = walletDataProvider.getWallet();
+        final Coin estimatedBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE);
+        if (!estimatedBalance.isPositive())
+            return;
+
+        log.info("detected balance, showing inactivity notification");
+
+        final MonetaryFormat btcFormat = config.getFormat();
+        final String title = application.getString(R.string.notification_inactivity_title);
+        final StringBuilder text = new StringBuilder(application.getString(R.string.notification_inactivity_message,
+                btcFormat.format(estimatedBalance)));
+
+        final NotificationCompat.Builder notification = new NotificationCompat.Builder(application,
+                Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS);
+        notification.setStyle(new NotificationCompat.BigTextStyle().bigText(text));
+        notification.setColor(application.getColor(R.color.fg_network_significant));
+        notification.setSmallIcon(R.drawable.ic_dash_d_white);
+        notification.setContentTitle(title);
+        notification.setContentText(text);
+        notification.setContentIntent(PendingIntent.getActivity(application, 0,
+                OnboardingActivity.createIntent(application), PendingIntent.FLAG_IMMUTABLE));
+        notification.setAutoCancel(true);
+
+        final Intent dismissIntent = new Intent(application, BootstrapReceiver.class);
+        dismissIntent.setAction(ACTION_DISMISS);
+        notification.addAction(new NotificationCompat.Action.Builder(0,
+                application.getString(R.string.notification_inactivity_action_dismiss),
+                PendingIntent.getBroadcast(application, 0, dismissIntent, PendingIntent.FLAG_IMMUTABLE)).build());
+
+        final Intent dismissForeverIntent = new Intent(application, BootstrapReceiver.class);
+        dismissForeverIntent.setAction(ACTION_DISMISS_FOREVER);
+        notification.addAction(new NotificationCompat.Action.Builder(0,
+                application.getString(R.string.notification_inactivity_action_dismiss_forever),
+                PendingIntent.getBroadcast(application, 0, dismissForeverIntent, PendingIntent.FLAG_IMMUTABLE)).build());
+
+        final NotificationManager nm = application.getSystemService(NotificationManager.class);
+        nm.notify(Constants.NOTIFICATION_ID_INACTIVITY, notification.build());
+    }
+
+    @WorkerThread
+    private void dismissNotification(final Context context) {
+        log.info("dismissing inactivity notification");
+        config.setRemindBalanceTimeIn(DateUtils.DAY_IN_MILLIS);
+        final NotificationManager nm = context.getSystemService(NotificationManager.class);
+        nm.cancel(Constants.NOTIFICATION_ID_INACTIVITY);
+    }
+
+    @WorkerThread
+    private void dismissNotificationForever(final Context context) {
+        log.info("dismissing inactivity notification forever");
+        config.setRemindBalanceTimeIn(DateUtils.WEEK_IN_MILLIS * 52);
+        config.setRemindBalance(false);
+        final NotificationManager nm = context.getSystemService(NotificationManager.class);
+        nm.cancel(Constants.NOTIFICATION_ID_INACTIVITY);
     }
 }

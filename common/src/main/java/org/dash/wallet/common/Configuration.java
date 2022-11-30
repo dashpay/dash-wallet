@@ -59,6 +59,7 @@ public class Configuration {
     public static final String PREFS_KEY_TRUSTED_PEER_ONLY = "trusted_peer_only";
     public static final String PREFS_KEY_BLOCK_EXPLORER = "block_explorer";
     public static final String PREFS_KEY_REMIND_BALANCE = "remind_balance";
+    public static final String PREFS_KEY_REMIND_BALANCE_TIME = "remind_balance_time";
     public static final String PREFS_KEY_DISCLAIMER = "disclaimer";
     private static final String PREFS_KEY_LABS_QR_PAYMENT_REQUEST = "labs_qr_payment_request";
     private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
@@ -484,6 +485,24 @@ public class Configuration {
 
     public void setShowNotificationsExplainer(boolean needToShow) {
         prefs.edit().putBoolean(PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER, needToShow).apply();
+    }
+
+    private long getRemindBalanceTime() {
+        return prefs.getLong(PREFS_KEY_REMIND_BALANCE_TIME, 0);
+    }
+
+    private void setRemindBalanceTime(final long remindBalanceTime) {
+        prefs.edit().putLong(PREFS_KEY_REMIND_BALANCE_TIME, remindBalanceTime).apply();
+    }
+
+    public boolean isTimeToRemindBalance() {
+        final long now = System.currentTimeMillis();
+        return remindBalance() && now >= getRemindBalanceTime();
+    }
+
+    public void setRemindBalanceTimeIn(final long durationMs) {
+        final long now = System.currentTimeMillis();
+        setRemindBalanceTime(now + durationMs);
     }
 
     // Tax Categories
