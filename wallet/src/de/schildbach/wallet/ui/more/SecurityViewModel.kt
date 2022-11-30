@@ -77,7 +77,6 @@ class SecurityViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         _fingerprintIsAvailable.value = biometricHelper.isAvailable
-
         _fingerprintIsEnabled.value = biometricHelper.isEnabled
         configuration.enableFingerprint = biometricHelper.isEnabled
     }
@@ -106,9 +105,9 @@ class SecurityViewModel @Inject constructor(
         if (configuration.enableFingerprint != isEnabled) {
             analytics.logEvent(
                 if (isEnabled) {
-                    AnalyticsConstants.Security.AUTOHIDE_BALANCE_ON
+                    AnalyticsConstants.Security.FINGERPRINT_ON
                 } else {
-                    AnalyticsConstants.Security.AUTOHIDE_BALANCE_OFF
+                    AnalyticsConstants.Security.FINGERPRINT_OFF
                 }, bundleOf()
             )
 
