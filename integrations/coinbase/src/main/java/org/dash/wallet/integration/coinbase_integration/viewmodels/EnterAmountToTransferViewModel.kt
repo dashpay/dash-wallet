@@ -25,7 +25,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BlockchainState
 import org.dash.wallet.common.data.ExchangeRate

@@ -37,6 +37,7 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
@@ -325,7 +326,7 @@ class ConvertViewViewModel @Inject constructor(
         val account = selectedCryptoCurrencyAccount.value
 
         return when {
-            (account?.coinBaseUserAccountData?.balance?.currency?.lowercase() == CoinbaseConstants.DASH_CURRENCY.lowercase()) -> {
+            (account?.coinBaseUserAccountData?.balance?.currency?.lowercase() == Constants.DASH_CURRENCY.lowercase()) -> {
                 CurrencyInputType.Dash
             }
             (account?.coinBaseUserAccountData?.balance?.currency?.lowercase() == currencyCode.lowercase()) -> {

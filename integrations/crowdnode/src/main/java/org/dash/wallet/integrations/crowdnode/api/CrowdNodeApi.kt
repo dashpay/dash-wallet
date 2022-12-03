@@ -30,7 +30,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status

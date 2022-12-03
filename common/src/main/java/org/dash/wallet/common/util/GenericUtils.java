@@ -26,13 +26,11 @@ import android.widget.Toast;
 
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.dash.wallet.common.Constants;
 import org.dash.wallet.common.data.CurrencyInfo;
 
 import java.text.NumberFormat;
 import java.util.Currency;
 import java.util.Locale;
-import java.util.Objects;
 
 /**
  * @author Andreas Schildbach
@@ -187,7 +185,7 @@ public class GenericUtils {
     }
 
     public static String fiatToString(Fiat fiat) {
-        MonetaryFormat format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode();
+        MonetaryFormat format = Constants.INSTANCE.getSEND_PAYMENT_LOCAL_FORMAT().noCode();
         NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
         Currency currency = Currency.getInstance(fiat.currencyCode);
         numberFormat.setCurrency(currency);
@@ -217,7 +215,7 @@ public class GenericUtils {
     }
 
     public static String fiatToStringWithoutCurrencyCode(Fiat fiat) {
-        MonetaryFormat format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode();
+        MonetaryFormat format = Constants.INSTANCE.getSEND_PAYMENT_LOCAL_FORMAT().noCode();
         return  format.format(fiat).toString();
     }
 

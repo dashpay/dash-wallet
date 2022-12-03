@@ -24,7 +24,6 @@ import androidx.navigation.NavDirections
 import androidx.navigation.fragment.DialogFragmentNavigator
 import androidx.navigation.fragment.FragmentNavigator
 import androidx.navigation.fragment.findNavController
-import org.dash.wallet.common.Constants
 
 // Avoids "Navigation action/destination xyz cannot be found from the current destination" errors
 fun Fragment.safeNavigate(directions: NavDirections) {

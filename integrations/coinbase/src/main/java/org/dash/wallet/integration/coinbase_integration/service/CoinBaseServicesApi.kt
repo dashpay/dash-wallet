@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.service
 
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integration.coinbase_integration.*
 import org.dash.wallet.integration.coinbase_integration.model.*
 import retrofit2.http.*
@@ -30,7 +31,7 @@ interface CoinBaseServicesApi {
 
     @GET("v2/exchange-rates")
     suspend fun getExchangeRates(
-        @Query("currency")currency: String = CoinbaseConstants.DASH_CURRENCY
+        @Query("currency")currency: String = Constants.DASH_CURRENCY
     ): CoinBaseExchangeRates?
 
     @GET("v2/payment-methods")

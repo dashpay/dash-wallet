@@ -31,11 +31,11 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Monetary;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.dash.wallet.common.Constants;
 import org.dash.wallet.common.R;
+import org.dash.wallet.common.util.Constants;
 import org.dash.wallet.common.util.MonetarySpannable;
 
-import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
+import static org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
  * @author Andreas Schildbach

@@ -41,11 +41,9 @@ import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.wallet.KeyChain.KeyPurpose
 import org.bitcoinj.wallet.SendRequest
-import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
@@ -64,7 +62,7 @@ class PaymentProtocolViewModel @Inject constructor(
 
     companion object {
         val FAKE_FEE_FOR_EXCEPTIONS: Coin =
-            org.dash.wallet.common.Constants.ECONOMIC_FEE.multiply(261).divide(1000)
+            org.dash.wallet.common.util.Constants.ECONOMIC_FEE.multiply(261).divide(1000)
     }
 
     private val log = LoggerFactory.getLogger(PaymentProtocolFragment::class.java)

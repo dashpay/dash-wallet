@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
@@ -212,7 +212,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             val amountFiat = dashFormat.format(it.first).toString()
             val fiatSymbol = GenericUtils.currencySymbol(it.first.currencyCode)
 
-            val formatDashValue = "$dashInStr ${CoinbaseConstants.DASH_CURRENCY}"
+            val formatDashValue = "$dashInStr ${Constants.DASH_CURRENCY}"
 
             val formatFiatValue = if (GenericUtils.isCurrencyFirst(it.first)) {
                 "$fiatSymbol $amountFiat"

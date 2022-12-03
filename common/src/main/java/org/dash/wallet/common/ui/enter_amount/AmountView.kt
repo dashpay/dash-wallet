@@ -21,15 +21,19 @@ import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
 import android.view.LayoutInflater
+import android.widget.LinearLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
+import androidx.core.widget.doAfterTextChanged
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.AmountViewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import java.text.DecimalFormat
 import java.text.NumberFormat
@@ -43,7 +47,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         .noCode().minDecimals(2).optionalDecimals()
 
     private var onCurrencyToggleClicked: (() -> Unit)? = null
-    private var onConvertDirectionChanged: ((Boolean) -> Unit)? = null
+    private var onDashToFiatChanged: ((Boolean) -> Unit)? = null
     private var onAmountChanged: ((Coin) -> Unit)? = null
 
     private var currencySymbol = "$"
@@ -57,7 +61,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             updateAmount()
         }
 
-    var fiatAmount: Fiat = Fiat.valueOf("USD", 0)
+    var fiatAmount: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
         private set
 
     var dashAmount: Coin = Coin.ZERO
@@ -79,7 +83,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             if (field != value) {
                 field = value
                 updateDashSymbols()
-                onConvertDirectionChanged?.invoke(value)
+                onDashToFiatChanged?.invoke(value)
 
                 if (value) {
                     input = dashFormat.minDecimals(0)
@@ -101,30 +105,41 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         set(value) {
             field = value
             binding.inputCurrencyToggle.isVisible = !dashToFiat && value
+            binding.inputContainer.isClickable = !dashToFiat && value
             binding.resultCurrencyToggle.isVisible = dashToFiat && value
+            binding.resultContainer.isClickable = dashToFiat && value
         }
 
     init {
         val padding = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
         updatePadding(left = padding, right = padding)
         updateCurrency()
-        binding.convertDirectionBtn.setOnClickListener {
-            dashToFiat = !dashToFiat
+
+        binding.inputContainer.setOnClickListener {
+            if (showCurrencySelector && !dashToFiat) {
+                onCurrencyToggleClicked?.invoke()
+            }
         }
-        binding.inputCurrencyToggle.setOnClickListener {
-            onCurrencyToggleClicked?.invoke()
+        binding.resultContainer.setOnClickListener {
+            if (showCurrencySelector && dashToFiat) {
+                onCurrencyToggleClicked?.invoke()
+            }
         }
-        binding.resultCurrencyToggle.setOnClickListener {
-            onCurrencyToggleClicked?.invoke()
-        }
+
+//        binding.inputAmount.doAfterTextChanged {
+//            Log.i("REFACTORING", "text size: ${binding.inputAmount.textSize}")
+//            binding.inputSymbolDash.updateLayoutParams {
+//
+//            }
+//        }
     }
 
     fun setOnCurrencyToggleClicked(listener: () -> Unit) {
         onCurrencyToggleClicked = listener
     }
 
-    fun setOnConvertDirectionChanged(listener: (Boolean) -> Unit) {
-        onConvertDirectionChanged = listener
+    fun setOnDashToFiatChanged(listener: (Boolean) -> Unit) {
+        onDashToFiatChanged = listener
     }
 
     fun setOnAmountChanged(listener: (Coin) -> Unit) {

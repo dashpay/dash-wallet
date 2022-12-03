@@ -33,6 +33,7 @@ import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.FragmentEnterAmountBinding
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import java.text.DecimalFormatSymbols
 
@@ -72,11 +73,11 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         val args = requireArguments()
         binding.maxButtonWrapper.isVisible = args.getBoolean(ARG_MAX_BUTTON_VISIBLE)
         binding.amountView.showCurrencySelector = args.getBoolean(ARG_SHOW_CURRENCY_SELECTOR_BUTTON)
         val dashToFiat = args.getBoolean(ARG_DASH_TO_FIAT)
-        binding.amountView.dashToFiat = dashToFiat
 
         if (args.containsKey(ARG_INITIAL_AMOUNT)) {
             val initialAmount = args.getSerializable(ARG_INITIAL_AMOUNT)
@@ -87,6 +88,8 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
             }
         }
 
+        setupAmountView(dashToFiat)
+
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.setOnClickListener {
             viewModel.onContinueEvent.value = Pair(
@@ -95,29 +98,9 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
             )
         }
 
-        binding.maxButton.setOnClickListener {
-            onMaxAmountButtonClick()
-        }
-
-        binding.amountView.setOnCurrencyToggleClicked {
-            parentFragmentManager.let { fragmentManager ->
-                ExchangeRatesDialog(viewModel.selectedCurrencyCode) { rate, _, dialog ->
-                    viewModel.selectedCurrencyCode = rate.currencyCode
-                    dialog.dismiss()
-                }.show(fragmentManager, "payment_method")
-            }
-        }
-
-        binding.amountView.setOnConvertDirectionChanged {
-            viewModel._dashToFiatDirection.value = binding.amountView.dashToFiat
-        }
-
-        binding.amountView.setOnAmountChanged {
-            viewModel._amount.value = it
-        }
-
         viewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->
             binding.amountView.exchangeRate = if (rate != null) {
+                binding.currencyOptions.provideOptions(listOf(rate.currencyCode, Constants.DASH_CURRENCY))
                 ExchangeRate(Coin.COIN, rate.fiat)
             } else {
                 null
@@ -152,6 +135,38 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     fun applyMaxAmount() {
         lifecycleScope.launchWhenStarted {
             onMaxAmountButtonClick()
+        }
+    }
+
+    private fun setupAmountView(dashToFiat: Boolean) {
+        binding.amountView.dashToFiat = dashToFiat
+        val currencyOptions = listOf(Constants.USD_CURRENCY, Constants.DASH_CURRENCY)
+        binding.currencyOptions.pickedOptionIndex = if (dashToFiat) 1 else 0
+        binding.currencyOptions.provideOptions(currencyOptions)
+        binding.currencyOptions.setOnOptionPickedListener { currency, _ ->
+            binding.amountView.dashToFiat = currency == Constants.DASH_CURRENCY
+        }
+
+        binding.maxButton.setOnClickListener {
+            onMaxAmountButtonClick()
+        }
+
+        binding.amountView.setOnCurrencyToggleClicked {
+            parentFragmentManager.let { fragmentManager ->
+                ExchangeRatesDialog(viewModel.selectedCurrencyCode) { rate, _, dialog ->
+                    viewModel.selectedCurrencyCode = rate.currencyCode
+                    dialog.dismiss()
+                }.show(fragmentManager, "payment_method")
+            }
+        }
+
+        binding.amountView.setOnDashToFiatChanged { isDashToFiat ->
+            binding.currencyOptions.pickedOptionIndex = if (isDashToFiat) 1 else 0
+            viewModel._dashToFiatDirection.value = binding.amountView.dashToFiat
+        }
+
+        binding.amountView.setOnAmountChanged {
+            viewModel._amount.value = it
         }
     }
 

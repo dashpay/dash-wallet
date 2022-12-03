@@ -34,7 +34,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.databinding.DialogOptionPickerBinding
