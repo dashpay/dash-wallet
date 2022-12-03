@@ -78,6 +78,7 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         binding.maxButtonWrapper.isVisible = args.getBoolean(ARG_MAX_BUTTON_VISIBLE)
         binding.amountView.showCurrencySelector = args.getBoolean(ARG_SHOW_CURRENCY_SELECTOR_BUTTON)
         val dashToFiat = args.getBoolean(ARG_DASH_TO_FIAT)
+        binding.amountView.dashToFiat = dashToFiat
 
         if (args.containsKey(ARG_INITIAL_AMOUNT)) {
             val initialAmount = args.getSerializable(ARG_INITIAL_AMOUNT)
@@ -129,6 +130,7 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     fun setError(errorText: String) {
         lifecycleScope.launchWhenStarted {
             binding.errorLabel.text = errorText
+            binding.errorLabel.isVisible = errorText.isNotEmpty()
         }
     }
 
@@ -139,7 +141,6 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     }
 
     private fun setupAmountView(dashToFiat: Boolean) {
-        binding.amountView.dashToFiat = dashToFiat
         val currencyOptions = listOf(Constants.USD_CURRENCY, Constants.DASH_CURRENCY)
         binding.currencyOptions.pickedOptionIndex = if (dashToFiat) 1 else 0
         binding.currencyOptions.provideOptions(currencyOptions)
@@ -215,11 +216,10 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
                 }
             }
         }
-
         override fun onBack(longClick: Boolean) {
             refreshValue()
 
-            if (longClick || maxSelected) {
+            if (longClick) {
                 value.clear()
             } else if (value.isNotEmpty()) {
                 value.deleteCharAt(value.length - 1)

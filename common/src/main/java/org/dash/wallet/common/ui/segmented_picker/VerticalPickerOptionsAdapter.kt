@@ -64,7 +64,6 @@ class VerticalPickerOptionsAdapter(
 
 class VerticalOptionViewHolder(val binding: VerticalSegmentedPickerOptionViewBinding) : RecyclerView.ViewHolder(binding.root) {
     fun bind(option: VerticalPickerOption) {
-        binding.name.setTextAppearance(R.style.Overline)
         binding.name.text = option.name
 
         if (option.isSelected) {

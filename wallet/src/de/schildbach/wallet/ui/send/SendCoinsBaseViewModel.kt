@@ -15,6 +15,8 @@
  */
 package de.schildbach.wallet.ui.send
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.PaymentIntent
@@ -32,8 +34,6 @@ open class SendCoinsBaseViewModel @Inject constructor(
     walletData: WalletDataProvider,
     private val configuration: Configuration
 ) : ViewModel() {
-    // TODO: analytics
-
     val wallet = walletData.wallet!!
     val dashFormat: MonetaryFormat
         get() = configuration.format
@@ -41,8 +41,13 @@ open class SendCoinsBaseViewModel @Inject constructor(
     lateinit var basePaymentIntent: PaymentIntent
         private set
 
+    private val _address = MutableLiveData("")
+    val address: LiveData<String>
+        get() = _address
+
     open fun initPaymentIntent(paymentIntent: PaymentIntent) {
         basePaymentIntent = paymentIntent
+        _address.value = paymentIntent.address.toBase58()
     }
 
     protected fun createSendRequest(
@@ -51,7 +56,6 @@ open class SendCoinsBaseViewModel @Inject constructor(
         signInputs: Boolean,
         forceEnsureMinRequiredFee: Boolean
     ): SendRequest {
-
         paymentIntent.setInstantX(false) // to make sure the correct instance of Transaction class is used in toSendRequest() method
         val sendRequest = paymentIntent.toSendRequest()
         sendRequest.coinSelector = ZeroConfCoinSelector.get()

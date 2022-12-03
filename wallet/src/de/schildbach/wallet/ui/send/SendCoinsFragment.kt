@@ -38,6 +38,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.crypto.KeyCrypterException
+import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.AuthenticationManager
@@ -67,6 +68,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     @Inject lateinit var authManager: AuthenticationManager
     private var userAuthorizedDuring = false
     private var enterAmountFragment: EnterAmountFragment? = null
+    private var revealBalance = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -97,10 +99,21 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             enterAmountFragment = fragment
         }
 
+        binding.hideButton.setOnClickListener {
+            revealBalance = !revealBalance
+            viewModel.balance.value?.let { balance ->
+                updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
+            }
+        }
+
         viewModel.isBlockchainReplaying.observe(viewLifecycleOwner) { updateView() }
         viewModel.dryRunSuccessful.observe(viewLifecycleOwner) { updateView() }
         viewModel.state.observe(viewLifecycleOwner) { updateView() }
-        viewModel.balance.observe(viewLifecycleOwner, enterAmountViewModel::setMaxAmount)
+        viewModel.address.observe(viewLifecycleOwner) { binding.address.text = it }
+        viewModel.balance.observe(viewLifecycleOwner) { balance ->
+            enterAmountViewModel.setMaxAmount(balance)
+            updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
+        }
 
         enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.currentAmount = it }
         enterAmountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) { viewModel.isDashToFiatPreferred = it}
@@ -167,7 +180,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val rate = enterAmountViewModel.selectedExchangeRate.value
 
         if (rate != null && editedAmount != null) {
-            val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, rate.fiat)
+            val exchangeRate = ExchangeRate(Coin.COIN, rate.fiat)
 
             try {
                 viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND)
@@ -217,7 +230,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val rate = enterAmountViewModel.selectedExchangeRate.value
 
         // prevent crash if the exchange rate is null
-        val exchangeRate = if (rate != null) org.bitcoinj.utils.ExchangeRate(Coin.COIN, rate.fiat) else null
+        val exchangeRate = if (rate != null) ExchangeRate(Coin.COIN, rate.fiat) else null
         val fiatAmount = exchangeRate?.coinToFiat(amount)
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
 
@@ -284,6 +297,18 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 requireActivity(),
                 Uri.parse("android.resource://" + requireActivity().packageName + "/" + soundResId))
                 .play()
+        }
+    }
+
+    private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.ExchangeRate?) {
+        val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, it.fiat) }
+
+        if (revealBalance) {
+            var balanceText = viewModel.dashFormat.format(balance).toString()
+            exchangeRate?.let { balanceText += " ~ ${GenericUtils.fiatToString(exchangeRate.coinToFiat(balance))}" }
+            binding.balanceLabel.text = balanceText
+        } else {
+            binding.balanceLabel.text = "**********"
         }
     }
 
