@@ -173,24 +173,29 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay) {
     }
 
     private fun manageStateOfPayToAddressButton(paymentIntent: PaymentIntent?) {
-        if (paymentIntent != null) {
-            when {
-                paymentIntent.hasAddress() -> {
-                    binding.payToAddress.setActive(true)
-                    binding.payToAddress.setSubTitle(paymentIntent.address.toBase58())
-                    return
-                }
-                paymentIntent.hasPaymentRequestUrl() -> {
-                    val host = Uri.parse(paymentIntent.paymentRequestUrl).host
-                    if (host != null) {
+        try {
+            if (paymentIntent != null) {
+                when {
+                    paymentIntent.hasAddress() -> {
                         binding.payToAddress.setActive(true)
-                        binding.payToAddress.setSubTitle(host)
+                        binding.payToAddress.setSubTitle(paymentIntent.address.toBase58())
                         return
+                    }
+                    paymentIntent.hasPaymentRequestUrl() -> {
+                        val host = Uri.parse(paymentIntent.paymentRequestUrl).host
+                        if (host != null) {
+                            binding.payToAddress.setActive(true)
+                            binding.payToAddress.setSubTitle(host)
+                            return
+                        }
                     }
                 }
             }
+            binding.payToAddress.setActive(false)
+            binding.payToAddress.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
+        } catch (ex: IllegalStateException) {
+            // TODO: StringInputParser is triggering callbacks after the view is destroyed,
+            // this should be fixed with some refactoring of the StringInputParser
         }
-        binding.payToAddress.setActive(false)
-        binding.payToAddress.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
     }
 }

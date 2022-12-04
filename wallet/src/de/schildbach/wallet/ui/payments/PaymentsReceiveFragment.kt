@@ -18,10 +18,16 @@
 package de.schildbach.wallet.ui.payments
 
 import android.os.Bundle
+import android.view.Gravity.CENTER_VERTICAL
 import android.view.View
+import android.widget.FrameLayout
+import android.widget.LinearLayout
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsReceiveBinding
@@ -36,18 +42,21 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
     private val binding by viewBinding(FragmentPaymentsReceiveBinding::bind)
 
     companion object {
-        private const val SHOW_IMPORT_PRIVATE_KEY_ARG = "show_import_private_key"
+        private const val SHOW_IMPORT_PRIVATE_KEY_ARG = "showImportPrivateKey"
+        private const val CENTER_VERTICALLY_KEY_ARG = "centerVertically"
 
         @JvmStatic
-        fun newInstance(showImportPrivateKey: Boolean = true): PaymentsReceiveFragment {
+        fun newInstance(): PaymentsReceiveFragment {
             return PaymentsReceiveFragment().apply {
                 arguments = bundleOf(
-                    SHOW_IMPORT_PRIVATE_KEY_ARG to showImportPrivateKey
+                    SHOW_IMPORT_PRIVATE_KEY_ARG to true,
+                    CENTER_VERTICALLY_KEY_ARG to false
                 )
             }
         }
     }
 
+    private val args by navArgs<PaymentsReceiveFragmentArgs>()
     @Inject lateinit var analytics: AnalyticsService
     @Inject lateinit var walletDataProvider: WalletDataProvider
 
@@ -57,7 +66,7 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
 
         binding.receiveInfo.setOnSpecifyAmountClicked {
             analytics.logEvent(AnalyticsConstants.SendReceive.SPECIFY_AMOUNT, bundleOf())
-            startActivity(ReceiveActivity.createIntent(requireContext()))
+            findNavController().navigate(PaymentsFragmentDirections.paymentsToReceive())
         }
         binding.receiveInfo.setOnAddressClicked {
             analytics.logEvent(AnalyticsConstants.SendReceive.COPY_ADDRESS, bundleOf())
@@ -68,9 +77,16 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
 
         binding.receiveInfo.setInfo(walletDataProvider.freshReceiveAddress(), null)
 
-        binding.importPrivateKeyBtn.isVisible = requireArguments().getBoolean(SHOW_IMPORT_PRIVATE_KEY_ARG)
+        binding.importPrivateKeyBtn.isVisible = args.showImportPrivateKey
         binding.importPrivateKeyBtn.setOnClickListener {
             SweepWalletActivity.start(requireContext(), false)
+        }
+
+        if (args.centerVertically) {
+            binding.content.updateLayoutParams<FrameLayout.LayoutParams> {
+                this.gravity = CENTER_VERTICAL
+                topMargin = -100
+            }
         }
     }
 }

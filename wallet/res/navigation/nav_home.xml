@@ -49,7 +49,19 @@
             app:argType="integer" />
 
         <deepLink app:uri="android-app://hashengineering.darkcoin.wallet/payments/{active_tab}"/>
+
+        <action
+            android:id="@+id/payments_to_receive"
+            app:destination="@id/receiveFragment"
+            app:enterAnim="@anim/slide_in_bottom"
+            app:popExitAnim="@anim/fade_out" />
     </fragment>
+
+    <fragment
+        android:id="@+id/receiveFragment"
+        android:name="de.schildbach.wallet.ui.payments.ReceiveFragment"
+        android:label="Receive"
+        tools:layout="@layout/fragment_receive"/>
 
     <fragment
         android:id="@+id/exploreFragment"

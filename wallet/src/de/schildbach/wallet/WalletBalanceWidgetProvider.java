@@ -45,8 +45,8 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Method;
 
 import de.schildbach.wallet.ui.OnboardingActivity;
-import de.schildbach.wallet.ui.QuickReceiveActivity;
-import de.schildbach.wallet.ui.SendCoinsQrActivity;
+import de.schildbach.wallet.ui.payments.QuickReceiveActivity;
+import de.schildbach.wallet.ui.send.SendCoinsQrActivity;
 import de.schildbach.wallet_test.R;
 
 import static org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO;

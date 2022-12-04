@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2015 the original author or authors.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.ui.send;
 
 import android.app.Activity;
 import android.content.Context;
@@ -30,10 +30,11 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.ui.LockScreenActivity;
+import de.schildbach.wallet.ui.ShortcutComponentActivity;
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.payments.SweepWalletActivity;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
