@@ -80,7 +80,6 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
             SegmentedOption(getString(R.string.payments_tab_pay_label), R.drawable.ic_arrow_up)
         ))
 
-
         binding.tabs.setOnOptionPickedListener { _, index ->
             binding.pager.currentItem = index
         }

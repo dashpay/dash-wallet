@@ -224,7 +224,6 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     private fun handlePasteAmount(view: View) {
         val clipboard = view.context.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         val clipboardText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
-        Log.i("LONGTAP", "primary clip: $clipboardText")
 
         if (isValidInput(clipboardText)) {
             val wrapper = ContextThemeWrapper(view.context, R.style.My_PopupOverlay)

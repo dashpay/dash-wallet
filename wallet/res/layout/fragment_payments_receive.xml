@@ -31,7 +31,7 @@
 
         <LinearLayout
             android:id="@+id/import_private_key_btn"
-            style="@style/Button.Primary.Large.White"
+            style="@style/Button.Primary.Large.Inverted"
             android:clickable="true"
             android:focusable="true"
             android:layout_width="match_parent"

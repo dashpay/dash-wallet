@@ -796,9 +796,9 @@
         <item name="strokeWidth">0dp</item>
     </style>
 
-    <style name="PrimaryButtonTheme.Large.White">
-        <item name="backgroundColor">@color/dash_white</item>
-        <item name="strokeColor">@color/dash_white</item>
+    <style name="PrimaryButtonTheme.Large.Inverted">
+        <item name="backgroundColor">@color/background_secondary</item>
+        <item name="strokeColor">@color/background_secondary</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
@@ -876,8 +876,8 @@
         <item name="android:theme">@style/PrimaryButtonTheme.Large.Blue</item>
     </style>
 
-    <style name="Button.Primary.Large.White">
-        <item name="android:theme">@style/PrimaryButtonTheme.Large.White</item>
+    <style name="Button.Primary.Large.Inverted">
+        <item name="android:theme">@style/PrimaryButtonTheme.Large.Inverted</item>
     </style>
 
     <style name="Button.Primary.Large.LightGrey">
