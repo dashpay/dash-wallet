@@ -31,7 +31,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseErrorResponse
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
 import java.io.IOException
