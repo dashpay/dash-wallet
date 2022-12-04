@@ -35,9 +35,9 @@ object Constants {
     const val RESULT_CODE_GO_HOME = 100
     const val COIN_BASE_AUTH = 102
 
-    var MAX_MONEY = MainNetParams.get().maxMoney
-    val ECONOMIC_FEE = Coin.valueOf(1000)
-    val SEND_PAYMENT_LOCAL_FORMAT =
+    var MAX_MONEY: Coin = MainNetParams.get().maxMoney
+    val ECONOMIC_FEE: Coin = Coin.valueOf(1000)
+    val SEND_PAYMENT_LOCAL_FORMAT: MonetaryFormat =
         MonetaryFormat().withLocale(GenericUtils.getDeviceLocale()).minDecimals(2)
             .optionalDecimals()
 

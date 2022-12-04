@@ -30,6 +30,7 @@
         android:orientation="horizontal"
         android:clickable="true"
         android:focusable="true"
+        android:longClickable="true"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/result_container">
@@ -49,13 +50,9 @@
             style="@style/Headline3.Medium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:ellipsize="none"
+            android:ellipsize="middle"
             android:maxLines="1"
-            android:singleLine="true"
-            app:autoSizeMaxTextSize="28sp"
-            app:autoSizeMinTextSize="14sp"
-            app:autoSizeStepGranularity="1sp"
-            app:autoSizeTextType="uniform"
+            android:lines="1"
             tools:text="0" />
 
         <ImageView
