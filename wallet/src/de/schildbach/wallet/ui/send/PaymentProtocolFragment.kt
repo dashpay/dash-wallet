@@ -182,26 +182,6 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                 }
             }
         }
-
-        // TODO
-//        paymentProtocolModel.onSendCoinsOffline.observe(viewLifecycleOwner) { (status, data) ->
-//            when (status) {
-//                SendCoinsBaseViewModel.SendCoinsOfflineStatus.SENDING -> {
-//                    binding.viewFlipper.displayedChild = VIEW_LOADING
-//                }
-//                SendCoinsBaseViewModel.SendCoinsOfflineStatus.SUCCESS -> {
-//                    showTransactionResult((data as SendRequest).tx)
-//                }
-//                else -> {
-//                    binding.viewFlipper.displayedChild = VIEW_ERROR
-//                    binding.errorView.title = R.string.payment_request_unable_to_send
-//                    binding.errorView.message = R.string.payment_request_please_try_again
-//                    binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
-//                        paymentProtocolModel.commitAndBroadcast(data as SendRequest)
-//                    }
-//                }
-//            }
-//        }
     }
 
     private fun commitSendRequest(sendRequest: SendRequest) {

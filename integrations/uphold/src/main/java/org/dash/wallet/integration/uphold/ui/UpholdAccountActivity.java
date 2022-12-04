@@ -217,7 +217,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
 
     private void openTransferActivity() {
         Intent intent = new Intent();
-        intent.setClassName(this, "de.schildbach.wallet.ui.UpholdTransferActivity");
+        intent.setClassName(this, "de.schildbach.wallet.ui.send.UpholdTransferActivity");
         intent.putExtra("extra_title", getString(R.string.uphold_account));
         intent.putExtra("extra_message", getString(R.string.uphold_withdrawal_instructions));
         intent.putExtra("extra_max_amount", balance.toString());
