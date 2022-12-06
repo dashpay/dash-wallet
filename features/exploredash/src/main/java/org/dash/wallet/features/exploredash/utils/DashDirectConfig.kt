@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.utils
 
 import android.content.Context
-import android.preference.PreferenceManager
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -34,8 +33,6 @@ class DashDirectConfig @Inject constructor(private val context: Context) {
     companion object {
         val PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN = stringPreferencesKey("last_dash_direct_access_token")
     }
-
-    private val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
 
     private val Context.dataStore by preferencesDataStore("dashdirect")
     private val dataStore = context.dataStore.data
