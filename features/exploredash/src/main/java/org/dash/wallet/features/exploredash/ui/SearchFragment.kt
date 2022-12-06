@@ -19,13 +19,16 @@ package org.dash.wallet.features.exploredash.ui
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.app.AlertDialog
 import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.widget.AppCompatEditText
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
@@ -381,6 +384,20 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
+    fun showLoginDialog() {
+        val builder = AlertDialog.Builder(requireContext())
+        val inflater = layoutInflater
+        builder.setTitle("Login to dash direct ")
+        val dialogLayout = inflater.inflate(R.layout.dialog_login, null)
+        val email = dialogLayout.findViewById<AppCompatEditText>(R.id.email)
+        val password = dialogLayout.findViewById<AppCompatEditText>(R.id.password)
+        builder.setView(dialogLayout)
+        builder.setPositiveButton("login") { _, _ ->
+            viewModel.signInToDashDirect(email.text.toString(), password.text.toString())
+        }
+        builder.show()
+    }
+
     private fun setupSearchInput(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
         searchHeaderAdapter.setOnSearchQueryChanged {
             binding.noResultsPanel.isVisible = false
@@ -500,7 +517,22 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
             }
         }
-        binding.itemDetails.setOnBuyGiftCardButtonClicked { viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BUY_GIFT_CARD) }
+
+        binding.itemDetails.setOnBuyGiftCardButtonClicked {
+            if (!viewModel.isUserSignInDashDirect()) {
+                showLoginDialog()
+            } else {
+                Toast.makeText(requireContext(), "Open Buy Card", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        viewModel.dashDirectSignIn.observe(viewLifecycleOwner) {
+            if (it) {
+                // TODO open Buy card UI
+                Toast.makeText(requireContext(), "Open Buy Card", Toast.LENGTH_SHORT).show()
+                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BUY_GIFT_CARD)
+            }
+        }
     }
 
     private fun setupScreenTransitions() {

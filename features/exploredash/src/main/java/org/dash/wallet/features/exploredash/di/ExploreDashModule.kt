@@ -31,12 +31,16 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.MerchantAtmDataSource
+import org.dash.wallet.features.exploredash.network.RemoteDataSource
+import org.dash.wallet.features.exploredash.network.service.DashDirectAuthApi
+import org.dash.wallet.features.exploredash.network.service.DashDirectServicesApi
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
-import org.dash.wallet.features.exploredash.repository.GCExploreDatabase
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
+import org.dash.wallet.features.exploredash.repository.GCExploreDatabase
 import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 
@@ -64,6 +68,25 @@ abstract class ExploreDashModule {
 
         @Provides
         fun provideFirebaseStorage() = Firebase.storage
+
+        @Provides
+        fun provideRemoteDataSource(userPreferences: Configuration): RemoteDataSource {
+            return RemoteDataSource(userPreferences)
+        }
+
+        @Provides
+        fun provideAuthApi(
+            remoteDataSource: RemoteDataSource
+        ): DashDirectAuthApi {
+            return remoteDataSource.buildApi(DashDirectAuthApi::class.java)
+        }
+
+        @Provides
+        fun provideDashDirectApi(
+            remoteDataSource: RemoteDataSource
+        ): DashDirectServicesApi {
+            return remoteDataSource.buildApi(DashDirectServicesApi::class.java)
+        }
     }
 
     @Binds
