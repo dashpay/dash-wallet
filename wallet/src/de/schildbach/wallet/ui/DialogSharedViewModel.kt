@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui
 
 
 import androidx.lifecycle.ViewModel
+import de.schildbach.wallet.ui.util.SingleLiveEventExt
 
 open class DialogSharedViewModel : ViewModel() {
 

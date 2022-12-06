@@ -28,7 +28,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import net.lingala.zip4j.ZipFile
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.slf4j.LoggerFactory
 import java.io.*
 import java.lang.System.currentTimeMillis

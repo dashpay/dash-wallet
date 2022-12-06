@@ -16,30 +16,37 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Application
 import android.content.Intent
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.RecoverPinLiveData
+import de.schildbach.wallet.security.SecurityFunctions
+import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet.util.MnemonicCodeExt
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.crypto.MnemonicException.MnemonicLengthException
+import org.dash.wallet.common.Configuration
 import org.slf4j.LoggerFactory
 import java.util.*
+import javax.inject.Inject
 
-class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class RestoreWalletFromSeedViewModel @Inject constructor(
+    private val walletApplication: WalletApplication,
+    private val configuration: Configuration,
+    securityFunctions: SecurityFunctions
+) : ViewModel() {
 
     private val log = LoggerFactory.getLogger(RestoreWalletFromSeedViewModel::class.java)
-
-    private val walletApplication = application as WalletApplication
 
     internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
 
-    val recoverPinLiveData = RecoverPinLiveData(application)
+    val recoverPinLiveData = RecoverPinLiveData(walletApplication.wallet!!, securityFunctions.scryptIterationsTarget())
 
     /**
      * Normalize - converts all letter to lowercase and to words matching those of a BIP39 word list.
@@ -57,10 +64,10 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
             val wallet = WalletUtils.restoreWalletFromSeed(normalize(words), Constants.NETWORK_PARAMETERS)
             walletApplication.setWallet(wallet)
             log.info("successfully restored wallet from seed")
-            walletApplication.configuration.disarmBackupSeedReminder()
-            walletApplication.configuration.isRestoringBackup = true
+            configuration.disarmBackupSeedReminder()
+            configuration.isRestoringBackup = true
             walletApplication.resetBlockchainState()
-            startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
+            startActivityAction.call(SetPinActivity.createIntent(walletApplication, R.string.set_pin_restore_wallet))
         }
     }
 

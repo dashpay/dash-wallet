@@ -24,9 +24,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
-import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.script.ScriptException
 import org.bitcoinj.wallet.*
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
@@ -59,9 +59,7 @@ class SendCoinsTaskRunner @Inject constructor(
         }
 
         val sendRequest = createSendRequest(address, amount, coinSelector, emptyWallet)
-        val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
-
-        return sendCoins(wallet, sendRequest, scryptIterationsTarget)
+        return sendCoins(sendRequest, checkBalanceConditions = false)
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")
@@ -74,8 +72,7 @@ class SendCoinsTaskRunner @Inject constructor(
         var sendRequest = createSendRequest(address, amount, null, emptyWallet, false)
         val securityGuard = SecurityGuard()
         val password = securityGuard.retrievePassword()
-        val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
-        val encryptionKey = securityFunctions.deriveKey(wallet, password, scryptIterationsTarget)
+        val encryptionKey = securityFunctions.deriveKey(wallet, password)
         sendRequest.aesKey = encryptionKey
         wallet.completeTx(sendRequest)
 
@@ -123,22 +120,20 @@ class SendCoinsTaskRunner @Inject constructor(
         }
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
-    private suspend fun sendCoins(
-        wallet: Wallet,
+    @Throws(LeftoverBalanceException::class)
+    suspend fun sendCoins(
         sendRequest: SendRequest,
-        scryptIterationsTarget: Int,
-        exchangeRate: ExchangeRate? = null,
-        txCompleted: Boolean = false
+        txCompleted: Boolean = false,
+        checkBalanceConditions: Boolean = true
     ): Transaction = withContext(Dispatchers.IO) {
+        val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
         Context.propagate(wallet.context)
 
-        val securityGuard = SecurityGuard()
-        val password = securityGuard.retrievePassword()
-        val encryptionKey = securityFunctions.deriveKey(wallet, password, scryptIterationsTarget)
+        if (checkBalanceConditions) {
+            checkBalanceConditions(wallet, sendRequest.tx)
+        }
 
-        sendRequest.aesKey = encryptionKey
-        sendRequest.exchangeRate = exchangeRate
+        signSendRequest(sendRequest)
 
         try {
             log.info("sending: {}", sendRequest)
@@ -167,6 +162,16 @@ class SendCoinsTaskRunner @Inject constructor(
         }
     }
 
+    fun signSendRequest(sendRequest: SendRequest) {
+        val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
+
+        val securityGuard = SecurityGuard()
+        val password = securityGuard.retrievePassword()
+        val encryptionKey = securityFunctions.deriveKey(wallet, password)
+
+        sendRequest.aesKey = encryptionKey
+    }
+
     private fun checkDust(req: SendRequest): Boolean {
         if (req.tx != null) {
             for (output in req.tx.outputs) {
@@ -174,5 +179,22 @@ class SendCoinsTaskRunner @Inject constructor(
             }
         }
         return false
+    }
+
+    @Throws(LeftoverBalanceException::class)
+    private fun checkBalanceConditions(wallet: Wallet, tx: Transaction) {
+        for (output in tx.outputs) {
+            try {
+                if (!output.isMine(wallet)) {
+                    val script = output.scriptPubKey
+                    val address = script.getToAddress(
+                        de.schildbach.wallet.Constants.NETWORK_PARAMETERS,
+                        true
+                    )
+                    walletData.checkSendingConditions(address, output.value)
+                    return
+                }
+            } catch (ignored: ScriptException) { }
+        }
     }
 }

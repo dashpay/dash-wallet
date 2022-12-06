@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.ui.vertical_segmented_picker
+package org.dash.wallet.common.ui.segmented_picker
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -27,16 +27,16 @@ import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.VerticalSegmentedPickerOptionViewBinding
 
 class VerticalPickerOptionsAdapter(
-    private val clickListener: (VerticalPickerOptions, Int) -> Unit
-) : ListAdapter<VerticalPickerOptions, VerticalOptionViewHolder>(TaskDiffCallBack()) {
+    private val clickListener: (VerticalPickerOption, Int) -> Unit
+) : ListAdapter<VerticalPickerOption, VerticalOptionViewHolder>(TaskDiffCallBack()) {
 
     // This check runs on background thread
-    class TaskDiffCallBack : DiffUtil.ItemCallback<VerticalPickerOptions>() {
-        override fun areItemsTheSame(oldItem: VerticalPickerOptions, newItem: VerticalPickerOptions): Boolean {
+    class TaskDiffCallBack : DiffUtil.ItemCallback<VerticalPickerOption>() {
+        override fun areItemsTheSame(oldItem: VerticalPickerOption, newItem: VerticalPickerOption): Boolean {
             return (oldItem.name == newItem.name) && (oldItem.isSelected == newItem.isSelected)
         }
 
-        override fun areContentsTheSame(oldItem: VerticalPickerOptions, newItem: VerticalPickerOptions): Boolean {
+        override fun areContentsTheSame(oldItem: VerticalPickerOption, newItem: VerticalPickerOption): Boolean {
             return oldItem == newItem
         }
     }
@@ -63,17 +63,18 @@ class VerticalPickerOptionsAdapter(
 }
 
 class VerticalOptionViewHolder(val binding: VerticalSegmentedPickerOptionViewBinding) : RecyclerView.ViewHolder(binding.root) {
-    fun bind(option: VerticalPickerOptions) {
-        binding.name.setTextAppearance(R.style.Overline)
+    fun bind(option: VerticalPickerOption) {
         binding.name.text = option.name
 
         if (option.isSelected) {
+            binding.name.setTextColor(itemView.context.resources.getColor(R.color.content_primary, null))
             binding.name.background =
                 ContextCompat.getDrawable(itemView.context, R.drawable.bg_vertical_segment_rounded)
         } else {
-            binding.name.setBackgroundColor(itemView.context.getColor(R.color.gray_100))
+            binding.name.setTextColor(itemView.context.resources.getColor(R.color.content_tertiary, null))
+            binding.name.background = null
         }
     }
 }
 
-data class VerticalPickerOptions(val name: String, val isSelected: Boolean = false)
+data class VerticalPickerOption(val name: String, val isSelected: Boolean = false)

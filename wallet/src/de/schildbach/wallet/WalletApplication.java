@@ -834,17 +834,6 @@ public class WalletApplication extends MultiDexApplication
         return isLowRamDevice() ? 4 : 6;
     }
 
-    /**
-     * Low memory devices (currently 1GB or less) and 32 bit devices will require
-     * fewer scrypt hashes on the PIN+salt (handled by dashj)
-     *
-     * @return The number of scrypt interations
-     */
-    public int scryptIterationsTarget() {
-        boolean is64bitABI = Build.SUPPORTED_64_BIT_ABIS.length != 0;
-        return (isLowRamDevice() || !is64bitABI) ? Constants.SCRYPT_ITERATIONS_TARGET_LOWRAM : Constants.SCRYPT_ITERATIONS_TARGET;
-    }
-
     public static void scheduleStartBlockchainService(final Context context) {
         scheduleStartBlockchainService(context, false);
     }

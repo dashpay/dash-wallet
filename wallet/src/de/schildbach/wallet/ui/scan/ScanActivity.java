@@ -40,7 +40,7 @@ import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeReader;
 
 import dagger.hilt.android.AndroidEntryPoint;
-import de.schildbach.wallet.ui.AbstractWalletActivity;
+import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.util.OnFirstPreDraw;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
@@ -93,7 +93,7 @@ import androidx.lifecycle.ViewModelProviders;
  */
 @SuppressWarnings("deprecation")
 @AndroidEntryPoint
-public final class ScanActivity extends AbstractWalletActivity
+public final class ScanActivity extends LockScreenActivity
         implements SurfaceTextureListener, ActivityCompat.OnRequestPermissionsResultCallback {
     private static final String INTENT_EXTRA_SCENE_TRANSITION_X = "scene_transition_x";
     private static final String INTENT_EXTRA_SCENE_TRANSITION_Y = "scene_transition_y";

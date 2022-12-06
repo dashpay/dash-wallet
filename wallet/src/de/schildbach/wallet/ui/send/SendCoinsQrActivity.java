@@ -1,21 +1,21 @@
 /*
- * Copyright 2013-2015 the original author or authors.
+ * copyright 2013-2015 the original author or authors.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
+ * this program is free software: you can redistribute it and/or modify
+ * it under the terms of the gnu general public license as published by
+ * the free software foundation, either version 3 of the license, or
  * (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * this program is distributed in the hope that it will be useful,
+ * but without any warranty; without even the implied warranty of
+ * merchantability or fitness for a particular purpose.  see the
+ * gnu general public license for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * you should have received a copy of the gnu general public license
+ * along with this program.  if not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui;
+package de.schildbach.wallet.ui.send;
 
 import android.app.Activity;
 import android.content.Context;
@@ -26,18 +26,17 @@ import android.view.View;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.LockScreenActivity;
+import de.schildbach.wallet.ui.ShortcutComponentActivity;
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.scan.ScanActivity;
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity;
 import de.schildbach.wallet.ui.payments.SweepWalletActivity;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
-
-import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
 
 /**
  * @author Andreas Schildbach
@@ -84,8 +83,8 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
                 @Override
                 protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
                     boolean quickScan = isQuickScan();
-                    // if this is a quick scan, keepUnlock = true for SendCoinsInternalActivity
-                    SendCoinsInternalActivity.start(SendCoinsQrActivity.this, getIntent().getAction(), paymentIntent, false, quickScan);
+                    // if this is a quick scan, keepUnlock = true for SendCoinsActivity
+                    SendCoinsActivity.Companion.start(SendCoinsQrActivity.this, getIntent().getAction(), paymentIntent, quickScan);
 
                     if (quickScan) {
                         SendCoinsQrActivity.this.finish();
@@ -113,17 +112,16 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
 
                 @Override
                 protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                    BaseAlertDialogBuilder alertDialogBuilder = new BaseAlertDialogBuilder(SendCoinsQrActivity.this);
-                    alertDialogBuilder.setMessage(formatString(SendCoinsQrActivity.this, messageResId, messageArgs));
-                    alertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-                    alertDialogBuilder.setNeutralAction(
-                            () -> {
-                                if (isQuickScan()) {
-                                    SendCoinsQrActivity.this.finish();
-                                }
-                                return Unit.INSTANCE;
-                            }
-                    );
+                    AdaptiveDialog.simple(
+                            getString(messageResId, messageArgs),
+                            getString(R.string.button_dismiss),
+                            null
+                    ).show(SendCoinsQrActivity.this, result -> {
+                        if (isQuickScan()) {
+                            SendCoinsQrActivity.this.finish();
+                        }
+                        return Unit.INSTANCE;
+                    });
                 }
             }.parse();
         } else {

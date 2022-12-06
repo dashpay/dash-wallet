@@ -58,6 +58,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.security.BiometricHelper;
 import de.schildbach.wallet.security.BiometricLockoutException;
 import de.schildbach.wallet.security.FingerprintStorage;
+import de.schildbach.wallet.security.SecurityFunctions;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.payments.DecryptSeedTask;
 import de.schildbach.wallet.payments.DeriveKeyTask;
@@ -78,7 +79,7 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
 
     private FingerprintView fingerprintView;
     @Inject public BiometricHelper biometricHelper;
-
+    @Inject SecurityFunctions securityFunctions;
 
     public static void show(final FragmentManager fm) {
         final BackupWalletToSeedDialogFragment newFragment = new BackupWalletToSeedDialogFragment();
@@ -267,7 +268,7 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
 
             final String pin = privateKeyPasswordView.getText().toString().trim();
 
-            new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
+            new DeriveKeyTask(backgroundHandler, securityFunctions.scryptIterationsTarget()) {
                 @Override
                 protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
                     privateKeyBadPasswordView.setVisibility(View.GONE);

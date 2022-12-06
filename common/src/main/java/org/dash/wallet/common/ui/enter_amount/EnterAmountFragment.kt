@@ -25,7 +25,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Monetary
 import org.bitcoinj.utils.ExchangeRate
@@ -34,11 +33,11 @@ import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.FragmentEnterAmountBinding
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import java.text.DecimalFormatSymbols
 
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     companion object {
         private const val ARG_INITIAL_AMOUNT = "initial_amount"
@@ -69,10 +68,12 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     private val binding by viewBinding(FragmentEnterAmountBinding::bind)
     private val viewModel: EnterAmountViewModel by activityViewModels()
     private val decimalSeparator = DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
-    private var maxSelected: Boolean = false
+    var maxSelected: Boolean = false
+        private set
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         val args = requireArguments()
         binding.maxButtonWrapper.isVisible = args.getBoolean(ARG_MAX_BUTTON_VISIBLE)
         binding.amountView.showCurrencySelector = args.getBoolean(ARG_SHOW_CURRENCY_SELECTOR_BUTTON)
@@ -88,6 +89,8 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
             }
         }
 
+        setupAmountView(dashToFiat)
+
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.setOnClickListener {
             viewModel.onContinueEvent.value = Pair(
@@ -96,31 +99,9 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
             )
         }
 
-        binding.maxButton.setOnClickListener {
-            binding.amountView.dashToFiat = true
-            binding.amountView.input = (viewModel.maxAmount.value ?: Coin.ZERO).toPlainString()
-            maxSelected = true
-        }
-
-        binding.amountView.setOnCurrencyToggleClicked {
-            parentFragmentManager.let { fragmentManager ->
-                ExchangeRatesDialog(viewModel.selectedCurrencyCode) { rate, _, dialog ->
-                    viewModel.selectedCurrencyCode = rate.currencyCode
-                    dialog.dismiss()
-                }.show(fragmentManager, "payment_method")
-            }
-        }
-
-        binding.amountView.setOnConvertDirectionChanged {
-            viewModel._dashToFiatDirection.value = binding.amountView.dashToFiat
-        }
-
-        binding.amountView.setOnAmountChanged {
-            viewModel._amount.value = it
-        }
-
         viewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->
             binding.amountView.exchangeRate = if (rate != null) {
+                binding.currencyOptions.provideOptions(listOf(rate.currencyCode, Constants.DASH_CURRENCY))
                 ExchangeRate(Coin.COIN, rate.fiat)
             } else {
                 null
@@ -136,8 +117,7 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         }
     }
 
-
-    fun setViewDetails(continueText: String, keyboardHeader: View?) {
+    fun setViewDetails(continueText: String, keyboardHeader: View? = null) {
         lifecycleScope.launchWhenStarted {
             binding.continueBtn.text = continueText
             keyboardHeader?.let {
@@ -145,6 +125,56 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
                 binding.keyboardHeaderDivider.isVisible = true
             }
         }
+    }
+
+    fun setError(errorText: String) {
+        lifecycleScope.launchWhenStarted {
+            binding.errorLabel.text = errorText
+            binding.errorLabel.isVisible = errorText.isNotEmpty()
+        }
+    }
+
+    fun applyMaxAmount() {
+        lifecycleScope.launchWhenStarted {
+            onMaxAmountButtonClick()
+        }
+    }
+
+    private fun setupAmountView(dashToFiat: Boolean) {
+        val currencyOptions = listOf(Constants.USD_CURRENCY, Constants.DASH_CURRENCY)
+        binding.currencyOptions.pickedOptionIndex = if (dashToFiat) 1 else 0
+        binding.currencyOptions.provideOptions(currencyOptions)
+        binding.currencyOptions.setOnOptionPickedListener { currency, _ ->
+            binding.amountView.dashToFiat = currency == Constants.DASH_CURRENCY
+        }
+
+        binding.maxButton.setOnClickListener {
+            onMaxAmountButtonClick()
+        }
+
+        binding.amountView.setOnCurrencyToggleClicked {
+            parentFragmentManager.let { fragmentManager ->
+                ExchangeRatesDialog(viewModel.selectedCurrencyCode) { rate, _, dialog ->
+                    viewModel.selectedCurrencyCode = rate.currencyCode
+                    dialog.dismiss()
+                }.show(fragmentManager, "payment_method")
+            }
+        }
+
+        binding.amountView.setOnDashToFiatChanged { isDashToFiat ->
+            binding.currencyOptions.pickedOptionIndex = if (isDashToFiat) 1 else 0
+            viewModel._dashToFiatDirection.value = binding.amountView.dashToFiat
+        }
+
+        binding.amountView.setOnAmountChanged {
+            viewModel._amount.value = it
+        }
+    }
+
+    private fun onMaxAmountButtonClick() {
+        binding.amountView.dashToFiat = true
+        binding.amountView.input = (viewModel.maxAmount.value ?: Coin.ZERO).toPlainString()
+        maxSelected = true
     }
 
     private val keyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
@@ -186,11 +216,10 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
                 }
             }
         }
-
         override fun onBack(longClick: Boolean) {
             refreshValue()
 
-            if (longClick || maxSelected) {
+            if (longClick) {
                 value.clear()
             } else if (value.isNotEmpty()) {
                 value.deleteCharAt(value.length - 1)

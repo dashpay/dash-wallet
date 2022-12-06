@@ -28,7 +28,7 @@ import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import de.schildbach.wallet.data.ServiceStatus
 import de.schildbach.wallet_test.databinding.ItemServiceListBinding
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import androidx.recyclerview.widget.ListAdapter
 import de.schildbach.wallet_test.R

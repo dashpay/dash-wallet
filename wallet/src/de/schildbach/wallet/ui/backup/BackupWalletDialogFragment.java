@@ -72,6 +72,7 @@ import java.util.TimeZone;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.security.SecurityFunctions;
 import de.schildbach.wallet.ui.more.SecurityActivity;
 import de.schildbach.wallet.security.SecurityGuard;
 import de.schildbach.wallet.payments.DeriveKeyTask;
@@ -89,6 +90,8 @@ import static androidx.core.util.Preconditions.checkNotNull;
 import static androidx.core.util.Preconditions.checkState;
 import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
 
+import javax.inject.Inject;
+
 /**
  * @author Andreas Schildbach
  * @author Eric Britten
@@ -104,6 +107,7 @@ public class BackupWalletDialogFragment extends BaseDialogFragment {
         newFragment.show(fm, FRAGMENT_TAG);
     }
 
+    @Inject SecurityFunctions securityFunctions;
     private SecurityActivity activity;
     private WalletApplication application;
 
@@ -324,7 +328,7 @@ public class BackupWalletDialogFragment extends BaseDialogFragment {
                     if (wallet.isEncrypted()) {
                         String walletPassword = securityGuard.retrievePassword();
                         final Wallet decryptedWallet = new WalletProtobufSerializer().readWallet(Constants.NETWORK_PARAMETERS, null, walletProto);
-                        new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
+                        new DeriveKeyTask(backgroundHandler, securityFunctions.scryptIterationsTarget()) {
                             @Override
                             protected void onSuccess(KeyParameter encryptionKey, boolean changed) {
                                 decryptedWallet.decrypt(encryptionKey);

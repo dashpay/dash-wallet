@@ -1,20 +1,21 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2019 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.send
 
 import android.content.Context
 import android.content.Intent
@@ -23,28 +24,32 @@ import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.style.ImageSpan
 import android.view.MenuItem
+import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.res.ResourcesCompat
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.ui.send.ConfirmTransactionDialog
-import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
+//import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
+import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
 import org.dash.wallet.integration.uphold.data.UpholdConstants
 import org.dash.wallet.integration.uphold.data.UpholdTransaction
 import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper
 import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper.OnTransferListener
-import org.dash.wallet.common.util.openCustomTab
 import java.math.BigDecimal
 import javax.inject.Inject
 
@@ -66,7 +71,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         }
     }
 
-    private lateinit var enterAmountSharedViewModel: EnterAmountSharedViewModel
+    private val enterAmountViewModel by viewModels<EnterAmountViewModel>()
     @Inject lateinit var walletDataProvider: WalletDataProvider
     @Inject lateinit var transactionMetadataProvider: TransactionMetadataProvider
     private lateinit var balance: Coin
@@ -77,9 +82,29 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         setContentView(R.layout.activity_uphold_tranfser)
 
         if (savedInstanceState == null) {
+            val fragment = EnterAmountFragment.newInstance()
             supportFragmentManager.beginTransaction()
-                    .replace(R.id.container, EnterAmountFragment.newInstance(Coin.ZERO))
+                    .replace(R.id.container, fragment)
                     .commitNow()
+
+            val drawableDash = ResourcesCompat.getDrawable(resources, R.drawable.ic_dash_d_black, null)
+            drawableDash!!.setBounds(0, 0, 38, 38)
+            val dashSymbol = ImageSpan(drawableDash, ImageSpan.ALIGN_BASELINE)
+            val builder = SpannableStringBuilder()
+            builder.appendLine(intent.getStringExtra(EXTRA_MESSAGE))
+            builder.append("  ")
+            builder.setSpan(dashSymbol, builder.length - 2, builder.length - 1, 0)
+            val dashFormat = MonetaryFormat().noCode().minDecimals(6).optionalDecimals()
+            builder.append(dashFormat.format(balance))
+            builder.append("  ")
+            builder.append(getText(R.string.enter_amount_available))
+
+            fragment.setViewDetails(
+                getString(R.string.uphold_transfer),
+                TextView(this).apply {
+                    text = SpannableString.valueOf(builder)
+                }
+            )
         }
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
@@ -92,30 +117,15 @@ class UpholdTransferActivity : InteractionAwareActivity() {
 
         title = intent.getStringExtra(EXTRA_TITLE)
 
-        enterAmountSharedViewModel = ViewModelProvider(this).get(EnterAmountSharedViewModel::class.java)
-        enterAmountSharedViewModel.buttonTextData.call(R.string.uphold_transfer)
-
         val balanceStr = intent.getStringExtra(EXTRA_MAX_AMOUNT)
         balance = Coin.parseCoin(balanceStr)
+        enterAmountViewModel.setMaxAmount(balance)
 
-        val drawableDash = ResourcesCompat.getDrawable(resources, R.drawable.ic_dash_d_black, null)
-        drawableDash!!.setBounds(0, 0, 38, 38)
-        val dashSymbol = ImageSpan(drawableDash, ImageSpan.ALIGN_BASELINE)
-        val builder = SpannableStringBuilder()
-        builder.appendln(intent.getStringExtra(EXTRA_MESSAGE))
-        builder.append("  ")
-        builder.setSpan(dashSymbol, builder.length - 2, builder.length - 1, 0)
-        val dashFormat = MonetaryFormat().noCode().minDecimals(6).optionalDecimals()
-        builder.append(dashFormat.format(balance))
-        builder.append("  ")
-        builder.append(getText(R.string.enter_amount_available))
-
-        enterAmountSharedViewModel.messageTextStringData.value = SpannableString.valueOf(builder)
-        enterAmountSharedViewModel.buttonClickEvent.observe(this) {
+        enterAmountViewModel.onContinueEvent.observe(this) {
             UpholdWithdrawalHelper.requirementsSatisfied(this) { result ->
                 when (result) {
                     RequirementsCheckResult.Satisfied -> {
-                        val dashAmount = enterAmountSharedViewModel.dashAmount
+                        val dashAmount = it.first
                         showPaymentConfirmation(dashAmount)
                     }
                     RequirementsCheckResult.Resolve -> {
@@ -125,17 +135,6 @@ class UpholdTransferActivity : InteractionAwareActivity() {
                     else -> {}
                 }
             }
-        }
-        enterAmountSharedViewModel.maxButtonVisibleData.value = true
-        enterAmountSharedViewModel.maxButtonClickEvent.observe(this) {
-            enterAmountSharedViewModel.applyMaxAmountEvent.setValue(balance)
-        }
-        enterAmountSharedViewModel.dashAmountData.observe(this) {
-            enterAmountSharedViewModel.buttonEnabledData.setValue(it.isPositive)
-        }
-        val confirmTransactionSharedViewModel: SingleActionSharedViewModel = ViewModelProvider(this).get(SingleActionSharedViewModel::class.java)
-        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this) {
-            withdrawalDialog.commitTransaction(this)
         }
     }
 
@@ -148,13 +147,20 @@ class UpholdTransferActivity : InteractionAwareActivity() {
                 val amountStr = transaction.origin.base.toPlainString()
 
                 // if the exchange rate is not available, then show "Not Available"
-                val fiatAmount = enterAmountSharedViewModel.exchangeRate?.coinToFiat(amount)
+                val exchangeRate = enterAmountViewModel.selectedExchangeRate.value?.let { ExchangeRate(Coin.COIN, it.fiat) }
+                val fiatAmount = exchangeRate?.coinToFiat(amount)
                 val amountFiat = if (fiatAmount != null) Constants.LOCAL_FORMAT.format(fiatAmount).toString() else getString(R.string.transaction_row_rate_not_available)
                 val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
 
                 val fee = transaction.origin.fee.toPlainString()
                 val total = transaction.origin.amount.toPlainString()
-                ConfirmTransactionDialog.showDialog(this@UpholdTransferActivity, address, amountStr, amountFiat, fiatSymbol, fee, total, getString(R.string.uphold_transfer))
+                lifecycleScope.launch {
+                    val toContinue = ConfirmTransactionDialog.showDialogAsync(this@UpholdTransferActivity, address, amountStr, amountFiat, fiatSymbol, fee, total)
+
+                    if (toContinue) {
+                        withdrawalDialog.commitTransaction(this@UpholdTransferActivity)
+                    }
+                }
             }
 
             override fun onTransfer() {

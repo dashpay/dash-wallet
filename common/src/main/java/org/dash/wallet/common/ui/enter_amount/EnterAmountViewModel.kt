@@ -29,7 +29,7 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import javax.inject.Inject
 
-@ExperimentalCoroutinesApi
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class EnterAmountViewModel @Inject constructor(
     var exchangeRates: ExchangeRatesProvider,
@@ -64,6 +64,11 @@ class EnterAmountViewModel @Inject constructor(
     val amount: LiveData<Coin>
         get() = _amount
 
+    private val _callerBlocksContinue = MutableLiveData(false)
+    var blockContinue: Boolean
+        get() = _callerBlocksContinue.value ?: false
+        set(value) { _callerBlocksContinue.value = value }
+
     val canContinue: LiveData<Boolean>
         get() = MediatorLiveData<Boolean>().apply {
             fun canContinue(): Boolean {
@@ -71,9 +76,10 @@ class EnterAmountViewModel @Inject constructor(
                 val minAmount = _minAmount.value ?: Coin.ZERO
                 val maxAmount = _maxAmount.value ?: Coin.ZERO
 
-                return amount > minAmount && (maxAmount == Coin.ZERO || amount <= maxAmount)
+                return !blockContinue && amount > minAmount && (maxAmount == Coin.ZERO || amount <= maxAmount)
             }
 
+            addSource(_callerBlocksContinue) { value = canContinue() }
             addSource(_amount) { value = canContinue() }
             addSource(_minAmount) { value = canContinue() }
             addSource(_maxAmount) { value = canContinue() }
