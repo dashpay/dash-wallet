@@ -83,6 +83,7 @@ import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
+import org.dash.wallet.features.exploredash.network.service.DashDirectClientConstants;
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
@@ -373,6 +374,7 @@ public class WalletApplication extends MultiDexApplication
 
         initUphold();
         initCoinbase();
+        initDashDirect();
     }
 
     private void initUphold() {
@@ -391,6 +393,10 @@ public class WalletApplication extends MultiDexApplication
     private void initCoinbase() {
         CoinBaseClientConstants.CLIENT_ID = BuildConfig.COINBASE_CLIENT_ID;
         CoinBaseClientConstants.CLIENT_SECRET = BuildConfig.COINBASE_CLIENT_SECRET;
+    }
+
+    private void initDashDirect() {
+        DashDirectClientConstants.CLIENT_ID = BuildConfig.DASHDIRECT_CLIENT_ID;
     }
 
     @TargetApi(Build.VERSION_CODES.O)

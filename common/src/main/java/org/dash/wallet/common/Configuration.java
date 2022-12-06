@@ -111,6 +111,9 @@ public class Configuration {
     public static final String PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN = "has_location_dialog_been_shown";
     public static final String PREFS_KEY_EXPLORE_DATABASE_NAME = "explore_database_name";
 
+    // DashDirect
+    public static final String PREFS_KEY_LAST_DASHDIRECT_ACCESS_TOKEN = "last_dash_direct_access_token";
+
     // CrowdNode
     public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
     public static final String PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS = "crowdnode_primary_address";
@@ -602,6 +605,17 @@ public class Configuration {
 
     public String getCoinbaseSendLimitCurrency() {
         return prefs.getString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, GenericUtils.getLocaleCurrencyCode());
+    }
+
+    //Dash Direct
+
+    public void setLastDashDirectAccessToken(String token) {
+        prefs.edit().putString(PREFS_KEY_LAST_DASHDIRECT_ACCESS_TOKEN, token).apply();
+    }
+
+    @NonNull
+    public String getLastDashDirectAccessToken() {
+        return prefs.getString(PREFS_KEY_LAST_DASHDIRECT_ACCESS_TOKEN, "");
     }
 
     // CrowdNode
