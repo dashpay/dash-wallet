@@ -20,8 +20,8 @@ import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.dash.wallet.common.BuildConfig
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.features.exploredash.network.interceptor.HeadersInterceptor
+import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -30,7 +30,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 class RemoteDataSource @Inject constructor(
-    private val userPreferences: Configuration
+    private val config: DashDirectConfig
 ) {
 
     fun <Api> buildApi(api: Class<Api>): Api {
@@ -44,7 +44,7 @@ class RemoteDataSource @Inject constructor(
 
     private fun getOkHttpClient(authenticator: Authenticator? = null): OkHttpClient {
         return OkHttpClient.Builder()
-            .addInterceptor(HeadersInterceptor(userPreferences))
+            .addInterceptor(HeadersInterceptor(config))
             .connectTimeout(20.seconds.toJavaDuration())
             .callTimeout(20.seconds.toJavaDuration())
             .readTimeout(20.seconds.toJavaDuration())

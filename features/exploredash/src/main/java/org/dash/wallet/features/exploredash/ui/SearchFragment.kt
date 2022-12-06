@@ -24,6 +24,7 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
@@ -38,6 +39,7 @@ import androidx.core.view.*
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.ConcatAdapter
@@ -61,6 +63,7 @@ import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -393,9 +396,34 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val password = dialogLayout.findViewById<AppCompatEditText>(R.id.password)
         builder.setView(dialogLayout)
         builder.setPositiveButton("login") { _, _ ->
-            viewModel.signInToDashDirect(email.text.toString(), password.text.toString())
+            signInToDashDirect(email, password)
         }
         builder.show()
+    }
+
+    private fun signInToDashDirect(
+        email: AppCompatEditText,
+        password: AppCompatEditText
+    ) {
+        lifecycleScope.launch {
+            when (val response = viewModel.signInToDashDirect(email.text.toString(), password.text.toString())) {
+                is ResponseResource.Success -> {
+                    if (response.value) {
+                        // TODO open Buy card UI
+                        Toast.makeText(requireContext(), "Open Buy Card", Toast.LENGTH_SHORT).show()
+                        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BUY_GIFT_CARD)
+                    }
+                }
+
+                is ResponseResource.Failure -> {
+                    Toast.makeText(
+                        requireContext(),
+                        "Dash direct error ${response.errorCode}: ${response.errorBody ?: "empty"}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
     }
 
     private fun setupSearchInput(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
@@ -523,14 +551,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 showLoginDialog()
             } else {
                 Toast.makeText(requireContext(), "Open Buy Card", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        viewModel.dashDirectSignIn.observe(viewLifecycleOwner) {
-            if (it) {
-                // TODO open Buy card UI
-                Toast.makeText(requireContext(), "Open Buy Card", Toast.LENGTH_SHORT).show()
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BUY_GIFT_CARD)
             }
         }
     }

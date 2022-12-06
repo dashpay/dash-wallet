@@ -206,9 +206,6 @@ class ExploreViewModel @Inject constructor(
     val screenState: LiveData<ScreenState>
         get() = _screenState
 
-    private val _dashDirectSignIn = MutableLiveData<Boolean>()
-    val dashDirectSignIn: LiveData<Boolean>
-        get() = _dashDirectSignIn
 
     // Used for the list of search results
     private val pagingSearchFlow: Flow<PagingData<SearchResult>> = _searchQuery
@@ -402,49 +399,15 @@ class ExploreViewModel @Inject constructor(
 
     fun isUserSignInDashDirect() = repository.isUserSignIn()
 
-    fun signInToDashDirect(email: String, password: String) {
-        if (repository.isUserSignIn()) {
-            _dashDirectSignIn.value = true
-            return
-        }
+    suspend fun signInToDashDirect(email: String, password: String) = repository.signIn(email, password)
 
-        viewModelScope.launch {
-            when (val response = repository.signIn(email, password)) {
-                is ResponseResource.Success -> {
-                    if (response.value) {
-                        _dashDirectSignIn.value = true
-                    }
-                }
-
-                is ResponseResource.Failure -> {
-                    _dashDirectSignIn.value = false
-                    log.error("Dash direct error ${response.errorCode}: ${response.errorBody ?: "empty"}")
-                }
-            }
-
-            _dashDirectSignIn.value = false
-        }
-    }
-
-    fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Int) {
-        viewModelScope.launch {
-            when (
-                val response = repository.purchaseGiftCard(
-                    deviceID = deviceID,
-                    giftCardAmount = giftCardAmount,
-                    currency = currency,
-                    merchantId = merchantId
-                )
-            ) {
-                is ResponseResource.Success -> {
-                }
-
-                is ResponseResource.Failure -> {
-                    log.error("Dash direct error ${response.errorCode}: ${response.errorBody ?: "empty"}")
-                }
-            }
-        }
-    }
+    suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Int) =
+        repository.purchaseGiftCard(
+            deviceID = deviceID,
+            giftCardAmount = giftCardAmount,
+            currency = currency,
+            merchantId = merchantId
+        )
 
     fun onMapMarkerSelected(id: Int) {
         val item = _allMerchantLocations.value?.firstOrNull { it.id == id } ?:

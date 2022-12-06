@@ -17,7 +17,7 @@
 
 package org.dash.wallet.features.exploredash.repository
 
-import org.dash.wallet.common.Configuration
+import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardRequest
@@ -25,12 +25,13 @@ import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCard
 import org.dash.wallet.features.exploredash.data.model.signin.SignInRequest
 import org.dash.wallet.features.exploredash.network.service.DashDirectAuthApi
 import org.dash.wallet.features.exploredash.network.service.DashDirectServicesApi
+import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 import javax.inject.Inject
 
 class DashDirectRepository @Inject constructor(
     private val servicesApi: DashDirectServicesApi,
     private val authApi: DashDirectAuthApi,
-    private val userPreferences: Configuration
+    private val config: DashDirectConfig
 ) : DashDirectRepositoryInt {
 
     override suspend fun signIn(
@@ -40,17 +41,17 @@ class DashDirectRepository @Inject constructor(
         authApi.signIn(signInRequest = SignInRequest(emailAddress = email, password = password))
             .also {
                 it?.data?.token?.let { token ->
-                    userPreferences.lastDashDirectAccessToken = token
+                    config.setPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN, token)
                 }
             }
-        userPreferences.lastDashDirectAccessToken.isNotEmpty()
+        config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: false
     }
 
     override fun isUserSignIn() =
-        userPreferences.lastDashDirectAccessToken.isNotEmpty()
+        runBlocking { config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: false }
 
     fun reset() {
-        userPreferences.lastDashDirectAccessToken = ""
+        runBlocking { config.setPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN, "") }
     }
 
     override suspend fun purchaseGiftCard(
