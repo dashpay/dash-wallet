@@ -159,24 +159,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    fun getWalletEncryptionKey(): KeyParameter? {
-        return if (walletApplication.wallet!!.isEncrypted) {
-            val password = try {
-                // always create a SecurityGuard when it is required
-                val securityGuard = SecurityGuard()
-                securityGuard.retrievePassword()
-            } catch (e: IllegalArgumentException) {
-                log.error("There was an error retrieving the wallet password", e)
-                analytics.logError(e, "There was an error retrieving the wallet password")
-                null
-            }
-            // Don't bother with DeriveKeyTask here, just call deriveKey
-            walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
-        } else {
-            null
-        }
-    }
-
     /**
      * This method looks at all items in the database tables
      * that have existing identites and saves them for future use.
@@ -595,7 +577,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
-            val cftx = blockchainIdentity.createCreditFundingTransaction(Coin.CENT, keyParameter)
+            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
         }
     }
