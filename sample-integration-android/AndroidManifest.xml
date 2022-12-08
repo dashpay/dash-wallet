@@ -14,7 +14,14 @@
         android:normalScreens="true"
         android:smallScreens="true" />
 
-	<application android:label="Dash in-app payment sample"
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="dash" />
+        </intent>
+    </queries>
+
+    <application android:label="Dash in-app payment sample"
         android:name="androidx.multidex.MultiDexApplication">
 
 		<activity
