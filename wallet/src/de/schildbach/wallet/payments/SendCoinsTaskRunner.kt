@@ -35,6 +35,10 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import kotlin.jvm.Throws
 
+// 226 226
+// with one output 192
+// 360 or 340 with 2 inputs
+
 class SendCoinsTaskRunner @Inject constructor(
     private val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
