@@ -34,7 +34,7 @@ class MaxOutputAmountCoinSelector: CoinSelector {
         val value = Coin.valueOf(candidates.sumOf { it.value.value })
         val inputCount = candidates.size.toLong()
         val outputCount = 1L
-        // Formulae is lifted from DashSync for ios: https://github.com/dashpay/dashsync-iOS/blob/master/DashSync/shared/Models/Wallet/DSAccount.m#L1680-L1711
+        // Formula is lifted from DashSync for ios: https://github.com/dashpay/dashsync-iOS/blob/master/DashSync/shared/Models/Wallet/DSAccount.m#L1680-L1711
         // Android has an extra byte per input
         val txSize = 8 + VarInt.sizeOf(inputCount) + (TX_INPUT_SIZE + 1) * inputCount +
                 VarInt.sizeOf(outputCount) + TX_OUTPUT_SIZE * outputCount
