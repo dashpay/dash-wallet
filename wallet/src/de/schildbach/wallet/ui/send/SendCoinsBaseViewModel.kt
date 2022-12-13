@@ -65,7 +65,7 @@ open class SendCoinsBaseViewModel @Inject constructor(
         sendRequest.signInputs = signInputs
 
         val walletBalance = wallet.getBalance(MaxOutputAmountCoinSelector())
-        sendRequest.emptyWallet = mayEditAmount && walletBalance <= paymentIntent.amount
+        sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
 
         return sendRequest
     }
