@@ -170,6 +170,16 @@ class SendCoinsViewModel @Inject constructor(
         return estimated.subtract(available)
     }
 
+    fun shouldAdjustAmount(): Boolean {
+        return dryRunException is InsufficientMoneyException &&
+                currentAmount.isLessThan(maxOutputAmount.value ?: Coin.ZERO)
+    }
+
+    fun getAdjustedAmount(): Coin {
+        val missing = (dryRunException as? InsufficientMoneyException)?.missing ?: Coin.ZERO
+        return currentAmount.subtract(missing)
+    }
+
     fun resetState() {
         _state.value = State.INPUT
     }
@@ -201,11 +211,10 @@ class SendCoinsViewModel @Inject constructor(
 
         val dummyAddress = wallet.currentReceiveAddress() // won't be used, tx is never committed
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(amount, dummyAddress)
-        var sendRequest: SendRequest? = null
 
         try {
             // check regular payment
-            sendRequest = createSendRequest(
+            var sendRequest = createSendRequest(
                 basePaymentIntent.mayEditAmount(),
                 finalPaymentIntent,
                 signInputs = false,
@@ -226,13 +235,8 @@ class SendCoinsViewModel @Inject constructor(
             dryrunSendRequest = sendRequest
             _dryRunSuccessful.value = true
         } catch (ex: Exception) {
-            if (ex is InsufficientMoneyException) {
-                dryrunSendRequest = sendRequest
-                _dryRunSuccessful.value = true
-            } else {
-                dryRunException = ex
-                _dryRunSuccessful.value = false
-            }
+            dryRunException = ex
+            _dryRunSuccessful.value = false
         }
     }
 

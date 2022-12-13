@@ -17,12 +17,12 @@
 
 package de.schildbach.wallet.payments
 
-import android.util.Log
-import org.bitcoinj.core.*
-import org.bitcoinj.params.MainNetParams
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.TransactionOutput
+import org.bitcoinj.core.VarInt
 import org.bitcoinj.wallet.CoinSelection
 import org.bitcoinj.wallet.CoinSelector
-import org.bitcoinj.wallet.Wallet
 
 class MaxOutputAmountCoinSelector: CoinSelector {
     companion object {
@@ -39,16 +39,7 @@ class MaxOutputAmountCoinSelector: CoinSelector {
         val txSize = 8 + VarInt.sizeOf(inputCount) + (TX_INPUT_SIZE + 1) * inputCount +
                 VarInt.sizeOf(outputCount) + TX_OUTPUT_SIZE * outputCount
         val fee = Transaction.DEFAULT_TX_FEE.multiply(txSize).divide(1000)
-        Log.i("MAXOUTPUTFIX", "calculated fee: ${fee}")
-        Log.i("MAXOUTPUTFIX", "calculated max: ${value - fee}")
 
-        val address = Address.fromBase58(MainNetParams.get(), "Xh2sjtFeR5NoBM3jDjCRreMafiju9KZGSN")
-        val output = TransactionOutput(address.parameters, null, fee, address)
-        Log.i("MAXOUTPUTFIX", "isDust: ${output.isDust}")
-        val minNonDust = output.minNonDustValue
-        Log.i("MAXOUTPUTFIX", "minNonDust: ${minNonDust.toFriendlyString()}, isLessThan: ${output.value.isLessThan(minNonDust)}")
-
-
-        return CoinSelection(value - fee, candidates)
+        return CoinSelection((value - fee).coerceAtLeast(Coin.ZERO), candidates)
     }
 }

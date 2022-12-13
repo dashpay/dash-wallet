@@ -140,6 +140,15 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         }
     }
 
+    fun setAmount(amount: Coin) {
+        if (binding.amountView.dashToFiat) {
+            binding.amountView.input = amount.toPlainString()
+        } else viewModel.selectedExchangeRate.value?.let {
+            val rate = ExchangeRate(it.fiat)
+            binding.amountView.input = binding.amountView.fiatFormat.format(rate.coinToFiat(amount)).toString()
+        }
+    }
+
     private fun setupAmountView(dashToFiat: Boolean) {
         val currencyOptions = listOf(Constants.USD_CURRENCY, Constants.DASH_CURRENCY)
         binding.currencyOptions.pickedOptionIndex = if (dashToFiat) 1 else 0

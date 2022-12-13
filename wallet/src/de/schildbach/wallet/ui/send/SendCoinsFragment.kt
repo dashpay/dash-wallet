@@ -107,7 +107,14 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
 
         viewModel.isBlockchainReplaying.observe(viewLifecycleOwner) { updateView() }
-        viewModel.dryRunSuccessful.observe(viewLifecycleOwner) { updateView() }
+        viewModel.dryRunSuccessful.observe(viewLifecycleOwner) { isSuccess ->
+            if (!isSuccess && viewModel.shouldAdjustAmount()) {
+                val newAmount = viewModel.getAdjustedAmount()
+                enterAmountFragment?.setAmount(newAmount)
+            } else {
+                updateView()
+            }
+        }
         viewModel.state.observe(viewLifecycleOwner) { updateView() }
         viewModel.address.observe(viewLifecycleOwner) { binding.address.text = it }
         viewModel.maxOutputAmount.observe(viewLifecycleOwner) { balance ->
