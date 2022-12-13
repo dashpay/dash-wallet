@@ -101,6 +101,11 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
         binding.hideButton.setOnClickListener {
             revealBalance = !revealBalance
+            viewModel.logEvent(if (revealBalance) {
+                AnalyticsConstants.SendReceive.ENTER_AMOUNT_SHOW_BALANCE
+            } else {
+                AnalyticsConstants.SendReceive.ENTER_AMOUNT_HIDE_BALANCE
+            })
             viewModel.maxOutputAmount.value?.let { balance ->
                 updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
             }
