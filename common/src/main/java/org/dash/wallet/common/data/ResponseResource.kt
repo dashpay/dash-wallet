@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.integration.coinbase_integration.network
+package org.dash.wallet.common.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
