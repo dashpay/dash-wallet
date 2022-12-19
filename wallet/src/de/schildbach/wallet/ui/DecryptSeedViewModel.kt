@@ -42,7 +42,7 @@ class DecryptSeedViewModel @Inject constructor(
 
     internal val decryptSeedLiveData = DecryptSeedLiveData(
         walletData.wallet!!,
-        securityFunctions.scryptIterationsTarget()
+        securityFunctions.scryptIterationsTarget
     )
 
     override fun checkPin(pin: CharSequence) {

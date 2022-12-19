@@ -294,7 +294,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                 final KeyParameter oldKey = oldPassword != null ? walletData.getWallet().getKeyCrypter().deriveKey(oldPassword) : null;
 
                 // For the new key, we create a new key crypter according to the desired parameters.
-                final KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(securityFunctions.scryptIterationsTarget());
+                final KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(securityFunctions.getScryptIterationsTarget());
                 final KeyParameter newKey = keyCrypter.deriveKey(newPassword);
 
                 handler.post(new Runnable() {
