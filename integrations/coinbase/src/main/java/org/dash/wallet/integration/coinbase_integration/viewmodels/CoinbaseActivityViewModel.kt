@@ -28,7 +28,7 @@ import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseIdForFaitDataUIState
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.PaymentMethodsUiState

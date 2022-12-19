@@ -36,7 +36,7 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import org.dash.wallet.integration.uphold.api.UpholdClient

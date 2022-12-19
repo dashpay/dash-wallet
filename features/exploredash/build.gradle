@@ -63,6 +63,7 @@ dependencies {
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
     implementation "androidx.navigation:navigation-ui-ktx:$navigationVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
+    implementation "androidx.datastore:datastore-preferences:$datastoreVersion"
 
     // Database
     implementation "androidx.room:room-ktx:$roomVersion"

@@ -25,7 +25,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderParams
 import org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderUIModel
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi

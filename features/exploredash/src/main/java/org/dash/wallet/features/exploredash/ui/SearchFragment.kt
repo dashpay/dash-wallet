@@ -19,13 +19,17 @@ package org.dash.wallet.features.exploredash.ui
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.app.AlertDialog
 import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.widget.AppCompatEditText
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
@@ -35,6 +39,7 @@ import androidx.core.view.*
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.ConcatAdapter
@@ -58,6 +63,7 @@ import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -381,6 +387,45 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
+    fun showLoginDialog() {
+        val builder = AlertDialog.Builder(requireContext())
+        val inflater = layoutInflater
+        builder.setTitle("Login to dash direct ")
+        val dialogLayout = inflater.inflate(R.layout.dialog_login, null)
+        val email = dialogLayout.findViewById<AppCompatEditText>(R.id.email)
+        val password = dialogLayout.findViewById<AppCompatEditText>(R.id.password)
+        builder.setView(dialogLayout)
+        builder.setPositiveButton("login") { _, _ ->
+            signInToDashDirect(email, password)
+        }
+        builder.show()
+    }
+
+    private fun signInToDashDirect(
+        email: AppCompatEditText,
+        password: AppCompatEditText
+    ) {
+        lifecycleScope.launch {
+            when (val response = viewModel.signInToDashDirect(email.text.toString(), password.text.toString())) {
+                is ResponseResource.Success -> {
+                    if (response.value) {
+                        // TODO open Buy card UI
+                        Toast.makeText(requireContext(), "Open Buy Card", Toast.LENGTH_SHORT).show()
+                        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BUY_GIFT_CARD)
+                    }
+                }
+
+                is ResponseResource.Failure -> {
+                    Toast.makeText(
+                        requireContext(),
+                        "Dash direct error ${response.errorCode}: ${response.errorBody ?: "empty"}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
+
     private fun setupSearchInput(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
         searchHeaderAdapter.setOnSearchQueryChanged {
             binding.noResultsPanel.isVisible = false
@@ -500,7 +545,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
             }
         }
-        binding.itemDetails.setOnBuyGiftCardButtonClicked { viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BUY_GIFT_CARD) }
+
+        binding.itemDetails.setOnBuyGiftCardButtonClicked {
+            if (!viewModel.isUserSignInDashDirect()) {
+                showLoginDialog()
+            } else {
+                Toast.makeText(requireContext(), "Open Buy Card", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun setupScreenTransitions() {

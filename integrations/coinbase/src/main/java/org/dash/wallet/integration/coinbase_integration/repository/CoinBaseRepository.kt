@@ -21,8 +21,8 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integration.coinbase_integration.*
 import org.dash.wallet.integration.coinbase_integration.model.*
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
-import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
+import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.safeApiCall
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi

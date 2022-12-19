@@ -32,7 +32,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.model.*
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import java.util.*
 import javax.inject.Inject
