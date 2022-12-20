@@ -53,8 +53,6 @@ public final class Constants {
     /** Network this wallet is on (e.g. testnet or mainnet). */
     public static final NetworkParameters NETWORK_PARAMETERS;
 
-    public static final Coin ECONOMIC_FEE = Coin.valueOf(1000);
-
     private static String FILENAME_NETWORK_SUFFIX;
 
     /** Currency code for the wallet name resolver. */

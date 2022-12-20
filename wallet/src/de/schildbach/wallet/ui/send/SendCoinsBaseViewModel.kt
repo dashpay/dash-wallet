@@ -20,9 +20,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
-import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.util.Constants
@@ -64,7 +64,7 @@ open class SendCoinsBaseViewModel @Inject constructor(
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
         sendRequest.signInputs = signInputs
 
-        val walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED)
+        val walletBalance = wallet.getBalance(MaxOutputAmountCoinSelector())
         sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
 
         return sendRequest

@@ -101,16 +101,28 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
         binding.hideButton.setOnClickListener {
             revealBalance = !revealBalance
-            viewModel.balance.value?.let { balance ->
+            viewModel.logEvent(if (revealBalance) {
+                AnalyticsConstants.SendReceive.ENTER_AMOUNT_SHOW_BALANCE
+            } else {
+                AnalyticsConstants.SendReceive.ENTER_AMOUNT_HIDE_BALANCE
+            })
+            viewModel.maxOutputAmount.value?.let { balance ->
                 updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
             }
         }
 
         viewModel.isBlockchainReplaying.observe(viewLifecycleOwner) { updateView() }
-        viewModel.dryRunSuccessful.observe(viewLifecycleOwner) { updateView() }
+        viewModel.dryRunSuccessful.observe(viewLifecycleOwner) { isSuccess ->
+            if (!isSuccess && viewModel.shouldAdjustAmount()) {
+                val newAmount = viewModel.getAdjustedAmount()
+                enterAmountFragment?.setAmount(newAmount)
+            } else {
+                updateView()
+            }
+        }
         viewModel.state.observe(viewLifecycleOwner) { updateView() }
         viewModel.address.observe(viewLifecycleOwner) { binding.address.text = it }
-        viewModel.balance.observe(viewLifecycleOwner) { balance ->
+        viewModel.maxOutputAmount.observe(viewLifecycleOwner) { balance ->
             enterAmountViewModel.setMaxAmount(balance)
             updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
         }
@@ -224,7 +236,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             total = enterAmountViewModel.amount.value?.toPlainString()
         } else {
             amount = enterAmountViewModel.amount.value
-            total = amount?.add(txFee)?.toPlainString()
+            total = amount?.add(txFee ?: Coin.ZERO)?.toPlainString()
         }
 
         val rate = enterAmountViewModel.selectedExchangeRate.value
@@ -241,7 +253,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             getString(R.string.transaction_row_rate_not_available)
         }
         val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
-        val fee = txFee.toPlainString()
+        val fee = txFee?.toPlainString() ?: ""
 
         val confirmed = ConfirmTransactionDialog.showDialogAsync(
             requireActivity(), address, amountStr, amountFiat,

@@ -237,8 +237,6 @@ open class SendCoinsActivity : LockScreenActivity() {
     }
 
     private fun initNavController(paymentIntent: PaymentIntent) {
-        Log.i("REFACTORING", paymentIntent.mayEditAmount().toString())
-
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.nav_send)

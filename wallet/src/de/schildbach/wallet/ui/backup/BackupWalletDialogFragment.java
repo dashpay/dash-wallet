@@ -328,7 +328,7 @@ public class BackupWalletDialogFragment extends BaseDialogFragment {
                     if (wallet.isEncrypted()) {
                         String walletPassword = securityGuard.retrievePassword();
                         final Wallet decryptedWallet = new WalletProtobufSerializer().readWallet(Constants.NETWORK_PARAMETERS, null, walletProto);
-                        new DeriveKeyTask(backgroundHandler, securityFunctions.scryptIterationsTarget()) {
+                        new DeriveKeyTask(backgroundHandler, securityFunctions.getScryptIterationsTarget()) {
                             @Override
                             protected void onSuccess(KeyParameter encryptionKey, boolean changed) {
                                 decryptedWallet.decrypt(encryptionKey);
