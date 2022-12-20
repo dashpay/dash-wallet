@@ -21,15 +21,17 @@ import android.os.Bundle
 import android.view.View
 import android.view.View.TEXT_ALIGNMENT_CENTER
 import android.widget.TextView
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
-import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentReceiveBinding
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
@@ -40,6 +42,7 @@ class ReceiveFragment : Fragment(R.layout.fragment_receive) {
     private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
     private val binding by viewBinding(FragmentReceiveBinding::bind)
     @Inject lateinit var walletData: WalletDataProvider
+    @Inject lateinit var analytics: AnalyticsService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -66,6 +69,7 @@ class ReceiveFragment : Fragment(R.layout.fragment_receive) {
         }
 
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
+            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_RECEIVE, bundleOf())
             val dashAmount = it.first
             val fiatAmount = it.second
             val address = walletData.freshReceiveAddress()

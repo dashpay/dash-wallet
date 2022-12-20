@@ -127,7 +127,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
             if (pinRetryController.isLocked()) {
                 return;
             }
-            new DeriveKeyTask(backgroundHandler, securityFunctions.scryptIterationsTarget()) {
+            new DeriveKeyTask(backgroundHandler, securityFunctions.getScryptIterationsTarget()) {
                 @Override
                 protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
                     pinRetryController.clearPinFailPrefs();

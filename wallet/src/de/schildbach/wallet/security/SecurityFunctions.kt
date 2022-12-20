@@ -48,6 +48,23 @@ class SecurityFunctions @Inject constructor(
 ): AuthenticationManager {
     private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
 
+    /**
+     * Low memory devices (currently 1GB or less) and 32 bit devices will require
+     * fewer scrypt hashes on the PIN+salt (handled by dashj)
+     *
+     * @return The number of scrypt interations
+     */
+    val scryptIterationsTarget: Int by lazy {
+        val is64bitABI = Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()
+        val isLowRamDevice = (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).isLowRamDevice
+
+        if (isLowRamDevice || !is64bitABI) {
+            Constants.SCRYPT_ITERATIONS_TARGET_LOWRAM
+        } else {
+            Constants.SCRYPT_ITERATIONS_TARGET
+        }
+    }
+
     override fun authenticate(
         activity: FragmentActivity,
         pinOnly: Boolean,
@@ -127,7 +144,6 @@ class SecurityFunctions @Inject constructor(
     fun deriveKey(wallet: Wallet, password: String): KeyParameter {
         require(wallet.isEncrypted)
         val keyCrypter = wallet.keyCrypter!!
-        val scryptIterationsTarget = scryptIterationsTarget()
 
         // Key derivation takes time.
         var key = keyCrypter.deriveKey(password)
@@ -155,22 +171,5 @@ class SecurityFunctions @Inject constructor(
 
         // Hand back the (possibly changed) encryption key.
         return key
-    }
-
-    /**
-     * Low memory devices (currently 1GB or less) and 32 bit devices will require
-     * fewer scrypt hashes on the PIN+salt (handled by dashj)
-     *
-     * @return The number of scrypt interations
-     */
-    fun scryptIterationsTarget(): Int {
-        val is64bitABI = Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()
-        val isLowRamDevice = (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).isLowRamDevice
-
-        return if (isLowRamDevice || !is64bitABI) {
-            Constants.SCRYPT_ITERATIONS_TARGET_LOWRAM
-        } else {
-            Constants.SCRYPT_ITERATIONS_TARGET
-        }
     }
 }

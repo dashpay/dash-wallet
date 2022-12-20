@@ -77,6 +77,8 @@ object AnalyticsConstants {
         const val ENTER_AMOUNT_FIAT = "enter_amount_fiat_amount"
         const val ENTER_AMOUNT_SEND = "enter_amount_send"
         const val ENTER_AMOUNT_RECEIVE = "enter_amount_receive"
+        const val ENTER_AMOUNT_SHOW_BALANCE = "enter_amount_show_balance"
+        const val ENTER_AMOUNT_HIDE_BALANCE = "enter_amount_hide_balance"
     }
 
     object Home {
