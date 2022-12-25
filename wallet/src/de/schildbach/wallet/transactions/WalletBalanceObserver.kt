@@ -19,7 +19,6 @@ package de.schildbach.wallet.transactions
 
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -29,7 +28,6 @@ import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.Wallet.BalanceType
 
-@ExperimentalCoroutinesApi
 class WalletBalanceObserver(
     private val wallet: Wallet,
     private val balanceType: BalanceType = BalanceType.ESTIMATED

@@ -22,7 +22,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.main.WalletFragment
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
-import de.schildbach.wallet.ui.send.SweepWalletActivity
+import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
@@ -38,7 +38,7 @@ import org.junit.Ignore
 
 @Ignore
 // TODO: testing fragments is harder than activities because the fragment has to be attached.
-// It's almost possible with Roboelectric and HiltTestApplication, but various
+// It's almost possible with Robolectric and HiltTestApplication, but various
 // .getInstance() calls on WalletApplication and PlatformRepo are preventing it from getting there.
 // We should keep replacing those with injections and restore this test at some point.
 class WalletFragmentTest {

@@ -25,22 +25,22 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainIdentityData
+import org.dash.wallet.common.data.BlockchainState
+import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.SingleLiveEvent
-import de.schildbach.wallet.ui.dashpay.*
-import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.*
-import org.dash.wallet.common.data.BlockchainState
-import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
+import de.schildbach.wallet.ui.dashpay.*
+import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -52,6 +52,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -66,9 +67,8 @@ import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTx
 import java.util.HashMap
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
-@FlowPreview
-@ExperimentalCoroutinesApi
 class MainViewModel @Inject constructor(
     val analytics: AnalyticsService,
     private val clipboardManager: ClipboardManager,
@@ -82,7 +82,8 @@ class MainViewModel @Inject constructor(
     val platformSyncService: PlatformSyncService,
     private val savedStateHandle: SavedStateHandle,
     private val metadataProvider: TransactionMetadataProvider,
-    private val blockchainStateProvider: BlockchainStateProvider
+    private val blockchainStateProvider: BlockchainStateProvider,
+    val biometricHelper: BiometricHelper
 ) : BaseProfileViewModel(walletApplication, appDatabase) {
     companion object {
         private const val THROTTLE_DURATION = 500L
@@ -109,7 +110,7 @@ class MainViewModel @Inject constructor(
         get() = _transactionsDirection.value
         set(value) {
             _transactionsDirection.value = value
-            savedStateHandle.set(DIRECTION_KEY, value)
+            savedStateHandle[DIRECTION_KEY] = value
         }
 
     private val _isBlockchainSynced = MutableLiveData<Boolean>()
@@ -201,7 +202,7 @@ class MainViewModel @Inject constructor(
 
     init {
         _hideBalance.value = config.hideBalance
-        transactionsDirection = savedStateHandle.get(DIRECTION_KEY) ?: TxDirection.ALL
+        transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxDirection.ALL
 
         _transactionsDirection
             .flatMapLatest { direction ->
@@ -209,11 +210,12 @@ class MainViewModel @Inject constructor(
                     .flatMapLatest { memos ->
                         val filter = TxDirectionFilter(direction, walletData.wallet!!)
                         refreshTransactions(filter, memos)
-                        walletData.observeTransactions(filter)
+                        walletData.observeWalletChanged()
                             .debounce(THROTTLE_DURATION)
                             .onEach { refreshTransactions(filter, memos) }
                     }
             }
+            .catch { analytics.logError(it, "is wallet null: ${walletData.wallet == null}") }
             .launchIn(viewModelWorkerScope)
 
         blockchainStateDao.observeState()
@@ -354,7 +356,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun joinDashPay() {
-        showCreateUsernameEvent.call(Unit)
+        showCreateUsernameEvent.call()
     }
 
     fun startBlockchainService() {

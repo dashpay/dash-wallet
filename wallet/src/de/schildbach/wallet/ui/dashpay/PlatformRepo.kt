@@ -30,8 +30,8 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.payments.DeriveKeyTask
 import de.schildbach.wallet.security.SecurityGuard
-import de.schildbach.wallet.ui.send.DeriveKeyTask
 import de.schildbach.wallet.util.canAffordIdentityCreation
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*

@@ -67,8 +67,6 @@
 
     <string name="receive_title">Receber</string>
     <string name="receive_enter_amount_message">Especifique o valor a ser recebido</string>
-    <string name="receive_enter_amount_button">Especificar Valor</string>
-    <string name="receive_share_button">Compartilhar</string>
 
     <string name="pay_title">Enviar</string>
     <string name="history_title">Histórico</string>
@@ -238,6 +236,12 @@
     <string name="view_seed_done">Feito</string>
     <string name="view_seed_title">Frase de Recuperação</string>
     <string name="transaction_result_view_on_explorer">Ver no Explorador de Blocos</string>
+    <string name="transaction_result_tax_category">Categoria fiscal</string>
+    <string name="transaction_result_tax_category_loading">Carregando…</string>
+    <string name="tax_category_income">Receita</string>
+    <string name="tax_category_expense">Despesa</string>
+    <string name="tax_category_transfer_in">Transferências de entrada</string>
+    <string name="tax_category_transfer_out">Transferências de saída</string>
     <string name="transaction_result_paid_successfully">Enviado com sucesso</string>
     <string name="transaction_result_sent_to">Enviado para</string>
     <string name="transaction_date_and_time">Data</string>
@@ -249,6 +253,8 @@
     <string name="transaction_details_received_at">Recebido em</string>
     <string name="transaction_details_moved_from">Movido de</string>
     <string name="transaction_details_moved_internally_to">Movido internamente para</string>
+    <string name="transaction_failed_details">Falha na transação</string>
+
     <string name="authenticate_fingerprint_title">Autenticar</string>
     <string name="authenticate_fingerprint_message">Confirmar digital para continuar</string>
     <string name="authenticate_pin_message">Insira seu PIN para continuar</string>
@@ -257,6 +263,8 @@
 
     <string name="menu_buy_and_sell_title">Comprar &amp; Vender Dash</string>
     <string name="menu_buy_and_sell_subtitle">Conectar com exchange de terceiros</string>
+    <string name="liquid_unavailable">A integração de Liquid com a Dash Wallet não está mais disponível</string>
+    <string name="liquid_unavailable_details">Se você tiver alguma dúvida sobre suas participações em Dash na Liquid, entre em contato com o centro de suporte da Liquid</string>
     <string name="menu_security_title">Segurança</string>
     <string name="menu_security_subtitle">Ver frase de recuperação, fazer backup...</string>
     <string name="menu_settings_title">Configurações</string>
@@ -276,16 +284,13 @@
     <string name="tools_show_xpub">Chave Pública Estendida</string>
 
     <string name="about_help_us_improve">Ajude-nos a melhorar a sua experiência</string>
-    <string name="about_review_and_rate">Comente ou classifique o aplicativo</string>
     <string name="about_contact_support">Contato com o Suporte</string>
     <string name="about_fork_disclaimer">Este é um aplicativo de código aberto bifurcado da Bitcoin Wallet</string>
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_dash_sync">Explore os dados atualizados do Dash em:%1$s\nÚltima sincronização:%2$s</string>
     <string name="about_last_explore_dash_update_error">não foi possível buscar</string>
     <string name="about_last_explore_dash_sync_never">nunca</string>
-
     <string name="block">Bloquear</string>
     <string name="time">Tempo</string>
     <string name="hash">Hash</string>
@@ -356,8 +361,12 @@
     <string name="import_image_import_valid_private_key">Copie uma chave privada para importar Dash dela</string>
     <string name="import_image_invalid_private">Chave Privada Inválida</string>
 
+    <string name="today">Hoje</string>
+    <string name="yesterday">Ontem</string>
+
     <string name="syncing">Sincronizando</string>
     <string name="syncing_balance">Sincronizando Saldo</string>
+    <string name="transaction_count">%d transações</string>
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recebido</string>
     <string name="sent_transactions">Enviado</string>
@@ -376,4 +385,14 @@
     <string name="launch_reset_wallet_extra_message">Faça backup da sua frase de recuperação</string>
     <string name="start_reset_wallet_title">Você pode perder %s</string>
     <string name="reset_wallet_text">Redefinir Carteira</string>
-    </resources>
+    <string name="reclassify_transactions_title">Reclassificar suas transações</string>
+    <string name="reclassify_transactions_title_message">Essas classificações serão refletidas na exportação CSV que pode ser usada para importar em serviços de relatórios fiscais.</string>
+    <string name="reclassify_transactions_question">Onde posso alterar a categoria fiscal?</string>
+    <string name="reclassify_transactions_outgoing_title">Transações de saída</string>
+    <string name="reclassify_transactions_by_default_message">por padrão será marcado como</string>
+    <string name="reclassify_transactions_incoming_title">Transações recebidas</string>
+    <string name="reclassify_transactions_change_it_message">Você pode alterá-lo para</string>
+    <string name="reclassify_transactions_linked_accounts_title">Contas associadas</string>
+    <string name="reclassify_transactions_linked_accounts_message">por padrão, todas as transações de ou para suas contas vinculadas (trocas, staking, etc.) serão marcadas como transferências.</string>
+    <string name="reclassify_transactions_change_explanation">Escolha qualquer transação na página inicial e altere a categoria na página de detalhes da transação.</string>
+</resources>

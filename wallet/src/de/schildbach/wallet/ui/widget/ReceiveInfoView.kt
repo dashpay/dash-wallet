@@ -32,9 +32,9 @@ import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.lifecycleOwner
-import de.schildbach.wallet.ui.ReceiveActivity
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.payments.ReceiveActivity
 import org.dash.wallet.common.util.Qr
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
@@ -118,7 +118,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         address_preview.text = address.toBase58() + "  "
 
         val addressSpannable = SpannableString.valueOf(address_preview.text)
-        val copyIconDrawable = ContextCompat.getDrawable(context, R.drawable.ic_copy_addres)!!
+        val copyIconDrawable = ContextCompat.getDrawable(context, R.drawable.ic_copy_blue)!!
         val iconSize = address_preview.lineHeight
         copyIconDrawable.setBounds(0, 0, iconSize, iconSize)
         val imageSpan = ImageSpan(copyIconDrawable, ImageSpan.ALIGN_BOTTOM)
@@ -159,9 +159,8 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
     private fun refreshData() {
         val walletApplication = context.applicationContext as WalletApplication
         address = walletApplication.wallet!!.freshReceiveAddress()
-        val ownName = config!!.ownName
         paymentRequestUri = BitcoinURI.convertToBitcoinURI(address.parameters, address.toString(),
-                amount, ownName, null, blockchainIdentity?.currentUsername)
+                amount, null, null, blockchainIdentity?.currentUsername)
     }
 
     private fun handleCopyAddress() {

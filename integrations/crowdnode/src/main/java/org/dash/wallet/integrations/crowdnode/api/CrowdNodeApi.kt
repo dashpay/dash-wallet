@@ -35,12 +35,13 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.services.ISecurityFunctions
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.util.TickerFlow
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.model.*
@@ -92,12 +93,12 @@ interface CrowdNodeApi {
 class CrowdNodeApiAggregator @Inject constructor(
     private val webApi: CrowdNodeWebApi,
     private val blockchainApi: CrowdNodeBlockchainApi,
-    walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletDataProvider,
     private val notificationService: NotificationService,
     private val analyticsService: AnalyticsService,
     private val config: CrowdNodeConfig,
     private val globalConfig: Configuration,
-    private val securityFunctions: ISecurityFunctions,
+    private val securityFunctions: AuthenticationManager,
     private val transactionMetadataProvider: TransactionMetadataProvider,
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {
@@ -178,11 +179,19 @@ class CrowdNodeApiAggregator @Inject constructor(
                 return
             }
 
-            val savedAddress = globalConfig.crowdNodeAccountAddress
+            val onlineStatusOrdinal = config.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
+                ?: OnlineAccountStatus.None.ordinal
+            var onlineStatus = OnlineAccountStatus.values()[onlineStatusOrdinal]
+            val onlineAccountAddress = getOnlineAccountAddress(onlineStatus)
 
-            if (savedAddress.isNotEmpty()) {
-                accountAddress = Address.fromString(params, savedAddress)
-                tryRestoreLinkedOnlineAccount(accountAddress!!)
+            if (onlineAccountAddress != null) {
+                accountAddress = onlineAccountAddress
+
+                if (onlineStatus == OnlineAccountStatus.None) {
+                    onlineStatus = OnlineAccountStatus.Linking
+                }
+
+                tryRestoreLinkedOnlineAccount(onlineStatus, onlineAccountAddress)
                 refreshWithdrawalLimits()
             }
         }
@@ -582,25 +591,40 @@ class CrowdNodeApiAggregator @Inject constructor(
         )
     }
 
-    private fun tryRestoreLinkedOnlineAccount(address: Address) {
-        var statusOrdinal: Int
-        var primaryAddressStr: String
+    private suspend fun getOnlineAccountAddress(onlineStatus: OnlineAccountStatus): Address? {
+        val savedAddress = globalConfig.crowdNodeAccountAddress
 
-        runBlocking {
-            statusOrdinal = config.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
-                ?: OnlineAccountStatus.None.ordinal
-            primaryAddressStr = globalConfig.crowdNodePrimaryAddress
+        if (savedAddress.isNotEmpty() && onlineStatus != OnlineAccountStatus.None) {
+            return Address.fromString(params, savedAddress)
+        } else {
+            val confirmationTx = blockchainApi.getApiAddressConfirmationTx()
+            val apiAddress = confirmationTx?.let {
+                TransactionUtils.getWalletAddressOfReceived(confirmationTx, walletDataProvider.transactionBag)
+            }
+
+            if (apiAddress != null) {
+                globalConfig.crowdNodeAccountAddress = apiAddress.toBase58()
+                signUpStatus.value = SignUpStatus.LinkedOnline
+                config.setPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, OnlineAccountStatus.Linking.ordinal)
+                return apiAddress
+            }
         }
+
+        return null
+    }
+
+    private suspend fun tryRestoreLinkedOnlineAccount(status: OnlineAccountStatus, address: Address) {
+        val primaryAddressStr = globalConfig.crowdNodePrimaryAddress
 
         if (primaryAddressStr.isNotEmpty()) {
             primaryAddress = Address.fromBase58(params, primaryAddressStr)
         }
 
-        when (val status = OnlineAccountStatus.values()[statusOrdinal]) {
+        when (status) {
             OnlineAccountStatus.None -> {}
             OnlineAccountStatus.Linking -> {
                 log.info("found linking online account in progress, account: ${address.toBase58()}, primary: $primaryAddressStr")
-                responseScope.launch { checkIfAddressIsInUse(address) }
+                checkIfAddressIsInUse(address)
             }
             OnlineAccountStatus.Creating, OnlineAccountStatus.SigningUp -> {
                 if (status == OnlineAccountStatus.Creating && globalConfig.crowdNodePrimaryAddress.isNotEmpty()) {
@@ -623,18 +647,17 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     private suspend fun checkIfAddressIsInUse(address: Address) {
-        val isInUse = resolveIsAddressInUse(address)
+        val (isInUse, primaryAddress) = webApi.isApiAddressInUse(address)
+        this.primaryAddress = primaryAddress
 
         if (isInUse && onlineAccountStatus.value.ordinal <= OnlineAccountStatus.Linking.ordinal) {
-            val primary = primaryAddress
-
-            if (primary == null) {
+            if (primaryAddress == null) {
                 apiError.value = CrowdNodeException(CrowdNodeException.MISSING_PRIMARY)
                 changeOnlineStatus(OnlineAccountStatus.None)
             } else {
                 accountAddress = address
                 globalConfig.crowdNodeAccountAddress = address.toBase58()
-                globalConfig.crowdNodePrimaryAddress = primary.toBase58()
+                globalConfig.crowdNodePrimaryAddress = primaryAddress.toBase58()
                 markAccountAddressWithTaxCategory()
                 changeOnlineStatus(OnlineAccountStatus.Validating)
             }
@@ -686,29 +709,6 @@ class CrowdNodeApiAggregator @Inject constructor(
         } else {
             // Good to go
             changeOnlineStatus(OnlineAccountStatus.SigningUp)
-        }
-    }
-
-    private suspend fun resolveIsAddressInUse(address: Address): Boolean {
-        return try {
-            val result = webApi.isAddressInUse(address.toBase58())
-            val isSuccess = result.isSuccessful && result.body()?.isInUse == true
-
-            if (isSuccess) {
-                val primary = result.body()!!.primaryAddress
-                requireNotNull(primary) { "isAddressInUse returns true but missing primary address" }
-                primaryAddress = Address.fromBase58(params, primary)
-            }
-
-            isSuccess
-        } catch (ex: Exception) {
-            log.error("Error in resolveIsAddressInUse: $ex")
-
-            if (ex !is IOException) {
-                analyticsService.logError(ex)
-            }
-
-            false
         }
     }
 

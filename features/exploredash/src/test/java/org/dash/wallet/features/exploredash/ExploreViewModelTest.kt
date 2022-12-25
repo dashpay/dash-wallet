@@ -66,9 +66,6 @@ class ExploreViewModelTest {
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
 
-    //private val context = Application()
-    //private val mockContext = Mockito.mock(Context::class.java)
-
     private val networkInfo = mock<NetworkInfo> {
         on { isConnectedOrConnecting } doReturn true
         on { isAvailable } doReturn true

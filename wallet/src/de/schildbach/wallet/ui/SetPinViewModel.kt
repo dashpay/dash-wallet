@@ -16,37 +16,44 @@
 
 package de.schildbach.wallet.ui
 
-import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.livedata.CheckPinLiveData
 import de.schildbach.wallet.livedata.EncryptWalletLiveData
+import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.ui.preference.PinRetryController
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel
 class SetPinViewModel @Inject constructor(
-    private val walletApplication: WalletApplication
-): ViewModel() {
+    val walletApplication: WalletApplication,
+    walletData: WalletDataProvider,
+    configuration: Configuration,
+    pinRetryController: PinRetryController,
+    biometricHelper: BiometricHelper,
+    analytics: AnalyticsService
+): CheckPinViewModel(walletData, configuration, pinRetryController, biometricHelper, analytics) {
 
     private val log = LoggerFactory.getLogger(SetPinViewModel::class.java)
 
-    val pin = arrayListOf<Int>()
+    val pinArray = arrayListOf<Int>()
     var oldPinCache: String? = null
     val isWalletEncrypted
-        get() = walletApplication.wallet!!.isEncrypted
+        get() = walletData.wallet!!.isEncrypted
 
     internal val startNextActivity = SingleLiveEvent<Boolean>()
-    internal val encryptWalletLiveData = EncryptWalletLiveData(walletApplication)
-    internal val checkPinLiveData = CheckPinLiveData(walletApplication.wallet!!)
+    internal val encryptWalletLiveData = EncryptWalletLiveData(walletApplication, biometricHelper)
 
     fun setPin(pin: ArrayList<Int>) {
-        this.pin.clear()
-        this.pin.addAll(pin)
+        this.pinArray.clear()
+        this.pinArray.addAll(pin)
     }
 
     fun getPinAsString(): String {
-        return pin.joinToString("")
+        return pinArray.joinToString("")
     }
 
     fun savePinAndEncrypt(initialize: Boolean) {
@@ -60,7 +67,7 @@ class SetPinViewModel @Inject constructor(
     }
 
     private fun encryptWallet(initialize: Boolean) {
-        if (!walletApplication.wallet!!.isEncrypted) {
+        if (!walletData.wallet!!.isEncrypted) {
             encryptWalletLiveData.encrypt(walletApplication.scryptIterationsTarget(), initialize)
         } else {
             log.warn("Trying to encrypt already encrypted wallet")
@@ -72,7 +79,7 @@ class SetPinViewModel @Inject constructor(
     }
 
     fun decryptKeys(password: String?) {
-        if (walletApplication.wallet!!.isEncrypted) {
+        if (walletData.wallet!!.isEncrypted) {
             encryptWalletLiveData.decrypt(password)
         } else {
             log.warn("Trying to decrypt unencrypted wallet")
@@ -81,7 +88,7 @@ class SetPinViewModel @Inject constructor(
 
     fun initWallet() {
         walletApplication.saveWalletAndFinalizeInitialization()
-        startNextActivity.call(walletApplication.configuration.remindBackupSeed)
+        startNextActivity.call(configuration.remindBackupSeed)
     }
 
     fun checkPin() {
@@ -92,6 +99,6 @@ class SetPinViewModel @Inject constructor(
     fun changePin() {
         val newPassword = getPinAsString()
         encryptWalletLiveData.changePassword(oldPinCache!!, newPassword)
-        walletApplication.configuration.updateLastEncryptKeysTime()
+        configuration.updateLastEncryptKeysTime()
     }
 }

@@ -4,12 +4,24 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    style="@style/DialogContainer">
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/dialog_title"
+        style="@style/Subtitle1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="10dp"
+        android:gravity="center"
+        android:textAlignment="gravity"
+        android:text="@string/sweep_wallet_fragment_encrypted"/>
 
     <EditText
         android:id="@+id/sweep_wallet_fragment_password"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
         android:hint="@string/sweep_wallet_fragment_password"
         android:inputType="textPassword"
         android:singleLine="true"
@@ -25,4 +37,11 @@
         style="@style/Overline.SemiBold.Red"
         tools:visibility="visible"/>
 
+    <Button
+        android:id="@+id/dialog_positive_button"
+        style="@style/Button.Primary.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/sweep_wallet_fragment_button_decrypt"/>
 </LinearLayout>

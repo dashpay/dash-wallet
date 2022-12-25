@@ -21,7 +21,6 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
@@ -33,11 +32,9 @@ import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.slf4j.LoggerFactory
-import java.security.GeneralSecurityException
 import javax.inject.Inject
 import kotlin.jvm.Throws
 
-@ExperimentalCoroutinesApi
 class SendCoinsTaskRunner @Inject constructor(
     private val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
@@ -75,41 +72,33 @@ class SendCoinsTaskRunner @Inject constructor(
     ): SendPaymentService.TransactionDetails {
         val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
         var sendRequest = createSendRequest(address, amount, null, emptyWallet, false)
-        try {
-            val securityGuard = SecurityGuard()
-            val password = securityGuard.retrievePassword()
-            val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
-            val encryptionKey = securityFunctions.deriveKey(wallet, password, scryptIterationsTarget)
+        val securityGuard = SecurityGuard()
+        val password = securityGuard.retrievePassword()
+        val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
+        val encryptionKey = securityFunctions.deriveKey(wallet, password, scryptIterationsTarget)
+        sendRequest.aesKey = encryptionKey
+        wallet.completeTx(sendRequest)
 
-            sendRequest.aesKey = encryptionKey
-
+        if (checkDust(sendRequest)) {
+            sendRequest = createSendRequest(address, amount, null, emptyWallet)
             wallet.completeTx(sendRequest)
-            if (checkDust(sendRequest)){
-                sendRequest = createSendRequest(address, amount, null, emptyWallet)
-                wallet.completeTx(sendRequest)
-            }
-
-        } catch (e: Exception){
-            e.printStackTrace()
-        } catch (e: GeneralSecurityException){
-            e.printStackTrace()
         }
 
         val txFee:Coin? = sendRequest.tx.fee
 
-        val amountToSend = if (sendRequest.emptyWallet){
+        val amountToSend = if (sendRequest.emptyWallet) {
             amount.minus(txFee)
         } else {
             amount
         }
 
-        val totalAmount = if (sendRequest.emptyWallet||txFee==null){
+        val totalAmount = if (sendRequest.emptyWallet || txFee == null) {
             amount.toPlainString()
         } else {
-                amount.add(txFee).toPlainString()
+            amount.add(txFee).toPlainString()
         }
 
-        return SendPaymentService.TransactionDetails(txFee?.toPlainString()?:"", amountToSend, totalAmount)
+        return SendPaymentService.TransactionDetails(txFee?.toPlainString() ?: "", amountToSend, totalAmount)
     }
 
     @VisibleForTesting

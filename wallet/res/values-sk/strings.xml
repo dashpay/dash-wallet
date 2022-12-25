@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Dajte odosielateľovi oskenovať tento kód.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Alebo sa dotknite zariadenia s podporou NFC.</string>
     <string name="request_coins_clipboard_msg">Požiadavok Dash skopírovaný do schránky</string>
-    <string name="request_coins_share_dialog_title">Zdieľať požiadavku na Dash…</string>
     <string name="request_coins_no_local_app_msg">Nebola nájdená žiadna ďalšia Dash aplikácia</string>
     <string name="request_coins_options_local_app_title">Vyžiadať z lokálnej aplikácie</string>
     <string name="address_book_activity_title">Adresár</string>
@@ -280,6 +279,8 @@
     <string name="preferences_show_disclaimer_summary">Naozaj ste si prečítali bezpečnostné pokyny? Zálohovali ste už peňaženku na bezpečné miesto?</string>
     <string name="preferences_report_issue_title">Nahlásiť problém</string>
     <string name="preferences_initiate_reset_title">Znova prehľadať blockchain</string>
+    <string name="preferences_initiate_reset_summary">Znova naskenovať reťazec blokov, transakcie a zostatok v peňaženke. Opätovné načítanie bude chvíľu trvať, preto používajte iba v prípade nutnosti.</string>
+    <string name="preferences_initiate_reset_dialog_message">Chcete znova naskenovať reťazec blokov?\n\nTýmto dočasne skryjete svoju bilanciu a zmažete transakcie. Oboje bude obnovené počas synchronizácie reťazca blokov. Uistite sa, že máte spoľahlivé internetové pripojenie</string>
     <string name="preferences_initiate_reset_dialog_positive">Pre-skenovať</string>
     <string name="preferences_extended_public_key_title">Ukázať xpub</string>
     <string name="preferences_extended_public_key_summary">Zobraziť rozšírený verejný kľúč vašej peňaženky, za účelom importovania do iných aplikácií a služieb. Buďte opatrní: odhalíte tým vaše finančné informácie s danou aplikáciou.</string>
@@ -382,8 +383,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">Na dokončenie tejto transakcie nemáte dostatok prostriedkov </string>
 
 
+    <string name="select_a_service_to_buy_and_sell_dash">Vyberte službu na nákup a predaj Dash.</string>
     <string name="select_a_service">Vyberte službu</string>
     <string name="activity_buy_and_sell_dash_filter">Filter platieb</string>
     <string name="clear_filter">Zrušiť filter</string>
     <string name="select_currency">Vyberte menu</string>
-    </resources>
+    <string name="reason">Dôvod</string>
+</resources>

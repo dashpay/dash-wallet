@@ -67,8 +67,6 @@
 
     <string name="receive_title">接收</string>
     <string name="receive_enter_amount_message">指定收款数额</string>
-    <string name="receive_enter_amount_button">指定数额</string>
-    <string name="receive_share_button">分享</string>
 
     <string name="pay_title">发送</string>
     <string name="history_title">历史</string>
@@ -232,6 +230,12 @@
     <string name="view_seed_done">完成</string>
     <string name="view_seed_title">助记词</string>
     <string name="transaction_result_view_on_explorer">在区块浏览器中查看</string>
+    <string name="transaction_result_tax_category">税务种类</string>
+    <string name="transaction_result_tax_category_loading">加载中...</string>
+    <string name="tax_category_income">收入</string>
+    <string name="tax_category_expense">支出</string>
+    <string name="tax_category_transfer_in">转入</string>
+    <string name="tax_category_transfer_out">转出</string>
     <string name="transaction_result_paid_successfully">发送成功</string>
     <string name="transaction_result_sent_to">发送至</string>
     <string name="transaction_date_and_time">日期</string>
@@ -243,6 +247,8 @@
     <string name="transaction_details_received_at">接收于</string>
     <string name="transaction_details_moved_from">移动于</string>
     <string name="transaction_details_moved_internally_to">内部移动至</string>
+    <string name="transaction_failed_details">交易失败</string>
+
     <string name="authenticate_fingerprint_title">验证</string>
     <string name="authenticate_fingerprint_message">确认指纹以继续</string>
     <string name="authenticate_pin_message">输入PIN以继续</string>
@@ -251,6 +257,8 @@
 
     <string name="menu_buy_and_sell_title">买 &amp; 卖 Dash</string>
     <string name="menu_buy_and_sell_subtitle">与第三方交易所连接</string>
+    <string name="liquid_unavailable">Liquid 与 Dash钱包的整合功能已经不能再使用</string>
+    <string name="liquid_unavailable_details">如果您对您再 Liquid的 Dash持仓有任何问题, 请联系 Liquid客服中心</string>
     <string name="menu_security_title">安全</string>
     <string name="menu_security_subtitle">查看密码, 备份钱包...</string>
     <string name="menu_settings_title">设置</string>
@@ -270,16 +278,13 @@
     <string name="tools_show_xpub">扩展的公钥</string>
 
     <string name="about_help_us_improve">帮助我们改善您的体验</string>
-    <string name="about_review_and_rate">对app进行评论 &amp; 评分</string>
     <string name="about_contact_support">联系支持</string>
     <string name="about_fork_disclaimer">这是从比特币钱包分叉而来的开源应用程序</string>
     <string name="about_copyright">版权所有 © 2022 Dash Core</string>
     <string name="about_license">GNU 公共通用许可 v3.0</string>
     <string name="about_version_name">Dash钱包 %s</string>
-    <string name="about_last_explore_dash_sync">探索Dash数据更新于: %1$s\n上次同步: %2$s</string>
     <string name="about_last_explore_dash_update_error">无法获取</string>
     <string name="about_last_explore_dash_sync_never">从不</string>
-
     <string name="block">区块</string>
     <string name="time">时间</string>
     <string name="hash">哈希值</string>
@@ -350,8 +355,12 @@
     <string name="import_image_import_valid_private_key">复制一个有效的私钥并将其中的Dash导入</string>
     <string name="import_image_invalid_private">无效的私钥</string>
 
+    <string name="today">今天</string>
+    <string name="yesterday">昨天</string>
+
     <string name="syncing">正在同步</string>
     <string name="syncing_balance">正在同步余额</string>
+    <string name="transaction_count">%d交易</string>
     <string name="all_transactions">所有</string>
     <string name="received_transactions">已接收</string>
     <string name="sent_transactions">已发送</string>
@@ -370,4 +379,14 @@
     <string name="launch_reset_wallet_extra_message">备份助记词</string>
     <string name="start_reset_wallet_title">您或许将丢失%s</string>
     <string name="reset_wallet_text">重置钱包</string>
-    </resources>
+    <string name="reclassify_transactions_title">重新分类您的交易</string>
+    <string name="reclassify_transactions_title_message">这些分类将反映在可用于导入税务报告服务的 CSV文件中.</string>
+    <string name="reclassify_transactions_question">我在哪离可以更改税务种类?</string>
+    <string name="reclassify_transactions_outgoing_title">发出的交易</string>
+    <string name="reclassify_transactions_by_default_message">在默认下将被标记为</string>
+    <string name="reclassify_transactions_incoming_title">接收的交易</string>
+    <string name="reclassify_transactions_change_it_message">您可以将其改为</string>
+    <string name="reclassify_transactions_linked_accounts_title">关联账户</string>
+    <string name="reclassify_transactions_linked_accounts_message">在默认下, 所有进出您关联账户的交易 (交易所, 质押等) 都将被标记为转账.</string>
+    <string name="reclassify_transactions_change_explanation">从主页选择任何交易并在交易详情页面更改类别.</string>
+</resources>

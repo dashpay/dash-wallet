@@ -27,14 +27,6 @@
         <item name="cornerRadius">8dp</item>
     </style>
 
-    <style name="CrowdNodeNavigationIconStyle">
-        <item name="android:layout_width">16dp</item>
-        <item name="android:layout_height">16dp</item>
-        <item name="android:rotation">180</item>
-        <item name="android:src">@drawable/ic_arrow_back</item>
-        <item name="android:tint">@color/light_gray</item>
-    </style>
-
     <style name="YellowTextHighlight">
         <item name="backgroundColor">@color/warning_yellow</item>
         <item name="strokeColor">@color/light_core_yellow</item>

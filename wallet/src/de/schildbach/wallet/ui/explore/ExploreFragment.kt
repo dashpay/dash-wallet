@@ -21,63 +21,60 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import androidx.core.os.bundleOf
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.staking.StakingActivity
+import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.databinding.FragmentExploreBinding
 import org.dash.wallet.features.exploredash.ui.ExploreTopic
 import java.util.*
-import javax.inject.Inject
 
 @AndroidEntryPoint
 @FlowPreview
 @ExperimentalCoroutinesApi
 class ExploreFragment : Fragment(R.layout.fragment_explore) {
-    private val viewModel by activityViewModels<MainViewModel>()
     private val binding by viewBinding(FragmentExploreBinding::bind)
-    @Inject
-    lateinit var blockChainDao: BlockchainStateDao
-    @Inject
-    lateinit var analytics: AnalyticsService
+    private val viewModel: MainViewModel by activityViewModels()
+
+    private val stakingLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Constants.USER_BUY_SELL_DASH) {
+            safeNavigate(ExploreFragmentDirections.exploreToBuySell())
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.merchantsBtn.setOnClickListener {
-            val intent = ExploreActivity.createIntent(requireContext(), ExploreTopic.Merchants)
-            startActivity(intent)
+            viewModel.logEvent(AnalyticsConstants.Explore.WHERE_TO_SPEND)
+            safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.Merchants))
         }
 
         binding.atmsBtn.setOnClickListener {
-            val intent = ExploreActivity.createIntent(requireContext(), ExploreTopic.ATMs)
-            startActivity(intent)
+            viewModel.logEvent(AnalyticsConstants.Explore.PORTAL_ATM)
+            safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.ATMs))
         }
 
         binding.stakingBtn.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY, bundleOf())
+            viewModel.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY)
             handleStakingNavigation()
         }
-
-        binding.faucetBtn.setOnClickListener {
-            val intent = ExploreActivity.createIntent(requireContext(), ExploreTopic.Faucet)
-            startActivity(intent)
-        }
-
-        setAPY(0.0) // hide the APY
 
         viewModel.stakingAPY.observe(viewLifecycleOwner) {
             setAPY(it)
@@ -89,29 +86,23 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
 
     private fun handleStakingNavigation() {
         lifecycleScope.launch {
-            if (isSynced()) {
-                startActivity(Intent(requireContext(), StakingActivity::class.java))
+            if (viewModel.isBlockchainSynced.value == true) {
+                stakingLauncher.launch(Intent(requireContext(), StakingActivity::class.java))
             } else {
                 val openWebsite = AdaptiveDialog.create(
                     null,
-                    getString(de.schildbach.wallet_test.R.string.chain_syncing),
-                    getString(de.schildbach.wallet_test.R.string.crowdnode_wait_for_sync),
-                    getString(de.schildbach.wallet_test.R.string.button_close),
-                    getString(de.schildbach.wallet_test.R.string.crowdnode_open_website)
+                    getString(R.string.chain_syncing),
+                    getString(R.string.crowdnode_wait_for_sync),
+                    getString(R.string.button_close),
+                    getString(R.string.crowdnode_open_website)
                 ).showAsync(requireActivity())
 
                 if (openWebsite == true) {
-                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(de.schildbach.wallet_test.R.string.crowdnode_website)))
+                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.crowdnode_website)))
                     startActivity(browserIntent)
                 }
             }
         }
-    }
-
-    private suspend fun isSynced(): Boolean {
-        val blockChainState = blockChainDao.get()
-
-        return blockChainState != null && blockChainState.isSynced()
     }
 
     fun setAPY(apy: Double) {

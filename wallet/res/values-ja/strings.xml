@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">このコードを送金者にスキャンさせてください。</string>
     <string name="request_coins_fragment_initiate_request_nfc">または、NFCが使用可能なデバイスアをタップしてください。</string>
     <string name="request_coins_clipboard_msg">Dashのリクエストがクリップボードにコピーされました</string>
-    <string name="request_coins_share_dialog_title">Dashのリクエストを共有…</string>
     <string name="request_coins_no_local_app_msg">他のDashアプリが見付かりませんでした</string>
     <string name="request_coins_options_local_app_title">ローカルアプリからのリクエスト</string>
     <string name="address_book_activity_title">アドレス帳</string>

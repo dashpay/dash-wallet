@@ -67,8 +67,6 @@
 
     <string name="receive_title">Prijať</string>
     <string name="receive_enter_amount_message">Zadajte čiastku, ktorú chcete prijať</string>
-    <string name="receive_enter_amount_button">Zadať množstvo</string>
-    <string name="receive_share_button">Zdieľať</string>
 
     <string name="pay_title">Poslať</string>
     <string name="history_title">História</string>
@@ -241,6 +239,12 @@
     <string name="view_seed_done">Hotovo</string>
     <string name="view_seed_title">Fráza pre obnovenie</string>
     <string name="transaction_result_view_on_explorer">Zobraziť v prehliadači blokov</string>
+    <string name="transaction_result_tax_category">Daňová kategória</string>
+    <string name="transaction_result_tax_category_loading">Načítava sa...</string>
+    <string name="tax_category_income">Príjem</string>
+    <string name="tax_category_expense">Výdavok</string>
+    <string name="tax_category_transfer_in">Prichádzajúce</string>
+    <string name="tax_category_transfer_out">Odchádzajúce</string>
     <string name="transaction_result_paid_successfully">Úspešne poslané</string>
     <string name="transaction_result_sent_to">Poslané ku</string>
     <string name="transaction_date_and_time">Dátum</string>
@@ -252,6 +256,8 @@
     <string name="transaction_details_received_at">Prijaté z</string>
     <string name="transaction_details_moved_from">Presunuté z</string>
     <string name="transaction_details_moved_internally_to">Interne presunuté do</string>
+    <string name="transaction_failed_details">Transakcia zlyhala</string>
+
     <string name="authenticate_fingerprint_title">Overiť</string>
     <string name="authenticate_fingerprint_message">Pre pokračovanie potvrďte odtlačok prsta</string>
     <string name="authenticate_pin_message">Pokračujte zadaním PIN kódu</string>
@@ -260,6 +266,8 @@
 
     <string name="menu_buy_and_sell_title">Kúpiť a predať Dash</string>
     <string name="menu_buy_and_sell_subtitle">Spojiť s burzami tretích strán</string>
+    <string name="liquid_unavailable">Liquid integrácia s Dash peňaženkou už nie je k dispozícii</string>
+    <string name="liquid_unavailable_details">Ak máte akékoľvek otázky týkajúce sa vašich Dash v Liquid, kontaktujte centrum podpory Liquid</string>
     <string name="menu_security_title">Bezpečnosť</string>
     <string name="menu_security_subtitle">Zobraziť prístupové heslo, zálohovať peňaženku...</string>
     <string name="menu_settings_title">Nastavenia</string>
@@ -279,16 +287,13 @@
     <string name="tools_show_xpub">Rozšírený verejný kľúč</string>
 
     <string name="about_help_us_improve">Pomôžte nám vylepšiť váš zážitok</string>
-    <string name="about_review_and_rate">Ohodnotiť aplikáciu</string>
     <string name="about_contact_support">Kontaktovať Podporu</string>
     <string name="about_fork_disclaimer">Toto je aplikácia s otvoreným zdrojovým kódom vytvorená z bitcoin peňaženky</string>
     <string name="about_copyright">Autorské práva © 2022 Dash Core</string>
     <string name="about_license">Všeobecná verejná licencia GNU v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_dash_sync">Preskúmajte údaje Dash aktualizované o: %1$s\nPosledná synchronizácia: %2$s</string>
     <string name="about_last_explore_dash_update_error">nedá sa načítať</string>
     <string name="about_last_explore_dash_sync_never">nikdy</string>
-
     <string name="block">Blok</string>
     <string name="time">Čas</string>
     <string name="hash">Hash</string>
@@ -359,8 +364,12 @@
     <string name="import_image_import_valid_private_key">Pre import Dashu skopírujte platný súkromný kľúč</string>
     <string name="import_image_invalid_private">Neplatný privátny kľúč</string>
 
+    <string name="today">Dnes</string>
+    <string name="yesterday">Včera</string>
+
     <string name="syncing">Synchronizuje sa</string>
     <string name="syncing_balance">Synchronizuje sa zostatok</string>
+    <string name="transaction_count">%d transakcií</string>
     <string name="all_transactions">Všetko</string>
     <string name="received_transactions">Prijté</string>
     <string name="sent_transactions">Poslané</string>
@@ -379,4 +388,14 @@
     <string name="launch_reset_wallet_extra_message">Zálohujte si frázu na obnovenie</string>
     <string name="start_reset_wallet_title">Môžete stratiť %s</string>
     <string name="reset_wallet_text">Resetovať peňaženku</string>
-    </resources>
+    <string name="reclassify_transactions_title">Preklasifikujte svoje transakcie</string>
+    <string name="reclassify_transactions_title_message">Tieto klasifikácie sa premietnu do exportu CSV, ktorý možno použiť na import do služieb daňového výkazníctva.</string>
+    <string name="reclassify_transactions_question">Kde môžem zmeniť kategóriu dane?</string>
+    <string name="reclassify_transactions_outgoing_title">Odchádzajúce transakcie</string>
+    <string name="reclassify_transactions_by_default_message">predvolene bude označený ako</string>
+    <string name="reclassify_transactions_incoming_title">Prichádzajúce transakcie</string>
+    <string name="reclassify_transactions_change_it_message">Môžete to zmeniť na</string>
+    <string name="reclassify_transactions_linked_accounts_title">Prepojené účty</string>
+    <string name="reclassify_transactions_linked_accounts_message">v predvolenom nastavení budú všetky transakcie do alebo z vašich prepojených účtov (výmeny, vkladanie atď.) označené ako prevody.</string>
+    <string name="reclassify_transactions_change_explanation">Vyberte ľubovoľnú transakciu na domovskej stránke a zmeňte kategóriu na stránke podrobností transakcie.</string>
+</resources>

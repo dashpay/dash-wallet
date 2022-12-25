@@ -33,6 +33,8 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.MerchantAtmDataSource
+import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
+import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
 import org.dash.wallet.features.exploredash.repository.GCExploreDatabase
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.services.UserLocationState
@@ -79,4 +81,9 @@ abstract class ExploreDashModule {
     abstract fun bindExploreDataSource(
         exploreDatabase: MerchantAtmDataSource
     ): ExploreDataSource
+
+    @Binds
+    abstract fun bindDataSyncService(
+        exploreDatabase: ExploreDataSyncStatus
+    ): DataSyncStatusService
 }

@@ -24,6 +24,8 @@
     <string name="explore_atms_title">Distributeurs d\'espèces</string>
     <string name="explore_atms_subtitle">Trouvez où acheter ou vendre des dashs et d\'autres cryptomonnaies, contre des espèces.</string>
     <string name="explore_staking_subtitle">Percevez facilement des gains Dash et gagnez un revenu passif après quelques simples clics.</string>
+    <string name="explore_staking_current_apy">APY actuel = %s%%</string>
+
     <!-- Search -->
     <string name="explore_search_results">Résultats de la recherche</string>
     <string name="explore_physical_merchant">Vendeur physique</string>

@@ -67,14 +67,6 @@
                                 android:layout_gravity="start"
                                 android:layout_marginStart="12dp"
                                 app:pp_item_size="35dp" />
-
-                            <de.schildbach.wallet.ui.widget.FingerprintView
-                                android:id="@+id/fingerprint_view"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:visibility="gone"
-                                tools:visibility="visible" />
-
                         </LinearLayout>
 
                         <ProgressBar

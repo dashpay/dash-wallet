@@ -67,8 +67,6 @@
 
     <string name="receive_title">Получить</string>
     <string name="receive_enter_amount_message">Введите сумму для получения</string>
-    <string name="receive_enter_amount_button">Введите сумму</string>
-    <string name="receive_share_button">Поделиться</string>
 
     <string name="pay_title">Отправить</string>
     <string name="history_title">История</string>
@@ -241,14 +239,12 @@
     <string name="view_seed_done">Готово</string>
     <string name="view_seed_title">Фраза восстановления</string>
     <string name="transaction_result_view_on_explorer">Посмотреть в Block Explorer</string>
-    <string name="transaction_result_tax_category">Налоговая категория</string>
+    <string name="transaction_result_tax_category">Категория</string>
     <string name="transaction_result_tax_category_loading">Загрузка…</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Доходы</item>
-        <item>Расходы</item>
-        <item>Входящие переводы</item>
-        <item>Исходящие переводы</item>
-    </string-array>
+    <string name="tax_category_income">Доходы</string>
+    <string name="tax_category_expense">Расходы</string>
+    <string name="tax_category_transfer_in">Входящие переводы</string>
+    <string name="tax_category_transfer_out">Исходящие переводы</string>
     <string name="transaction_result_paid_successfully">Успешно отправлено</string>
     <string name="transaction_result_sent_to">Отправить</string>
     <string name="transaction_date_and_time">Дата</string>
@@ -270,6 +266,8 @@
 
     <string name="menu_buy_and_sell_title">Купить &amp; Продать Dash</string>
     <string name="menu_buy_and_sell_subtitle">Подключиться к сторонним биржам</string>
+    <string name="liquid_unavailable">Интеграция Liquid с Dash Wallet больше не доступна</string>
+    <string name="liquid_unavailable_details">Если у вас есть вопросы о ваших средствах в Dash на Liquid, пожалуйста свяжитесь со службой поддержки Liquid</string>
     <string name="menu_security_title">Безопасность</string>
     <string name="menu_security_subtitle">Показать кодовую фразу, сделать резервную копию кошелька...</string>
     <string name="menu_settings_title">Настройки</string>
@@ -289,16 +287,13 @@
     <string name="tools_show_xpub">Расширенный  публичный ключ</string>
 
     <string name="about_help_us_improve">Помогите нам стать лучше</string>
-    <string name="about_review_and_rate">Оставить отзыв &amp; Оценить приложение</string>
     <string name="about_contact_support">Связаться с поддержкой</string>
     <string name="about_fork_disclaimer">Это приложение с открытым кодом, основанное на Bitcoin Wallet</string>
     <string name="about_copyright">Все права защищены © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_dash_sync">Данные Explore Dash были обновлены %1$s\nПоследняя синхронизация:%2$s</string>
     <string name="about_last_explore_dash_update_error">Невозможно получить</string>
     <string name="about_last_explore_dash_sync_never">никогда</string>
-
     <string name="block">Блок</string>
     <string name="time">Время</string>
     <string name="hash">Хэш</string>
@@ -369,6 +364,9 @@
     <string name="import_image_import_valid_private_key">Скопируйте действующий приватный ключ, чтобы с его помощью импортировать Dash</string>
     <string name="import_image_invalid_private">Неверный приватный ключ</string>
 
+    <string name="today">Сегодня</string>
+    <string name="yesterday">Вчера</string>
+
     <string name="syncing">Синхронизация</string>
     <string name="syncing_balance">Синхронизация баланса</string>
     <string name="transaction_count">%dтранзакций</string>
@@ -392,7 +390,7 @@
     <string name="reset_wallet_text">Сбросить кошелек</string>
     <string name="reclassify_transactions_title">Переклассифицировать транзакции</string>
     <string name="reclassify_transactions_title_message">Эти классификации будут отражены при экспорте в CSV-файл, который в дальнейшем можно использовать для передачи в налоговые службы.</string>
-    <string name="reclassify_transactions_question">Где можно сменить налоговую категорию?</string>
+    <string name="reclassify_transactions_question">Где можно сменить категорию?</string>
     <string name="reclassify_transactions_outgoing_title">Исходящие транзакции</string>
     <string name="reclassify_transactions_by_default_message">по умолчанию будут отмечены как</string>
     <string name="reclassify_transactions_incoming_title">Входящие транзакции</string>

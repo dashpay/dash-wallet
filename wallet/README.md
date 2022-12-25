@@ -176,18 +176,18 @@ BUILDING ALL FLAVORS
     
 All flavors (debug and release) will be at:  wallet/build/outputs/apk
 
-### CONFIGURATION FOR UPHOLD AND LIQUID
+### CONFIGURATION FOR UPHOLD AND COINBASE
 
 The file services.properties must be in the root folder of the repo with the keys for the Uphold and
-Liquid Services as follows:
+Coinbase Services as follows:
 
 ```
 UPHOLD_CLIENT_ID="<uphold client id>"
 UPHOLD_CLIENT_SECRET="<uphold secret>"
 UPHOLD_CLIENT_ID_SANDBOX="<uphold sandbox client id>"
 UPHOLD_CLIENT_SECRET_SANDBOX="<uphold sandbox secret"
-LIQUID_PUBLIC_API_KEY="<liquid sandbox public api key>"
-LIQUID_PUBLIC_API_KEY_SANDBOX="<liquid sandbox public api key>"
+COINBASE_CLIENT_ID="<coinbase client id>"
+COINBASE_CLIENT_SECRET="<coinbase secret>"
 ```
 
 ### CONFIGURATION FOR SUPPORT EMAIL

@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Questo codice deve essere scansionato dal mittente.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Oppure tocca un dispositivo abilitato per NFC.</string>
     <string name="request_coins_clipboard_msg">Richiesta Dash copiata negli appunti</string>
-    <string name="request_coins_share_dialog_title">Condividi richiesta di Dash…</string>
     <string name="request_coins_no_local_app_msg">Nessun\'altra applicazione Dash trovata</string>
     <string name="request_coins_options_local_app_title">Richiesta dall\'app locale</string>
     <string name="address_book_activity_title">Rubrica degli indirizzi </string>

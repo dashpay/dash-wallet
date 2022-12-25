@@ -44,13 +44,6 @@ source_file = integrations/uphold/src/main/res/values/strings-uphold.xml
 source_lang = en
 type = ANDROID
 
-[dash-mobile-wallets.strings-liquid]
-file_filter = integrations/liquid/src/main/res/values-<lang>/strings-liquid.xml
-lang_map = sl_SI:sl, zh_TW:zh-rTW
-source_file = integrations/liquid/src/main/res/values/strings-liquid.xml
-source_lang = en
-type = ANDROID
-
 [dash-mobile-wallets.strings-exploredash]
 file_filter = features/exploredash/src/main/res/values-<lang>/strings-explore-dash.xml
 lang_map = sl_SI:sl, zh_TW:zh-rTW
@@ -66,8 +59,8 @@ source_lang = en
 type = ANDROID
 
 [dash-mobile-wallets.strings-coinbase]
-file_filter = integrations/coinbase-integration/src/main/res/values-<lang>/strings.xml
+file_filter = integrations/coinbase/src/main/res/values-<lang>/strings.xml
 lang_map = sl_SI:sl, zh_TW:zh-rTW
-source_file = integrations/coinbase-integration/src/main/res/values/strings.xml
+source_file = integrations/coinbase/src/main/res/values/strings.xml
 source_lang = en
 type = ANDROID

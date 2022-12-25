@@ -17,24 +17,28 @@
 package de.schildbach.wallet.ui.send
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
+import androidx.lifecycle.*
+import dagger.hilt.android.lifecycle.HiltViewModel
 import org.dash.wallet.common.data.ExchangeRate
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.ui.SingleLiveEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
+import javax.inject.Inject
 
-class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(application) {
-
+@HiltViewModel
+class EnterAmountSharedViewModel @Inject constructor(
+    private val configuration: Configuration,
+    private val walletData: WalletDataProvider
+) : ViewModel() {
     private var repo: ExchangeRatesRepository
-    private var _nameLiveData = MutableLiveData<ExchangeRate>()
+    private val _nameLiveData = MutableLiveData<ExchangeRate>()
     val exchangeRateData: LiveData<ExchangeRate>
         get() = _nameLiveData
 
@@ -42,12 +46,13 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
         _nameLiveData.value = selectedExchangeRate
     }
 
-    var exchangeRate: org.bitcoinj.utils.ExchangeRate? = null
+    val exchangeRate: org.bitcoinj.utils.ExchangeRate?
         get() = _nameLiveData.value?.run { org.bitcoinj.utils.ExchangeRate(Coin.COIN, _nameLiveData.value!!.fiat) }
 
     private val dashToFiatDirectionData = MutableLiveData<Boolean>()
     val dashToFiatDirectionLiveData: LiveData<Boolean>
         get() = dashToFiatDirectionData
+
     fun setDashToFiatDirection(isDashToFiat: Boolean) {
         dashToFiatDirectionData.value = isDashToFiat
     }
@@ -80,9 +85,12 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
     val maxButtonClickEvent = SingleLiveEvent<Boolean>()
 
     val dashPayProfileData = MutableLiveData<DashPayProfile>()
+    
+    val receiveAddress: Address
+        get() = walletData.freshReceiveAddress()
 
     init {
-        val currencyCode = (application as WalletApplication).configuration.exchangeCurrencyCode
+        val currencyCode = configuration.exchangeCurrencyCode
         repo = ExchangeRatesRepository.instance
         viewModelScope.launch(Dispatchers.Main) {
             currencyCode?.let {

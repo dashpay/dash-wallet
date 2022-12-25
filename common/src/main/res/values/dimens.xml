@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <dimen name="font_size_tiny">11sp</dimen>
     <dimen name="font_size_small">14sp</dimen>
     <dimen name="font_size_normal">16sp</dimen>
@@ -53,4 +53,6 @@
     <dimen name="char_counter_bottom_padding">10dp</dimen>
     <dimen name="char_counter_end_padding">12dp</dimen>
     <dimen name="transaction_icon_padding">8dp</dimen>
+    <dimen name="transaction_row_vertical_padding">13dp</dimen>
+    <dimen name="transaction_row_extended_padding">17dp</dimen>
 </resources>

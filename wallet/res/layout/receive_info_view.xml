@@ -140,7 +140,7 @@
                 android:layout_height="40dp"
                 android:layout_marginStart="4dp"
                 android:layout_weight="1"
-                android:text="@string/receive_share_button" />
+                android:text="@string/button_share" />
 
         </LinearLayout>
 
@@ -185,7 +185,7 @@
             android:layout_marginStart="4dp"
             android:layout_marginBottom="40dp"
             android:layout_weight="1"
-            android:text="@string/receive_share_button"
+            android:text="@string/button_share"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"

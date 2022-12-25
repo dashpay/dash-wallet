@@ -1,0 +1,118 @@
+<!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="coinbase">كوين بيس</string>
+    <string name="last_known_balance" >آخر رصيد معروف</string>
+    <string name="coinbase_dash_wallet_error_title">لم نعثر على Dash Wallet في حساب كوين بيس الخاص بك.</string>
+    <string name="coinbase_dash_wallet_error_message">يرجى إنشاء محفظة داش على كوين بيس للمتابعة.</string>
+    <string name="create_dash_account">قم بإنشاء حساب داش</string>
+    <string name="close">اغلاق</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="connected">تم الاتصال</string>
+    <string name="disconnect_coinbase_account">افصل حساب كوين بيس</string>
+    <string name="receive_directly_into_dash_wallet">تلقي مباشرة في محفظة داش.</string>
+    <string name="buy_dash">شراء داش</string>
+    <string name="balance">الرصيد:</string>
+    <string name="balance_on_coinbase">الرصيد على كوين بيس</string>
+    <string name="sending_to">إرسال إلى</string>
+    <string name="dash_wallet_device">محفظة داش على هذا الجهاز</string>
+    <string name="exchange_rate_template">%1$s داش = %2$s</string>
+    <string name="payment_method">طريقة الدفع </string>
+    <string name="purchase">شراء</string>
+    <string name="coinbase_fee">رسوم كوين بيس</string>
+    <string name="total">المجموع</string>
+    <string name="order_preview">معاينة الطلب</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">ستتلقى %s داش على محفظة داش الخاصة بك على هذا الجهاز. يرجى ملاحظة أن الأمر قد يستغرق ما يصل إلى 2-3 دقائق لإكمال التحويل.</string>
+    <string name="amount_in_dash">المبلغ في داش</string>
+    <string name="cancel">إلغاء</string>
+    <string name="confirm_sec">تأكيد (%s)</string>
+    <string name="confirm">تأكيد</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_title">لم نجد أي طرق دفع.</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_message">يرجى تحديث حساب كوين بيس الخاص بك للمتابعة.</string>
+    <string name="add_payment_method">إضافة طريقة دفع</string>
+    <string name="error">خطأ</string>
+    <string name="cancel_transaction">إلغاء الصفقة؟</string>
+    <string name="yes_cancel">نعم ، إلغاء</string>
+    <string name="no_keep_it">لا ، احتفظ بها</string>
+    <string name="purchase_successful">تم الشراء بنجاح</string>
+    <string name="conversion_successful">التحويل ناجح</string>
+    <string name="purchase_failed">الشراء لم ينجح</string>
+    <string name="transfer_failed">فشل التحويل</string>
+    <string name="conversion_failed">فشل تحويل</string>
+    <string name="transfer_failed_msg">تم إيداع الداش بنجاح في حساب كوين بيس الخاص بك. ولكن كانت هناك مشكلة في نقلها إلى محفظة داش على هذا الجهاز.</string>
+    <string name="purchase_failed_msg">هناك خطأ ما</string>
+    <string name="it_could_take_up_to_2_3_minutes">قد يستغرق الأمر ما يصل إلى 2-3 دقائق حتى يتم نقل داش إلى مجفظة داش على هذا الجهاز.</string>
+    <string name="it_could_take_up_to_5_minutes">قد يستغرق تحويل %s من حساب كوين بيس إلى داش في محفظة داش على هذا الجهاز ما يصل إلى 5 دقائق ..</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">\"قد يستغرق تحويل داش من محفظة داش على هذا الجهاز إلى %s حساب كوين بيس الخاص بك ما يصل إلى 5 دقائق.</string>
+    <string name="contact_coinbase_support">اتصل بدعم كوين بيس</string>
+    <string name="fees_in_crypto_purchase">رسوم مشتريات العملات المشفرة</string>
+    <string name="coinbase_fee_info_msg_content">بالإضافة إلى رسوم كوين بيس المعروضة ، نقوم بتضمين فروق الأسعار في السعر. أسواق العملات المشفرة متقلبة ، وهذا يسمح لنا بتثبيت السعر مؤقتًا لتنفيذ التجارة.</string>
+    <string name="learn_more">اعرف المزيد</string>
+    <string name="something_wrong_title">هناك خطأ ما</string>
+    <string name="retry_later_message">يرجى إعادة المحاولة لاحقًا أو الاتصال بمركز الدعم للحصول على المساعدة</string>
+    <string name="convert_crypto">تحويل العملات المشفرة</string>
+    <string name="between_dash_wallet_and_coinbase">بين محفظة داش و كوين بيس.</string>
+    <string name="conversion_preview">معاينة التحويل</string>
+    <string name="you_send">انت ارسل</string>
+    <string name="from_your_coinbase_account">من حساب كوين بيس الخاص بك</string>
+    <string name="you_receive">انت تستقبل</string>
+    <string name="to_dash_wallet_on_this_device">إلى داش المحفظة على هذا الجهاز</string>
+    <string name="to_your_coinbase_account">إلى حساب كوين بيس الخاص بك</string>
+    <string name="from_dash_wallet_on_this_device">من محفظة داش على هذا الجهاز</string>
+    <string name="you_will_receive">ستستلم</string>
+    <string name="we_didnt_find_any_assets" >لم نعثر على أي أصول في حساب كوين بيس الخاص بك.</string>
+    <string name="you_dont_own_any_crypto" >أنت لا تملك أي عملة مشفرة. قم بشراء بعض العملات المشفرة لتبدأ ..</string>
+    <string name="buy_crypto_on_coinbase" >شراء عملات على كوين بيس</string>
+    <string name="auth_limit_description">لقد تجاوزت حد التفويض على كوين بيس.</string>
+    <string name="debit_money">خصم الأموال من حسابك</string>
+    <string name="change_limit">قم بتغيير هذا الحد</string>
+    <string name="set_auth_limit">تأكد من إعداد حد التفويض الصحيح على كوين بيس</string>
+    <string name="change_withdrawal_limit">يمكنك تغييره في أي وقت عن طريق تسجيل الخروج من حساب كوين بيس الخاص بك في محفظة داش وإعادة تسجيل الدخول.</string>
+    <string name="got_it">حصلت عليه</string>
+    <string name="send_to_wallet_error">لا يمكن إرسال هذا المبلغ دون تجاوز حد التطبيق</string>
+    <string name="dont_have_any_dash">ليس لديك أي داش في محفظة داش الخاصة بك.</string>
+    <string name="transfer_wallet_not_synced">لا يمكن التحويل من محفظة داش إلى كوين بيس حتى تكتمل مزامنة المحفظة.</string>
+    <string name="disconnected">تم قطع الاتصال</string>
+
+    <string name="insufficient_money_title">لا يوجد عملات كافية</string>
+    <string name="insufficient_money_msg">كمية القطع في المحفظة صغيرة جدا للنقل.</string>
+    <string name="send_coins_error_msg">مشكلة في إرسال العملات!</string>
+    <string name="entered_amount_is_too_low">الحد الأدنى لمبلغ الصفقة هو</string>
+    <string name="entered_amount_is_too_high">الحد الأقصى لمبلغ الصفقة هو</string>
+    <string name="verify_continue">تحقق</string>
+    <string name="enter_auth_code">أدخل كود كوين بيس 2FA</string>
+    <string name="extra_steps_label">توضح هذه الخطوة الإضافية أنك تحاول حقًا إجراء معاملة.</string>
+    <string name="need_help">تحتاج مساعدة ؟</string>
+    <string name="coinbase_fa_code_hint">كود كوين بيس 2FA</string>
+    <string name="enter_code_details">قد يكون الرمز من الرسائل القصيرة على هاتفك. إذا لم يكن كذلك ، أدخل الرمز من تطبيق المصادقة.</string>
+    <string name="two_fa_code_incorrect">الرمز غير صحيح. يرجى مراجعة وحاول مرة أخرى!</string>
+    <string name="invalid_code">كان هذا الرمز غير صالح. حاول مرة اخرى</string>
+    <string name="verify_code">تحقق</string>
+    <string name="you_dont_have_enough_balance">ليس لديك رصيد كافي</string>
+    <string name="transfer_dash">تحويل داش</string>
+    <string name="transfer_amount">نقل</string>
+    <string name="dash_wallet_limit_description">المبلغ أعلى من رصيدك</string>
+    <string name="address_creation_failed">لم نتمكن من إنشاء عنوان لحسابك لإكمال معاملتك. من فضلك حاول لاحقا.</string>
+    <string name="transaction_row_rate_not_available">غير متاح</string>
+    <string name="transfer_dash_successful">تم التحويل بنجاح</string>
+    <string name="it_could_take_up_to_10_minutes">قد يستغرق نقل داش من كوين بيس إلى محفظة داش لهذا الجهاز ما يصل إلى 10 دقائق.</string>
+    <string name="it_could_take_up_to_10_minutes_to_coinbase">قد يستغرق الأمر ما يصل إلى 10 دقائق لنقل داش من محفظة داش على هذا الجهاز إلى حساب كوين بيس الخاص بك.</string>
+    <string name="transfer_dash_failed_msg">حدثت مشكلة في نقلها إلى محفظة داش على هذا الجهاز.</string>
+    <string name="insufficient_money_to_transfer">كمية العملات في المحفظة صغيرة جدًا بحيث لا يمكن تحويلها.</string>
+    <string name="amount_to_transfer">ستستلم %s%s%s</string>
+
+    </resources>

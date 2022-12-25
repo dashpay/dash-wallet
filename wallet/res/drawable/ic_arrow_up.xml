@@ -1,0 +1,25 @@
+<!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="8dp"
+    android:height="12dp"
+    android:viewportWidth="8"
+    android:viewportHeight="12">
+  <path
+      android:pathData="M3.991,12C3.463,12 3.057,11.572 3.057,11.045V5.121H1.567C1.136,5.121 0.858,4.956 0.733,4.625C0.607,4.286 0.67,3.943 0.921,3.596L3.354,0.331C3.526,0.11 3.742,0 4,0C4.267,0 4.482,0.11 4.647,0.331L7.08,3.596C7.331,3.927 7.393,4.266 7.268,4.613C7.15,4.952 6.868,5.121 6.422,5.121H4.968V11.045C4.968,11.572 4.519,12 3.991,12Z"
+      android:fillColor="#008DE4"/>
+</vector>

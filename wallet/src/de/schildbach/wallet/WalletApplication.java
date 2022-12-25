@@ -50,6 +50,7 @@ import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.hilt.work.HiltWorkerFactory;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.multidex.MultiDexApplication;
 import androidx.work.BackoffPolicy;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
@@ -84,8 +85,7 @@ import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants;
-import org.dash.wallet.integration.liquid.data.LiquidClient;
-import org.dash.wallet.integration.liquid.data.LiquidConstants;
+import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
@@ -131,7 +131,7 @@ import de.schildbach.wallet.service.platform.PlatformSyncService;
 import de.schildbach.wallet.transactions.TransactionWrapperHelper;
 import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
-import de.schildbach.wallet.transactions.WalletTransactionObserver;
+import de.schildbach.wallet.transactions.WalletObserver;
 import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
@@ -151,13 +151,12 @@ import kotlinx.coroutines.flow.FlowKt;
  * @author Andreas Schildbach
  */
 @HiltAndroidApp
-@ExperimentalCoroutinesApi
-public class WalletApplication extends BaseWalletApplication
+public class WalletApplication extends MultiDexApplication
         implements androidx.work.Configuration.Provider, AutoLogoutTimerHandler, WalletDataProvider {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
-    private List<Function0<Unit>> wipeListeners = new ArrayList<>();
+    private final List<Function0<Unit>> wipeListeners = new ArrayList<>();
 
     private boolean basicWalletInitalizationFinished = false;
 
@@ -413,11 +412,10 @@ public class WalletApplication extends BaseWalletApplication
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannels();
         }
-        initUphold();
-        initPlatform();
 
-        CoinBaseClientConstants.CLIENT_ID= BuildConfig.COINBASE_CLIENT_ID;
-        CoinBaseClientConstants.CLIENT_SECRET = BuildConfig.COINBASE_CLIENT_SECRET;
+        initPlatform();
+        initUphold();
+        initCoinbase();
     }
 
     private void initUphold() {
@@ -430,14 +428,17 @@ public class WalletApplication extends BaseWalletApplication
         UpholdConstants.CLIENT_SECRET = BuildConfig.UPHOLD_CLIENT_SECRET;
         UpholdConstants.initialize(Constants.NETWORK_PARAMETERS.getId().contains("test"));
         UpholdClient.init(getApplicationContext(), authenticationHash);
-
-        LiquidConstants.INSTANCE.setPUBLIC_API_KEY(BuildConfig.LIQUID_PUBLIC_API_KEY);
         LiquidClient.Companion.init(getApplicationContext(), authenticationHash);
     }
 
     private void initPlatform() {
         platformSyncService.initGlobal();
         //PlatformRepo.getInstance().initGlobal();
+    }
+    
+    private void initCoinbase() {
+        CoinBaseClientConstants.CLIENT_ID = BuildConfig.COINBASE_CLIENT_ID;
+        CoinBaseClientConstants.CLIENT_SECRET = BuildConfig.COINBASE_CLIENT_SECRET;
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -557,7 +558,6 @@ public class WalletApplication extends BaseWalletApplication
         rollingPolicy.start();
 
 
-        PreferenceManager.setDefaultValues(this, R.xml.preference_settings, false);
         fileAppender.setEncoder(filePattern);
         fileAppender.setRollingPolicy(rollingPolicy);
         fileAppender.start();
@@ -932,10 +932,10 @@ public class WalletApplication extends BaseWalletApplication
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
             alarmIntent = PendingIntent.getForegroundService(context, 0, serviceIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT);
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         } else {
             alarmIntent = PendingIntent.getService(context, 0, serviceIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT);
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         }
         alarmManager.cancel(alarmIntent);
 
@@ -1064,12 +1064,6 @@ public class WalletApplication extends BaseWalletApplication
     }
 
     @NotNull
-    @Override
-    public Address currentReceiveAddress() {
-        return wallet.currentReceiveAddress();
-    }
-
-    @NotNull
     public Coin getWalletBalance() {
         return wallet.getBalance(Wallet.BalanceType.ESTIMATED);
     }
@@ -1086,12 +1080,25 @@ public class WalletApplication extends BaseWalletApplication
 
     @NonNull
     @Override
-    public Flow<Transaction> observeTransactions(@NonNull TransactionFilter... filters) {
+    public Flow<Transaction> observeTransactions(
+        boolean withConfidence,
+        @NonNull TransactionFilter... filters
+    ) {
         if (wallet == null) {
             return FlowKt.emptyFlow();
         }
 
-        return new WalletTransactionObserver(wallet).observe(filters);
+        return new WalletObserver(wallet).observeTransactions(withConfidence, filters);
+    }
+
+    @NonNull
+    @Override
+    public Flow<Unit> observeWalletChanged() {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+
+        return new WalletObserver(wallet).observeWalletChanged();
     }
 
     @NonNull

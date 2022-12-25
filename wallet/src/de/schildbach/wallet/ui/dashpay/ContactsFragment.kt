@@ -29,6 +29,7 @@ import android.widget.TextView
 import androidx.core.text.HtmlCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -54,7 +55,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 
 @AndroidEntryPoint
-class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root),
+class ContactsFragment : Fragment(R.layout.fragment_contacts_root),
         ContactSearchResultsAdapter.Listener,
         ContactViewHolder.OnItemClickListener {
 
@@ -132,7 +133,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root),
                     search.visibility = View.VISIBLE
                     icon.visibility = View.VISIBLE
                     setupActionBarWithTitle(R.string.contacts_send_to_contact_title)
-                    forceHideBottomNav = true
+//                    forceHideBottomNav = true TODO
                 }
             }
 

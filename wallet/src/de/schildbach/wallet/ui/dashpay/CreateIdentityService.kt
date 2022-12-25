@@ -17,11 +17,11 @@ import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainIdentityData.CreationState
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.payments.DecryptSeedTask
+import de.schildbach.wallet.payments.DeriveKeyTask
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
-import de.schildbach.wallet.ui.send.DecryptSeedTask
-import de.schildbach.wallet.ui.send.DeriveKeyTask
 import de.schildbach.wallet_test.R
 import io.grpc.Status
 import io.grpc.StatusRuntimeException

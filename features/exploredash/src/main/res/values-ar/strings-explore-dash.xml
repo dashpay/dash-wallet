@@ -24,6 +24,8 @@
     <string name="explore_atms_title">أجهزة الصراف الآلي</string>
     <string name="explore_atms_subtitle">اكتشف مكان بيع أو شراء داش والعملات المشفرة الأخرى مقابل النقود.</string>
     <string name="explore_staking_subtitle">قم بستاك داش بسهولة واكسب دخلًا سلبيًا ببضع نقرات بسيطة.</string>
+    <string name="explore_staking_current_apy">APY الحالي = %s%%</string>
+
     <!-- Search -->
     <string name="explore_search_results">نتائج البحث</string>
     <string name="explore_physical_merchant">التاجر المادي</string>

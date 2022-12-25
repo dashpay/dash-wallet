@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@color/background_primary"
     android:orientation="vertical"
-    tools:context="de.schildbach.wallet.ui.PaymentsPayFragment">
+    tools:context="de.schildbach.wallet.ui.payments.PaymentsPayFragment">
 
     <LinearLayout
         android:layout_width="match_parent"

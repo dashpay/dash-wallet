@@ -66,11 +66,11 @@ class PaymentsButtonView(context: Context, attrs: AttributeSet?) : ConstraintLay
 
     fun setActive(active: Boolean) {
         if (active) {
-            val subTitleColor = ResourcesCompat.getColor(resources, R.color.dash_black, null)
+            val subTitleColor = ResourcesCompat.getColor(resources, R.color.content_primary, null)
             sub_title_view.setTextColor(subTitleColor)
             sub_title_view.textSize = convertPixelsToDp(defaultSybTitleSize, context)
         } else {
-            val subTitleColor = ResourcesCompat.getColor(resources, R.color.dash_gray, null)
+            val subTitleColor = ResourcesCompat.getColor(resources, R.color.content_secondary, null)
             sub_title_view.setTextColor(subTitleColor)
             sub_title_view.textSize = convertPixelsToDp(defaultSybTitleSize, context) * 0.8f
         }

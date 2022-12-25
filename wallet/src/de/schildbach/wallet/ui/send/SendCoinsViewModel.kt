@@ -15,26 +15,30 @@
  */
 package de.schildbach.wallet.ui.send
 
-import android.app.Application
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.liveData
-import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.Dispatchers
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.security.BiometricHelper
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.SendRequest
-import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.Configuration
 import javax.inject.Inject
 
 @HiltViewModel
 class SendCoinsViewModel @Inject constructor(
-    application: Application,
+    walletApplication: WalletApplication,
+    configuration: Configuration,
+    val biometricHelper: BiometricHelper,
     private val analytics: AnalyticsService
-) : SendCoinsBaseViewModel(application) {
+) : SendCoinsBaseViewModel(walletApplication, configuration) {
 
     enum class State {
         INPUT,  // asks for confirmation

@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">โค้ดนี้ถูกสแกนโดยผู้ส่ง</string>
     <string name="request_coins_fragment_initiate_request_nfc">หรือแตะเปิดใช้งาน NFC</string>
     <string name="request_coins_clipboard_msg">คำขอ Dash ถูกคัดลอกไปยังคลิปบอร์ดแล้ว</string>
-    <string name="request_coins_share_dialog_title">แชร์คำขอสำหรับ Dash</string>
     <string name="request_coins_no_local_app_msg">ไม่พบแอพพลิเคชั่น Dash อื่นๆ</string>
     <string name="request_coins_options_local_app_title">คำขอจากแอพพลิเคชั่นในเครื่อง</string>
     <string name="address_book_activity_title">สมุดที่อยู่</string>
@@ -280,6 +279,8 @@
     <string name="preferences_show_disclaimer_summary">คุณได้อ่านบันทึกความปลอดภัยหรือยัง?  คุณสำรอง wallet ของคุณไปยังที่ปลอดภัยหรือยัง?</string>
     <string name="preferences_report_issue_title">รายงานปัญหา</string>
     <string name="preferences_initiate_reset_title">สแกน blockchain อีกครั้ง</string>
+    <string name="preferences_initiate_reset_summary">การสแกนการตรวจสอบบล็อกเชน, ธุรกรรม และยอดคงเหลือซ้ำ ๆ นั้นจะใช้เวลาสักพักดังนั้นคุณควรทำในกรณีที่มีความจำเป็นเท่านั้น</string>
+    <string name="preferences_initiate_reset_dialog_message">คุณต้องการจะตรวจสอบบล็อกเชนอีกครั้ง?\n\nซึ่งจะมีการซ่อนยอดคงเหลือของกระเป๋าเงินของคุณชั่วคราวและลบธุรกรรมทั้งหมด ทั้งสองจะกู้คืนอีกครั้งเมื่อมีการซิงค์กับบล็อกเชน กรุณาตรวจสอบให้แน่ใจว่าคุณมีการเชื่อมต่อที่เชื่อถือได้กับอินเทอร์เน็ตที่คุณใช้งานอยู่</string>
     <string name="preferences_initiate_reset_dialog_positive">สแกนอีกครั้ง</string>
     <string name="preferences_extended_public_key_title">แสดง xpub</string>
     <string name="preferences_extended_public_key_summary">ดูส่วนขยาย public key  wallet ของคุณ  มันสามารถนำเข้าไปยังแอพพลิเคชั่นและบริการอื่น ๆ ได้   โปรดระวัง: การทำเช่นนี้จะเป็นการเปิดเผยข้อมูลทางการเงินส่วนบุคคลของคุณไปยังแอพพลิเคชั่นนั้น</string>
@@ -382,8 +383,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">คุณมีเงินทุนไม่เพียงพอที่จะดำเนินการทางธุรกรรมได้สำเร็จ</string>
 
 
+    <string name="select_a_service_to_buy_and_sell_dash">เลือกบริการที่จะซื้อและขาย Dash</string>
     <string name="select_a_service">เลือกบริการ</string>
     <string name="activity_buy_and_sell_dash_filter">กรอง</string>
     <string name="clear_filter">ล้างตัวกรอง</string>
     <string name="select_currency">เลือกสกุลเงิน</string>
-    </resources>
+    <string name="reason">เหตุผล</string>
+</resources>

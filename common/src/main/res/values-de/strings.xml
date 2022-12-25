@@ -10,7 +10,12 @@
     <string name="network_unavailable_balance_not_accurate">Die Guthabensanzeige ist möglicherweise inakkurat, da keine Verbindung besteht</string>
     <string name="buy_dash">Dash kaufen</string>
     <string name="copied">Kopiert</string>
+    <string name="staking_title">Staking</string>
+    <string name="email">E-Mail</string>
+    <string name="email_placeholder">z.B. maxmustermann@mail.com</string>
     <string name="error">Fehler</string>
+    <string name="select_a_coin">Wähle einen Coin aus</string>
+    <string name="request_coins_share_dialog_title">Anforderung veröffentlichen…</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pfund</string>
@@ -35,22 +40,36 @@
     <string name="button_dismiss">Schließen</string>
     <string name="network_unavailable_return">Zur Wallet zurückkehren</string>
     <string name="button_continue">Fortfahren</string>
+    <string name="get_quote">Angebot einholen</string>
     <string name="button_close">Schließen</string>
     <string name="button_retry">Wiederholen</string>
+    <string name="button_send_report">Bericht senden</string>
     <string name="button_info">Info</string>
     <string name="button_copy_address">Adresse kopieren</string>
     <string name="button_understand">Ich verstehe</string>
     <string name="button_okay">OK</string>
     <string name="button_share">Teilen</string>
     <string name="verify">Verifizieren</string>
+    <string name="receive_enter_amount_button">Betrag festsetzen</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Suchen</string>
     <string name="permission_allow">Erlauben</string>
     <string name="permission_deny">Ablehnen</string>
+    <string name="pay_with">Bezahle mit</string>
+    <string name="choose_payment_method">Wähle eine Zahlungsmethode aus</string>
+    <string name="debit_credit_card">Debit-/Kreditkarte</string>
     <string name="max">Max</string>
+    <string name="select_the_coin">Wähle einen Coin aus</string>
+    <string name="dash">Dash</string>
+    <string name="dash_wallet_name">Dash Wallet</string>
+    <string name="from">von</string>
+    <string name="to">nach</string>
     <string name="select_currency">Währung auswählen</string>
     <string name="send_coins_error_dusty_send">Der Betrag ist zu klein zum Senden</string>
     <string name="send_coins_error_insufficient_money">Guthaben nicht ausreichend</string>
 
-    </resources>
+    <string name="empty_wallet_warning_title">Es scheint als würdest du deine Dash Wallet leeren</string>
+    <string name="empty_wallet_crowdnode_warning">Bitte beachte, dass du dein Guthaben nicht von CrowdNode abheben kannst solange dies niedriger als 0.0003 Dash ist.</string>
+    <string name="syncing">Synchronisiere</string>
+</resources>

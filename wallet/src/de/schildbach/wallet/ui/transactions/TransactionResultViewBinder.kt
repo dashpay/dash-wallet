@@ -40,6 +40,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
@@ -48,7 +49,6 @@ import org.dash.wallet.common.ui.CurrencyTextView
 /**
  * @author Samuel Barbosa
  */
-@ExperimentalCoroutinesApi
 class TransactionResultViewBinder(
     private val wallet: Wallet,
     private val dashFormat: MonetaryFormat,
@@ -90,6 +90,12 @@ class TransactionResultViewBinder(
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
     private val explorerContainer by lazy { containerView.findViewById<View>(R.id.open_explorer_card) }
 
+    private val taxCategoryNames = mapOf(
+        TaxCategory.Income to R.string.tax_category_income,
+        TaxCategory.Expense to R.string.tax_category_expense,
+        TaxCategory.TransferIn to R.string.tax_category_transfer_in,
+        TaxCategory.TransferOut to R.string.tax_category_transfer_out
+    )
     private val resourceMapper = TxResourceMapper()
     private lateinit var transaction: Transaction
     private var dashPayProfile: DashPayProfile? = null
@@ -298,13 +304,10 @@ class TransactionResultViewBinder(
     }
 
     fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
-        val categories =
-            containerView.resources.getStringArray(R.array.transaction_result_tax_categories)
-
-        if (transactionMetadata.taxCategory != null) {
-            taxCategory.text = categories[transactionMetadata.taxCategory!!.value]
+        val strResource = if (transactionMetadata.taxCategory != null) {
+            taxCategoryNames[transactionMetadata.taxCategory!!]
         } else {
-            taxCategory.text = categories[transactionMetadata.defaultTaxCategory.value]
+            taxCategoryNames[transactionMetadata.defaultTaxCategory]
         }
 
         privateMemoText.text = transactionMetadata.memo
@@ -316,6 +319,8 @@ class TransactionResultViewBinder(
             privateMemoText.isVisible = false
             addPrivateMemoBtn.setText(R.string.add_note)
         }
+        
+        taxCategory.text = containerView.resources.getString(strResource!!)
     }
 
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {

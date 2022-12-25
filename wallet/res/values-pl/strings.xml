@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Niech nadawca zeskanuje ten kod QR</string>
     <string name="request_coins_fragment_initiate_request_nfc">Lub zbliż do siebie urządzenia z aktywnym NFC</string>
     <string name="request_coins_clipboard_msg">Prośba o Dash została skopiowana do schowka</string>
-    <string name="request_coins_share_dialog_title">Udostępnij prośbę o Dashy…</string>
     <string name="request_coins_no_local_app_msg">Nie znaleziono innej aplikacji Dash</string>
     <string name="request_coins_options_local_app_title">Żądanie z lokalnej aplikacji</string>
     <string name="address_book_activity_title">Książka adresowa</string>
@@ -280,6 +279,8 @@
     <string name="preferences_show_disclaimer_summary">Czy naprawdę przeczytałeś notatki dotyczące bezpieczeństwa? Czy dokonałeś juz kopii zapasowej portfela w bezpieczne miejsce?</string>
     <string name="preferences_report_issue_title">Zgłoś problem</string>
     <string name="preferences_initiate_reset_title">Przeskanuj blockchain ponownie</string>
+    <string name="preferences_initiate_reset_summary">Ponownie przeskanuj blockchain, transakcje i saldo portfela. Powtórka zajmie trochę czasu, więc rób to tylko wtedy, gdy masz dobry powód.</string>
+    <string name="preferences_initiate_reset_dialog_message">Chcesz ponownie przeskanować łańcuch bloków?\n\nSpowoduje to tymczasowe ukrycie salda portfela i usunięcie transakcji. Oba zostaną odzyskane w miarę postępu synchronizacji łańcucha bloków. Upewnij się, że masz niezawodne połączenie z internetem.</string>
     <string name="preferences_initiate_reset_dialog_positive">Ponownie zeskanuj</string>
     <string name="preferences_extended_public_key_title">Pokaż xpub</string>
     <string name="preferences_extended_public_key_summary">Sprawdź rozszerzony klucz publiczny twojego portfela, tak aby mógł być zaimportowany do innych aplikacji i usług. Bądź ostrożny: ta operacja ujawni poufne dane twojego portfela.</string>
@@ -382,8 +383,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">Nie posiadasz wystarczających środków aby dokonać tej transakcji</string>
 
 
+    <string name="select_a_service_to_buy_and_sell_dash">Wybierz usługe do kupowania i sprzedawania Dash</string>
     <string name="select_a_service">Wybierz usługę</string>
     <string name="activity_buy_and_sell_dash_filter">Filtrowanie</string>
     <string name="clear_filter">Zresetuj Filtrowanie</string>
     <string name="select_currency">Wybierz Walutę</string>
-    </resources>
+    <string name="reason">Powód</string>
+</resources>

@@ -67,8 +67,6 @@
 
     <string name="receive_title">Ricevi</string>
     <string name="receive_enter_amount_message">Specificare l\'importo da ricevere</string>
-    <string name="receive_enter_amount_button">Specifica Importo</string>
-    <string name="receive_share_button">Condividi</string>
 
     <string name="pay_title">Invia</string>
     <string name="history_title">Storia</string>
@@ -239,13 +237,11 @@
     <string name="view_seed_title">Frase di recupero</string>
     <string name="transaction_result_view_on_explorer">Visualizza in Block Explorer</string>
     <string name="transaction_result_tax_category">Categoria fiscale</string>
-    <string name="transaction_result_tax_category_loading">Caricamento...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Reddito</item>
-        <item>Spese</item>
-        <item>Trasferimento in entrata</item>
-        <item>Trasferimento in uscita</item>
-    </string-array>
+    <string name="transaction_result_tax_category_loading">Caricamento in corso.....</string>
+    <string name="tax_category_income">Reddito</string>
+    <string name="tax_category_expense">Spese</string>
+    <string name="tax_category_transfer_in">Trasferimento in entrata</string>
+    <string name="tax_category_transfer_out">Trasferimento in uscita</string>
     <string name="transaction_result_paid_successfully">Correttamente Inviato</string>
     <string name="transaction_result_sent_to">Inviato a</string>
     <string name="transaction_date_and_time">Data</string>
@@ -267,6 +263,8 @@
 
     <string name="menu_buy_and_sell_title">Compra &amp; Vendi Dash</string>
     <string name="menu_buy_and_sell_subtitle">Connetti a Exchanges esterni</string>
+    <string name="liquid_unavailable">L\'integrazione Liquid con Dash Wallet non è più disponibile</string>
+    <string name="liquid_unavailable_details">In caso di domande relative alle partecipazioni in Dash presso Liquid, contattare il centro di assistenza Liquid</string>
     <string name="menu_security_title">Sicurezza</string>
     <string name="menu_security_subtitle">Visualizza frase di recupero, portafoglio di backup</string>
     <string name="menu_settings_title">Impostazioni</string>
@@ -286,16 +284,13 @@
     <string name="tools_show_xpub">Chiave pubblica estesa</string>
 
     <string name="about_help_us_improve">Aiutaci a migliorare raccontaci tua esperienza</string>
-    <string name="about_review_and_rate">Recensisci &amp; Valuta l\'app</string>
     <string name="about_contact_support">Contatta il Supporto</string>
     <string name="about_fork_disclaimer">This is an open source app forked from Bitcoin Wallet</string>
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_dash_sync">Esplora i dati di Dash aggiornati su: %1$s\nLast sync: %2$s</string>
     <string name="about_last_explore_dash_update_error">non può recuperare</string>
     <string name="about_last_explore_dash_sync_never">mai</string>
-
     <string name="block">Blocchi</string>
     <string name="time">Tempo</string>
     <string name="hash">Hash</string>
@@ -365,6 +360,9 @@
     <string name="import_image_no_private_key_copied">Nessuna chiave privata copiata</string>
     <string name="import_image_import_valid_private_key">Copia una chiave privata valida per importare Dash </string>
     <string name="import_image_invalid_private">Chiave privata non valida</string>
+
+    <string name="today">In data odierna</string>
+    <string name="yesterday">Ieri</string>
 
     <string name="syncing">Sincronizzazione</string>
     <string name="syncing_balance">Sincronizzazione bilancio</string>

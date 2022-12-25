@@ -20,8 +20,6 @@ import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionDetailsDialogBinding
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -32,9 +30,7 @@ import org.slf4j.LoggerFactory
 /**
  * @author Samuel Barbosa
  */
-@FlowPreview
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class TransactionDetailsDialogFragment : OffsetDialogFragment() {
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
     private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }

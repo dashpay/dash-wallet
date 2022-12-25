@@ -14,6 +14,9 @@
     <string name="email">Email</string>
     <string name="email_placeholder">misalnya johndoe@mail.com</string>
     <string name="error">Kesalahan</string>
+    <string name="select_a_coin">Pilih koin</string>
+    <string name="request_coins_share_dialog_title">Berbagi permintaan Dash…</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Pound Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -37,6 +40,7 @@
     <string name="button_dismiss">Tolak</string>
     <string name="network_unavailable_return">Kembali ke dompet</string>
     <string name="button_continue">Teruskan</string>
+    <string name="get_quote">Dapatkan Penawaran</string>
     <string name="button_close">Tutup</string>
     <string name="button_retry">Coba lagi</string>
     <string name="button_send_report">Kirim Laporan</string>
@@ -46,13 +50,21 @@
     <string name="button_okay">Oke</string>
     <string name="button_share">Berbagi</string>
     <string name="verify">Memeriksa</string>
+    <string name="receive_enter_amount_button">Tentukan Jumlah</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Cari</string>
     <string name="permission_allow">Izinkan</string>
     <string name="permission_deny">Tolak</string>
+    <string name="pay_with">Bayar dengan</string>
+    <string name="choose_payment_method">Pilih metode pembayaran</string>
+    <string name="debit_credit_card">Kartu Debit/Credit</string>
     <string name="max">Max</string>
+    <string name="select_the_coin">Pilih koin</string>
     <string name="dash">Dash</string>
+    <string name="dash_wallet_name">Dompet Dash</string>
+    <string name="from">dari</string>
+    <string name="to">ke</string>
     <string name="select_currency">Pilih mata uang</string>
     <string name="send_coins_error_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
     <string name="send_coins_error_insufficient_money">Dana tidak mencukupi</string>

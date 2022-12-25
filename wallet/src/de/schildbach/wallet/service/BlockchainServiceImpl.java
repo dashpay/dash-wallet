@@ -62,7 +62,6 @@ import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
-import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.core.listeners.PreBlocksDownloadListener;
 import org.bitcoinj.evolution.CreditFundingTransaction;
@@ -242,10 +241,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         @Override
         public void onCoinsReceived(final Wallet wallet, final Transaction tx, final Coin prevBalance,
-                final Coin newBalance) {
+                                    final Coin newBalance) {
 
-            //final int bestChainHeight = blockChain.getBestChainHeight();
-            final boolean replaying = blockchainState.getReplaying();
+            final int bestChainHeight = blockChain.getBestChainHeight();
+            final boolean replaying = bestChainHeight < config.getBestChainHeightEver() || config.isRestoringBackup();
 
             long now = new Date().getTime();
             long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
@@ -255,7 +254,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     tx.getTxId(), tx.getExchangeRate(), replaying, insideTxExchangeRateTimeThreshold, tx.getConfidence().getConfidenceType(),
                     tx.getExchangeRate() == null && ((!replaying || insideTxExchangeRateTimeThreshold) || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING));
 
-            if (tx.getExchangeRate() == null && ((!replaying || insideTxExchangeRateTimeThreshold) || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
+            // only set an exchange rate if the tx has no exchange rate and:
+            //   1. the blockchain is not being rescanned nor the wallet is being restored OR
+            //   2. the transaction is less than three hours old OR
+            //   3. the transaction is not yet mined
+            if (tx.getExchangeRate() == null && (!replaying
+                    || insideTxExchangeRateTimeThreshold
+                    || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
                 try {
                     final org.dash.wallet.common.data.ExchangeRate exchangeRate =
                             exchangeRatesDao.getRateSync(config.getExchangeCurrencyCode());
@@ -301,7 +306,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         @Override
         public void onCoinsSent(final Wallet wallet, final Transaction tx, final Coin prevBalance,
-                final Coin newBalance) {
+                                final Coin newBalance) {
             transactionsReceived.incrementAndGet();
 
             log.info("onCoinsSent: {}", tx.getTxId());
@@ -394,7 +399,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         notification.setContentTitle(msg);
         if (text.length() > 0)
             notification.setContentText(text);
-        notification.setContentIntent(PendingIntent.getActivity(this, 0, OnboardingActivity.createIntent(this), 0));
+        notification.setContentIntent(PendingIntent.getActivity(this, 0, OnboardingActivity.createIntent(this), PendingIntent.FLAG_IMMUTABLE));
         notification.setNumber(notificationCount == 1 ? 0 : notificationCount);
         notification.setWhen(System.currentTimeMillis());
         notification.setSound(Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.coins_received));
@@ -451,7 +456,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     notification.setContentTitle(getString(R.string.app_name));
                     notification.setContentText(getString(R.string.notification_peers_connected_msg, numPeers));
                     notification.setContentIntent(PendingIntent.getActivity(BlockchainServiceImpl.this, 0,
-                            OnboardingActivity.createIntent(BlockchainServiceImpl.this), 0));
+                            OnboardingActivity.createIntent(BlockchainServiceImpl.this), PendingIntent.FLAG_IMMUTABLE));
                     notification.setWhen(System.currentTimeMillis());
                     notification.setOngoing(true);
                     nm.notify(Constants.NOTIFICATION_ID_CONNECTED, notification.build());
@@ -471,14 +476,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         @Override
         public void onBlocksDownloaded(final Peer peer, final Block block, final FilteredBlock filteredBlock,
-                final int blocksLeft) {
+                                       final int blocksLeft) {
             super.onBlocksDownloaded(peer, block, filteredBlock, blocksLeft);
             postOrPostDelayed();
         }
 
         @Override
         public void onHeadersDownloaded(final Peer peer, final Block block,
-                                       final int blocksLeft) {
+                                        final int blocksLeft) {
             super.onHeadersDownloaded(peer, block, blocksLeft);
             postOrPostDelayed();
         }
@@ -685,7 +690,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
                     @Override
                     public InetSocketAddress[] getPeers(final long services, final long timeoutValue,
-                            final TimeUnit timeoutUnit) throws PeerDiscoveryException {
+                                                        final TimeUnit timeoutUnit) throws PeerDiscoveryException {
                         final List<InetSocketAddress> peers = new LinkedList<InetSocketAddress>();
 
                         boolean needsTrimPeersWorkaround = false;
@@ -1057,7 +1062,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
                     peerGroup.broadcastTransaction(tx, minimum, true);
                 } else {
-                    log.info("peergroup not available, not broadcasting transaction " + tx.getHashAsString());
+                    log.info("peergroup not available, not broadcasting transaction {}", tx.getTxId());
                     tx.getConfidence().setPeerInfo(0, 1);
                 }
             } else if(BlockchainService.ACTION_RESET_BLOOMFILTERS.equals(action)) {
@@ -1168,7 +1173,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private Notification createNetworkSyncNotification(BlockchainState blockchainState) {
         Intent notificationIntent = OnboardingActivity.createIntent(this);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
-                notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         final String message = (blockchainState != null)
                 ? BlockchainStateUtils.getSyncStateString(blockchainState, this)

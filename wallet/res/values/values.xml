@@ -22,7 +22,7 @@
 		<item>@string/preferences_precision_labels_0_6</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_values">
-		<item>http://insight.dash.org/insight/</item>
+		<item>https://insight.dash.org/insight/</item>
 		<item>http://explorer.dash.org/chain/Dash/</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_labels">

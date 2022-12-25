@@ -67,8 +67,6 @@
 
     <string name="receive_title">接收</string>
     <string name="receive_enter_amount_message">指定收款金額</string>
-    <string name="receive_enter_amount_button">指定金額</string>
-    <string name="receive_share_button">分享</string>
 
     <string name="pay_title">付款</string>
     <string name="history_title">歷史</string>
@@ -234,12 +232,10 @@
     <string name="transaction_result_view_on_explorer">在區塊瀏覽器中查看</string>
     <string name="transaction_result_tax_category">稅種</string>
     <string name="transaction_result_tax_category_loading">載入中...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>收入</item>
-        <item>支出</item>
-        <item>轉入</item>
-        <item>轉出</item>
-    </string-array>
+    <string name="tax_category_income">收入</string>
+    <string name="tax_category_expense">支出</string>
+    <string name="tax_category_transfer_in">轉入</string>
+    <string name="tax_category_transfer_out">轉出</string>
     <string name="transaction_result_paid_successfully">發送成功</string>
     <string name="transaction_result_sent_to">發給</string>
     <string name="transaction_date_and_time">日期</string>
@@ -261,6 +257,8 @@
 
     <string name="menu_buy_and_sell_title">購買 &amp; 出售達世幣</string>
     <string name="menu_buy_and_sell_subtitle">與第三方交易所連結</string>
+    <string name="liquid_unavailable">Liquid 與達世幣錢包的整合功能已經不能再使用</string>
+    <string name="liquid_unavailable_details">如果您對您在 Liquid 的達世幣持倉有任何疑問，請聯繫 Liquid 支援中心</string>
     <string name="menu_security_title">安全性</string>
     <string name="menu_security_subtitle">查看恢復詞組, 備份錢包…</string>
     <string name="menu_settings_title">設定</string>
@@ -280,16 +278,13 @@
     <string name="tools_show_xpub">擴展的公鑰</string>
 
     <string name="about_help_us_improve">幫助我們改善您的體驗</string>
-    <string name="about_review_and_rate">對應用程序進行評價 &amp; 和評分</string>
     <string name="about_contact_support">聯繫支援服務</string>
     <string name="about_fork_disclaimer">這是一個從比特幣錢包分叉的開源應用程序</string>
     <string name="about_copyright">版權所有 © 2022 Dash Core</string>
     <string name="about_license">GNU通用公共許可證 v3.0</string>
     <string name="about_version_name">達世幣錢包 %s</string>
-    <string name="about_last_explore_dash_sync">探索達世幣數據更新於: %1$s\n上次同步: %2$s</string>
     <string name="about_last_explore_dash_update_error">無法獲取</string>
     <string name="about_last_explore_dash_sync_never">從不</string>
-
     <string name="block">區塊</string>
     <string name="time">時間</string>
     <string name="hash">哈希值</string>
@@ -359,6 +354,9 @@
     <string name="import_image_no_private_key_copied">沒有複製到私鑰</string>
     <string name="import_image_import_valid_private_key">複製一個有效的私鑰並從中導入達世幣</string>
     <string name="import_image_invalid_private">無效的私鑰</string>
+
+    <string name="today">今天</string>
+    <string name="yesterday">昨天</string>
 
     <string name="syncing">同步中</string>
     <string name="syncing_balance">正在同步餘額</string>

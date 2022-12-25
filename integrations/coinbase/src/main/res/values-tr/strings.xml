@@ -1,0 +1,118 @@
+<!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="coinbase">Coinbase</string>
+    <string name="last_known_balance" >Bilinen son bakiye</string>
+    <string name="coinbase_dash_wallet_error_title">Coinbase hesabınızda bir Dash Cüzdanı bulamadık.</string>
+    <string name="coinbase_dash_wallet_error_message">Devam etmek için lütfen Coinbase\'de bir Dash Cüzdanı oluşturun.</string>
+    <string name="create_dash_account">Dash Hesabı Oluştur</string>
+    <string name="close">Kapat</string>
+    <string name="retry">Tekrar dene</string>
+    <string name="connected">Bağlandı</string>
+    <string name="disconnect_coinbase_account">Coinbase Hesabının Bağlantısını Kes</string>
+    <string name="receive_directly_into_dash_wallet">Doğrudan Dash Cüzdanına alın.</string>
+    <string name="buy_dash">Dash Al</string>
+    <string name="balance">Bakiye:</string>
+    <string name="balance_on_coinbase">Coinbase\'dek\' Bakiye</string>
+    <string name="sending_to">Gönderiliyor</string>
+    <string name="dash_wallet_device">Bu cihazdaki Dash Cüzdanı</string>
+    <string name="exchange_rate_template">%1$s DASH = %2$s</string>
+    <string name="payment_method">Ödeme şekli</string>
+    <string name="purchase">Satın alma</string>
+    <string name="coinbase_fee">Coinbase Ücreti</string>
+    <string name="total">Toplam</string>
+    <string name="order_preview">Sipariş Önizleme</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Bu cihazdaki Dash Cüzdanınıza %s Dash alacaksınız. Bir aktarımın tamamlanmasının 2-3 dakika kadar sürebileceğini lütfen unutmayın.</string>
+    <string name="amount_in_dash">Dash\'teki Tutar</string>
+    <string name="cancel">İptal et</string>
+    <string name="confirm_sec">Onaylayın (%ss)</string>
+    <string name="confirm">Onayla</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Herhangi bir ödeme yöntemi bulamadık.</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Devam etmek için lütfen Coinbase hesabınızı güncelleyin.</string>
+    <string name="add_payment_method">Ödeme yöntemi ekle</string>
+    <string name="error">Hata</string>
+    <string name="cancel_transaction">İşlemi iptal et?</string>
+    <string name="yes_cancel">Evet, iptal et</string>
+    <string name="no_keep_it">Hayır, sakla</string>
+    <string name="purchase_successful">Satın alma başarılı</string>
+    <string name="conversion_successful">Dönüşüm başarılı</string>
+    <string name="purchase_failed">Satın Alma Başarısız</string>
+    <string name="transfer_failed">Aktarım Başarısız</string>
+    <string name="conversion_failed">Dönüştürülemedi</string>
+    <string name="transfer_failed_msg">Dash başarıyla Coinbase hesabınıza yatırıldı. Ancak bu cihazda Dash Cüzdan\'a aktarılırken bir sorun oluştu.</string>
+    <string name="purchase_failed_msg">Bir şeyler yanlış gitti</string>
+    <string name="it_could_take_up_to_2_3_minutes">Dash\'in bu cihazdaki Dash Cüzdanınıza aktarılması 2-3 dakika kadar sürebilir.</string>
+    <string name="it_could_take_up_to_5_minutes">Coinbase hesabınızdaki %s\'i Dash Cüzdanınızdaki Dash\'e dönüştürmek 5 dakika kadar sürebilir..</string>
+    <string name="it_could_take_up_to_5_minutes_to_coinbase">\"Bu cihazda bulunan Dash Cüzdanınızdaki Dash\'i Coinbase hesabınıza %s olarak dönüştürmek 5 dakika kadar sürebilir.</string>
+    <string name="contact_coinbase_support">Coinbase Destek Ekibii ile İletişime Geçin</string>
+    <string name="fees_in_crypto_purchase">Kripto alımlarında ücretler</string>
+    <string name="coinbase_fee_info_msg_content">Görüntülenen Coinbase ücretine ek olarak, fiyata bir makas daha dahil ediyoruz. Kripto para piyasaları değişkendir ve bu, ticari işlem için bir fiyatta geçici olarak kilitlememize olanak tanır.</string>
+    <string name="learn_more">Daha fazla bilgi edin</string>
+    <string name="something_wrong_title">Bir şeyler yanlış gitti!</string>
+    <string name="retry_later_message">Lütfen biraz sonra tekrar deneyin veya yardım almak için destek merkezimizle iletişime geçin.</string>
+    <string name="convert_crypto">Kriptoyu Dönüştür</string>
+    <string name="between_dash_wallet_and_coinbase">Dash Cüzdanı ve Coinbase arasında.</string>
+    <string name="conversion_preview">Dönüşüm Önizleme</string>
+    <string name="you_send">Göndereceğiniz</string>
+    <string name="from_your_coinbase_account">Coinbase hesabınızdan</string>
+    <string name="you_receive">Alacağınız</string>
+    <string name="to_dash_wallet_on_this_device">Bu cihazdaki Dash Cüzdanınıza</string>
+    <string name="to_your_coinbase_account">Coinbase hesabınıza</string>
+    <string name="from_dash_wallet_on_this_device">Bu cihazdaki Dash Cüzdanınızdan</string>
+    <string name="you_will_receive">Alacağınız</string>
+    <string name="we_didnt_find_any_assets" >Coinbase hesabınızda herhangi bir varlık bulamadık.</string>
+    <string name="you_dont_own_any_crypto" >Herhangi bir kripto paranız yok. Başlamak için kripto satın alın..</string>
+    <string name="buy_crypto_on_coinbase" >Coinbase\'de Kripto Satın Alın</string>
+    <string name="auth_limit_description">Coinbase\'deki yetki sınırını aştınız.</string>
+    <string name="debit_money">Hesabınızdan para çekme</string>
+    <string name="change_limit">Bu sınırı değiştir</string>
+    <string name="set_auth_limit">Coinbase\'de doğru yetki limitini ayarladığınızdan emin olun.</string>
+    <string name="change_withdrawal_limit">Dash Cüzdanındayken Coinbase hesabınızdan çıkış yapıp tekrar giriş yaparak istediğiniz zaman değiştirebilirsiniz.</string>
+    <string name="got_it">Anladım</string>
+    <string name="send_to_wallet_error">Başvuru limitini aşmadan bu miktar gönderilemez</string>
+    <string name="dont_have_any_dash">Dash Cüzdanınızda Dash yok.</string>
+    <string name="transfer_wallet_not_synced">Dash Cüzdanından Coinbase\'e transferler, cüzdan senkronizasyonu tamamlanmadan mümkün değildir.</string>
+    <string name="disconnected">Bağlantı kesildi</string>
+
+    <string name="insufficient_money_title">Bakiye yetersiz</string>
+    <string name="insufficient_money_msg">Cüzdandaki Dash miktarı tarama işlemi için yetersiz.</string>
+    <string name="send_coins_error_msg">Dash gönderim problemi!</string>
+    <string name="entered_amount_is_too_low">Minimum işlem tutarı</string>
+    <string name="entered_amount_is_too_high">Maksimum işlem tutarı</string>
+    <string name="verify_continue">Onayla</string>
+    <string name="enter_auth_code">Coinbase 2FA kodunu girin</string>
+    <string name="extra_steps_label">Bu ekstra adım, gerçekten bir işlem yapmaya çalıştığınızı gösterir.</string>
+    <string name="need_help">Yardıma mı ihtiyacınız var?</string>
+    <string name="coinbase_fa_code_hint">Coinbase 2FA kodu</string>
+    <string name="enter_code_details">Telefonunuzdaki SMS\'den gelen kod olabilir. Değilse, kimlik doğrulama uygulamasından kodu girin.</string>
+    <string name="two_fa_code_incorrect">Kod yanlış. Lütfen kontrol edip tekrar deneyin!</string>
+    <string name="invalid_code">Girilen kod geçersiz. Lütfen tekrar deneyin</string>
+    <string name="verify_code">Onayla</string>
+    <string name="you_dont_have_enough_balance">Yeterli bakiyeniz yok</string>
+    <string name="transfer_dash">Transfer Dash</string>
+    <string name="transfer_amount">Transfer</string>
+    <string name="dash_wallet_limit_description">Tutar, bakiyenizden daha yüksek</string>
+    <string name="address_creation_failed">İşleminizi tamamlamak için hesabınız için bir adres oluşturamadık. Lütfen daha sonra tekrar deneyin.</string>
+    <string name="transaction_row_rate_not_available">Mevcut değil</string>
+    <string name="transfer_dash_successful">Aktarım başarılı</string>
+    <string name="it_could_take_up_to_10_minutes">Dash\'i Coinbase\'den bu cihazdaki Dash cüzdanına aktarmak 10 dakika kadar sürebilir.</string>
+    <string name="it_could_take_up_to_10_minutes_to_coinbase">Dash\'i bu cihazdaki Dash Cüzdanından Coinbase hesabınıza aktarmak 10 dakika kadar sürebilir.</string>
+    <string name="transfer_dash_failed_msg">Bu cihazdaki Dash Cüzdanınaa aktarılırken bir sorun oluştu.</string>
+    <string name="insufficient_money_to_transfer">Cüzdandaki jeton miktarı transfer edilemeyecek kadar az.</string>
+    <string name="amount_to_transfer">%s %s %s alacaksınız</string>
+
+    </resources>

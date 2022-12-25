@@ -202,12 +202,12 @@ public final class WalletAddressesFragment extends FancyListFragment {
             }
 
             private void handleEdit(final Address address) {
-                EditAddressBookEntryFragment.edit(getFragmentManager(), address);
+                EditAddressBookEntryFragment.edit(getParentFragmentManager(), address);
             }
 
             private void handleShowQr(final Address address) {
-                final String uri = BitcoinURI.convertToBitcoinURI(address, null, config.getOwnName(), null);
-                BitmapFragment.show(getFragmentManager(), Qr.bitmap(uri));
+                final String uri = BitcoinURI.convertToBitcoinURI(address, null, null, null);
+                BitmapFragment.show(getParentFragmentManager(), Qr.bitmap(uri));
             }
 
             private void handleCopyToClipboard(final Address address) {
@@ -255,12 +255,9 @@ public final class WalletAddressesFragment extends FancyListFragment {
                 }
             });
 
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    adapter.replaceDerivedKeys(derivedKeys);
-                    adapter.replaceRandomKeys(randomKeys);
-                }
+            handler.post(() -> {
+                adapter.replaceDerivedKeys(derivedKeys);
+                adapter.replaceRandomKeys(randomKeys);
             });
         }
     };

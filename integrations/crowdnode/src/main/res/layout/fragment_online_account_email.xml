@@ -54,7 +54,7 @@
             android:layout_marginHorizontal="3dp"
             android:text="@string/online_account_email_privacy" />
 
-        <org.dash.wallet.common.ui.inputs.InputWrapper
+        <org.dash.wallet.common.ui.text.InputWrapper
             android:id="@+id/input_wrapper"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -70,7 +70,7 @@
                 android:inputType="textEmailAddress"
                 android:autofillHints="emailAddress"
                 android:imeOptions="actionNext" />
-        </org.dash.wallet.common.ui.inputs.InputWrapper>
+        </org.dash.wallet.common.ui.text.InputWrapper>
 
         <Space
             android:layout_width="match_parent"

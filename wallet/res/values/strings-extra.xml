@@ -72,8 +72,6 @@
 
     <string name="receive_title">Receive</string>
     <string name="receive_enter_amount_message">Specify the amount to be received</string>
-    <string name="receive_enter_amount_button">Specify Amount</string>
-    <string name="receive_share_button">Share</string>
 
     <string name="pay_title">Send</string>
     <string name="history_title">History</string>
@@ -248,13 +246,11 @@
     <string name="view_seed_title">Recovery Phrase</string>
     <string name="transaction_result_view_on_explorer">View in Block Explorer</string>
     <string name="transaction_result_tax_category">Tax Category</string>
-    <string name="transaction_result_tax_category_loading">Loading...</string>
-    <string-array name="transaction_result_tax_categories">
-        <item>Income</item>
-        <item>Expense</item>
-        <item>Transfer-in</item>
-        <item>Transfer-out</item>
-    </string-array>
+    <string name="transaction_result_tax_category_loading">Loading…</string>
+    <string name="tax_category_income">Income</string>
+    <string name="tax_category_expense">Expense</string>
+    <string name="tax_category_transfer_in">Transfer-in</string>
+    <string name="tax_category_transfer_out">Transfer-out</string>
     <string name="transaction_result_paid_successfully">Sent successfully</string>
     <string name="transaction_result_sent_to">Sent to</string>
     <string name="transaction_date_and_time">Date</string>
@@ -280,6 +276,9 @@
     <string name="menu_invite_subtitle">Help your friends and family join Dash</string>
     <string name="menu_buy_and_sell_title">Buy &amp; Sell Dash</string>
     <string name="menu_buy_and_sell_subtitle">Connect with third party exchanges</string>
+    <string name="liquid" translatable="false">Liquid</string>
+    <string name="liquid_unavailable">Liquid integration with Dash Wallet is no longer available</string>
+    <string name="liquid_unavailable_details">If you have any questions regarding your Dash holdings at Liquid, please contact Liquid support center</string>
     <string name="menu_security_title">Security</string>
     <string name="menu_security_subtitle">View passphrase, backup wallet…</string>
     <string name="menu_settings_title">Settings</string>
@@ -299,17 +298,21 @@
     <string name="tools_show_xpub">Extended Public Key</string>
 
     <string name="about_help_us_improve">Help us improve your experience</string>
-    <string name="about_review_and_rate">Review &amp; Rate the app</string>
+    <string name="about_review_and_rate">Review and rate the app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">This is an open source app forked from Bitcoin Wallet</string>
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_github_link" translatable="false">https://github.com/dashevo/dash-wallet</string>
-    <string name="about_version_name">DashPay %s</string>
-    <string name="about_version_extra">code: %d / flavor: %s</string>
-    <string name="about_last_explore_dash_sync">Explore Dash data updated at: %1$s\nLast sync: %2$s</string>
+    <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_device_sync">Last Explore device sync</string>
+    <string name="about_last_explore_server_update">Last Explore server update</string>
+    <string name="about_firebase_installation_id">Firebase installation ID</string>
+    <string name="about_fcm_token">Firebase cloud messaging token</string>
     <string name="about_last_explore_dash_update_error">cannot fetch</string>
     <string name="about_last_explore_dash_sync_never">never</string>
+    <string name="about_explore_failed_sync">Failed to sync on %s</string>
+    <string name="about_explore_preloaded_on">Pre-loaded on %s</string>
 
     <string name="block">Block</string>
     <string name="time">Time</string>
@@ -641,14 +644,13 @@
     <string name="today">Today</string>
     <string name="yesterday">Yesterday</string>
 
-
     <string name="syncing">Syncing</string>
     <string name="syncing_balance">Syncing Balance</string>
     <string name="transaction_count">%d transactions</string>
     <string name="all_transactions">All</string>
     <string name="received_transactions">Received</string>
     <string name="sent_transactions">Sent</string>
-    <string name="services_portal_subtitle_error" translatable="false">Keys are missing for these services. See CONFIGURATION FOR UPHOLD AND LIQUID in README.md for more information.</string>
+    <string name="services_portal_subtitle_error" translatable="false">Keys are missing for these services. See CONFIGURATION FOR UPHOLD AND COINBASE in README.md for more information.</string>
     <string name="serious_error_title">Serious Error</string>
     <string name="serious_error_unknown">Please contact support.</string>
     <string name="serious_error_security_missing_iv" translatable="false">Invalid security state detected.\n\nSee if you can view your recovery phrase under the Security Settings. After that send a report to the support desk with Contact Support.\n\nLastly, restart this app and try again.</string>

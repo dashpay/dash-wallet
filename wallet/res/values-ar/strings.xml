@@ -116,7 +116,6 @@
     <string name="request_coins_fragment_initiate_request_qr">قم بمسح هذا الرمز من قبل المرسل.</string>
     <string name="request_coins_fragment_initiate_request_nfc">أو اضغط على جهاز مزود بتقنية NFC.</string>
     <string name="request_coins_clipboard_msg">تم نسخ طلب داش إلى الحافظة</string>
-    <string name="request_coins_share_dialog_title">طلب مشاركة لـداش ...</string>
     <string name="request_coins_no_local_app_msg">لم يتم العثور على تطبيق داش آخر</string>
     <string name="request_coins_options_local_app_title">طلب من البرنامج المحلي</string>
     <string name="address_book_activity_title">دفتر عناوين</string>
@@ -281,6 +280,9 @@
     <string name="preferences_show_disclaimer_summary">هل قرأت بالفعل ملاحظات السلامة ؟ هل قمت بالفعل بعمل نسخة احتياطية من محفظتك في مكان آمن ؟</string>
     <string name="preferences_report_issue_title">إبلاغ عن مشكلة</string>
     <string name="preferences_initiate_reset_title">إعادة فحص بلوكشين</string>
+    <string name="preferences_initiate_reset_summary">إعادة تعيين سلسلة كتلة والمعاملات ورصيد المحفظة. سيستغرق إعادة التشغيل بعض الوقت ، لذلك افعل ذلك فقط إذا كنت تعرف السبب.</string>
+    <string name="preferences_initiate_reset_dialog_message">هل ترغب في إعادة تعيين سلسلة الكتلة وإعادة تشغيلها؟\n\nسيؤدي ذلك إلى إخفاء رصيد محفظتك مؤقتًا وإزالة المعاملات. كلاهما سوف يتعافى مع تقدم مزامنة سلسلة الكتل. تأكد من أن لديك اتصالاً موثوقًا بالإنترنت.</string>
+    <string name="preferences_initiate_reset_dialog_positive">إعادة تفحص</string>
     <string name="preferences_extended_public_key_title">عرض xpub</string>
     <string name="preferences_extended_public_key_summary">عرض المفتاح العام الموسع لمحفظتك ، بحيث يمكن استيراده إلى تطبيقات وخدمات أخرى. كن حذرًا: سيؤدي ذلك إلى الكشف عن خصوصيتك المالية لهذا التطبيق.</string>
     <string name="bitmap_fragment_share">شارك…</string>
@@ -382,8 +384,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">ليس لديك رصيد كافي لإتمام هذه المعاملة</string>
 
 
+    <string name="select_a_service_to_buy_and_sell_dash">حدد خدمة لبيع وشراء داش.</string>
     <string name="select_a_service">اختر خدمة</string>
     <string name="activity_buy_and_sell_dash_filter">منقي</string>
     <string name="clear_filter">ازل فلتر البحث</string>
     <string name="select_currency">اختر العملة</string>
-    </resources>
+    <string name="reason">سبب</string>
+</resources>

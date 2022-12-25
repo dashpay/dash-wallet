@@ -1,18 +1,32 @@
+<!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="47dp"
-    android:height="47dp"
-    android:viewportWidth="47"
-    android:viewportHeight="47">
-  <path
-      android:pathData="M15.0001,12.9995L19.9933,12.9995A2,2 0,0 1,21.9933 14.9995L21.9933,19.9927A2,2 0,0 1,19.9933 21.9927L15.0001,21.9927A2,2 0,0 1,13.0001 19.9927L13.0001,14.9995A2,2 0,0 1,15.0001 12.9995z"
-      android:fillColor="#008de4"/>
-  <path
-      android:pathData="M27.0067,12.9995L31.9999,12.9995A2,2 0,0 1,33.9999 14.9995L33.9999,19.9927A2,2 0,0 1,31.9999 21.9927L27.0067,21.9927A2,2 0,0 1,25.0067 19.9927L25.0067,14.9995A2,2 0,0 1,27.0067 12.9995z"
-      android:fillColor="#a6d7f5"/>
-  <path
-      android:pathData="M27.0067,25.0073L31.9999,25.0073A2,2 0,0 1,33.9999 27.0073L33.9999,32.0005A2,2 0,0 1,31.9999 34.0005L27.0067,34.0005A2,2 0,0 1,25.0067 32.0005L25.0067,27.0073A2,2 0,0 1,27.0067 25.0073z"
-      android:fillColor="#008de4"/>
-  <path
-      android:pathData="M15.0001,25.0073L19.9933,25.0073A2,2 0,0 1,21.9933 27.0073L21.9933,32.0005A2,2 0,0 1,19.9933 34.0005L15.0001,34.0005A2,2 0,0 1,13.0001 32.0005L13.0001,27.0073A2,2 0,0 1,15.0001 25.0073z"
-      android:fillColor="#a6d7f5"/>
+    android:width="41dp"
+    android:height="40dp"
+    android:viewportWidth="41"
+    android:viewportHeight="40">
+
+    <group android:scaleX="0.9" android:scaleY="0.9" android:translateX="2" android:translateY="2">
+        <path
+            android:pathData="M12.165,9.5L17.159,9.5A2,2 0,0 1,19.159 11.5L19.159,16.494A2,2 0,0 1,17.159 18.494L12.165,18.494A2,2 0,0 1,10.165 16.494L10.165,11.5A2,2 0,0 1,12.165 9.5z"
+            android:fillColor="#78C4F5"/>
+        <path
+            android:pathData="M22.172,12.7C22.172,11.58 22.172,11.02 22.39,10.592C22.582,10.216 22.888,9.91 23.264,9.718C23.692,9.5 24.252,9.5 25.372,9.5H27.966C29.086,9.5 29.646,9.5 30.074,9.718C30.451,9.91 30.756,10.216 30.948,10.592C31.166,11.02 31.166,11.58 31.166,12.7V15.294C31.166,16.414 31.166,16.974 30.948,17.402C30.756,17.778 30.451,18.084 30.074,18.276C29.646,18.494 29.086,18.494 27.966,18.494H25.372C24.252,18.494 23.692,18.494 23.264,18.276C22.888,18.084 22.582,17.778 22.39,17.402C22.172,16.974 22.172,16.414 22.172,15.294V12.7ZM22.172,24.706C22.172,23.586 22.172,23.026 22.39,22.598C22.582,22.222 22.888,21.916 23.264,21.724C23.692,21.506 24.252,21.506 25.372,21.506H27.966C29.086,21.506 29.646,21.506 30.074,21.724C30.451,21.916 30.756,22.222 30.948,22.598C31.166,23.026 31.166,23.586 31.166,24.706V27.3C31.166,28.42 31.166,28.98 30.948,29.408C30.756,29.784 30.451,30.09 30.074,30.282C29.646,30.5 29.086,30.5 27.966,30.5H25.372C24.252,30.5 23.692,30.5 23.264,30.282C22.888,30.09 22.582,29.784 22.39,29.408C22.172,28.98 22.172,28.42 22.172,27.3V24.706ZM10.383,22.598C10.165,23.026 10.165,23.586 10.165,24.706V27.3C10.165,28.42 10.165,28.98 10.383,29.408C10.575,29.784 10.881,30.09 11.257,30.282C11.685,30.5 12.245,30.5 13.365,30.5H15.959C17.079,30.5 17.639,30.5 18.067,30.282C18.443,30.09 18.749,29.784 18.941,29.408C19.159,28.98 19.159,28.42 19.159,27.3V24.706C19.159,23.586 19.159,23.026 18.941,22.598C18.749,22.222 18.443,21.916 18.067,21.724C17.639,21.506 17.079,21.506 15.959,21.506H13.365C12.245,21.506 11.685,21.506 11.257,21.724C10.881,21.916 10.575,22.222 10.383,22.598Z"
+            android:fillColor="#008DE4"
+        android:fillType="evenOdd"/>
+    </group>
 </vector>

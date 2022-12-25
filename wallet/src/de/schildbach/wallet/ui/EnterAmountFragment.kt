@@ -268,7 +268,7 @@ class EnterAmountFragment : Fragment() {
                     if (fiatValue.isNotEmpty()) {
                         fiatAmountFormat = GenericUtils.formatFiatFromLocale(fiatValue)
                     }
-                    input_amount.text = if (fiatValue.isEmpty()) "" else fiatAmountFormat?.formattedAmount?.let { amount -> if(amount.isBlank()) "" else amount }
+                    input_amount.text = if (fiatValue.isEmpty()) "" else fiatAmountFormat?.formattedAmount?.let { amount -> amount.ifBlank { "" } }
                 } else {
                     viewModel.calculateDependent(rate)
                 }

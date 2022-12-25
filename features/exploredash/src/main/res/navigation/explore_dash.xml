@@ -17,7 +17,8 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/explore_dash">
+    android:id="@+id/explore_dash"
+    app:startDestination="@id/searchFragment">
 
     <fragment
         android:id="@+id/searchFragment"

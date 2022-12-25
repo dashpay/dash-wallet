@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Nechte oskenovat tento kód odesílatelem.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Nebo poklepejte na zařízení vybavené NFC.</string>
     <string name="request_coins_clipboard_msg">Požadavek na platbu zkopírován do schránky</string>
-    <string name="request_coins_share_dialog_title">Sdílet požadavek na Dash…</string>
     <string name="request_coins_no_local_app_msg">Žádná další Dash aplikace nebyla nalezena</string>
     <string name="request_coins_options_local_app_title">Požadavek z lokální aplikace</string>
     <string name="address_book_activity_title">Adresář</string>

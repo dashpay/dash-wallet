@@ -21,6 +21,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
@@ -67,12 +68,11 @@ class TaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val taxCategories = resources.getStringArray(R.array.transaction_result_tax_categories)
         binding.apply {
-            transferInText.text = taxCategories[2]
-            incomeText.text = taxCategories[0]
-            expenseText.text = taxCategories[1]
-            transferOutText.text = taxCategories[3]
+            incomeText.text = resources.getString(R.string.tax_category_income)
+            expenseText.text = resources.getString(R.string.tax_category_expense)
+            transferInText.text = resources.getString(R.string.tax_category_transfer_in)
+            transferOutText.text = resources.getString(R.string.tax_category_transfer_out)
 
             collapseButton.setOnClickListener {
                 dismissAllowingStateLoss()
@@ -83,16 +83,13 @@ class TaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
             }
             whereButton.setOnClickListener {
                 val dialog = ChangeTaxCategoryExplainerDialogFragment.newInstance(exampleTxId)
-                dialog.show(
-                    activity?.supportFragmentManager!!,
-                    "changeclassificationdialog"
-                )
+                dialog.show(requireActivity())
             }
         }
     }
 
-    fun show(manager: FragmentManager, tag: String?, onClickListener: () -> Unit) {
+    fun show(activity: FragmentActivity, onClickListener: () -> Unit) {
         this.onClickListener = onClickListener
-        super.show(manager, tag)
+        super.show(activity)
     }
 }

@@ -67,8 +67,6 @@
 
     <string name="receive_title">Al</string>
     <string name="receive_enter_amount_message">Alınacak tutarı belirtin</string>
-    <string name="receive_enter_amount_button">Tutarı Belirleyin</string>
-    <string name="receive_share_button">Paylaş</string>
 
     <string name="pay_title">Gönder</string>
     <string name="history_title">Geçmiş</string>
@@ -235,6 +233,12 @@
     <string name="view_seed_done">Bitti</string>
     <string name="view_seed_title">Kurtarma Sözcük Grubu</string>
     <string name="transaction_result_view_on_explorer">Blok gezgininde görüntüle</string>
+    <string name="transaction_result_tax_category">Vergi Kategorisi</string>
+    <string name="transaction_result_tax_category_loading">Yükleniyor...</string>
+    <string name="tax_category_income">Gelir</string>
+    <string name="tax_category_expense">Gider</string>
+    <string name="tax_category_transfer_in">İçe transfer</string>
+    <string name="tax_category_transfer_out">Dışa transfer</string>
     <string name="transaction_result_paid_successfully">Başarıyla gönderildi</string>
     <string name="transaction_result_sent_to">Gönder</string>
     <string name="transaction_date_and_time">Tarih</string>
@@ -246,6 +250,8 @@
     <string name="transaction_details_received_at">Alındı</string>
     <string name="transaction_details_moved_from">Taşındı</string>
     <string name="transaction_details_moved_internally_to">Dahili olarak taşındı</string>
+    <string name="transaction_failed_details">İşlem başarısız</string>
+
     <string name="authenticate_fingerprint_title">Doğrulama</string>
     <string name="authenticate_fingerprint_message">Devam etmek için parmak iziyle onaylayın</string>
     <string name="authenticate_pin_message">Devam etmek için PİN\'inizi girin</string>
@@ -254,6 +260,8 @@
 
     <string name="menu_buy_and_sell_title">Dash Al &amp; Sat</string>
     <string name="menu_buy_and_sell_subtitle">Üçüncü parti borsalara bağlanın</string>
+    <string name="liquid_unavailable">Dash Cüzdanı ile Liquid entegrasyonu artık yok</string>
+    <string name="liquid_unavailable_details">Liquid\'deki Dash varlıklarınızla ilgili herhangi bir sorunuz varsa, lütfen Liquid destek merkezi ile iletişime geçin.</string>
     <string name="menu_security_title">Güvenlik</string>
     <string name="menu_security_subtitle">Kurtarma sözcük grubunu göster, cüzdanı yedekle...</string>
     <string name="menu_settings_title">Ayarlar</string>
@@ -273,16 +281,13 @@
     <string name="tools_show_xpub">Genişletilmiş Genel Anahtar</string>
 
     <string name="about_help_us_improve">Deneyiminizi geliştirmemize yardımcı olun</string>
-    <string name="about_review_and_rate">Uygulamamızı değerlendirip &amp; Puanlayın</string>
     <string name="about_contact_support">Destekle İletişime Geçin</string>
     <string name="about_fork_disclaimer">Bu uygulama açık kaynak kodlu bir Bitcoin çatallanmasıdır</string>
     <string name="about_copyright">Telif Hakkı © 2022 Dash Core</string>
     <string name="about_license">GNU Genel Kamu Lisansı v3.0</string>
     <string name="about_version_name">Dash Cüzdanı %s</string>
-    <string name="about_last_explore_dash_sync">Dash verilerini keşfedin: %1$s\nSon senkronizasyon: %2$s</string>
     <string name="about_last_explore_dash_update_error">getirilemiyor</string>
     <string name="about_last_explore_dash_sync_never">asla</string>
-
     <string name="block">Blok</string>
     <string name="time">Zaman</string>
     <string name="hash">Karma</string>
@@ -353,8 +358,12 @@
     <string name="import_image_import_valid_private_key">Dash\'i içe aktarmak için geçerli bir özel anahtar kopyalayın</string>
     <string name="import_image_invalid_private">Geçersiz Özel Anahtar</string>
 
+    <string name="today">Bugün</string>
+    <string name="yesterday">Dün</string>
+
     <string name="syncing">Senkronize ediliyor</string>
     <string name="syncing_balance">Bakiye senkronize ediliyor</string>
+    <string name="transaction_count">%d işlemler</string>
     <string name="all_transactions">Hepsi</string>
     <string name="received_transactions">Alınan</string>
     <string name="sent_transactions">Gönderilen</string>
@@ -373,4 +382,14 @@
     <string name="launch_reset_wallet_extra_message">Kurtarma ifadenizi yedekleyin</string>
     <string name="start_reset_wallet_title">%s kaybedebilirsiniz</string>
     <string name="reset_wallet_text">Cüzdanı Sıfırla</string>
-    </resources>
+    <string name="reclassify_transactions_title">İşlemlerinizi Yeniden Sınıflandırın</string>
+    <string name="reclassify_transactions_title_message">Bu sınıflandırmalar, vergi raporlama hizmetlerine içe aktarılmak için kullanılabilecek CSV aktarımlarına yansıyacaktır.</string>
+    <string name="reclassify_transactions_question">Vergi kategorisini nereden değiştirebilirim?</string>
+    <string name="reclassify_transactions_outgoing_title">Giden işlemler</string>
+    <string name="reclassify_transactions_by_default_message">varsayılan olarak işaretlenecektir</string>
+    <string name="reclassify_transactions_incoming_title">Gelen işlemler</string>
+    <string name="reclassify_transactions_change_it_message">olarak değiştirebilirsiniz</string>
+    <string name="reclassify_transactions_linked_accounts_title">Bağlı hesaplar</string>
+    <string name="reclassify_transactions_linked_accounts_message">Varsayılan olarak, bağlı hesaplarınıza yapılan veya bu hesaplardan yapılan tüm işlemler (borsalar, vb.) transfer olarak işaretlenecektir.</string>
+    <string name="reclassify_transactions_change_explanation">Ana sayfadan herhangi bir işlemi seçin ve işlem ayrıntıları sayfasında kategoriyi değiştirin.</string>
+</resources>

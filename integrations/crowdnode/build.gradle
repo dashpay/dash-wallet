@@ -8,13 +8,11 @@ plugins {
 }
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 31
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 30
-        versionCode 1
-        versionName "1.0"
+        targetSdkVersion 31
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
     }
@@ -36,6 +34,7 @@ android {
     buildFeatures {
         viewBinding true
     }
+    namespace 'org.dash.wallet.integrations.crowdnode'
 }
 
 kapt {
@@ -54,7 +53,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation "androidx.appcompat:appcompat:$appCompatVersion"
     implementation "org.dashj:dashj-core:$dashjVersion"
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.0'
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:$desugaringLibraryVersion"
 
     // Architecture
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
@@ -84,4 +83,10 @@ dependencies {
     testImplementation 'com.google.guava:guava:28.2-android'
     androidTestImplementation "androidx.test.ext:junit:$junitExtVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$espressoVersion"
+
+    // Logging
+    implementation "org.slf4j:slf4j-api:$slf4jVersion"
+
+    // Guava
+    implementation 'com.google.guava:guava:29.0-android'
 }
