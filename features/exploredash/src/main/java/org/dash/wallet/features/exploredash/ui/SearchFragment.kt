@@ -560,7 +560,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             if (viewModel.selectedItem.value != null) {
                 viewModel.openSearchResults()
             } else {
-                requireActivity().finish()
+                findNavController().popBackStack()
             }
         }
 

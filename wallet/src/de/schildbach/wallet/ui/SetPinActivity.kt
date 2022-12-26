@@ -469,7 +469,6 @@ class SetPinActivity : InteractionAwareActivity() {
             }
         }
         viewModel.startNextActivity.observe(this) {
-            setResult(Activity.RESULT_OK)
             if (it) {
                 startVerifySeedActivity()
             } else {

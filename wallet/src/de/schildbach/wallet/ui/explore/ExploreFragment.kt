@@ -26,7 +26,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.findNavController
+import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.staking.StakingActivity
@@ -60,6 +60,7 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        enterTransition = MaterialFadeThrough()
 
         binding.merchantsBtn.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Explore.WHERE_TO_SPEND)

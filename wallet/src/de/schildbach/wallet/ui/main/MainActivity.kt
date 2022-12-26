@@ -347,7 +347,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                     viewModel.dismissUsernameCreatedCard()
                 }
             }
-            val contactsFragment = ContactsFragment.newInstance(mode)
+            val contactsFragment = ContactsFragment.newInstance(mode) // TODO
             if (mode == MODE_VIEW_REQUESTS) {
                 addFragment(contactsFragment)
             } else {

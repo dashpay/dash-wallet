@@ -52,10 +52,25 @@
     </fragment>
 
     <fragment
+        android:id="@+id/contactsFragment"
+        android:name="de.schildbach.wallet.ui.dashpay.ContactsFragment"
+        android:label="Contacts"
+        tools:layout="@layout/fragment_contacts_root">
+
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="true" />
+    </fragment>
+
+    <fragment
         android:id="@+id/exploreFragment"
         android:name="de.schildbach.wallet.ui.explore.ExploreFragment"
         android:label="Explore"
         tools:layout="@layout/fragment_explore">
+
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="true" />
 
         <action
             android:id="@+id/explore_to_search"

@@ -31,7 +31,9 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
@@ -45,6 +47,7 @@ import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentContactsRootBinding
+import kotlinx.android.synthetic.main.activity_payments.view.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
@@ -67,7 +70,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root),
         const val MODE_VIEW_REQUESTS = 2
 
         @JvmStatic
-        fun newInstance(mode: Int = MODE_SEARCH_CONTACTS): ContactsFragment {
+        fun newInstance(mode: Int = MODE_SEARCH_CONTACTS): ContactsFragment { // TODO nav args
             val args = Bundle()
             args.putInt(EXTRA_MODE, mode)
 
@@ -91,11 +94,15 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setHasOptionsMenu(true)
+        setHasOptionsMenu(true) // TODO menu provider
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        enterTransition = MaterialFadeThrough()
+        reenterTransition = MaterialFadeThrough()
+        binding.appBar.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
 
         if (requireActivity() is ContactSearchResultsAdapter.OnViewAllRequestsListener) {
             val viewAllRequestsListener = requireActivity() as ContactSearchResultsAdapter.OnViewAllRequestsListener

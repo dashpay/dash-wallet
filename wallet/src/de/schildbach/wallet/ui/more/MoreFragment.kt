@@ -72,7 +72,6 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         enterTransition = MaterialFadeThrough()
-        reenterTransition = MaterialFadeThrough()
 
         binding.appBar.toolbar.title = getString(R.string.more_title)
         binding.appBar.toolbar.setNavigationOnClickListener {
