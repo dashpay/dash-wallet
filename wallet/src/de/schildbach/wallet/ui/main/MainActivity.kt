@@ -57,13 +57,7 @@ import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet.ui.backup.RestoreFromFileHelper
-import de.schildbach.wallet.ui.dashpay.ContactSearchResultsAdapter
-import de.schildbach.wallet.ui.dashpay.ContactsFragment
-import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SEARCH_CONTACTS
-import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CONTACT
-import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_VIEW_REQUESTS
-import de.schildbach.wallet.ui.dashpay.CreateIdentityService
-import de.schildbach.wallet.ui.dashpay.UpgradeToEvolutionFragment
+import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
@@ -92,9 +86,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPermissionsResultCallback,
     UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
-    EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
-    PaymentsPayFragment.OnSelectContactToPayListener,
-    ContactSearchResultsAdapter.OnViewAllRequestsListener {
+    EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
 
     companion object {
         const val REQUEST_CODE_SCAN = 0
@@ -217,14 +209,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 }
             }
         }
-
-        viewModel.goBackAndStartActivityEvent.observe(this) {
-            goBack(true)
-            //Delay added to prevent fragment being removed and activity being launched "at the same time"
-            Handler().postDelayed({
-                startActivity(Intent(this, it))
-            }, 500)
-        }
         viewModel.showCreateUsernameEvent.observe(this) {
             startActivity(Intent(this, CreateUsernameActivity::class.java))
         }
@@ -308,26 +292,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    private fun startFragmentTransaction(enterAnim: Int, exitAnim: Int): FragmentTransaction {
-        val transaction = supportFragmentManager.beginTransaction()
-        transaction.setCustomAnimations(enterAnim, R.anim.fragment_out, enterAnim, exitAnim)
-        return transaction
-    }
-
-    private fun addFragment(fragment: Fragment, enterAnim: Int = R.anim.fragment_in,
-                            exitAnim: Int = R.anim.fragment_out) {
-        val transaction = startFragmentTransaction(enterAnim, exitAnim)
-        transaction.add(R.id.fragment_container, fragment)
-        transaction.addToBackStack(null).commit()
-    }
-
-    private fun replaceFragment(fragment: Fragment, enterAnim: Int = R.anim.fragment_in,
-                                exitAnim: Int = R.anim.fragment_out) {
-        val transaction = startFragmentTransaction(enterAnim, exitAnim)
-        transaction.replace(R.id.fragment_container, fragment)
-        transaction.addToBackStack(null).commit()
-    }
-
     private fun goBack(goHome: Boolean = false): Boolean {
         if (!goHome && supportFragmentManager.backStackEntryCount > 1) {
             supportFragmentManager.popBackStack()
@@ -338,24 +302,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             return true
         }
         return false
-    }
-
-    private fun showContacts(mode: Int = MODE_SEARCH_CONTACTS) {
-        if (viewModel.hasIdentity) {
-            viewModel.blockchainIdentityData.observeOnce(this) {
-                if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
-                    viewModel.dismissUsernameCreatedCard()
-                }
-            }
-            val contactsFragment = ContactsFragment.newInstance(mode) // TODO
-            if (mode == MODE_VIEW_REQUESTS) {
-                addFragment(contactsFragment)
-            } else {
-                replaceFragment(contactsFragment)
-            }
-        } else {
-            replaceFragment(UpgradeToEvolutionFragment.newInstance())
-        }
     }
 
     override fun onNewKeyChainEncrypted() {
@@ -854,14 +800,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             }
         }
         return super.onOptionsItemSelected(item)
-    }
-
-    override fun selectContactToPay() {
-        showContacts(MODE_SELECT_CONTACT)
-    }
-
-    override fun onViewAllRequests() {
-        showContacts(MODE_VIEW_REQUESTS)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

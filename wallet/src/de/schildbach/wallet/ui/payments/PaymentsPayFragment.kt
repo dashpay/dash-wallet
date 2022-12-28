@@ -38,9 +38,11 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.FrequentContactsAdapter
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.InputParser
+import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
@@ -52,6 +54,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -151,10 +154,9 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
     }
 
     private fun handleSelectContact() {
-        if (requireActivity() is OnSelectContactToPayListener) {
-            dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.TAB_SEND_TO_CONTACT)
-            (requireActivity() as OnSelectContactToPayListener).selectContactToPay()
-        }
+        // TODO check
+        dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.TAB_SEND_TO_CONTACT)
+        safeNavigate(PaymentsFragmentDirections.paymentsToContacts(mode = ContactsScreenMode.SELECT_CONTACT))
     }
 
     private fun handleScan(clickView: View) {
@@ -251,10 +253,6 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
         }
         binding.payToAddress.setActive(false)
         binding.payToAddress.setSubTitle(R.string.payments_pay_to_clipboard_sub_title)
-    }
-
-    interface OnSelectContactToPayListener {
-        fun selectContactToPay()
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {

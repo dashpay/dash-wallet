@@ -31,7 +31,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
-//import org.bitcoinj.params.OuzoDevNetParams;
+import org.bitcoinj.params.OuzoDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
@@ -108,27 +108,27 @@ public final class Constants {
                 org.dash.wallet.common.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-testnet.db";
                 break;
             }
-//            case "schnapps": {
-//                // Schnapps Devnet
-//                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
-//                NETWORK_PARAMETERS = OuzoDevNetParams.get();
-//                String devNetName = ((DevNetParams)NETWORK_PARAMETERS).getDevNetName();
-//                devNetName = devNetName.substring(devNetName.indexOf("-") + 1);
-//                // TODO: remove this next line when Platform Supports Core 0.18
-//                NETWORK_PARAMETERS.setSupportsV18(true);
-//                DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
-//                IS_PROD_BUILD = false;
-//                FILENAME_NETWORK_SUFFIX = "-" + devNetName;
-//                FEE_NETWORK_SUFFIX = "-testnet"; // use the same fee file as testnet
-//                WALLET_NAME_CURRENCY_CODE = "tdash";
-//                SUPPORTS_PLATFORM = true;
-//                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-//                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
-//                org.dash.wallet.common.Constants.FAUCET_URL = String.format("http://faucet.%s.networks.dash.org/", devNetName);
-//                org.dash.wallet.common.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-testnet.db";
-//                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-//                break;
-//            }
+            case "schnapps": {
+                // Schnapps Devnet
+                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
+                NETWORK_PARAMETERS = OuzoDevNetParams.get();
+                String devNetName = ((DevNetParams)NETWORK_PARAMETERS).getDevNetName();
+                devNetName = devNetName.substring(devNetName.indexOf("-") + 1);
+                // TODO: remove this next line when Platform Supports Core 0.18
+                NETWORK_PARAMETERS.setSupportsV18(true);
+                DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
+                IS_PROD_BUILD = false;
+                FILENAME_NETWORK_SUFFIX = "-" + devNetName;
+                FEE_NETWORK_SUFFIX = "-testnet"; // use the same fee file as testnet
+                WALLET_NAME_CURRENCY_CODE = "tdash";
+                SUPPORTS_PLATFORM = true;
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
+                org.dash.wallet.common.Constants.FAUCET_URL = String.format("http://faucet.%s.networks.dash.org/", devNetName);
+                org.dash.wallet.common.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-testnet.db";
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                break;
+            }
             default: {
                 throw new IllegalStateException("Unsupported flavor " + BuildConfig.FLAVOR);
             }

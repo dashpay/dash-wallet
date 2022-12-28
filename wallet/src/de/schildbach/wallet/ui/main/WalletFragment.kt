@@ -37,6 +37,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.InputParser.StringInputParser
+import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.payments.PaymentsFragment
 import de.schildbach.wallet.ui.payments.PaymentsPayFragment
 import de.schildbach.wallet.ui.scan.ScanActivity
@@ -236,10 +237,8 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun handleSelectContact() {
-        if (requireActivity() is PaymentsPayFragment.OnSelectContactToPayListener) {
-            viewModel.logEvent(AnalyticsConstants.UsersContacts.SHORTCUT_SEND_TO_CONTACT)
-            (requireActivity() as PaymentsPayFragment.OnSelectContactToPayListener).selectContactToPay()
-        }
+        viewModel.logEvent(AnalyticsConstants.UsersContacts.SHORTCUT_SEND_TO_CONTACT)
+        safeNavigate(WalletFragmentDirections.homeToContacts(mode = ContactsScreenMode.SELECT_CONTACT))
     }
 
     private fun handlePayToAddress() {
@@ -316,10 +315,5 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 error(null, cannotClassifyCustomMessageResId, input)
             }
         }.parse()
-    }
-
-    interface OnSelectPaymentTabListener {
-        fun onSelectPaymentTab(mode: Int)
-        fun onSelectExploreTab()
     }
 }

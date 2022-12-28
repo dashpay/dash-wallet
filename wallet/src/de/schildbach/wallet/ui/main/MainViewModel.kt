@@ -27,14 +27,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityData
+import de.schildbach.wallet.data.*
 import org.dash.wallet.common.data.BlockchainState
-import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirection
@@ -80,6 +78,7 @@ class MainViewModel @Inject constructor(
     appDatabase: AppDatabase,
     val platformRepo: PlatformRepo,
     val platformSyncService: PlatformSyncService,
+    private val blockchainIdentityDataDao: BlockchainIdentityDataDao,
     private val savedStateHandle: SavedStateHandle,
     private val metadataProvider: TransactionMetadataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
@@ -185,7 +184,6 @@ class MainViewModel @Inject constructor(
     val isAbleToCreateIdentity: Boolean
         get() = isAbleToCreateIdentityLiveData.value ?: false
 
-    val goBackAndStartActivityEvent = SingleLiveEvent<Class<*>>()
     val showCreateUsernameEvent = SingleLiveEvent<Unit>()
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
     val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
@@ -347,6 +345,17 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             platformSyncService.updateContactRequests()
         }
+    }
+
+    suspend fun dismissUsernameCreatedCardIfDone(): Boolean {
+        val data = blockchainIdentityDataDao.loadBase()
+
+        if (data?.creationState == BlockchainIdentityData.CreationState.DONE) {
+            platformRepo.doneAndDismiss()
+            return true
+        }
+
+        return false
     }
 
     fun dismissUsernameCreatedCard() {

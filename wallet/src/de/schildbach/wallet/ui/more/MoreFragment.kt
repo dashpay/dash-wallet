@@ -131,7 +131,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.errorUpdatingProfile.cancel.setOnClickListener { dismissProfileError() }
         binding.editUpdateSwitcher.isVisible = false
         binding.joinDashpayBtn.setOnClickListener {
-            mainActivityViewModel.goBackAndStartActivityEvent.postValue(CreateUsernameActivity::class.java)
+            startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+            findNavController().popBackStack()
         }
         initViewModel()
     }

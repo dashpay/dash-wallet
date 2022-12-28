@@ -21,17 +21,17 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.MenuItem
-import android.view.View
+import android.view.*
 import android.widget.TextView
 import androidx.core.text.HtmlCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
@@ -44,10 +44,12 @@ import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
+import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentContactsRootBinding
 import kotlinx.android.synthetic.main.activity_payments.view.*
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
@@ -56,60 +58,49 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
+import org.dash.wallet.common.util.safeNavigate
+
+enum class ContactsScreenMode {
+    SEARCH_CONTACTS,
+    SELECT_CONTACT,
+    VIEW_REQUESTS
+}
 
 @AndroidEntryPoint
-class ContactsFragment : Fragment(R.layout.fragment_contacts_root),
+class ContactsFragment : Fragment(),
         ContactSearchResultsAdapter.Listener,
         ContactViewHolder.OnItemClickListener {
 
-    companion object {
-        private const val EXTRA_MODE = "extra_mode"
-
-        const val MODE_SEARCH_CONTACTS = 0
-        const val MODE_SELECT_CONTACT = 1
-        const val MODE_VIEW_REQUESTS = 2
-
-        @JvmStatic
-        fun newInstance(mode: Int = MODE_SEARCH_CONTACTS): ContactsFragment { // TODO nav args
-            val args = Bundle()
-            args.putInt(EXTRA_MODE, mode)
-
-            val instance = ContactsFragment()
-            instance.arguments = args
-
-            return instance
-        }
-    }
-
     private val binding by viewBinding(FragmentContactsRootBinding::bind)
-    private lateinit var dashPayViewModel: DashPayViewModel
+    private val dashPayViewModel by viewModels<DashPayViewModel>()
+    private val mainViewModel by activityViewModels<MainViewModel>()
     private var searchHandler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
     private lateinit var contactsAdapter: ContactSearchResultsAdapter
     private var query = ""
     private var direction = UsernameSortOrderBy.USERNAME
-    private val mode by lazy { requireArguments().getInt(EXTRA_MODE, MODE_SEARCH_CONTACTS) }
+    private val args by navArgs<ContactsFragmentArgs>()
     private var initialSearch = true
     private var searchEventSent = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setHasOptionsMenu(true) // TODO menu provider
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        if (!mainViewModel.hasIdentity) {
+            safeNavigate(ContactsFragmentDirections.contactsToEvoUpgrade())
+            return null
+        }
+
+        setHasOptionsMenu(true)
+        return inflater.inflate(R.layout.fragment_contacts_root, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         enterTransition = MaterialFadeThrough()
-        reenterTransition = MaterialFadeThrough()
         binding.appBar.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
 
-        if (requireActivity() is ContactSearchResultsAdapter.OnViewAllRequestsListener) {
-            val viewAllRequestsListener = requireActivity() as ContactSearchResultsAdapter.OnViewAllRequestsListener
-            contactsAdapter = ContactSearchResultsAdapter(this, viewAllRequestsListener)
-        } else {
-            throw java.lang.IllegalStateException("The activity hosting this fragment should implement" +
-                    "ContactSearchResultsAdapter.Listener")
+        contactsAdapter = ContactSearchResultsAdapter(this) {
+            // todo: switch to ContactsScreenMode.VIEW_REQUESTS mode?
         }
 
         binding.contactList.apply {
@@ -122,20 +113,20 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root),
 
             initViewModel()
 
-            when (mode) {
-                MODE_VIEW_REQUESTS -> {
+            when (args.mode) {
+                ContactsScreenMode.VIEW_REQUESTS -> {
                     search.visibility = View.GONE
                     icon.visibility = View.GONE
                     setupActionBarWithTitle(R.string.contact_requests_title)
                 }
-                MODE_SEARCH_CONTACTS -> {
+                ContactsScreenMode.SEARCH_CONTACTS -> {
                     // search should be available for all other modes
                     search.doAfterTextChanged { afterSearchTextChanged(it) }
                     search.visibility = View.VISIBLE
                     icon.visibility = View.VISIBLE
                     setupActionBarWithTitle(R.string.contacts_title)
                 }
-                MODE_SELECT_CONTACT -> {
+                ContactsScreenMode.SELECT_CONTACT -> {
                     search.doAfterTextChanged { afterSearchTextChanged(it) }
                     search.visibility = View.VISIBLE
                     icon.visibility = View.VISIBLE
@@ -166,6 +157,10 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root),
 
             networkErrorLayout.networkErrorSubtitle.setText(R.string.network_error_contact_suggestions)
         }
+
+        lifecycleScope.launch {
+            mainViewModel.dismissUsernameCreatedCardIfDone()
+        }
     }
 
     private fun showEmptyPane() {
@@ -173,11 +168,10 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root),
     }
 
     private fun initViewModel() {
-        dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
         dashPayViewModel.searchContactsLiveData.observe(viewLifecycleOwner) {
             imitateUserInteraction()
             if (Status.SUCCESS == it.status) {
-                if (initialSearch && query.isEmpty() && (mode != MODE_VIEW_REQUESTS)) {
+                if (initialSearch && query.isEmpty() && (args.mode != ContactsScreenMode.VIEW_REQUESTS)) {
                     if (it.data == null || it.data.isEmpty() || it.data.find { u -> u.requestReceived } == null) {
                         binding.contactList.apply {
                             emptyStatePane.root.isVisible = true
@@ -270,31 +264,31 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root),
     private fun processResults(data: List<UsernameSearchResult>) {
         val results = ArrayList<ContactSearchResultsAdapter.ViewItem>()
         // process the requests
-        val requests = if (mode != MODE_SELECT_CONTACT) {
+        val requests = if (args.mode != ContactsScreenMode.SELECT_CONTACT) {
             data.filter { r -> r.isPendingRequest }.toMutableList()
         } else {
             ArrayList()
         }
 
         val requestCount = requests.size
-        if (mode != MODE_VIEW_REQUESTS) {
+        if (args.mode != ContactsScreenMode.VIEW_REQUESTS) {
             while (requests.size > 3) {
                 requests.remove(requests[requests.size - 1])
             }
         }
 
-        if (requests.isNotEmpty() && mode == MODE_SEARCH_CONTACTS) {
+        if (requests.isNotEmpty() && args.mode == ContactsScreenMode.SEARCH_CONTACTS) {
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_REQUEST_HEADER, requestCount = requestCount))
             requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
-        } else if (mode == MODE_VIEW_REQUESTS) {
+        } else if (args.mode == ContactsScreenMode.VIEW_REQUESTS) {
             requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
         }
         // process contacts
-        val contacts = if (mode != MODE_VIEW_REQUESTS)
+        val contacts = if (args.mode != ContactsScreenMode.VIEW_REQUESTS)
             data.filter { r -> r.requestSent && r.requestReceived }
         else ArrayList()
 
-        if (contacts.isNotEmpty() && mode != MODE_VIEW_REQUESTS) {
+        if (contacts.isNotEmpty() && args.mode != ContactsScreenMode.VIEW_REQUESTS) {
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_HEADER))
             contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
         }
@@ -302,7 +296,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root),
     }
 
     override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
-        if (mode == MODE_SEARCH_CONTACTS) {
+        if (args.mode == ContactsScreenMode.SEARCH_CONTACTS) {
             menuInflater.inflate(R.menu.contacts_menu, menu)
         }
         return super.onCreateOptionsMenu(menu, menuInflater)
@@ -343,7 +337,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root),
         searchContactsRunnable = Runnable {
             contactsAdapter.query = query
             dashPayViewModel.searchContacts(query, direction)
-            if (mode == MODE_SEARCH_CONTACTS) {
+            if (args.mode == ContactsScreenMode.SEARCH_CONTACTS) {
                 if (!initialSearch && query.isNotEmpty()) {
                     dashPayViewModel.searchUsernames(query, limit = 3, removeContacts = true)
                 }
@@ -369,11 +363,11 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root),
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-        when (mode) {
-            MODE_SEARCH_CONTACTS, MODE_VIEW_REQUESTS -> {
+        when (args.mode) {
+            ContactsScreenMode.SEARCH_CONTACTS, ContactsScreenMode.VIEW_REQUESTS -> {
                 startActivity(DashPayUserActivity.createIntent(requireContext(), usernameSearchResult))
             }
-            MODE_SELECT_CONTACT -> {
+            ContactsScreenMode.SELECT_CONTACT -> {
                 handleString(usernameSearchResult.toContactRequest!!.toUserId, true, R.string.scan_to_pay_username_dialog_message)
             }
         }

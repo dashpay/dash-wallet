@@ -111,10 +111,6 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 Context.MODE_PRIVATE
             )
         )
-        binding.walletTransactionsList.adapter = ConcatAdapter(header, adapter)
-        viewLifecycleOwner.observeOnDestroy {
-            binding.walletTransactionsList.adapter = null
-        }
 
         header.setOnIdentityRetryClicked { retryIdentityCreation(header) }
         header.setOnIdentityClicked { openIdentityCreation() }
@@ -122,7 +118,11 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
         binding.walletTransactionsList.setHasFixedSize(true)
         binding.walletTransactionsList.layoutManager = LinearLayoutManager(requireContext())
-        binding.walletTransactionsList.adapter = adapter
+        binding.walletTransactionsList.adapter = ConcatAdapter(header, adapter)
+
+        viewLifecycleOwner.observeOnDestroy {
+            binding.walletTransactionsList.adapter = null
+        }
 
         val horizontalMargin = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
         val verticalMargin = resources.getDimensionPixelOffset(R.dimen.default_vertical_padding)

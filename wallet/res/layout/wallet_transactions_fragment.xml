@@ -5,7 +5,6 @@
     android:id="@+id/wallet_transactions_group"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/dash_blue"
     tools:context="de.schildbach.wallet.ui.main.WalletTransactionsFragment">
 
     <ProgressBar

@@ -55,4 +55,5 @@
     <dimen name="transaction_icon_padding">8dp</dimen>
     <dimen name="transaction_row_vertical_padding">13dp</dimen>
     <dimen name="transaction_row_extended_padding">17dp</dimen>
+    <dimen name='bottom_nav_bar_height'>60dp</dimen>
 </resources>

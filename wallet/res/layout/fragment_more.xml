@@ -7,6 +7,7 @@
     android:animateLayoutChanges="true"
     android:background="@color/background_primary"
     android:orientation="vertical"
+    android:paddingBottom="@dimen/bottom_nav_bar_height"
     tools:context="de.schildbach.wallet.ui.more.MoreFragment">
 
     <include

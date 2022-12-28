@@ -36,6 +36,10 @@
             app:enterAnim="@anim/slide_in_bottom"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/home_to_contacts"
+            app:destination="@id/contactsFragment" />
     </fragment>
 
     <fragment
@@ -49,6 +53,10 @@
             app:argType="integer" />
 
         <deepLink app:uri="android-app://hashengineering.darkcoin.wallet/payments/{active_tab}"/>
+
+        <action
+            android:id="@+id/payments_to_contacts"
+            app:destination="@id/contactsFragment" />
     </fragment>
 
     <fragment
@@ -56,6 +64,28 @@
         android:name="de.schildbach.wallet.ui.dashpay.ContactsFragment"
         android:label="Contacts"
         tools:layout="@layout/fragment_contacts_root">
+
+        <action
+            android:id="@+id/contacts_to_evoUpgrade"
+            app:popUpTo="@id/contactsFragment"
+            app:popUpToInclusive="true"
+            app:destination="@id/evoUpgradeFragment" />
+
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="true" />
+
+        <argument
+            android:name="mode"
+            app:argType="de.schildbach.wallet.ui.dashpay.ContactsScreenMode"
+            android:defaultValue="SEARCH_CONTACTS" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/evoUpgradeFragment"
+        android:name="de.schildbach.wallet.ui.dashpay.UpgradeToEvolutionFragment"
+        android:label="UpgradeToEvolution"
+        tools:layout="@layout/fragment_upgrade_to_evolution">
 
         <argument
             android:name="ShowNavBar"
