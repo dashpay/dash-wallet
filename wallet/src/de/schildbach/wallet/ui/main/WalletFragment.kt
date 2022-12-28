@@ -238,7 +238,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     private fun handleSelectContact() {
         viewModel.logEvent(AnalyticsConstants.UsersContacts.SHORTCUT_SEND_TO_CONTACT)
-        safeNavigate(WalletFragmentDirections.homeToContacts(mode = ContactsScreenMode.SELECT_CONTACT))
+        safeNavigate(WalletFragmentDirections.homeToContacts(ShowNavBar = false, mode = ContactsScreenMode.SELECT_CONTACT))
     }
 
     private fun handlePayToAddress() {

@@ -25,6 +25,7 @@ import android.view.*
 import android.widget.TextView
 import androidx.core.text.HtmlCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -131,7 +132,6 @@ class ContactsFragment : Fragment(),
                     search.visibility = View.VISIBLE
                     icon.visibility = View.VISIBLE
                     setupActionBarWithTitle(R.string.contacts_send_to_contact_title)
-//                    forceHideBottomNav = true TODO
                 }
             }
 
@@ -157,6 +157,14 @@ class ContactsFragment : Fragment(),
 
             networkErrorLayout.networkErrorSubtitle.setText(R.string.network_error_contact_suggestions)
         }
+
+        binding.root.updatePadding(bottom =
+            if (args.ShowNavBar) {
+                resources.getDimensionPixelOffset(R.dimen.bottom_nav_bar_height)
+            } else {
+                0
+            }
+        )
 
         lifecycleScope.launch {
             mainViewModel.dismissUsernameCreatedCardIfDone()

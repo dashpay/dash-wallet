@@ -154,9 +154,13 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
     }
 
     private fun handleSelectContact() {
-        // TODO check
         dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.TAB_SEND_TO_CONTACT)
-        safeNavigate(PaymentsFragmentDirections.paymentsToContacts(mode = ContactsScreenMode.SELECT_CONTACT))
+        findNavController().navigate(
+            PaymentsFragmentDirections.paymentsToContacts(
+                ShowNavBar = false,
+                mode = ContactsScreenMode.SELECT_CONTACT
+            )
+        )
     }
 
     private fun handleScan(clickView: View) {
