@@ -101,7 +101,8 @@ class ContactsFragment : Fragment(),
         binding.appBar.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
 
         contactsAdapter = ContactSearchResultsAdapter(this) {
-            // todo: switch to ContactsScreenMode.VIEW_REQUESTS mode?
+            // TODO: this is weird. Better to have another fragment to display all requests.
+            safeNavigate(ContactsFragmentDirections.contactsToContacts(mode = ContactsScreenMode.VIEW_REQUESTS))
         }
 
         binding.contactList.apply {

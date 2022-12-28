@@ -71,6 +71,10 @@
             app:popUpToInclusive="true"
             app:destination="@id/evoUpgradeFragment" />
 
+        <action
+            android:id="@+id/contacts_to_contacts"
+            app:destination="@id/contactsFragment" />
+
         <argument
             android:name="ShowNavBar"
             android:defaultValue="true" />
