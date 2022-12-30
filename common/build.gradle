@@ -85,6 +85,7 @@ dependencies {
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     //noinspection GradleDependency
     implementation 'com.google.zxing:core:3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
+    implementation 'com.github.amulyakhare:textdrawable:558677ea31'
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"

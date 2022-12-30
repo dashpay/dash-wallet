@@ -24,7 +24,6 @@ import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet_test.R
@@ -40,12 +39,14 @@ import android.content.Intent
 import android.app.Activity
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.rates.ExchangeRatesActivity
 import de.schildbach.wallet.ui.rates.ExchangeRatesFragment.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.util.FiatAmountFormat
 import javax.inject.Inject
 

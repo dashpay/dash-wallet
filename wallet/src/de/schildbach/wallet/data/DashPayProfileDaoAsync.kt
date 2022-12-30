@@ -5,6 +5,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface DashPayProfileDaoAsync {
@@ -16,6 +17,9 @@ interface DashPayProfileDaoAsync {
 
     @Query("SELECT * FROM dashpay_profile where userId = :userId")
     fun loadByUserId(userId: String): LiveData<DashPayProfile?>
+
+    @Query("SELECT * FROM dashpay_profile where userId = :userId")
+    fun observeByUserId(userId: String): Flow<DashPayProfile?>
 
     fun loadByUserIdDistinct(userId: String):
             LiveData<DashPayProfile?> = loadByUserId(userId).getDistinct()

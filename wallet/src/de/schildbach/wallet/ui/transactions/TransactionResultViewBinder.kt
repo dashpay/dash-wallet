@@ -30,7 +30,7 @@ import androidx.core.view.isVisible
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.DashPayUserActivity
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -45,6 +45,7 @@ import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
 import org.dash.wallet.common.ui.CurrencyTextView
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
 /**
  * @author Samuel Barbosa

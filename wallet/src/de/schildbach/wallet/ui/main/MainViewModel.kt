@@ -372,6 +372,10 @@ class MainViewModel @Inject constructor(
         walletApplication.startBlockchainService(true)
     }
 
+    suspend fun getProfile(profileId: String): DashPayProfile? {
+        return platformRepo.loadProfileByUserId(profileId)
+    }
+
     private fun combineLatestData(): Boolean {
         val isPlatformAvailable = isPlatformAvailableData.value ?: false
         val isSynced = _isBlockchainSynced.value ?: false

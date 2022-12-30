@@ -26,9 +26,10 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dashpay_contact_row_content.view.*
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
 class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes layout: Int, val isSuggestion: Boolean = false, val useFriendsIcon: Boolean = true)
     : RecyclerView.ViewHolder(inflater.inflate(layout, parent, false)) {

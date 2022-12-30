@@ -22,6 +22,7 @@ import android.view.View
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsReceiveBinding
@@ -34,6 +35,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
     private val binding by viewBinding(FragmentPaymentsReceiveBinding::bind)
+    private val viewModel by viewModels<PaymentsViewModel>()
 
     companion object {
         private const val SHOW_IMPORT_PRIVATE_KEY_ARG = "show_import_private_key"
@@ -71,6 +73,10 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
         binding.importPrivateKeyBtn.isVisible = requireArguments().getBoolean(SHOW_IMPORT_PRIVATE_KEY_ARG)
         binding.importPrivateKeyBtn.setOnClickListener {
             SweepWalletActivity.start(requireContext(), false)
+        }
+
+        viewModel.dashPayProfile.observe(viewLifecycleOwner) {
+            binding.receiveInfo.setProfile(it?.username, it?.displayName, it?.avatarUrl, it?.avatarHash)
         }
     }
 }

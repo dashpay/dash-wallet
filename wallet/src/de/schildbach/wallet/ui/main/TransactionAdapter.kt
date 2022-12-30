@@ -31,7 +31,6 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.transactions.TransactionDateHeaderViewHolder
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet.ui.transactions.TxResourceMapper
@@ -41,6 +40,7 @@ import de.schildbach.wallet_test.databinding.TransactionRowBinding
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.util.GenericUtils
 

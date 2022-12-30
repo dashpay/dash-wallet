@@ -38,7 +38,7 @@ import de.schildbach.wallet.data.ImgurUploadResponse
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.SingleLiveEvent
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper
+import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileStatusLiveData
 import de.schildbach.wallet_test.BuildConfig

@@ -91,13 +91,13 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/address_preview_pane"
-        style="@style/Button.Tertiary.Small"
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
         android:clickable="true"
         android:focusable="true"
-        android:layout_marginHorizontal="15dp"
-        android:layout_marginTop="4dp"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="25dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/qr_preview_bg">
@@ -105,27 +105,31 @@
         <TextView
             android:id="@+id/address_label"
             style="@style/Overline.Tertiary"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="@string/dash_address"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/address_copy_btn"/>
 
         <TextView
             android:id="@+id/address_preview"
             style="@style/Overline"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:ellipsize="middle"
             android:singleLine="true"
+            android:layout_marginTop="1dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/address_label"
+            app:layout_constraintEnd_toStartOf="@+id/address_copy_btn"
             tools:text="XukpuUxUimEn.....wkeFK2p2WahEsegsq" />
 
         <ImageButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:id="@+id/address_copy_btn"
             style="@style/Button.Tertiary.Square"
+            android:layout_width="36dp"
+            android:layout_height="40dp"
             android:src="@drawable/ic_copy_blue"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -134,13 +138,11 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/username_preview_pane"
-        style="@style/Button.Tertiary.Small"
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
-        android:clickable="true"
-        android:focusable="true"
-        android:layout_marginHorizontal="15dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="12dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/address_preview_pane">
@@ -148,27 +150,31 @@
         <TextView
             android:id="@+id/username_label"
             style="@style/Overline.Tertiary"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="@string/username"
+            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintEnd_toStartOf="@id/username_copy_btn" />
 
         <TextView
             android:id="@+id/username_preview"
             style="@style/Overline"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginTop="1dp"
             android:ellipsize="middle"
             android:singleLine="true"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/username_label"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/username_copy_btn"
             tools:text="johndoe" />
 
         <ImageButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:id="@+id/username_copy_btn"
             style="@style/Button.Tertiary.Square"
+            android:layout_width="36dp"
+            android:layout_height="40dp"
             android:src="@drawable/ic_copy_blue"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -180,7 +186,7 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/divider_color"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="20dp"
         app:layout_constraintTop_toBottomOf="@+id/username_preview_pane" />
 
     <LinearLayout

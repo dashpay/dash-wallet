@@ -54,13 +54,15 @@ import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper
+import de.schildbach.wallet.ui.dashpay.utils.display
+import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
 import kotlinx.android.synthetic.main.upload_policy_dialog.*
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.avatar.ProfilePictureTransformation
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileNotFoundException

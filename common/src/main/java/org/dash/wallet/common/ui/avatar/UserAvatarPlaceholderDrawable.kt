@@ -15,14 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui
+package org.dash.wallet.common.ui.avatar
 
 import android.content.Context
 import android.graphics.Color
 import androidx.core.content.res.ResourcesCompat
 import com.amulyakhare.textdrawable.TextDrawable
-import de.schildbach.wallet.util.GraphicUtils.convertDpToPixel
-import de.schildbach.wallet_test.R
+import org.dash.wallet.common.R
 
 class UserAvatarPlaceholderDrawable {
 

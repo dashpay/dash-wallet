@@ -32,7 +32,7 @@ import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsAdapter
 import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
 import de.schildbach.wallet.ui.dashpay.notification.UserAlertViewHolder
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
@@ -43,6 +43,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.data.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
 @AndroidEntryPoint

@@ -35,7 +35,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.invite.CreateInviteViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
@@ -44,6 +44,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory

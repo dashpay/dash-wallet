@@ -58,10 +58,10 @@ class CreateIdentityNotification(val service: LifecycleService) {
 //            setContentIntent(contentIntent)
             val actionIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val serviceRetryIntent = CreateIdentityService.createIntentForRetry(service, true)
-                PendingIntent.getForegroundService(service, 0, serviceRetryIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+                PendingIntent.getForegroundService(service, 0, serviceRetryIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             } else {
                 val serviceRetryIntent = CreateIdentityService.createIntentForRetry(service)
-                PendingIntent.getService(service, 0, serviceRetryIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+                PendingIntent.getService(service, 0, serviceRetryIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             }
             addAction(R.drawable.ic_retry, service.getString(R.string.button_retry), actionIntent)
             build()
