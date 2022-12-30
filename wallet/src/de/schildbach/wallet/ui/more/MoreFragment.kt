@@ -88,6 +88,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 bundleOf(),
                 NavOptions.Builder()
                     .setEnterAnim(R.anim.slide_in_bottom)
+                    .setPopUpTo(R.id.moreFragment, true)
                     .build()
             )
         }

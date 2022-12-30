@@ -158,7 +158,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
                         bundleOf(
                             PaymentsFragment.ARG_ACTIVE_TAB to
                                     PaymentsFragment.ACTIVE_TAB_RECEIVE
-                        )
+                        ),
+                        NavOptions.Builder()
+                            .setPopUpTo(R.id.walletFragment, true)
+                            .build()
                     )
                 }
                 binding.shortcutsPane.importPrivateKey -> {
@@ -170,6 +173,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                         bundleOf(),
                         NavOptions.Builder()
                             .setEnterAnim(R.anim.slide_in_bottom)
+                            .setPopUpTo(R.id.walletFragment, true)
                             .build()
                     )
                 }

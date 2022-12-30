@@ -21,6 +21,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
+import android.util.Log
 import android.view.*
 import android.widget.TextView
 import androidx.core.text.HtmlCompat
@@ -90,7 +91,6 @@ class ContactsFragment : Fragment(),
             return null
         }
 
-        setHasOptionsMenu(true)
         return inflater.inflate(R.layout.fragment_contacts_root, container, false)
     }
 
@@ -98,7 +98,24 @@ class ContactsFragment : Fragment(),
         super.onViewCreated(view, savedInstanceState)
 
         enterTransition = MaterialFadeThrough()
-        binding.appBar.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
+        binding.appBar.toolbar.setNavigationOnClickListener {
+            findNavController().popBackStack()
+        }
+
+        if (args.mode == ContactsScreenMode.SEARCH_CONTACTS) {
+            binding.appBar.toolbar.inflateMenu(R.menu.contacts_menu)
+        }
+
+        binding.appBar.toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.contacts_add_contact -> {
+                    dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.SEARCH_USER_ICON)
+                    searchUser()
+                    true
+                }
+                else -> false
+            }
+        }
 
         contactsAdapter = ContactSearchResultsAdapter(this) {
             // TODO: this is weird. Better to have another fragment to display all requests.
@@ -119,20 +136,20 @@ class ContactsFragment : Fragment(),
                 ContactsScreenMode.VIEW_REQUESTS -> {
                     search.visibility = View.GONE
                     icon.visibility = View.GONE
-                    setupActionBarWithTitle(R.string.contact_requests_title)
+                    binding.appBar.toolbar.title = getString(R.string.contact_requests_title)
                 }
                 ContactsScreenMode.SEARCH_CONTACTS -> {
                     // search should be available for all other modes
                     search.doAfterTextChanged { afterSearchTextChanged(it) }
                     search.visibility = View.VISIBLE
                     icon.visibility = View.VISIBLE
-                    setupActionBarWithTitle(R.string.contacts_title)
+                    binding.appBar.toolbar.title = getString(R.string.contacts_title)
                 }
                 ContactsScreenMode.SELECT_CONTACT -> {
                     search.doAfterTextChanged { afterSearchTextChanged(it) }
                     search.visibility = View.VISIBLE
                     icon.visibility = View.VISIBLE
-                    setupActionBarWithTitle(R.string.contacts_send_to_contact_title)
+                    binding.appBar.toolbar.title = getString(R.string.contacts_send_to_contact_title)
                 }
             }
 
@@ -302,24 +319,6 @@ class ContactsFragment : Fragment(),
             contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
         }
         contactsAdapter.results = results
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
-        if (args.mode == ContactsScreenMode.SEARCH_CONTACTS) {
-            menuInflater.inflate(R.menu.contacts_menu, menu)
-        }
-        return super.onCreateOptionsMenu(menu, menuInflater)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.contacts_add_contact -> {
-                dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.SEARCH_USER_ICON)
-                searchUser()
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
     }
 
     override fun onSortOrderChanged(direction: UsernameSortOrderBy) {

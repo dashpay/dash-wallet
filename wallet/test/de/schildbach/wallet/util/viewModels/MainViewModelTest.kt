@@ -156,7 +156,7 @@ class MainViewModelTest {
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
             exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            savedStateMock, transactionMetadataMock, blockchainStateMock
+            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
         ))
 
         val clipboardInput = viewModel.getClipboardInput()
@@ -176,7 +176,7 @@ class MainViewModelTest {
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
             exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            savedStateMock, transactionMetadataMock, blockchainStateMock
+            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
         ))
 
         every { clipboardManagerMock.primaryClip?.getItemAt(0)?.uri?.toString() } returns mockUri
@@ -209,7 +209,7 @@ class MainViewModelTest {
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
             exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            savedStateMock, transactionMetadataMock, blockchainStateMock
+            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
         ))
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
             assertEquals(false, viewModel.isBlockchainSynced.value)
@@ -225,7 +225,7 @@ class MainViewModelTest {
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
             exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            savedStateMock, transactionMetadataMock, blockchainStateMock
+            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
         ))
 
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
