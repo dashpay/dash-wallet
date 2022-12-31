@@ -25,6 +25,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
@@ -43,7 +44,7 @@ class ExploreTestNetFragment : Fragment(R.layout.fragment_explore_testnet) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.titleBar.setNavigationOnClickListener {
-            requireActivity().finish()
+            findNavController().popBackStack()
         }
 
         binding.getDashBtn.setOnClickListener {

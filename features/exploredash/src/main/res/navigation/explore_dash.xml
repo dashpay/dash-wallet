@@ -40,12 +40,6 @@
             app:destination="@id/filtersDialog" />
     </fragment>
 
-    <fragment
-        android:id="@+id/exploreTestNetFragment"
-        android:name="org.dash.wallet.features.exploredash.ui.ExploreTestNetFragment"
-        android:label="fragment_testnet"
-        tools:layout="@layout/fragment_explore_testnet"/>
-
     <dialog
         android:id="@+id/infoDialog"
         android:name="org.dash.wallet.features.exploredash.ui.dialogs.ExploreDashInfoDialog"

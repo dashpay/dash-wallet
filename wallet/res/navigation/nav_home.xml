@@ -125,6 +125,24 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/explore_to_faucet"
+            app:destination="@id/exploreTestNetFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/exploreTestNetFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.ExploreTestNetFragment"
+        android:label="fragment_testnet"
+        tools:layout="@layout/fragment_explore_testnet">
+
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="true" />
     </fragment>
 
     <fragment

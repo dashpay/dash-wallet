@@ -77,6 +77,10 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
             handleStakingNavigation()
         }
 
+        binding.faucetBtn.setOnClickListener {
+            safeNavigate(ExploreFragmentDirections.exploreToFaucet())
+        }
+
         viewModel.stakingAPY.observe(viewLifecycleOwner) {
             setAPY(it)
         }
