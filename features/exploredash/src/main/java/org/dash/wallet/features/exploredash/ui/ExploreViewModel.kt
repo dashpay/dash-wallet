@@ -276,7 +276,6 @@ class ExploreViewModel @Inject constructor(
 
 
     fun init(exploreTopic: ExploreTopic) {
-        repository.reset()
         if (this.exploreTopic != exploreTopic) {
             clearSearchResults()
         }
