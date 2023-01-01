@@ -160,4 +160,12 @@
 
     <string name="sync_in_progress_file_not_found">Build Error: Database not found!</string>
     <string name="sync_in_progress_network_error">Sync interrupted... Network is offline or unreachable</string>
+
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">at</string>
+    <string name="purchase_gift_card_min">Min: %s</string>
+    <string name="purchase_gift_card_max">Max: %s</string>
+    <string name="purchase_gift_card_discount">You are buying a  gift card, but you paying  (%s% discount)</string>
+    <string name="button_next">Next</string>
+
 </resources>

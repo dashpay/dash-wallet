@@ -24,7 +24,6 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
@@ -39,7 +38,6 @@ import androidx.core.view.*
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.ConcatAdapter
@@ -409,9 +407,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             when (val response = viewModel.signInToDashDirect(email.text.toString(), password.text.toString())) {
                 is ResponseResource.Success -> {
                     if (response.value) {
-                        // TODO open Buy card UI
-                        Toast.makeText(requireContext(), "Open Buy Card", Toast.LENGTH_SHORT).show()
-                        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BUY_GIFT_CARD)
+                        openPurchaseGiftCardFragment()
                     }
                 }
 
@@ -424,6 +420,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
             }
         }
+    }
+
+    private fun openPurchaseGiftCardFragment() {
+        safeNavigate(SearchFragmentDirections.searchToPurchaseGiftCardFragment())
+        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BUY_GIFT_CARD)
     }
 
     private fun setupSearchInput(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
@@ -550,7 +551,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             if (!viewModel.isUserSignInDashDirect()) {
                 showLoginDialog()
             } else {
-                Toast.makeText(requireContext(), "Open Buy Card", Toast.LENGTH_SHORT).show()
+                openPurchaseGiftCardFragment()
             }
         }
     }
