@@ -27,6 +27,7 @@ interface DashDirectServicesApi {
     @POST("PurchaseGiftCard")
     suspend fun purchaseGiftCard(
         @Header(DashDirectConstants.requestedUUID) deviceID: String,
+        @Header(DashDirectConstants.EMAIL) email: String,
         @Body purchaseGiftCardRequest: PurchaseGiftCardRequest
     ): PurchaseGiftCardResponse?
 }

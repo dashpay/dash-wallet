@@ -58,7 +58,8 @@ class DashDirectRepository @Inject constructor(
         deviceID: String,
         currency: String,
         giftCardAmount: Double,
-        merchantId: Int
+        merchantId: Long,
+        userEmail: String
     ) = safeApiCall {
         servicesApi.purchaseGiftCard(
             deviceID = deviceID,
@@ -66,13 +67,14 @@ class DashDirectRepository @Inject constructor(
                 currency = currency,
                 giftCardAmount = giftCardAmount,
                 merchantId = merchantId
-            )
+            ),
+            email = userEmail
         )
     }
 }
 interface DashDirectRepositoryInt {
     suspend fun signIn(email: String, password: String): ResponseResource<Boolean>
     fun isUserSignIn(): Boolean
-    suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Int):
+    suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Long, userEmail: String):
         ResponseResource<PurchaseGiftCardResponse?>
 }

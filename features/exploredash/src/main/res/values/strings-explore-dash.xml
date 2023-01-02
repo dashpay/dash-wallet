@@ -165,7 +165,13 @@
     <string name="purchase_gift_card_at">at</string>
     <string name="purchase_gift_card_min">Min: %s</string>
     <string name="purchase_gift_card_max">Max: %s</string>
-    <string name="purchase_gift_card_discount">You are buying a  gift card, but you paying  (%s% discount)</string>
+    <string name="purchase_gift_card_discount_hint">You are buying a  gift card, but you paying  (%s% discount)</string>
     <string name="button_next">Next</string>
-
+    <string name="purchase_gift_card_from">From</string>
+    <string name="purchase_gift_card_to">To</string>
+    <string name="purchase_confirm_transaction">Confirm Transaction</string>
+    <string name="purchase_gift_card_total_label">Gift card total</string>
+    <string name="purchase_gift_card_discount">Discount</string>
+    <string name="purchase_gift_card_you_pay">You pay</string>
+    <string name="purchase_gift_card_confirm">Confirm</string>
 </resources>

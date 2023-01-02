@@ -49,9 +49,8 @@
         android:id="@+id/purchaseGiftCardFragment"
         android:name="org.dash.wallet.features.exploredash.ui.PurchaseGiftCardFragment"
         android:label="fragment_purchase_gift_card"
-        tools:layout="@layout/fragment_purchase_gift_card">
+        tools:layout="@layout/fragment_purchase_gift_card"/>
 
-    </fragment>
     <dialog
         android:id="@+id/infoDialog"
         android:name="org.dash.wallet.features.exploredash.ui.dialogs.ExploreDashInfoDialog"

@@ -21,4 +21,5 @@ object DashDirectConstants {
     const val API_KEY = "apikey"
     const val requestedUUID = "requestedUUID"
     const val CLIENT_ID = "clientId"
+    const val EMAIL = "email"
 }

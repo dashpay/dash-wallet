@@ -24,5 +24,5 @@ data class PurchaseGiftCardRequest(
     @SerializedName("GiftCardAmount")
     val giftCardAmount: Double? = null,
     @SerializedName("MerchantId")
-    val merchantId: Int? = null
+    val merchantId: Long? = null
 )
