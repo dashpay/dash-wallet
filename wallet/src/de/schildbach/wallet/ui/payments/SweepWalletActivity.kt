@@ -51,6 +51,7 @@ class SweepWalletActivity: AbstractBindServiceActivity() {
 
         binding = ActivitySweepWalletBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.appbar.toolbar.title = getString(R.string.sweep_wallet_activity_title)
         binding.appbar.toolbar.setNavigationOnClickListener { finish() }
         walletApplication.startBlockchainService(false)
     }
