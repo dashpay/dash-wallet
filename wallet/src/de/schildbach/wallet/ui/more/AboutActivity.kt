@@ -25,6 +25,7 @@ import android.text.format.DateUtils
 import androidx.activity.viewModels
 import androidx.core.view.isVisible
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet_test.BuildConfig
@@ -32,11 +33,18 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityAboutBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.VersionMessage
+import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.features.exploredash.ExploreSyncWorker
+import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
 class AboutActivity : LockScreenActivity() {
+    companion object {
+        private val log = LoggerFactory.getLogger(AboutActivity::class.java)
+    }
+
     private val viewModel by viewModels<AboutViewModel>()
     private lateinit var binding: ActivityAboutBinding
 
@@ -59,6 +67,16 @@ class AboutActivity : LockScreenActivity() {
         binding.contactSupport.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT)
             handleReportIssue()
+        }
+
+        val isMainNet = Constants.NETWORK_PARAMETERS == MainNetParams.get()
+        binding.forceSyncBtn.isVisible = !isMainNet
+        binding.forceSyncBtn.setOnClickListener {
+            try {
+                ExploreSyncWorker.run(applicationContext, isMainNet)
+            } catch (ex: Exception) {
+                log.error(ex.message, ex)
+            }
         }
 
         showExploreDashSyncStatus()
