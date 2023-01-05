@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
@@ -41,7 +42,13 @@ import org.slf4j.LoggerFactory
 class TransactionDetailsDialogFragment : OffsetDialogFragment() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
-    private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }
+    private val txId by lazy {
+        if (arguments?.get(TX_ID)is Sha256Hash) {
+            arguments?.get(TX_ID) as Sha256Hash
+        } else {
+            Sha256Hash.wrap(arguments?.get(TX_ID) as String)
+        }
+    }
     private val binding by viewBinding(TransactionDetailsDialogBinding::bind)
     private lateinit var contentBinding: TransactionResultContentBinding
     private val viewModel: TransactionResultViewModel by viewModels()
@@ -54,11 +61,12 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         const val TX_ID = "tx_id"
 
         @JvmStatic
-        fun newInstance(txId: Sha256Hash): TransactionDetailsDialogFragment {
+        fun newInstance(txId: Sha256Hash? = null): TransactionDetailsDialogFragment {
             val fragment = TransactionDetailsDialogFragment()
-            val args = Bundle()
-            args.putSerializable(TX_ID, txId)
-            fragment.arguments = args
+
+            if (txId != null) {
+                fragment.arguments = bundleOf(TX_ID to txId)
+            }
             return fragment
         }
     }

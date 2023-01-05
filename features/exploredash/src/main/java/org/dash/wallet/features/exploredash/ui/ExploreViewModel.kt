@@ -30,12 +30,14 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.livedata.ConnectionLiveData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
@@ -82,7 +84,8 @@ class ExploreViewModel @Inject constructor(
     private val locationProvider: UserLocationStateInt,
     private val syncStatusService: DataSyncStatusService,
     private val analyticsService: AnalyticsService,
-    private val repository: DashDirectRepository
+    private val repository: DashDirectRepository,
+    private val walletData: WalletDataProvider
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -866,4 +869,11 @@ class ExploreViewModel @Inject constructor(
     fun logEvent(event: String) {
         analyticsService.logEvent(event, bundleOf())
     }
+    //TODO Change to card payment
+    val transcation_id = walletData.wrapAllTransactions()
+            .sortedWith(TransactionWrapperComparator())
+            .map {
+                it.transactions.first().txId
+            }.last()
+
 }
