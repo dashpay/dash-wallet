@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="uphold_link_title">Conecte sua conta Uphold</string>
+    <string name="uphold_transfer_details">Da Uphold à sua Carteira Dash</string>
     <string name="uphold_buy_dash_activity_title">Comprar/Vender Dash com Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Comprar Dash com conta Uphold</string>
     <string name="uphold_buy_dash_button">Comprar Dash</string>

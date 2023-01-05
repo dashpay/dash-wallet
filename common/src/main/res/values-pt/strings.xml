@@ -16,6 +16,12 @@
     <string name="error">Erro</string>
     <string name="select_a_coin">Selecionar uma moeda</string>
     <string name="request_coins_share_dialog_title">Compartilhar pedido de Dash…</string>
+    <string name="buy_with_fiat">Compre Dash com fiat</string>
+    <string name="buy_and_convert">Compre e converta Dash com outra criptomoeda</string>
+    <string name="transfer_dash">Transferir Dash</string>
+    <string name="login_error_title">Não é possível fazer login na sua conta %s</string>
+    <string name="login_error_message">Ocorreu um erro ao fazer login na sua conta %s.</string>
+    <string name="balance">Saldo:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Libra Guernsey</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">Eu entendo</string>
     <string name="button_okay">Okay</string>
     <string name="button_share">Compartilhar</string>
+    <string name="share_address">Compartilhar Endereço</string>
     <string name="verify">Verificar</string>
     <string name="receive_enter_amount_button">Especificar Valor</string>
 

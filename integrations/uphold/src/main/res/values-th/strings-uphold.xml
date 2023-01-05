@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="uphold_link_title">เชื่อมต่อบัญชี Uphold ของคุณ</string>
+    <string name="uphold_transfer_details">จาก Uphold ไปสู่กระเป๋าเงิน Dash ของคุณ</string>
     <string name="uphold_buy_dash_activity_title">ซื้อ / ขาย Dash กับ Uphold</string>
     <string name="uphold_buy_dash_with_uphold">ซื้อ Dash ด้วยบัญชี  Uphold</string>
     <string name="uphold_buy_dash_button">ซื้อ Dash </string>

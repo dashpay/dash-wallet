@@ -16,6 +16,12 @@
     <string name="error">Hata</string>
     <string name="select_a_coin">Bir koin seçin</string>
     <string name="request_coins_share_dialog_title">Dash talebini paylaş...</string>
+    <string name="buy_with_fiat">Fiat ile Dash satın alın</string>
+    <string name="buy_and_convert">Başka bir kripto para kullanarak Dash satın alın</string>
+    <string name="transfer_dash">Transfer Dash</string>
+    <string name="login_error_title">%s hesabınızda oturum açılamıyor</string>
+    <string name="login_error_message">%s hesabınızda oturum açılırken bir hata oluştu.</string>
+    <string name="balance">Bakiye:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Lirası</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">Anladım</string>
     <string name="button_okay">Tamam</string>
     <string name="button_share">Paylaş</string>
+    <string name="share_address">Adresi Paylaş</string>
     <string name="verify">Onayla</string>
     <string name="receive_enter_amount_button">Tutarı Belirleyin</string>
 

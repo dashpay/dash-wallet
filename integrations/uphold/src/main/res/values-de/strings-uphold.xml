@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="uphold_link_title">Dein Uphold Konto verknüpfen</string>
+    <string name="uphold_transfer_details">Von Uphold auf deine Dash Wallet</string>
     <string name="uphold_buy_dash_activity_title">Dash mit Uphold kaufen/verkaufen</string>
     <string name="uphold_buy_dash_with_uphold">Dash über den Uphold Account kaufen</string>
     <string name="uphold_buy_dash_button">Dash kaufen</string>

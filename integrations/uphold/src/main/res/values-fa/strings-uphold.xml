@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">آپهولد</string>
+    <string name="uphold_link_title">حساب آپعولدتان را متصل کنید</string>
+    <string name="uphold_transfer_details">از آپهولد به دش والت‌ شما</string>
     <string name="uphold_buy_dash_activity_title">خرید/فروش دش با آپهلد</string>
     <string name="uphold_buy_dash_with_uphold">خرید دش با حساب آپهلد</string>
     <string name="uphold_buy_dash_button">خرید دش</string>

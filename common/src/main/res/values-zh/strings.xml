@@ -16,6 +16,12 @@
     <string name="error">错误</string>
     <string name="select_a_coin">选择一个币种</string>
     <string name="request_coins_share_dialog_title">分享接收Dash的请求…</string>
+    <string name="buy_with_fiat">通过法币购买Dash</string>
+    <string name="buy_and_convert">购买并以其他加密货币兑换Dash</string>
+    <string name="transfer_dash">转账 Dash</string>
+    <string name="login_error_title">无法登录您%s的账户</string>
+    <string name="login_error_message">当登录您%s的账户时发生了一个错误.</string>
+    <string name="balance">余额:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey镑</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">我明白</string>
     <string name="button_okay">好的</string>
     <string name="button_share">分享</string>
+    <string name="share_address">分享地址</string>
     <string name="verify">验证</string>
     <string name="receive_enter_amount_button">指定数额</string>
 

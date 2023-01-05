@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="uphold_link_title">Koppel Uphold account</string>
+    <string name="uphold_transfer_details">Van Uphold naar je Dash Portemonnee</string>
     <string name="uphold_buy_dash_activity_title">Koop/Verkoop Dash met Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Koop Dash met Uphold-rekening</string>
     <string name="uphold_buy_dash_button">Koop Dash</string>
