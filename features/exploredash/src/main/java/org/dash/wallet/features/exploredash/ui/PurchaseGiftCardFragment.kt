@@ -36,10 +36,10 @@ import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseGiftCardBinding
+import org.dash.wallet.features.exploredash.ui.dialogs.GiftCardDetailsDialog
 import org.dash.wallet.features.exploredash.ui.dialogs.PurchaseGiftCardConfirmDialog
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -136,7 +136,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
             val minValue = exchangeRate.fiatToCoin(minFaitValue) ?: Coin.ZERO
             val maxValue = exchangeRate.fiatToCoin(maxFaitValue) ?: Coin.ZERO
 
-            enterAmountViewModel.setMinAmount(minValue,true)
+            enterAmountViewModel.setMinAmount(minValue, true)
             enterAmountViewModel.setMaxAmount(maxValue)
         }
 
@@ -155,6 +155,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
                             )
                         }
                     }
+                    GiftCardDetailsDialog().show(requireActivity())
+                    val navController = findNavController()
+                    navController.popBackStack(navController.graph.startDestinationId, true)
                 }
             }
         }

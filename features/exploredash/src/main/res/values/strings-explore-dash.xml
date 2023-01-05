@@ -174,4 +174,19 @@
     <string name="purchase_gift_card_discount">Discount</string>
     <string name="purchase_gift_card_you_pay">You pay</string>
     <string name="purchase_gift_card_confirm">Confirm</string>
+    <string name="purchase_gift_card_details">Gift card details</string>
+    <string name="purchase_original_purchase">Original purchase</string>
+    <string name="purchase_check_current_balance">Check current balance</string>
+    <string name="purchase_card_number">Card Number</string>
+    <string name="purchase_card_pin">Card PIN</string>
+    <string name="purchase_view_transaction">View Transaction Details</string>
+    <string name="purchase_see_how_to_use_gift_card">See how to use a gift card</string>
+    <string name="purchase_how_to_use_gift_card">How to use a gift card</string>
+    <string name="purchase_self_checkout">Self-checkout</string>
+    <string name="purchase_Request_assistance">Request assistance from an employee to redeem a digital gift card.</string>
+    <string name="purchase_in_store">In store</string>
+    <string name="purchase_tell_the_cashier">Tell the cashier that you are paying with a digital gift card. Cashier: type the total amount on the Bankcard field, then type the gift card number in the Account field and press Enter.</string>
+    <string name="purchase_online">Online</string>
+    <string name="purchase_in_the_payment_section">In the payment section, enter your digital gift card number into the gift card field.</string>
+    <string name="purchase_powered_by">Powered by</string>
 </resources>
