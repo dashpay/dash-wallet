@@ -23,6 +23,7 @@ import android.os.Bundle
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.style.ImageSpan
+import android.view.Gravity
 import android.view.MenuItem
 import android.widget.TextView
 import androidx.activity.viewModels
@@ -81,6 +82,9 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_uphold_tranfser)
 
+        val balanceStr = intent.getStringExtra(EXTRA_MAX_AMOUNT)
+        balance = Coin.parseCoin(balanceStr)
+
         if (savedInstanceState == null) {
             val fragment = EnterAmountFragment.newInstance()
             supportFragmentManager.beginTransaction()
@@ -103,6 +107,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
                 getString(R.string.uphold_transfer),
                 TextView(this).apply {
                     text = SpannableString.valueOf(builder)
+                    gravity = Gravity.CENTER_VERTICAL or Gravity.CENTER_HORIZONTAL
                 }
             )
         }
@@ -117,8 +122,6 @@ class UpholdTransferActivity : InteractionAwareActivity() {
 
         title = intent.getStringExtra(EXTRA_TITLE)
 
-        val balanceStr = intent.getStringExtra(EXTRA_MAX_AMOUNT)
-        balance = Coin.parseCoin(balanceStr)
         enterAmountViewModel.setMaxAmount(balance)
 
         enterAmountViewModel.onContinueEvent.observe(this) {
