@@ -30,14 +30,12 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.livedata.ConnectionLiveData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
@@ -84,8 +82,7 @@ class ExploreViewModel @Inject constructor(
     private val locationProvider: UserLocationStateInt,
     private val syncStatusService: DataSyncStatusService,
     private val analyticsService: AnalyticsService,
-    private val repository: DashDirectRepository,
-    private val walletData: WalletDataProvider
+    private val repository: DashDirectRepository
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -114,24 +111,23 @@ class ExploreViewModel @Inject constructor(
     var exploreTopic = ExploreTopic.Merchants
         private set
     var previousCameraGeoBounds = GeoBounds.noBounds
-    var previousZoomLevel: Float = -1.0f
+    var previousZoomLevel:  Float = -1.0f
     private var lastResolvedAddress: GeoBounds? = null
     private var _currentUserLocation: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
     val currentUserLocation = _currentUserLocation.asLiveData()
 
     private val _selectedTerritory = MutableStateFlow("")
     val selectedTerritory = _selectedTerritory.asLiveData()
-    fun setSelectedTerritory(territory: String) {
+    fun setSelectedTerritory(territory: String){
         _selectedTerritory.value = territory
     }
 
     // Can be miles or kilometers, see isMetric
     private val _selectedRadiusOption = MutableStateFlow(DEFAULT_RADIUS_OPTION)
     val selectedRadiusOption = _selectedRadiusOption.asLiveData()
-    fun setSelectedRadiusOption(selectedRadius: Int) {
+    fun setSelectedRadiusOption(selectedRadius: Int){
         _selectedRadiusOption.value = selectedRadius
     }
-
     // In meters
     val radius: Double
         get() = if (isMetric) (selectedRadiusOption.value ?: DEFAULT_RADIUS_OPTION) * Const.METERS_IN_KILOMETER
@@ -225,8 +221,8 @@ class ExploreViewModel @Inject constructor(
                                 clearSearchResults()
                                 _searchBounds
                                     .filter {
-                                        (mode != FilterMode.Nearby || _isLocationEnabled.value == true) &&
-                                            screenState.value == ScreenState.SearchResults
+                                        (mode != FilterMode.Nearby || _isLocationEnabled.value == true)
+                                                && screenState.value == ScreenState.SearchResults
                                     }
                                     .map { bounds ->
                                         if (bounds != null && isLocationEnabled.value == true &&
@@ -322,11 +318,9 @@ class ExploreViewModel @Inject constructor(
             .filter {
                 val lastResolved = lastResolvedAddress
                 isLocationEnabled.value == true &&
-                    it.zoomLevel > MIN_ZOOM_LEVEL &&
-                    (
-                        selectedTerritory.value?.isEmpty() == true || lastResolved == null ||
-                            locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2
-                        )
+                it.zoomLevel > MIN_ZOOM_LEVEL &&
+                (selectedTerritory.value?.isEmpty() == true || lastResolved == null ||
+                locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2)
             }
             .onEach(::resolveAddress)
             .launchIn(viewModelWorkerScope)
@@ -413,12 +407,12 @@ class ExploreViewModel @Inject constructor(
             giftCardAmount = giftCardAmount,
             currency = currency,
             merchantId = merchantId,
-            userEmail = "hadia.ismail@dash.org"
+            userEmail = ""
         )
 
     fun onMapMarkerSelected(id: Int) {
-        val item = _allMerchantLocations.value?.firstOrNull { it.id == id }
-            ?: _physicalSearchResults.value?.firstOrNull { it.id == id }
+        val item = _allMerchantLocations.value?.firstOrNull { it.id == id } ?:
+                   _physicalSearchResults.value?.firstOrNull { it.id == id }
         item?.let {
             if (item is Merchant) {
                 openMerchantDetails(item)
@@ -443,12 +437,7 @@ class ExploreViewModel @Inject constructor(
                 val limitResults = _isLocationEnabled.value != true || selectedTerritory.value?.isNotEmpty() == true
                 val limit = if (limitResults) 100 else -1
                 exploreData.observeMerchantLocations(
-                    merchantId,
-                    source,
-                    selectedTerritory.value!!,
-                    "",
-                    radiusBounds,
-                    limit
+                    merchantId, source, selectedTerritory.value!!, "", radiusBounds, limit
                 )
             }
             .onEach { locations ->
@@ -470,7 +459,7 @@ class ExploreViewModel @Inject constructor(
         val nearest = item ?: nearestLocation
         // Cannot show nearest location if there are more than 1 in group and location is disabled
         return (nearest is Merchant && nearest.physicalAmount <= 1) ||
-            (isLocationEnabled.value == true && selectedTerritory.value?.isEmpty() == true)
+                (isLocationEnabled.value == true && selectedTerritory.value?.isEmpty() == true)
     }
 
     fun backFromMerchantLocation() {
@@ -536,9 +525,9 @@ class ExploreViewModel @Inject constructor(
         val userLat = currentUserLocation.value?.latitude
         val userLng = currentUserLocation.value?.longitude
         val byDistance = _filterMode.value != FilterMode.Online &&
-            _isLocationEnabled.value == true &&
-            userLat != null && userLng != null &&
-            sortByDistance
+                _isLocationEnabled.value == true &&
+                userLat != null && userLng != null &&
+                sortByDistance
         val onlineFirst = _isLocationEnabled.value != true
 
         val pagerConfig = PagingConfig(
@@ -568,13 +557,8 @@ class ExploreViewModel @Inject constructor(
             Pager(pagerConfig) {
                 val types = getAtmTypes(filterMode)
                 exploreData.observeAtmsPaging(
-                    query,
-                    territory,
-                    types,
-                    bounds,
-                    byDistance,
-                    userLat ?: 0.0,
-                    userLng ?: 0.0
+                    query, territory, types, bounds,
+                    byDistance, userLat ?: 0.0, userLng ?: 0.0
                 )
             }.flow.map { data ->
                 data.map {
@@ -600,19 +584,14 @@ class ExploreViewModel @Inject constructor(
             val result = if (exploreTopic == ExploreTopic.Merchants) {
                 val type = getMerchantType(filterMode.value ?: FilterMode.Online)
                 exploreData.getMerchantsResultCount(
-                    _searchQuery.value,
-                    selectedTerritory.value!!,
-                    type,
-                    paymentMethodFilter,
-                    radiusBounds ?: GeoBounds.noBounds
+                        _searchQuery.value, selectedTerritory.value!!, type,
+                        paymentMethodFilter, radiusBounds ?: GeoBounds.noBounds
                 )
             } else {
                 val types = getAtmTypes(filterMode.value ?: FilterMode.All)
                 exploreData.getAtmsResultsCount(
-                    _searchQuery.value,
-                    types,
-                    selectedTerritory.value!!,
-                    radiusBounds ?: GeoBounds.noBounds
+                        _searchQuery.value, types,
+                        selectedTerritory.value!!, radiusBounds ?: GeoBounds.noBounds
                 )
             }
             _pagingSearchResultsCount.postValue(result)
@@ -659,8 +638,7 @@ class ExploreViewModel @Inject constructor(
             min(original.eastLng, inRadius.eastLng),
             max(original.southLat, inRadius.southLat),
             max(original.westLng, inRadius.westLng),
-            original.centerLat,
-            original.centerLng,
+            original.centerLat, original.centerLng,
             original.zoomLevel
         )
     }
@@ -707,7 +685,7 @@ class ExploreViewModel @Inject constructor(
                     }
                 }
                 progress.status == Status.LOADING && !isOnline -> {
-                    if (!observedLastError) {
+                    if(!observedLastError) {
                         Resource.error(FirebaseNetworkException("network is offline"))
                     } else {
                         Resource.success(100.0) // hide errors if already observed
@@ -739,17 +717,17 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun triggerPanAndZoomEvents(currentZoomLevel: Float, currentGeoBounds: GeoBounds) {
+    fun triggerPanAndZoomEvents(currentZoomLevel: Float, currentGeoBounds: GeoBounds){
         when {
             hasZoomLevelChanged(currentZoomLevel) -> {
-                if (exploreTopic == ExploreTopic.Merchants) {
+                if (exploreTopic == ExploreTopic.Merchants){
                     logEvent(AnalyticsConstants.Explore.ZOOM_MERCHANT_MAP)
                 } else {
                     logEvent(AnalyticsConstants.Explore.ZOOM_ATM_MAP)
                 }
             }
             hasCameraCenterChanged(currentGeoBounds) -> {
-                if (exploreTopic == ExploreTopic.Merchants) {
+                if (exploreTopic == ExploreTopic.Merchants){
                     logEvent(AnalyticsConstants.Explore.PAN_MERCHANT_MAP)
                 } else {
                     logEvent(AnalyticsConstants.Explore.PAN_ATM_MAP)
@@ -774,28 +752,28 @@ class ExploreViewModel @Inject constructor(
             }
         }
 
-        if (sortByDistance == DEFAULT_SORT_BY_DISTANCE) {
-            if (exploreTopic == ExploreTopic.Merchants) {
+        if (sortByDistance == DEFAULT_SORT_BY_DISTANCE){
+            if (exploreTopic == ExploreTopic.Merchants){
                 logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE)
             } else {
                 logEvent(AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_DISTANCE)
             }
         } else {
-            if (exploreTopic == ExploreTopic.Merchants) {
+            if (exploreTopic == ExploreTopic.Merchants){
                 logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_NAME)
             } else {
                 logEvent(AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_NAME)
             }
         }
 
-        if (_selectedTerritory.value.isEmpty()) {
-            if (exploreTopic == ExploreTopic.Merchants) {
+        if ( _selectedTerritory.value.isEmpty()){
+            if (exploreTopic == ExploreTopic.Merchants){
                 logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_CURRENT_LOCATION)
             } else {
                 logEvent(AnalyticsConstants.Explore.FILTER_ATM_CURRENT_LOCATION)
             }
         } else {
-            if (exploreTopic == ExploreTopic.Merchants) {
+            if (exploreTopic == ExploreTopic.Merchants){
                 logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_SELECTED_LOCATION)
             } else {
                 logEvent(AnalyticsConstants.Explore.FILTER_ATM_SELECTED_LOCATION)
@@ -803,7 +781,7 @@ class ExploreViewModel @Inject constructor(
         }
 
         logEvent(
-            when (_selectedRadiusOption.value) {
+            when(_selectedRadiusOption.value){
                 1 -> {
                     if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.Explore.FILTER_MERCHANT_ONE_MILE
                     else AnalyticsConstants.Explore.FILTER_ATM_ONE_MILE
@@ -823,21 +801,21 @@ class ExploreViewModel @Inject constructor(
             }
         )
 
-        if (_isLocationEnabled.value == true) {
-            if (exploreTopic == ExploreTopic.Merchants) {
+        if (_isLocationEnabled.value == true){
+            if (exploreTopic == ExploreTopic.Merchants){
                 logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_LOCATION_ALLOWED)
             } else {
                 logEvent(AnalyticsConstants.Explore.FILTER_ATM_LOCATION_ALLOWED)
             }
         } else {
-            if (exploreTopic == ExploreTopic.Merchants) {
+            if (exploreTopic == ExploreTopic.Merchants){
                 logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_LOCATION_DENIED)
             } else {
                 logEvent(AnalyticsConstants.Explore.FILTER_ATM_LOCATION_DENIED)
             }
         }
 
-        if (exploreTopic == ExploreTopic.Merchants) {
+        if (exploreTopic == ExploreTopic.Merchants){
             logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_APPLY_ACTION)
         } else {
             logEvent(AnalyticsConstants.Explore.FILTER_ATM_APPLY_ACTION)
@@ -845,14 +823,14 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun trackDismissEvent() {
-        if (isDialogDismissedOnCancel) {
-            if (exploreTopic == ExploreTopic.Merchants) {
+        if (isDialogDismissedOnCancel){
+            if (exploreTopic == ExploreTopic.Merchants){
                 logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_CANCEL_ACTION)
             } else {
                 logEvent(AnalyticsConstants.Explore.FILTER_ATM_CANCEL_ACTION)
             }
         } else {
-            if (exploreTopic == ExploreTopic.Merchants) {
+            if (exploreTopic == ExploreTopic.Merchants){
                 logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_SWIPE_ACTION)
             } else {
                 logEvent(AnalyticsConstants.Explore.FILTER_ATM_SWIPE_ACTION)
@@ -863,11 +841,4 @@ class ExploreViewModel @Inject constructor(
     fun logEvent(event: String) {
         analyticsService.logEvent(event, bundleOf())
     }
-    //TODO Change to card payment
-    val transcation_id = walletData.wrapAllTransactions()
-            .sortedWith(TransactionWrapperComparator())
-            .map {
-                it.transactions.first().txId
-            }.last()
-
 }
