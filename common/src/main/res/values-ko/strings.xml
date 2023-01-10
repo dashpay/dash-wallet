@@ -16,6 +16,12 @@
     <string name="error">오류</string>
     <string name="select_a_coin">코인 선택</string>
     <string name="request_coins_share_dialog_title">대시 요청을 공유합니다...</string>
+    <string name="buy_with_fiat">법정 화폐로 대시 구매하기</string>
+    <string name="buy_and_convert">다른 암호화폐로 대시 구매 및 전환하기</string>
+    <string name="transfer_dash">대시 송금하기</string>
+    <string name="login_error_title">%s 계정에 로그인할 수 없습니다</string>
+    <string name="login_error_message">%s 계정에 로그인하는 동안 오류가 발생하였습니다.</string>
+    <string name="balance">잔고:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">건지섬 파운드</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">이해합니다</string>
     <string name="button_okay">알겠습니다</string>
     <string name="button_share">공유</string>
+    <string name="share_address">주소 공유하기</string>
     <string name="verify">인증하기</string>
     <string name="receive_enter_amount_button">금액 특정하기</string>
 

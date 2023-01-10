@@ -93,7 +93,7 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
 
                 @Override
                 protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
-                    SweepWalletActivity.start(SendCoinsQrActivity.this, key, false);
+                    SweepWalletActivity.Companion.start(SendCoinsQrActivity.this, key, false);
 
                     if (isQuickScan()) {
                         SendCoinsQrActivity.this.finish();

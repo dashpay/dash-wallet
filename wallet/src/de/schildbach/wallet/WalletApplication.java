@@ -277,25 +277,8 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void syncExploreData() {
-        Data.Builder inputData = new Data.Builder().putBoolean(
-                ExploreSyncWorker.USE_TEST_DB_KEY,
-                !Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET)
-        );
-        OneTimeWorkRequest syncDataWorkRequest =
-                new OneTimeWorkRequest.Builder(ExploreSyncWorker.class)
-                        .setBackoffCriteria(
-                                BackoffPolicy.EXPONENTIAL,
-                                WorkRequest.DEFAULT_BACKOFF_DELAY_MILLIS,
-                                TimeUnit.MILLISECONDS
-                        )
-                        .setInputData(inputData.build())
-                        .build();
-
-        WorkManager.getInstance(this.getApplicationContext()).enqueueUniqueWork(
-                "Sync Explore Data",
-                ExistingWorkPolicy.KEEP,
-                syncDataWorkRequest
-        );
+        boolean isMainNet = Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET);
+        ExploreSyncWorker.Companion.run(getApplicationContext(), isMainNet);
     }
 
     public void fullInitialization() {

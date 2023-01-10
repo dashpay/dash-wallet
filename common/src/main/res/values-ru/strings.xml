@@ -16,6 +16,12 @@
     <string name="error">Ошибка</string>
     <string name="select_a_coin">Выбрать монету</string>
     <string name="request_coins_share_dialog_title">Поделиться запросом…</string>
+    <string name="buy_with_fiat">Купить Dash за фиат</string>
+    <string name="buy_and_convert">Купить и конвертировать Dash с помощью другой криптовалюты</string>
+    <string name="transfer_dash">Перевести Dash</string>
+    <string name="login_error_title">Невозможно войти в ваш аккаунт %s</string>
+    <string name="login_error_message">Во время входа в ваш аккаунт %s произошла ошибка.</string>
+    <string name="balance">Баланс:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Гернсийский фунт</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">Я понимаю</string>
     <string name="button_okay">Да</string>
     <string name="button_share">Поделиться</string>
+    <string name="share_address">Поделиться адресом</string>
     <string name="verify">Подтвердить</string>
     <string name="receive_enter_amount_button">Введите сумму</string>
 
