@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2021 Dash Core Group.
  *
@@ -48,7 +49,7 @@ class DashDirectRepository @Inject constructor(
     }
 
     override fun isUserSignIn() =
-        runBlocking { config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: true }
+        runBlocking { config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: false }
 
     fun reset() {
         runBlocking { config.setPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN, "") }
