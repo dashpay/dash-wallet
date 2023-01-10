@@ -40,6 +40,7 @@ import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.repository.DashDirectRepository
+import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
@@ -82,7 +83,7 @@ class ExploreViewModel @Inject constructor(
     private val locationProvider: UserLocationStateInt,
     private val syncStatusService: DataSyncStatusService,
     private val analyticsService: AnalyticsService,
-    private val repository: DashDirectRepository
+    private val repository: DashDirectRepositoryInt
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
