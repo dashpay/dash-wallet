@@ -27,7 +27,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.Invitation
 import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.DashPayUserActivity
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
@@ -38,6 +38,7 @@ import kotlinx.android.synthetic.main.fragment_invite_details.send_button
 import kotlinx.android.synthetic.main.fragment_invite_details.tag_edit
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.util.KeyboardUtil
 
 @AndroidEntryPoint

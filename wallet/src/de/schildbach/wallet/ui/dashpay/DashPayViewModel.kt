@@ -15,15 +15,11 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
-import android.app.Application
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.UsernameSearch
-import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
@@ -42,18 +38,20 @@ import javax.inject.Inject
 
 @HiltViewModel
 open class DashPayViewModel @Inject constructor(
-    application: Application,
+    private val walletApplication: WalletApplication,
     private val analytics: AnalyticsService,
+    private val platformRepo: PlatformRepo,
+    private val blockchainState: BlockchainStateDao,
+    private val dashPayProfile: DashPayProfileDaoAsync,
+    private val userAlert: UserAlertDaoAsync,
+    private val invitations: InvitationsDaoAsync,
     val platformSyncService: PlatformSyncService,
-    val platformBroadcastService: PlatformBroadcastService
-) : AndroidViewModel(application) {
+    private val platformBroadcastService: PlatformBroadcastService
+) : ViewModel() {
 
     companion object {
-        val log = LoggerFactory.getLogger(DashPayViewModel::class.java)
+        private val log = LoggerFactory.getLogger(DashPayViewModel::class.java)
     }
-
-    protected val platformRepo = PlatformRepo.getInstance()
-    protected val walletApplication = application as WalletApplication
 
     private val usernameLiveData = MutableLiveData<String?>()
     private val userSearchLiveData = MutableLiveData<UserSearch>()
@@ -63,7 +61,7 @@ open class DashPayViewModel @Inject constructor(
     val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformSyncService)
     val frequentContactsLiveData = FrequentContactsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
-    val blockchainStateData = AppDatabase.getAppDatabase().blockchainStateDao().load()
+    val blockchainStateData = blockchainState.load()
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
@@ -108,7 +106,7 @@ open class DashPayViewModel @Inject constructor(
     }
 
     fun dashPayProfileData(username: String): LiveData<DashPayProfile?> {
-        return AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUsernameDistinct(username)
+        return dashPayProfile.loadByUsernameDistinct(username)
     }
 
     override fun onCleared() {
@@ -194,9 +192,9 @@ open class DashPayViewModel @Inject constructor(
         return platformRepo.getNextContactAddress(userId, accountReference)
     }
 
-    val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(application)
+    val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
 
-    fun allUsersLiveData() = AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserId()
+    fun allUsersLiveData() = dashPayProfile.loadByUserId()
 
     fun sendContactRequest(toUserId: String) {
         var recentlyModifiedContacts = recentlyModifiedContactsLiveData.value
@@ -287,7 +285,7 @@ open class DashPayViewModel @Inject constructor(
 
     fun dismissUserAlert(alertId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            AppDatabase.getAppDatabase().userAlertDaoAsync().dismiss(alertId)
+            userAlert.dismiss(alertId)
             notificationsLiveData.onContactsUpdated()
         }
     }
@@ -295,5 +293,5 @@ open class DashPayViewModel @Inject constructor(
     private inner class UserSearch(val text: String, val limit: Int = 100,
                                    val excludeIds: ArrayList<String> = arrayListOf())
 
-    val inviteHistory = AppDatabase.getAppDatabase().invitationsDaoAsync().loadAll()
+    val inviteHistory = invitations.loadAll()
 }

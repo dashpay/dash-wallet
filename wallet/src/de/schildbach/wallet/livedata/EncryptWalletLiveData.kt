@@ -21,15 +21,16 @@ import android.os.AsyncTask
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.SecurityGuard
-import de.schildbach.wallet.util.FingerprintHelper
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.wallet.Wallet
 import org.slf4j.LoggerFactory
 
 class EncryptWalletLiveData(
-    private val walletApplication: WalletApplication
+    private val walletApplication: WalletApplication,
+    private val biometricHelper: BiometricHelper
 ) : MutableLiveData<Resource<Wallet>>() {
 
     private val log = LoggerFactory.getLogger(EncryptWalletLiveData::class.java)
@@ -38,8 +39,6 @@ class EncryptWalletLiveData(
     private var decryptWalletTask: DecryptWalletTask? = null
 
     private var scryptIterationsTarget: Int = Constants.SCRYPT_ITERATIONS_TARGET
-    private var fingerprintHelper = FingerprintHelper(walletApplication)
-
     private val securityGuard = SecurityGuard()
 
     fun savePin(pin: String) {
@@ -65,7 +64,7 @@ class EncryptWalletLiveData(
     fun changePassword(oldPin: String, newPin: String) {
         value = if (securityGuard.checkPin(oldPin)) {
             securityGuard.savePin(newPin)
-            fingerprintHelper.clear()
+            biometricHelper.clearBiometricInfo()
             Resource.success(walletApplication.wallet)
         } else {
             Resource.error("", null)

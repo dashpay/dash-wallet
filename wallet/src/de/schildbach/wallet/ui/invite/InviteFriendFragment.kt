@@ -22,13 +22,13 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
-import de.schildbach.wallet.ui.setupActionBarWithTitle
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.fragment_integration_overview.*
 import kotlinx.android.synthetic.main.fragment_invite_friend.*
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -51,7 +51,8 @@ class InviteFriendFragment(private val startedByHistory: Boolean)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupActionBarWithTitle(R.string.invitation_init_title)
+        toolbar.title = getString(R.string.invitation_init_title)
+        toolbar.setNavigationOnClickListener { requireActivity().finish() }
 
         walletApplication = requireActivity().application as WalletApplication
         create_invitation_button.setOnClickListener {

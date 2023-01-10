@@ -24,41 +24,46 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
+import androidx.navigation.fragment.findNavController
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
+import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.InputParser.StringInputParser
-import de.schildbach.wallet.ui.dashpay.BottomNavFragment
+import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
+import de.schildbach.wallet.ui.payments.PaymentsFragment
+import de.schildbach.wallet.ui.payments.PaymentsPayFragment
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
-import de.schildbach.wallet.ui.send.SweepWalletActivity
+import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HomeContentBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
-@FlowPreview
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
-class WalletFragment : BottomNavFragment(R.layout.home_content) {
-
+class WalletFragment : Fragment(R.layout.home_content) {
     companion object {
         private val log = LoggerFactory.getLogger(WalletFragment::class.java)
     }
@@ -66,6 +71,7 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
     private val viewModel: MainViewModel by activityViewModels()
     private val binding by viewBinding(HomeContentBinding::bind)
     @Inject lateinit var configuration: Configuration
+    @Inject lateinit var authManager: AuthenticationManager
 
     private val scanLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -80,6 +86,8 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        reenterTransition = MaterialFadeThrough()
         initShortcutActions()
 
         val params = binding.appBar.layoutParams as CoordinatorLayout.LayoutParams
@@ -100,17 +108,17 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.isBlockchainSyncFailed.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.mostRecentTransaction.observe(viewLifecycleOwner) { mostRecentTransaction: Transaction ->
-            log.info("most recent transaction: {}", mostRecentTransaction.txId
-            )
+            log.info("most recent transaction: {}", mostRecentTransaction.txId)
+
             if ((activity as? LockScreenActivity)?.lockScreenDisplayed != true && !configuration.hasDisplayedTaxCategoryExplainer
                 && WalletUtils.getTransactionDate(mostRecentTransaction).time >= configuration.taxCategoryInstallTime
             ) {
                 val dialogFragment: TaxCategoryExplainerDialogFragment =
                     TaxCategoryExplainerDialogFragment.newInstance(mostRecentTransaction.txId)
-                dialogFragment.show(activity?.supportFragmentManager!!, "taxcategorydialog") {
+                dialogFragment.show(requireActivity()) {
                     val transactionDetailsDialogFragment: TransactionDetailsDialogFragment =
                         TransactionDetailsDialogFragment.newInstance(mostRecentTransaction.txId)
-                    transactionDetailsDialogFragment.show(activity?.supportFragmentManager!!, null)
+                    transactionDetailsDialogFragment.show(requireActivity())
                 }
                 configuration.setHasDisplayedTaxCategoryExplainer()
             }
@@ -135,7 +143,7 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
                 }
                 binding.shortcutsPane.buySellButton -> {
                     viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL)
-                    startActivity(BuyAndSellIntegrationsActivity.createIntent(requireContext()))
+                    safeNavigate(WalletFragmentDirections.homeToBuySell())
                 }
                 binding.shortcutsPane.payToAddressButton -> {
                     handlePayToAddress()
@@ -145,15 +153,26 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
                 }
                 binding.shortcutsPane.receiveButton -> {
                     viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE)
-                    (requireActivity() as OnSelectPaymentTabListener).onSelectPaymentTab(
-                        PaymentsFragment.ACTIVE_TAB_RECEIVE
+                    findNavController().navigate(
+                        R.id.paymentsFragment,
+                        bundleOf(
+                            PaymentsFragment.ARG_ACTIVE_TAB to
+                                    PaymentsFragment.ACTIVE_TAB_RECEIVE
+                        )
                     )
                 }
                 binding.shortcutsPane.importPrivateKey -> {
                     SweepWalletActivity.start(requireContext(), true)
                 }
                 binding.shortcutsPane.explore -> {
-                    (requireActivity() as OnSelectPaymentTabListener).onSelectExploreTab()
+                    findNavController().navigate(
+                        R.id.exploreFragment,
+                        bundleOf(),
+                        NavOptions.Builder()
+                            .setEnterAnim(R.anim.slide_in_bottom)
+                            .setPopUpTo(R.id.walletFragment, true)
+                            .build()
+                    )
                 }
             }
         }
@@ -196,13 +215,10 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
     }
 
     private fun handleVerifySeed() {
-        val checkPinSharedModel = ViewModelProvider(requireActivity())[CheckPinSharedModel::class.java]
-        checkPinSharedModel.onCorrectPinCallback.observe(viewLifecycleOwner) { data ->
-            if (data?.second != null) {
-                startVerifySeedActivity(data.second)
-            }
+        lifecycleScope.launch {
+            val pin = authManager.authenticate(requireActivity())
+            pin?.let { startVerifySeedActivity(pin) }
         }
-        CheckPinDialog.show(requireActivity(), 0)
     }
 
     private fun handleScan(clickView: View?) {
@@ -222,10 +238,8 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
     }
 
     private fun handleSelectContact() {
-        if (requireActivity() is PaymentsPayFragment.OnSelectContactToPayListener) {
-            viewModel.logEvent(AnalyticsConstants.UsersContacts.SHORTCUT_SEND_TO_CONTACT)
-            (requireActivity() as PaymentsPayFragment.OnSelectContactToPayListener).selectContactToPay()
-        }
+        viewModel.logEvent(AnalyticsConstants.UsersContacts.SHORTCUT_SEND_TO_CONTACT)
+        safeNavigate(WalletFragmentDirections.homeToContacts(ShowNavBar = false, mode = ContactsScreenMode.SELECT_CONTACT))
     }
 
     private fun handlePayToAddress() {
@@ -286,7 +300,7 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
                     R.drawable.ic_info_red,
                     getString(errorDialogTitleResId),
                     if (messageArgs.isNotEmpty()) {
-                        getString(messageResId, messageArgs)
+                        getString(messageResId, *messageArgs)
                     } else {
                         getString(messageResId)
                     },
@@ -302,10 +316,5 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
                 error(null, cannotClassifyCustomMessageResId, input)
             }
         }.parse()
-    }
-
-    interface OnSelectPaymentTabListener {
-        fun onSelectPaymentTab(mode: Int)
-        fun onSelectExploreTab()
     }
 }

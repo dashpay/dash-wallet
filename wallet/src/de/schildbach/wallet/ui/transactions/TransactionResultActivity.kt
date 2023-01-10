@@ -32,8 +32,8 @@ import de.schildbach.wallet.ui.main.MainActivity
 
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.AbstractWalletActivity
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
@@ -43,8 +43,6 @@ import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dashj.platform.dashpay.BlockchainIdentity
@@ -53,8 +51,6 @@ import org.slf4j.LoggerFactory
 /**
  * @author Samuel Barbosa
  */
-@FlowPreview
-@ExperimentalCoroutinesApi
 class TransactionResultActivity : AbstractWalletActivity() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)

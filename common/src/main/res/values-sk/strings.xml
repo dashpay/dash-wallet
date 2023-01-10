@@ -14,6 +14,9 @@
     <string name="email">Email</string>
     <string name="email_placeholder">napr. johndoe@mail.com</string>
     <string name="error">Chyba</string>
+    <string name="select_a_coin">Vyberte mincu</string>
+    <string name="request_coins_share_dialog_title">Zdieľať požiadavku na Dash…</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernseyova libra</string>
     <!-- Local Currency List: JEP -->
@@ -37,6 +40,7 @@
     <string name="button_dismiss">Zrušiť</string>
     <string name="network_unavailable_return">Návrat do Peňaženky</string>
     <string name="button_continue">Pokračovať</string>
+    <string name="get_quote">Získajte ponuku</string>
     <string name="button_close">Zatvoriť</string>
     <string name="button_retry">Znovu</string>
     <string name="button_send_report">Poslať správu</string>
@@ -46,13 +50,21 @@
     <string name="button_okay">Dobre</string>
     <string name="button_share">Zdieľať</string>
     <string name="verify">Overiť</string>
+    <string name="receive_enter_amount_button">Zadať množstvo</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Hľadať</string>
     <string name="permission_allow">Povoliť</string>
     <string name="permission_deny">Zamietnuť</string>
+    <string name="pay_with">Platiť s</string>
+    <string name="choose_payment_method">Vyberte si metódu platby</string>
+    <string name="debit_credit_card">Debetná/kreditná karta</string>
     <string name="max">Max</string>
+    <string name="select_the_coin">Vyberte mincu</string>
     <string name="dash">Dash</string>
+    <string name="dash_wallet_name">Peňaženka Dash</string>
+    <string name="from">od</string>
+    <string name="to">pre</string>
     <string name="select_currency">Vyberte menu</string>
     <string name="send_coins_error_dusty_send">Čiastka je príliš nízka pre odoslanie</string>
     <string name="send_coins_error_insufficient_money">Nedostatok prostriedkov</string>

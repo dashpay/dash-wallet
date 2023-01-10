@@ -26,6 +26,7 @@ import org.dash.wallet.common.data.ExchangeRate
 /**
  * @author Samuel Barbosa
  */
+@Deprecated("Inject ExchangeRatesProvider into your viewModel instead")
 class ExchangeRatesViewModel : ViewModel() {
     private val exchangeRatesRepository = ExchangeRatesRepository.instance
 

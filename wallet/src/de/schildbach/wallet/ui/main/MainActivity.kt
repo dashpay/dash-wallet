@@ -55,34 +55,26 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser
-import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_RECENT
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet.ui.backup.RestoreFromFileHelper
-import de.schildbach.wallet.ui.dashpay.ContactSearchResultsAdapter
-import de.schildbach.wallet.ui.dashpay.ContactsFragment
-import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SEARCH_CONTACTS
-import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CONTACT
-import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_VIEW_REQUESTS
-import de.schildbach.wallet.ui.dashpay.CreateIdentityService
-import de.schildbach.wallet.ui.dashpay.UpgradeToEvolutionFragment
-import de.schildbach.wallet.ui.explore.ExploreFragment
+import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
+import de.schildbach.wallet.ui.main.WalletActivityExt.setupBottomNavigation
+import de.schildbach.wallet.ui.payments.PaymentsPayFragment
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
-import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet.util.Nfc
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityMainBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.CurrencyInfo
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import java.io.IOException
@@ -90,13 +82,11 @@ import java.util.*
 import javax.inject.Inject
 
 
+// TODO: check WalletActivity commits
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPermissionsResultCallback,
-        UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
-    EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
-    PaymentsPayFragment.OnSelectContactToPayListener, WalletFragment.OnSelectPaymentTabListener,
-        ContactSearchResultsAdapter.OnViewAllRequestsListener {
+    UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
+    EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
 
     companion object {
         const val REQUEST_CODE_SCAN = 0
@@ -125,13 +115,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
+    private val baseAlertDialogBuilder = BaseAlertDialogBuilder(this)
     private val viewModel: MainViewModel by viewModels()
     @Inject
     lateinit var config: Configuration
     private lateinit var binding: ActivityMainBinding
     private var isRestoringBackup = false
     private var showBackupWalletDialog = false
-    private var fingerprintHelper: FingerprintHelper? = null
     private var retryCreationIfInProgress = true
     private var pendingInvite: InvitationLinkData? = null
 
@@ -143,6 +133,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        this.setupBottomNavigation(viewModel)
 
         initViewModel()
         handleCreateFromInvite()
@@ -159,8 +150,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             //Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false)
         }
-        initFingerprintHelper()
-        setupBottomNavigation()
     }
 
     override fun onStart() {
@@ -220,14 +209,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 }
             }
         }
-
-        viewModel.goBackAndStartActivityEvent.observe(this) {
-            goBack(true)
-            //Delay added to prevent fragment being removed and activity being launched "at the same time"
-            Handler().postDelayed({
-                startActivity(Intent(this, it))
-            }, 500)
-        }
         viewModel.showCreateUsernameEvent.observe(this) {
             startActivity(Intent(this, CreateUsernameActivity::class.java))
         }
@@ -276,9 +257,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun showInviteSendContactRequestDialog(initInvitationUserId: String) {
-        viewModel.platformRepo.loadProfileByUserId(initInvitationUserId).observe(this@MainActivity) {
-            val dialog = InviteSendContactRequestDialog.newInstance(this@MainActivity, it!!)
-            dialog.show(supportFragmentManager, null)
+        lifecycleScope.launch {
+            viewModel.getProfile(initInvitationUserId)?.let { profile ->
+                val dialog = InviteSendContactRequestDialog.newInstance(this@MainActivity, profile)
+                dialog.show(supportFragmentManager, null)
+            }
         }
     }
 
@@ -305,63 +288,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    private fun setupBottomNavigation() {
-        binding.bottomNavigation.itemIconTintList = null
-        supportFragmentManager.addOnBackStackChangedListener {
-            val lastFragment = supportFragmentManager.fragments.last()
-            val itemId = when(lastFragment::class) {
-                WalletFragment::class -> R.id.bottom_home
-                ContactsFragment::class,
-                UpgradeToEvolutionFragment::class -> R.id.contacts
-                PaymentsFragment::class -> R.id.payments
-                ExploreFragment::class -> R.id.discover
-                MoreFragment::class -> R.id.more
-                else -> binding.bottomNavigation.selectedItemId
-            }
-
-            binding.bottomNavigation.menu.findItem(itemId).isChecked = true
-        }
-        binding.bottomNavigation.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                binding.bottomNavigation.selectedItemId -> {
-                    if (item.itemId == R.id.payments) {
-                        goBack()
-                    }
-                }
-                R.id.bottom_home -> goBack(true)
-                R.id.contacts -> showContacts()
-                R.id.payments -> showPayments()
-                R.id.discover -> showExplore()
-                R.id.more -> showMore()
-            }
-            true
-        }
-    }
-
     override fun onBackPressed() {
         if (!goBack()) {
             super.onBackPressed()
         }
-    }
-
-    private fun startFragmentTransaction(enterAnim: Int, exitAnim: Int): FragmentTransaction {
-        val transaction = supportFragmentManager.beginTransaction()
-        transaction.setCustomAnimations(enterAnim, R.anim.fragment_out, enterAnim, exitAnim)
-        return transaction
-    }
-
-    private fun addFragment(fragment: Fragment, enterAnim: Int = R.anim.fragment_in,
-                            exitAnim: Int = R.anim.fragment_out) {
-        val transaction = startFragmentTransaction(enterAnim, exitAnim)
-        transaction.add(R.id.fragment_container, fragment)
-        transaction.addToBackStack(null).commit()
-    }
-
-    private fun replaceFragment(fragment: Fragment, enterAnim: Int = R.anim.fragment_in,
-                                exitAnim: Int = R.anim.fragment_out) {
-        val transaction = startFragmentTransaction(enterAnim, exitAnim)
-        transaction.replace(R.id.fragment_container, fragment)
-        transaction.addToBackStack(null).commit()
     }
 
     private fun goBack(goHome: Boolean = false): Boolean {
@@ -374,41 +304,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             return true
         }
         return false
-    }
-
-    private fun showContacts(mode: Int = MODE_SEARCH_CONTACTS) {
-        if (viewModel.hasIdentity) {
-            viewModel.blockchainIdentityData.observeOnce(this) {
-                if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
-                    viewModel.dismissUsernameCreatedCard()
-                }
-            }
-            val contactsFragment = ContactsFragment.newInstance(mode)
-            if (mode == MODE_VIEW_REQUESTS) {
-                addFragment(contactsFragment)
-            } else {
-                replaceFragment(contactsFragment)
-            }
-        } else {
-            replaceFragment(UpgradeToEvolutionFragment.newInstance())
-        }
-    }
-
-    private fun showExplore() {
-        val exploreFragment = ExploreFragment()
-        replaceFragment(exploreFragment)
-    }
-
-    private fun showPayments(activeTab: Int = ACTIVE_TAB_RECENT) {
-        val paymentsFragment = PaymentsFragment.newInstance(activeTab)
-        replaceFragment(paymentsFragment, R.anim.fragment_slide_up,
-                R.anim.fragment_slide_down)
-        viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
-    }
-
-    private fun showMore() {
-        val moreFragment = MoreFragment()
-        replaceFragment(moreFragment)
     }
 
     override fun onNewKeyChainEncrypted() {
@@ -522,26 +417,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
         config.disarmBackupReminder()
         upgradeWalletKeyChains(Constants.BIP44_PATH, true)
-        if (fingerprintHelper != null) {
-            fingerprintHelper!!.clear()
-        }
-    }
-
-    private fun enableFingerprint() {
-        config.remindEnableFingerprint = true
-        UnlockWalletDialogFragment.show(supportFragmentManager)
     }
 
     private fun handleInvite(invite: InvitationLinkData) {
         val acceptInviteIntent = AcceptInviteActivity.createIntent(this, invite, false)
         startActivity(acceptInviteIntent)
-    }
-
-    override fun onUnlocked() {
-        if (pendingInvite != null) {
-            handleInvite(pendingInvite!!)
-            pendingInvite = null // clear the invite
-        }
     }
 
     private fun handleIntent(intent: Intent) {
@@ -624,7 +504,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 }
 
                 override fun collectWalletDump(): CharSequence? {
-                    return wallet.toString(false, true, true, null)
+                    return walletApplication.wallet!!.toString(false, true, true, null)
                 }
             }.buildAlertDialog()
             if (!isFinishing) {
@@ -639,7 +519,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     // not encrypt the wallet.
 
     private fun checkWalletEncryptionDialog() {
-        if (!wallet.isEncrypted) {
+        if (!walletApplication.wallet!!.isEncrypted) {
             log.info("the wallet is not encrypted")
             viewModel.logError(
                 Exception("the wallet is not encrypted / OnboardingActivity"),
@@ -692,14 +572,15 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun checkRestoredWalletEncryptionDialog() {
-        if (!wallet.isEncrypted) {
+        if (!walletApplication.wallet!!.isEncrypted) {
             handleEncryptKeysRestoredWallet()
         } else {
             resetBlockchain()
         }
     }
 
-    open fun upgradeWalletKeyChains(path: ImmutableList<ChildNumber?>?, restoreBackup: Boolean): Unit {
+    open fun upgradeWalletKeyChains(path: ImmutableList<ChildNumber?>?, restoreBackup: Boolean) {
+        val wallet = walletApplication.wallet!!
         isRestoringBackup = restoreBackup
         if (!wallet.hasKeyChain(path)) {
             if (wallet.isEncrypted()) {
@@ -723,16 +604,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    private fun initFingerprintHelper() {
-        //Init fingerprint helper
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            fingerprintHelper = FingerprintHelper(this)
-            if (!fingerprintHelper!!.init()) {
-                fingerprintHelper = null
-            }
-        }
-    }
-
     /**
      * Show a Dialog and if user confirms it, set the default fiat currency exchange rate using
      * the country code to generate a Locale and get the currency code from it.
@@ -749,7 +620,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         baseAlertDialogBuilder.positiveAction = {
             config.exchangeCurrencyCodeDetected = true
             config.exchangeCurrencyCode = newCurrencyCode
-            WalletBalanceWidgetProvider.updateWidgets(this@MainActivity, wallet)
+            WalletBalanceWidgetProvider.updateWidgets(this@MainActivity, walletApplication.wallet!!)
         }
         baseAlertDialogBuilder.negativeText = getString(R.string.leave_as, currentCurrencyCode)
         baseAlertDialogBuilder.negativeAction = {
@@ -933,22 +804,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         return super.onOptionsItemSelected(item)
     }
 
-    override fun selectContactToPay() {
-        showContacts(MODE_SELECT_CONTACT)
-    }
-
-    override fun onSelectPaymentTab(mode: Int) {
-        showPayments(mode)
-    }
-
-    override fun onSelectExploreTab() {
-        showExplore()
-    }
-
-    override fun onViewAllRequests() {
-        showContacts(MODE_VIEW_REQUESTS)
-    }
-
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         supportFragmentManager.fragments.forEach {
@@ -962,7 +817,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     override fun onLockScreenDeactivated() {
-        if (config.showNotificationsExplainer) {
+        if (pendingInvite != null) {
+            handleInvite(pendingInvite!!)
+            pendingInvite = null // clear the invite
+        } else if (config.showNotificationsExplainer) {
             explainPushNotifications()
         }
     }

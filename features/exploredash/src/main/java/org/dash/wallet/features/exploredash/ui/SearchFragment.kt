@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
@@ -460,9 +460,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             if (isPayingWithDash){
                 viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
             }
-            viewModel.sendDash()
+
+            deepLinkNavigate(DeepLinkDestination.SendDash)
         }
-        binding.itemDetails.setOnReceiveDashClicked { viewModel.receiveDash() }
+        binding.itemDetails.setOnReceiveDashClicked {
+            deepLinkNavigate(DeepLinkDestination.ReceiveDash)
+        }
         binding.itemDetails.setOnBackButtonClicked {
             viewModel.backFromMerchantLocation()
         }
@@ -557,7 +560,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             if (viewModel.selectedItem.value != null) {
                 viewModel.openSearchResults()
             } else {
-                requireActivity().finish()
+                findNavController().popBackStack()
             }
         }
 

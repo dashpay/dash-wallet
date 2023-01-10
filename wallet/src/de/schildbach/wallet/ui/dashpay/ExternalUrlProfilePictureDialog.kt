@@ -42,8 +42,8 @@ import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.ui.ExternalUrlProfilePictureViewModel
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper.OnResourceReadyListener
+import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
+import org.dash.wallet.common.ui.avatar.ProfilePictureHelper.OnResourceReadyListener
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.InteractionAwareDialogFragment

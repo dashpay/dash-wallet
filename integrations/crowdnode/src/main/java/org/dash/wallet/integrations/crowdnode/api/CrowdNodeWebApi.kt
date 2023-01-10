@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.crowdnode.api
 
 import kotlinx.coroutines.delay
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.Resource
@@ -86,18 +87,14 @@ open class CrowdNodeWebApi @Inject constructor(
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(CrowdNodeWebApi::class.java)
-        private val MAX_PER_TX_KEY = "AmountApiWithdrawalMax"
-        private val MAX_PER_1H_KEY = "AmountApiWithdrawal1hMax"
-        private val MAX_PER_24H_KEY = "AmountApiWithdrawal24hMax"
+        private const val MAX_PER_TX_KEY = "AmountApiWithdrawalMax"
+        private const val MAX_PER_1H_KEY = "AmountApiWithdrawal1hMax"
+        private const val MAX_PER_24H_KEY = "AmountApiWithdrawal24hMax"
     }
 
     // TODO: these methods are just mappers right now. Move more logic in here from the aggregator class
     suspend fun sendSignedMessage(address: String, email: String, encodedSignature: String): Response<MessageStatus> {
         return endpoint.sendSignedMessage(address, email, encodedSignature)
-    }
-
-    open suspend fun isAddressInUse(address: String): Response<IsAddressInUse> {
-        return endpoint.isAddressInUse(address)
     }
 
     suspend fun getMessages(address: String): Response<List<MessageStatus>> {
@@ -194,7 +191,7 @@ open class CrowdNodeWebApi @Inject constructor(
         }
     }
 
-    suspend fun getWithdrawalLimits(address: Address?): Map<WithdrawalLimitPeriod, Coin> {
+    open suspend fun getWithdrawalLimits(address: Address?): Map<WithdrawalLimitPeriod, Coin> {
         return try {
             val response = endpoint.getWithdrawalLimits(address?.toBase58() ?: "")
 
@@ -219,6 +216,36 @@ open class CrowdNodeWebApi @Inject constructor(
             }
 
             mapOf()
+        }
+    }
+
+    open suspend fun isApiAddressInUse(address: Address): Pair<Boolean, Address?> {
+        return try {
+            val result = endpoint.isAddressInUse(address.toBase58())
+            val isSuccess = result.isSuccessful && result.body()?.isInUse == true
+            var primaryAddress: Address? = null
+
+            if (isSuccess) {
+                val primary = result.body()!!.primaryAddress
+                requireNotNull(primary) { "isAddressInUse returns true but missing primary address" }
+
+                primaryAddress = try {
+                    Address.fromBase58(address.parameters, primary)
+                } catch (ex: AddressFormatException) {
+                    analyticsService.logError(ex, primary)
+                    null
+                }
+            }
+
+            Pair(isSuccess, primaryAddress)
+        } catch (ex: Exception) {
+            log.error("Error in resolveIsAddressInUse: $ex")
+
+            if (ex !is IOException) {
+                analyticsService.logError(ex)
+            }
+
+            Pair(false, null)
         }
     }
 }

@@ -39,7 +39,7 @@ import kotlinx.android.synthetic.main.no_contacts_results.view.*
 
 
 class ContactSearchResultsAdapter(private val listener: Listener,
-                                  private val onViewAllRequestsListener: OnViewAllRequestsListener) :
+                                  private val onViewAllRequestsListener: () -> Unit) :
         RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     var query = ""
@@ -188,7 +188,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
 
                 view_all_contacts.isVisible = requestCount > 3
                 view_all_contacts.setOnClickListener {
-                    onViewAllRequestsListener.onViewAllRequests()
+                    onViewAllRequestsListener.invoke()
                 }
             }
         }
@@ -218,10 +218,6 @@ class ContactSearchResultsAdapter(private val listener: Listener,
     interface Listener : ContactViewHolder.OnContactRequestButtonClickListener {
         fun onSortOrderChanged(direction: UsernameSortOrderBy)
         fun onSearchUser()
-    }
-
-    interface OnViewAllRequestsListener {
-        fun onViewAllRequests()
     }
 
     fun searchContacts(direction: UsernameSortOrderBy) {

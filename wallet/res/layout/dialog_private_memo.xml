@@ -35,7 +35,7 @@
         android:layout_marginHorizontal="20dp"
         android:text="@string/private_memo" />
 
-    <org.dash.wallet.common.ui.inputs.InputWrapper
+    <org.dash.wallet.common.ui.text.InputWrapper
         android:id="@+id/input_wrapper"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -53,7 +53,7 @@
             android:inputType="textMultiLine"
             android:maxLines="2"
             android:singleLine="false" />
-    </org.dash.wallet.common.ui.inputs.InputWrapper>
+    </org.dash.wallet.common.ui.text.InputWrapper>
 
     <Space
         android:layout_width="match_parent"

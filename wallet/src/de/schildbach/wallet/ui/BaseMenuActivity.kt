@@ -34,9 +34,6 @@ import javax.inject.Inject
 @SuppressLint("Registered")
 @AndroidEntryPoint
 abstract class BaseMenuActivity : LockScreenActivity() {
-    @Inject
-    lateinit var analytics: AnalyticsService
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(getLayoutId())

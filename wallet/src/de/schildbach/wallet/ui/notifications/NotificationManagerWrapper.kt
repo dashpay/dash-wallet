@@ -64,8 +64,9 @@ class NotificationManagerWrapper @Inject constructor(
         if (intent != null) {
             val pendingIntent = TaskStackBuilder.create(appContext).run {
                 addNextIntentWithParentStack(intent)
-                getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT)
+                getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             }
+
             notification.setContentIntent(pendingIntent).setAutoCancel(true)
         }
 

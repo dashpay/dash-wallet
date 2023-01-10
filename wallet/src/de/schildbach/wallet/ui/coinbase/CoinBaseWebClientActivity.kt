@@ -26,23 +26,23 @@ import androidx.appcompat.widget.Toolbar
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
-import org.dash.wallet.integration.liquid.databinding.ActivityLoginWebviewBinding
+import org.dash.wallet.common.databinding.FragmentWebviewBinding
 
 class CoinBaseWebClientActivity : InteractionAwareActivity() {
 
-    private lateinit var binding: ActivityLoginWebviewBinding
+    private lateinit var binding: FragmentWebviewBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityLoginWebviewBinding.inflate(layoutInflater)
+        binding = FragmentWebviewBinding.inflate(layoutInflater)
         setContentView(binding.root)
         initUI()
         turnOffAutoLogout()
     }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun initUI() {
-        val toolbar = findViewById<Toolbar>(org.dash.wallet.integration.liquid.R.id.toolbar)
-        setSupportActionBar(toolbar)
+        setSupportActionBar(binding.toolbar)
         val actionBar = supportActionBar
         actionBar?.apply {
             setDisplayHomeAsUpEnabled(true)

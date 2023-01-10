@@ -35,6 +35,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.BIP38PrivateKey;
 import org.bitcoinj.crypto.TrustStoreLoader;
+import org.bitcoinj.params.AbstractBitcoinNetParams;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocol.PkiVerificationData;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
@@ -77,7 +78,7 @@ public abstract class InputParser {
                 // replaces Anypay scheme with the Dash one
                 // ie "pay:?r=https://(...)" become "dash:?r=https://(...)"
                 if (input.startsWith(SendCoinsActivity.ANYPAY_SCHEME + ":")) {
-                    this.input = input.replaceFirst(SendCoinsActivity.ANYPAY_SCHEME, "dash");
+                    this.input = input.replaceFirst(SendCoinsActivity.ANYPAY_SCHEME, SendCoinsActivity.DASH_SCHEME);
                     return;
                 }
             }
@@ -86,7 +87,7 @@ public abstract class InputParser {
 
         @Override
         public void parse() {
-            if (input.startsWith("DASH:-")) {
+            if (input.startsWith(SendCoinsActivity.DASH_SCHEME.toUpperCase() + ":-")) {
                 try {
                     final byte[] serializedPaymentRequest = Qr.decodeBinary(input.substring(9));
 
@@ -104,7 +105,7 @@ public abstract class InputParser {
 
                     error(x, R.string.input_parser_invalid_paymentrequest, x.getMessage());
                 }
-            } else if (input.startsWith("dash:")) {
+            } else if (input.startsWith(SendCoinsActivity.DASH_SCHEME + ":")) {
                 try {
                     final BitcoinURI bitcoinUri = new BitcoinURI(null, input);
                     final Address address = AddressUtil.getCorrectAddress(bitcoinUri);

@@ -19,7 +19,8 @@
 
 		<activity
 			android:name="de.schildbach.wallet.integration.sample.SampleActivity"
-			android:theme="@android:style/Theme.Light" >
+			android:theme="@android:style/Theme.Light"
+            android:exported="true">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
 

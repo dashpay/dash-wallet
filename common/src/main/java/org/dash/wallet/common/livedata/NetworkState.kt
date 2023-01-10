@@ -22,7 +22,6 @@ import android.content.Context.CONNECTIVITY_SERVICE
 import android.net.*
 import android.os.Build
 import androidx.lifecycle.LiveData
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -32,7 +31,6 @@ interface NetworkStateInt {
     fun observeNetworkChangeState(): Flow<Boolean>
 }
 
-@ExperimentalCoroutinesApi
 class NetworkState @Inject constructor (private val connectivityManager: ConnectivityManager): NetworkStateInt {
 
     private var networkRequestBuilder: NetworkRequest.Builder = NetworkRequest.Builder()
@@ -112,7 +110,7 @@ class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
                 postValue(true)
             }
 
-            override fun onLost(network: Network?) {
+            override fun onLost(network: Network) {
                 postValue(false)
             }
         }

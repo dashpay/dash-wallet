@@ -18,16 +18,22 @@
 package de.schildbach.wallet.ui;
 
 import android.content.DialogInterface;
-import android.os.Build;
 import android.view.View;
 
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
-import de.schildbach.wallet.WalletApplication;
+import org.dash.wallet.common.Configuration;
+
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet_test.R;
 
+@AndroidEntryPoint
 public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
+
+    @Inject Configuration configuration;
 
     private static final String FRAGMENT_TAG = UnlockWalletDialogFragment.class.getName();
 
@@ -54,9 +60,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
 
     @Override
     public void onDismiss(DialogInterface dialog) {
-        if (fingerprintCancellationSignal != null) {
-            fingerprintCancellationSignal.cancel();
-        }
+        biometricHelper.cancelPending();
         super.onDismiss(dialog);
     }
 
@@ -82,12 +86,8 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
 
                     dismissAllowingStateLoss();
 
-                    if (fingerprintHelper != null) {
-                        if (!fingerprintHelper.isFingerprintEnabled() && WalletApplication
-                                .getInstance().getConfiguration().getRemindEnableFingerprint()) {
-                            EnableFingerprintDialog.show(password,
-                                    getActivity().getSupportFragmentManager());
-                        }
+                    if (!biometricHelper.isEnabled() && configuration.getRemindEnableFingerprint()) {
+                        biometricHelper.runEnableBiometricReminder(requireActivity(), password);
                     }
                 }
             }

@@ -14,6 +14,9 @@
     <string name="email">Електронна адреса</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Помилка</string>
+    <string name="select_a_coin">Виберіть монету</string>
+    <string name="request_coins_share_dialog_title">Поділитись запитом Dash-монет…</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Гернсійський фунт</string>
     <!-- Local Currency List: JEP -->
@@ -37,6 +40,7 @@
     <string name="button_dismiss">Відхилити</string>
     <string name="network_unavailable_return">Повернутися до гаманця</string>
     <string name="button_continue">Продовжити</string>
+    <string name="get_quote">Отримати пропозицію</string>
     <string name="button_close">Закрити</string>
     <string name="button_retry">Повторити</string>
     <string name="button_send_report">Надіслати Звіт</string>
@@ -46,13 +50,21 @@
     <string name="button_okay">Згода</string>
     <string name="button_share">Поділитися</string>
     <string name="verify">Підтвердити</string>
+    <string name="receive_enter_amount_button">Вкажіть суму</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Пошук</string>
     <string name="permission_allow">Дозволити</string>
     <string name="permission_deny">Відмовитись</string>
+    <string name="pay_with">Платіть з</string>
+    <string name="choose_payment_method">Виберіть спосіб оплати</string>
+    <string name="debit_credit_card">Дебетова/кредитна картка</string>
     <string name="max">Максимум</string>
+    <string name="select_the_coin">Виберіть монету</string>
     <string name="dash">Dash</string>
+    <string name="dash_wallet_name">Dash Wallet</string>
+    <string name="from">з</string>
+    <string name="to">до</string>
     <string name="select_currency">Вибрати Валюту</string>
     <string name="send_coins_error_dusty_send">Сума надто мала для відправки</string>
     <string name="send_coins_error_insufficient_money">Недостатньо коштів</string>

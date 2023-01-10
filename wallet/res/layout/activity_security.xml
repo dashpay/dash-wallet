@@ -6,9 +6,10 @@
     android:layout_height="match_parent"
     android:background="@color/background_primary"
     android:orientation="vertical"
-    tools:context="de.schildbach.wallet.ui.SecurityActivity">
+    tools:context="de.schildbach.wallet.ui.more.SecurityActivity">
 
     <include
+        android:id="@+id/app_bar"
         layout="@layout/app_bar_general"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />

@@ -67,8 +67,6 @@
 
     <string name="receive_title">Terima</string>
     <string name="receive_enter_amount_message">Tentukan jumlah yang akan diterima</string>
-    <string name="receive_enter_amount_button">Tentukan Jumlah</string>
-    <string name="receive_share_button">Berbagi</string>
 
     <string name="pay_title">Kirim</string>
     <string name="history_title">Riwayat</string>
@@ -232,6 +230,12 @@
     <string name="view_seed_done">Selesai</string>
     <string name="view_seed_title">Frasa pemulihan</string>
     <string name="transaction_result_view_on_explorer">Lihat di Blok Explorer</string>
+    <string name="transaction_result_tax_category">Kategori Pajak</string>
+    <string name="transaction_result_tax_category_loading">Memuat...</string>
+    <string name="tax_category_income">Pemasukan</string>
+    <string name="tax_category_expense">pengeluaran</string>
+    <string name="tax_category_transfer_in">Transfer masuk</string>
+    <string name="tax_category_transfer_out">Transfer keluar</string>
     <string name="transaction_result_paid_successfully">Pengiriman berhasil</string>
     <string name="transaction_result_sent_to">Terkirim ke</string>
     <string name="transaction_date_and_time">Tanggal</string>
@@ -243,6 +247,8 @@
     <string name="transaction_details_received_at">Diterima di</string>
     <string name="transaction_details_moved_from">Pindah dari</string>
     <string name="transaction_details_moved_internally_to">Pindah ke internal</string>
+    <string name="transaction_failed_details">Transaksi  gagal</string>
+
     <string name="authenticate_fingerprint_title">Membuktikan</string>
     <string name="authenticate_fingerprint_message">Konfirmasikan sidik jari untuk melanjutkan</string>
     <string name="authenticate_pin_message">Masukkan PIN Anda untuk melanjutkan</string>
@@ -251,6 +257,8 @@
 
     <string name="menu_buy_and_sell_title">Beli &amp; Jual Dash</string>
     <string name="menu_buy_and_sell_subtitle">Terhubung dengan pertukaran pihak ketiga</string>
+    <string name="liquid_unavailable">Integrasi Liquid dengan Dash Wallet tidak lagi tersedia</string>
+    <string name="liquid_unavailable_details">Jika Anda memiliki pertanyaan tentang kepemilikan Dash Anda di Liquid, silakan hubungi pusat dukungan Liquid</string>
     <string name="menu_security_title">Keamanan</string>
     <string name="menu_security_subtitle">Lihat frasa sandi, cadangkan domept...</string>
     <string name="menu_settings_title">Pengaturan</string>
@@ -270,16 +278,13 @@
     <string name="tools_show_xpub">Kunci Publik Diperpanjang</string>
 
     <string name="about_help_us_improve">Bantu kami meningkatkan pengalaman Anda</string>
-    <string name="about_review_and_rate">Ulas &amp; Beri nilai aplikasi</string>
     <string name="about_contact_support">Hubungi Dukungan</string>
     <string name="about_fork_disclaimer">Ini adalah aplikasi open source yang bercabang dari Bitcoin Wallet</string>
     <string name="about_copyright">Hak Cipta © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
-    <string name="about_last_explore_dash_sync">Data Eksplorasi Dash diperbarui pada: %1$s\nSinkronisasi terakhir: %2$s</string>
     <string name="about_last_explore_dash_update_error">tidak bisa mengambil</string>
     <string name="about_last_explore_dash_sync_never">tak pernah</string>
-
     <string name="block">Blok</string>
     <string name="time">Waktu</string>
     <string name="hash">Hash</string>
@@ -350,8 +355,12 @@
     <string name="import_image_import_valid_private_key">Salin kunci pribadi yang valid untuk mengimpor Dash darinya</string>
     <string name="import_image_invalid_private">Kunci Pribadi Tidak Valid</string>
 
+    <string name="today">Hari ini</string>
+    <string name="yesterday">Kemarin</string>
+
     <string name="syncing">Menyingkronkan:</string>
     <string name="syncing_balance">Menyinkronkan Saldo</string>
+    <string name="transaction_count">%dtransaksi</string>
     <string name="all_transactions">Semua</string>
     <string name="received_transactions">Diterima</string>
     <string name="sent_transactions">Terkirim</string>
@@ -370,4 +379,14 @@
     <string name="launch_reset_wallet_extra_message">Cadangkan frasa pemulihan Anda</string>
     <string name="start_reset_wallet_title">Anda mungkin kehilangan %s</string>
     <string name="reset_wallet_text">Atur ulang dompet</string>
-    </resources>
+    <string name="reclassify_transactions_title">Klasifikasi Ulang Transaksi Anda</string>
+    <string name="reclassify_transactions_title_message">Klasifikasi ini akan tercermin dalam Ekspor CSV yang dapat digunakan untuk mengimpor ke dalam layanan pelaporan pajak.</string>
+    <string name="reclassify_transactions_question">Di mana saya dapat mengubah kategori pajak?</string>
+    <string name="reclassify_transactions_outgoing_title">Transaksi keluar</string>
+    <string name="reclassify_transactions_by_default_message">secara default akan ditandai sebagai</string>
+    <string name="reclassify_transactions_incoming_title">Transaksi masuk</string>
+    <string name="reclassify_transactions_change_it_message">Anda dapat mengubahnya menjadi</string>
+    <string name="reclassify_transactions_linked_accounts_title">Akun terhubung</string>
+    <string name="reclassify_transactions_linked_accounts_message">secara default semua transaksi ke atau dari akun tertaut Anda (pertukaran, staking, dll) akan ditandai sebagai transfer.</string>
+    <string name="reclassify_transactions_change_explanation">Pilih transaksi apa pun dari beranda dan ubah kategori di halaman detail transaksi.</string>
+</resources>

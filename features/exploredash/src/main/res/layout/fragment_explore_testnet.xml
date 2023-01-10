@@ -22,6 +22,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_explore"
+    android:paddingBottom="@dimen/bottom_nav_bar_height"
     tools:context="org.dash.wallet.features.exploredash.ui.ExploreTestNetFragment">
 
     <androidx.appcompat.widget.Toolbar

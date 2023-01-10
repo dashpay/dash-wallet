@@ -17,15 +17,28 @@
 
 package org.dash.wallet.common.ui.segmented_picker
 
+import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
+import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.SegmentedPickerOptionViewBinding
 
 class PickerOptionsAdapter(
-    private val options: List<String>,
-    private val clickListener: (String, Int) -> Unit
+    private val options: List<SegmentedOption>,
+    private val clickListener: (SegmentedOption, Int) -> Unit
 ) : RecyclerView.Adapter<OptionViewHolder>() {
+
+    var selectedIndex: Int = 0
+        set(value) {
+            if (field != value) {
+                val oldSelected = field
+                field = value
+                notifyItemChanged(oldSelected)
+                notifyItemChanged(value)
+            }
+        }
 
     override fun getItemCount(): Int {
         return options.size
@@ -42,15 +55,33 @@ class PickerOptionsAdapter(
 
     override fun onBindViewHolder(holder: OptionViewHolder, position: Int) {
         val item = options[position]
-        holder.bind(item)
+        holder.bind(item, position == selectedIndex)
         holder.binding.root.setOnClickListener {
             clickListener.invoke(item, position)
         }
     }
 }
 
-class OptionViewHolder(val binding: SegmentedPickerOptionViewBinding): RecyclerView.ViewHolder(binding.root) {
-    fun bind(option: String) {
-        binding.name.text = option
+class OptionViewHolder(
+    val binding: SegmentedPickerOptionViewBinding
+): RecyclerView.ViewHolder(binding.root) {
+    fun bind(option: SegmentedOption, isSelected: Boolean) {
+        binding.name.text = option.title
+        binding.name.setTextColor(binding.root.resources.getColor(
+            if (isSelected) {
+                R.color.content_primary
+            } else {
+                R.color.content_tertiary
+            }, null
+        ))
+        binding.icon.isVisible = option.icon != null
+        option.icon?.let {
+            binding.icon.setImageResource(it)
+            binding.icon.imageTintList = if (isSelected) {
+                null
+            } else {
+                ColorStateList.valueOf(binding.root.resources.getColor(R.color.gray, null))
+            }
+        }
     }
 }

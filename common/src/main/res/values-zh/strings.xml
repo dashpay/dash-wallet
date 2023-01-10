@@ -14,6 +14,9 @@
     <string name="email">邮箱</string>
     <string name="email_placeholder">例 johndoe@mail.com</string>
     <string name="error">错误</string>
+    <string name="select_a_coin">选择一个币种</string>
+    <string name="request_coins_share_dialog_title">分享接收Dash的请求…</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey镑</string>
     <!-- Local Currency List: JEP -->
@@ -37,6 +40,7 @@
     <string name="button_dismiss">忽略</string>
     <string name="network_unavailable_return">返回到钱包</string>
     <string name="button_continue">继续</string>
+    <string name="get_quote">获得报价</string>
     <string name="button_close">关闭</string>
     <string name="button_retry">重试</string>
     <string name="button_send_report">发送报告</string>
@@ -46,13 +50,21 @@
     <string name="button_okay">好的</string>
     <string name="button_share">分享</string>
     <string name="verify">验证</string>
+    <string name="receive_enter_amount_button">指定数额</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">搜索</string>
     <string name="permission_allow">允许</string>
     <string name="permission_deny">拒绝</string>
+    <string name="pay_with">使用...来支付</string>
+    <string name="choose_payment_method">选择付款方式</string>
+    <string name="debit_credit_card">借记卡/信用卡</string>
     <string name="max">最大</string>
+    <string name="select_the_coin">选择币种</string>
     <string name="dash">Dash</string>
+    <string name="dash_wallet_name">Dash 钱包</string>
+    <string name="from">来自</string>
+    <string name="to">到</string>
     <string name="select_currency">选择货币</string>
     <string name="send_coins_error_dusty_send">该金额太小, 无法支付</string>
     <string name="send_coins_error_insufficient_money">资金不足</string>

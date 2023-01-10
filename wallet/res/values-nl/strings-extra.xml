@@ -67,8 +67,6 @@
 
     <string name="receive_title">Ontvangen</string>
     <string name="receive_enter_amount_message">Specificeer het te ontvangen bedrag</string>
-    <string name="receive_enter_amount_button">Specificeer bedrag</string>
-    <string name="receive_share_button">Delen</string>
 
     <string name="pay_title">Verzenden</string>
     <string name="history_title">Geschiedenis</string>
@@ -235,6 +233,12 @@
     <string name="view_seed_done">Klaar</string>
     <string name="view_seed_title">Herstelzin</string>
     <string name="transaction_result_view_on_explorer">Bekijk in Block Explorer</string>
+    <string name="transaction_result_tax_category">Belastingcategorie</string>
+    <string name="transaction_result_tax_category_loading">Laden...</string>
+    <string name="tax_category_income">Inkomen</string>
+    <string name="tax_category_expense">Uitgaven</string>
+    <string name="tax_category_transfer_in">Inkomend</string>
+    <string name="tax_category_transfer_out">Uitgaand</string>
     <string name="transaction_result_paid_successfully">Succesvol verzonden</string>
     <string name="transaction_result_sent_to">Verzonden naar</string>
     <string name="transaction_date_and_time">Datum</string>
@@ -246,6 +250,8 @@
     <string name="transaction_details_received_at">Ontvangen met</string>
     <string name="transaction_details_moved_from">Verplaatst van</string>
     <string name="transaction_details_moved_internally_to">Intern verplaatst naar</string>
+    <string name="transaction_failed_details">Transactie mislukt</string>
+
     <string name="authenticate_fingerprint_title">Verifieer</string>
     <string name="authenticate_fingerprint_message">Bevestig vingerafdruk om door te gaan</string>
     <string name="authenticate_pin_message">Voer PIN in om door te gaan</string>
@@ -254,6 +260,8 @@
 
     <string name="menu_buy_and_sell_title">Koop &amp; verkoop Dash</string>
     <string name="menu_buy_and_sell_subtitle">Verbind met beurzen van derden</string>
+    <string name="liquid_unavailable">Liquid integratie met Dash portemonnee is niet langer beschikbaar</string>
+    <string name="liquid_unavailable_details">Als je vragen heeft over je bezit in Dash bij Liquid, neem dan contact op met het ondersteuningscentrum van Liquid </string>
     <string name="menu_security_title">Beveiliging</string>
     <string name="menu_security_subtitle">Bekijk wachtwoord, maak back-up van portemonnee...</string>
     <string name="menu_settings_title">Instellingen</string>
@@ -273,15 +281,20 @@
     <string name="tools_show_xpub">Uitgebreide publieke sleutel</string>
 
     <string name="about_help_us_improve">Help ons je ervaring te verbeteren</string>
-    <string name="about_review_and_rate">Schrijf een recensie &amp; Beoordeel de app</string>
+    <string name="about_review_and_rate">Schrijf een recensie en beoordeel de app</string>
     <string name="about_contact_support">Neem contact op</string>
     <string name="about_fork_disclaimer">Dit is een open source app afgesplitst van de Bitcoin portemonnee</string>
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash portemonnee%s</string>
-    <string name="about_last_explore_dash_sync">Explore Dash gegevens bijgewerkt op: %1$s \nLaatste synchronisatie: %2$s</string>
+    <string name="about_last_explore_device_sync">Laatste Explore-apparaatsynchronisatie</string>
+    <string name="about_last_explore_server_update">Laatste Explore-serverupdate</string>
+    <string name="about_firebase_installation_id">Firebase-installatie-ID</string>
+    <string name="about_fcm_token">Firebase-cloudmessagingtoken</string>
     <string name="about_last_explore_dash_update_error">kan niet ophalen</string>
     <string name="about_last_explore_dash_sync_never">nooit</string>
+    <string name="about_explore_failed_sync">Mislukt te synchroniseren op %s</string>
+    <string name="about_explore_preloaded_on">Voorgeladen op %s</string>
 
     <string name="block">Block</string>
     <string name="time">Tijd</string>
@@ -353,8 +366,12 @@
     <string name="import_image_import_valid_private_key">Kopieer een geldige persoonlijke sleutel om de Dash er van te importeren</string>
     <string name="import_image_invalid_private">Ongeldige persoonlijke sleutel</string>
 
-    <string name="syncing">Aan het synchroniseren</string>
+    <string name="today">Vandaag</string>
+    <string name="yesterday">Gisteren</string>
+
+    <string name="syncing">synchroniseren</string>
     <string name="syncing_balance">Saldo aan het synchroniseren</string>
+    <string name="transaction_count">%d transacties</string>
     <string name="all_transactions">Alles</string>
     <string name="received_transactions">Ontvangen</string>
     <string name="sent_transactions">Verzonden</string>
@@ -373,4 +390,14 @@
     <string name="launch_reset_wallet_extra_message">Back-up je herstelzin</string>
     <string name="start_reset_wallet_title">Je kan %s kwijtraken</string>
     <string name="reset_wallet_text">Portemonnee resetten</string>
-    </resources>
+    <string name="reclassify_transactions_title">Herclassificeer je transacties</string>
+    <string name="reclassify_transactions_title_message">Deze classificaties worden gexporteerd naar CSV bestand. Deze kan worden geïmporteerd in belastingservices of -software.</string>
+    <string name="reclassify_transactions_question">Waar kan ik de belastingcategorie wijzigen?</string>
+    <string name="reclassify_transactions_outgoing_title">Uitgaande transacties</string>
+    <string name="reclassify_transactions_by_default_message">wordt standaard gemarkeerd als</string>
+    <string name="reclassify_transactions_incoming_title">Inkomende transacties</string>
+    <string name="reclassify_transactions_change_it_message">Je kunt het veranderen in</string>
+    <string name="reclassify_transactions_linked_accounts_title">Gekoppelde accounts</string>
+    <string name="reclassify_transactions_linked_accounts_message">Standaard worden alle transacties van of naar je gekoppelde rekeningen gemarkeerd als overboekingen.</string>
+    <string name="reclassify_transactions_change_explanation">Kies een transactie op de startpagina en wijzig de categorie in de transactiedetails.</string>
+</resources>

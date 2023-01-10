@@ -28,7 +28,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import org.dash.wallet.common.data.BlockchainState
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
@@ -50,10 +49,6 @@ import kotlin.math.min
 
 enum class ExploreTopic {
     Merchants, ATMs, Faucet
-}
-
-enum class NavigationRequest {
-    SendDash, ReceiveDash, Staking
 }
 
 enum class FilterMode {
@@ -97,7 +92,6 @@ class ExploreViewModel @Inject constructor(
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
     var isDialogDismissedOnCancel = false
-    val navigationCallback = SingleLiveEvent<NavigationRequest>()
     val recenterMapCallback = SingleLiveEvent<Unit>()
     private var boundedFilterJob: Job? = null
     private var pagingFilterJob: Job? = null
@@ -446,18 +440,6 @@ class ExploreViewModel @Inject constructor(
         // Cannot show nearest location if there are more than 1 in group and location is disabled
         return (nearest is Merchant && nearest.physicalAmount <= 1) ||
                 (isLocationEnabled.value == true && selectedTerritory.value?.isEmpty() == true)
-    }
-
-    fun sendDash() {
-        navigationCallback.postValue(NavigationRequest.SendDash)
-    }
-
-    fun receiveDash() {
-        navigationCallback.postValue(NavigationRequest.ReceiveDash)
-    }
-
-    fun openStaking() {
-        navigationCallback.postValue(NavigationRequest.Staking)
     }
 
     fun backFromMerchantLocation() {

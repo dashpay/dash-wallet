@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Пусть отправитель отсканирует этот код.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Или коснитесь устройства с поддержкой NFC.</string>
     <string name="request_coins_clipboard_msg">Запрос скопирован в буфер обмена</string>
-    <string name="request_coins_share_dialog_title">Поделиться запросом…</string>
     <string name="request_coins_no_local_app_msg">Не обнаружено других приложений для Dash</string>
     <string name="request_coins_options_local_app_title">Запрос от локального приложения</string>
     <string name="address_book_activity_title">Адресная книга</string>

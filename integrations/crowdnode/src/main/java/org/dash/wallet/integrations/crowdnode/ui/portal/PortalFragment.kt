@@ -375,7 +375,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             safeNavigate(PortalFragmentDirections.portalToTransfer(true))
         } else {
             AdaptiveDialog.create(
-                R.drawable.ic_error_red,
+                R.drawable.ic_error,
                 getString(R.string.positive_balance_required),
                 getString(R.string.withdrawal_required_balance),
                 getString(R.string.button_close),

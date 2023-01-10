@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_coinbase"
+    app:startDestination="@id/coinbaseServicesFragment">
+
+
+    <fragment
+        android:id="@+id/coinbaseServicesFragment"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseServicesFragment"
+        android:label="CoinbaseServicesFragment">
+
+        <action
+            android:id="@+id/services_to_buy_dash"
+            app:destination="@id/coinbaseBuyDashFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+        <action
+            android:id="@+id/services_to_convert_crypto"
+            app:destination="@id/coinbaseConvertCryptoFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+        <action
+            android:id="@+id/services_to_transfer_dash"
+            app:destination="@id/transferDashFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/coinbaseBuyDashFragment"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseBuyDashFragment"
+        android:label="CoinbaseBuyDashFragment"
+        tools:layout="@layout/fragment_coinbase_buy_dash">
+        <action
+            android:id="@+id/buy_dash_to_order_review"
+            app:destination="@id/coinbaseBuyDashOrderReviewFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+        
+        <argument
+            android:name="paymentMethods"
+            app:argType="org.dash.wallet.common.ui.payment_method_picker.PaymentMethod[]" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/coinbaseBuyDashOrderReviewFragment"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseBuyDashOrderReviewFragment"
+        android:label="CoinbaseBuyDashOrderReviewFragment"
+        tools:layout="@layout/fragment_coinbase_buy_dash_order_review">
+        <argument
+            android:name="paymentMethod"
+            app:argType="org.dash.wallet.common.ui.payment_method_picker.PaymentMethod" />
+        <argument
+            android:name="placeBuyOrderUIModel"
+            app:argType="org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderUIModel" />
+        <action
+            android:id="@+id/orderReviewToFeeInfo"
+            app:destination="@id/coinbaseFeeInfoDialog" />
+        <action
+            android:id="@+id/coinbaseBuyDashOrderReviewToTwoFaCode"
+            app:destination="@id/enterTwoFaCodeFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            />
+    </fragment>
+
+    <fragment
+        android:id="@+id/coinbaseConvertCryptoFragment"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseConvertCryptoFragment"
+        android:label="CoinbaseConvertCryptoFragment"
+        tools:layout="@layout/fragment_coinbase_convert_crypto">
+        <argument
+            android:name="hasCoinbaseCryptoBalance"
+            android:defaultValue="false"
+            app:argType="boolean" />
+
+        <action
+            android:id="@+id/coinbaseConvertCryptoFragmentTocoinbaseConversionPreviewFragment"
+            app:destination="@id/coinbaseConversionPreviewFragment" />
+    </fragment>
+
+    <dialog
+        android:id="@+id/coinbaseFeeInfoDialog"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinbaseFeeInfoDialog"
+        android:label="coinbase_info_fee"
+        tools:layout="@layout/dialog_coinbase_fee_info"
+        />
+
+    <fragment
+        android:id="@+id/coinbaseConversionPreviewFragment"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseConversionPreviewFragment"
+        android:label="CoinbaseConversionPreviewFragment"
+        tools:layout="@layout/fragment_coinbase_conversion_preview">
+
+        <action
+            android:id="@+id/orderReviewToFeeInfo"
+            app:destination="@id/coinbaseFeeInfoDialog" />
+        <argument
+            android:name="swapModel"
+            app:argType="org.dash.wallet.integration.coinbase_integration.model.SwapTradeUIModel" />
+        <action
+            android:id="@+id/conversionPreviewToTwoFaCode"
+            app:destination="@id/enterTwoFaCodeFragment"
+            />
+    </fragment>
+    <fragment
+        android:id="@+id/enterTwoFaCodeFragment"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.EnterTwoFaCodeFragment"
+        android:label="TwoFACodeFragment"
+        tools:layout="@layout/enter_two_fa_code_fragment">
+        <argument
+            android:name="transactionParams"
+            app:argType="org.dash.wallet.integration.coinbase_integration.model.CoinbaseTransactionParams"
+            />
+        <action
+            android:id="@+id/conversionPreviewToTwoFaCode"
+            app:destination="@id/enterTwoFaCodeFragment"
+            />
+    </fragment>
+    <fragment
+        android:id="@+id/transferDashFragment"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.TransferDashFragment"
+        tools:layout="@layout/transfer_dash_fragment"
+        android:label="TransferDash">
+
+        <action
+            android:id="@+id/transferDashToTwoFaCode"
+            app:destination="@id/enterTwoFaCodeFragment"
+            />
+    </fragment>
+</navigation>

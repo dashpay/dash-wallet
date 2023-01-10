@@ -13,7 +13,9 @@
         app:iconSrc="@drawable/please_wait_anim"
         app:mode="progress" />
 
-    <include layout="@layout/view_payment_request_details" />
+    <include
+        android:id="@+id/payment_request"
+        layout="@layout/view_payment_request_details" />
 
     <de.schildbach.wallet.ui.widget.PaymentRequestWaitErrorView
         android:id="@+id/error_view"

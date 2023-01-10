@@ -87,6 +87,7 @@ public final class Constants {
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 org.dash.wallet.common.Constants.FAUCET_URL = "";
                 org.dash.wallet.common.Constants.EXPLORE_GC_FILE_PATH = "explore/explore.db";
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 break;
             }
             case "staging":
@@ -125,6 +126,7 @@ public final class Constants {
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 org.dash.wallet.common.Constants.FAUCET_URL = String.format("http://faucet.%s.networks.dash.org/", devNetName);
                 org.dash.wallet.common.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-testnet.db";
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 break;
             }
             default: {
@@ -170,7 +172,7 @@ public final class Constants {
         /** Filename of the block store for storing the chain. */
         public static final String BLOCKCHAIN_FILENAME = "blockchain" + FILENAME_NETWORK_SUFFIX;
 
-        /** Filename of the block store for storing the chain. */
+        /** Filename of the block store for storing the headers. */
         public static final String HEADERS_FILENAME = "headers" + FILENAME_NETWORK_SUFFIX;
 
         /** Filename of the block checkpoints file. */

@@ -18,12 +18,10 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -38,7 +36,6 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.os.CancellationSignal;
 import androidx.fragment.app.FragmentManager;
@@ -54,21 +51,25 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import javax.annotation.Nullable;
+import javax.inject.Inject;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.security.BiometricHelper;
+import de.schildbach.wallet.security.BiometricLockoutException;
+import de.schildbach.wallet.security.FingerprintStorage;
 import de.schildbach.wallet.ui.preference.PinRetryController;
-import de.schildbach.wallet.ui.send.DecryptSeedTask;
-import de.schildbach.wallet.ui.send.DeriveKeyTask;
+import de.schildbach.wallet.payments.DecryptSeedTask;
+import de.schildbach.wallet.payments.DeriveKeyTask;
 import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
-import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
         implements SharedPreferences.OnSharedPreferenceChangeListener {
 
@@ -76,8 +77,8 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
     private static final String ARGS_IS_UPGRADING = "is_upgrading";
 
     private FingerprintView fingerprintView;
+    @Inject public BiometricHelper biometricHelper;
 
-    private CancellationSignal fingerprintCancellationSignal;
 
     public static void show(final FragmentManager fm) {
         final BackupWalletToSeedDialogFragment newFragment = new BackupWalletToSeedDialogFragment();
@@ -195,9 +196,6 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
 
     @Override
     public void onDismiss(final DialogInterface dialog) {
-        if (fingerprintCancellationSignal != null) {
-            fingerprintCancellationSignal.cancel();
-        }
         if (activity instanceof DialogInterface.OnDismissListener) {
             ((DialogInterface.OnDismissListener) activity).onDismiss(getDialog());
         }
@@ -220,30 +218,18 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
         }
     };
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private void initFingerprintHelper() {
-        FingerprintHelper fingerprintHelper = new FingerprintHelper(getActivity());
-        if (fingerprintHelper.init() && fingerprintHelper.isFingerprintEnabled()) {
+        if (biometricHelper.isEnabled()) {
             fingerprintView.setVisibility(View.VISIBLE);
-            fingerprintCancellationSignal = new CancellationSignal();
-            fingerprintHelper.getPassword(fingerprintCancellationSignal, new FingerprintHelper.Callback() {
-                @Override
-                public void onSuccess(String savedPass) {
+            biometricHelper.getPassword(requireActivity(), false, (savedPass, error) -> {
+                if (error != null) {
+                    fingerprintView.showError(error instanceof BiometricLockoutException);
+                } else if (savedPass != null) {
                     privateKeyPasswordView.setText(savedPass);
                     handleDecryptPIN();
                 }
 
-                @Override
-                public void onFailure(String message, boolean canceled, boolean exceededMaxAttempts) {
-                    if (!canceled) {
-                        fingerprintView.showError(exceededMaxAttempts);
-                    }
-                }
-
-                @Override
-                public void onHelp(int helpCode, String helpString) {
-                    fingerprintView.showError(false);
-                }
+                return Unit.INSTANCE;
             });
         }
     }

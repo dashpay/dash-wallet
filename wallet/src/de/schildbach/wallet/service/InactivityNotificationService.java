@@ -114,14 +114,14 @@ public final class InactivityNotificationService extends Service {
             notification.setContentTitle(title);
             notification.setContentText(text);
             notification
-                    .setContentIntent(PendingIntent.getActivity(this, 0, OnboardingActivity.createIntent(this), 0));
+                    .setContentIntent(PendingIntent.getActivity(this, 0, OnboardingActivity.createIntent(this), PendingIntent.FLAG_IMMUTABLE));
             notification.setAutoCancel(true);
             notification.addAction(new NotificationCompat.Action.Builder(0,
                     getString(R.string.notification_inactivity_action_dismiss_forever),
-                    PendingIntent.getService(this, 0, dismissForeverIntent, 0)).build());
+                    PendingIntent.getService(this, 0, dismissForeverIntent, PendingIntent.FLAG_IMMUTABLE)).build());
             notification.addAction(new NotificationCompat.Action.Builder(0,
                     getString(R.string.button_dismiss),
-                    PendingIntent.getService(this, 0, dismissIntent, 0)).build());
+                    PendingIntent.getService(this, 0, dismissIntent, PendingIntent.FLAG_IMMUTABLE)).build());
 
             Notification inactivityNotification = notification.build();
             startForeground(Constants.NOTIFICATION_ID_INACTIVITY, inactivityNotification);

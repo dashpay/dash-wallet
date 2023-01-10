@@ -115,7 +115,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Хай відправник відсканує цей код.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Або торкніться пристрою з підтримкою NFC.</string>
     <string name="request_coins_clipboard_msg">Запит отримання Dash-монет скопійований</string>
-    <string name="request_coins_share_dialog_title">Поділитись запитом Dash-монет…</string>
     <string name="request_coins_no_local_app_msg">Немає жодних інших Dash додатків</string>
     <string name="request_coins_options_local_app_title">Запит від локального пристрою</string>
     <string name="address_book_activity_title">Адресна книга</string>
@@ -279,6 +278,9 @@
     <string name="preferences_show_disclaimer_title">Показувати застереження</string>
     <string name="preferences_show_disclaimer_summary">Ви дійсно читали примітки з безпеки? Ви вже зробили резервну копію свого гаманця в безпечному місці?</string>
     <string name="preferences_report_issue_title">Повідомити про проблему</string>
+    <string name="preferences_initiate_reset_title">Пересканувати блокчейн</string>
+    <string name="preferences_initiate_reset_summary">Пересканувати блокчейн, транзакції та баланс гаманця. Повторне відтворення займе деякий час, тому робіть це, лише якщо знаєте чому.</string>
+    <string name="preferences_initiate_reset_dialog_message">Ви хочете пересканувати блокчейн?\n\nЦе зробить тимчасово недоступними ваші баланс та список транзакцій. Вони будуть відновлені у процесі синхронізації блокчейна. Переконайтеся, що у вас є надійне підключення до інтернету.</string>
     <string name="preferences_initiate_reset_dialog_positive">Повторне сканування</string>
     <string name="preferences_extended_public_key_title">Показати xpub</string>
     <string name="preferences_extended_public_key_summary">Перегляньте розширений відкритий ключ свого гаманця, щоб його можна було імпортувати в інші програми та служби. Будьте обережні: це призведе до розкриття вашої грошової конфіденційності цій програмі.</string>
@@ -381,8 +383,10 @@
     <string name="payment_protocol_insufficient_funds_error_message">У вас недостатньо коштів для завершення цієї операції</string>
 
 
+    <string name="select_a_service_to_buy_and_sell_dash">Виберіть сервіс для купівлі та продажу Dash.</string>
     <string name="select_a_service">Виберіть послугу</string>
     <string name="activity_buy_and_sell_dash_filter">Фільтр</string>
     <string name="clear_filter">Очистити фільтр</string>
     <string name="select_currency">Вибрати Валюту</string>
-    </resources>
+    <string name="reason">Причина</string>
+</resources>

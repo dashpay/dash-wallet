@@ -30,7 +30,8 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.services.ISecurityFunctions
+import org.dash.wallet.common.Constants
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
@@ -52,7 +53,7 @@ class StakingActivity : LockScreenActivity() {
     private lateinit var navController: NavController
 
     @Inject
-    lateinit var securityFunctions: ISecurityFunctions
+    lateinit var securityFunctions: AuthenticationManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,7 +78,9 @@ class StakingActivity : LockScreenActivity() {
                 ResetWalletDialog.newInstance(viewModel.analytics).show(supportFragmentManager, "reset_wallet_dialog")
             }
             NavigationRequest.BuyDash -> {
-                startActivity(BuyAndSellIntegrationsActivity.createIntent(this))
+                // TODO: replace with navController navigation when Staking is integrated into nav_home
+                setResult(Constants.USER_BUY_SELL_DASH)
+                finish()
             }
             NavigationRequest.SendReport -> {
                 log.info("CrowdNode initiated report")
@@ -100,7 +103,7 @@ class StakingActivity : LockScreenActivity() {
     private fun handleCrowdNodeError(error: Exception?) {
         if (error is CrowdNodeException && error.message == CrowdNodeException.MISSING_PRIMARY) {
             AdaptiveDialog.create(
-                R.drawable.ic_error_red,
+                R.drawable.ic_error,
                 getString(org.dash.wallet.common.R.string.error),
                 getString(R.string.crowdnode_primary_missing),
                 getString(R.string.button_close)
@@ -111,7 +114,7 @@ class StakingActivity : LockScreenActivity() {
 
     private fun checkPinAndBackupPassphrase() {
         lifecycleScope.launch {
-            val pin = securityFunctions.requestPinCode(this@StakingActivity)
+            val pin = securityFunctions.authenticate(this@StakingActivity)
 
             if (pin != null) {
                 val intent = VerifySeedActivity.createIntent(
@@ -133,7 +136,7 @@ class StakingActivity : LockScreenActivity() {
         val status = viewModel.signUpStatus
         binding.progressBar.isVisible = false
 
-        navGraph.startDestination =
+        navGraph.setStartDestination(
             when (status) {
                 SignUpStatus.LinkedOnline, SignUpStatus.Finished -> R.id.crowdNodePortalFragment
                 SignUpStatus.NotStarted -> {
@@ -142,6 +145,7 @@ class StakingActivity : LockScreenActivity() {
                 }
                 else -> R.id.newAccountFragment
             }
+        )
 
         navController.graph = navGraph
 

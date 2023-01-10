@@ -22,10 +22,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.data.AddressMetadataDao
-import de.schildbach.wallet.data.BlockchainIdentityDataDao
-import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.data.TransactionMetadataDao
+import de.schildbach.wallet.data.*
 import de.schildbach.wallet.rates.ExchangeRatesDao
 import javax.inject.Singleton
 
@@ -61,5 +58,20 @@ object DatabaseModule {
     @Provides
     fun provideAddressMetadata(appDatabase: AppDatabase): AddressMetadataDao {
         return appDatabase.addressMetadataDao()
+    }
+
+    @Provides
+    fun provideDashPayProfileDaoAsync(appDatabase: AppDatabase): DashPayProfileDaoAsync {
+        return appDatabase.dashPayProfileDaoAsync()
+    }
+
+    @Provides
+    fun provideUserAlertDaoAsync(appDatabase: AppDatabase): UserAlertDaoAsync {
+        return appDatabase.userAlertDaoAsync()
+    }
+
+    @Provides
+    fun provideInvitationsDaoAsync(appDatabase: AppDatabase): InvitationsDaoAsync {
+        return appDatabase.invitationsDaoAsync()
     }
 }

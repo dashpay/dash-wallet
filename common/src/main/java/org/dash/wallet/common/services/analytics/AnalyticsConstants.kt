@@ -25,21 +25,6 @@ object AnalyticsConstants {
         const val VALUE = "value"
     }
 
-    object Liquid {
-        const val BUY_SELL_MORE = "more_buy_sell_dash"
-        const val ENTER_CONNECTED = "liquid_enter_connected"
-        const val ENTER_DISCONNECTED = "liquid_enter_disconnected"
-        const val DISCONNECT = "liquid_disconnect"
-        const val SUPPORTED_COUNTRIES = "liquid_country_support_info"
-        const val BUY_DASH = "liquid_buy_dash"
-        const val BUY_CREDIT_CARD = "liquid_buy_with_credit_card"
-        const val WIDGET_QUOTE_CLOSE = "liquid_quote_screen_close"
-        const val WIDGET_QUOTE_BUY = "liquid_quote_screen_buy_with_visa"
-        const val WIDGET_PROCESSING_DURATION = "liquid_processing_duration"
-        const val WIDGET_PROCESSING_CLOSE_TOP_LEFT = "liquid_processing_close_top_left"
-        const val WIDGET_PROCESSING_CLOSE_OVERLAY = "liquid_processing_close_overlay"
-    }
-
     object Uphold {
         const val ENTER_CONNECTED = "uphold_enter_connected"
         const val ENTER_DISCONNECTED = "uphold_enter_disconnected"
@@ -47,6 +32,10 @@ object AnalyticsConstants {
         const val LINK_ACCOUNT = "uphold_link_account"
         const val TRANSFER_DASH = "uphold_transfer_dash"
         const val BUY_DASH = "uphold_buy_dash"
+    }
+
+    object MoreMenu {
+        const val BUY_SELL_MORE = "more_buy_sell_dash"
     }
 
     object Security {
@@ -286,7 +275,7 @@ object AnalyticsConstants {
         const val BUY_PAYMENT_METHOD = "coinbase_buy_p_method"
         const val BUY_ENTER_FIAT = "coinbase_buy_enter_amount_fiat"
         const val BUY_ENTER_DASH = "coinbase_buy_enter_amount_dash"
-        const val BUY_CHANGE_FIAT_CURRENCY = "coinbase_buy_b_change_fiat_currency" // Currency selector isn't shown in Coinbase atm.
+        const val BUY_CHANGE_FIAT_CURRENCY = "coinbase_buy_b_change_fiat_currency" // Currency selector isn't shown in Coinbase.
         const val BUY_CONTINUE = "coinbase_buy_b_continue"
         const val BUY_AUTH_LIMIT = "coinbase_buy_b_auth_limit"
 

@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.crowdnode
 import junit.framework.TestCase.*
 import org.bitcoinj.core.*
 import org.bitcoinj.params.TestNet3Params
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationForwarded
 import org.dash.wallet.integrations.crowdnode.transactions.*
 import org.junit.Before
 import org.junit.Test
@@ -213,5 +214,18 @@ class CrowdNodeTxFilterTest {
 
         assertFalse("Tx matches but should not", possibleAcceptFilter.matches(acceptTx))
         assertFalse("Tx matches but should not", possibleWelcomeFilter.matches(welcomeTx))
+    }
+
+    @Test
+    fun crowdNodeAPIConfirmationForwarded_correctMatch() {
+        val txData = "01000000016fdb75611fd8892d8d19707f0d0958da5b930c635750f2c8c5bf5a48458a8ffd000000006b483045022100ff77055377b33afb8fc2f622fda59816394a567c50e98569fe8ab68d797948b802204b05504b3f837e80f4d0d8c3c6d98107e770572a8eaae66ddd14a660fe9674f101210275ab1f1c864e594c5e075ac45fbd01a45285701e429b842f8d0a1c872cf3a7baffffffff0149d00000000000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888ac00000000"
+        val forwardedTx = Transaction(networkParams, Utils.HEX.decode(txData))
+        val connected = "01000000017a4c4461b44d14a3866bc89482bdd35c800961879d65fc4e0542a377232f124b000000006a47304402206beee5884010d44501dee9094d9922af0c22b63f3afc1f3aa5c43bfcf59f38070220676e5bbeb712cbbbadbde6959cdee3367d1578bd06204178630cb1ba729073a20121025e25aa5f744bdd42f386a11efc584fa25afdaa299477038d2b86ac655287305effffffff0231d40000000000001976a914dcd48b7080eafd7b4db3bac7ea8480ccc3b1093388ac7d54a750000000001976a9149701a96ac4f8bb1a627be9928ccbc717ccce485788ac00000000"
+        val connectedTx = Transaction(networkParams, Utils.HEX.decode(connected))
+        forwardedTx.inputs[0].connect(connectedTx.outputs[0])
+
+        val filter = CrowdNodeAPIConfirmationForwarded(networkParams)
+        assertTrue("Transaction doesn't match", filter.matches(forwardedTx))
+        assertFalse("Tx matches but should not", filter.matches(signUpRequestTx))
     }
 }

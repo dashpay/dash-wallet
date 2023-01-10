@@ -65,6 +65,7 @@
         android:background="@drawable/rounded_background"
         android:orientation="vertical"
         android:paddingTop="15dp"
+        android:paddingBottom="@dimen/bottom_nav_bar_height"
         android:theme="@style/ExploreBottomContentBackground"
         app:layout_constraintBottom_toBottomOf="parent">
 

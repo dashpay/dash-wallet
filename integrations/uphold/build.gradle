@@ -5,13 +5,11 @@ apply plugin: 'kotlin-kapt'
 apply plugin: 'dagger.hilt.android.plugin'
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 31
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 29
-        versionCode 1
-        versionName "1.0"
+        targetSdkVersion 31
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -22,9 +20,6 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             consumerProguardFiles 'proguard-rules.pro'
         }
-        debug {
-            debuggable true
-        }
     }
 
     compileOptions {
@@ -34,6 +29,7 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    namespace 'org.dash.wallet.integration.uphold'
 }
 
 dependencies {
@@ -48,6 +44,7 @@ dependencies {
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
+    implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     kapt "com.google.dagger:hilt-compiler:$hiltVersion"
 
     // Tests

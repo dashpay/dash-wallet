@@ -108,7 +108,7 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
         views.setViewVisibility(R.id.main_pane, walletNotReady ? View.GONE : View.VISIBLE);
         views.setViewVisibility(R.id.wallet_not_initialized_message, walletNotReady ? View.VISIBLE : View.GONE);
         views.setOnClickPendingIntent(R.id.widget_button_balance,
-                PendingIntent.getActivity(context, 0, OnboardingActivity.createIntent(context), 0));
+                PendingIntent.getActivity(context, 0, OnboardingActivity.createIntent(context), PendingIntent.FLAG_IMMUTABLE));
 
         if (walletNotReady) {
             appWidgetManager.updateAppWidget(appWidgetId, views);
@@ -159,11 +159,11 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
                 }
 
                 views.setOnClickPendingIntent(R.id.widget_button_balance,
-                        PendingIntent.getActivity(context, 0, OnboardingActivity.createIntent(context), 0));
+                        PendingIntent.getActivity(context, 0, OnboardingActivity.createIntent(context), PendingIntent.FLAG_IMMUTABLE));
                 views.setOnClickPendingIntent(R.id.widget_button_request,
-                        PendingIntent.getActivity(context, 0, QuickReceiveActivity.createIntent(context), 0));
+                        PendingIntent.getActivity(context, 0, QuickReceiveActivity.createIntent(context), PendingIntent.FLAG_IMMUTABLE));
                 views.setOnClickPendingIntent(R.id.widget_button_send_qr,
-                        PendingIntent.getActivity(context, 0, SendCoinsQrActivity.createIntent(context, true), 0));
+                        PendingIntent.getActivity(context, 0, SendCoinsQrActivity.createIntent(context, true), PendingIntent.FLAG_IMMUTABLE));
 
                 appWidgetManager.updateAppWidget(appWidgetId, views);
             }

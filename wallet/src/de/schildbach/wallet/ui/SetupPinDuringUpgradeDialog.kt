@@ -31,16 +31,14 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
 
 @AndroidEntryPoint
-open class SetupPinDuringUpgradeDialog : CheckPinDialog() {
+open class SetupPinDuringUpgradeDialog(
+    private var onResult: ((Boolean?, String?) -> Unit)?
+) : CheckPinDialog() {
 
     companion object {
         @JvmStatic
-        fun show(activity: AppCompatActivity, requestCode: Int = 0) {
-            val checkPinDialogExt = SetupPinDuringUpgradeDialog()
-            val args = Bundle()
-            args.putInt(ARG_REQUEST_CODE, requestCode)
-            args.putBoolean(ARG_PIN_ONLY, true)
-            checkPinDialogExt.arguments = args
+        fun show(activity: AppCompatActivity, onResult: (Boolean?, String?) -> Unit) {
+            val checkPinDialogExt = SetupPinDuringUpgradeDialog(onResult)
             checkPinDialogExt.show(activity.supportFragmentManager, FRAGMENT_TAG)
         }
     }
@@ -85,10 +83,10 @@ open class SetupPinDuringUpgradeDialog : CheckPinDialog() {
         setPinViewModel.encryptWalletLiveData.observe(viewLifecycleOwner) {
             when (it.status) {
                 Status.SUCCESS -> {
-                    sharedModel.onWalletEncryptedCallback.value = viewModel.pin.toString()
+                    onResult?.invoke(true, viewModel.pin.toString())
                 }
                 Status.ERROR -> {
-                    sharedModel.onWalletEncryptedCallback.value = null
+                    onResult?.invoke(false, null)
                 }
                 Status.LOADING -> {
                     setState(State.DECRYPTING)
@@ -116,6 +114,6 @@ open class SetupPinDuringUpgradeDialog : CheckPinDialog() {
     }
 
     override fun showLockedAlert(activity: FragmentActivity, lockedTimeMessage: String) {
-        sharedModel.onCancelCallback.call()
+        onResult?.invoke(null, null)
     }
 }

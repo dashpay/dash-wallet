@@ -26,15 +26,17 @@ import androidx.activity.viewModels
 import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.send.SweepWalletActivity
+import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_tools.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.Qr
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class ToolsActivity : BaseMenuActivity() {
@@ -43,6 +45,8 @@ class ToolsActivity : BaseMenuActivity() {
         private val log = LoggerFactory.getLogger(ToolsActivity::class.java)
     }
 
+    @Inject
+    lateinit var analytics: AnalyticsService
     private val viewModel: ToolsViewModel by viewModels()
 
     override fun getLayoutId(): Int {

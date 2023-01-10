@@ -26,10 +26,11 @@ import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.notification_contact_request_received_row.view.*
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
 open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
         NotificationViewHolder(R.layout.notification_contact_request_received_row, inflater, parent) {

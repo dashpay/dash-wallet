@@ -63,7 +63,6 @@
     <string name="receive_title">Nhận</string>
     <string name="receive_enter_amount_message">Hãy xác định rõ số lượng cần nhận</string>
     <string name="receive_enter_amount_button">Hãy cung cấp số lượng</string>
-    <string name="receive_share_button">Chia sẻ</string>
 
     <string name="pay_title">Gửi</string>
     <string name="history_title">Lịch sử</string>

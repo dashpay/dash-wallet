@@ -24,10 +24,12 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
+import org.bitcoinj.core.Sha256Hash
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
@@ -37,6 +39,7 @@ import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
 
+@OptIn(FlowPreview::class)
 @HiltViewModel
 @ExperimentalCoroutinesApi
 class TransactionGroupViewModel @Inject constructor(
@@ -44,6 +47,10 @@ class TransactionGroupViewModel @Inject constructor(
     val config: Configuration,
     private val metadataProvider: TransactionMetadataProvider
 ) : ViewModel() {
+    companion object {
+        private const val THROTTLE_DURATION = 500L
+    }
+
     val dashFormat: MonetaryFormat = config.format.noCode()
 
     private val _dashValue = MutableLiveData<Coin>()
@@ -64,7 +71,8 @@ class TransactionGroupViewModel @Inject constructor(
         metadataProvider.observeAllMemos()
             .flatMapLatest { memos ->
                 refreshTransactions(transactionWrapper, memos)
-                walletData.observeTransactions()
+                walletData.observeTransactions(true)
+                    .debounce(THROTTLE_DURATION)
                     .onEach { tx ->
                         if (transactionWrapper.tryInclude(tx)) {
                             refreshTransactions(transactionWrapper, memos)

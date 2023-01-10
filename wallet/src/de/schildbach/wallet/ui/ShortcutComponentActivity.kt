@@ -18,13 +18,20 @@ package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
 import androidx.appcompat.app.AppCompatActivity
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import javax.inject.Inject
 
 @SuppressLint("Registered")
+@AndroidEntryPoint
 open class ShortcutComponentActivity : AppCompatActivity() {
+    @Inject lateinit var walletApplication: WalletApplication
+
 
     open fun finishIfNotInitialized(): Boolean {
-        if (WalletApplication.getInstance().wallet == null) {
+        if (walletApplication.wallet == null) {
             startActivity(OnboardingActivity.createIntent(this))
             finish()
             return true

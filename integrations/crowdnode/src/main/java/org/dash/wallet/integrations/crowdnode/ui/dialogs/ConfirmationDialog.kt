@@ -26,7 +26,6 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
-import org.bitcoinj.uri.BitcoinURI
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
@@ -82,16 +81,7 @@ class ConfirmationDialog: OffsetDialogFragment() {
             qrDialog?.show(parentFragmentManager, "qr_dialog")
         }
         binding.shareUrlBtn.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING_SHARE_BUTTON)
-            val paymentRequestUri = BitcoinURI.convertToBitcoinURI(accountAddress, amount, "", "")
-            val sendIntent = Intent().apply {
-                action = Intent.ACTION_SEND
-                putExtra(Intent.EXTRA_TEXT, paymentRequestUri)
-                type = "text/plain"
-            }
-
-            val shareIntent = Intent.createChooser(sendIntent, null)
-            startActivity(shareIntent)
+            viewModel.shareConfirmationPaymentUrl()
         }
 
         viewModel.setConfirmationDialogShown(true)

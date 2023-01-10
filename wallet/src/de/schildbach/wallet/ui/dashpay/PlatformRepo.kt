@@ -30,11 +30,13 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.payments.DeriveKeyTask
 import de.schildbach.wallet.security.SecurityGuard
-import de.schildbach.wallet.ui.send.DeriveKeyTask
 import de.schildbach.wallet.util.canAffordIdentityCreation
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
@@ -1016,8 +1018,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    fun loadProfileByUserId(userId: String): LiveData<DashPayProfile?> {
-        return dashPayProfileDaoAsync.loadByUserIdDistinct(userId)
+    fun observeProfileByUserId(userId: String): Flow<DashPayProfile?> {
+        return dashPayProfileDaoAsync.observeByUserId(userId).distinctUntilChanged()
+    }
+
+    suspend fun loadProfileByUserId(userId: String): DashPayProfile? {
+        return dashPayProfileDao.loadByUserId(userId)
     }
 
     /**

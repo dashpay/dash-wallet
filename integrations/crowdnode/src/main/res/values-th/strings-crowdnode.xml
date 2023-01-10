@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="crowdnode_get_started">เริ่มต้นใช้งาน CrowdNode</string>
+    <string name="crowdnode_get_started_hint">ในการเริ่มการ stakingให้สร้างบัญชีบน CrowdNode หรือเชื่อมต่อกับบัญชีที่มีอยู่</string>
+    <string name="crowdnode_account">บัญชี CrowdNode </string>
+    <string name="new_account">บัญชี CrowdNode ใหม่</string>
+    <string name="account_create">สร้างบัญชี</string>
+    <string name="accept_terms_response">โปรดยอมรับข้อกำหนด</string>
+    <string name="accept_terms">ยอมรับข้อกำหนด</string>
+    <string name="welcome_response">สร้างบัญชี</string>
+    <string name="account_link">ลิงก์บัญชีที่มีอยู่</string>
+    <string name="crowdnode_login">ลงชื่อเข้าใช้ CrowdNode</string>
+    <string name="crowdnode_signup">ลงทะเบียนกับ CrowdNode</string>
+    <string name="crowdnode_link">ลิงก์บัญชี CrowdNode ที่มีอยู่</string>
+    <string name="required_passphrase_backup">คุณต้องสำรองข้อมูลรหัสผ่านของคุณในกระเป๋าเงิน Dash</string>
+    <string name="backup_passphrase">สำรองวลีรหัสผ่าน</string>
+    <string name="required_dash_amount">คุณต้องการอย่างน้อย %s Dash บนกระเป๋า Dash ของคุณ</string>
+    <string name="crowdnode_new_account_warning_1">CrowdNode ใช้ที่อยู่นี้เป็นรหัสบัญชีของคุณ คุณจะสูญเสียการเข้าถึงเงินทุนของคุณภายในกระเป๋าเงินนี้และบัญชี CrowdNode ของคุณหากคุณสูญเสียวลีรหัสผ่านที่เกี่ยวข้องกับที่อยู่นี้</string>
+    <string name="crowdnode_new_account_warning_2">Dash จำนวนน้อยมากจะถูกส่งไปและกลับจาก CrowdNode เพื่อตรวจสอบว่าคุณเป็นเจ้าของที่อยู่กระเป๋าเงินนี้</string>
+    <string name="crowdnode_link_account_description">การถ่ายโอนทั้งหมดไปและกลับจาก CrowdNode จากอุปกรณ์นี้จะดำเนินการด้วยที่อยู่ DASH ด้านล่างจากอุปกรณ์นี้</string>
+    <string name="dash_address">ที่อยู่ Dash </string>
+    <string name="primary_dash_address">ที่อยู่หลัก Dash </string>
+    <string name="crowdnode_secure_wallet">สำรองข้อมูลรหัสผ่านของคุณเพื่อสร้างบัญชี CrowdNode</string>
+    <string name="crowdnode_secure_wallet_explainer">หากคุณสูญเสียวลีรหัสผ่านสำหรับกระเป๋าเงินนี้และสูญเสียอุปกรณ์นี้หรือถอนการติดตั้งกระเป๋าเงิน Dash คุณจะสูญเสียการเข้าถึงเงินทุนของคุณใน CrowdNode และเงินทุนภายในกระเป๋าเงินนี้</string>
+    <string name="insufficient_funds">คุณมีเงินไม่เพียงพอที่จะดำเนินการต่อ</string>
+    <string name="crowdnode_minimum_dash">คุณควรมี Dash อย่างน้อย %s พื่อดำเนินการตรวจสอบ CrowdNode</string>
+    <string name="crowdnode_agree_to_terms">ฉันเห็นด้วยกับ CrowdNode %1$s และ %2$s</string>
+    <string name="terms_of_use">ข้อกำหนดการใช้งาน</string>
+    <string name="privacy_policy">นโยบายความเป็นส่วนตัว</string>
+    <string name="crowdnode_account_ready">บัญชี CrowdNode ของคุณถูกตั้งค่าและพร้อมใช้งาน!</string>
+    <string name="notify_when_done">ปิดและแจ้งเมื่อเสร็จแล้ว</string>
+    <string name="crowdnode_creating">การสร้างบัญชี CrowdNode ของคุณ ...</string>
+    <string name="accepting_terms">ยอมรับข้อกำหนดการใช้งาน ...</string>
+    <string name="crowdnode_signup_error">เราไม่สามารถสร้างบัญชี CrowdNode ของคุณได้</string>
+    <string name="crowdnode_deposit_error">เราไม่สามารถฝากเงินไปยังบัญชี CrowdNode ของคุณได้</string>
+    <string name="crowdnode_withdraw_error">เราไม่สามารถถอนตัวจากบัญชี CrowdNode ของคุณได้</string>
+    <string name="crowdnode_transfer_error">การถ่ายโอน CrowdNode ของคุณไม่ประสบความสำเร็จ</string>
+    <string name="crowdnode_deposit_received">ได้รับเงินฝากของคุณไปยัง CrowdNode</string>
+    <string name="deposit">เงินฝาก</string>
+    <string name="deposit_sent">ส่งเงินฝากแล้ว</string>
+    <string name="deposit_sent_message">อาจใช้เวลาสักครู่เพื่ออัปเดตยอดคงเหลือของคุณ</string>
+    <string name="crowdnode_deposit_from_wallet">DashWallet ➝ CrowdNode</string>
+    <string name="from_wallet">จากกระเป๋าเงิน Dash </string>
+    <string name="from_crowdnode">จาก CrowdNode</string>
+    <string name="withdraw">ถอนเงิน</string>
+    <string name="withdrawal_requested">ขอถอนเงิน</string>
+    <string name="withdrawal_requested_message">อาจใช้เวลาสักครู่เพื่อให้เงินทุนของคุณมาถึง</string>
+    <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
+    <string name="online_account">บัญชีออนไลน์</string>
+    <string name="online_account_create">สร้างบัญชีออนไลน์</string>
+    <string name="secure_online_account">ปกป้องเงินทุนของคุณ</string>
+    <string name="crowdnode_signup_to_finish">ลงทะเบียนเพื่อเสร็จสิ้นการตั้งค่าบัญชี</string>
+    <string name="online_account_create_full">สร้างบัญชี CrowdNode ออนไลน์</string>
+    <string name="online_account_email_privacy">โปรดทราบว่าอีเมลที่ไม่ได้รับการบันทึกโดยกระเป๋าเงิน Dash และจะถูกส่งไปยัง CrowdNode เท่านั้น</string>
+    <string name="crowdnode_support">ฝ่ายสนับสนุน CrowdNode </string>
+    <string name="unlink_account">บัญชี Unlink</string>
+    <string name="online_account_title">ทำไมคุณถึงต้องการบัญชีออนไลน์?</string>
+    <string name="crowdnode_online_synced">ซิงค์กับกระเป๋าเงิน Dash ปัจจุบัน</string>
+    <string name="crowdnode_in_process">อยู่ในระหว่างการดำเนินงาน…</string>
+    <string name="account_recovery">การกู้คืนบัญชี</string>
+    <string name="crowdnode_recovery_info">หากคุณสูญเสียวลีรหัสผ่านคุณสามารถยืยยันตัวตนด้วยวิธีอื่นเพื่อให้สามารถเข้าถึงเงินทุน CrowdNode ของคุณได้</string>
+    <string name="transaction_history">ประวัติการทำรายการ</string>
+    <string name="see_staking_details">คุณสามารถดูข้อมูลโดยละเอียดเกี่ยวกับเงินฝากการถอนและรางวัลของคุณ</string>
+    <string name="payout_options">ตัวเลือกการจ่ายเงิน</string>
+    <string name="payout_options_details">คุณสามารถเปลี่ยนวิธีการที่คุณได้รับจากรายได้จากรางวัลของคุณ</string>
+    <string name="crowdnode_balance">เงินคงเหลือบน CrowdNode</string>
+    <string name="crowdnode_your_address_title">นี่คือที่อยู่ Dash ที่เกี่ยวข้องกับบัญชี CrowdNode ของคุณ</string>
+    <string name="chain_syncing">โซ่กำลังซิงค์...</string>
+    <string name="crowdnode_wait_for_sync">รอจนกว่าบล็อกเชนจะถูกซิงค์อย่างเต็มที่ดังนั้นเราสามารถตรวจสอบประวัติการทำธุรกรรมของคุณ เยี่ยมชมเว็บไซต์ CrowdNode เพื่อเข้าสู่ระบบหรือลงทะเบียน</string>
+    <string name="crowdnode_open_website">ไปที่เว็บไซต์ CrowdNode</string>
+    <string name="crowdnode_info_title">เป็นส่วนหนึ่งของ Dash มาสเตอร์โหนด กับ CrowdNode</string>
+    <string name="introducing_staking">แนะนำ Staking</string>
+    <string name="crowdnode_staking_info">รับรางวัลจากเงินฝากใน Dash มาสเตอร์โหนดที่มีเพียง 0.5 Dash</string>
+    <string name="instant_rewards">รับรางวัลทันที</string>
+    <string name="daily_rewards_info">รับส่วนแบ่งของรางวัลทุกวัน</string>
+    <string name="crowdnode_sending_to">ส่งไปยังบัญชี CrowdNode</string>
+    <string name="wallet_sending_to">ส่งไปยังกระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
+    <string name="available_balance">เงินคงเหลือ: %s</string>
+    <string name="crowdnode_minimum_deposit">ฝากเงินอย่างน้อย %s เพื่อเริ่มต้นหารายได้</string>
+    <string name="crowdnode_minimum_deposit_difference">ฝากเงิน %s เพื่อเริ่มต้นหารายได้</string>
+    <string name="crowdnode_first_deposit">เงินฝากครั้งแรกควรมากกว่า %s</string>
+    <string name="crowdnode_staking_info_title">การ staking CrowdNode ทำงานอย่างไร</string>
+    <string name="crowdnode_staking_info_message_first">เครือข่าย Dash นั้นขับเคลื่อนด้วยมาสเตอร์โหนดจำนวนมากซึ่งเป็นส่วนสำคัญของการชำระเงินที่อำนวยความสะดวก</string>
+    <string name="crowdnode_staking_info_message_second">มาสเตอร์โหนดต้องการ 1000 Dash เป็นหลักประกันและแต่ละ มาสเตอร์โหนดต้องการจะได้รับรางวัลประมาณ %s%%ต่อปี  </string>
+    <string name="crowdnode_staking_apy_title">APY ปัจจุบันคือ %s%%</string>
+    <string name="crowdnode_staking_info_message">คุณเริ่มมีรายได้หากบัญชี CrowdNode ของคุณมีมากกว่า %s</string>
+    <string name="staking_apy_title">APY ปัจจุบันคือ %s</string>
+    <string name="crowdnode_staking_current_apy_message">สิ่งนี้แสดงถึงอัตราผลตอบแทนร้อยละต่อปีปัจจุบันของมาสเตอรืโหนด เต็มน้อยกว่าค่าธรรมเนียม CrowdNode 15% แต่มันไม่ได้เป็นอัตราผลตอบแทนที่รับประกันได้และอาจเพิ่มขึ้นหรือลงตามขนาดของกลุ่ม CrowdNode และราคา Dash</string>
+    <string name="crowdnode_staking_leave_pool_message_one">สมาชิกมีอิสระที่จะออกจาก pool และมักจะออกไปทันที</string>
+    <string name="crowdnode_staking_leave_pool_message_two">ในกรณีที่มีการถอนจำนวนมาก CrowdNode จะจ่ายเงินที่ถอนภายในสองสัปดาห์ นี่เป็นเพราะโปรโตคอลความปลอดภัยของพวกเขาและส่วนใหญ่มักจะได้รับการจัดการที่เร็วขึ้นมาก</string>
+
+    <string name="crowdnode_staking_leaving_the_pool_title">การออกจาก Pool</string>
+    <string name="crowdnode_staking_receiving_rewards_title">การรับรีวอร์ด</string>
+    <string name="crowdnode_staking_receiving_rewards_message">คุณจะได้รับการชำระเงินแบบเศษส่วนโดยอัตโนมัติและโดยค่าเริ่มต้นจะถูกนำกลับมาลงทุนใหม่อย่างไรก็ตามมันเป็นเรื่องง่ายที่จะตั้งค่าการถอนอัตโนมัติเพื่อรับการจ่ายเงินที่เกิดขึ้นซ้ำ</string>
+    <string name="crowdnode_staking_first_minimum_deposit_title">เงินฝากขั้นต่ำขั้นแรก</string>
+    <string name="crowdnode_staking_join_pool_message">เนื่องจากคนส่วนใหญ่ไม่ได้มี 1000 Dash ในมือ CrowdNode ได้ให้บริการที่พวกเขามีการรวมเงินฝากจากสมาชิกสามารถได้รับประโยชน์จากการเป็นเจ้าของมาสเตอร์โหนด</string>
+    <string name="crowdnode_staking_join_pool_title">เข้าร่วม pool</string>
+    <string name="crowdnode_staking_crowdnode_benefits_title">ผลประโยชน์ของ CrowdNode</string>
+    <string name="crowdnode_staking_connected_dash_address_title">ที่อยู่ Dash ที่เชื่อมต่อ</string>
+    <string name="crowdnode_staking_connected_dash_address_message">นี่คือที่อยู่ Dash ที่กำหนดไว้สำหรับบัญชี CrowdNode ของคุณในกระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
+    <string name="crowdnode_staking_toast_address_copied">ที่อยู่ Dash ที่คัดลอกไปยังคลิปบอร์ด</string>
+    <string name="crowdnode_verify_api_address">ตรวจสอบที่อยู่ API Dash ของคุณ</string>
+    <string name="crowdnode_how_to_verify">วิธียืนยันที่อยู่ API Dash ของคุณ</string>
+    <string name="crowdnode_how_to_verify_description1">ส่ง %s Dash จากที่อยู่หลัก Dash ของคุณที่คุณใช้สำหรับบัญชี CrowdNode ของคุณในปัจจุบัน </string>
+    <string name="crowdnode_how_to_verify_description2">ไปยังที่อยู่ Dash ที่กำหนดไว้สำหรับบัญชี CrowdNode ของคุณในกระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
+    <string name="crowdnode_how_to_verify_description3">เราจะตรวจสอบการทำธุรกรรมนี้โดยอัตโนมัติและโอนจำนวนเท่ากันไปยังบัญชี CrowdNode ของคุณ หลังจากนั้นคุณจะสามารถฝากเงินและการถอนในกระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
+    <string name="button_show_qr">แสดง QR</string>
+    <string name="scan_qr">สแกน QR</string>
+    <string name="qr_contains_request">QR นี้มีคำขอชำระเงินสำหรับ %s Dash แล้ว</string>
+    <string name="verification_required">จำเป็นต้องมีการตรวจสอบ</string>
+    <string name="validating_address">ตรวจสอบที่อยู่...</string>
+    <string name="crowdnode_address_validated">ที่อยู่ CrowdNode ของคุณได้รับการตรวจสอบแล้ว แต่ยังจำเป็นต้องมีการตรวจสอบ</string>
+    <string name="crowdnode_address_confirmed">ที่อยู่ CrowdNode ของคุณได้รับการยืนยันแล้ว</string>
+    <string name="crowdnode_bad_confirmation">การยืนยันที่ส่งจากที่อยู่หลักผิด</string>
+    <string name="crowdnode_online_account_details_title">ข้อมูลเกี่ยวกับบัญชีออนไลน์ของคุณ</string>
+    <string name="crowdnode_online_account_details_primary">ที่อยู่หลัก Dash ของคุณที่คุณใช้สำหรับบัญชี CrowdNode ของคุณในปัจจุบัน</string>
+    <string name="crowdnode_online_account_details_api">ที่อยู่ Dash ที่กำหนดไว้สำหรับบัญชี CrowdNode ของคุณในกระเป๋าเงิน Dash บนอุปกรณ์นี้</string>
+    <string name="crowdnode_primary_missing">ที่อยู่หลัก Dash หายไปจากบัญชีของคุณ โปรดระบุไว้ในเว็บไซต์ CrowdNode</string>
+    <string name="crowdnode_wait_signed_email">โปรดรอจนกว่าอีเมลของคุณจะถูกประมวลผล...</string>
+    <string name="cannot_send">ไม่สามารถส่งได้</string>
+    <string name="crowdnode_tx_set_title">ทำไมฉันถึงเห็นธุรกรรมเหล่านี้ทั้งหมด?</string>
+    <string name="crowdnode_tx_set_explainer">บัญชี CrowdNode ของคุณถูกสร้างขึ้นโดยใช้ธุรกรรมเหล่านี้</string>
+    <string name="shuffle_coins">สลับเหรียญ</string>
+    <string name="positive_balance_required">คุณควรมียอดเงินคงเหลือบนกระเป๋าเงิน Dash มากกว่านี้</string>
+    <string name="withdrawal_required_balance">ฝากอย่างน้อย 0.0003 Dash บนกระเป๋า Dash ของคุณเพื่อการถอน</string>
+    <string name="withdrawal_limit">ข้อจำกัดการถอน Dash</string>
+    <string name="withdrawal_limit_details">คุณไม่สามารถถอนได้มากกว่า %1$s Dash %2$s</string>
+    <string name="crowdnode_withdrawal_limits_title">ข้อจำกัดการถอน CrowdNode </string>
+    <string name="crowdnode_withdrawal_limits_message">เนื่องจากเงื่อนไขการใช้บริการของ CrowdNode สามารถถอนได้ไม่เกิน:</string>
+    <string name="crowdnode_withdraw_without_limits_online">ถอนโดยไม่จำกัดด้วยบัญชีออนไลน์บนเว็บไซต์ CrowdNode</string>
+    <string name="crowdnode_withdrawal_limits_error">ข้อผิดพลาดนี้น่าจะเป็นเพราะเกินขีดจำกัดการถอน CrowdNode โปรดลองอีกครั้งในภายหลัง</string>
+    <string name="per_transaction">ต่อธุรกรรม</string>
+    <string name="per_hour">ต่อชั่วโมง</string>
+    <string name="per_day">ต่อ 24 ชั่วโมง</string>
+    <string name="read_withdrawal_policy">โปรดอ่านนโยบายการถอนเงิน</string>
+
+
+    </resources>

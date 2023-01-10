@@ -18,42 +18,29 @@
 package de.schildbach.wallet.ui;
 
 import android.app.ActivityManager.TaskDescription;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
-import android.view.WindowManager;
 
 import androidx.annotation.LayoutRes;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.Toolbar;
 
-import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.InteractionAwareActivity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.util.AnrSupervisor;
 import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractWalletActivity extends LockScreenActivity implements AbstractPINDialogFragment.WalletProvider {
-
-    private WalletApplication application;
+// TODO: do we need this class?
+public abstract class AbstractWalletActivity extends LockScreenActivity {
 
     protected static final Logger log = LoggerFactory.getLogger(AbstractWalletActivity.class);
 
-    static final AnrSupervisor sSupervisor = new AnrSupervisor();
-
-
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
-        application = (WalletApplication) getApplication();
-
-        setTaskDescription(new TaskDescription(null, null, getResources().getColor(R.color.bg_action_bar)));
-
+        setTaskDescription(new TaskDescription(null, null, getResources().getColor(R.color.bg_action_bar, null)));
         super.onCreate(savedInstanceState);
     }
 
@@ -81,25 +68,5 @@ public abstract class AbstractWalletActivity extends LockScreenActivity implemen
                 actionBar.setDisplayShowHomeEnabled(true);
             }
         }
-    }
-
-    @Override
-    public Wallet getWallet() {
-        return application.getWallet();
-    }
-
-    @Override
-    public void onWalletUpgradeComplete(String password) {
-
-    }
-
-    public void onStart() {
-        super.onStart();
-        sSupervisor.start();
-
-    }
-    public void onStop() {
-        super.onStop();
-        sSupervisor.stop();
     }
 }

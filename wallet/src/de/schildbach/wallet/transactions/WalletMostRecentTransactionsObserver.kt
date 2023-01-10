@@ -19,7 +19,6 @@ package de.schildbach.wallet.transactions
 
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -28,7 +27,6 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.Wallet
 
-@ExperimentalCoroutinesApi
 class WalletMostRecentTransactionsObserver(private val wallet: Wallet) {
     fun observe(): Flow<Transaction> = callbackFlow {
         fun emitMostRecentTransaction() {
@@ -38,7 +36,7 @@ class WalletMostRecentTransactionsObserver(private val wallet: Wallet) {
                 var mostRecentTx = allTxs.first()
                 allTxs.forEach {
                     if (it.transaction.updateTime > mostRecentTx.transaction.updateTime) {
-                        mostRecentTx = it;
+                        mostRecentTx = it
                     }
                 }
                 trySend(mostRecentTx.transaction)

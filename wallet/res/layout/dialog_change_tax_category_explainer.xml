@@ -45,7 +45,7 @@
 
     <TextView
         android:id="@+id/explanation"
-        style="@style/Body2"
+        style="@style/Body2.Secondary"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"
@@ -62,8 +62,8 @@
         android:layout_marginTop="30dp"
         android:layout_marginBottom="54dp"
         android:layout_marginHorizontal="20dp"
-        android:background="@drawable/rounded_corners_bgd_light_gray"
-        android:theme="@style/ExampleBackground"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/TaxCategoryExampleBackground"
         app:layout_constraintTop_toBottomOf="@+id/explanation"
         app:layout_constraintBottom_toBottomOf="parent">
 
@@ -71,16 +71,25 @@
             android:id="@+id/transaction_details"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:translationY="50dp"
+            android:translationY="40dp"
             android:layout_marginVertical="-50dp"
+            android:paddingTop="50dp"
             android:scaleX="0.77"
             android:scaleY="0.77"
-            android:background="@drawable/white_background_rounded">
+            android:background="@drawable/rounded_background"
+            android:theme="@style/TaxCategoryExampleContentBackground">
 
             <include
                 layout="@layout/transaction_result_content" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <ImageView
+            style="@style/DialogCloseButton"
+            android:translationY="44dp"
+            android:translationX="-32dp"
+            android:scaleX="0.6"
+            android:scaleY="0.6" />
     </FrameLayout>
 
     <androidx.constraintlayout.widget.Guideline

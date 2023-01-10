@@ -20,11 +20,11 @@ package org.dash.wallet.features.exploredash
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Resources
+import android.database.sqlite.SQLiteException
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import junit.framework.TestCase.*
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import net.lingala.zip4j.ZipFile
 import org.dash.wallet.features.exploredash.repository.GCExploreDatabase
@@ -36,9 +36,9 @@ import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.kotlin.*
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import java.lang.IllegalArgumentException
 import java.lang.RuntimeException
 import kotlin.time.ExperimentalTime
-import kotlin.time.Duration.Companion.seconds
 
 @ExperimentalTime
 @RunWith(RobolectricTestRunner::class)
@@ -66,76 +66,87 @@ class ExploreDatabaseTest {
     }
 
     @Test
-    fun noPreloadedDb_doesNotUpdateLocalTimestamp() {
+    fun noPreloadedDb_throwAndDoesNotUpdateLocalTimestamp() = runBlocking {
         timestamp = -1L
 
         val dbBuilder = Room.databaseBuilder(
             appContext,
-            AppExploreDatabase::class.java,
+            ExploreDatabase::class.java,
             "explore.db"
         ).allowMainThreadQueries()
 
         val updateFile = File("/not/existing/file.db")
-        val database = AppExploreDatabase.buildDatabase(dbBuilder, repo, updateFile)
-        database.query("SELECT * FROM sqlite_master", null)
-        runBlocking { delay(3.seconds) }
+        var database: ExploreDatabase? = null
 
-        assertFalse("This case should not update the timestamp", timestamp > 0)
-        database.close()
+        try {
+            database = ExploreDatabase.preloadAndOpen(dbBuilder, repo, updateFile)
+            assertTrue(false)
+        } catch (ex: IllegalArgumentException) {
+            println("Got expected IllegalArgumentException: ${ex.message}")
+            assertFalse("This case should not update the timestamp", timestamp > 0)
+        } finally {
+            database?.close()
+        }
     }
 
     @Test
-    fun emptyPreloadedDb_doesNotUpdateLocalTimestamp() {
+    fun emptyPreloadedDb_throwDoesNotUpdateLocalTimestamp() = runBlocking {
         timestamp = -1L
 
         val dbBuilder = Room.databaseBuilder(
             appContext,
-            AppExploreDatabase::class.java,
+            ExploreDatabase::class.java,
             "explore.db"
         ).allowMainThreadQueries()
 
         val resource = javaClass.classLoader?.getResource("empty_explore.db")
         val updateFile =
             File(resource?.file ?: throw Resources.NotFoundException("explore.db not found"))
-        val database = AppExploreDatabase.buildDatabase(dbBuilder, repo, updateFile)
-        database.query("SELECT * FROM sqlite_master", null)
-        runBlocking { delay(3.seconds) }
-        assertFalse("This case should not update the timestamp", timestamp > 0)
-        database.close()
+
+        var database: ExploreDatabase? = null
+
+        try {
+            database = ExploreDatabase.preloadAndOpen(dbBuilder, repo, updateFile)
+            assertTrue(false)
+        } catch (ex: SQLiteException) {
+            println("Got expected SQLiteException: ${ex.message}")
+            assertFalse("This case should not update the timestamp", timestamp > 0)
+        } finally {
+            database?.close()
+        }
     }
 
     @Test
-    fun badPreloadedDb_throwsAndDoesNotUpdateLocalTimestamp() {
+    fun badPreloadedDb_throwsAndDoesNotUpdateLocalTimestamp() = runBlocking {
         timestamp = -1L
 
         val dbBuilder = Room.databaseBuilder(
             appContext,
-            AppExploreDatabase::class.java,
+            ExploreDatabase::class.java,
             "explore.db"
         ).allowMainThreadQueries()
 
         val updateFile = File.createTempFile("temp", "file")
-        val database = AppExploreDatabase.buildDatabase(dbBuilder, repo, updateFile)
+        var database: ExploreDatabase? = null
 
         try {
-            database.query("SELECT * FROM sqlite_master", null)
-            runBlocking { delay(3.seconds) }
+            database = ExploreDatabase.preloadAndOpen(dbBuilder, repo, updateFile)
             assertTrue(false)
         } catch (ex: RuntimeException) {
             println("Got expected RuntimeException: ${ex.message}")
             assertFalse("This case should not update the timestamp", timestamp > 0)
         } finally {
-            database.close()
+            database?.close()
         }
     }
 
     @Test
-    fun goodPreloadedDb_updatesLocalTimestamp() {
+    fun goodPreloadedDb_updatesLocalTimestamp() = runBlocking {
         timestamp = -1L
 
         val dbBuilder = Room.databaseBuilder(
             appContext,
-            AppExploreDatabase::class.java,
+            ExploreDatabase::class.java,
             "explore.db"
         ).allowMainThreadQueries()
 
@@ -147,10 +158,7 @@ class ExploreDatabaseTest {
         val databaseTimestamp = comment[0].toLong()
         zipFile.close()
 
-        val database = AppExploreDatabase.buildDatabase(dbBuilder, repo, updateFile)
-        database.query("SELECT * FROM sqlite_master", null)
-
-        runBlocking { delay(3.seconds) }
+        val database = ExploreDatabase.preloadAndOpen(dbBuilder, repo, updateFile)
 
         assertTrue("This case should update the timestamp", timestamp > 0)
         assertEquals("Wrong timestamp set;", databaseTimestamp, timestamp)

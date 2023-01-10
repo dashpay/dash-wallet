@@ -114,7 +114,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Đã nhận được mã này được quét từ người gửi.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Hoặc chạm vào phần NFC để bật thiết bị.</string>
     <string name="request_coins_clipboard_msg">Yêu cầu Dash đã được copy vào vùng đệm</string>
-    <string name="request_coins_share_dialog_title">Chia sẻ yêu cầu về Dash…</string>
     <string name="request_coins_no_local_app_msg">Không thấy app nào khác về Dash</string>
     <string name="request_coins_options_local_app_title">Gửi yêu cầu từ ứng dụng tại thiết bị</string>
     <string name="address_book_activity_title">Sổ địa chỉ</string>

@@ -62,7 +62,6 @@
     <string name="receive_title">Получаване</string>
     <string name="receive_enter_amount_message">Посочете  сумата за получаване</string>
     <string name="receive_enter_amount_button">Посочете сума</string>
-    <string name="receive_share_button">Сподели</string>
 
     <string name="pay_title">Изпрати</string>
     <string name="history_title">История</string>

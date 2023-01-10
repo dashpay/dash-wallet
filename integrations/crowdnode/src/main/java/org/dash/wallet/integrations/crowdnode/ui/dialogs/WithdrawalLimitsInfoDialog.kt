@@ -61,7 +61,7 @@ class WithdrawalLimitsInfoDialog(
         highlightedLimit?.let {
             val warningColor = resources.getColor(R.color.system_red, null)
             val colorStateLit = ColorStateList.valueOf(warningColor)
-            binding.icon.setImageResource(R.drawable.ic_error_red)
+            binding.icon.setImageResource(R.drawable.ic_error)
 
             when (highlightedLimit) {
                 WithdrawalLimitPeriod.PerTransaction -> {

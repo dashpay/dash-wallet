@@ -35,13 +35,14 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
 import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.common.ui.CurrencyTextView;
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay;
 import org.dash.wallet.common.util.GenericUtils;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.ui.dashpay.NotificationsActivity;
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay;
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplayKt;
 import de.schildbach.wallet_test.R;
 import kotlinx.coroutines.ExperimentalCoroutinesApi;
 
@@ -133,7 +134,7 @@ public final class HeaderBalanceFragment extends Fragment {
 
     private void updateView() {
         DashPayProfile dashPayProfile = viewModel.getDashPayProfile();
-        ProfilePictureDisplay.display(dashpayUserAvatar, dashPayProfile, true);
+        ProfilePictureDisplayKt.display(ProfilePictureDisplay.Companion, dashpayUserAvatar, dashPayProfile, true);
 
         View balances = view.findViewById(R.id.balances_layout);
         Boolean hideBalance = viewModel.getHideBalance().getValue();

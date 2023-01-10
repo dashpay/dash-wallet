@@ -20,10 +20,11 @@ import android.content.Context
 import android.os.Bundle
 import android.view.View
 import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.invite_send_contact_request_view.*
 import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
 open class InviteSendContactRequestDialog : FancyAlertDialog() {
 

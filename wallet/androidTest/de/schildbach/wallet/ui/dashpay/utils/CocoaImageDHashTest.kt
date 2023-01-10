@@ -1,6 +1,8 @@
 package de.schildbach.wallet.ui.dashpay.utils
 
 import android.graphics.Bitmap
+import org.dash.wallet.common.ui.avatar.CocoaImageDHash
+import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.math.BigInteger

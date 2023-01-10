@@ -23,7 +23,6 @@ import android.view.ViewGroup
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogChangeTaxCategoryExplainerBinding
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -35,7 +34,6 @@ import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
 
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
 
     private val binding by viewBinding(DialogChangeTaxCategoryExplainerBinding::bind)

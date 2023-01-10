@@ -17,11 +17,9 @@
 
 package org.dash.wallet.common
 
-import androidx.lifecycle.LiveData
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.*
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
@@ -35,21 +33,16 @@ interface WalletDataProvider {
 
     val networkParameters: NetworkParameters
 
-    fun currentReceiveAddress(): Address
-
     fun freshReceiveAddress(): Address
-
-    @Deprecated("Inject ExchangeRatesProvider instead")
-    fun getExchangeRate(currencyCode: String): LiveData<ExchangeRateData>
-
-    @Deprecated("Inject Configuration instead")
-    fun defaultCurrencyCode(): String
 
     fun getWalletBalance(): Coin
 
+    fun observeWalletChanged(): Flow<Unit>
+
     fun observeBalance(balanceType: Wallet.BalanceType = Wallet.BalanceType.ESTIMATED): Flow<Coin>
 
-    fun observeTransactions(vararg filters: TransactionFilter): Flow<Transaction>
+    // Treat @withConfidence with care - it may produce a lot of events and affect performance.
+    fun observeTransactions(withConfidence: Boolean = false, vararg filters: TransactionFilter): Flow<Transaction>
 
     fun getTransactions(vararg filters: TransactionFilter): Collection<Transaction>
 

@@ -14,6 +14,9 @@
     <string name="email">อีเมล</string>
     <string name="email_placeholder">ตัวอย่างเช่น johndoe@mail.com</string>
     <string name="error">ผิดพลาด</string>
+    <string name="select_a_coin">เลือกเหรียญ</string>
+    <string name="request_coins_share_dialog_title">แชร์คำขอสำหรับ Dash</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->
@@ -37,6 +40,7 @@
     <string name="button_dismiss">ยกเลิก</string>
     <string name="network_unavailable_return">รีเซ็ตกระเป๋าสตางค์</string>
     <string name="button_continue">ดำเนินการต่อ</string>
+    <string name="get_quote">รับใบเสนอราคา</string>
     <string name="button_close">ปิด</string>
     <string name="button_retry">ลองอีกครั้ง</string>
     <string name="button_send_report">ส่งรายงาน</string>
@@ -46,13 +50,21 @@
     <string name="button_okay">ตกลง</string>
     <string name="button_share">แบ่งปัน</string>
     <string name="verify">ตรวจสอบ</string>
+    <string name="receive_enter_amount_button">ระบุจำนวน</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">ค้นหา</string>
     <string name="permission_allow">อนุญาติ</string>
     <string name="permission_deny">ปฏิเสธ</string>
+    <string name="pay_with">จ่ายเงินด้วย</string>
+    <string name="choose_payment_method">เลือกวิธีการชำระเงิน</string>
+    <string name="debit_credit_card">บัตรเดบิต/เครดิต</string>
     <string name="max">สูงสุด</string>
+    <string name="select_the_coin">เลือกเหรียญ</string>
     <string name="dash">Dash</string>
+    <string name="dash_wallet_name">กระเป๋าเงิน Dash </string>
+    <string name="from">จาก</string>
+    <string name="to">ถึง</string>
     <string name="select_currency">เลือกสกุลเงิน</string>
     <string name="send_coins_error_dusty_send">จำนวนเงินน้อยเกินไปที่จะส่ง</string>
     <string name="send_coins_error_insufficient_money">ยอดเงินไม่เพียงพอ</string>

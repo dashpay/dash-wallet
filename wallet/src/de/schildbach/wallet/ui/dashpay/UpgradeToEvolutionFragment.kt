@@ -17,51 +17,44 @@
 
 package de.schildbach.wallet.ui.dashpay
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
+import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_upgrade_to_evolution.*
+import de.schildbach.wallet_test.databinding.FragmentUpgradeToEvolutionBinding
+import org.dash.wallet.common.ui.viewBinding
 
 @AndroidEntryPoint
 class UpgradeToEvolutionFragment : Fragment(R.layout.fragment_upgrade_to_evolution) {
 
-    companion object {
-        @JvmStatic
-        fun newInstance(): UpgradeToEvolutionFragment {
-            return UpgradeToEvolutionFragment()
-        }
-    }
-
-    private lateinit var mainActivityViewModel: MainViewModel
+    private val mainViewModel by activityViewModels<MainViewModel>()
+    private val binding by viewBinding(FragmentUpgradeToEvolutionBinding::bind)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        upgradeBtn.setOnClickListener {
-            mainActivityViewModel.goBackAndStartActivityEvent.postValue(CreateUsernameActivity::class.java)
-        }
-    }
+        enterTransition = MaterialFadeThrough()
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        initViewModel()
+        binding.upgradeBtn.setOnClickListener {
+            startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+            findNavController().popBackStack()
+        }
+
+        mainViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner) { isAble ->
+            binding.upgradeBtn.isEnabled = isAble
+            binding.balanceRequirementDisclaimer.isVisible = !isAble
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        upgradeBtn.isEnabled = mainActivityViewModel.isAbleToCreateIdentity
-    }
-
-    private fun initViewModel() {
-        mainActivityViewModel = ViewModelProvider(requireActivity())[MainViewModel::class.java]
-        mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner, Observer {
-            upgradeBtn.isEnabled = it
-            balance_requirement_disclaimer.visibility = if (it) View.GONE else View.VISIBLE
-        })
+        binding.upgradeBtn.isEnabled = mainViewModel.isAbleToCreateIdentity
     }
 }
