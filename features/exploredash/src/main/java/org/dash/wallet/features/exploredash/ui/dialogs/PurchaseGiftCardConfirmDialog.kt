@@ -112,10 +112,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
                     GiftCardDetailsDialogModel(
                         merchantName = merchant?.name,
                         merchantLogo = merchant?.logoLocation,
-                        giftCardPrice = GenericUtils.fiatToString(paymentValue?.second),
-                        giftCardNumber = "11222222",
-                        giftCardPin = "11223",
-                        transactionId = exploreViewModel.transcation_id.toString()
+                        giftCardPrice = GenericUtils.fiatToString(paymentValue?.second)
                     )
                 ).show(requireActivity())
                 val navController = findNavController()
