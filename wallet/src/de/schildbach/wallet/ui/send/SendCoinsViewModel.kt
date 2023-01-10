@@ -24,6 +24,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.SendRequest
@@ -65,9 +67,9 @@ class SendCoinsViewModel @Inject constructor(
     val state: LiveData<State>
         get() = _state
 
-    private val _balance = MutableLiveData<Coin>()
-    val balance: LiveData<Coin>
-        get() = _balance
+    private val _maxOutputAmount = MutableLiveData<Coin>()
+    val maxOutputAmount: LiveData<Coin>
+        get() = _maxOutputAmount
 
     var currentAmount: Coin = Coin.ZERO
         set(value) {
@@ -103,9 +105,9 @@ class SendCoinsViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        walletDataProvider.observeBalance()
+        walletDataProvider.observeBalance(coinSelector = MaxOutputAmountCoinSelector())
             .distinctUntilChanged()
-            .onEach(_balance::postValue)
+            .onEach(_maxOutputAmount::postValue)
             .launchIn(viewModelScope)
 
         walletApplication.startBlockchainService(false)
@@ -166,6 +168,16 @@ class SendCoinsViewModel @Inject constructor(
         val available = wallet.getBalance(Wallet.BalanceType.AVAILABLE)
 
         return estimated.subtract(available)
+    }
+
+    fun shouldAdjustAmount(): Boolean {
+        return dryRunException is InsufficientMoneyException &&
+                currentAmount.isLessThan(maxOutputAmount.value ?: Coin.ZERO)
+    }
+
+    fun getAdjustedAmount(): Coin {
+        val missing = (dryRunException as? InsufficientMoneyException)?.missing ?: Coin.ZERO
+        return currentAmount.subtract(missing)
     }
 
     fun resetState() {

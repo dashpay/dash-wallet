@@ -16,6 +16,8 @@
     <string name="error">Помилка</string>
     <string name="select_a_coin">Виберіть монету</string>
     <string name="request_coins_share_dialog_title">Поділитись запитом Dash-монет…</string>
+    <string name="transfer_dash">Переказати Dash</string>
+    <string name="balance">Баланс:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Гернсійський фунт</string>

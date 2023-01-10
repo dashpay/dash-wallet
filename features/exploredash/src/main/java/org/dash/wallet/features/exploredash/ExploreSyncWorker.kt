@@ -19,19 +19,20 @@ package org.dash.wallet.features.exploredash
 
 import android.content.Context
 import androidx.hilt.work.HiltWorker
-import androidx.work.CoroutineWorker
-import androidx.work.WorkerParameters
+import androidx.work.*
 import com.google.firebase.FirebaseNetworkException
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
+import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.system.measureTimeMillis
 
 @HiltWorker
@@ -46,6 +47,27 @@ class ExploreSyncWorker @AssistedInject constructor(
     companion object {
         const val USE_TEST_DB_KEY = "use_test_database"
         private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
+
+        fun run(@ApplicationContext context: Context, isMainNet: Boolean) {
+            val inputData = Data.Builder().putBoolean(
+                USE_TEST_DB_KEY,
+                !isMainNet
+            )
+            val syncDataWorkRequest = OneTimeWorkRequest.Builder(ExploreSyncWorker::class.java)
+                .setBackoffCriteria(
+                    BackoffPolicy.EXPONENTIAL,
+                    WorkRequest.DEFAULT_BACKOFF_DELAY_MILLIS,
+                    TimeUnit.MILLISECONDS
+                )
+                .setInputData(inputData.build())
+                .build()
+
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                "Sync Explore Data",
+                ExistingWorkPolicy.KEEP,
+                syncDataWorkRequest
+            )
+        }
     }
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {

@@ -16,6 +16,12 @@
     <string name="error">エラー</string>
     <string name="select_a_coin">通貨を選ぶ</string>
     <string name="request_coins_share_dialog_title">Dashのリクエストを共有…</string>
+    <string name="buy_with_fiat">Dashをフィアットで購入する</string>
+    <string name="buy_and_convert">Dashを他の仮想通貨で購入して変換する</string>
+    <string name="transfer_dash">Dashを送金する</string>
+    <string name="login_error_title">お客様の%sアカウントにログインできません</string>
+    <string name="login_error_message">お客様の%sアカウントへのログイン中にエラーが発生しました。</string>
+    <string name="balance">残高:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">ガーンジー・ポンド</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">どれでも有効</string>
     <string name="button_okay">OK</string>
     <string name="button_share">共有</string>
+    <string name="share_address">アドレスを共有する</string>
     <string name="verify">検証する</string>
     <string name="receive_enter_amount_button">金額を指定する</string>
 

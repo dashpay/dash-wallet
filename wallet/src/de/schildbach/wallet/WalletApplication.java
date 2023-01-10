@@ -70,6 +70,8 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.CoinSelection;
+import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
@@ -275,25 +277,8 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void syncExploreData() {
-        Data.Builder inputData = new Data.Builder().putBoolean(
-                ExploreSyncWorker.USE_TEST_DB_KEY,
-                !Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET)
-        );
-        OneTimeWorkRequest syncDataWorkRequest =
-                new OneTimeWorkRequest.Builder(ExploreSyncWorker.class)
-                        .setBackoffCriteria(
-                                BackoffPolicy.EXPONENTIAL,
-                                WorkRequest.DEFAULT_BACKOFF_DELAY_MILLIS,
-                                TimeUnit.MILLISECONDS
-                        )
-                        .setInputData(inputData.build())
-                        .build();
-
-        WorkManager.getInstance(this.getApplicationContext()).enqueueUniqueWork(
-                "Sync Explore Data",
-                ExistingWorkPolicy.KEEP,
-                syncDataWorkRequest
-        );
+        boolean isMainNet = Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET);
+        ExploreSyncWorker.Companion.run(getApplicationContext(), isMainNet);
     }
 
     public void fullInitialization() {
@@ -1005,12 +990,15 @@ public class WalletApplication extends MultiDexApplication
 
     @NonNull
     @Override
-    public Flow<Coin> observeBalance(@NonNull Wallet.BalanceType balanceType) {
+    public Flow<Coin> observeBalance(
+        @NonNull Wallet.BalanceType balanceType,
+        @Nullable CoinSelector coinSelector
+    ) {
         if (wallet == null) {
             return FlowKt.emptyFlow();
         }
 
-        return new WalletBalanceObserver(wallet, balanceType).observe();
+        return new WalletBalanceObserver(wallet, balanceType, coinSelector).observe();
     }
 
     @NonNull

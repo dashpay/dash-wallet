@@ -268,7 +268,7 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
 
             final String pin = privateKeyPasswordView.getText().toString().trim();
 
-            new DeriveKeyTask(backgroundHandler, securityFunctions.scryptIterationsTarget()) {
+            new DeriveKeyTask(backgroundHandler, securityFunctions.getScryptIterationsTarget()) {
                 @Override
                 protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
                     privateKeyBadPasswordView.setVisibility(View.GONE);

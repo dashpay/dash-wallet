@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="uphold_link_title">鏈接您的Uphold 帳戶</string>
+    <string name="uphold_transfer_details">從 Uphold 轉到你的達世幣錢包</string>
     <string name="uphold_buy_dash_activity_title">用Uphold帳戶來 購買/出售 達世幣</string>
     <string name="uphold_buy_dash_with_uphold">用Uphold帳戶來購買達世幣</string>
     <string name="uphold_buy_dash_button">購買達世幣</string>

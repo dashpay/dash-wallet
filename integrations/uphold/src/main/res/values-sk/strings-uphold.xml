@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="uphold_link_title">Pripojiť váš Uphold účet</string>
+    <string name="uphold_transfer_details">Z Upholdu do vašej Dash peňaženky</string>
     <string name="uphold_buy_dash_activity_title">Kúpiť/Predať Dash na Upholde</string>
     <string name="uphold_buy_dash_with_uphold">Kúpiť Dash s Uphold účtom</string>
     <string name="uphold_buy_dash_button">Kúpiť Dash</string>

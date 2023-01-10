@@ -46,6 +46,10 @@ open class OffsetDialogFragment : BottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         dialog?.setOnShowListener { dialog ->
+            if (!this@OffsetDialogFragment.isAdded) {
+                return@setOnShowListener
+            }
+
             val d = dialog as BottomSheetDialog
             val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
             bottomSheet?.let {

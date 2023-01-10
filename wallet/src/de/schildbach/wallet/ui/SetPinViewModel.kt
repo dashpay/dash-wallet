@@ -71,7 +71,7 @@ class SetPinViewModel @Inject constructor(
 
     private fun encryptWallet(initialize: Boolean) {
         if (!walletData.wallet!!.isEncrypted) {
-            encryptWalletLiveData.encrypt(securityFunctions.scryptIterationsTarget(), initialize)
+            encryptWalletLiveData.encrypt(securityFunctions.scryptIterationsTarget, initialize)
         } else {
             log.warn("Trying to encrypt already encrypted wallet")
         }
