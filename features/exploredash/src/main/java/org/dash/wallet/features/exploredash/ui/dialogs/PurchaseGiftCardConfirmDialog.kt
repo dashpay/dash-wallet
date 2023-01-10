@@ -22,23 +22,33 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.StyleRes
-import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.navGraphViewModels
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.model.GiftCardDetailsDialogModel
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
+import java.util.*
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@FlowPreview
+@ExperimentalCoroutinesApi
+@AndroidEntryPoint
 class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
     @StyleRes
     override val backgroundStyle = R.style.PrimaryBackground
 
-    private val exploreViewModel: ExploreViewModel by activityViewModels()
+    private val exploreViewModel: ExploreViewModel by navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
 
     private val binding by viewBinding(DialogConfirmPurchaseGiftCardBinding::bind)
 
@@ -84,8 +94,35 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
         }
 
         binding.confirmButton.setOnClickListener {
-            exploreViewModel.setConfirmPurchaseGiftCard(true)
-            dismiss()
+            lifecycleScope.launch {
+                val merchant = exploreViewModel.purchaseGiftCardData?.second
+                val paymentValue = exploreViewModel.purchaseGiftCardData?.first
+                merchant?.merchantId?.let {
+                    paymentValue?.let { amountValue ->
+                        exploreViewModel.purchaseGiftCard(
+                            merchantId = it,
+                            giftCardAmount = amountValue.first.toPlainString().toDouble(),
+                            currency = Constants.DASH_CURRENCY,
+                            deviceID = UUID.randomUUID().toString()
+                        )
+                    }
+                }
+                // TODO Change to response from API
+                GiftCardDetailsDialog.newInstance(
+                    GiftCardDetailsDialogModel(
+                        merchantName = merchant?.name,
+                        merchantLogo = merchant?.logoLocation,
+                        giftCardPrice = GenericUtils.fiatToString(paymentValue?.second),
+                        giftCardNumber = "11222222",
+                        giftCardPin = "11223",
+                        transactionId = exploreViewModel.transcation_id.toString()
+                    )
+                ).show(requireActivity())
+                val navController = findNavController()
+                navController.popBackStack(navController.graph.startDestinationId, true)
+
+                dismiss()
+            }
         }
     }
 }

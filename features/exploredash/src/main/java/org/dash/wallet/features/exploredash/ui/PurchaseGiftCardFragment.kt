@@ -21,12 +21,11 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.navGraphViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
@@ -39,10 +38,8 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseGiftCardBinding
-import org.dash.wallet.features.exploredash.ui.dialogs.GiftCardDetailsDialog
 import org.dash.wallet.features.exploredash.ui.dialogs.PurchaseGiftCardConfirmDialog
 import org.slf4j.LoggerFactory
-import java.util.UUID
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -55,7 +52,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
     private val binding by viewBinding(FragmentPurchaseGiftCardBinding::bind)
     private val viewModel: PurchaseGiftCardViewModel by activityViewModels()
     private var enterAmountFragment: EnterAmountFragment? = null
-    private val exploreViewModel: ExploreViewModel by activityViewModels()
+    private val exploreViewModel: ExploreViewModel by navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
     private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
 
     var selectedMerchent: Merchant? = null
@@ -138,28 +135,6 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
 
             enterAmountViewModel.setMinAmount(minValue, true)
             enterAmountViewModel.setMaxAmount(maxValue)
-        }
-
-        exploreViewModel.confirmPurchaseGiftCard.observe(viewLifecycleOwner) {
-            lifecycleScope.launch {
-                if (it) {
-                    val merchant = exploreViewModel.purchaseGiftCardData?.second
-                    val paymentValue = exploreViewModel.purchaseGiftCardData?.first
-                    merchant?.merchantId?.let {
-                        paymentValue?.let { amountValue ->
-                            exploreViewModel.purchaseGiftCard(
-                                merchantId = it,
-                                giftCardAmount = amountValue.first.toPlainString().toDouble(),
-                                currency = Constants.DASH_CURRENCY,
-                                deviceID = UUID.randomUUID().toString()
-                            )
-                        }
-                    }
-                    GiftCardDetailsDialog().show(requireActivity())
-                    val navController = findNavController()
-                    navController.popBackStack(navController.graph.startDestinationId, true)
-                }
-            }
         }
     }
 

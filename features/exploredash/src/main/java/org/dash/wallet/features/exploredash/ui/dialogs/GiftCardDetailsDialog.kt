@@ -24,27 +24,40 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.StyleRes
 import androidx.core.view.isVisible
-import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.copy
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.model.GiftCardDetailsDialogModel
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
-import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 
+@FlowPreview
+@ExperimentalCoroutinesApi
+@AndroidEntryPoint
 class GiftCardDetailsDialog : OffsetDialogFragment() {
     @StyleRes
     override val backgroundStyle = R.style.PrimaryBackground
     override val forceExpand = true
-    private val exploreViewModel: ExploreViewModel by activityViewModels()
 
+    // private var purchaseGiftCardData: Pair<Pair<Coin, Fiat>, Merchant>? = null
     private val binding by viewBinding(DialogGiftCardDetailsBinding::bind)
+
+    private var giftCardDetailsDialogModel: GiftCardDetailsDialogModel? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        arguments?.let {
+            giftCardDetailsDialogModel = it.getParcelable(ARG_MODEL)
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -57,13 +70,11 @@ class GiftCardDetailsDialog : OffsetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val merchent = exploreViewModel.purchaseGiftCardData?.second
-        val paymentValue = exploreViewModel.purchaseGiftCardData?.first
-        merchent?.let {
-            binding.merchentName.text = it.name
-            merchent.logoLocation?.let {
+        giftCardDetailsDialogModel?.let {
+            binding.merchentName.text = it.merchantName
+            it.merchantLogo?.let { url ->
                 Glide.with(requireContext())
-                    .load(it)
+                    .load(url)
                     .placeholder(org.dash.wallet.common.R.drawable.ic_image_placeholder)
                     .error(org.dash.wallet.common.R.drawable.ic_image_placeholder)
                     .transition(DrawableTransitionOptions.withCrossFade(200))
@@ -71,12 +82,11 @@ class GiftCardDetailsDialog : OffsetDialogFragment() {
             }
         }
 
-        paymentValue?.let {
-            binding.originalPurchaseValue.text =
-                GenericUtils.fiatToString(it.second)
-        }
-        binding.purchaseCardNumber.text = "122222233"
-        binding.purchaseCardPin.text = "12222"
+        binding.originalPurchaseValue.text = giftCardDetailsDialogModel?.giftCardPrice
+
+        binding.purchaseCardNumber.text = giftCardDetailsDialogModel?.giftCardNumber
+        binding.purchaseCardPin.text = giftCardDetailsDialogModel?.giftCardPin
+
         binding.copyCardNumber.setOnClickListener {
             binding.purchaseCardNumber.text.toString().copy(requireActivity(), "card number")
         }
@@ -93,14 +103,25 @@ class GiftCardDetailsDialog : OffsetDialogFragment() {
             dismiss()
         }
 
-        val id = exploreViewModel.transcation_id.toString()
         binding.viewTransactionDetailsCard.setOnClickListener {
-            findNavController().navigate(Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/$id"))
+            giftCardDetailsDialogModel?.transactionId?.let{
+                findNavController().navigate(Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/$it"))
+            }
         }
 
         binding.checkCurrentBalance.setOnClickListener {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(DashDirectConstants.CHECK_BALANCE_URL))
             requireContext().startActivity(intent)
+        }
+    }
+
+    companion object {
+        private const val ARG_MODEL = "argModel"
+
+        fun newInstance(model: GiftCardDetailsDialogModel) = GiftCardDetailsDialog().apply {
+            arguments = Bundle().apply {
+                putParcelable(ARG_MODEL, model)
+            }
         }
     }
 }

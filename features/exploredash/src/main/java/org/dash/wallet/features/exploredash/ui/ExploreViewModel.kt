@@ -166,12 +166,6 @@ class ExploreViewModel @Inject constructor(
             _sortByDistance.value = value
         }
 
-    private val _confirmPurchaseGiftCard = MutableStateFlow(false)
-    val confirmPurchaseGiftCard = _confirmPurchaseGiftCard.asLiveData()
-    fun setConfirmPurchaseGiftCard(isConfirmed: Boolean) {
-        _confirmPurchaseGiftCard.value = isConfirmed
-    }
-
     private val _filterMode = MutableStateFlow(FilterMode.Online)
 
     // Need a mediator here because flow.asLiveData() doesn't play well with liveData.value

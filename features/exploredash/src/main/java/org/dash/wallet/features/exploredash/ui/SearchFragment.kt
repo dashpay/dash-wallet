@@ -40,6 +40,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.navigation.navGraphViewModels
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -82,7 +83,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     @Inject
     lateinit var analyticsService: AnalyticsService
     private val binding by viewBinding(FragmentSearchBinding::bind)
-    private val viewModel: ExploreViewModel by activityViewModels()
+    private val viewModel: ExploreViewModel by navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
     private val args by navArgs<SearchFragmentArgs>()
 
     private var bottomSheetWasExpanded: Boolean = false
