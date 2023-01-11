@@ -104,8 +104,10 @@ class GiftCardDetailsDialog : OffsetDialogFragment() {
         }
 
         binding.viewTransactionDetailsCard.setOnClickListener {
-            giftCardDetailsDialogModel?.transactionId?.let{
-                findNavController().navigate(Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/$it"))
+            giftCardDetailsDialogModel?.transactionId?.let {
+                if (it.isNotEmpty()) {
+                    findNavController().navigate(Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/$it"))
+                }
             }
         }
 
