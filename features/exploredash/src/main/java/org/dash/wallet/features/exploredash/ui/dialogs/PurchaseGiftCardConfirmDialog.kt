@@ -114,11 +114,12 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
                         merchantLogo = merchant?.logoLocation,
                         giftCardPrice = GenericUtils.fiatToString(paymentValue?.second)
                     )
-                ).show(requireActivity())
-                val navController = findNavController()
-                navController.popBackStack(navController.graph.startDestinationId, true)
+                ).show(requireActivity()).also {
+                    val navController = findNavController()
+                    navController.popBackStack(navController.graph.startDestinationId, false)
 
-                dismiss()
+                    this@PurchaseGiftCardConfirmDialog.dismiss()
+                }
             }
         }
     }
