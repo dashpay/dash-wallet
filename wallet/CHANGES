@@ -1,4 +1,8 @@
 Dash Wallet
+v8.1.3
+* Fix Uphold Transfer Crash
+* Add Sync Explore DB button on About Screen (Testnet only)
+
 v8.1.2
 * Fix transaction details crash
 * Redesign send screen
