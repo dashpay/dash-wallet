@@ -22,9 +22,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.StyleRes
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.navGraphViewModels
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import dagger.hilt.android.AndroidEntryPoint
@@ -33,13 +33,11 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.GiftCardDetailsDialogModel
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
-import org.dash.wallet.features.exploredash.ui.ExploreViewModel
-import java.util.*
+import org.dash.wallet.features.exploredash.ui.PurchaseGiftCardViewModel
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -48,9 +46,8 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
     @StyleRes
     override val backgroundStyle = R.style.PrimaryBackground
 
-    private val exploreViewModel: ExploreViewModel by navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
-
     private val binding by viewBinding(DialogConfirmPurchaseGiftCardBinding::bind)
+    private val purchaseGiftCardViewModel: PurchaseGiftCardViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -63,11 +60,11 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val merchent = exploreViewModel.purchaseGiftCardData?.second
-        val paymentValue = exploreViewModel.purchaseGiftCardData?.first
-        merchent?.let {
+        val merchant = purchaseGiftCardViewModel.purchaseGiftCardDataMerchant
+        val paymentValue = purchaseGiftCardViewModel.purchaseGiftCardDataPaymentValue
+        merchant?.let {
             binding.merchentName.text = it.name
-            merchent.logoLocation?.let {
+            merchant.logoLocation?.let {
                 Glide.with(requireContext())
                     .load(it)
                     .placeholder(org.dash.wallet.common.R.drawable.ic_image_placeholder)
@@ -95,18 +92,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
 
         binding.confirmButton.setOnClickListener {
             lifecycleScope.launch {
-                val merchant = exploreViewModel.purchaseGiftCardData?.second
-                val paymentValue = exploreViewModel.purchaseGiftCardData?.first
-                merchant?.merchantId?.let {
-                    paymentValue?.let { amountValue ->
-                        exploreViewModel.purchaseGiftCard(
-                            merchantId = it,
-                            giftCardAmount = amountValue.first.toPlainString().toDouble(),
-                            currency = Constants.DASH_CURRENCY,
-                            deviceID = UUID.randomUUID().toString()
-                        )
-                    }
-                }
+                purchaseGiftCardViewModel.purchaseGiftCard()
                 // TODO Change to response from API
                 GiftCardDetailsDialog.newInstance(
                     GiftCardDetailsDialogModel(

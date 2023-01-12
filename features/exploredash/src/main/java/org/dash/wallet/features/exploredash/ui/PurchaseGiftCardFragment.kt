@@ -85,7 +85,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
 
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             selectedMerchent?.let { selectedMerchant ->
-                exploreViewModel.purchaseGiftCardData = (Pair(it, selectedMerchant))
+                viewModel.purchaseGiftCardDataMerchant = selectedMerchant
+                viewModel.purchaseGiftCardDataPaymentValue = it
                 PurchaseGiftCardConfirmDialog().show(requireActivity())
             }
         }

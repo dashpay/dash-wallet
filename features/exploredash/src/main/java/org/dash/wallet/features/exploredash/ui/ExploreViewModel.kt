@@ -208,8 +208,6 @@ class ExploreViewModel @Inject constructor(
     val screenState: LiveData<ScreenState>
         get() = _screenState
 
-    var purchaseGiftCardData: Pair<Pair<Coin, Fiat>, Merchant>? = null
-
     // Used for the list of search results
     private val pagingSearchFlow: Flow<PagingData<SearchResult>> = _searchQuery
         .debounce(QUERY_DEBOUNCE_VALUE)
@@ -401,15 +399,6 @@ class ExploreViewModel @Inject constructor(
     fun isUserSignInDashDirect() = repository.isUserSignIn()
 
     suspend fun signInToDashDirect(email: String, password: String) = repository.signIn(email, password)
-
-    suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Long) =
-        repository.purchaseGiftCard(
-            deviceID = deviceID,
-            giftCardAmount = giftCardAmount,
-            currency = currency,
-            merchantId = merchantId,
-            userEmail = ""
-        )
 
     fun onMapMarkerSelected(id: Int) {
         val item = _allMerchantLocations.value?.firstOrNull { it.id == id } ?:
