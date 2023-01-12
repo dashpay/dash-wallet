@@ -69,7 +69,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
                 showCurrencySelector = false,
                 isMaxButtonVisible = false,
                 isCurrencyOptionsPickerVisible = false,
-                hideAmountResultContainer = true,
+                showAmountResultContainer = false,
                 faitCurrencyCode = if (viewModel.isUserSettingFaitIsNotUSD)Constants.USD_CURRENCY else null
             )
 

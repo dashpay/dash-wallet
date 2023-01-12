@@ -111,10 +111,10 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             binding.resultCurrencyToggle.isVisible = dashToFiat && value
         }
 
-    var hideResultContainer: Boolean = true
+    var showResultContainer: Boolean = true
         set(value) {
             field = value
-            binding.resultContainer.isGone = !dashToFiat && value
+            binding.resultContainer.isVisible = !dashToFiat && value
         }
 
     init {
