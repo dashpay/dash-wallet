@@ -27,6 +27,7 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.navGraphViewModels
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestBuilder
 import com.bumptech.glide.RequestManager
@@ -61,7 +62,7 @@ class ExploreMapFragment : SupportMapFragment() {
         const val DETAILS_ZOOM_LEVEL = 14f
     }
 
-    private val viewModel: ExploreViewModel by activityViewModels()
+    private val viewModel: ExploreViewModel by navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
     private var savedSearchResultsBounds: LatLngBounds? = null
     private var savedMerchantLocationsBounds: LatLngBounds? = null
     private var prevScreenState: ScreenState = ScreenState.SearchResults
