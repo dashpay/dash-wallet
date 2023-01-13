@@ -87,7 +87,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         binding.maxButtonWrapper.isVisible = args.getBoolean(ARG_MAX_BUTTON_VISIBLE)
         binding.amountView.showCurrencySelector = args.getBoolean(ARG_SHOW_CURRENCY_SELECTOR_BUTTON)
         binding.amountView.showResultContainer = args.getBoolean(ARG_SHOW_AMOUNT_RESULT_CONTAINER)
-        binding.currencyOptions.isVisible = args.getBoolean(ARG_CURRENCY_Code)
+        binding.currencyOptions.isVisible = args.getBoolean(ARG_CURRENCY_OPTIONS_PICKER_VISIBLE)
 
         args.getString(ARG_CURRENCY_Code)?.let { rateCurrencyCode ->
             viewModel.selectedCurrencyCode = rateCurrencyCode
