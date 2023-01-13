@@ -27,6 +27,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.PopupMenu
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import org.bitcoinj.core.Coin
@@ -40,7 +41,6 @@ import org.dash.wallet.common.util.GenericUtils
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.*
-
 
 class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs) {
     private val binding = AmountViewBinding.inflate(LayoutInflater.from(context), this)
@@ -90,14 +90,14 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
 
                 if (value) {
                     input = dashFormat.minDecimals(0)
-                        .optionalDecimals(0,6).format(dashAmount).toString()
+                        .optionalDecimals(0, 6).format(dashAmount).toString()
                 } else {
                     binding.resultAmount.text = dashFormat.format(dashAmount)
 
                     exchangeRate?.let {
                         fiatAmount = it.coinToFiat(dashAmount)
                         _input = fiatFormat.minDecimals(0)
-                            .optionalDecimals(0,2).format(fiatAmount).toString()
+                            .optionalDecimals(0, 2).format(fiatAmount).toString()
                         binding.inputAmount.text = formatInputWithCurrency()
                     }
                 }
@@ -109,6 +109,12 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             field = value
             binding.inputCurrencyToggle.isVisible = !dashToFiat && value
             binding.resultCurrencyToggle.isVisible = dashToFiat && value
+        }
+
+    var showResultContainer: Boolean = true
+        set(value) {
+            field = value
+            binding.resultContainer.isVisible = !dashToFiat && value
         }
 
     init {

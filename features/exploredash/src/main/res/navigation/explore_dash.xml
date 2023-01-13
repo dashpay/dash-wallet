@@ -38,7 +38,18 @@
         <action
             android:id="@+id/search_to_filters"
             app:destination="@id/filtersDialog" />
+
+        <action
+            android:id="@+id/search_to_purchaseGiftCardFragment"
+            app:destination="@id/purchaseGiftCardFragment" />
+
     </fragment>
+
+    <fragment
+        android:id="@+id/purchaseGiftCardFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.PurchaseGiftCardFragment"
+        android:label="fragment_purchase_gift_card"
+        tools:layout="@layout/fragment_purchase_gift_card"/>
 
     <dialog
         android:id="@+id/infoDialog"

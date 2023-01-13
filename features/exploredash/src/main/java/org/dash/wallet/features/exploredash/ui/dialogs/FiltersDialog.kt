@@ -25,6 +25,7 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.navGraphViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import org.dash.wallet.common.Configuration
@@ -58,7 +59,7 @@ class FiltersDialog: OffsetDialogFragment() {
     private var giftCardPaymentOn: Boolean = true
 
     private val binding by viewBinding(DialogFiltersBinding::bind)
-    private val viewModel: ExploreViewModel by activityViewModels()
+    private val viewModel: ExploreViewModel by navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
 
     private var territoriesJob: Deferred<List<String>>? = null
     private var radiusOptionsAdapter: RadioGroupAdapter? = null

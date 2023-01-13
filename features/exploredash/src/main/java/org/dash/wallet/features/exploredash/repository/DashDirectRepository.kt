@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2021 Dash Core Group.
  *
@@ -48,7 +49,7 @@ class DashDirectRepository @Inject constructor(
     }
 
     override fun isUserSignIn() =
-        runBlocking { config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: false }
+        runBlocking { config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: true }
 
     fun reset() {
         runBlocking { config.setPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN, "") }
@@ -58,7 +59,8 @@ class DashDirectRepository @Inject constructor(
         deviceID: String,
         currency: String,
         giftCardAmount: Double,
-        merchantId: Int
+        merchantId: Long,
+        userEmail: String
     ) = safeApiCall {
         servicesApi.purchaseGiftCard(
             deviceID = deviceID,
@@ -66,13 +68,14 @@ class DashDirectRepository @Inject constructor(
                 currency = currency,
                 giftCardAmount = giftCardAmount,
                 merchantId = merchantId
-            )
+            ),
+            email = userEmail
         )
     }
 }
 interface DashDirectRepositoryInt {
     suspend fun signIn(email: String, password: String): ResponseResource<Boolean>
     fun isUserSignIn(): Boolean
-    suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Int):
+    suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Long, userEmail: String):
         ResponseResource<PurchaseGiftCardResponse?>
 }

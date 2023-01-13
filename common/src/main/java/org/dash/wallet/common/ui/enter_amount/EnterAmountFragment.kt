@@ -38,24 +38,33 @@ import org.dash.wallet.common.util.GenericUtils
 import java.text.DecimalFormatSymbols
 
 @AndroidEntryPoint
-class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
+class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
     companion object {
         private const val ARG_INITIAL_AMOUNT = "initial_amount"
         private const val ARG_DASH_TO_FIAT = "dash_to_fiat"
         private const val ARG_MAX_BUTTON_VISIBLE = "max_visible"
         private const val ARG_SHOW_CURRENCY_SELECTOR_BUTTON = "show_currency_selector"
+        private const val ARG_CURRENCY_OPTIONS_PICKER_VISIBLE = "currency_options_picker_visible"
+        private const val ARG_SHOW_AMOUNT_RESULT_CONTAINER = "show_amount_result_container"
+        private const val ARG_CURRENCY_Code = "CURRENCY_Code"
 
         @JvmStatic
         fun newInstance(
             dashToFiat: Boolean = false,
             initialAmount: Monetary? = null,
             isMaxButtonVisible: Boolean = true,
-            showCurrencySelector: Boolean = true
+            showCurrencySelector: Boolean = true,
+            isCurrencyOptionsPickerVisible: Boolean = true,
+            showAmountResultContainer: Boolean = true,
+            faitCurrencyCode: String? = null
         ): EnterAmountFragment {
             val args = bundleOf(
                 ARG_DASH_TO_FIAT to dashToFiat,
                 ARG_MAX_BUTTON_VISIBLE to isMaxButtonVisible,
-                ARG_SHOW_CURRENCY_SELECTOR_BUTTON to showCurrencySelector
+                ARG_SHOW_CURRENCY_SELECTOR_BUTTON to showCurrencySelector,
+                ARG_CURRENCY_OPTIONS_PICKER_VISIBLE to isCurrencyOptionsPickerVisible,
+                ARG_SHOW_AMOUNT_RESULT_CONTAINER to showAmountResultContainer,
+                ARG_CURRENCY_Code to faitCurrencyCode
             )
             initialAmount?.let { args.putSerializable(ARG_INITIAL_AMOUNT, it) }
 
@@ -77,6 +86,13 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         val args = requireArguments()
         binding.maxButtonWrapper.isVisible = args.getBoolean(ARG_MAX_BUTTON_VISIBLE)
         binding.amountView.showCurrencySelector = args.getBoolean(ARG_SHOW_CURRENCY_SELECTOR_BUTTON)
+        binding.amountView.showResultContainer = args.getBoolean(ARG_SHOW_AMOUNT_RESULT_CONTAINER)
+        binding.currencyOptions.isVisible = args.getBoolean(ARG_CURRENCY_OPTIONS_PICKER_VISIBLE)
+
+        args.getString(ARG_CURRENCY_Code)?.let { rateCurrencyCode ->
+            viewModel.selectedCurrencyCode = rateCurrencyCode
+        }
+
         val dashToFiat = args.getBoolean(ARG_DASH_TO_FIAT)
         binding.amountView.dashToFiat = dashToFiat
 

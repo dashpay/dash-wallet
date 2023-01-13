@@ -28,8 +28,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.livedata.ConnectionLiveData
@@ -39,6 +40,7 @@ import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.repository.DashDirectRepository
+import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
@@ -81,7 +83,7 @@ class ExploreViewModel @Inject constructor(
     private val locationProvider: UserLocationStateInt,
     private val syncStatusService: DataSyncStatusService,
     private val analyticsService: AnalyticsService,
-    private val repository: DashDirectRepository
+    private val repository: DashDirectRepositoryInt
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -206,7 +208,6 @@ class ExploreViewModel @Inject constructor(
     val screenState: LiveData<ScreenState>
         get() = _screenState
 
-
     // Used for the list of search results
     private val pagingSearchFlow: Flow<PagingData<SearchResult>> = _searchQuery
         .debounce(QUERY_DEBOUNCE_VALUE)
@@ -274,9 +275,7 @@ class ExploreViewModel @Inject constructor(
             }
         }
 
-
     fun init(exploreTopic: ExploreTopic) {
-        repository.reset()
         if (this.exploreTopic != exploreTopic) {
             clearSearchResults()
         }
@@ -400,14 +399,6 @@ class ExploreViewModel @Inject constructor(
     fun isUserSignInDashDirect() = repository.isUserSignIn()
 
     suspend fun signInToDashDirect(email: String, password: String) = repository.signIn(email, password)
-
-    suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Int) =
-        repository.purchaseGiftCard(
-            deviceID = deviceID,
-            giftCardAmount = giftCardAmount,
-            currency = currency,
-            merchantId = merchantId
-        )
 
     fun onMapMarkerSelected(id: Int) {
         val item = _allMerchantLocations.value?.firstOrNull { it.id == id } ?:

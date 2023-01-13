@@ -36,10 +36,7 @@ import org.dash.wallet.features.exploredash.data.MerchantAtmDataSource
 import org.dash.wallet.features.exploredash.network.RemoteDataSource
 import org.dash.wallet.features.exploredash.network.service.DashDirectAuthApi
 import org.dash.wallet.features.exploredash.network.service.DashDirectServicesApi
-import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
-import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
-import org.dash.wallet.features.exploredash.repository.ExploreRepository
-import org.dash.wallet.features.exploredash.repository.GCExploreDatabase
+import org.dash.wallet.features.exploredash.repository.*
 import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.utils.DashDirectConfig
@@ -109,4 +106,9 @@ abstract class ExploreDashModule {
     abstract fun bindDataSyncService(
         exploreDatabase: ExploreDataSyncStatus
     ): DataSyncStatusService
+
+    @Binds
+    abstract fun provideDashDirectRepository(
+        dashDirectRepository: DashDirectRepository
+    ): DashDirectRepositoryInt
 }
