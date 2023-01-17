@@ -32,6 +32,7 @@ import javax.inject.Singleton
 class DashDirectConfig @Inject constructor(private val context: Context) {
     companion object {
         val PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN = stringPreferencesKey("last_dash_direct_access_token")
+        val PREFS_KEY_DASH_DIRECT_EMAIL = stringPreferencesKey("dash_direct_email")
     }
 
     private val Context.dataStore by preferencesDataStore("dashdirect")

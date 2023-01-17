@@ -398,7 +398,15 @@ class ExploreViewModel @Inject constructor(
 
     fun isUserSignInDashDirect() = repository.isUserSignIn()
 
-    suspend fun signInToDashDirect(email: String, password: String) = repository.signIn(email, password)
+    suspend fun signInToDashDirect(email: String) = repository.signIn(email)
+
+    suspend fun createUserToDashDirect(email: String) = repository.createUser(email)
+
+    suspend fun verifyEmail(code: String) = repository.verifyEmail(code)
+
+    fun getDashDirectEmail() = repository.getDashDirectEmail()
+
+    fun logout() = repository.logout()
 
     fun onMapMarkerSelected(id: Int) {
         val item = _allMerchantLocations.value?.firstOrNull { it.id == id } ?:

@@ -18,9 +18,9 @@ package org.dash.wallet.features.exploredash.data.model.signin
 
 import com.google.gson.annotations.SerializedName
 
-data class SignInRequest(
-    @SerializedName("EmailAddress")
+data class VerifyEmailRequest(
+    @SerializedName("Email")
     val emailAddress: String? = null,
-    @SerializedName("Password")
-    val password: String? = null
+    @SerializedName("Code")
+    val code: String? = null
 )

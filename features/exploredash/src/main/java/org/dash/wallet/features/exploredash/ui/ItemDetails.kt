@@ -17,27 +17,42 @@
 
 package org.dash.wallet.features.exploredash.ui
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.style.ClickableSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.UnderlineSpan
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePaddingRelative
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.util.makeLinks
+import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
+import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import java.util.*
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, attrs) {
     private val binding = ItemDetailsViewBinding.inflate(LayoutInflater.from(context), this)
 
@@ -49,6 +64,9 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
     private var onDialPhoneButtonClicked: (() -> Unit)? = null
     private var onOpenWebsiteButtonClicked: (() -> Unit)? = null
     private var onBuyGiftCardButtonClicked: (() -> Unit)? = null
+    private var onDashDirectLogOutClicked: (() -> Unit)? = null
+
+    @Inject lateinit var repository: DashDirectRepositoryInt
 
     init {
         orientation = VERTICAL
@@ -96,6 +114,36 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
         onBuyGiftCardButtonClicked = listener
     }
 
+    fun setOnDashDirectLogOutClicked(listener: () -> Unit) {
+        onDashDirectLogOutClicked = listener
+    }
+
+    @SuppressLint("SetTextI18n")
+    fun setDashDirectLogInUser(isDash: Boolean, email: String?) {
+        binding.loginDashDirectUser.isVisible = !isDash && email?.isNotEmpty() == true
+        email?.let {
+            binding.loginDashDirectUser.text =
+                context.resources.getString(R.string.logged_in_as, email.maskEmail()) + " " +
+                context.resources.getString(
+                    R.string
+                        .log_out
+                )
+
+            binding.loginDashDirectUser.makeLinks(
+                Pair(
+                    context.resources.getString(
+                        R.string
+                            .log_out
+                    ),
+                    OnClickListener {
+                        onDashDirectLogOutClicked?.invoke()
+                        binding.loginDashDirectUser.isGone = true
+                    }
+                ),
+                isUnderlineText = true
+            )
+        }
+    }
     fun getMerchantType(type: String?): String {
         return when (cleanMerchantTypeValue(type)) {
             MerchantType.ONLINE -> resources.getString(R.string.explore_online_merchant)
@@ -170,11 +218,11 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
                 payBtn.isVisible = !merchant.deeplink.isNullOrBlank()
                 payBtn.text = context.getText(R.string.explore_buy_gift_card)
                 payBtn.setOnClickListener {
-                    //openDeeplink(merchant.deeplink!!)
                     onBuyGiftCardButtonClicked?.invoke()
                 }
             }
 
+            setDashDirectLogInUser(isDash, repository.getDashDirectEmail())
             showAllBtn.setOnClickListener { onShowAllLocationsClicked?.invoke() }
             backButton.setOnClickListener { onBackButtonClicked?.invoke() }
 

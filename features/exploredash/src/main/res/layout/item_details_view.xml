@@ -234,6 +234,19 @@
             </LinearLayout>
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/login_dash_direct_user"
+            style="@style/Overline.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:visibility="gone"
+            tools:visibility="visible"
+            tools:text="@string/explore_atm_location_hint"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/pay_btn"
+            app:layout_constraintEnd_toEndOf="parent" />
+
         <Button
             android:id="@+id/pay_btn"
             style="@style/Button.Primary.Large.Blue"
