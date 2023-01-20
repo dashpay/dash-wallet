@@ -60,7 +60,6 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
     private val binding by viewBinding(FragmentDashDirectUserAuthBinding::bind)
     private val exploreViewModel: ExploreViewModel by navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
 
-    private  var windowBottomPadding =0
     enum class DashDirectUserAuthType(
         @StringRes val screenTitle: Int,
         @StringRes val screenSubtitle: Int,
@@ -118,7 +117,6 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             ViewCompat.setOnApplyWindowInsetsListener(decor) { _, insets ->
                val showingKeyboard = insets.isVisible(WindowInsetsCompat.Type.ime())
 
-                windowBottomPadding = binding.root.bottom
                 if (showingKeyboard) {
                     val systemBarsIMEInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
                     binding.root.setPadding(0, 0, 0, systemBarsIMEInsets.bottom)
@@ -217,6 +215,6 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
     private fun hideKeyboard() {
         val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         inputManager?.hideSoftInputFromWindow(binding.input.windowToken, 0)
-        binding.root.setPadding(0, 0, 0, windowBottomPadding)
+        binding.root.setPadding(0, 0, 0, 0)
     }
 }

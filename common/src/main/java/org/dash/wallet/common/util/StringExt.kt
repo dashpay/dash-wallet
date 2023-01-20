@@ -32,6 +32,6 @@ fun String.copy(activity: FragmentActivity, label: String) {
 }
 
 fun String.maskEmail(): String {
-    val regex = """(.{1,4}@)""".toRegex()
-    return this.replace(regex, "****@")
+    val regex = "(?<=.)[^@\\n](?=[^@\\n]*?@)".toRegex()
+    return this.replace(regex, "*")
 }
