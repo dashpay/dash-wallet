@@ -202,8 +202,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
+            val item = viewModel.selectedItem.value
+            val isOnline = item?.type == MerchantType.ONLINE
             bottomSheet.isDraggable = isBottomSheetDraggable()
-            bottomSheet.state = setBottomSheetState()
+            bottomSheet.state = setBottomSheetState(isOnline)
             refreshManageGpsView()
         }
 

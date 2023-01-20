@@ -44,6 +44,9 @@ class DashDirectRepository @Inject constructor(
                         throw Exception(errorMessage)
                     }
                 }
+                if(it?.data?.statusCode==0){
+                    createUser(email)
+                }
                 config.setPreference(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
             }
         true

@@ -76,6 +76,10 @@ class DashDirectLoginInfoDialog : OffsetDialogFragment() {
         binding.dialogNegativeButton.setOnClickListener {
             onNegativeAction()
         }
+
+        binding.dialogExtraMessage.setOnClickListener {
+            onExtraMessageAction()
+        }
     }
 
     private fun onPositiveAction() {

@@ -20,16 +20,9 @@ package org.dash.wallet.features.exploredash.ui
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
-import android.text.Spannable
-import android.text.SpannableString
-import android.text.style.ClickableSpan
-import android.text.style.ForegroundColorSpan
-import android.text.style.UnderlineSpan
 import android.util.AttributeSet
 import android.view.LayoutInflater
-import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -119,8 +112,8 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
     }
 
     @SuppressLint("SetTextI18n")
-    fun setDashDirectLogInUser(isDash: Boolean, email: String?) {
-        binding.loginDashDirectUser.isVisible = !isDash && email?.isNotEmpty() == true
+    fun setDashDirectLogInUser(isDash: Boolean, email: String?, userSignIn: Boolean) {
+        binding.loginDashDirectUser.isVisible = !isDash && email?.isNotEmpty() == true && userSignIn
         email?.let {
             binding.loginDashDirectUser.text =
                 context.resources.getString(R.string.logged_in_as, email.maskEmail()) + " " +
@@ -222,7 +215,7 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
                 }
             }
 
-            setDashDirectLogInUser(isDash, repository.getDashDirectEmail())
+            setDashDirectLogInUser(isDash, repository.getDashDirectEmail(), repository.isUserSignIn())
             showAllBtn.setOnClickListener { onShowAllLocationsClicked?.invoke() }
             backButton.setOnClickListener { onBackButtonClicked?.invoke() }
 

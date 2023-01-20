@@ -193,7 +193,7 @@
     <!-- dash direct login-->
     <string name="create_dash_direct_account">Create DashDirect account</string>
     <string name="log_in_to_dashdirect_account">Log in to DashDirect account</string>
-    <string name="log_in_to_dashdirect_account_desc">Please note that the email is not saved by the Dash Wallet and is only used to send one-time password</string>
+    <string name="log_in_to_dashdirect_account_desc">Your email is only used to send a one-time password.</string>
     <string name="enter_one_time_password">Enter one-time password</string>
     <string name="check_your_email_and_enter_the_one_time_password">Check your email and enter the one-time password</string>
     <string name="buy_a_gift_card_with_your_dash_direct_account">Buy a gift card with your DashDirect account</string>

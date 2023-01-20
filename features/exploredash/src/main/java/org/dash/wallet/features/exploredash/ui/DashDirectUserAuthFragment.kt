@@ -17,27 +17,31 @@
 package org.dash.wallet.features.exploredash.ui
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
+import android.view.ViewGroup
+import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.annotation.StringRes
-import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
@@ -56,6 +60,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
     private val binding by viewBinding(FragmentDashDirectUserAuthBinding::bind)
     private val exploreViewModel: ExploreViewModel by navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
 
+    private  var windowBottomPadding =0
     enum class DashDirectUserAuthType(
         @StringRes val screenTitle: Int,
         @StringRes val screenSubtitle: Int,
@@ -78,16 +83,18 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         );
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.titleBar.setNavigationOnClickListener {
-           //  hideKeyboard()
+            hideKeyboard()
+
             findNavController().popBackStack()
         }
         binding.continueButton.isEnabled = false
 
         binding.input.postDelayed({
-               // showKeyboard()
+               showKeyboard()
             },
             100
         )
@@ -107,17 +114,17 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             else
                 binding.continueButton.isEnabled = !text.isNullOrEmpty()
         }
-
         requireActivity().window?.decorView?.let { decor ->
             ViewCompat.setOnApplyWindowInsetsListener(decor) { _, insets ->
-                // System Bars' Insets
-                val systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                //  System Bars' and Keyboard's insets combined
-                val systemBarsIMEInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+               val showingKeyboard = insets.isVisible(WindowInsetsCompat.Type.ime())
 
-                // We use the combined bottom inset of the System Bars and Keyboard to move the view so it doesn't get covered up by the keyboard
-                binding.root.setPadding(systemBarsInsets.left, 0, systemBarsInsets.right, systemBarsIMEInsets.bottom)
-                WindowInsetsCompat.CONSUMED
+                windowBottomPadding = binding.root.bottom
+                if (showingKeyboard) {
+                    val systemBarsIMEInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+                    binding.root.setPadding(0, 0, 0, systemBarsIMEInsets.bottom)
+
+                }
+                insets
             }
         }
 
@@ -132,7 +139,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         }
 
         binding.continueButton.setOnClickListener {
-            //hideKeyboard()
+            hideKeyboard()
             continueAction()
         }
     }
@@ -175,12 +182,11 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
     }
 
     private fun verifyEmail(code: String) {
-        try {
-            lifecycleScope.launch {
+        lifecycleScope.launch {
                 when (val response = exploreViewModel.verifyEmail(code)) {
                     is ResponseResource.Success -> {
                         if (response.value) {
-
+                            hideKeyboard()
                            safeNavigate(DashDirectUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
                         }
                     }
@@ -195,26 +201,22 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
                     }
                 }
             }
-        }catch (e:Exception){
-            e.printStackTrace()
-        }
     }
-
-
 
     private fun isEmail(text: CharSequence?): Boolean {
         return !text.isNullOrEmpty() &&
                 Patterns.EMAIL_ADDRESS.matcher(text).matches()
     }
-//
-//    private fun showKeyboard() {
-//        binding.input.requestFocus()
-//        val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-//        inputManager?.showSoftInput(binding.input, InputMethodManager.SHOW_IMPLICIT)
-//    }
-//
-//    private fun hideKeyboard() {
-//        val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-//        inputManager?.hideSoftInputFromWindow(binding.input.windowToken, 0)
-//    }
+
+    private fun showKeyboard() {
+        binding.input.requestFocus()
+        val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        inputManager?.showSoftInput(binding.input, InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun hideKeyboard() {
+        val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        inputManager?.hideSoftInputFromWindow(binding.input.windowToken, 0)
+        binding.root.setPadding(0, 0, 0, windowBottomPadding)
+    }
 }
