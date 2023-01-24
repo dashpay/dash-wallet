@@ -35,7 +35,7 @@
     <ImageView
         android:id="@+id/dialog_icon"
         android:layout_width="wrap_content"
-        android:layout_height="50dp"
+        android:layout_height="60dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginHorizontal="20dp"
         tools:src="@drawable/ic_dashdirect_logo" />
@@ -68,16 +68,19 @@
     <Button
         android:id="@+id/dialog_extra_message"
         style="@style/Button.Tertiary.Small.Blue"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:layout_marginBottom="25dp"
+        android:layout_gravity="center"
+        android:drawablePadding="8dp"
+        android:drawableEnd="@drawable/ic_open_link"
+        android:layout_marginBottom="40dp"
         app:layout_constraintTop_toTopOf="@id/title"
         tools:text="Back up recovery phase" />
 
     <Button
         android:id="@+id/dialog_positive_button"
-        style="@style/Button.Primary.Blue"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"
@@ -86,7 +89,7 @@
 
     <Button
         android:id="@+id/dialog_negative_button"
-        style="@style/Button.Tertiary.Blue"
+        style="@style/Button.Tertiary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"

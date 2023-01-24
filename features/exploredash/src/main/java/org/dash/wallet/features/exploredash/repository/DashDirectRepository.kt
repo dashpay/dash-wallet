@@ -44,10 +44,10 @@ class DashDirectRepository @Inject constructor(
                         throw Exception(errorMessage)
                     }
                 }
-                if(it?.data?.statusCode==0){
+                if (it?.data?.statusCode == 0) {
                     createUser(email)
                 }
-                config.setPreference(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
+                config.setSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
             }
         true
     }
@@ -60,7 +60,7 @@ class DashDirectRepository @Inject constructor(
                         throw Exception(errorMessage)
                     }
                 }
-                config.setPreference(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
+                config.setSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
             }
         true
     }
@@ -68,7 +68,7 @@ class DashDirectRepository @Inject constructor(
     override suspend fun verifyEmail(
         code: String
     ): ResponseResource<Boolean> = safeApiCall {
-        authApi.verifyEmail(signInRequest = VerifyEmailRequest(emailAddress = config.getPreference(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL), code = code))
+        authApi.verifyEmail(signInRequest = VerifyEmailRequest(emailAddress = config.getSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL), code = code))
             .also {
                 it?.data?.errorMessage?.let { errorMessage ->
                     if (it?.data?.hasError == true && errorMessage.isNotEmpty()) {
@@ -86,14 +86,11 @@ class DashDirectRepository @Inject constructor(
         runBlocking { config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: false }
 
     override fun getDashDirectEmail(): String? {
-        return runBlocking { config.getPreference(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL) }
+        return runBlocking { config.getSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL) }
     }
 
-    override fun logout() {
-        runBlocking {
-            config.setPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN, "")
-            config.setPreference(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, "")
-        }
+    override suspend fun logout() {
+        config.clearAll()
     }
 
     fun reset() {
@@ -124,7 +121,7 @@ interface DashDirectRepositoryInt {
     suspend fun verifyEmail(code: String): ResponseResource<Boolean>
     fun isUserSignIn(): Boolean
     fun getDashDirectEmail(): String?
-    fun logout()
+    suspend fun logout()
     suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Long, userEmail: String):
         ResponseResource<PurchaseGiftCardResponse?>
 }

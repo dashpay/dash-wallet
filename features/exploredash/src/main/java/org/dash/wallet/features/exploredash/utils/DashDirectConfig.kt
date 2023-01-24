@@ -18,24 +18,47 @@
 package org.dash.wallet.features.exploredash.utils
 
 import android.content.Context
+import android.content.SharedPreferences
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import org.dash.wallet.common.util.secuirty.EncryptionProvider
 import java.io.IOException
+import java.security.KeyStore
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DashDirectConfig @Inject constructor(private val context: Context) {
+class DashDirectConfig @Inject constructor(
+    private val context: Context,
+    private val prefs: SharedPreferences
+) {
+    private val securityKeyAlias = "dash_direct_data-store"
+    private val bytesToStringSeparator = "|"
     companion object {
         val PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN = stringPreferencesKey("last_dash_direct_access_token")
         val PREFS_KEY_DASH_DIRECT_EMAIL = stringPreferencesKey("dash_direct_email")
     }
 
+    private val keyStore by lazy {
+        KeyStore.getInstance("AndroidKeyStore").apply {
+            load(null)
+        }
+    }
+
     private val Context.dataStore by preferencesDataStore("dashdirect")
+
+    private val encryptionProvider by lazy {
+        EncryptionProvider(keyStore, prefs)
+    }
+
     private val dataStore = context.dataStore.data
         .catch { exception ->
             if (exception is IOException) {
@@ -59,7 +82,45 @@ class DashDirectConfig @Inject constructor(private val context: Context) {
         }
     }
 
+    suspend fun getSecuredData(key: Preferences.Key<String>) =
+        dataStore.secureMap<String> { preferences ->
+            preferences[key].orEmpty()
+        }.first()
+
+    suspend fun setSecuredData(key: Preferences.Key<String>, value: String) {
+        context.dataStore.secureEdit(value) { preferences, encryptedValue ->
+            preferences[key] = encryptedValue
+        }
+    }
+
     suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
+    }
+
+    private inline fun <reified T> Flow<Preferences>.secureMap(crossinline fetchValue: (value: Preferences) -> String): Flow<T?> {
+        return map {
+            try {
+                encryptionProvider.decrypt(
+                    securityKeyAlias,
+                    fetchValue(it).split(bytesToStringSeparator).map { result ->
+                        result.toByte()
+                    }.toByteArray()
+                )?.let { data -> Json { encodeDefaults = true }.decodeFromString(data) }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+
+    private suspend inline fun <reified T> DataStore<Preferences>.secureEdit(
+        value: T,
+        crossinline editStore: (MutablePreferences, String) -> Unit
+    ) {
+        edit {
+            encryptionProvider.encrypt(securityKeyAlias, Json.encodeToString(value))?.let { encryptedValue ->
+                editStore.invoke(it, encryptedValue?.joinToString(bytesToStringSeparator))
+            }
+        }
     }
 }

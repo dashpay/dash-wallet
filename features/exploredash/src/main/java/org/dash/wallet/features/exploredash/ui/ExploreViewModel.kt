@@ -22,14 +22,11 @@ import androidx.annotation.VisibleForTesting
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import androidx.paging.*
-import androidx.paging.PagingData
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
@@ -38,8 +35,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
-import org.dash.wallet.features.exploredash.data.model.GeoBounds
-import org.dash.wallet.features.exploredash.repository.DashDirectRepository
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocation
@@ -406,7 +401,7 @@ class ExploreViewModel @Inject constructor(
 
     fun getDashDirectEmail() = repository.getDashDirectEmail()
 
-    fun logout() = repository.logout()
+    suspend fun logout() = repository.logout()
 
     fun onMapMarkerSelected(id: Int) {
         val item = _allMerchantLocations.value?.firstOrNull { it.id == id } ?:

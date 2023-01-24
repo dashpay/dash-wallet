@@ -555,7 +555,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.itemDetails.setOnDashDirectLogOutClicked {
             if (viewModel.isUserSignInDashDirect()) {
-                viewModel.logout()
+                lifecycleScope.launch {
+                    viewModel.logout()
+                }
             }
         }
     }
