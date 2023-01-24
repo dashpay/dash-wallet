@@ -33,6 +33,7 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.merchants.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import java.util.*
@@ -62,9 +63,15 @@ class PurchaseGiftCardViewModel @Inject constructor(
     var purchaseGiftCardDataMerchant: Merchant? = null
     var purchaseGiftCardDataPaymentValue: Pair<Coin, Fiat>? = null
 
+    var minCardPurchaseCoin: Coin = Coin.ZERO
+    var minCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
+    var maxCardPurchaseCoin: Coin = Coin.ZERO
+    var maxCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
+
     init {
         exchangeRates
             .observeExchangeRate(Constants.USD_CURRENCY)
+            .onEach { updateMinMaxPurchase() }
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
 
@@ -87,5 +94,45 @@ class PurchaseGiftCardViewModel @Inject constructor(
             }
         }
         return null
+    }
+
+    suspend fun getMerchantById(id: Long): ResponseResource<GetMerchantByIdResponse?>? {
+        return repository.getMerchantById(
+            merchantId = id,
+        )
+    }
+
+    fun setMinMaxCardPurchaseValues(
+        minCardPurchase: Double,
+        maximumCardPurchase: Double
+    ) {
+        minCardPurchaseFiat = Fiat.parseFiat(
+            Constants.USD_CURRENCY,
+            minCardPurchase.toString()
+        )
+
+        maxCardPurchaseFiat = Fiat.parseFiat(
+            Constants.USD_CURRENCY,
+            maximumCardPurchase.toString()
+        )
+
+        updateMinMaxPurchase()
+    }
+
+    private fun updateMinMaxPurchase() {
+        _exchangeRate.value?.let {
+            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
+            minCardPurchaseCoin = myRate.fiatToCoin(minCardPurchaseFiat)
+            maxCardPurchaseCoin = myRate.fiatToCoin(maxCardPurchaseFiat)
+        }
+    }
+
+    fun getDiscountedAmount(fullAmount: Coin, savingsPercentage: Double): Fiat? {
+        return _exchangeRate.value?.let {
+            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
+            val discountedAmount =
+                Coin.valueOf((fullAmount.value * (100.0 - savingsPercentage) / 100).toLong())
+            return myRate.coinToFiat(discountedAmount)
+        }
     }
 }

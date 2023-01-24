@@ -21,6 +21,8 @@ package org.dash.wallet.features.exploredash.repository
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
+import org.dash.wallet.features.exploredash.data.model.merchants.GetMerchantByIdRequest
+import org.dash.wallet.features.exploredash.data.model.merchants.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.signin.VerifyEmailRequest
@@ -93,6 +95,9 @@ class DashDirectRepository @Inject constructor(
         config.clearAll()
     }
 
+    suspend fun getUserAppKey() =
+        config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)!!
+
     fun reset() {
         runBlocking { config.setPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN, "") }
     }
@@ -114,6 +119,17 @@ class DashDirectRepository @Inject constructor(
             email = userEmail
         )
     }
+
+    override suspend fun getMerchantById(
+        merchantId: Long,
+    ) = safeApiCall {
+        servicesApi.getMerchantById(
+            getMerchantByIdRequest = GetMerchantByIdRequest(
+                id = merchantId,
+                includeLocation = false
+            ),
+        )
+    }
 }
 interface DashDirectRepositoryInt {
     suspend fun signIn(email: String): ResponseResource<Boolean>
@@ -124,4 +140,5 @@ interface DashDirectRepositoryInt {
     suspend fun logout()
     suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Long, userEmail: String):
         ResponseResource<PurchaseGiftCardResponse?>
+    suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>
 }

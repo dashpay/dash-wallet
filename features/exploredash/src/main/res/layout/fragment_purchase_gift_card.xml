@@ -69,12 +69,14 @@
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/discount_value"
         style="@style/Caption.Secondary"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_marginHorizontal="20dp"
+        android:layout_marginVertical="20dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/messages_guideline"
+        app:layout_constraintTop_toBottomOf="@+id/max_value"
+        android:textAlignment="center"
         tools:text="@string/balance" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -14,21 +14,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package org.dash.wallet.features.exploredash.data.model.merchants
 
-package org.dash.wallet.common.util
+import com.google.gson.annotations.SerializedName
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
-import java.math.BigDecimal
-
-// the purpose of these methods is to directly convert Coin and Fiat to BigDecimal
-// without first converting to a string.  If the strings are localized, BigDecimal
-// may throw a NumberFormatException (e.g. "0,43")
-
-fun Coin.toBigDecimal() : BigDecimal {
-    return BigDecimal(this.value).scaleByPowerOfTen(-Coin.SMALLEST_UNIT_EXPONENT)
-}
-
-fun Fiat.toBigDecimal() : BigDecimal {
-    return BigDecimal(this.value).scaleByPowerOfTen(-Fiat.SMALLEST_UNIT_EXPONENT)
-}
+data class GetMerchantByIdRequest(
+    @SerializedName("Id")
+    val id: Long? = null,
+    @SerializedName("IncludeLocation")
+    val includeLocation: Boolean? = false
+)
