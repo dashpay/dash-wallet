@@ -118,17 +118,15 @@ class DashDirectRepository @Inject constructor(
     }
 
     override suspend fun getMerchantById(
-        deviceID: String,
         userEmail: String,
         merchantId: Long,
         includeLocations: Boolean?
-    )= safeApiCall {
+    ) = safeApiCall {
         servicesApi.getMerchantById(
-            deviceID = deviceID,
             email = userEmail,
             getDataMerchantIdRequest = GetDataMerchantIdRequest(
                 id = merchantId,
-                includeLocations= includeLocations
+                includeLocations = includeLocations
             )
         )
     }
@@ -142,6 +140,6 @@ interface DashDirectRepositoryInt {
     suspend fun logout()
     suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Long, userEmail: String):
         ResponseResource<PurchaseGiftCardResponse?>
-    suspend fun getMerchantById(deviceID: String, userEmail: String,merchantId: Long, includeLocations: Boolean? = false):
-            ResponseResource<GetDataMerchantIdResponse?>
+    suspend fun getMerchantById(userEmail: String, merchantId: Long, includeLocations: Boolean? = false):
+        ResponseResource<GetDataMerchantIdResponse?>
 }
