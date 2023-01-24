@@ -113,18 +113,6 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             else
                 binding.continueButton.isEnabled = !text.isNullOrEmpty()
         }
-//        requireActivity().window?.decorView?.let { decor ->
-//            ViewCompat.setOnApplyWindowInsetsListener(decor) { _, insets ->
-//               val showingKeyboard = insets.isVisible(WindowInsetsCompat.Type.ime())
-//
-//                if (showingKeyboard) {
-//                    val systemBarsIMEInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
-//                    binding.root.setPadding(0, 0, 0, systemBarsIMEInsets.bottom)
-//
-//                }
-//                insets
-//            }
-//        }
 
         binding.input.setOnEditorActionListener { _, actionId, _ ->
             when (actionId) {
