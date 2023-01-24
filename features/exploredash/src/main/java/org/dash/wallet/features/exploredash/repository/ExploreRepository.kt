@@ -77,7 +77,7 @@ class GCExploreDatabase @Inject constructor(
             return if (isTestDB) {
                 "explore/explore-testnet.db"
             } else {
-                "explore/explore.db"
+                "explore/explore-devnet.db" // this is temporary, should have means of selecting dev db
             }
         }
     }
