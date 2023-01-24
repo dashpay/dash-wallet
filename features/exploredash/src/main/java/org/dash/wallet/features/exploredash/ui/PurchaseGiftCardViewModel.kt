@@ -80,13 +80,15 @@ class PurchaseGiftCardViewModel @Inject constructor(
     suspend fun purchaseGiftCard(): ResponseResource<PurchaseGiftCardResponse?>? {
         purchaseGiftCardDataMerchant?.merchantId?.let {
             purchaseGiftCardDataPaymentValue?.let { amountValue ->
-                return repository.purchaseGiftCard(
-                    merchantId = it,
-                    giftCardAmount = amountValue.first.toPlainString().toDouble(),
-                    currency = Constants.DASH_CURRENCY,
-                    deviceID = UUID.randomUUID().toString(),
-                    userEmail = ""
-                )
+                repository.getDashDirectEmail()?.let { email ->
+                    return repository.purchaseGiftCard(
+                        merchantId = it,
+                        giftCardAmount = amountValue.first.toPlainString().toDouble(),
+                        currency = Constants.DASH_CURRENCY,
+                        deviceID = UUID.randomUUID().toString(),
+                        userEmail = email
+                    )
+                }
             }
         }
         return null
