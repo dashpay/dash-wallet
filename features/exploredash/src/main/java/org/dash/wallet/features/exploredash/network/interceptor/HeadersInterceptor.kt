@@ -36,7 +36,7 @@ class HeadersInterceptor @Inject constructor(
 
         val accessToken = runBlocking { config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN) }
         if (accessToken?.isNotEmpty() == true) {
-            requestBuilder.header("authentication", "Bearer $accessToken")
+            requestBuilder.header("Authorization", "Bearer $accessToken")
         }
 
         requestBuilder.method(original.method, original.body)

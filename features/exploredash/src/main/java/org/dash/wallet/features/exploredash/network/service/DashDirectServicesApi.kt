@@ -37,7 +37,6 @@ interface DashDirectServicesApi {
 
     @POST("GetMerchantById")
     suspend fun getMerchantById(
-        @Header(DashDirectConstants.requestedUUID) deviceID: String,
         @Header(DashDirectConstants.EMAIL) email: String,
         @Body getDataMerchantIdRequest: GetDataMerchantIdRequest
     ): GetDataMerchantIdResponse?

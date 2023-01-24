@@ -107,7 +107,6 @@ class PurchaseGiftCardViewModel @Inject constructor(
                 return repository.getMerchantById(
                     merchantId = id,
                     includeLocations = false,
-                    deviceID = UUID.randomUUID().toString(),
                     userEmail = email
                 )
             }
