@@ -21,8 +21,8 @@ package org.dash.wallet.features.exploredash.repository
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
-import org.dash.wallet.features.exploredash.data.model.merchants.GetMerchantByIdRequest
-import org.dash.wallet.features.exploredash.data.model.merchants.GetMerchantByIdResponse
+import org.dash.wallet.features.exploredash.data.model.merchent.GetDataMerchantIdRequest
+import org.dash.wallet.features.exploredash.data.model.merchent.GetDataMerchantIdResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.signin.VerifyEmailRequest
@@ -121,13 +121,18 @@ class DashDirectRepository @Inject constructor(
     }
 
     override suspend fun getMerchantById(
+        deviceID: String,
+        userEmail: String,
         merchantId: Long,
-    ) = safeApiCall {
+        includeLocations: Boolean?
+    )= safeApiCall {
         servicesApi.getMerchantById(
-            getMerchantByIdRequest = GetMerchantByIdRequest(
+            deviceID = deviceID,
+            email = userEmail,
+            getDataMerchantIdRequest = GetDataMerchantIdRequest(
                 id = merchantId,
-                includeLocation = false
-            ),
+                includeLocations= includeLocations
+            )
         )
     }
 }
@@ -140,5 +145,6 @@ interface DashDirectRepositoryInt {
     suspend fun logout()
     suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Long, userEmail: String):
         ResponseResource<PurchaseGiftCardResponse?>
-    suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>
+    suspend fun getMerchantById(deviceID: String, userEmail: String,merchantId: Long, includeLocations: Boolean? = false):
+            ResponseResource<GetDataMerchantIdResponse?>
 }
