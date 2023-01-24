@@ -22,7 +22,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
@@ -33,6 +35,7 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.merchent.GetDataMerchantIdResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import java.util.*
@@ -83,6 +86,20 @@ class PurchaseGiftCardViewModel @Inject constructor(
                     currency = Constants.DASH_CURRENCY,
                     deviceID = UUID.randomUUID().toString(),
                     userEmail = ""
+                )
+            }
+        }
+        return null
+    }
+
+    suspend fun getMerchantById(): ResponseResource<GetDataMerchantIdResponse?>? {
+        purchaseGiftCardDataMerchant?.merchantId?.let { id ->
+            repository.getDashDirectEmail()?.let { email ->
+                return repository.getMerchantById(
+                    merchantId = id,
+                    includeLocations = false,
+                    deviceID = UUID.randomUUID().toString(),
+                    userEmail = email
                 )
             }
         }
