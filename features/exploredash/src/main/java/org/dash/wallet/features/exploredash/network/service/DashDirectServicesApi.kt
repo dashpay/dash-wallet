@@ -16,8 +16,6 @@
  */
 package org.dash.wallet.features.exploredash.network.service
 
-import org.dash.wallet.features.exploredash.data.model.merchent.GetDataMerchantIdRequest
-import org.dash.wallet.features.exploredash.data.model.merchent.GetDataMerchantIdResponse
 import org.dash.wallet.features.exploredash.data.model.merchants.GetMerchantByIdRequest
 import org.dash.wallet.features.exploredash.data.model.merchants.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardRequest
@@ -38,12 +36,6 @@ interface DashDirectServicesApi {
     @POST("GetMerchantById")
     suspend fun getMerchantById(
         @Header(DashDirectConstants.EMAIL) email: String,
-        @Body getDataMerchantIdRequest: GetDataMerchantIdRequest
-    ): GetDataMerchantIdResponse?
-
-    @POST("GetMerchantById")
-    suspend fun getMerchantById(
-        //@Header(DashDirectConstants.API_KEY) appKey: String,
         @Body getMerchantByIdRequest: GetMerchantByIdRequest
     ): GetMerchantByIdResponse?
 }

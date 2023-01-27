@@ -21,6 +21,6 @@ import com.google.gson.annotations.SerializedName
 data class GetMerchantByIdRequest(
     @SerializedName("Id")
     val id: Long? = null,
-    @SerializedName("IncludeLocation")
-    val includeLocation: Boolean? = false
+    @SerializedName("IncludeLocations")
+    val includeLocations: Boolean? = false
 )

@@ -489,13 +489,13 @@ data class GetDataMerchantIdResponse(
             @SerializedName("LogoUrl")
             val logoUrl: String? = "",
             @SerializedName("MaximumCardPurchase")
-            val maximumCardPurchase: Int? = 0,
+            val maximumCardPurchase: Double? = 0.0,
             @SerializedName("MinimumCardPurchase")
-            val minimumCardPurchase: Int? = 0,
+            val minimumCardPurchase: Double? = 0.0,
             @SerializedName("PaymentInstructions")
             val paymentInstructions: String? = "",
             @SerializedName("SavingsPercentage")
-            val savingsPercentage: Int? = 0,
+            val savingsPercentage: Double? = 0.0,
             @SerializedName("SystemName")
             val systemName: String? = "",
             @SerializedName("TermsAndConditions")

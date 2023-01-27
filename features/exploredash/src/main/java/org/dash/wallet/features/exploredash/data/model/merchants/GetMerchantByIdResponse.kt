@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,16 +33,17 @@ data class GetMerchantByIdResponse(
     val successful: Boolean? = null
 ) {
     data class Data(
-        val merchant: Merchant
+        @SerializedName("Merchant")
+        val merchant: Merchant? = Merchant()
     )
     data class Merchant(
         @SerializedName("Id")
-        val id: Int,
+        val id: Int? = 0,
         @SerializedName("MinimumCardPurchase")
-        val minCardPurchase: Double,
+        val minimumCardPurchase: Double? = 0.0,
         @SerializedName("MaximumCardPurchase")
-        val maxCardPurchase: Double,
+        val maximumCardPurchase: Double? = 0.0,
         @SerializedName("SavingsPercentage")
-        val savingsPercentage: Double
+        val savingsPercentage: Double? = 0.0
     )
 }

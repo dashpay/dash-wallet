@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +35,6 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.merchent.GetDataMerchantIdResponse
 import org.dash.wallet.features.exploredash.data.model.merchants.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
@@ -50,7 +49,7 @@ class PurchaseGiftCardViewModel @Inject constructor(
     private val repository: DashDirectRepositoryInt
 ) : ViewModel() {
 
-    val isUserSettingFaitIsNotUSD = (configuration.exchangeCurrencyCode != Constants.USD_CURRENCY)
+    val isUserSettingFiatIsNotUSD = (configuration.exchangeCurrencyCode != Constants.USD_CURRENCY)
 
     val dashFormat: MonetaryFormat
         get() = configuration.format
@@ -74,7 +73,6 @@ class PurchaseGiftCardViewModel @Inject constructor(
     init {
         exchangeRates
             .observeExchangeRate(Constants.USD_CURRENCY)
-            .onEach { updateMinMaxPurchase() }
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
 
@@ -101,23 +99,15 @@ class PurchaseGiftCardViewModel @Inject constructor(
         return null
     }
 
-    suspend fun getMerchantById(): ResponseResource<GetDataMerchantIdResponse?>? {
-        purchaseGiftCardDataMerchant?.merchantId?.let { id ->
-            repository.getDashDirectEmail()?.let { email ->
-                return repository.getMerchantById(
-                    merchantId = id,
-                    includeLocations = false,
-                    userEmail = email
-                )
-            }
+    suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>? {
+        repository.getDashDirectEmail()?.let { email ->
+            return repository.getMerchantById(
+                merchantId = merchantId,
+                includeLocations = false,
+                userEmail = email
+            )
         }
         return null
-    }
-
-    suspend fun getMerchantById(id: Long): ResponseResource<GetMerchantByIdResponse?>? {
-        return repository.getMerchantById(
-            merchantId = id,
-        )
     }
 
     fun setMinMaxCardPurchaseValues(
@@ -134,10 +124,10 @@ class PurchaseGiftCardViewModel @Inject constructor(
             maximumCardPurchase.toString()
         )
 
-        updateMinMaxPurchase()
+        updatePurchaseLimits()
     }
 
-    private fun updateMinMaxPurchase() {
+    private fun updatePurchaseLimits() {
         _exchangeRate.value?.let {
             val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
             minCardPurchaseCoin = myRate.fiatToCoin(minCardPurchaseFiat)
