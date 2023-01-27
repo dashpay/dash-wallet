@@ -105,9 +105,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
                     if (response is ResponseResource.Success) {
                         selectedMerchant?.let { merchant ->
                             response.value?.data?.merchant?.let {
-                                merchant.savingsPercentage = it.savingsPercentage!!
-                                merchant.minCardPurchase = it.minimumCardPurchase!!
-                                merchant.maxCardPurchase = it.maximumCardPurchase!!
+                                merchant.savingsPercentage = it.savingsPercentage
+                                merchant.minCardPurchase = it.minimumCardPurchase
+                                merchant.maxCardPurchase = it.maximumCardPurchase
 
                                 setCardPurchaseLimits()
                                 setDiscountHint()
