@@ -38,6 +38,7 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.GiftCardDetailsDialogModel
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.PurchaseGiftCardViewModel
+import java.text.NumberFormat
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -64,15 +65,17 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
         val paymentValue = purchaseGiftCardViewModel.purchaseGiftCardDataPaymentValue
         merchant?.let {
             binding.merchentName.text = it.name
-            merchant.logoLocation?.let {
+            it.logoLocation?.let { logoLocation ->
                 Glide.with(requireContext())
-                    .load(it)
+                    .load(logoLocation)
                     .placeholder(org.dash.wallet.common.R.drawable.ic_image_placeholder)
                     .error(org.dash.wallet.common.R.drawable.ic_image_placeholder)
                     .transition(DrawableTransitionOptions.withCrossFade(200))
                     .into(binding.merchentLogo)
             }
-            binding.giftCardDiscountValue.text = "0%"
+            // This number formatter takes 0.0275 and returns 2.75%
+            val percentFormat = NumberFormat.getPercentInstance()
+            binding.giftCardDiscountValue.text = percentFormat.format((it.savingsPercentage ?: 0.0) / 100.0)
         }
 
         paymentValue?.let {

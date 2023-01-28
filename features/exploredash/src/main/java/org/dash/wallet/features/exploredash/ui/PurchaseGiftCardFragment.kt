@@ -121,7 +121,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
         viewModel.usdExchangeRate.observe(viewLifecycleOwner) { rate ->
             if (viewModel.isUserSettingFiatIsNotUSD) {
                 viewModel.balance.value?.let { balance ->
-                    updateBalanceLabel(balance, viewModel.usdExchangeRate.value)
+                    updateBalanceLabel(balance, rate)
                 }
             }
 
