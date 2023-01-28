@@ -26,6 +26,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.annotation.StringRes
+import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -101,6 +102,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         binding.input.doOnTextChanged { text, _, _, _ ->
 
             binding.inputWrapper.isErrorEnabled = false
+            binding.inputErrorTv.isVisible = false
 
             if(currentDirectUserAuthType!=DashDirectUserAuthType.OTP )
                 binding.continueButton.isEnabled =isEmail(text)
@@ -152,7 +154,8 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
 
                 is ResponseResource.Failure -> {
                     binding.inputWrapper.isErrorEnabled = true
-                    binding.inputWrapper.error = getString(R.string.error)
+                    binding.inputErrorTv.text = getString(R.string.error)
+                    binding.inputErrorTv.isVisible = true
                 }
             }
         }
@@ -170,8 +173,8 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
 
                     is ResponseResource.Failure -> {
                     binding.inputWrapper.isErrorEnabled = true
-                    binding.inputWrapper.error = getString(R.string.invaild_code)
-
+                    binding.inputErrorTv.text = getString(R.string.invaild_code)
+                        binding.inputErrorTv.isVisible = true
                     }
                 }
             }
