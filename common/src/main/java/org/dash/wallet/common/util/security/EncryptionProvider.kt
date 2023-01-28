@@ -1,4 +1,4 @@
-package org.dash.wallet.common.util.secuirty
+package org.dash.wallet.common.util.security
 
 import android.content.SharedPreferences
 import android.security.keystore.KeyGenParameterSpec

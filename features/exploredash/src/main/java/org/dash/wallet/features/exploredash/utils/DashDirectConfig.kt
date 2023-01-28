@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.dash.wallet.common.util.secuirty.EncryptionProvider
+import org.dash.wallet.common.util.security.EncryptionProvider
 import java.io.IOException
 import java.security.KeyStore
 import javax.inject.Inject
