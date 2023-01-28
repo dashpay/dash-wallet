@@ -143,4 +143,8 @@ class PurchaseGiftCardViewModel @Inject constructor(
             return myRate.coinToFiat(discountedAmount)
         }
     }
+
+    fun getDiscountedAmount(fullAmount: Fiat, savingsPercentage: Double): Fiat {
+        return Fiat.valueOf(Constants.USD_CURRENCY, (fullAmount.value * (100.0 - savingsPercentage) / 100).toLong())
+    }
 }

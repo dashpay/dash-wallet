@@ -63,6 +63,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
 
         val merchant = purchaseGiftCardViewModel.purchaseGiftCardDataMerchant
         val paymentValue = purchaseGiftCardViewModel.purchaseGiftCardDataPaymentValue
+        var savingsPercentage = 0.0
         merchant?.let {
             binding.merchentName.text = it.name
             it.logoLocation?.let { logoLocation ->
@@ -76,15 +77,17 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
             // This number formatter takes 0.0275 and returns 2.75% using current locale
             val percentFormat = NumberFormat.getPercentInstance()
             percentFormat.minimumFractionDigits = 2;
-            binding.giftCardDiscountValue.text = percentFormat.format((it.savingsPercentage ?: 0.0) / 100.0)
+            savingsPercentage = it.savingsPercentage ?: 0.0
+            binding.giftCardDiscountValue.text = percentFormat.format(savingsPercentage / 100.0)
         }
 
         paymentValue?.let {
             binding.giftCardTotalValue.text =
                 GenericUtils.fiatToString(it.second)
 
+            val discountedValue = purchaseGiftCardViewModel.getDiscountedAmount(it.second, savingsPercentage)
             binding.giftCardYouPayValue.text =
-                GenericUtils.fiatToString(it.second)
+                GenericUtils.fiatToString(discountedValue)
 
             binding.purchaseCardValue.text =
                 GenericUtils.fiatToString(it.second)
