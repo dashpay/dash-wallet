@@ -73,8 +73,9 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
                     .transition(DrawableTransitionOptions.withCrossFade(200))
                     .into(binding.merchentLogo)
             }
-            // This number formatter takes 0.0275 and returns 2.75%
+            // This number formatter takes 0.0275 and returns 2.75% using current locale
             val percentFormat = NumberFormat.getPercentInstance()
+            percentFormat.minimumFractionDigits = 2;
             binding.giftCardDiscountValue.text = percentFormat.format((it.savingsPercentage ?: 0.0) / 100.0)
         }
 
