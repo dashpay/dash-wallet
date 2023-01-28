@@ -21,22 +21,16 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
-import android.view.ViewGroup
-import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.annotation.StringRes
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updateLayoutParams
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
-import com.google.android.material.bottomsheet.BottomSheetBehavior
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -76,8 +70,8 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             R.string.email
         ),
         OTP(
-            R.string.enter_one_time_password,
-            R.string.check_your_email_and_enter_the_one_time_password,
+            R.string.enter_verification_code,
+            R.string.check_your_email_and_verification_code,
             R.string.password
         );
     }
@@ -157,11 +151,8 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
                 }
 
                 is ResponseResource.Failure -> {
-                    Toast.makeText(
-                        requireContext(),
-                        "Dash direct error ${response.errorCode}: ${response.errorBody ?: "empty"}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    binding.inputWrapper.isErrorEnabled = true
+                    binding.inputWrapper.error = getString(R.string.error)
                 }
             }
         }
@@ -179,11 +170,8 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
 
                     is ResponseResource.Failure -> {
                     binding.inputWrapper.isErrorEnabled = true
-                    Toast.makeText(
-                        requireContext(),
-                        "Dash direct error ${response.errorCode}: ${response.errorBody ?: "empty"}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    binding.inputWrapper.error = getString(R.string.invaild_code)
+
                     }
                 }
             }
