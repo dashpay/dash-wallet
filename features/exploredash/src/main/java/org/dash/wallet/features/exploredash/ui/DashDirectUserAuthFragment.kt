@@ -153,8 +153,12 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
                 }
 
                 is ResponseResource.Failure -> {
+
                     binding.inputWrapper.isErrorEnabled = true
-                    binding.inputErrorTv.text = getString(R.string.error)
+                    binding.inputErrorTv.text = if( response.errorBody.isNullOrEmpty())
+                        getString(R.string.error)
+                    else
+                        response.errorBody
                     binding.inputErrorTv.isVisible = true
                 }
             }
@@ -173,7 +177,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
 
                     is ResponseResource.Failure -> {
                     binding.inputWrapper.isErrorEnabled = true
-                    binding.inputErrorTv.text = getString(R.string.invaild_code)
+                    binding.inputErrorTv.text =  getString(R.string.invaild_code)
                         binding.inputErrorTv.isVisible = true
                     }
                 }
