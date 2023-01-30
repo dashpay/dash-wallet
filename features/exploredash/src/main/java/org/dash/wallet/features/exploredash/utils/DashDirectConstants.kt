@@ -24,4 +24,5 @@ object DashDirectConstants {
     const val EMAIL = "email"
     const val CHECK_BALANCE_URL = "https://www.lowes.com/l/help/gift-card-balance"
     const val DASH_DIRECT_URL = "https://www.dashdirect.org/"
+    const val DEFAULT_DISCOUNT = 0.0
 }

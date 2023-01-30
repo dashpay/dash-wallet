@@ -165,7 +165,7 @@
     <string name="purchase_gift_card_at">at</string>
     <string name="purchase_gift_card_min">Min: %s</string>
     <string name="purchase_gift_card_max">Max: %s</string>
-    <string name="purchase_gift_card_discount_hint">You are buying a %s gift card for %s (%.2f%% discount)</string>
+    <string name="purchase_gift_card_discount_hint">You are buying a %s gift card for %s (%s discount)</string>
     <string name="button_next">Next</string>
     <string name="purchase_gift_card_from">From</string>
     <string name="purchase_gift_card_to">To</string>

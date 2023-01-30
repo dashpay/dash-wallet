@@ -38,7 +38,7 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.GiftCardDetailsDialogModel
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.PurchaseGiftCardViewModel
-import java.text.NumberFormat
+import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -63,7 +63,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
 
         val merchant = purchaseGiftCardViewModel.purchaseGiftCardDataMerchant
         val paymentValue = purchaseGiftCardViewModel.purchaseGiftCardDataPaymentValue
-        var savingsPercentage = 0.0
+        val savingsPercentage = merchant?.savingsPercentage ?: DEFAULT_DISCOUNT
         merchant?.let {
             binding.merchentName.text = it.name
             it.logoLocation?.let { logoLocation ->
@@ -74,11 +74,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
                     .transition(DrawableTransitionOptions.withCrossFade(200))
                     .into(binding.merchentLogo)
             }
-            // This number formatter takes 0.0275 and returns 2.75% using current locale
-            val percentFormat = NumberFormat.getPercentInstance()
-            percentFormat.minimumFractionDigits = 2;
-            savingsPercentage = it.savingsPercentage ?: 0.0
-            binding.giftCardDiscountValue.text = percentFormat.format(savingsPercentage / 100.0)
+            binding.giftCardDiscountValue.text = GenericUtils.formatPercent(savingsPercentage)
         }
 
         paymentValue?.let {
@@ -87,7 +83,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
 
             val discountedValue = purchaseGiftCardViewModel.getDiscountedAmount(it.second, savingsPercentage)
             binding.giftCardYouPayValue.text =
-                GenericUtils.fiatToString(discountedValue)
+                GenericUtils.fiatToStringRoundUp(discountedValue)
 
             binding.purchaseCardValue.text =
                 GenericUtils.fiatToString(it.second)

@@ -42,6 +42,7 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.dialogs.PurchaseGiftCardConfirmDialog
+import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
 import org.slf4j.LoggerFactory
 
 @FlowPreview
@@ -174,8 +175,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
 
     private fun setDiscountHint() {
         selectedMerchant?.let { merchant ->
-            val savingsPercentage = merchant.savingsPercentage ?: 0.0
-            if (savingsPercentage != 0.0) {
+            val savingsPercentage = merchant.savingsPercentage ?: DEFAULT_DISCOUNT
+            if (savingsPercentage != DEFAULT_DISCOUNT) {
                 val purchaseAmount = enterAmountViewModel.amount.value
                 if (purchaseAmount != null && purchaseAmount != Coin.ZERO) {
                     val rate = enterAmountViewModel.selectedExchangeRate.value
@@ -183,13 +184,13 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
                     binding.discountValue.text = getString(
                         R.string.purchase_gift_card_discount_hint,
                         GenericUtils.fiatToString(myRate.coinToFiat(purchaseAmount)),
-                        GenericUtils.fiatToString(
+                        GenericUtils.fiatToStringRoundUp(
                             viewModel.getDiscountedAmount(
                                 purchaseAmount,
                                 savingsPercentage
                             )
                         ),
-                        savingsPercentage
+                        GenericUtils.formatPercent(savingsPercentage)
                     )
                     binding.discountValue.isVisible = true
                 } else {

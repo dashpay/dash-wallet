@@ -28,6 +28,7 @@ import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.data.CurrencyInfo;
 
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.Currency;
 import java.util.Locale;
@@ -36,6 +37,13 @@ import java.util.Locale;
  * @author Andreas Schildbach
  */
 public class GenericUtils {
+    private static NumberFormat percentFormat;
+
+    static {
+        percentFormat = NumberFormat.getPercentInstance();
+        percentFormat.setMaximumFractionDigits(2);
+        percentFormat.setRoundingMode(RoundingMode.HALF_UP);
+    }
     public static boolean startsWithIgnoreCase(final String string, final String prefix) {
         return string.regionMatches(true, 0, prefix, 0, prefix.length());
     }
@@ -186,12 +194,20 @@ public class GenericUtils {
 
     public static String fiatToString(Fiat fiat) {
         MonetaryFormat format = Constants.INSTANCE.getSEND_PAYMENT_LOCAL_FORMAT().noCode();
+        return fiatToString(fiat, format);
+    }
+
+    public static String fiatToStringRoundUp(Fiat fiat) {
+        MonetaryFormat format = Constants.INSTANCE.getSEND_PAYMENT_LOCAL_FORMAT().noCode().roundingMode(RoundingMode.UP);
+        return fiatToString(fiat, format);
+    }
+
+    public static String fiatToString(Fiat fiat, MonetaryFormat format) {
         NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
         Currency currency = Currency.getInstance(fiat.currencyCode);
         numberFormat.setCurrency(currency);
         String currencySymbol = currency.getSymbol(getDeviceLocale());
         boolean isCurrencyFirst = numberFormat.format(1.0).startsWith(currencySymbol);
-
         if (isCurrencyFirst) {
             return currencySymbol + " " + format.format(fiat);
         } else {
@@ -231,5 +247,15 @@ public class GenericUtils {
         }
         newCurrencyCode = CurrencyInfo.getOtherName(newCurrencyCode);
         return newCurrencyCode;
+    }
+
+    /**
+     *
+     * @param percent The number as a double where 1.00 is 1.00%
+     * @return
+     */
+    public static String formatPercent(double percent) {
+        // the formatter translates 0.01 to 1.00%
+        return percentFormat.format(percent / 100);
     }
 }
