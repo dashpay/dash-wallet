@@ -138,10 +138,7 @@ class PurchaseGiftCardViewModel @Inject constructor(
     fun getDiscountedAmount(fullAmount: Coin, savingsPercentage: Double): Fiat? {
         return _exchangeRate.value?.let {
             val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
-            //val discountedAmount =
-            //    Coin.valueOf((fullAmount.value * (100.0 - savingsPercentage) / 100).toLong())
-            //return myRate.coinToFiat(discountedAmount)
-            return getDiscountedAmount(myRate.coinToFiat(fullAmount), savingsPercentage);
+            return getDiscountedAmount(myRate.coinToFiat(fullAmount), savingsPercentage)
         }
     }
 
