@@ -42,9 +42,30 @@
         <action
             android:id="@+id/search_to_purchaseGiftCardFragment"
             app:destination="@id/purchaseGiftCardFragment" />
+        <action
+            android:id="@+id/search_to_dashDirectUserAuthFragment"
+            app:destination="@id/dashDirectUserAuthFragment" />
 
     </fragment>
 
+    <fragment
+        android:id="@+id/dashDirectUserAuthFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.DashDirectUserAuthFragment"
+        android:label="fragment_dashDirectUserAuthFragment"
+        tools:layout="@layout/fragment_dash_direct_user_auth">
+        <action
+            android:id="@+id/auth_to_dashDirectUserAuthFragment"
+            app:destination="@id/dashDirectUserAuthFragment" />
+
+        <action
+            android:id="@+id/auth_to_purchaseGiftCardFragment"
+            app:popUpTo="@id/searchFragment"
+            app:destination="@id/purchaseGiftCardFragment" />
+
+        <argument
+            android:name="dashDirectUserAuthType"
+            app:argType="org.dash.wallet.features.exploredash.ui.DashDirectUserAuthFragment$DashDirectUserAuthType" />
+    </fragment>
     <fragment
         android:id="@+id/purchaseGiftCardFragment"
         android:name="org.dash.wallet.features.exploredash.ui.PurchaseGiftCardFragment"

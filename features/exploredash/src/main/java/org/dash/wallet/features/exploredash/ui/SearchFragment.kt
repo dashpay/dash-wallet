@@ -21,6 +21,8 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -66,8 +68,12 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
+import org.dash.wallet.features.exploredash.ui.dialogs.DashDirectLoginInfoDialog
+import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import javax.inject.Inject
 
 @FlowPreview
@@ -196,8 +202,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
+            val item = viewModel.selectedItem.value
+            val isOnline = item?.type == MerchantType.ONLINE
             bottomSheet.isDraggable = isBottomSheetDraggable()
-            bottomSheet.state = setBottomSheetState()
+            bottomSheet.state = setBottomSheetState(isOnline)
             refreshManageGpsView()
         }
 
@@ -386,41 +394,30 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    fun showLoginDialog() {
-        val builder = AlertDialog.Builder(requireContext())
-        val inflater = layoutInflater
-        builder.setTitle("Login to dash direct ")
-        val dialogLayout = inflater.inflate(R.layout.dialog_login, null)
-        val email = dialogLayout.findViewById<AppCompatEditText>(R.id.email)
-        val password = dialogLayout.findViewById<AppCompatEditText>(R.id.password)
-        builder.setView(dialogLayout)
-        builder.setPositiveButton("login") { _, _ ->
-            signInToDashDirect(email, password)
-        }
-        builder.show()
-    }
-
-    private fun signInToDashDirect(
-        email: AppCompatEditText,
-        password: AppCompatEditText
-    ) {
-        lifecycleScope.launch {
-            when (val response = viewModel.signInToDashDirect(email.text.toString(), password.text.toString())) {
-                is ResponseResource.Success -> {
-                    if (response.value) {
-                        openPurchaseGiftCardFragment()
+    private fun showLoginDialog() {
+    DashDirectLoginInfoDialog.custom(
+                R.drawable.ic_dashdirect_logo,
+                getString(R.string.buy_a_gift_card_with_your_dash_direct_account),
+                getString(R.string.create_an_account_at_dash_direct_or_log_in_to_the_existing_one),
+                getString(R.string.login),
+            getString(R.string.create_new_account),
+                "dashdirect.org"
+        ).show(requireActivity(),
+                onResult = {
+                    if (it == true) {
+                        safeNavigate(SearchFragmentDirections.
+                        searchToDashDirectUserAuthFragment(DashDirectUserAuthFragment.
+                        DashDirectUserAuthType.CREATE_ACCOUNT) )
+                    }else{
+                        safeNavigate(SearchFragmentDirections.
+                        searchToDashDirectUserAuthFragment(DashDirectUserAuthFragment.
+                        DashDirectUserAuthType.SIGN_IN) )
                     }
-                }
-
-                is ResponseResource.Failure -> {
-                    Toast.makeText(
-                        requireContext(),
-                        "Dash direct error ${response.errorCode}: ${response.errorBody ?: "empty"}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }
+                },
+                onExtraMessageAction = {
+                    requireContext().startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(DashDirectConstants.DASH_DIRECT_URL)))
+                })
     }
 
     private fun openPurchaseGiftCardFragment() {
@@ -553,6 +550,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 showLoginDialog()
             } else {
                 openPurchaseGiftCardFragment()
+            }
+        }
+
+        binding.itemDetails.setOnDashDirectLogOutClicked {
+            if (viewModel.isUserSignInDashDirect()) {
+                lifecycleScope.launch {
+                    viewModel.logout()
+                }
             }
         }
     }
