@@ -22,7 +22,7 @@ import org.bitcoinj.utils.Fiat
 import java.math.BigDecimal
 
 // the purpose of these methods is to directly convert Coin and Fiat to BigDecimal
-// without first converting to a string.  If the strings are localized, BitDecimal
+// without first converting to a string.  If the strings are localized, BigDecimal
 // may throw a NumberFormatException (e.g. "0,43")
 
 fun Coin.toBigDecimal() : BigDecimal {

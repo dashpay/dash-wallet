@@ -38,6 +38,7 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.GiftCardDetailsDialogModel
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.PurchaseGiftCardViewModel
+import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -62,25 +63,27 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
 
         val merchant = purchaseGiftCardViewModel.purchaseGiftCardDataMerchant
         val paymentValue = purchaseGiftCardViewModel.purchaseGiftCardDataPaymentValue
+        val savingsPercentage = merchant?.savingsPercentage ?: DEFAULT_DISCOUNT
         merchant?.let {
             binding.merchentName.text = it.name
-            merchant.logoLocation?.let {
+            it.logoLocation?.let { logoLocation ->
                 Glide.with(requireContext())
-                    .load(it)
+                    .load(logoLocation)
                     .placeholder(org.dash.wallet.common.R.drawable.ic_image_placeholder)
                     .error(org.dash.wallet.common.R.drawable.ic_image_placeholder)
                     .transition(DrawableTransitionOptions.withCrossFade(200))
                     .into(binding.merchentLogo)
             }
-            binding.giftCardDiscountValue.text = "0%"
+            binding.giftCardDiscountValue.text = GenericUtils.formatPercent(savingsPercentage)
         }
 
         paymentValue?.let {
             binding.giftCardTotalValue.text =
                 GenericUtils.fiatToString(it.second)
 
+            val discountedValue = purchaseGiftCardViewModel.getDiscountedAmount(it.second, savingsPercentage)
             binding.giftCardYouPayValue.text =
-                GenericUtils.fiatToString(it.second)
+                GenericUtils.fiatToStringRoundUp(discountedValue)
 
             binding.purchaseCardValue.text =
                 GenericUtils.fiatToString(it.second)

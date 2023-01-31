@@ -24,6 +24,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.Configuration
@@ -45,7 +46,7 @@ import kotlin.coroutines.resumeWithException
     MerchantFTS::class,
     Atm::class,
     AtmFTS::class
-], version = 1)
+], version = 2, exportSchema = true)
 @TypeConverters(RoomConverters::class)
 abstract class ExploreDatabase : RoomDatabase() {
     abstract fun merchantDao(): MerchantDao
@@ -60,6 +61,15 @@ abstract class ExploreDatabase : RoomDatabase() {
                 instance = open(context, config)
             }
             return instance!!
+        }
+
+        @JvmStatic
+        val migration1To2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE merchant ADD COLUMN minCardPurchase REAL DEFAULT 0.0")
+                database.execSQL("ALTER TABLE merchant ADD COLUMN maxCardPurchase REAL DEFAULT 0.0")
+                database.execSQL("ALTER TABLE merchant ADD COLUMN savingsPercentage REAL DEFAULT 0.0")
+            }
         }
 
         suspend fun updateDatabase(
@@ -83,7 +93,8 @@ abstract class ExploreDatabase : RoomDatabase() {
 
             log.info("Open database {}", config.exploreDatabaseName)
             return dbBuilder
-                .fallbackToDestructiveMigration()
+                //.fallbackToDestructiveMigration()
+                .addMigrations(migration1To2)
                 .build()
         }
 
@@ -169,7 +180,8 @@ abstract class ExploreDatabase : RoomDatabase() {
                 }
 
                 database = dbBuilder
-                    .fallbackToDestructiveMigration()
+                    //.fallbackToDestructiveMigration()
+                    .addMigrations(migration1To2)
                     .addCallback(onOpenCallback)
                     .build()
 

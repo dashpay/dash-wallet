@@ -208,7 +208,8 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
                 payBtn.text = context.getText(R.string.explore_pay_with_dash)
                 payBtn.setOnClickListener { onSendDashClicked?.invoke(true) }
             } else {
-                payBtn.isVisible = !merchant.deeplink.isNullOrBlank()
+                // DashDirect allows payments via API, other sources require a deeplink
+                payBtn.isVisible = merchant.source == "DashDirect" || !merchant.deeplink.isNullOrBlank()
                 payBtn.text = context.getText(R.string.explore_buy_gift_card)
                 payBtn.setOnClickListener {
                     onBuyGiftCardButtonClicked?.invoke()

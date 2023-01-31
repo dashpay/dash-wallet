@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,15 +14,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.features.exploredash.utils
+package org.dash.wallet.features.exploredash.data.model.merchant
 
-object DashDirectConstants {
-    const val BASE_URL = "https://apidev.dashdirect.org/DashDirect/"
-    const val API_KEY = "apikey"
-    const val requestedUUID = "requestedUUID"
-    const val CLIENT_ID = "clientId"
-    const val EMAIL = "email"
-    const val CHECK_BALANCE_URL = "https://www.lowes.com/l/help/gift-card-balance"
-    const val DASH_DIRECT_URL = "https://www.dashdirect.org/"
-    const val DEFAULT_DISCOUNT = 0.0
-}
+import com.google.gson.annotations.SerializedName
+
+data class GetMerchantByIdRequest(
+    @SerializedName("Id")
+    val id: Long? = null,
+    @SerializedName("IncludeLocations")
+    val includeLocations: Boolean? = false
+)

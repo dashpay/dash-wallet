@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.merchent.GetDataMerchantIdResponse
+import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import java.util.*
@@ -49,7 +49,7 @@ class PurchaseGiftCardViewModel @Inject constructor(
     private val repository: DashDirectRepositoryInt
 ) : ViewModel() {
 
-    val isUserSettingFaitIsNotUSD = (configuration.exchangeCurrencyCode != Constants.USD_CURRENCY)
+    val isUserSettingFiatIsNotUSD = (configuration.exchangeCurrencyCode != Constants.USD_CURRENCY)
 
     val dashFormat: MonetaryFormat
         get() = configuration.format
@@ -64,6 +64,11 @@ class PurchaseGiftCardViewModel @Inject constructor(
 
     var purchaseGiftCardDataMerchant: Merchant? = null
     var purchaseGiftCardDataPaymentValue: Pair<Coin, Fiat>? = null
+
+    var minCardPurchaseCoin: Coin = Coin.ZERO
+    var minCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
+    var maxCardPurchaseCoin: Coin = Coin.ZERO
+    var maxCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
 
     init {
         exchangeRates
@@ -94,16 +99,50 @@ class PurchaseGiftCardViewModel @Inject constructor(
         return null
     }
 
-    suspend fun getMerchantById(): ResponseResource<GetDataMerchantIdResponse?>? {
-        purchaseGiftCardDataMerchant?.merchantId?.let { id ->
-            repository.getDashDirectEmail()?.let { email ->
-                return repository.getMerchantById(
-                    merchantId = id,
-                    includeLocations = false,
-                    userEmail = email
-                )
-            }
+    suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>? {
+        repository.getDashDirectEmail()?.let { email ->
+            return repository.getMerchantById(
+                merchantId = merchantId,
+                includeLocations = false,
+                userEmail = email
+            )
         }
         return null
+    }
+
+    fun setMinMaxCardPurchaseValues(
+        minCardPurchase: Double,
+        maximumCardPurchase: Double
+    ) {
+        minCardPurchaseFiat = Fiat.parseFiat(
+            Constants.USD_CURRENCY,
+            minCardPurchase.toString()
+        )
+
+        maxCardPurchaseFiat = Fiat.parseFiat(
+            Constants.USD_CURRENCY,
+            maximumCardPurchase.toString()
+        )
+
+        updatePurchaseLimits()
+    }
+
+    private fun updatePurchaseLimits() {
+        _exchangeRate.value?.let {
+            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
+            minCardPurchaseCoin = myRate.fiatToCoin(minCardPurchaseFiat)
+            maxCardPurchaseCoin = myRate.fiatToCoin(maxCardPurchaseFiat)
+        }
+    }
+
+    fun getDiscountedAmount(fullAmount: Coin, savingsPercentage: Double): Fiat? {
+        return _exchangeRate.value?.let {
+            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
+            return getDiscountedAmount(myRate.coinToFiat(fullAmount), savingsPercentage)
+        }
+    }
+
+    fun getDiscountedAmount(fullAmount: Fiat, savingsPercentage: Double): Fiat {
+        return Fiat.valueOf(Constants.USD_CURRENCY, (fullAmount.value * (100.0 - savingsPercentage) / 100).toLong())
     }
 }
