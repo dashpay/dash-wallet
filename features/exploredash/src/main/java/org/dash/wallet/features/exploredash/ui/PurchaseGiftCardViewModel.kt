@@ -35,7 +35,7 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.merchants.GetMerchantByIdResponse
+import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import java.util.*

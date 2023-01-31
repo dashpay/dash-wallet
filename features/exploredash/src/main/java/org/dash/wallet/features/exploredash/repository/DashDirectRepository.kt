@@ -21,8 +21,8 @@ package org.dash.wallet.features.exploredash.repository
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
-import org.dash.wallet.features.exploredash.data.model.merchants.GetMerchantByIdRequest
-import org.dash.wallet.features.exploredash.data.model.merchants.GetMerchantByIdResponse
+import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdRequest
+import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.signin.VerifyEmailRequest

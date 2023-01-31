@@ -16,8 +16,8 @@
  */
 package org.dash.wallet.features.exploredash.network.service
 
-import org.dash.wallet.features.exploredash.data.model.merchants.GetMerchantByIdRequest
-import org.dash.wallet.features.exploredash.data.model.merchants.GetMerchantByIdResponse
+import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdRequest
+import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
