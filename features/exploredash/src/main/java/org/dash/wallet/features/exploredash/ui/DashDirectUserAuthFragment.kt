@@ -21,22 +21,17 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
-import android.view.ViewGroup
-import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.annotation.StringRes
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updateLayoutParams
+import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
-import com.google.android.material.bottomsheet.BottomSheetBehavior
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -76,8 +71,8 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             R.string.email
         ),
         OTP(
-            R.string.enter_one_time_password,
-            R.string.check_your_email_and_enter_the_one_time_password,
+            R.string.enter_verification_code,
+            R.string.check_your_email_and_verification_code,
             R.string.password
         );
     }
@@ -107,6 +102,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         binding.input.doOnTextChanged { text, _, _, _ ->
 
             binding.inputWrapper.isErrorEnabled = false
+            binding.inputErrorTv.isVisible = false
 
             if(currentDirectUserAuthType!=DashDirectUserAuthType.OTP )
                 binding.continueButton.isEnabled =isEmail(text)
@@ -157,11 +153,13 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
                 }
 
                 is ResponseResource.Failure -> {
-                    Toast.makeText(
-                        requireContext(),
-                        "Dash direct error ${response.errorCode}: ${response.errorBody ?: "empty"}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+
+                    binding.inputWrapper.isErrorEnabled = true
+                    binding.inputErrorTv.text = if( response.errorBody.isNullOrEmpty())
+                        getString(R.string.error)
+                    else
+                        response.errorBody
+                    binding.inputErrorTv.isVisible = true
                 }
             }
         }
@@ -179,11 +177,8 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
 
                     is ResponseResource.Failure -> {
                     binding.inputWrapper.isErrorEnabled = true
-                    Toast.makeText(
-                        requireContext(),
-                        "Dash direct error ${response.errorCode}: ${response.errorBody ?: "empty"}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    binding.inputErrorTv.text =  getString(R.string.invaild_code)
+                        binding.inputErrorTv.isVisible = true
                     }
                 }
             }
