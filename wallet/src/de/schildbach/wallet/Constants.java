@@ -29,9 +29,9 @@ import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.params.BinTangDevNetParams;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.OuzoDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
@@ -111,7 +111,7 @@ public final class Constants {
             case "schnapps": {
                 // Schnapps Devnet
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
-                NETWORK_PARAMETERS = OuzoDevNetParams.get();
+                NETWORK_PARAMETERS = BinTangDevNetParams.get();
                 String devNetName = ((DevNetParams)NETWORK_PARAMETERS).getDevNetName();
                 devNetName = devNetName.substring(devNetName.indexOf("-") + 1);
                 // TODO: remove this next line when Platform Supports Core 0.18
