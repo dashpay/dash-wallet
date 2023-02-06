@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service
 
+import android.app.Activity
 import android.content.*
 import android.net.Uri
 import android.os.Build
@@ -49,6 +50,7 @@ class AndroidActionsService @Inject constructor(
         }
 
         val shareIntent = Intent.createChooser(sendIntent, null)
+        shareIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         context.startActivity(shareIntent)
     }
 
