@@ -97,14 +97,14 @@ class StakingActivity : LockScreenActivity() {
         when (status) {
             OnlineAccountStatus.None -> { }
             OnlineAccountStatus.Linking, OnlineAccountStatus.SigningUp -> super.turnOffAutoLogout()
-            OnlineAccountStatus.Validating -> super.turnOffAutoLogout()
-            else -> {
+            OnlineAccountStatus.Validating -> {
                 val isWebView = navController.currentDestination?.id == R.id.crowdNodeWebViewFragment
                 if (isWebView) {
                     navController.navigate(WebViewFragmentDirections.webViewToPortal())
                 }
                 super.turnOnAutoLogout()
             }
+            else -> super.turnOnAutoLogout()
         }
     }
 
