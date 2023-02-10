@@ -325,7 +325,7 @@ class CreateIdentityService : LifecycleService() {
         if (blockchainIdentityData.creationState <= CreationState.UPGRADING_WALLET) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.UPGRADING_WALLET)
             val seed = decryptSeed(backgroundHandler, wallet, encryptionKey)
-            platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+            platformRepo.addWalletKeyChainsAsync(seed, encryptionKey)
         }
 
         val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
@@ -457,7 +457,7 @@ class CreateIdentityService : LifecycleService() {
         if (blockchainIdentityData.creationState <= CreationState.UPGRADING_WALLET) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.UPGRADING_WALLET)
             val seed = decryptSeed(backgroundHandler, wallet, encryptionKey)
-            platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+            platformRepo.addWalletKeyChainsAsync(seed, encryptionKey)
         }
 
         val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
@@ -673,7 +673,7 @@ class CreateIdentityService : LifecycleService() {
         val blockchainIdentity = BlockchainIdentity(platformRepo.platform, 0, wallet)
         // this process should have been done already, otherwise the credit funding transaction
         // will not have the credit burn keys associated with it
-        platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+        platformRepo.addWalletKeyChainsAsync(seed, encryptionKey)
         platformSyncService.updateSyncStatus(PreBlockStage.InitWallet)
 
         //
