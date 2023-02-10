@@ -26,6 +26,7 @@ import de.schildbach.wallet.security.SecurityGuard
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletEx
 import org.slf4j.LoggerFactory
 
 class EncryptWalletLiveData(
@@ -79,7 +80,7 @@ class EncryptWalletLiveData(
         }
 
         override fun doInBackground(vararg args: Any): Resource<Wallet> {
-            val wallet = walletApplication.wallet!!
+            val wallet = walletApplication.wallet as WalletEx
             val password = securityGuard.generateRandomPassword()
 
             return try {
@@ -91,6 +92,7 @@ class EncryptWalletLiveData(
                 wallet.encrypt(keyCrypter, newKey)
                 // initialize the authentication key chains to allow recovery of the username
                 wallet.initializeAuthenticationKeyChains(decryptedSeed, newKey);
+                wallet.initializeCoinJoin(newKey)
 
                 securityGuard.savePassword(password)
 

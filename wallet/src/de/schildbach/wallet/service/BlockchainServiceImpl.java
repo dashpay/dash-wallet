@@ -47,6 +47,10 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.common.base.Stopwatch;
 
+import org.bitcoinj.coinjoin.CoinJoinClientManager;
+import org.bitcoinj.coinjoin.PoolMessage;
+import org.bitcoinj.coinjoin.PoolStatus;
+import org.bitcoinj.coinjoin.progress.MixingProgressTracker;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
@@ -82,13 +86,12 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
-import org.dashj.platform.dapiclient.DapiClient;
 import org.dash.wallet.common.services.NotificationService;
 import org.dash.wallet.common.transactions.filters.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
-import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.transactions.TransactionUtils;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationHandler;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi;
@@ -1072,12 +1075,39 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 } else {
                     log.info("peergroup not available, not recalculating bloom filers");
                 }
+            } else if (BlockchainService.ACTION_START_MIXING.equals(action)) {
+                if (peerGroup != null) {
+                    log.info("begin mixing");
+                    CoinJoinClientManager manager = application.getWallet().getContext().coinJoinManager.coinJoinClientManagers.get(application.getWallet().getDescription());
+                    if (!manager.startMixing()) {
+                        log.info("Mixing has been started already.");
+                    } else {
+                        boolean result = manager.doAutomaticDenominating();
+                        log.info("Mixing " + (result ? "started successfully" : ("start failed: " + manager.getStatuses() + ", will retry")));
+
+                        if (manager != null) {
+                            manager.addMixingCompleteListener(Threading.SAME_THREAD, mixingProgressTracker);
+                            manager.addSessionCompleteListener(Threading.SAME_THREAD, mixingProgressTracker);
+                            manager.setBlockChain(blockChain);
+                            handleMixingProgress(0.0);
+                        }
+                    }
+                } else {
+                    log.info("peergroup not available, not mixing");
+                }
+            } else if (BlockchainService.ACTION_STOP_MIXING.equals(action)) {
+                stopMixing();
             }
         } else {
             log.warn("service restart, although it was started as non-sticky");
         }
 
         return START_NOT_STICKY;
+    }
+
+    private void stopMixing() {
+        application.getWallet().getContext().coinJoinManager.stop();
+        nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
     }
 
     private void startForeground() {
@@ -1178,6 +1208,23 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         final String message = (blockchainState != null)
                 ? BlockchainStateUtils.getSyncStateString(blockchainState, this)
                 : getString(R.string.blockchain_state_progress_downloading, 0);
+
+        return new NotificationCompat.Builder(this,
+                Constants.NOTIFICATION_CHANNEL_ID_ONGOING)
+                .setSmallIcon(R.drawable.ic_dash_d_white)
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText(message)
+                .setContentIntent(pendingIntent).build();
+    }
+
+    private Notification createMixingNotification(double progress) {
+        Intent notificationIntent = OnboardingActivity.createIntent(this);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+                notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        final String message = (blockchainState != null)
+                ? getString(R.string.mixing_state_progress_mixing, progress)
+                : getString(R.string.mixing_state_progress_mixing, 0.0);
 
         return new NotificationCompat.Builder(this,
                 Constants.NOTIFICATION_CHANNEL_ID_ONGOING)
@@ -1359,4 +1406,32 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             }
         }
     }
+
+    void handleMixingProgress(double progress) {
+        Notification notification = createMixingNotification(progress);
+        nm.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification);
+    }
+
+    private final MixingProgressTracker mixingProgressTracker = new MixingProgressTracker() {
+        @Override
+        public void onSessionStarted(WalletEx wallet, int sessionId, int denomination, PoolMessage message) {
+            log.info("Session {} started.  {}%", sessionId, getProgress());
+            handleMixingProgress(getProgress());
+        }
+
+        @Override
+        public void onSessionComplete(WalletEx wallet, int sessionId, int denomination, PoolMessage message) {
+            super.onSessionComplete(wallet, sessionId, denomination, message);
+            log.info("Session {} complete.  {}% -- {}", sessionId, getProgress(), message);
+            handleMixingProgress(getProgress());
+        }
+
+        @Override
+        public void onMixingComplete(WalletEx wallet, List<PoolStatus> statusList) {
+            super.onMixingComplete(wallet, statusList);
+            log.info("Mixing Complete.  {}%", getProgress());
+            handleMixingProgress(getProgress());
+            stopMixing();
+        }
+    };
 }

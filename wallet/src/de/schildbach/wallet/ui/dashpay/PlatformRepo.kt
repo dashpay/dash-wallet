@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui.dashpay
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
-import androidx.lifecycle.LiveData
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
@@ -37,12 +36,19 @@ import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import org.bitcoinj.coinjoin.CoinJoinClientManager
+import org.bitcoinj.coinjoin.CoinJoinClientOptions
+import org.bitcoinj.coinjoin.PoolStatus
+import org.bitcoinj.coinjoin.listeners.MixingCompleteListener
+import org.bitcoinj.coinjoin.utils.ProTxToOutpoint
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.quorums.InstantSendLock
+import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletEx
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -171,7 +177,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private suspend fun initializeStateRepository() {
         // load our id
 
-        if (this::blockchainIdentity.isInitialized && blockchainIdentity.registered) {
+        if (this::blockchainIdentity.isInitialized && blockchainIdentity.isRegistered()) {
             val identityId = blockchainIdentity.uniqueIdString
             platform.stateRepository.addValidIdentity(Identifier.from(identityId))
 
@@ -567,9 +573,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun addWalletKeyChainsAsync(seed: DeterministicSeed, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
-            val wallet = walletApplication.wallet
+            val wallet = walletApplication.wallet as WalletEx
             // this will initialize any missing key chains
-            wallet!!.initializeAuthenticationKeyChains(seed, keyParameter)
+            wallet.initializeAuthenticationKeyChains(seed, keyParameter)
+            wallet.initializeCoinJoin(keyParameter)
         }
     }
 
@@ -579,8 +586,64 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
-            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter)
+            mixFunds(keyParameter)
+            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, true)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
+        }
+    }
+
+    suspend fun mixFunds(keyParameter: KeyParameter?): Boolean {
+        return suspendCoroutine { continuation ->
+            (walletApplication.wallet as WalletEx).initializeCoinJoin(keyParameter);
+            CoinJoinClientOptions.setEnabled(true);
+            CoinJoinClientOptions.setRounds(1);
+            CoinJoinClientOptions.setSessions(4);
+            CoinJoinClientOptions.setAmount(Constants.DASH_PAY_FEE)
+            val wallet = walletApplication.wallet!!
+            if (wallet.getBalance(Wallet.BalanceType.COINJOIN_SPENDABLE)
+                    .isLessThan(Constants.DASH_PAY_FEE)
+            ) {
+                wallet.context.coinJoinManager.coinJoinClientManagers[wallet.description] =
+                    CoinJoinClientManager(wallet)
+                wallet.context.coinJoinManager.setRequestKeyParameter {
+                    keyParameter
+                }
+                wallet.context.coinJoinManager.setRequestDecryptedKey { it.decrypt(keyParameter) }
+
+                // remove with Core 19
+                ProTxToOutpoint.initialize(Constants.NETWORK_PARAMETERS)
+
+                val manager =
+                    wallet.context.coinJoinManager.coinJoinClientManagers[wallet.description]
+                if (manager != null) {
+                    // trigger something with Blockchain Service to call manager.setBlockchain
+                    manager.setStopOnNothingToDo(true)
+                    val mixingFinished = manager.mixingFinishedFuture
+
+                    val mixingCompleteListener =
+                        MixingCompleteListener { _, statusList ->
+                            statusList?.let {
+                                for (status in it) {
+                                    if (status != PoolStatus.FINISHED) {
+                                        continuation.resumeWithException(Exception(status.name))
+                                    }
+                                }
+                            }
+                        }
+
+                    mixingFinished.addListener({
+                        println("Mixing complete.")
+                        walletApplication.triggerStopMixing()
+                        wallet.context.coinJoinManager.removeMixingCompleteListener(mixingCompleteListener)
+                        continuation.resumeWith(Result.success(true))
+                    }, Threading.SAME_THREAD)
+
+                    wallet.context.coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, mixingCompleteListener)
+
+                    walletApplication.triggerMixing()
+                    //mixingFinished.get()
+                }
+            }
         }
     }
 
@@ -1047,7 +1110,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet!!.context)
-        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter)
+        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin = false)
         val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
                 System.currentTimeMillis())
         // update database
