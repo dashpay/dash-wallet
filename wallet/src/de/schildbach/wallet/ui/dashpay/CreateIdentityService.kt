@@ -329,7 +329,13 @@ class CreateIdentityService : LifecycleService() {
         }
 
         val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
-
+        // look for the credit funding tx in case there was an error in the next step previously
+        for (tx in wallet.creditFundingTransactions) {
+            tx as CreditFundingTransaction
+            if (walletApplication.wallet!!.blockchainIdentityFundingKeyChain.findKeyFromPubHash(tx.creditBurnPublicKeyId.bytes) != null) {
+                blockchainIdentity.initializeCreditFundingTransaction(tx)
+            }
+        }
 
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CREATING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_CREATING)
@@ -342,11 +348,17 @@ class CreateIdentityService : LifecycleService() {
             }
         }
 
-        //TODO: check to see if the funding transaction has been sent
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_SENDING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_SENDING)
             val timerIsLock = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_ISLOCK)
-            sendTransaction(blockchainIdentity.creditFundingTransaction!!)
+            // check to see if the funding transaction has been sent previously
+            val sent = blockchainIdentity.creditFundingTransaction!!.confidence?.let {
+                it.isSent || it.isIX || it.numBroadcastPeers() > 0 || it.confidenceType == TransactionConfidence.ConfidenceType.BUILDING
+            } ?: false
+
+            if (!sent) {
+                sendTransaction(blockchainIdentity.creditFundingTransaction!!)
+            }
             timerIsLock.logTiming()
         }
 
