@@ -586,7 +586,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
-            mixFunds(keyParameter)
+            //mixFunds(keyParameter)
             val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, true)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
         }
@@ -625,6 +625,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                             statusList?.let {
                                 for (status in it) {
                                     if (status != PoolStatus.FINISHED) {
+                                        walletApplication.triggerStopMixing()
                                         continuation.resumeWithException(Exception(status.name))
                                     }
                                 }
@@ -641,7 +642,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     wallet.context.coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, mixingCompleteListener)
 
                     walletApplication.triggerMixing()
-                    //mixingFinished.get()
                 }
             }
         }

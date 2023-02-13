@@ -20,6 +20,7 @@ import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.payments.DecryptSeedTask
 import de.schildbach.wallet.payments.DeriveKeyTask
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet_test.R
@@ -137,6 +138,7 @@ class CreateIdentityService : LifecycleService() {
     private val walletApplication by lazy { application as WalletApplication }
     private val platformRepo by lazy { PlatformRepo.getInstance() }
     @Inject lateinit var platformSyncService: PlatformSyncService
+    @Inject lateinit var coinJoinService: CoinJoinService
     private lateinit var securityGuard: SecurityGuard
 
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
@@ -334,6 +336,18 @@ class CreateIdentityService : LifecycleService() {
             tx as CreditFundingTransaction
             if (walletApplication.wallet!!.blockchainIdentityFundingKeyChain.findKeyFromPubHash(tx.creditBurnPublicKeyId.bytes) != null) {
                 blockchainIdentity.initializeCreditFundingTransaction(tx)
+            }
+        }
+
+        if (blockchainIdentityData.creationState <= CreationState.MIXING_FUNDS) {
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.MIXING_FUNDS)
+            if (coinJoinService.needsToMix(Constants.DASH_PAY_FEE)) {
+                coinJoinService.configureMixing(
+                    Constants.DASH_PAY_FEE,
+                    { encryptionKey },
+                    { it.decrypt(encryptionKey) })
+
+                coinJoinService.prepareAndStartMixing()
             }
         }
 
