@@ -34,6 +34,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.Constants.USERNAME_MAX_LENGTH
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
@@ -429,7 +430,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     private fun showConfirmationDialog() {
-        val upgradeFee = if (intent.action == ACTION_FROM_INVITE) null else Coin.CENT.value
+        val upgradeFee = if (intent.action == ACTION_FROM_INVITE) null else Constants.DASH_PAY_FEE
         val username = "<b>“${username.text}”</b>"
         val dialogMessage = getString(R.string.new_account_confirm_message, username)
         val dialogTitle = getString(R.string.dashpay_upgrade_fee)

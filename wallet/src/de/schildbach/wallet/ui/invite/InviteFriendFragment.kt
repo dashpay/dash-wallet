@@ -24,6 +24,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
@@ -101,10 +102,10 @@ class InviteFriendFragment(private val startedByHistory: Boolean)
     }
 
     private fun showConfirmationDialog() {
-        val upgradeFee = Coin.CENT
+        val upgradeFee = Constants.DASH_PAY_FEE
         val dialogTitle = getString(R.string.invitation_confirm_title)
         val dialogMessage = getString(R.string.invitation_confirm_message)
-        val dialog = PlatformPaymentConfirmDialog.createDialog(dialogTitle, dialogMessage, upgradeFee.value)
+        val dialog = PlatformPaymentConfirmDialog.createDialog(dialogTitle, dialogMessage, upgradeFee)
         dialog.show(childFragmentManager, null)
     }
 
