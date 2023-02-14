@@ -35,12 +35,7 @@ interface CoinJoinService {
     fun startMixing(): Boolean
     fun stopMixing()
     fun setBlockchain(blockChain: AbstractBlockChain)
-    // not sure if we will need these exposed
-    fun addSessionCompleteListener(sessionCompleteListener: SessionCompleteListener)
-    fun addMixingCompleteListener(mixingCompleteListener: MixingCompleteListener)
-    fun removeSessionCompleteListener(sessionCompleteListener: SessionCompleteListener)
-    fun removeMixingCompleteListener(mixingCompleteListener: MixingCompleteListener)
-    suspend fun getMixingProgress() : Flow<Double>
+    // TODO: add getMixingProgress() : Flow<progress data>
 }
 
 class CoinJoinMixingService @Inject constructor(
@@ -137,19 +132,13 @@ class CoinJoinMixingService @Inject constructor(
                     }
 
                 mixingFinished.addListener({
-                    println("Mixing complete.")
+                    log.info("Mixing complete.")
                     triggerStopMixing()
-                    wallet.context.coinJoinManager.removeMixingCompleteListener(
-                        mixingCompleteListener
-                    )
+                    removeMixingCompleteListener(mixingCompleteListener)
                     continuation.resumeWith(Result.success(true))
                 }, Threading.SAME_THREAD)
 
-                addMixingCompleteListener(
-                    Threading.SAME_THREAD,
-                    mixingCompleteListener
-                )
-
+                addMixingCompleteListener(Threading.SAME_THREAD, mixingCompleteListener)
                 triggerMixing()
             }
         }
@@ -170,6 +159,7 @@ class CoinJoinMixingService @Inject constructor(
 
     override fun stopMixing() {
         log.info("Mixing process will stop...")
+        // remove all listeners
         mixingCompleteListeners.forEach { coinJoinManager?.removeMixingCompleteListener(it) }
         sessionCompleteListeners.forEach { coinJoinManager?.removeSessionCompleteListener(it) }
         coinJoinManager?.stop()
@@ -180,29 +170,23 @@ class CoinJoinMixingService @Inject constructor(
         clientManager.setBlockChain(blockChain);
     }
 
-    override fun addSessionCompleteListener(sessionCompleteListener: SessionCompleteListener) {
+    fun addSessionCompleteListener(sessionCompleteListener: SessionCompleteListener) {
         sessionCompleteListeners.add(sessionCompleteListener);
         coinJoinManager?.addSessionCompleteListener(Threading.SAME_THREAD, sessionCompleteListener)
     }
 
-    override fun addMixingCompleteListener(mixingCompleteListener: MixingCompleteListener) {
+    fun addMixingCompleteListener(mixingCompleteListener: MixingCompleteListener) {
         mixingCompleteListeners.add(mixingCompleteListener)
         coinJoinManager?.addMixingCompleteListener(Threading.SAME_THREAD, mixingCompleteListener)
     }
 
-    override fun removeMixingCompleteListener(mixingCompleteListener: MixingCompleteListener) {
+    fun removeMixingCompleteListener(mixingCompleteListener: MixingCompleteListener) {
         coinJoinManager?.removeMixingCompleteListener(mixingCompleteListener)
     }
 
-    override fun removeSessionCompleteListener(sessionCompleteListener: SessionCompleteListener) {
-        coinJoinManager?.removeSessionCompleteListener(sessionCompleteListener)
-    }
-
-    private val _progressFlow = MutableStateFlow(0.00)
-
-    override suspend fun getMixingProgress(): Flow<Double> = _progressFlow
-
-    suspend fun setProgress(progress: Double) = _progressFlow.emit(progress)
+    // TODO: private val _progressFlow = MutableStateFlow(0.00)
+    // TODO: override suspend fun getMixingProgress(): Flow<Double + other data> = _progressFlow
+    // TODO: suspend fun setProgress(progress: Double) = _progressFlow.emit(progress)
 
     private fun triggerMixing() {
         log.info("Mixing process will begin shortly...")
@@ -223,5 +207,4 @@ class CoinJoinMixingService @Inject constructor(
             )
         )
     }
-
 }

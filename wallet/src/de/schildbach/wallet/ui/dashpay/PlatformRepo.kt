@@ -586,67 +586,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
-            //mixFunds(keyParameter)
             val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, true)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
         }
     }
-
-    suspend fun mixFunds(keyParameter: KeyParameter?): Boolean {
-        return suspendCoroutine { continuation ->
-            (walletApplication.wallet as WalletEx).initializeCoinJoin(keyParameter);
-            CoinJoinClientOptions.setEnabled(true);
-            CoinJoinClientOptions.setRounds(1);
-            CoinJoinClientOptions.setSessions(4);
-            CoinJoinClientOptions.setAmount(Constants.DASH_PAY_FEE)
-            val wallet = walletApplication.wallet!!
-            if (wallet.getBalance(Wallet.BalanceType.COINJOIN_SPENDABLE)
-                    .isLessThan(Constants.DASH_PAY_FEE)
-            ) {
-                wallet.context.coinJoinManager.coinJoinClientManagers[wallet.description] =
-                    CoinJoinClientManager(wallet)
-                wallet.context.coinJoinManager.setRequestKeyParameter {
-                    keyParameter
-                }
-                wallet.context.coinJoinManager.setRequestDecryptedKey { it.decrypt(keyParameter) }
-
-                // remove with Core 19
-                ProTxToOutpoint.initialize(Constants.NETWORK_PARAMETERS)
-
-                val manager =
-                    wallet.context.coinJoinManager.coinJoinClientManagers[wallet.description]
-                if (manager != null) {
-                    // trigger something with Blockchain Service to call manager.setBlockchain
-                    manager.setStopOnNothingToDo(true)
-                    val mixingFinished = manager.mixingFinishedFuture
-
-                    val mixingCompleteListener =
-                        MixingCompleteListener { _, statusList ->
-                            statusList?.let {
-                                for (status in it) {
-                                    if (status != PoolStatus.FINISHED) {
-                                        walletApplication.triggerStopMixing()
-                                        continuation.resumeWithException(Exception(status.name))
-                                    }
-                                }
-                            }
-                        }
-
-                    mixingFinished.addListener({
-                        println("Mixing complete.")
-                        walletApplication.triggerStopMixing()
-                        wallet.context.coinJoinManager.removeMixingCompleteListener(mixingCompleteListener)
-                        continuation.resumeWith(Result.success(true))
-                    }, Threading.SAME_THREAD)
-
-                    wallet.context.coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, mixingCompleteListener)
-
-                    walletApplication.triggerMixing()
-                }
-            }
-        }
-    }
-
 
     //
     // Step 2 is to obtain the credit funding transaction for invites

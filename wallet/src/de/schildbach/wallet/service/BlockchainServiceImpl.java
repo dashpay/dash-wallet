@@ -1078,24 +1078,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             } else if (BlockchainService.ACTION_START_MIXING.equals(action)) {
                 if (peerGroup != null) {
                     log.info("begin mixing");
-                    /*CoinJoinClientManager manager = application.getWallet().getContext().coinJoinManager.coinJoinClientManagers.get(application.getWallet().getDescription());
-                    if (!manager.startMixing()) {
-                        log.info("Mixing has been started already.");
-                    } else {
-                        boolean result = manager.doAutomaticDenominating();
-                        log.info("Mixing " + (result ? "started successfully" : ("start failed: " + manager.getStatuses() + ", will retry")));
-
-                        if (manager != null) {
-                            manager.addMixingCompleteListener(Threading.SAME_THREAD, mixingProgressTracker);
-                            manager.addSessionCompleteListener(Threading.SAME_THREAD, mixingProgressTracker);
-                            manager.setBlockChain(blockChain);
-                        }
-                    }*/
                     if(coinJoinService.startMixing()) {
-                        //coinJoinService.addMixingCompleteListener(mixingProgressTracker);
-                        //coinJoinService.addSessionCompleteListener(mixingProgressTracker);
                         coinJoinService.setBlockchain(blockChain);
-
                     }
                 } else {
                     log.info("peergroup not available, not mixing");
@@ -1111,14 +1095,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     }
 
     private void stopMixing() {
-        //CoinJoinManager manager = application.getWallet().getContext().coinJoinManager;
-        //manager.removeMixingCompleteListener(mixingProgressTracker);
-        //manager.removeSessionCompleteListener(mixingProgressTracker);
-        //coinJoinService.removeMixingCompleteListener(mixingProgressTracker);
-        //coinJoinService.removeSessionCompleteListener(mixingProgressTracker);
+        log.info("Mixing will be stopping...");
         coinJoinService.stopMixing();
-        //application.getWallet().getContext().coinJoinManager.stop();
-        //nm.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC);
     }
 
     private void startForeground() {
