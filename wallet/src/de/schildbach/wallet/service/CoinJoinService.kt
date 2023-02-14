@@ -59,7 +59,7 @@ class CoinJoinMixingService @Inject constructor(
             super.onMixingComplete(wallet, statusList)
             log.info("Mixing Complete.  {}%", progress)
 
-            //_progressFlow.emit(progress)
+            //TODO: _progressFlow.emit(progress)
             triggerStopMixing()
         }
 
@@ -80,7 +80,7 @@ class CoinJoinMixingService @Inject constructor(
             message: PoolMessage?
         ) {
             super.onSessionComplete(wallet, sessionId, denomination, message)
-            //_progressFlow.emit(progress)
+            //TODO: _progressFlow.emit(progress)
             log.info("Session {} complete.  {}% -- {}", sessionId, progress, message);
         }
     }
