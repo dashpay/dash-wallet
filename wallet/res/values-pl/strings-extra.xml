@@ -91,7 +91,7 @@
     <string name="forgot_pin_instruction_3">Zaloguj się z nowym PINem by mieć dostęp do portfela</string>
     <string name="forgot_pin_warning">Jeśli zapomniałeś kodu PIN i zgubiłeś frazy odzyskiwania, nie będziesz w stanie odzyskać dostępu do portfela i środków.</string>
     <string name="forgot_pin_recover">Wpisz Frazy Odzyskiwania</string>
-    <string name="forgot_pin_passphrase_doesnt_match">Ta fraza nie pasuje do tej wykreowanej kiedy portfel został stworzony. </string>
+    <string name="forgot_pin_passphrase_doesnt_match">Ta fraza odzyskiwania portfela nie pasuje do tej wygenerowanej w chwili tworzenia portfela.</string>
 
     <string name="send_coins_auto_lock_feasible">Ta transakcja powinna się usadowić natychmiast bez braku dodatkowych opłat</string>
     <string name="send_coins_auto_lock_not_feasible">Rozliczenie transakcji może potrwać dłuższą chwilę. Wykonać natychmiast za dodatkowe %1$s%2$s?</string>
@@ -287,13 +287,21 @@
     <string name="tools_show_xpub">Wydłużony Publiczny Klucz</string>
 
     <string name="about_help_us_improve">Pomóż nam poprawić Twoje wrażenia</string>
+    <string name="about_review_and_rate">Przeglądnij i oceń appke</string>
     <string name="about_contact_support">Skontaktuj się z pomocą techniczną</string>
     <string name="about_fork_disclaimer">Jest to aplikacja typu open source opracowana na podstawie portfela Bitcoin</string>
-    <string name="about_copyright">Prawa autorskie © 2022 Dash Core</string>
+    <string name="about_copyright">Prawa autorskie © 2023 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Portfel Dash %s</string>
+    <string name="about_last_explore_device_sync">Ostatnia synchronizacja Eksploruj na urządzeniu</string>
+    <string name="about_last_explore_server_update">Ostatnia aktualizacja Eksploruj dla serwera</string>
+    <string name="about_firebase_installation_id">ID instalacji Firebase</string>
+    <string name="about_fcm_token">Token wiadomości chmury Firebase</string>
     <string name="about_last_explore_dash_update_error">nie można pobrać</string>
     <string name="about_last_explore_dash_sync_never">nigdy</string>
+    <string name="about_explore_failed_sync">Synchronizacja się nie powiodła dla %s</string>
+    <string name="about_explore_preloaded_on">Pre załadowany dla %s</string>
+
     <string name="block">Blok</string>
     <string name="time">Czas</string>
     <string name="hash">Hash</string>

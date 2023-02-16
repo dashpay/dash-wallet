@@ -28,6 +28,7 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseToDashExchangeRateUIModel
@@ -295,7 +296,7 @@ class TransferDashViewModel @Inject constructor(
     fun reviewTransfer(dashValue: String) {
         val sendTransactionToWalletParams = SendTransactionToWalletParams(
             dashValue,
-            CoinbaseConstants.DASH_CURRENCY,
+            Constants.DASH_CURRENCY,
             UUID.randomUUID().toString(),
             walletDataProvider.freshReceiveAddress().toBase58(),
             CoinbaseConstants.TRANSACTION_TYPE_SEND

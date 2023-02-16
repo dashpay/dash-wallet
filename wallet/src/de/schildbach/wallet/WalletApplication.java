@@ -70,6 +70,8 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.CoinSelection;
+import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
@@ -129,6 +131,7 @@ import de.schildbach.wallet.transactions.WalletObserver;
 import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.security.SecurityGuard;
+import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
@@ -136,7 +139,6 @@ import de.schildbach.wallet_test.R;
 import kotlin.Deprecated;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
-import kotlinx.coroutines.ExperimentalCoroutinesApi;
 import kotlinx.coroutines.flow.Flow;
 import kotlinx.coroutines.flow.FlowKt;
 
@@ -274,25 +276,8 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void syncExploreData() {
-        Data.Builder inputData = new Data.Builder().putBoolean(
-                ExploreSyncWorker.USE_TEST_DB_KEY,
-                !Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET)
-        );
-        OneTimeWorkRequest syncDataWorkRequest =
-                new OneTimeWorkRequest.Builder(ExploreSyncWorker.class)
-                        .setBackoffCriteria(
-                                BackoffPolicy.EXPONENTIAL,
-                                WorkRequest.DEFAULT_BACKOFF_DELAY_MILLIS,
-                                TimeUnit.MILLISECONDS
-                        )
-                        .setInputData(inputData.build())
-                        .build();
-
-        WorkManager.getInstance(this.getApplicationContext()).enqueueUniqueWork(
-                "Sync Explore Data",
-                ExistingWorkPolicy.KEEP,
-                syncDataWorkRequest
-        );
+        boolean isMainNet = Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET);
+        ExploreSyncWorker.Companion.run(getApplicationContext(), isMainNet);
     }
 
     public void fullInitialization() {
@@ -584,6 +569,8 @@ public class WalletApplication extends MultiDexApplication
             }
         }
 
+        wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
+
         if (!wallet.isConsistent()) {
             Toast.makeText(this, "inconsistent wallet: " + walletFile, Toast.LENGTH_LONG).show();
 
@@ -832,17 +819,6 @@ public class WalletApplication extends MultiDexApplication
         return isLowRamDevice() ? 4 : 6;
     }
 
-    /**
-     * Low memory devices (currently 1GB or less) and 32 bit devices will require
-     * fewer scrypt hashes on the PIN+salt (handled by dashj)
-     *
-     * @return The number of scrypt interations
-     */
-    public int scryptIterationsTarget() {
-        boolean is64bitABI = Build.SUPPORTED_64_BIT_ABIS.length != 0;
-        return (isLowRamDevice() || !is64bitABI) ? Constants.SCRYPT_ITERATIONS_TARGET_LOWRAM : Constants.SCRYPT_ITERATIONS_TARGET;
-    }
-
     public static void scheduleStartBlockchainService(final Context context) {
         scheduleStartBlockchainService(context, false);
     }
@@ -1008,12 +984,15 @@ public class WalletApplication extends MultiDexApplication
 
     @NonNull
     @Override
-    public Flow<Coin> observeBalance(@NonNull Wallet.BalanceType balanceType) {
+    public Flow<Coin> observeBalance(
+        @NonNull Wallet.BalanceType balanceType,
+        @Nullable CoinSelector coinSelector
+    ) {
         if (wallet == null) {
             return FlowKt.emptyFlow();
         }
 
-        return new WalletBalanceObserver(wallet, balanceType).observe();
+        return new WalletBalanceObserver(wallet, balanceType, coinSelector).observe();
     }
 
     @NonNull

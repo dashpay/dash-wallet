@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >Posledná známa bilancia</string>
+    <string name="coinbase_link_title">Prepojiť váš účet na Coinbase</string>
+    <string name="coinbase_link">Prepojiť účet na Coinbase</string>
+    <string name="coinbase_transfer_details">Medzi Dash peňaženkou a vaším účtom na Coinbase</string>
     <string name="coinbase_dash_wallet_error_title">Na vašom účte Coinbase sme nenašli Dash peňaženku.</string>
     <string name="coinbase_dash_wallet_error_message">Ak chcete pokračovať, vytvorte si Dash peňaženku na Coinbase.</string>
     <string name="create_dash_account">Vytvoriť Dash účet</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">Odpojte Coinbase účet</string>
     <string name="receive_directly_into_dash_wallet">Prijímajte priamo do Dash peňaženky.</string>
     <string name="buy_dash">Kúpiť Dash</string>
-    <string name="balance">Zostatok:</string>
     <string name="balance_on_coinbase">Zostatok na Coinbase</string>
     <string name="sending_to">Posiela sa</string>
     <string name="dash_wallet_device">Peňaženka Dash v tomto zariadení</string>
@@ -41,8 +43,11 @@
     <string name="cancel">Zrušiť</string>
     <string name="confirm_sec">Potvrďte (%ss)</string>
     <string name="confirm">Potvrdiť</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Nenašli sme žiadne spôsoby platby.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Ak chcete pokračovať, aktualizujte svoj účet Coinbase.</string>
+    <string name="coinbase_no_payment_methods_error_title">Nenašli sme žiadne spôsoby platby.</string>
+    <string name="coinbase_no_payment_methods_error_message">Ak chcete pokračovať, aktualizujte svoj účet na Coinbase.</string>
+    <string name="coinbase_unusable_payment_method_error_title">Tento spôsob platby nie je možné použiť.</string>
+    <string name="coinbase_unusable_payment_method_error_message">Povoľte nákup prostredníctvom tohto spôsobu platby vo svojom účte na Coinbase.</string>
+    <string name="coinbase_open_account">Otvorte si účet na Coinbase</string>
     <string name="add_payment_method">Pridať spôsob platby</string>
     <string name="error">Chyba</string>
     <string name="cancel_transaction">Zrušiť transakciu?</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">Kód bol neplatný. Prosím skúste znova</string>
     <string name="verify_code">Overiť</string>
     <string name="you_dont_have_enough_balance">Váš zostatok je nedostatočný</string>
-    <string name="transfer_dash">Preniesť Dash</string>
     <string name="transfer_amount">Presun</string>
     <string name="dash_wallet_limit_description">Suma je vyššia ako váš zostatok</string>
     <string name="address_creation_failed">Nepodarilo sa nám vytvoriť adresu pre váš účet na dokončenie transakcie. Prosím, skúste neskôr.</string>

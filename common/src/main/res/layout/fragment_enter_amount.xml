@@ -27,9 +27,10 @@
         android:id="@+id/amount_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginHorizontal="50dp"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Wrapper with background is needed so that the text that
@@ -38,20 +39,44 @@
         android:id="@+id/max_button_wrapper"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="7dp"
-        android:layout_marginStart="15dp"
+        android:layout_marginStart="20dp"
         android:background="@color/background_primary"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/amount_view">
+        app:layout_constraintTop_toTopOf="@id/amount_view"
+        app:layout_constraintBottom_toBottomOf="@id/amount_view">
 
         <Button
             android:id="@+id/max_button"
             style="@style/Button.Primary.Small.Round"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:text="@string/max"
             tools:background="@null" />
     </FrameLayout>
+
+    <org.dash.wallet.common.ui.segmented_picker.VerticalSegmentedPicker
+        android:id="@+id/currency_options"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="18dp"
+        android:layout_marginTop="-4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/amount_view"
+        app:layout_constraintBottom_toBottomOf="@id/amount_view" />
+
+    <TextView
+        android:id="@+id/error_label"
+        style="@style/Caption.Red"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginHorizontal="15dp"
+        android:gravity="center"
+        android:textAlignment="gravity"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/amount_view"
+        tools:visibility="visible"
+        tools:text="Insufficient funds" />
 
     <androidx.cardview.widget.CardView
         android:id="@+id/bottom_card"

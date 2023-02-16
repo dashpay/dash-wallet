@@ -70,7 +70,7 @@ import android.widget.ViewAnimator;
  * @author Andreas Schildbach
  */
 public final class BlockListFragment extends Fragment implements BlockListAdapter.OnClickListener {
-	private AbstractWalletActivity activity;
+	private LockScreenActivity activity;
 	private WalletApplication application;
 	private Configuration config;
 	private Wallet wallet;
@@ -93,7 +93,7 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
     public void onAttach(final Activity activity) {
 		super.onAttach(activity);
 
-		this.activity = (AbstractWalletActivity) activity;
+		this.activity = (LockScreenActivity) activity;
 		this.application = this.activity.getWalletApplication();
 		this.config = application.getConfiguration();
 		this.wallet = application.getWallet();

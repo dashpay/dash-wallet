@@ -44,6 +44,8 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Currency;
@@ -57,7 +59,7 @@ import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.EncryptKeysDialogFragment;
 import de.schildbach.wallet.ui.EncryptNewKeyChainDialogFragment;
-import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
+import de.schildbach.wallet.ui.util.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder;
 import de.schildbach.wallet.ui.RestoreWalletFromSeedDialogFragment;
 import de.schildbach.wallet.ui.SetPinActivity;
@@ -84,6 +86,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private static final int DIALOG_TIMESKEW_ALERT = 3;
     private static final int DIALOG_VERSION_ALERT = 4;
     private static final int DIALOG_LOW_STORAGE_ALERT = 5;
+
+    private static final Logger log = LoggerFactory.getLogger(WalletActivity.class);
 
     public static Intent createIntent(Context context) {
         return new Intent(context, WalletActivity.class);

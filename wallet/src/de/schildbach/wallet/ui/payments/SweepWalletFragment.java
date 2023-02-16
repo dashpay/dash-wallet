@@ -83,7 +83,7 @@ import de.schildbach.wallet.payments.DecodePrivateKeyTask;
 import de.schildbach.wallet.data.FeeCategory;
 import de.schildbach.wallet.payments.RequestWalletBalanceTask;
 import de.schildbach.wallet.payments.SendCoinsOfflineTask;
-import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity;
 import de.schildbach.wallet.ui.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.ui.scan.ScanActivity;

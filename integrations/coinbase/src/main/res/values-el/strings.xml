@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >Τελευταίο γνωστό υπόλοιπο</string>
+    <string name="coinbase_link_title">Συνδέστε το λογαριασμό σας στην Coinbase</string>
+    <string name="coinbase_link">Συνδέστε το λογαριασμό στην Coinbase</string>
+    <string name="coinbase_transfer_details">Μεταξύ του Dash Wallet και του λογαριασμού σας στην Coinbase.</string>
     <string name="coinbase_dash_wallet_error_title">Δεν βρήκαμε Dash πορτοφόλι στο λογαριασμό σας στην Coinbase.</string>
     <string name="coinbase_dash_wallet_error_message"> Παρακαλούμε δημιουργήστε ένα Dash πορτοφόλι στη Coinbase για να προχωρήσετε.</string>
     <string name="create_dash_account">Δημιουργία λογαριασμού Dash</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">Αποσύνδεση λογαριασμού Coinbase</string>
     <string name="receive_directly_into_dash_wallet">Λάβετε απευθείας στο Dash Wallet.</string>
     <string name="buy_dash">Αγορά Dash</string>
-    <string name="balance">Υπόλοιπο:</string>
     <string name="balance_on_coinbase">Υπόλοιπο στην Coinbase</string>
     <string name="sending_to">Αποστολή στο</string>
     <string name="dash_wallet_device">Dash Wallet σε αυτή τη συσκευή</string>
@@ -41,8 +43,11 @@
     <string name="cancel">Ακύρωση</string>
     <string name="confirm_sec">Επιβεβαίωση(%ss)</string>
     <string name="confirm">Επιβεβαίωση</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Δεν βρήκαμε μεθόδους πληρωμής.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message"> Ενημερώστε τον Coinbase λογαριασμό σας για να προχωρήσετε.</string>
+    <string name="coinbase_no_payment_methods_error_title">Δεν βρήκαμε μεθόδους πληρωμής.</string>
+    <string name="coinbase_no_payment_methods_error_message"> Ενημερώστε τον Coinbase λογαριασμό σας για να προχωρήσετε.</string>
+    <string name="coinbase_unusable_payment_method_error_title">Αυτή η μέθοδος πληρωμής δεν μπορεί να χρησιμοποιηθεί.</string>
+    <string name="coinbase_unusable_payment_method_error_message">Παρακαλούμε επιτρέψτε την αγορά από αυτή τη μέθοδο πληρωμής στο λογαριασμό σας στην Coinbase.</string>
+    <string name="coinbase_open_account">Άνοιγμα λογαριασμού στην Coinbase</string>
     <string name="add_payment_method">Προσθήκη μεθόδου πληρωμής</string>
     <string name="error">Σφάλμα</string>
     <string name="cancel_transaction">Ακύρωση συναλλαγής;</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">Αυτός ο κωδικός ήταν άκυρος. Παρακαλώ δοκιμάστε ξανά</string>
     <string name="verify_code">Επιβεβαίωση</string>
     <string name="you_dont_have_enough_balance">Δεν έχετε αρκετό υπόλοιπο</string>
-    <string name="transfer_dash">Μεταφορά Dash</string>
     <string name="transfer_amount">Μεταφορά</string>
     <string name="dash_wallet_limit_description">Το ποσό είναι υψηλότερο από το υπόλοιπό σας</string>
     <string name="address_creation_failed">Δεν μπορέσαμε να δημιουργήσουμε μια διεύθυνση για το λογαριασμό σας ώστε να ολοκληρώσουμε τη συναλλαγή σας. Παρακαλώ δοκιμάστε αργότερα.</string>

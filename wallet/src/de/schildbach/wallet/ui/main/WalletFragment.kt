@@ -36,11 +36,11 @@ import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.InputParser.StringInputParser
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.payments.PaymentsFragment
 import de.schildbach.wallet.ui.scan.ScanActivity
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.util.WalletUtils
@@ -262,11 +262,11 @@ class WalletFragment : Fragment(R.layout.home_content) {
                         getString(R.string.confirm)
                     ).show(requireActivity()) { confirmed ->
                         if (confirmed != null && confirmed) {
-                            SendCoinsInternalActivity.start(requireContext(), paymentIntent, true)
+                            SendCoinsActivity.start(requireContext(), paymentIntent)
                         }
                     }
                 } else {
-                    SendCoinsInternalActivity.start(requireActivity(), paymentIntent, true)
+                    SendCoinsActivity.start(requireActivity(), paymentIntent)
                 }
             }
 

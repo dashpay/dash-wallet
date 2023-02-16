@@ -65,7 +65,7 @@ import android.widget.ViewAnimator;
  * @author Andreas Schildbach
  */
 public final class PeerListFragment extends Fragment {
-    private AbstractWalletActivity activity;
+    private LockScreenActivity activity;
     private LoaderManager loaderManager;
 
     private BlockchainService service;
@@ -89,7 +89,7 @@ public final class PeerListFragment extends Fragment {
     public void onAttach(final Activity activity) {
         super.onAttach(activity);
 
-        this.activity = (AbstractWalletActivity) activity;
+        this.activity = (LockScreenActivity) activity;
         this.loaderManager = getLoaderManager();
     }
 

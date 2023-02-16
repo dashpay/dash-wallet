@@ -43,7 +43,9 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.BiometricLockoutException
 import de.schildbach.wallet.service.RestartService
+import de.schildbach.wallet.ui.payments.QuickReceiveActivity
 import de.schildbach.wallet.ui.preference.PinRetryController
+import de.schildbach.wallet.ui.send.SendCoinsQrActivity
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*

@@ -65,6 +65,7 @@ dependencies {
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
     implementation "androidx.navigation:navigation-ui-ktx:$navigationVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
+    implementation "androidx.datastore:datastore-preferences:$datastoreVersion"
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
@@ -80,6 +81,9 @@ dependencies {
     implementation "androidx.browser:browser:$browserVersion"
 
     implementation 'com.scottyab:secure-preferences-lib:0.1.7'
+
+    // Logging
+    implementation "org.slf4j:slf4j-api:$slf4jVersion"
 
     // Tests
     testImplementation 'junit:junit:4.13.2'

@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >Dernier solde connu</string>
+    <string name="coinbase_link_title">Liez à votre compte Coinbase</string>
+    <string name="coinbase_link">Lier au compte Coinbase</string>
+    <string name="coinbase_transfer_details">Entre Dash Wallet et votre compte Coinbase</string>
     <string name="coinbase_dash_wallet_error_title">Nous n\'avons pas trouvé de portefeuille Dash sur votre compte Coinbase.</string>
     <string name="coinbase_dash_wallet_error_message">Veuillez créer un portefeuille Dash sur Coinbase pour continuer.</string>
     <string name="create_dash_account">Créer un compte Dash</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">Se déconnecter du compte Coinbase</string>
     <string name="receive_directly_into_dash_wallet">Réception directe dans le portefeuille Dash.</string>
     <string name="buy_dash">Acheter Dash</string>
-    <string name="balance">Solde :</string>
     <string name="balance_on_coinbase">Solde sur Coinbase</string>
     <string name="sending_to">Envoi à</string>
     <string name="dash_wallet_device">Portefeuille Dash sur cet appareil</string>
@@ -36,13 +38,16 @@
     <string name="coinbase_fee">Frais Coinbase</string>
     <string name="total">Total</string>
     <string name="order_preview">Prévisualisation de la commande</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Vous recevrez %s dashs dans votre portefeuille Dash sur cet appareil. Veuillez noter qu\'un transfert peut prendre jusqu\'à 2 à 3 minutes.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Vous recevrez %s dashs dans votre Dash Wallet sur cet appareil. Veuillez noter qu\'un transfert peut prendre jusqu\'à 2 à 3 minutes.</string>
     <string name="amount_in_dash">Montant en dashs</string>
     <string name="cancel">Annuler</string>
     <string name="confirm_sec">Confirmer (%ss)</string>
     <string name="confirm">Confirmer</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Nous n\'avons pas trouvé de méthode de paiement.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Veuillez mettre à jour votre compte Coinbase pour continuer.</string>
+    <string name="coinbase_no_payment_methods_error_title">Nous n\'avons pas trouvé de méthode de paiement.</string>
+    <string name="coinbase_no_payment_methods_error_message">Veuillez mettre à jour votre compte Coinbase pour faire cette opération.</string>
+    <string name="coinbase_unusable_payment_method_error_title">Cette méthode de paiement ne peut pas être utilisée.</string>
+    <string name="coinbase_unusable_payment_method_error_message">Veuillez autoriser l\'achat avec cette méthode de paiement dans votre compte Coinbase.</string>
+    <string name="coinbase_open_account">Ouvrir le compte Coinbase</string>
     <string name="add_payment_method">Ajouter une méthode de paiement</string>
     <string name="error">Erreur</string>
     <string name="cancel_transaction">Annuler la transaction ?</string>
@@ -55,7 +60,7 @@
     <string name="conversion_failed">Échec de la conversion</string>
     <string name="transfer_failed_msg">Les dashs ont été déposés avec succès dans votre compte Coinbase. Mais il y a un problème pour les transférer vers le portefeuille Dash sur cet appareil.</string>
     <string name="purchase_failed_msg">Quelque chose s\'est mal passé</string>
-    <string name="it_could_take_up_to_2_3_minutes">Transférer vers le portefeuille Dash sur cet appareil peut prendre jusqu\'à 2 à 3 minutes.</string>
+    <string name="it_could_take_up_to_2_3_minutes">Le transfert des dashs sur votre Dash Wallet sur cet appareil peut prendre jusqu\'à 2 à 3 minutes.</string>
     <string name="it_could_take_up_to_5_minutes">Jusqu\'à 5 minutes peuvent être nécessaires pour convertir %s depuis le compte Coinbase vers Dash Wallet sur cet appareil.</string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">Jusqu\'à 5 minutes peuvent être nécessaires pour convertir des dashs de Dash Wallet sur cet appareil en %s sur votre compte Coinbase.</string>
     <string name="contact_coinbase_support">Contacter le service de soutien Coinbase</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">Ce code était invalide. Veuillez réessayer</string>
     <string name="verify_code">Vérifier</string>
     <string name="you_dont_have_enough_balance">Vous n\'avez pas un solde suffisant</string>
-    <string name="transfer_dash">Transférer des dashs</string>
     <string name="transfer_amount">Transférer</string>
     <string name="dash_wallet_limit_description">Le montant est supérieur à votre solde</string>
     <string name="address_creation_failed">Nous n\'avons pas pu créer une adresse pour votre compte et terminer la transaction. Veuillez réessayer plus tard.</string>

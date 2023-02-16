@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >Laatst bekende saldo</string>
+    <string name="coinbase_link_title">Koppel je Coinbase account</string>
+    <string name="coinbase_link">Koppel Coinbase account</string>
+    <string name="coinbase_transfer_details">Tussen Dash portemonnee en je Coinbase account</string>
     <string name="coinbase_dash_wallet_error_title">We hebben geen Dash portemonnee gevonden op je Coinbase account.</string>
     <string name="coinbase_dash_wallet_error_message">Maak een Dash portemonnee aan op Coinbase om door te gaan.</string>
     <string name="create_dash_account">Maak Dash account aan</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">Koppel Coinbase account los</string>
     <string name="receive_directly_into_dash_wallet">Ontvang direct in Dash portemonnee.</string>
     <string name="buy_dash">Koop Dash</string>
-    <string name="balance">Saldo:</string>
     <string name="balance_on_coinbase">Saldo op Coinbase</string>
     <string name="sending_to">Verzenden naar</string>
     <string name="dash_wallet_device">Dash portemonnee op dit apparaat</string>
@@ -36,13 +38,16 @@
     <string name="coinbase_fee">Coinbase vergoeding</string>
     <string name="total">Totaal</string>
     <string name="order_preview">Voorbeeld bestelling</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Je ontvangt %s Dash in je Dash portemonnee op dit apparaat. Houd er rekening mee dat het tot 2-3 minuten kan duren om een overdracht te voltooien.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Je ontvangt %s Dash in je Dash portemonnee op dit apparaat. Houd er rekening mee dat het tot 2 à 3 minuten kan duren om een overdracht te voltooien.</string>
     <string name="amount_in_dash">Bedrag in Dash</string>
     <string name="cancel">Annuleer</string>
     <string name="confirm_sec">Bevestig (%ss)</string>
     <string name="confirm">Bevestig</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">We hebben geen betaalmethode gevonden.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Werk je Coinbase account bij om door te gaan.</string>
+    <string name="coinbase_no_payment_methods_error_title">We hebben geen betaalmethode gevonden.</string>
+    <string name="coinbase_no_payment_methods_error_message">Werk je Coinbase account bij om door te gaan.</string>
+    <string name="coinbase_unusable_payment_method_error_title">Deze betaalmethode kan niet worden gebruikt.</string>
+    <string name="coinbase_unusable_payment_method_error_message">Sta aankopen via deze betaalmethode toe in je Coinbase account.</string>
+    <string name="coinbase_open_account">Open Coinbase account</string>
     <string name="add_payment_method">Betalingsmethode toevoegen</string>
     <string name="error">Fout</string>
     <string name="cancel_transaction">Transactie annuleren?</string>
@@ -55,7 +60,7 @@
     <string name="conversion_failed">Conversie mislukt</string>
     <string name="transfer_failed_msg">De Dash is succesvol gestort op je Coinbase account. Maar er was een probleem bij het overzetten naar de Dash portemonnee op dit apparaat.</string>
     <string name="purchase_failed_msg">Er is iets verkeerd gegaan</string>
-    <string name="it_could_take_up_to_2_3_minutes">Het kan tot 2-3 minuten duren voordat de Dash is overgezet naar je Dash portemonnee op dit apparaat.</string>
+    <string name="it_could_take_up_to_2_3_minutes">Het kan tot 2 à 3 minuten duren voordat de Dash is verzonden naar je Dash portemonnee op dit apparaat.</string>
     <string name="it_could_take_up_to_5_minutes">Het kan tot 5 minuten duren om %s van je Coinbase-account naar Dash in je Dash portemonnee te converteren.</string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">“Het kan tot 5 minuten duren om Dash van je Dash portemonnee naar %s in je Coinbase-account te converteren.</string>
     <string name="contact_coinbase_support">Neem contact op met Coinbase</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">Die code was ongeldig. Probeer het opnieuw</string>
     <string name="verify_code">Verifiëren</string>
     <string name="you_dont_have_enough_balance">Je hebt niet genoeg saldo</string>
-    <string name="transfer_dash">Dash overzetten</string>
     <string name="transfer_amount">Maak over</string>
     <string name="dash_wallet_limit_description">Het bedrag is hoger dan het saldo</string>
     <string name="address_creation_failed">We konden geen adres voor je account aanmaken om de transactie te voltooien. Probeer het later nog een keer.</string>

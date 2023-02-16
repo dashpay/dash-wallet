@@ -35,11 +35,13 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
@@ -47,6 +49,7 @@ import javax.inject.Inject
 class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     val userPreference: Configuration,
+    private val config: CoinbaseConfig,
     private val walletDataProvider: WalletDataProvider,
     var exchangeRates: ExchangeRatesProvider,
     var networkState: NetworkStateInt,
@@ -83,11 +86,11 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         _showLoading.value = true
 
         val source_asset =
-            if (dashToCrypt)_baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == CoinbaseConstants.DASH_CURRENCY }?.base_id ?: ""
+            if (dashToCrypt)_baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == Constants.DASH_CURRENCY }?.base_id ?: ""
             else _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
         val target_asset = if (dashToCrypt)_baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
         else
-            _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == CoinbaseConstants.DASH_CURRENCY }?.base_id ?: ""
+            _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == Constants.DASH_CURRENCY }?.base_id ?: ""
 
         val tradesRequest = TradesRequest(
             GenericUtils.fiatToStringWithoutCurrencyCode(valueToConvert),
@@ -120,7 +123,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
             is ResponseResource.Failure -> {
                 _showLoading.value = false
 
-                val error = result.errorBody?.string()
+                val error = result.errorBody
                 if (error.isNullOrEmpty()) {
                     swapTradeFailedCallback.call()
                 } else {
@@ -156,13 +159,17 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         analyticsService.logEvent(eventName, bundleOf())
     }
 
+    suspend fun getLastBalance(): Coin {
+        return Coin.valueOf(config.getPreference(CoinbaseConfig.LAST_BALANCE) ?: 0)
+    }
+
     private fun isValidCoinBaseAccount(
         it: CoinBaseUserAccountDataUIModel
     ) = (
         it.coinBaseUserAccountData.balance?.amount?.toDouble() != null &&
             !it.coinBaseUserAccountData.balance.amount.toDouble().isNaN() &&
             it.coinBaseUserAccountData.type != "fiat" &&
-            it.coinBaseUserAccountData.balance.currency != CoinbaseConstants.DASH_CURRENCY
+            it.coinBaseUserAccountData.balance.currency != Constants.DASH_CURRENCY
         )
 
     private fun setDashWalletBalance() {

@@ -703,6 +703,10 @@
         <item name="android:textColor">@color/content_secondary</item>
     </style>
 
+    <style name="Overline.Medium.Tertiary">
+        <item name="android:textColor">@color/content_tertiary</item>
+    </style>
+
     <style name="Overline.Medium.White">
         <item name="android:textColor">@color/dash_white</item>
     </style>
@@ -792,9 +796,9 @@
         <item name="strokeWidth">0dp</item>
     </style>
 
-    <style name="PrimaryButtonTheme.Large.White">
-        <item name="backgroundColor">@color/dash_white</item>
-        <item name="strokeColor">@color/dash_white</item>
+    <style name="PrimaryButtonTheme.Large.Inverted">
+        <item name="backgroundColor">@color/background_secondary</item>
+        <item name="strokeColor">@color/background_secondary</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
@@ -818,7 +822,8 @@
     </style>
 
     <style name="PrimaryButtonTheme.Small.Round">
-        <item name="cornerRadius">16dp</item>
+        <item name="cornerRadius">20dp</item>
+        <item name="titleTextColor">@color/dash_blue</item>
         <item name="backgroundColor">@color/max_button_bg</item>
         <item name="strokeColor">@android:color/transparent</item>
         <item name="rippleColor">@color/button_ripple_color</item>
@@ -871,8 +876,8 @@
         <item name="android:theme">@style/PrimaryButtonTheme.Large.Blue</item>
     </style>
 
-    <style name="Button.Primary.Large.White">
-        <item name="android:theme">@style/PrimaryButtonTheme.Large.White</item>
+    <style name="Button.Primary.Large.Inverted">
+        <item name="android:theme">@style/PrimaryButtonTheme.Large.Inverted</item>
     </style>
 
     <style name="Button.Primary.Large.LightGrey">
@@ -897,9 +902,10 @@
         <item name="android:paddingEnd">0dp</item>
         <item name="android:minHeight">20dp</item>
         <item name="android:minWidth">20dp</item>
-        <item name="android:textSize">10sp</item>
+        <item name="android:textSize">11sp</item>
         <item name="android:theme">@style/PrimaryButtonTheme.Small.Round</item>
     </style>
+
 
     <style name="Button.Primary.ExtraSmall">
         <item name="android:theme">@style/PrimaryButtonTheme.ExtraSmall</item>
@@ -1137,7 +1143,7 @@
         <item name="android:layout_width">14dp</item>
         <item name="android:layout_height">14dp</item>
         <item name="android:rotation">180</item>
-        <item name="android:src">@drawable/ic_arrow_back</item>
+        <item name="android:src">@drawable/ic_back_arrow</item>
         <item name="android:tint">@color/steel_gray_200</item>
     </style>
 
@@ -1205,7 +1211,7 @@
         <item name="android:layout_width">16dp</item>
         <item name="android:layout_height">16dp</item>
         <item name="android:rotation">180</item>
-        <item name="android:src">@drawable/ic_arrow_back</item>
+        <item name="android:src">@drawable/ic_back_arrow</item>
         <item name="android:tint">@color/light_gray</item>
     </style>
 

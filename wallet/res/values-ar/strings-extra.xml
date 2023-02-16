@@ -293,13 +293,21 @@
     <string name="tools_show_xpub">مفتاح عام ممتد</string>
 
     <string name="about_help_us_improve">ساعدنا على تحسين تجربتك</string>
+    <string name="about_review_and_rate">مراجعة وتقييم التطبيق</string>
     <string name="about_contact_support">اتصل بالدعم</string>
     <string name="about_fork_disclaimer">هذا هو تطبيق مفتوح المصدر متفرع من محفظة بيتكوين</string>
-    <string name="about_copyright">حقوق النشر © 2022 داش كور</string>
+    <string name="about_copyright">حقوق النشر © 2023 داش كور</string>
     <string name="about_license">رخصة GNUالعمومية العامة الإصدار 3.0</string>
     <string name="about_version_name">محفظة داش %s</string>
+    <string name="about_last_explore_device_sync">آخر استكشاف مزامنة الجهاز</string>
+    <string name="about_last_explore_server_update">آخر تحديث لاستكشاف الخادم</string>
+    <string name="about_firebase_installation_id">معرّف تثبيت Firebase</string>
+    <string name="about_fcm_token">رمز Firebase للرسائل السحابية</string>
     <string name="about_last_explore_dash_update_error">لا يمكن جلبه</string>
     <string name="about_last_explore_dash_sync_never">مطلقا</string>
+    <string name="about_explore_failed_sync">فشلت المزامنة في %s</string>
+    <string name="about_explore_preloaded_on">تم التحميل مسبقًا %s</string>
+
     <string name="block">بلوك</string>
     <string name="time">وقت</string>
     <string name="hash">هاش</string>

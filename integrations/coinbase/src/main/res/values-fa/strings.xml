@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">کوین‌بیس</string>
     <string name="last_known_balance" >آخرین موجودی به‌روزشده</string>
+    <string name="coinbase_link_title">حساب کوین‌بیس‌تان را متصل کنید</string>
+    <string name="coinbase_link">حساب کوین‌بیس‌ را متصل کنید</string>
+    <string name="coinbase_transfer_details">بین داش والت و حساب کوین‌بیس شما</string>
     <string name="coinbase_dash_wallet_error_title">دش والت روی حساب کوین‌بیس شما یافت نشد</string>
     <string name="coinbase_dash_wallet_error_message">برای ادامه لطفا یک دش والت روی کوین‌بیس ایجاد کنید. </string>
     <string name="create_dash_account">ایجاد حساب دش</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">قطع اتصال به حساب کوین‌بیس</string>
     <string name="receive_directly_into_dash_wallet">دریافت مسقیم در دش والت</string>
     <string name="buy_dash">خرید دش</string>
-    <string name="balance">موجودی: </string>
     <string name="balance_on_coinbase">موجودی در کوین‌بیس</string>
     <string name="sending_to">ارسال برای </string>
     <string name="dash_wallet_device">دش والت روی این دستگاه</string>
@@ -36,13 +38,16 @@
     <string name="coinbase_fee">کارمزد کوین‌بیس</string>
     <string name="total">مجموع</string>
     <string name="order_preview">پیش‌نمایش سفارش</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">شما %s دش روی دش والت‌تان روی این دستگاه دریافت خواهید کرد. لطفا دقت داشته باشید که تکمیل تراکنش ممکن است بین ۲ تا ۳ دقیقه زمان ببرد. </string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">شما %sدش در دش والت‌تان روی همین دستگاه دریافت خواهید کرد. لطفا توجه داشته باشید که تکمیل عملیات انتقال این مبلغ می‌تواند بین ۲ تا ۳ دقیقه زمان ببرد. </string>
     <string name="amount_in_dash">مبلغ بر حسب دش</string>
     <string name="cancel">لغو</string>
     <string name="confirm_sec">تائید (%sثانیه) </string>
     <string name="confirm">تائید</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">هیچ روش پرداختی پیدا نکردیم. </string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">برای ادامه لطفا حساب کوین‌بیس‌تان را به‌روزرسانی کنید. </string>
+    <string name="coinbase_no_payment_methods_error_title">هیچ روش پرداختی پیدا نکردیم. </string>
+    <string name="coinbase_no_payment_methods_error_message">برای ادامه، لطفا حساب کوین‌بیس‌تان را به‌روز کنید. </string>
+    <string name="coinbase_unusable_payment_method_error_title">شیوه پرداخت نمی‌تواند مورد استفاده قرار گیرد. </string>
+    <string name="coinbase_unusable_payment_method_error_message">لطفا امکان خرید از این شیوه پرداخت را در حساب کوین‌بیس‌تان فعال کنید. </string>
+    <string name="coinbase_open_account">باز کردن حساب کوین‌بیس</string>
     <string name="add_payment_method">اضافه کردن روش پرداخت</string>
     <string name="error">خطا</string>
     <string name="cancel_transaction">تراکنش لغو شود؟ </string>
@@ -55,7 +60,7 @@
     <string name="conversion_failed">عملیات تبدیل انجام نشد</string>
     <string name="transfer_failed_msg">دش با موفقیت به حساب کوین‌بیس شما انتقال یافت. اما انتقال دش به دش والت روی این دستگاه موفق نبود. </string>
     <string name="purchase_failed_msg">مشکلی روی داده است</string>
-    <string name="it_could_take_up_to_2_3_minutes"> انتقال دش به دش والت روی این دستگاه ممکن است بین ۲ تا ۳ دقیقه زمان ببرد. </string>
+    <string name="it_could_take_up_to_2_3_minutes">عملیات انتقال دش به این دش والت روی این دستگاه ممکن است ۲ تا ۳ دقیقه زمان ببرد. </string>
     <string name="it_could_take_up_to_5_minutes">تا حداکثر ۵ دقیقه زمان لازم است تا %s از حساب کوین‌بیس به دش تبدیل شده و به دش والت در دستگاه‌تان انتقال یابد. </string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">تا حداکثر ۵ دقیقه زمان لازم است تا %s از دش والت روی این دستگاه به حساب کوین‌بیس شما تبدیل شده و انتقال یابد. </string>
     <string name="contact_coinbase_support">با پشتیبانی کوین‌بیس تماس بگیرید</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">کد نامعتبر بود. لطفا دوباره امتحان کنید</string>
     <string name="verify_code">تائید</string>
     <string name="you_dont_have_enough_balance">موجودی کافی ندارید</string>
-    <string name="transfer_dash">انتقال دش</string>
     <string name="transfer_amount">انتقال</string>
     <string name="dash_wallet_limit_description">این مبلغ بیشتر از موجودی‌تان است </string>
     <string name="address_creation_failed">نمی‌توانیم برای تکمیل تراکنش، یک نشانی برای حساب‌تان ایجاد کنیم. لطفا بعدا دوباره امتحان کنید. </string>

@@ -53,7 +53,7 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
+import static org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
  * @author Andreas Schildbach

@@ -21,7 +21,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isVisible
-import androidx.fragment.app.DialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogReceiveDetailsBinding
@@ -43,7 +42,7 @@ class ReceiveDetailsDialog : OffsetDialogFragment() {
         private const val ARG_ADDRESS = "arg_address"
 
         @JvmStatic
-        fun createDialog(address: Address, dashAmount: Coin, fiatAmount: Fiat?): DialogFragment {
+        fun createDialog(address: Address, dashAmount: Coin, fiatAmount: Fiat?): OffsetDialogFragment {
             val dialog = ReceiveDetailsDialog()
             val bundle = Bundle()
             bundle.putSerializable(ARG_ADDRESS, address)

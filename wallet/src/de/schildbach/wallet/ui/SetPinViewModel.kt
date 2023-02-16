@@ -20,7 +20,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.EncryptWalletLiveData
 import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.preference.PinRetryController
+import de.schildbach.wallet.ui.util.SingleLiveEvent
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -34,7 +36,8 @@ class SetPinViewModel @Inject constructor(
     configuration: Configuration,
     pinRetryController: PinRetryController,
     biometricHelper: BiometricHelper,
-    analytics: AnalyticsService
+    analytics: AnalyticsService,
+    private val securityFunctions: SecurityFunctions
 ): CheckPinViewModel(walletData, configuration, pinRetryController, biometricHelper, analytics) {
 
     private val log = LoggerFactory.getLogger(SetPinViewModel::class.java)
@@ -68,7 +71,7 @@ class SetPinViewModel @Inject constructor(
 
     private fun encryptWallet(initialize: Boolean) {
         if (!walletData.wallet!!.isEncrypted) {
-            encryptWalletLiveData.encrypt(walletApplication.scryptIterationsTarget(), initialize)
+            encryptWalletLiveData.encrypt(securityFunctions.scryptIterationsTarget, initialize)
         } else {
             log.warn("Trying to encrypt already encrypted wallet")
         }

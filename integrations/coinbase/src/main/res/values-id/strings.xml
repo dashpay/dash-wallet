@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >Saldo terakhir yang diketahui</string>
+    <string name="coinbase_link_title">Tautkan akun Coinbase Anda</string>
+    <string name="coinbase_link">Tautkan akun Coinbase</string>
+    <string name="coinbase_transfer_details">Antara Dash Wallet dan akun Coinbase Anda</string>
     <string name="coinbase_dash_wallet_error_title">Kami tidak menemukan Dompet Dash di akun Coinbase Anda.</string>
     <string name="coinbase_dash_wallet_error_message">Silakan buat Dompet Dash di Coinbase untuk melanjutkan.</string>
     <string name="create_dash_account">Buat Akun Dash</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">Putuskan Sambungan Akun Coinbase</string>
     <string name="receive_directly_into_dash_wallet">Terima langsung ke Dompet Dash.</string>
     <string name="buy_dash">Beli Dash</string>
-    <string name="balance">Saldo:</string>
     <string name="balance_on_coinbase">Saldo di Coinbase</string>
     <string name="sending_to">Mengirim ke</string>
     <string name="dash_wallet_device">Dompet Dash di perangkat ini</string>
@@ -36,13 +38,16 @@
     <string name="coinbase_fee">Biaya Coinbase</string>
     <string name="total">Total</string>
     <string name="order_preview">Pratinjau Pesanan</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Anda akan menerima %s Dash di Dash Wallet Anda di perangkat ini. Harap diperhatikan bahwa diperlukan waktu hingga 2-3 menit untuk menyelesaikan transfer.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Anda akan menerima %s Dash di Dash Wallet Anda di perangkat ini. Harap perhatikan bahwa perlu waktu hingga 2–3 menit untuk menyelesaikan transfer.</string>
     <string name="amount_in_dash">Jumlah dalam Dash</string>
     <string name="cancel">Batal</string>
     <string name="confirm_sec">Konfirmasi (%ss)</string>
     <string name="confirm">Memastikan</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Kami tidak menemukan metode pembayaran apa pun.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Harap perbarui akun Coinbase Anda untuk melanjutkan.</string>
+    <string name="coinbase_no_payment_methods_error_title">Kami tidak menemukan metode pembayaran apa pun.</string>
+    <string name="coinbase_no_payment_methods_error_message">Harap perbarui akun Coinbase Anda untuk melanjutkan.</string>
+    <string name="coinbase_unusable_payment_method_error_title">Metode pembayaran ini tidak dapat digunakan.</string>
+    <string name="coinbase_unusable_payment_method_error_message">Izinkan pembelian dari metode pembayaran ini di akun Coinbase Anda.</string>
+    <string name="coinbase_open_account">Buka akun Coinbase</string>
     <string name="add_payment_method">Tambahkan Metode Pembayaran</string>
     <string name="error">Kesalahan</string>
     <string name="cancel_transaction">Batalkan transaksi?</string>
@@ -55,7 +60,7 @@
     <string name="conversion_failed">Konversi Gagal</string>
     <string name="transfer_failed_msg">Dash berhasil disetorkan ke akun Coinbase Anda. Namun ada masalah saat mentransfernya ke Dash Wallet di perangkat ini.</string>
     <string name="purchase_failed_msg">Ada yang salah</string>
-    <string name="it_could_take_up_to_2_3_minutes">Diperlukan waktu hingga 2-3 menit agar Dash ditransfer ke Dompet Dash Anda di perangkat ini.</string>
+    <string name="it_could_take_up_to_2_3_minutes">Diperlukan waktu hingga 2–3 menit agar Dash ditransfer ke Dash Wallet Anda di perangkat ini.</string>
     <string name="it_could_take_up_to_5_minutes">Diperlukan waktu hingga 5 menit untuk mengonversi %s dari akun Coinbase ke Dash di Dash Wallet Anda di perangkat ini..</string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">“Diperlukan waktu hingga 5 menit untuk mengonversi %s Dash dari Dash Wallet di perangkat ini ke akun Coinbase Anda.</string>
     <string name="contact_coinbase_support">Hubungi Dukungan Coinbase</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">Kode itu tidak valid. Silakan coba lagi</string>
     <string name="verify_code">Memeriksa</string>
     <string name="you_dont_have_enough_balance">Anda tidak memiliki cukup saldo</string>
-    <string name="transfer_dash">Transfer Dash</string>
     <string name="transfer_amount">Transfer</string>
     <string name="dash_wallet_limit_description">Jumlahnya lebih tinggi dari saldo Anda</string>
     <string name="address_creation_failed">Kami tidak dapat membuat alamat akun untuk menyelesaikan transaksi Anda. Silakan coba lagi nanti.</string>

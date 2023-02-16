@@ -55,7 +55,7 @@
                 app:layout_constraintBottom_toBottomOf="@id/settings_header_bgd"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@id/settings_header_bgd"
-                app:srcCompat="@drawable/ic_baseline_arrow_back_white" />
+                app:srcCompat="@drawable/ic_arrow_back_white" />
 
             <TextView
                 android:id="@+id/local_currency_label"

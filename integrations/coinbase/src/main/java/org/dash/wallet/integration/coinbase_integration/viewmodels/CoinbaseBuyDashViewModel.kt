@@ -35,6 +35,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.*
@@ -91,7 +92,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
                 )
 
                 viewModelScope.launch {
-                    placeBuyOrder(PlaceBuyOrderParams(dashAmount.toString(), CoinbaseConstants.DASH_CURRENCY, paymentMethod.paymentMethodId))
+                    placeBuyOrder(PlaceBuyOrderParams(dashAmount.toString(), Constants.DASH_CURRENCY, paymentMethod.paymentMethodId))
                 }
             }
         }
@@ -112,7 +113,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
             is ResponseResource.Failure -> {
                 _showLoading.value = false
 
-                val error = result.errorBody?.string()
+                val error = result.errorBody
                 if (error.isNullOrEmpty()) {
                     placeBuyOrderFailedCallback.call()
                 } else {

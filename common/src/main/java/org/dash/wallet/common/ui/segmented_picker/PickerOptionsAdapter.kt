@@ -21,6 +21,8 @@ import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.view.isVisible
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.SegmentedPickerOptionViewBinding
@@ -28,7 +30,17 @@ import org.dash.wallet.common.databinding.SegmentedPickerOptionViewBinding
 class PickerOptionsAdapter(
     private val options: List<SegmentedOption>,
     private val clickListener: (SegmentedOption, Int) -> Unit
-) : RecyclerView.Adapter<OptionViewHolder>() {
+) : ListAdapter<SegmentedOption, OptionViewHolder>(TaskDiffCallBack()) {
+
+    class TaskDiffCallBack : DiffUtil.ItemCallback<SegmentedOption>() {
+        override fun areItemsTheSame(oldItem: SegmentedOption, newItem: SegmentedOption): Boolean {
+            return (oldItem.title == newItem.title)
+        }
+
+        override fun areContentsTheSame(oldItem: SegmentedOption, newItem: SegmentedOption): Boolean {
+            return oldItem == newItem
+        }
+    }
 
     var selectedIndex: Int = 0
         set(value) {

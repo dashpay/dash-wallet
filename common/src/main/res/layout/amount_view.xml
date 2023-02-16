@@ -24,18 +24,21 @@
     tools:context="org.dash.wallet.common.ui.enter_amount.AmountView">
 
     <LinearLayout
+        android:id="@+id/input_container"
         android:layout_height="wrap_content"
         android:layout_width="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="6dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:longClickable="true"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/convert_direction_btn">
+        app:layout_constraintBottom_toTopOf="@id/result_container">
 
         <ImageView
             android:id="@+id/input_symbol_dash"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:layout_marginEnd="8dp"
             android:src="@drawable/ic_dash_d_white"
             android:layout_gravity="center_vertical"
@@ -44,17 +47,18 @@
 
         <TextView
             android:id="@+id/input_amount"
-            style="@style/Headline4.Regular"
+            style="@style/Headline3.Medium"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ellipsize="middle"
-            android:singleLine="true"
+            android:maxLines="1"
+            android:lines="1"
             tools:text="0" />
 
         <ImageView
             android:id="@+id/input_symbol_dash_postfix"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:layout_marginStart="8dp"
             android:src="@drawable/ic_dash_d_white"
             android:layout_gravity="center_vertical"
@@ -62,38 +66,25 @@
             app:tint="@color/content_primary"
             tools:tint="@color/content_primary" />
 
-        <ImageButton
+        <ImageView
             android:id="@+id/input_currency_toggle"
-            style="@style/Button.Tertiary.Square"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="4dp"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_marginStart="8dp"
             android:layout_gravity="center_vertical"
-            android:src="@drawable/ic_list_toggle"
-            tools:background="@null" />
+            android:src="@drawable/ic_list_toggle" />
     </LinearLayout>
-
-    <ImageButton
-        android:id="@+id/convert_direction_btn"
-        style="@style/Button.Tertiary.Square"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:src="@drawable/ic_up_down"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        tools:background="@null" />
 
     <LinearLayout
         android:id="@+id/result_container"
         android:layout_height="26dp"
         android:layout_width="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="5dp"
+        android:clickable="true"
+        android:focusable="true"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/convert_direction_btn">
+        app:layout_constraintTop_toBottomOf="@id/input_container">
 
         <ImageView
             android:id="@+id/result_symbol_dash"
@@ -102,28 +93,27 @@
             android:layout_marginEnd="4dp"
             android:src="@drawable/ic_dash_d_white"
             android:layout_gravity="center_vertical"
-            app:tint="@color/dash_gray"
-            tools:tint="@color/dash_gray" />
+            app:tint="@color/content_secondary"
+            tools:tint="@color/content_secondary" />
 
         <TextView
             android:id="@+id/result_amount"
-            style="@style/Body1.Secondary"
+            style="@style/Body2.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             tools:text="0.00" />
 
-        <ImageButton
+        <ImageView
             android:id="@+id/result_currency_toggle"
-            style="@style/Button.Tertiary.Square"
-            android:layout_width="26dp"
-            android:layout_height="26dp"
-            android:layout_marginStart="4dp"
-            android:scaleType="fitCenter"
-            android:padding="4dp"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginStart="6dp"
             android:layout_gravity="center_vertical"
+            android:scaleType="fitCenter"
             android:src="@drawable/ic_list_toggle"
-            tools:background="@null" />
+            app:tint="@color/content_secondary"
+            tools:tint="@color/content_secondary" />
 
         <ImageView
             android:id="@+id/result_symbol_dash_postfix"
@@ -133,7 +123,7 @@
             android:src="@drawable/ic_dash_d_white"
             android:layout_gravity="center_vertical"
             android:visibility="gone"
-            app:tint="@color/dash_gray"
-            tools:tint="@color/dash_gray" />
+            app:tint="@color/content_secondary"
+            tools:tint="@color/content_secondary" />
     </LinearLayout>
 </merge>

@@ -30,8 +30,9 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.ui.WebViewFragmentDirections
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
@@ -96,6 +97,13 @@ class StakingActivity : LockScreenActivity() {
         when (status) {
             OnlineAccountStatus.None -> { }
             OnlineAccountStatus.Linking, OnlineAccountStatus.SigningUp -> super.turnOffAutoLogout()
+            OnlineAccountStatus.Validating -> {
+                val isWebView = navController.currentDestination?.id == R.id.crowdNodeWebViewFragment
+                if (isWebView) {
+                    navController.navigate(WebViewFragmentDirections.webViewToPortal())
+                }
+                super.turnOnAutoLogout()
+            }
             else -> super.turnOnAutoLogout()
         }
     }

@@ -23,7 +23,7 @@
     <string name="transfer_dash">Transfer Dash</string>
     <string name="login_error_title">Unable to log in your %s account</string>
     <string name="login_error_message">An error occurred while logging in to your %s account.</string>
-
+    <string name="balance">Balance:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>

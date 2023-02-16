@@ -56,6 +56,7 @@ import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.security.BiometricHelper;
+import de.schildbach.wallet.security.SecurityFunctions;
 import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet_test.R;
@@ -113,6 +114,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     @Inject BiometricHelper biometricHelper;
     @Inject RestartService restartService;
     @Inject WalletApplication application;
+    @Inject SecurityFunctions securityFunctions;
     @Inject WalletDataProvider walletData;
     @Inject PinRetryController pinRetryController;
 
@@ -292,7 +294,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                 final KeyParameter oldKey = oldPassword != null ? walletData.getWallet().getKeyCrypter().deriveKey(oldPassword) : null;
 
                 // For the new key, we create a new key crypter according to the desired parameters.
-                final KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(application.scryptIterationsTarget());
+                final KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(securityFunctions.getScryptIterationsTarget());
                 final KeyParameter newKey = keyCrypter.deriveKey(newPassword);
 
                 handler.post(new Runnable() {
@@ -313,7 +315,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                                 } catch (final KeyCrypterException x) {
                                     log.info("wallet decryption failed: " + x.getMessage());
                                     if(pinRetryController.failedAttempt(oldPassword)) {
-                                        restartService.performRestart(getActivity(), true, false);
+                                        restartService.performRestart(requireActivity(), true, false);
                                         dismiss();
                                     }
                                     badPasswordView.setVisibility(View.VISIBLE);

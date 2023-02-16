@@ -16,30 +16,57 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Application
 import android.content.Intent
-import androidx.lifecycle.AndroidViewModel
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Process
+import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.livedata.RecoverPinLiveData
+import de.schildbach.wallet.security.SecurityFunctions
+import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet.util.MnemonicCodeExt
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.MnemonicException
-import org.bitcoinj.crypto.MnemonicException.MnemonicLengthException
+import org.dash.wallet.common.Configuration
 import org.slf4j.LoggerFactory
 import java.util.*
+import javax.inject.Inject
 
-class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class RestoreWalletFromSeedViewModel @Inject constructor(
+    private val walletApplication: WalletApplication,
+    private val configuration: Configuration,
+    private val securityFunctions: SecurityFunctions
+) : ViewModel() {
 
     private val log = LoggerFactory.getLogger(RestoreWalletFromSeedViewModel::class.java)
-
-    private val walletApplication = application as WalletApplication
-
-    internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
+    private val securityGuard = SecurityGuard()
 
-    val recoverPinLiveData = RecoverPinLiveData(application)
+    suspend fun recover(words: List<String>): String? = withContext(Dispatchers.Default) {
+        val wallet = walletApplication.wallet!!
+        val encryptionKey = securityFunctions.deriveKey(
+            walletApplication.wallet!!,
+            securityGuard.retrievePassword()
+        )
+
+        try {
+            val decryptedSeed =
+                wallet.keyChainSeed.decrypt(wallet.keyCrypter, null, encryptionKey) // takes time
+            val seed = decryptedSeed.mnemonicCode!!.toTypedArray()
+            if (seed contentEquals words.toTypedArray()) {
+                return@withContext securityGuard.retrievePin()
+            }
+        } catch (_: Exception) { }
+
+        return@withContext null
+    }
 
     /**
      * Normalize - converts all letter to lowercase and to words matching those of a BIP39 word list.
@@ -57,23 +84,19 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
             val wallet = WalletUtils.restoreWalletFromSeed(normalize(words), Constants.NETWORK_PARAMETERS)
             walletApplication.setWallet(wallet)
             log.info("successfully restored wallet from seed")
-            walletApplication.configuration.disarmBackupSeedReminder()
-            walletApplication.configuration.isRestoringBackup = true
+            configuration.disarmBackupSeedReminder()
+            configuration.isRestoringBackup = true
             walletApplication.resetBlockchainState()
-            startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
+            startActivityAction.call(SetPinActivity.createIntent(walletApplication, R.string.set_pin_restore_wallet))
         }
     }
 
-    fun recoverPin(words: List<String>) {
-        if (isSeedValid(words)) {
-            recoverPinLiveData.recover(normalize(words))
+    suspend fun recoverPin(words: List<String>): String? {
+        return if (isSeedValid(words)) {
+            recover(normalize(words))
+        } else {
+            null
         }
-    }
-
-    private fun handleException(x: MnemonicException): Boolean {
-        log.info("problem restoring wallet from seed: ", x)
-        showRestoreWalletFailureAction.call(x)
-        return false
     }
 
     /**
@@ -87,10 +110,9 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
         return try {
             MnemonicCodeExt.getInstance().check(walletApplication, words)
             true
-        } catch (x: MnemonicLengthException) {
-            handleException(x)
         } catch (x: MnemonicException) {
-            handleException(x)
+            log.info("problem restoring wallet from seed: ", x)
+            throw x
         }
     }
 }

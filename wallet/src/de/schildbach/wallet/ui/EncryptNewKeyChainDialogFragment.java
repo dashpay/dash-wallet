@@ -23,6 +23,7 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
+import de.schildbach.wallet.security.SecurityFunctions;
 import de.schildbach.wallet.service.RestartService;
 import de.schildbach.wallet.payments.DecryptSeedTask;
 import de.schildbach.wallet.payments.DeriveKeyTask;
@@ -38,6 +39,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
     private static final String FRAGMENT_TAG = EncryptNewKeyChainDialogFragment.class.getName();
     private static final String ARGS_PATH = "chain_path";
     @Inject RestartService restartService;
+    @Inject SecurityFunctions securityFunctions;
 
     public static void show(FragmentManager fm, ImmutableList<ChildNumber> path) {
         EncryptNewKeyChainDialogFragment dialogFragment = new EncryptNewKeyChainDialogFragment();
@@ -125,7 +127,7 @@ public class EncryptNewKeyChainDialogFragment extends AbstractPINDialogFragment 
             if (pinRetryController.isLocked()) {
                 return;
             }
-            new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
+            new DeriveKeyTask(backgroundHandler, securityFunctions.getScryptIterationsTarget()) {
                 @Override
                 protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
                     pinRetryController.clearPinFailPrefs();

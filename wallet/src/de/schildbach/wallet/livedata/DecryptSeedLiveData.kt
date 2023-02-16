@@ -20,11 +20,11 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 import androidx.lifecycle.MutableLiveData
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.payments.DecryptSeedTask
 import de.schildbach.wallet.payments.DeriveKeyTask
 import org.bitcoinj.wallet.DeterministicSeed
+import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 
 /**
@@ -32,7 +32,8 @@ import org.bouncycastle.crypto.params.KeyParameter
  */
 
 class DecryptSeedLiveData(
-    private val walletApplication: WalletApplication
+    private val wallet: Wallet,
+    private val scryptIterationsTarget: Int
 ) : MutableLiveData<Resource<Pair<DeterministicSeed?, String?>>>() {
 
     val backgroundHandler: Handler
@@ -52,13 +53,13 @@ class DecryptSeedLiveData(
         if (securityGuard.checkPin(pin)) {
             decryptSeed(pin, securityGuard.retrievePassword())
         } else {
-            value = Resource.error("wrong pin", Pair(walletApplication.wallet!!.keyChainSeed, pin))
+            value = Resource.error("wrong pin", Pair(wallet.keyChainSeed, pin))
         }
     }
 
     private fun decryptSeed(pin: String, password: String) {
         if (deriveKeyTask == null) {
-            deriveKeyTask = object : DeriveKeyTask(backgroundHandler, walletApplication.scryptIterationsTarget()) {
+            deriveKeyTask = object : DeriveKeyTask(backgroundHandler, scryptIterationsTarget) {
 
                 override fun onSuccess(encryptionKey: KeyParameter, changed: Boolean) {
                     deriveKeyTask = null
@@ -66,7 +67,7 @@ class DecryptSeedLiveData(
                         decryptSeedTask = object : DecryptSeedTask(backgroundHandler) {
 
                             override fun onBadPassphrase() {
-                                value = Resource.error("wrong password", Pair(walletApplication.wallet!!.keyChainSeed, pin))
+                                value = Resource.error("wrong password", Pair(wallet.keyChainSeed, pin))
                                 decryptSeedTask = null
                             }
 
@@ -76,12 +77,12 @@ class DecryptSeedLiveData(
                             }
                         }
                         value = Resource.loading(null)
-                        decryptSeedTask!!.decryptSeed(walletApplication.wallet!!.keyChainSeed, walletApplication.wallet!!.keyCrypter, encryptionKey)
+                        decryptSeedTask!!.decryptSeed(wallet.keyChainSeed, wallet.keyCrypter, encryptionKey)
                     }
                 }
             }
             value = Resource.loading(null)
-            deriveKeyTask!!.deriveKey(walletApplication.wallet, password)
+            deriveKeyTask!!.deriveKey(wallet, password)
         }
     }
 }

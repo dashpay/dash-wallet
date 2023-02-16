@@ -275,7 +275,7 @@
     <string name="menu_rescan_blockchain">Reexaminar blockchain</string>
     <string name="menu_contact_support_title">Contato com o Suporte</string>
     <string name="menu_contact_support_subtitle">Reportar um problema</string>
-    <string name="menu_explore_title">Explorar</string>
+    <string name="menu_explore_title">Explorador</string>
     <string name="menu_explore_subtitle">Compre com DASH em mais de 155.000 comércios</string>
 
     <string name="tools_address_book">Livro de endereços</string>
@@ -284,13 +284,21 @@
     <string name="tools_show_xpub">Chave Pública Estendida</string>
 
     <string name="about_help_us_improve">Ajude-nos a melhorar a sua experiência</string>
+    <string name="about_review_and_rate">Avalie o aplicativo</string>
     <string name="about_contact_support">Contato com o Suporte</string>
     <string name="about_fork_disclaimer">Este é um aplicativo de código aberto bifurcado da Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2022 Dash Core</string>
+    <string name="about_copyright">Copyright © 2023 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_device_sync">Última sincronização do dispositivo Explore</string>
+    <string name="about_last_explore_server_update">Última atualização do servidor Explore</string>
+    <string name="about_firebase_installation_id">ID de instalação do Firebase</string>
+    <string name="about_fcm_token">Token de mensagens na nuvem do Firebase</string>
     <string name="about_last_explore_dash_update_error">não foi possível buscar</string>
     <string name="about_last_explore_dash_sync_never">nunca</string>
+    <string name="about_explore_failed_sync">Falha ao sincronizar em %s</string>
+    <string name="about_explore_preloaded_on">Pré-carregado em %s</string>
+
     <string name="block">Bloquear</string>
     <string name="time">Tempo</string>
     <string name="hash">Hash</string>

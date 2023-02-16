@@ -33,7 +33,7 @@ import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentBuySellIntegrationsBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate

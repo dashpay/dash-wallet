@@ -37,6 +37,7 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.ConnectivityViewModel
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
@@ -86,7 +87,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     commitSwapTradeFailureState.call()
                 } else {
-                    if (inputCurrency == CoinbaseConstants.DASH_CURRENCY) {
+                    if (inputCurrency == Constants.DASH_CURRENCY) {
                         try {
                             val coin = Coin.parseCoin(inputAmount)
                             sellDashToCoinBase(coin)
@@ -109,7 +110,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
-                val error = result.errorBody?.string()
+                val error = result.errorBody
                 if (error.isNullOrEmpty()) {
                     commitSwapTradeFailureState.call()
                 } else {
@@ -151,7 +152,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                 is ResponseResource.Failure -> {
                     _showLoading.value = false
 
-                    val error = result.errorBody?.string() // TODO: this is a blocking call in main thread. Better to switch contexts
+                    val error = result.errorBody
                     if (error.isNullOrEmpty()) {
                         swapTradeFailureState.call()
                     } else {

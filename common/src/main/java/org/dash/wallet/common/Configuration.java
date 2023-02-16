@@ -17,6 +17,8 @@
 
 package org.dash.wallet.common;
 
+import static java.lang.Math.max;
+
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -57,6 +59,7 @@ public class Configuration {
     public static final String PREFS_KEY_TRUSTED_PEER_ONLY = "trusted_peer_only";
     public static final String PREFS_KEY_BLOCK_EXPLORER = "block_explorer";
     public static final String PREFS_KEY_REMIND_BALANCE = "remind_balance";
+    public static final String PREFS_KEY_REMIND_BALANCE_TIME = "remind_balance_time";
     public static final String PREFS_KEY_DISCLAIMER = "disclaimer";
     private static final String PREFS_KEY_LABS_QR_PAYMENT_REQUEST = "labs_qr_payment_request";
     private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
@@ -68,6 +71,7 @@ public class Configuration {
     private static final String PREFS_KEY_LAST_VERSION = "last_version";
     private static final String PREFS_KEY_LAST_USED = "last_used";
     private static final String PREFS_KEY_BEST_CHAIN_HEIGHT_EVER = "best_chain_height_ever";
+    private static final String PREFS_KEY_BEST_HEADER_HEIGHT_EVER = "best_header_height_ever";
     public static final String PREFS_KEY_REMIND_BACKUP = "remind_backup";
     private static final String PREFS_KEY_LAST_BACKUP = "last_backup";
     public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
@@ -88,7 +92,6 @@ public class Configuration {
 
     public static final String PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN = "last_coinbase_access_token";
     public static final String PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN = "last_coinbase_refresh_token";
-    public static final String PREFS_KEY_LAST_COINBASE_BALANCE = "last_coinbase_balance";
     public static final String PREFS_KEY_COINBASE_USER_ACCOUNT_ID = "coinbase_account_id";
     public static final String PREFS_KEY_COINBASE_AUTH_INFO_SHOWN = "coinbase_auth_info_shown";
     public static final String PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT = "withdrawal_limit";
@@ -383,6 +386,19 @@ public class Configuration {
             prefs.edit().putInt(PREFS_KEY_BEST_CHAIN_HEIGHT_EVER, bestChainHeightEver).apply();
     }
 
+    public int getBestHeaderHeightEver() {
+        return prefs.getInt(PREFS_KEY_BEST_HEADER_HEIGHT_EVER, 0);
+    }
+
+    public void maybeIncrementBestHeaderHeightEver(final int bestHeaderHeightEver) {
+        if (bestHeaderHeightEver > getBestHeaderHeightEver())
+            prefs.edit().putInt(PREFS_KEY_BEST_HEADER_HEIGHT_EVER, bestHeaderHeightEver).apply();
+    }
+
+    public int getBestHeightEver() {
+        return max(getBestHeaderHeightEver(), getBestChainHeightEver());
+    }
+
     public boolean isRestoringBackup() {
         return prefs.getBoolean(PREFS_RESTORING_BACKUP, false);
     }
@@ -471,6 +487,24 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER, needToShow).apply();
     }
 
+    private long getRemindBalanceTime() {
+        return prefs.getLong(PREFS_KEY_REMIND_BALANCE_TIME, 0);
+    }
+
+    private void setRemindBalanceTime(final long remindBalanceTime) {
+        prefs.edit().putLong(PREFS_KEY_REMIND_BALANCE_TIME, remindBalanceTime).apply();
+    }
+
+    public boolean isTimeToRemindBalance() {
+        final long now = System.currentTimeMillis();
+        return remindBalance() && now >= getRemindBalanceTime();
+    }
+
+    public void setRemindBalanceTimeIn(final long durationMs) {
+        final long now = System.currentTimeMillis();
+        setRemindBalanceTime(now + durationMs);
+    }
+
     // Tax Categories
 
     public boolean getHasDisplayedTaxCategoryExplainer() {
@@ -519,6 +553,7 @@ public class Configuration {
     }
 
     // Coinbase
+    // TODO: put new preferences in the CoinbaseConfig and migrate these.
 
     public void setLastCoinBaseAccessToken(String token) {
         prefs.edit().putString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, token).apply();
@@ -535,14 +570,6 @@ public class Configuration {
 
     public String getLastCoinbaseRefreshToken() {
         return prefs.getString(PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN, null);
-    }
-
-    public void setLastCoinbaseBalance(String balance) {
-        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_BALANCE, balance).apply();
-    }
-
-    public String getLastCoinbaseBalance() {
-        return prefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, null);
     }
 
     public Boolean getHasCoinbaseAuthInfoBeenShown() {

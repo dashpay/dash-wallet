@@ -20,8 +20,8 @@ package org.dash.wallet.common.ui;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Monetary;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.dash.wallet.common.Constants;
 import org.dash.wallet.common.R;
+import org.dash.wallet.common.util.Constants;
 import org.dash.wallet.common.util.GenericUtils;
 import org.dash.wallet.common.util.MonetarySpannable;
 
@@ -250,7 +250,7 @@ public final class CurrencyAmountView extends FrameLayout {
                 final Monetary amount;
                 if (localCurrencyCode == null) {
                     amount = inputFormat.parse(str);
-                    if (((Coin) amount).isGreaterThan(Constants.MAX_MONEY))
+                    if (((Coin) amount).isGreaterThan(Constants.INSTANCE.getMAX_MONEY()))
                         return false;
                 } else {
                     amount = inputFormat.parseFiat(localCurrencyCode, str);

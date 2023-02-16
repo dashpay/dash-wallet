@@ -132,7 +132,7 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet_test.R;
 
-import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
+import static org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
  * @author Andreas Schildbach
@@ -465,6 +465,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 log.debug("Runnable % = " + syncPercentage);
 
                 config.maybeIncrementBestChainHeightEver(blockChain.getChainHead().getHeight());
+                config.maybeIncrementBestHeaderHeightEver(headerChain.getChainHead().getHeight());
                 if(config.isRestoringBackup()) {
                     long timeAgo = System.currentTimeMillis() - blockChain.getChainHead().getHeader().getTimeSeconds() * 1000;
                     //if the app was restoring a backup from a file or seed and block chain is nearly synced
@@ -753,7 +754,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup.removeConnectedEventListener(peerConnectivityListener);
                 peerGroup.removeWallet(wallet);
                 peerGroup.stopAsync();
-                wallet.setRiskAnalyzer(defaultRiskAnalyzer);
+                // use the offline risk analyzer
+                wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
                 riskAnalyzer.shutdown();
                 peerGroup = null;
 

@@ -1,71 +1,250 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2019 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package de.schildbach.wallet.ui.send
 
+import androidx.core.os.bundleOf
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
+import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.InsufficientMoneyException
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.SendRequest
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel
 class SendCoinsViewModel @Inject constructor(
+    walletDataProvider: WalletDataProvider,
     walletApplication: WalletApplication,
-    configuration: Configuration,
-    val biometricHelper: BiometricHelper
-) : SendCoinsBaseViewModel(walletApplication, configuration) {
+    blockchainStateDao: BlockchainStateDao,
+    val biometricHelper: BiometricHelper,
+    private val analytics: AnalyticsService,
+    private val configuration: Configuration,
+    private val sendCoinsTaskRunner: SendCoinsTaskRunner
+) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
+    companion object {
+        private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
+    }
 
     enum class State {
         INPUT,  // asks for confirmation
-        DECRYPTING, SIGNING, SENDING, SENT, FAILED // sending states
+        SENDING, SENT, FAILED // sending states
     }
 
-    @JvmField
-    val state = MutableLiveData<State>()
+    private val _state = MutableLiveData(State.INPUT)
+    val state: LiveData<State>
+        get() = _state
 
-    @JvmField
-    var finalPaymentIntent: PaymentIntent? = null
+    private val _maxOutputAmount = MutableLiveData<Coin>()
+    val maxOutputAmount: LiveData<Coin>
+        get() = _maxOutputAmount
 
-    @JvmField
+    var currentAmount: Coin = Coin.ZERO
+        set(value) {
+            field = value
+            executeDryrun(value)
+        }
+
     var dryrunSendRequest: SendRequest? = null
+        private set
+    var dryRunException: Exception? = null
+        private set
 
-    @JvmField
-    var dryrunException: Exception? = null
+    private val _dryRunSuccessful = MutableLiveData(false)
+    val dryRunSuccessful: LiveData<Boolean>
+        get() = _dryRunSuccessful
 
-    fun createSendRequest(finalPaymentIntent: PaymentIntent, signInputs: Boolean, forceEnsureMinRequiredFee: Boolean): SendRequest {
-        return createSendRequest(wallet, basePaymentIntentValue.mayEditAmount(), finalPaymentIntent, signInputs, forceEnsureMinRequiredFee)
+    private val _isBlockchainReplaying = MutableLiveData<Boolean>()
+    val isBlockchainReplaying: LiveData<Boolean>
+        get() = _isBlockchainReplaying
+
+    val isSpendingConfirmationEnabled: Boolean
+        get() = configuration.spendingConfirmationEnabled
+
+    var isDashToFiatPreferred: Boolean
+        get() = configuration.isDashToFiatDirection
+        set(value) { configuration.isDashToFiatDirection = value }
+
+    init {
+        blockchainStateDao.observeState()
+            .filterNotNull()
+            .onEach { state ->
+                _isBlockchainReplaying.postValue(state.replaying)
+            }
+            .launchIn(viewModelScope)
+
+        walletDataProvider.observeBalance(coinSelector = MaxOutputAmountCoinSelector())
+            .distinctUntilChanged()
+            .onEach(_maxOutputAmount::postValue)
+            .launchIn(viewModelScope)
+
+        walletApplication.startBlockchainService(false)
     }
 
-    fun signAndSendPayment(editedAmount: Coin, exchangeRate: ExchangeRate?) {
-        state.value = State.DECRYPTING
-        finalPaymentIntent = basePaymentIntentValue.mergeWithEditedValues(editedAmount, null)
-        super.signAndSendPayment(finalPaymentIntent!!, dryrunSendRequest!!.ensureMinRequiredFee, exchangeRate, basePaymentIntentValue.memo)
+    override fun initPaymentIntent(paymentIntent: PaymentIntent) {
+        super.initPaymentIntent(paymentIntent)
+
+        if (paymentIntent.hasPaymentRequestUrl()) {
+            throw IllegalArgumentException(PaymentProtocolFragment::class.java.simpleName
+                    + "class should be used to handle Payment requests (BIP70 and BIP270)")
+        }
+
+        log.info("got {}", paymentIntent)
+        _state.value = State.INPUT
+        executeDryrun(currentAmount)
     }
 
-    override fun signAndSendPayment(
-        sendRequest: SendRequest,
-        txAlreadyCompleted: Boolean,
-        checkBalanceConditions: Boolean
-    ) {
-        state.value = State.SIGNING
-        super.signAndSendPayment(sendRequest, false, checkBalanceConditions)
+    fun everythingPlausible(): Boolean {
+        return state.value === State.INPUT && isPayeePlausible() && isAmountPlausible()
+    }
+
+    suspend fun signAndSendPayment(
+        editedAmount: Coin,
+        exchangeRate: ExchangeRate?,
+        checkBalance: Boolean
+    ): Transaction {
+        _state.value = State.SENDING
+        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
+
+        val transaction = try {
+            val finalSendRequest = createSendRequest(
+                basePaymentIntent.mayEditAmount(),
+                finalPaymentIntent,
+                true,
+                dryrunSendRequest!!.ensureMinRequiredFee
+            )
+            finalSendRequest.memo = basePaymentIntent.memo
+            finalSendRequest.exchangeRate = exchangeRate
+
+            sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
+        } catch (ex: Exception) {
+            _state.value = State.FAILED
+            throw ex
+        }
+
+        _state.value = State.SENT
+        return transaction
+    }
+
+    fun allowBiometric(): Boolean {
+        val thresholdAmount = Coin.parseCoin(configuration.biometricLimit.toString())
+        return currentAmount.isLessThan(thresholdAmount)
+    }
+
+    fun getPendingBalance(): Coin {
+        val estimated = wallet.getBalance(Wallet.BalanceType.ESTIMATED)
+        val available = wallet.getBalance(Wallet.BalanceType.AVAILABLE)
+
+        return estimated.subtract(available)
+    }
+
+    fun shouldAdjustAmount(): Boolean {
+        return dryRunException is InsufficientMoneyException &&
+                currentAmount.isLessThan(maxOutputAmount.value ?: Coin.ZERO)
+    }
+
+    fun getAdjustedAmount(): Coin {
+        val missing = (dryRunException as? InsufficientMoneyException)?.missing ?: Coin.ZERO
+        return currentAmount.subtract(missing)
+    }
+
+    fun resetState() {
+        _state.value = State.INPUT
+    }
+
+    fun logSentEvent(dashToFiat: Boolean) {
+        if (dashToFiat) {
+            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_DASH, bundleOf())
+        } else {
+            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_FIAT, bundleOf())
+        }
+    }
+
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, bundleOf())
+    }
+
+    private fun isPayeePlausible(): Boolean {
+        return basePaymentIntent.hasOutputs()
+    }
+
+    private fun executeDryrun(amount: Coin) {
+        dryrunSendRequest = null
+        dryRunException = null
+
+        if (state.value != State.INPUT || amount == Coin.ZERO) {
+            _dryRunSuccessful.value = false
+            return
+        }
+
+        val dummyAddress = wallet.currentReceiveAddress() // won't be used, tx is never committed
+        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(amount, dummyAddress)
+
+        try {
+            // check regular payment
+            var sendRequest = createSendRequest(
+                basePaymentIntent.mayEditAmount(),
+                finalPaymentIntent,
+                signInputs = false,
+                forceEnsureMinRequiredFee = false
+            )
+            wallet.completeTx(sendRequest)
+
+            if (checkDust(sendRequest)) {
+                sendRequest = createSendRequest(
+                    basePaymentIntent.mayEditAmount(),
+                    finalPaymentIntent,
+                    signInputs = false,
+                    forceEnsureMinRequiredFee = true
+                )
+                wallet.completeTx(sendRequest)
+            }
+
+            dryrunSendRequest = sendRequest
+            _dryRunSuccessful.value = true
+        } catch (ex: Exception) {
+            dryRunException = ex
+            _dryRunSuccessful.value = false
+        }
+    }
+
+    private fun isAmountPlausible(): Boolean {
+        return if (basePaymentIntent.mayEditAmount()) {
+            currentAmount.isGreaterThan(Coin.ZERO)
+        } else {
+            basePaymentIntent.hasAmount()
+        }
     }
 }

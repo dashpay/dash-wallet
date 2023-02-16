@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="uphold_link_title">I-link ang iyong Uphold account</string>
+    <string name="uphold_transfer_details">Mula sa Uphold hanggang sa iyong Dash Wallet</string>
     <string name="uphold_buy_dash_activity_title">Bumili/Magbenta sa Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Bumili ng Dash sa Uphold na account</string>
     <string name="uphold_buy_dash_button">Bumili ng Dash</string>

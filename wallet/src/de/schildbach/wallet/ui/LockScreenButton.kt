@@ -26,7 +26,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.lock_screen_button.view.*
 
 
-class LockScreenButton(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs, R.style.Button_Primary_Large_White) {
+class LockScreenButton(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs, R.style.Button_Primary_Large_Inverted) {
 
     init {
         inflate(context, R.layout.lock_screen_button, this)

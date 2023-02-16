@@ -23,7 +23,6 @@ import java.util.regex.Matcher;
 
 import org.bitcoinj.core.Monetary;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.dash.wallet.common.Constants;
 import org.dash.wallet.common.ui.Formats;
 
 import android.graphics.Typeface;

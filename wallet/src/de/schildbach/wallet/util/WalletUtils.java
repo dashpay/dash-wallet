@@ -27,14 +27,11 @@ import java.io.Writer;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.TimeZone;
 
@@ -46,12 +43,8 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.TransactionBag;
-import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
@@ -76,7 +69,7 @@ import android.text.Editable;
 import android.text.SpannableStringBuilder;
 import android.text.format.DateUtils;
 
-import static org.dash.wallet.common.Constants.CHAR_THIN_SPACE;
+import static org.dash.wallet.common.util.Constants.CHAR_THIN_SPACE;
 
 /**
  * @author Andreas Schildbach
