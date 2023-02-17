@@ -99,7 +99,7 @@ public final class Constants {
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-chacha";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
-                org.dash.wallet.common.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-testnet.db";
+                org.dash.wallet.common.util.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-testnet.db";
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 break;
             }
