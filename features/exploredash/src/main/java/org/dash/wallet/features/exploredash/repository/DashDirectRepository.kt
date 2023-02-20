@@ -110,8 +110,8 @@ class DashDirectRepository @Inject constructor(
             deviceID = deviceID,
             purchaseGiftCardRequest = PurchaseGiftCardRequest(
                 currency = currency,
-                giftCardAmount = giftCardAmount,
-                merchantId = merchantId
+                giftCardAmount = 0.03,
+                merchantId = 318
             ),
             email = userEmail
         )
@@ -125,7 +125,7 @@ class DashDirectRepository @Inject constructor(
         servicesApi.getMerchantById(
             email = userEmail,
             getMerchantByIdRequest = GetMerchantByIdRequest(
-                id = merchantId,
+                id = 318,
                 includeLocations = includeLocations
             )
         )
