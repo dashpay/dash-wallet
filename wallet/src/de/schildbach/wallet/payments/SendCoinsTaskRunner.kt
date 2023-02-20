@@ -141,7 +141,7 @@ class SendCoinsTaskRunner @Inject constructor(
             try {
                 var sendRequest = createSendRequest(
                     false,
-                    basePaymentIntent,
+                    finalPaymentIntent,
                     signInputs = false,
                     forceEnsureMinRequiredFee = false
                 )
@@ -150,7 +150,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 if (checkDust(sendRequest)) {
                     sendRequest = createSendRequest(
                         false,
-                        basePaymentIntent,
+                        finalPaymentIntent,
                         signInputs = false,
                         forceEnsureMinRequiredFee = true
                     )
@@ -183,7 +183,6 @@ class SendCoinsTaskRunner @Inject constructor(
 
             override fun onPaymentIntent(paymentIntent: PaymentIntent) {
                 if (basePaymentIntent.isExtendedBy(paymentIntent, true)) {
-                    // finalPaymentIntent = paymentIntent
                     createBaseSendRequest(coroutine,basePaymentIntent, paymentIntent, wallet)
                 } else {
                     log.info("BIP72 trust check failed")
@@ -196,10 +195,11 @@ class SendCoinsTaskRunner @Inject constructor(
                     val errorMessage =
                         if (messageResId > 0) walletApplication.getString(messageResId, *messageArgs)
                         else ex.message!!
-                    //    _sendRequestLiveData.value = Resource.error(ex, errorMessage)
+                    coroutine.resumeWithException(Exception(errorMessage))
+
                 } else {
                     val errorMessage = walletApplication.getString(messageResId, *messageArgs)
-                    //  _sendRequestLiveData.value = Resource.error(errorMessage)
+                    coroutine.resumeWithException(Exception(errorMessage))
                 }
             }
         }
