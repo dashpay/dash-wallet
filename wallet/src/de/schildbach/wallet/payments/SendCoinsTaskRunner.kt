@@ -133,6 +133,7 @@ class SendCoinsTaskRunner @Inject constructor(
     private fun createBaseSendRequest(
         coroutine: CancellableContinuation<Transaction>,
         basePaymentIntent: PaymentIntent,
+        finalPaymentIntent: PaymentIntent,
         wallet: Wallet
     ) {
         if (coroutine.isActive) {
@@ -141,7 +142,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 var sendRequest = createSendRequest(
                     false,
                     basePaymentIntent,
-                    signInputs = true,
+                    signInputs = false,
                     forceEnsureMinRequiredFee = false
                 )
 
@@ -150,7 +151,7 @@ class SendCoinsTaskRunner @Inject constructor(
                     sendRequest = createSendRequest(
                         false,
                         basePaymentIntent,
-                        signInputs = true,
+                        signInputs = false,
                         forceEnsureMinRequiredFee = true
                     )
                     wallet.completeTx(sendRequest)
@@ -158,8 +159,13 @@ class SendCoinsTaskRunner @Inject constructor(
                 val scope =
                     CoroutineScope(coroutine.context)
                 scope.launch(Dispatchers.IO) {
-                    signSendRequest(sendRequest)
-                    coroutine.resume(sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = false))
+                    val finalSendRequest = createSendRequest(
+                        basePaymentIntent.mayEditAmount(),
+                        finalPaymentIntent!!,
+                        true,
+                        sendRequest!!.ensureMinRequiredFee
+                    )
+                    coroutine.resume(sendCoins(finalSendRequest, txCompleted = false, checkBalanceConditions = false))
                 }
             } catch (x: Exception) {
                 x.printStackTrace()
@@ -178,7 +184,7 @@ class SendCoinsTaskRunner @Inject constructor(
             override fun onPaymentIntent(paymentIntent: PaymentIntent) {
                 if (basePaymentIntent.isExtendedBy(paymentIntent, true)) {
                     // finalPaymentIntent = paymentIntent
-                    createBaseSendRequest(coroutine, paymentIntent, wallet)
+                    createBaseSendRequest(coroutine,basePaymentIntent, paymentIntent, wallet)
                 } else {
                     log.info("BIP72 trust check failed")
                 }
