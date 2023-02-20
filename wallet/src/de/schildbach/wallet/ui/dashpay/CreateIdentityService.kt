@@ -27,6 +27,8 @@ import de.schildbach.wallet_test.R
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.core.RejectMessage
 import org.bitcoinj.core.RejectedTransactionException
 import org.bitcoinj.core.TransactionConfidence
@@ -70,6 +72,7 @@ class CreateIdentityService : LifecycleService() {
         private const val ACTION_RETRY_INVITE_AFTER_INTERRUPTION = "org.dash.dashpay.action.ACTION_RETRY_INVITE_AFTER_INTERRUPTION"
 
         private const val ACTION_RESTORE_IDENTITY = "org.dash.dashpay.action.RESTORE_IDENTITY"
+        private const val ACTION_MIXING_COMPLETE = "org.dash.dashpay.action.MIXING_COMPLETE"
 
         private const val EXTRA_USERNAME = "org.dash.dashpay.extra.USERNAME"
         private const val EXTRA_START_FOREGROUND_PROMISED = "org.dash.dashpay.extra.EXTRA_START_FOREGROUND_PROMISED"
@@ -131,6 +134,13 @@ class CreateIdentityService : LifecycleService() {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_RESTORE_IDENTITY
                 putExtra(EXTRA_IDENTITY, identity)
+            }
+        }
+
+        @JvmStatic
+        fun createIntentForMixingComplete(context: Context): Intent {
+            return Intent(context, CreateIdentityService::class.java).apply {
+                action = ACTION_MIXING_COMPLETE
             }
         }
     }
@@ -244,6 +254,9 @@ class CreateIdentityService : LifecycleService() {
                     val identity = intent.getByteArrayExtra(EXTRA_IDENTITY)!!
                     handleRestoreIdentityAction(identity)
                 }
+                ACTION_MIXING_COMPLETE -> {
+                    setMixingComplete()
+                }
             }
         } else {
             log.info("work in progress, ignoring ${intent.action}")
@@ -259,6 +272,13 @@ class CreateIdentityService : LifecycleService() {
             workInProgress = false
             stopSelf()
         }
+    }
+
+    // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
+    private val mixingMutex = Mutex(locked = true)
+    private suspend fun waitForMixing() = mixingMutex.withLock{}
+    private fun setMixingComplete() {
+        mixingMutex.unlock()
     }
 
     private suspend fun createIdentity(username: String?, retryWithNewUserName: Boolean) {
@@ -347,8 +367,9 @@ class CreateIdentityService : LifecycleService() {
                     { encryptionKey },
                     { it.decrypt(encryptionKey) })
 
-                coinJoinService.prepareAndStartMixing()
+                 coinJoinService.prepareAndStartMixing()
             }
+            waitForMixing();
         }
 
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CREATING) {

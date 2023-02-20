@@ -781,6 +781,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup.startAsync();
                 peerGroup.startBlockChainDownload(blockchainDownloadListener);
                 platformSyncService.addPreBlockProgressListener(blockchainDownloadListener);
+
+                // restart coinjoin if need be
+                if (coinJoinService.getMixingStatus() == MixingStatus.PAUSED) {
+                    coinJoinService.prepareAndStartMixingAsync();
+                }
             } else if (!impediments.isEmpty() && peerGroup != null) {
                 application.getWallet().getContext().close();
                 log.info("stopping peergroup");
@@ -792,6 +797,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup.stopAsync();
                 wallet.setRiskAnalyzer(defaultRiskAnalyzer);
                 riskAnalyzer.shutdown();
+                // stop coinjoin if mixing
+                coinJoinService.stopMixing();
+
                 peerGroup = null;
 
                 log.debug("releasing wakelock");
@@ -1121,7 +1129,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         unregisterReceiver(connectivityReceiver);
 
-        platformSyncService.shutdown(); //PlatformRepo.getInstance().shutdown();
+        platformSyncService.shutdown();
 
         if (peerGroup != null) {
             application.getWallet().getContext().close();
@@ -1132,6 +1140,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             peerGroup.stop();
             application.getWallet().setRiskAnalyzer(defaultRiskAnalyzer);
             riskAnalyzer.shutdown();
+
+            // coinjoin
+            coinJoinService.stopMixing();
 
             log.info("peergroup stopped");
         }

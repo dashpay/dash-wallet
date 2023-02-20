@@ -3,8 +3,16 @@ package de.schildbach.wallet.service
 import android.content.Intent
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import org.bitcoinj.coinjoin.CoinJoinClientManager
 import org.bitcoinj.coinjoin.CoinJoinClientOptions
 import org.bitcoinj.coinjoin.PoolMessage
@@ -24,6 +32,8 @@ import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.WalletDataProvider
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -32,15 +42,26 @@ interface CoinJoinService {
     fun needsToMix(amount: Coin): Boolean
     fun configureMixing(amount: Coin, requestKeyParameter: RequestKeyParameter, requestDecryptedKey: RequestDecryptedKey)
     suspend fun prepareAndStartMixing(): Boolean
+    fun prepareAndStartMixingAsync()
     fun startMixing(): Boolean
     fun stopMixing()
     fun setBlockchain(blockChain: AbstractBlockChain)
+    fun getMixingStatus(): MixingStatus
     // TODO: add getMixingProgress() : Flow<progress data>
+}
+
+enum class MixingStatus {
+    NOT_STARTED,
+    MIXING,
+    PAUSED,
+    FINISHED,
+    ERROR
 }
 
 class CoinJoinMixingService @Inject constructor(
      val walletDataProvider: WalletDataProvider,
-     val walletApplication: WalletApplication
+     val walletApplication: WalletApplication,
+     val blockchainStateDao: BlockchainStateDao
 ) : CoinJoinService {
 
     companion object {
@@ -53,6 +74,23 @@ class CoinJoinMixingService @Inject constructor(
 
     private var mixingCompleteListeners: ArrayList<MixingCompleteListener> = arrayListOf()
     private var sessionCompleteListeners: ArrayList<SessionCompleteListener> = arrayListOf()
+
+    private var mixingStatus: MixingStatus = MixingStatus.NOT_STARTED
+
+    private val syncScope = CoroutineScope(
+        Executors.newFixedThreadPool(5).asCoroutineDispatcher()
+    )
+
+    init {
+            blockchainStateDao.observeState()
+                .filterNotNull()
+                .onEach { state ->
+                    //updateSyncStatus(state)
+                    //updatePercentage(state)
+                }
+                .launchIn(syncScope)
+
+    }
 
     private var mixingProgressTracker: MixingProgressTracker = object : MixingProgressTracker() {
         override fun onMixingComplete(wallet: WalletEx?, statusList: MutableList<PoolStatus>?) {
@@ -70,7 +108,7 @@ class CoinJoinMixingService @Inject constructor(
             message: PoolMessage?
         ) {
             super.onSessionStarted(wallet, sessionId, denomination, message)
-            log.info("Session {} started.  {}%", sessionId, progress);
+            log.info("Session {} started.  {}%", sessionId, progress)
         }
 
         override fun onSessionComplete(
@@ -81,7 +119,7 @@ class CoinJoinMixingService @Inject constructor(
         ) {
             super.onSessionComplete(wallet, sessionId, denomination, message)
             //TODO: _progressFlow.emit(progress)
-            log.info("Session {} complete.  {}% -- {}", sessionId, progress, message);
+            log.info("Session {} complete.  {}% -- {}", sessionId, progress, message)
         }
     }
 
@@ -90,12 +128,15 @@ class CoinJoinMixingService @Inject constructor(
         ProTxToOutpoint.initialize(Constants.NETWORK_PARAMETERS)
     }
 
+    override fun getMixingStatus(): MixingStatus {
+        return mixingStatus
+    }
+
     override fun needsToMix(amount: Coin): Boolean {
         return walletApplication.wallet?.getBalance(Wallet.BalanceType.COINJOIN_SPENDABLE)?.isLessThan(amount) ?: false
     }
 
     override fun configureMixing(amount: Coin, requestKeyParameter: RequestKeyParameter, requestDecryptedKey: RequestDecryptedKey) {
-        CoinJoinClientOptions.setEnabled(true);
         CoinJoinClientOptions.setRounds(1);
         CoinJoinClientOptions.setSessions(4);
         CoinJoinClientOptions.setAmount(amount)
@@ -108,11 +149,19 @@ class CoinJoinMixingService @Inject constructor(
         }
     }
 
+    override fun prepareAndStartMixingAsync() {
+        syncScope.launch {
+            prepareAndStartMixing()
+        }
+    }
+
     override suspend fun prepareAndStartMixing(): Boolean {
+        CoinJoinClientOptions.setEnabled(true);
         val wallet = walletDataProvider.wallet!!
         addMixingCompleteListener(mixingProgressTracker)
         addSessionCompleteListener(mixingProgressTracker)
         coinJoinManager?.run {
+            mixingStatus = MixingStatus.PAUSED
             clientManager = CoinJoinClientManager(wallet)
             coinJoinClientManagers[wallet.description] = clientManager
             clientManager.setStopOnNothingToDo(true)
@@ -125,7 +174,8 @@ class CoinJoinMixingService @Inject constructor(
                             for (status in it) {
                                 if (status != PoolStatus.FINISHED) {
                                     walletApplication.triggerStopMixing()
-                                    continuation.resumeWithException(Exception(status.name))
+                                    mixingStatus = MixingStatus.ERROR
+                                    continuation.resumeWithException(Exception("Mixing stopped before completion ${status.name}"))
                                 }
                             }
                         }
@@ -135,7 +185,14 @@ class CoinJoinMixingService @Inject constructor(
                     log.info("Mixing complete.")
                     triggerStopMixing()
                     removeMixingCompleteListener(mixingCompleteListener)
-                    continuation.resumeWith(Result.success(true))
+                    if (mixingFinished.get()) {
+                        mixingStatus = MixingStatus.FINISHED
+                        triggerCompleteMixing()
+                        continuation.resumeWith(Result.success(true))
+                    } else {
+                        mixingStatus = MixingStatus.PAUSED
+                        continuation.resumeWith(Result.success(false))//resumeWithException(Exception("Mixing stopped before completion"))
+                    }
                 }, Threading.SAME_THREAD)
 
                 addMixingCompleteListener(Threading.SAME_THREAD, mixingCompleteListener)
@@ -152,13 +209,21 @@ class CoinJoinMixingService @Inject constructor(
         } else {
             val result = clientManager.doAutomaticDenominating()
             log.info("Mixing " + if (result) "started successfully" else "start failed: " + clientManager.statuses + ", will retry")
+            mixingStatus = MixingStatus.MIXING
             true
         }
     }
 
-
     override fun stopMixing() {
         log.info("Mixing process will stop...")
+        if (coinJoinManager == null || !this::clientManager.isInitialized) {
+            return
+        }
+
+        // is missing complete?
+        if (!clientManager.mixingFinishedFuture.isDone) {
+            clientManager.mixingFinishedFuture.set(false)
+        }
         // remove all listeners
         mixingCompleteListeners.forEach { coinJoinManager?.removeMixingCompleteListener(it) }
         sessionCompleteListeners.forEach { coinJoinManager?.removeSessionCompleteListener(it) }
@@ -205,6 +270,13 @@ class CoinJoinMixingService @Inject constructor(
                 BlockchainService.ACTION_STOP_MIXING, null, walletApplication,
                 BlockchainServiceImpl::class.java
             )
+        )
+    }
+
+    private fun triggerCompleteMixing() {
+        log.info("Mixing process will end...")
+        walletApplication.startService(
+            CreateIdentityService.createIntentForMixingComplete(walletApplication)
         )
     }
 }
