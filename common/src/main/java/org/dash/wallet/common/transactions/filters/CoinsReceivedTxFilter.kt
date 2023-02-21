@@ -19,6 +19,7 @@ package org.dash.wallet.common.transactions.filters
 
 import org.bitcoinj.core.*
 import org.bitcoinj.script.ScriptPattern
+import org.dash.wallet.common.transactions.TransactionUtils
 
 open class CoinsReceivedTxFilter(
     private val bag: TransactionBag,
@@ -28,6 +29,11 @@ open class CoinsReceivedTxFilter(
         private set
 
     override fun matches(tx: Transaction): Boolean {
+        if (TransactionUtils.isEntirelySelf(tx, bag) || tx.getValue(bag).signum() < 0) {
+            // Not an incoming transaction
+            return false
+        }
+
         val output = tx.outputs.firstOrNull { it.isMine(bag) && it.value == coins }
 
         if (output != null) {
