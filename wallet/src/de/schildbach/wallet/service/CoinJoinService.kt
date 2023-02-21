@@ -1,18 +1,15 @@
 package de.schildbach.wallet.service
 
-import android.content.Intent
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.coinjoin.CoinJoinClientManager
 import org.bitcoinj.coinjoin.CoinJoinClientOptions
 import org.bitcoinj.coinjoin.PoolMessage
@@ -26,28 +23,32 @@ import org.bitcoinj.coinjoin.utils.CoinJoinManager
 import org.bitcoinj.coinjoin.utils.ProTxToOutpoint
 import org.bitcoinj.core.AbstractBlockChain
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Context
 import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.NetworkStatus
+import org.dash.wallet.common.services.BlockchainStateProvider
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
 interface CoinJoinService {
     fun needsToMix(amount: Coin): Boolean
-    fun configureMixing(amount: Coin, requestKeyParameter: RequestKeyParameter, requestDecryptedKey: RequestDecryptedKey)
-    suspend fun prepareAndStartMixing(): Boolean
-    fun prepareAndStartMixingAsync()
+    fun configureMixing(
+        amount: Coin,
+        requestKeyParameter: RequestKeyParameter,
+        requestDecryptedKey: RequestDecryptedKey
+    )
+
+    suspend fun prepareAndStartMixing()
     fun startMixing(): Boolean
     fun stopMixing()
-    fun setBlockchain(blockChain: AbstractBlockChain)
     fun getMixingStatus(): MixingStatus
-    // TODO: add getMixingProgress() : Flow<progress data>
+    suspend fun waitForMixing()
+    suspend fun waitForMixingWithException()
 }
 
 enum class MixingStatus {
@@ -59,9 +60,9 @@ enum class MixingStatus {
 }
 
 class CoinJoinMixingService @Inject constructor(
-     val walletDataProvider: WalletDataProvider,
-     val walletApplication: WalletApplication,
-     val blockchainStateDao: BlockchainStateDao
+    val walletDataProvider: WalletDataProvider,
+    val walletApplication: WalletApplication,
+    val blockchainStateProvider: BlockchainStateProvider
 ) : CoinJoinService {
 
     companion object {
@@ -81,24 +82,84 @@ class CoinJoinMixingService @Inject constructor(
         Executors.newFixedThreadPool(5).asCoroutineDispatcher()
     )
 
-    init {
-            blockchainStateDao.observeState()
-                .filterNotNull()
-                .onEach { state ->
-                    //updateSyncStatus(state)
-                    //updatePercentage(state)
-                }
-                .launchIn(syncScope)
+    private var blockChain: AbstractBlockChain? = null
+    private var isBlockChainSet = false
+    private var networkStatus: NetworkStatus = NetworkStatus.STOPPED
 
+    // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified            //mixingStatus = MixingStatus.MIXING
+
+    private val mixingMutex = Mutex(locked = true)
+    private var exception: Throwable? = null
+    override suspend fun waitForMixing() = mixingMutex.withLock{}
+    override suspend fun waitForMixingWithException() {
+        waitForMixing()
+        exception?.let {
+            throw it
+        }
+    }
+    private fun setMixingComplete() {
+        mixingMutex.unlock()
+    }
+
+    init {
+        blockchainStateProvider.observeNetworkStatus()
+            .onEach { status ->
+                updateNetworkStatus(status)
+            }
+            .launchIn(syncScope)
+
+        blockchainStateProvider.observeBlockChain()
+            .filterNotNull()
+            .onEach { blockChain ->
+                updateBlockChain(blockChain)
+            }
+            .launchIn(syncScope)
+    }
+
+    private suspend fun updateState(mixingStatus: MixingStatus, networkStatus: NetworkStatus, blockChain: AbstractBlockChain?) {
+
+        log.info("coinjoin-updateState: $mixingStatus, $networkStatus, ${blockChain != null}")
+        setBlockchain(blockChain)
+
+        when {
+            mixingStatus == MixingStatus.MIXING && networkStatus == NetworkStatus.CONNECTED -> {
+                prepareAndStartMixing2()
+                setBlockchain(blockChain)
+                startMixing()
+            }
+            this.mixingStatus == MixingStatus.MIXING && mixingStatus == MixingStatus.FINISHED -> {
+                stopMixing()
+                setMixingComplete()
+            }
+            mixingStatus == MixingStatus.MIXING && this.networkStatus == NetworkStatus.CONNECTED && networkStatus == NetworkStatus.NOT_AVAILABLE -> {
+                stopMixing()
+            }
+            mixingStatus == MixingStatus.PAUSED && this.networkStatus == NetworkStatus.NOT_AVAILABLE && networkStatus == NetworkStatus.CONNECTED -> {
+                startMixing()
+            }
+            mixingStatus == MixingStatus.ERROR -> setMixingComplete()
+        }
+        this.networkStatus = networkStatus
+        this.mixingStatus = mixingStatus
+    }
+
+    private suspend fun updateBlockChain(blockChain: AbstractBlockChain) {
+        updateState(mixingStatus, networkStatus, blockChain)
+    }
+
+    private suspend fun updateNetworkStatus(networkStatus: NetworkStatus) {
+        updateState(mixingStatus, networkStatus, blockChain)
+    }
+
+    private suspend fun updateMixingStatus(mixingStatus: MixingStatus) {
+        updateState(mixingStatus, networkStatus, blockChain);
     }
 
     private var mixingProgressTracker: MixingProgressTracker = object : MixingProgressTracker() {
         override fun onMixingComplete(wallet: WalletEx?, statusList: MutableList<PoolStatus>?) {
             super.onMixingComplete(wallet, statusList)
-            log.info("Mixing Complete.  {}%", progress)
-
+            log.info("Mixing Complete.  {}% mixed", progress)
             //TODO: _progressFlow.emit(progress)
-            triggerStopMixing()
         }
 
         override fun onSessionStarted(
@@ -108,7 +169,7 @@ class CoinJoinMixingService @Inject constructor(
             message: PoolMessage?
         ) {
             super.onSessionStarted(wallet, sessionId, denomination, message)
-            log.info("Session {} started.  {}%", sessionId, progress)
+            log.info("Session {} started.  {}% mixed", sessionId, progress)
         }
 
         override fun onSessionComplete(
@@ -119,7 +180,7 @@ class CoinJoinMixingService @Inject constructor(
         ) {
             super.onSessionComplete(wallet, sessionId, denomination, message)
             //TODO: _progressFlow.emit(progress)
-            log.info("Session {} complete.  {}% -- {}", sessionId, progress, message)
+            log.info("Session {} complete. {}% mixed -- {}", sessionId, progress, message)
         }
     }
 
@@ -133,10 +194,15 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     override fun needsToMix(amount: Coin): Boolean {
-        return walletApplication.wallet?.getBalance(Wallet.BalanceType.COINJOIN_SPENDABLE)?.isLessThan(amount) ?: false
+        return walletApplication.wallet?.getBalance(Wallet.BalanceType.COINJOIN_SPENDABLE)
+            ?.isLessThan(amount) ?: false
     }
 
-    override fun configureMixing(amount: Coin, requestKeyParameter: RequestKeyParameter, requestDecryptedKey: RequestDecryptedKey) {
+    override fun configureMixing(
+        amount: Coin,
+        requestKeyParameter: RequestKeyParameter,
+        requestDecryptedKey: RequestDecryptedKey
+    ) {
         CoinJoinClientOptions.setRounds(1);
         CoinJoinClientOptions.setSessions(4);
         CoinJoinClientOptions.setAmount(amount)
@@ -149,67 +215,61 @@ class CoinJoinMixingService @Inject constructor(
         }
     }
 
-    override fun prepareAndStartMixingAsync() {
-        syncScope.launch {
-            prepareAndStartMixing()
+    override suspend fun prepareAndStartMixing() {
+        // do we need to mix?
+        val wallet = walletDataProvider.wallet!! as WalletEx
+        if (wallet.coinJoinBalance.isGreaterThanOrEqualTo(CoinJoinClientOptions.getAmount())) {
+            setMixingComplete()
+        } else {
+            updateMixingStatus(MixingStatus.MIXING)
         }
     }
 
-    override suspend fun prepareAndStartMixing(): Boolean {
+    private suspend fun prepareAndStartMixing2() {
         CoinJoinClientOptions.setEnabled(true);
         val wallet = walletDataProvider.wallet!!
         addMixingCompleteListener(mixingProgressTracker)
         addSessionCompleteListener(mixingProgressTracker)
         coinJoinManager?.run {
-            mixingStatus = MixingStatus.PAUSED
             clientManager = CoinJoinClientManager(wallet)
             coinJoinClientManagers[wallet.description] = clientManager
             clientManager.setStopOnNothingToDo(true)
             val mixingFinished = clientManager.mixingFinishedFuture
-            return suspendCoroutine { continuation ->
 
-                val mixingCompleteListener =
-                    MixingCompleteListener { _, statusList ->
-                        statusList?.let {
-                            for (status in it) {
-                                if (status != PoolStatus.FINISHED) {
-                                    walletApplication.triggerStopMixing()
-                                    mixingStatus = MixingStatus.ERROR
-                                    continuation.resumeWithException(Exception("Mixing stopped before completion ${status.name}"))
-                                }
+            val mixingCompleteListener =
+                MixingCompleteListener { _, statusList ->
+                    statusList?.let {
+                        for (status in it) {
+                            if (status != PoolStatus.FINISHED) {
+                                syncScope.launch { updateMixingStatus(MixingStatus.ERROR) }
+                                exception = Exception("Mixing stopped before completion ${status.name}")
                             }
                         }
                     }
+                }
 
-                mixingFinished.addListener({
-                    log.info("Mixing complete.")
-                    triggerStopMixing()
-                    removeMixingCompleteListener(mixingCompleteListener)
-                    if (mixingFinished.get()) {
-                        mixingStatus = MixingStatus.FINISHED
-                        triggerCompleteMixing()
-                        continuation.resumeWith(Result.success(true))
-                    } else {
-                        mixingStatus = MixingStatus.PAUSED
-                        continuation.resumeWith(Result.success(false))//resumeWithException(Exception("Mixing stopped before completion"))
-                    }
-                }, Threading.SAME_THREAD)
+            mixingFinished.addListener({
+                log.info("Mixing complete.")
+                removeMixingCompleteListener(mixingCompleteListener)
+                if (mixingFinished.get()) {
+                    syncScope.launch { updateMixingStatus(MixingStatus.FINISHED) }
+                } else {
+                    syncScope.launch { updateMixingStatus(MixingStatus.PAUSED) }
+                }
+            }, Threading.SAME_THREAD)
 
-                addMixingCompleteListener(Threading.SAME_THREAD, mixingCompleteListener)
-                triggerMixing()
-            }
+            addMixingCompleteListener(Threading.SAME_THREAD, mixingCompleteListener)
         }
-        return false
     }
 
     override fun startMixing(): Boolean {
+        Context.propagate(walletDataProvider.wallet!!.context)
         return if (!clientManager.startMixing()) {
             log.info("Mixing has been started already.")
             false
         } else {
             val result = clientManager.doAutomaticDenominating()
             log.info("Mixing " + if (result) "started successfully" else "start failed: " + clientManager.statuses + ", will retry")
-            mixingStatus = MixingStatus.MIXING
             true
         }
     }
@@ -220,7 +280,7 @@ class CoinJoinMixingService @Inject constructor(
             return
         }
 
-        // is missing complete?
+        // if mixing is not complete, then tell the future we didn't finish yet
         if (!clientManager.mixingFinishedFuture.isDone) {
             clientManager.mixingFinishedFuture.set(false)
         }
@@ -228,11 +288,19 @@ class CoinJoinMixingService @Inject constructor(
         mixingCompleteListeners.forEach { coinJoinManager?.removeMixingCompleteListener(it) }
         sessionCompleteListeners.forEach { coinJoinManager?.removeSessionCompleteListener(it) }
         coinJoinManager?.stop()
+        isBlockChainSet = false
         CoinJoinClientOptions.setEnabled(false)
     }
 
-    override fun setBlockchain(blockChain: AbstractBlockChain) {
-        clientManager.setBlockChain(blockChain);
+    private fun setBlockchain(blockChain: AbstractBlockChain?) {
+        if (blockChain != null && !isBlockChainSet && this::clientManager.isInitialized) {
+            log.info("setting blockchain in clientManager")
+            clientManager.setBlockChain(blockChain)
+            isBlockChainSet = true
+        } else {
+            log.info("setting blockchain in clientManager: only in class")
+        }
+        this.blockChain = blockChain
     }
 
     fun addSessionCompleteListener(sessionCompleteListener: SessionCompleteListener) {
@@ -252,31 +320,4 @@ class CoinJoinMixingService @Inject constructor(
     // TODO: private val _progressFlow = MutableStateFlow(0.00)
     // TODO: override suspend fun getMixingProgress(): Flow<Double + other data> = _progressFlow
     // TODO: suspend fun setProgress(progress: Double) = _progressFlow.emit(progress)
-
-    private fun triggerMixing() {
-        log.info("Mixing process will begin shortly...")
-        walletApplication.startService(
-            Intent(
-                BlockchainService.ACTION_START_MIXING, null, walletApplication,
-                BlockchainServiceImpl::class.java
-            )
-        )
-    }
-
-    private fun triggerStopMixing() {
-        log.info("Mixing process will end...")
-        walletApplication.startService(
-            Intent(
-                BlockchainService.ACTION_STOP_MIXING, null, walletApplication,
-                BlockchainServiceImpl::class.java
-            )
-        )
-    }
-
-    private fun triggerCompleteMixing() {
-        log.info("Mixing process will end...")
-        walletApplication.startService(
-            CreateIdentityService.createIntentForMixingComplete(walletApplication)
-        )
-    }
 }

@@ -254,9 +254,6 @@ class CreateIdentityService : LifecycleService() {
                     val identity = intent.getByteArrayExtra(EXTRA_IDENTITY)!!
                     handleRestoreIdentityAction(identity)
                 }
-                ACTION_MIXING_COMPLETE -> {
-                    setMixingComplete()
-                }
             }
         } else {
             log.info("work in progress, ignoring ${intent.action}")
@@ -272,13 +269,6 @@ class CreateIdentityService : LifecycleService() {
             workInProgress = false
             stopSelf()
         }
-    }
-
-    // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
-    private val mixingMutex = Mutex(locked = true)
-    private suspend fun waitForMixing() = mixingMutex.withLock{}
-    private fun setMixingComplete() {
-        mixingMutex.unlock()
     }
 
     private suspend fun createIdentity(username: String?, retryWithNewUserName: Boolean) {
@@ -361,15 +351,14 @@ class CreateIdentityService : LifecycleService() {
 
         if (blockchainIdentityData.creationState <= CreationState.MIXING_FUNDS) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.MIXING_FUNDS)
-            if (coinJoinService.needsToMix(Constants.DASH_PAY_FEE)) {
-                coinJoinService.configureMixing(
-                    Constants.DASH_PAY_FEE,
-                    { encryptionKey },
-                    { it.decrypt(encryptionKey) })
+            coinJoinService.configureMixing(
+                Constants.DASH_PAY_FEE,
+                { encryptionKey },
+                { it.decrypt(encryptionKey) })
 
-                 coinJoinService.prepareAndStartMixing()
-            }
-            waitForMixing();
+            coinJoinService.prepareAndStartMixing()
+
+            coinJoinService.waitForMixing();
         }
 
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CREATING) {

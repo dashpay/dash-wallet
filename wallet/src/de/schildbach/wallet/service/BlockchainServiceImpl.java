@@ -47,9 +47,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.common.base.Stopwatch;
 
-import org.bitcoinj.coinjoin.PoolMessage;
-import org.bitcoinj.coinjoin.PoolStatus;
-import org.bitcoinj.coinjoin.progress.MixingProgressTracker;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
@@ -85,8 +82,8 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletEx;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.data.NetworkStatus;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.NotificationService;
 import org.dash.wallet.common.transactions.filters.NotFromAddressTxFilter;
@@ -133,7 +130,6 @@ import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 import de.schildbach.wallet.service.platform.PlatformSyncService;
 import de.schildbach.wallet.ui.OnboardingActivity;
-import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet.ui.dashpay.PreBlockStage;
@@ -162,7 +158,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject TransactionMetadataProvider transactionMetadataProvider;
     @Inject PlatformSyncService platformSyncService;
     @Inject PlatformRepo platformRepo;
-    @Inject CoinJoinService coinJoinService;
+    @Inject BlockchainStateDataProvider blockchainStateDataProvider;
 
     private BlockStore blockStore;
     private BlockStore headerStore;
@@ -447,6 +443,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         private void changed(final int numPeers) {
             if (stopped.get())
                 return;
+            NetworkStatus networkStatus = blockchainStateDataProvider.getNetworkStatus();
+            if (numPeers > 0 && networkStatus == NetworkStatus.CONNECTING)
+                blockchainStateDataProvider.setNetworkStatus(NetworkStatus.CONNECTED);
+            else if (numPeers == 0 && networkStatus == NetworkStatus.DISCONNECTING)
+                blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTED);
 
             handler.post(() -> {
                 final boolean connectivityNotificationEnabled = config.getConnectivityNotificationEnabled();
@@ -778,15 +779,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 wallet.setRiskAnalyzer(riskAnalyzer);
 
                 // start peergroup
+                blockchainStateDataProvider.setNetworkStatus(NetworkStatus.CONNECTING);
                 peerGroup.startAsync();
                 peerGroup.startBlockChainDownload(blockchainDownloadListener);
                 platformSyncService.addPreBlockProgressListener(blockchainDownloadListener);
 
-                // restart coinjoin if need be
-                if (coinJoinService.getMixingStatus() == MixingStatus.PAUSED) {
-                    coinJoinService.prepareAndStartMixingAsync();
-                }
             } else if (!impediments.isEmpty() && peerGroup != null) {
+                blockchainStateDataProvider.setNetworkStatus(NetworkStatus.NOT_AVAILABLE);
                 application.getWallet().getContext().close();
                 log.info("stopping peergroup");
                 peerGroup.removeDisconnectedEventListener(peerConnectivityListener);
@@ -797,8 +796,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup.stopAsync();
                 wallet.setRiskAnalyzer(defaultRiskAnalyzer);
                 riskAnalyzer.shutdown();
-                // stop coinjoin if mixing
-                coinJoinService.stopMixing();
 
                 peerGroup = null;
 
@@ -980,6 +977,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         try {
             blockChain = new BlockChain(Constants.NETWORK_PARAMETERS, wallet, blockStore);
             headerChain = new BlockChain(Constants.NETWORK_PARAMETERS, headerStore);
+            blockchainStateDataProvider.setBlockChain(blockChain);
         } catch (final BlockStoreException x) {
             throw new Error("blockchain cannot be created", x);
         }
@@ -1083,28 +1081,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 } else {
                     log.info("peergroup not available, not recalculating bloom filers");
                 }
-            } else if (BlockchainService.ACTION_START_MIXING.equals(action)) {
-                if (peerGroup != null) {
-                    log.info("begin mixing");
-                    if(coinJoinService.startMixing()) {
-                        coinJoinService.setBlockchain(blockChain);
-                    }
-                } else {
-                    log.info("peergroup not available, not mixing");
-                }
-            } else if (BlockchainService.ACTION_STOP_MIXING.equals(action)) {
-                stopMixing();
             }
         } else {
             log.warn("service restart, although it was started as non-sticky");
         }
 
         return START_NOT_STICKY;
-    }
-
-    private void stopMixing() {
-        log.info("Mixing will be stopping...");
-        coinJoinService.stopMixing();
     }
 
     private void startForeground() {
@@ -1137,12 +1119,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             peerGroup.removeConnectedEventListener(peerConnectivityListener);
             peerGroup.removeWallet(application.getWallet());
             platformSyncService.removePreBlockProgressListener(blockchainDownloadListener);
+            blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING);
             peerGroup.stop();
+            blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED);
             application.getWallet().setRiskAnalyzer(defaultRiskAnalyzer);
             riskAnalyzer.shutdown();
-
-            // coinjoin
-            coinJoinService.stopMixing();
 
             log.info("peergroup stopped");
         }

@@ -4,7 +4,13 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BlockchainStateDao
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import org.bitcoinj.core.AbstractBlockChain
 import org.bitcoinj.core.Block
 import org.bitcoinj.core.CheckpointManager
 import org.bitcoinj.core.Coin
@@ -14,11 +20,14 @@ import org.bitcoinj.store.BlockStoreException
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BlockchainState
+import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.services.BlockchainStateProvider
 import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
+import java.util.concurrent.Executors
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.math.min
 
 /**
@@ -30,6 +39,7 @@ import kotlin.math.min
  *
  */
 
+@Singleton
 class BlockchainStateDataProvider @Inject constructor(
     @ApplicationContext
     private val context: Context,
@@ -48,6 +58,13 @@ class BlockchainStateDataProvider @Inject constructor(
         val MASTERNODE_COST: Coin = Coin.valueOf(1000, 0)
     }
 
+    private val providerScope = CoroutineScope(
+        Executors.newFixedThreadPool(2).asCoroutineDispatcher()
+    )
+
+    private val networkStatusFlow = MutableStateFlow(NetworkStatus.STOPPED)
+    private val blockchainFlow = MutableStateFlow<AbstractBlockChain?>(null)
+
     override suspend fun getState(): BlockchainState? {
         return blockchainStateDao.loadSync()
     }
@@ -63,6 +80,34 @@ class BlockchainStateDataProvider @Inject constructor(
         } else {
             getEstimatedMasternodeAPY()
         }
+    }
+
+    fun setNetworkStatus(networkStatus: NetworkStatus) {
+        providerScope.launch {
+            networkStatusFlow.emit(networkStatus)
+        }
+    }
+
+    override fun getNetworkStatus(): NetworkStatus {
+        return networkStatusFlow.value
+    }
+
+    override fun observeNetworkStatus(): Flow<NetworkStatus> {
+        return networkStatusFlow
+    }
+
+    fun setBlockChain(blockChain: AbstractBlockChain) {
+        providerScope.launch {
+            blockchainFlow.emit(blockChain)
+        }
+    }
+
+    override fun getBlockChain(): AbstractBlockChain? {
+        return walletDataProvider.wallet?.context?.blockChain
+    }
+
+    override fun observeBlockChain(): Flow<AbstractBlockChain?> {
+        return blockchainFlow;
     }
 
     override fun getMasternodeAPY(): Double {
