@@ -974,16 +974,6 @@ public class WalletApplication extends MultiDexApplication
         startService(new Intent(BlockchainService.ACTION_WIPE_WALLET, null, this, BlockchainServiceImpl.class));
     }
 
-    public void triggerMixing() {
-        log.info("Mixing process will begin shortly...");
-        startService(new Intent(BlockchainService.ACTION_START_MIXING, null, this, BlockchainServiceImpl.class));
-    }
-
-    public void triggerStopMixing() {
-        log.info("Mixing process will end...");
-        startService(new Intent(BlockchainService.ACTION_STOP_MIXING, null, this, BlockchainServiceImpl.class));
-    }
-
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public void shutdownAndDeleteWallet() {
         if (walletFile.exists()) {

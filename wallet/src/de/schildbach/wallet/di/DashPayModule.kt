@@ -61,7 +61,6 @@ abstract class DashPayModule {
     @Binds
     abstract fun bindsPlatformBroadcastService(platformBroadcastService: PlatformDocumentBroadcastService): PlatformBroadcastService
 
-    @Singleton
     @Binds
     abstract fun bindsCoinJoinService(coinJoinMixingService: CoinJoinMixingService) : CoinJoinService
 }
