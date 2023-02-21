@@ -1135,6 +1135,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         try {
             blockStore.close();
             headerStore.close();
+            blockchainStateDataProvider.setBlockChain(null);
         } catch (final BlockStoreException x) {
             throw new RuntimeException(x);
         }

@@ -102,7 +102,8 @@ class CoinJoinMixingService @Inject constructor(
     )
 
     private var blockChain: AbstractBlockChain? = null
-    private var isBlockChainSet = false
+    private val isBlockChainSet: Boolean
+        get() = blockChain != null
     private var networkStatus: NetworkStatus = NetworkStatus.STOPPED
 
     // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
@@ -140,19 +141,23 @@ class CoinJoinMixingService @Inject constructor(
         setBlockchain(blockChain)
 
         when {
-            mixingStatus == MixingStatus.MIXING && networkStatus == NetworkStatus.CONNECTED -> {
-                prepareAndStartMixing2()
-                setBlockchain(blockChain)
+            mixingStatus == MixingStatus.MIXING && networkStatus == NetworkStatus.CONNECTED && isBlockChainSet-> {
+                // start mixing
+                prepareMixing()
                 startMixing()
             }
             this.mixingStatus == MixingStatus.MIXING && mixingStatus == MixingStatus.FINISHED -> {
+                // finish mixing
                 stopMixing()
                 setMixingComplete()
             }
             mixingStatus == MixingStatus.MIXING && this.networkStatus == NetworkStatus.CONNECTED && networkStatus == NetworkStatus.NOT_AVAILABLE -> {
+                // pause mixing
                 stopMixing()
             }
-            mixingStatus == MixingStatus.PAUSED && this.networkStatus == NetworkStatus.NOT_AVAILABLE && networkStatus == NetworkStatus.CONNECTED -> {
+            mixingStatus == MixingStatus.PAUSED && this.networkStatus == NetworkStatus.CONNECTING && networkStatus == NetworkStatus.CONNECTED && isBlockChainSet-> {
+                // resume mixing
+                prepareMixing()
                 startMixing()
             }
             mixingStatus == MixingStatus.ERROR -> setMixingComplete()
@@ -243,7 +248,7 @@ class CoinJoinMixingService @Inject constructor(
         }
     }
 
-    private suspend fun prepareAndStartMixing2() {
+    private suspend fun prepareMixing() {
         CoinJoinClientOptions.setEnabled(true);
         val wallet = walletDataProvider.wallet!!
         addMixingCompleteListener(mixingProgressTracker)
@@ -282,6 +287,7 @@ class CoinJoinMixingService @Inject constructor(
 
     override fun startMixing(): Boolean {
         Context.propagate(walletDataProvider.wallet!!.context)
+        clientManager.setBlockChain(blockChain)
         return if (!clientManager.startMixing()) {
             log.info("Mixing has been started already.")
             false
@@ -306,18 +312,15 @@ class CoinJoinMixingService @Inject constructor(
         mixingCompleteListeners.forEach { coinJoinManager?.removeMixingCompleteListener(it) }
         sessionCompleteListeners.forEach { coinJoinManager?.removeSessionCompleteListener(it) }
         coinJoinManager?.stop()
-        isBlockChainSet = false
         CoinJoinClientOptions.setEnabled(false)
     }
 
     private fun setBlockchain(blockChain: AbstractBlockChain?) {
-        if (blockChain != null && !isBlockChainSet && this::clientManager.isInitialized) {
-            log.info("setting blockchain in clientManager")
-            clientManager.setBlockChain(blockChain)
-            isBlockChainSet = true
-        } else {
-            log.info("setting blockchain in clientManager: only in class")
+        if (blockChain != this.blockChain) {
+            log.info("setting blockchain in clientManager to ${blockChain?.chainHead?.height ?: "null"}")
+            this.blockChain = blockChain
         }
+
         this.blockChain = blockChain
     }
 

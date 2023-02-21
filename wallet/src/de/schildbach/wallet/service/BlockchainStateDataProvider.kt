@@ -96,7 +96,7 @@ class BlockchainStateDataProvider @Inject constructor(
         return networkStatusFlow
     }
 
-    fun setBlockChain(blockChain: AbstractBlockChain) {
+    fun setBlockChain(blockChain: AbstractBlockChain?) {
         providerScope.launch {
             blockchainFlow.emit(blockChain)
         }
