@@ -17,6 +17,5 @@
 package org.dash.wallet.features.exploredash.network.service
 
 object DashDirectClientConstants {
-    @kotlin.jvm.JvmField
-    var CLIENT_ID = ""
+    @kotlin.jvm.JvmField var CLIENT_ID = ""
 }

@@ -21,10 +21,9 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 
-interface BaseDao<T: SearchResult> {
+interface BaseDao<T : SearchResult> {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun save(list: List<T>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun save(list: List<T>)
 
     // add @Query(...) in sub classes to avoid build failures
     suspend fun deleteAll(): Int

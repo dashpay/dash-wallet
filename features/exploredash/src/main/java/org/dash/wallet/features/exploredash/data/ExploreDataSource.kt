@@ -18,9 +18,9 @@
 package org.dash.wallet.features.exploredash.data
 
 import androidx.paging.PagingSource
+import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.model.*
-import javax.inject.Inject
 
 interface ExploreDataSource {
     fun observePhysicalMerchants(
@@ -50,12 +50,7 @@ interface ExploreDataSource {
         bounds: GeoBounds
     ): Int
 
-    fun observePhysicalAtms(
-        query: String,
-        territory: String,
-        types: List<String>,
-        bounds: GeoBounds
-    ): Flow<List<Atm>>
+    fun observePhysicalAtms(query: String, territory: String, types: List<String>, bounds: GeoBounds): Flow<List<Atm>>
 
     fun observeAtmsPaging(
         query: String,
@@ -67,12 +62,7 @@ interface ExploreDataSource {
         userLng: Double
     ): PagingSource<Int, Atm>
 
-    suspend fun getAtmsResultsCount(
-        query: String,
-        types: List<String>,
-        territory: String,
-        bounds: GeoBounds
-    ): Int
+    suspend fun getAtmsResultsCount(query: String, types: List<String>, territory: String, bounds: GeoBounds): Int
 
     suspend fun observeMerchantLocations(
         merchantId: Long,
@@ -88,10 +78,8 @@ interface ExploreDataSource {
     fun sanitizeQuery(query: String): String
 }
 
-open class MerchantAtmDataSource @Inject constructor(
-    private val merchantDao: MerchantDao,
-    private val atmDao: AtmDao
-): ExploreDataSource {
+open class MerchantAtmDataSource @Inject constructor(private val merchantDao: MerchantDao, private val atmDao: AtmDao) :
+    ExploreDataSource {
 
     override fun observePhysicalMerchants(
         query: String,
@@ -107,11 +95,27 @@ open class MerchantAtmDataSource @Inject constructor(
             }
         } else {
             if (query.isNotBlank()) {
-                merchantDao.observeSearchResults(sanitizeQuery(query), MerchantType.ONLINE,
-                    paymentMethod, bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                merchantDao.observeSearchResults(
+                    sanitizeQuery(query),
+                    MerchantType.ONLINE,
+                    paymentMethod,
+                    bounds.northLat,
+                    bounds.eastLng,
+                    bounds.southLat,
+                    bounds.westLng
+                )
             } else {
-                merchantDao.observe(-1, "", MerchantType.ONLINE, paymentMethod,
-                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng, -1)
+                merchantDao.observe(
+                    -1,
+                    "",
+                    MerchantType.ONLINE,
+                    paymentMethod,
+                    bounds.northLat,
+                    bounds.eastLng,
+                    bounds.southLat,
+                    bounds.westLng,
+                    -1
+                )
             }
         }
     }
@@ -145,33 +149,68 @@ open class MerchantAtmDataSource @Inject constructor(
                 val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    merchantDao.pagingSearchByCoordinates(sanitizeQuery(query), types, paymentMethod,
-                        bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng,
-                        sortByDistance, userLat, userLng)
+                    merchantDao.pagingSearchByCoordinates(
+                        sanitizeQuery(query),
+                        types,
+                        paymentMethod,
+                        bounds.northLat,
+                        bounds.eastLng,
+                        bounds.southLat,
+                        bounds.westLng,
+                        sortByDistance,
+                        userLat,
+                        userLng
+                    )
                 } else {
-                    merchantDao.pagingGetByCoordinates(types, paymentMethod,
-                        bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng,
-                        sortByDistance, userLat, userLng)
+                    merchantDao.pagingGetByCoordinates(
+                        types,
+                        paymentMethod,
+                        bounds.northLat,
+                        bounds.eastLng,
+                        bounds.southLat,
+                        bounds.westLng,
+                        sortByDistance,
+                        userLat,
+                        userLng
+                    )
                 }
             }
             else -> {
                 // If location services are disabled or user picked a territory
                 // or filter is All, we search everything and filter by territory
-                val types = if (type == MerchantType.PHYSICAL) {
-                    listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
-                } else {
-                    listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
-                }
+                val types =
+                    if (type == MerchantType.PHYSICAL) {
+                        listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
+                    } else {
+                        listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
+                    }
 
                 val onlineOrder = if (onlineFirst) 0 else 2
                 val physicalOrder = if (onlineFirst) 2 else 1
 
                 if (query.isNotBlank()) {
-                    merchantDao.pagingSearchByTerritory(sanitizeQuery(query), territory, types,
-                        paymentMethod, sortByDistance, userLat, userLng, onlineOrder, physicalOrder)
+                    merchantDao.pagingSearchByTerritory(
+                        sanitizeQuery(query),
+                        territory,
+                        types,
+                        paymentMethod,
+                        sortByDistance,
+                        userLat,
+                        userLng,
+                        onlineOrder,
+                        physicalOrder
+                    )
                 } else {
-                    merchantDao.pagingGetByTerritory(territory, types,
-                        paymentMethod, sortByDistance, userLat, userLng, onlineOrder, physicalOrder)
+                    merchantDao.pagingGetByTerritory(
+                        territory,
+                        types,
+                        paymentMethod,
+                        sortByDistance,
+                        userLat,
+                        userLng,
+                        onlineOrder,
+                        physicalOrder
+                    )
                 }
             }
         }
@@ -198,11 +237,24 @@ open class MerchantAtmDataSource @Inject constructor(
                 val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    merchantDao.searchByCoordinatesResultCount(sanitizeQuery(query), types, paymentMethod,
-                        bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                    merchantDao.searchByCoordinatesResultCount(
+                        sanitizeQuery(query),
+                        types,
+                        paymentMethod,
+                        bounds.northLat,
+                        bounds.eastLng,
+                        bounds.southLat,
+                        bounds.westLng
+                    )
                 } else {
-                    merchantDao.getByCoordinatesResultCount(types, paymentMethod, bounds.northLat,
-                        bounds.eastLng, bounds.southLat, bounds.westLng)
+                    merchantDao.getByCoordinatesResultCount(
+                        types,
+                        paymentMethod,
+                        bounds.northLat,
+                        bounds.eastLng,
+                        bounds.southLat,
+                        bounds.westLng
+                    )
                 }
             }
             else -> {
@@ -231,8 +283,14 @@ open class MerchantAtmDataSource @Inject constructor(
             }
         } else {
             if (query.isNotBlank()) {
-                atmDao.observeSearchResults(sanitizeQuery(query), types, bounds.northLat,
-                    bounds.eastLng, bounds.southLat, bounds.westLng)
+                atmDao.observeSearchResults(
+                    sanitizeQuery(query),
+                    types,
+                    bounds.northLat,
+                    bounds.eastLng,
+                    bounds.southLat,
+                    bounds.westLng
+                )
             } else {
                 atmDao.observe(types, bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
             }
@@ -251,18 +309,34 @@ open class MerchantAtmDataSource @Inject constructor(
         return if (territory.isBlank() && bounds != GeoBounds.noBounds) {
             // Search by coordinates (nearby) if territory isn't specified
             if (query.isNotBlank()) {
-                atmDao.pagingSearchByCoordinates(sanitizeQuery(query), types, bounds.northLat, bounds.eastLng,
-                    bounds.southLat, bounds.westLng, sortByDistance, userLat, userLng)
+                atmDao.pagingSearchByCoordinates(
+                    sanitizeQuery(query),
+                    types,
+                    bounds.northLat,
+                    bounds.eastLng,
+                    bounds.southLat,
+                    bounds.westLng,
+                    sortByDistance,
+                    userLat,
+                    userLng
+                )
             } else {
-                atmDao.pagingGetByCoordinates(types, bounds.northLat, bounds.eastLng, bounds.southLat,
-                    bounds.westLng, sortByDistance, userLat, userLng)
+                atmDao.pagingGetByCoordinates(
+                    types,
+                    bounds.northLat,
+                    bounds.eastLng,
+                    bounds.southLat,
+                    bounds.westLng,
+                    sortByDistance,
+                    userLat,
+                    userLng
+                )
             }
         } else {
             // If location services are disabled or user picked a territory
             // we search everything and filter by territory
             if (query.isNotBlank()) {
-                atmDao.pagingSearchByTerritory(sanitizeQuery(query), territory,
-                    types, sortByDistance, userLat, userLng)
+                atmDao.pagingSearchByTerritory(sanitizeQuery(query), territory, types, sortByDistance, userLat, userLng)
             } else {
                 atmDao.pagingGetByTerritory(territory, types, sortByDistance, userLat, userLng)
             }
@@ -277,10 +351,22 @@ open class MerchantAtmDataSource @Inject constructor(
     ): Int {
         return if (territory.isBlank() && bounds != GeoBounds.noBounds) {
             if (query.isNotBlank()) {
-                atmDao.searchByCoordinatesResultCount(sanitizeQuery(query), types,
-                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                atmDao.searchByCoordinatesResultCount(
+                    sanitizeQuery(query),
+                    types,
+                    bounds.northLat,
+                    bounds.eastLng,
+                    bounds.southLat,
+                    bounds.westLng
+                )
             } else {
-                atmDao.getByCoordinatesResultCount(types, bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                atmDao.getByCoordinatesResultCount(
+                    types,
+                    bounds.northLat,
+                    bounds.eastLng,
+                    bounds.southLat,
+                    bounds.westLng
+                )
             }
         } else {
             if (query.isNotBlank()) {
@@ -308,11 +394,19 @@ open class MerchantAtmDataSource @Inject constructor(
         limit: Int
     ): Flow<List<Merchant>> {
         return if (territory.isBlank() && bounds != GeoBounds.noBounds) {
-            merchantDao.observe(merchantId, source, MerchantType.ONLINE, paymentMethod,
-                bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng, limit)
+            merchantDao.observe(
+                merchantId,
+                source,
+                MerchantType.ONLINE,
+                paymentMethod,
+                bounds.northLat,
+                bounds.eastLng,
+                bounds.southLat,
+                bounds.westLng,
+                limit
+            )
         } else {
-            merchantDao.observeByTerritory(merchantId, source, territory,
-                MerchantType.ONLINE, paymentMethod, limit)
+            merchantDao.observeByTerritory(merchantId, source, territory, MerchantType.ONLINE, paymentMethod, limit)
         }
     }
 

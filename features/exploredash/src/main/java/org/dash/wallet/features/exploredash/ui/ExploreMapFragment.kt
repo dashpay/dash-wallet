@@ -25,7 +25,6 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.res.ResourcesCompat
-import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.navGraphViewModels
 import com.bumptech.glide.Glide
@@ -44,15 +43,15 @@ import com.google.android.gms.maps.model.*
 import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.MerchantType
-import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.MerchantType
+import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
-import javax.inject.Inject
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -84,8 +83,7 @@ class ExploreMapFragment : SupportMapFragment() {
     private lateinit var markersGlideRequestManager: RequestManager
     private var markerDrawable: Bitmap? = null
 
-    @Inject
-    lateinit var userLocationState: UserLocationStateInt
+    @Inject lateinit var userLocationState: UserLocationStateInt
     private var cameraMovementReason: Int = -1
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -99,16 +97,14 @@ class ExploreMapFragment : SupportMapFragment() {
             googleMap?.let { map ->
                 map.setOnCameraIdleListener {
                     viewModel.searchBounds = getGeoBounds(map)
-                    if (cameraMovementReason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE){
+                    if (cameraMovementReason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
                         viewModel.triggerPanAndZoomEvents(map.cameraPosition.zoom, getGeoBounds(map))
                     }
                     viewModel.previousZoomLevel = map.cameraPosition.zoom
                     viewModel.previousCameraGeoBounds = getGeoBounds(map)
                 }
 
-                map.setOnCameraMoveStartedListener { reason ->
-                    cameraMovementReason = reason
-                }
+                map.setOnCameraMoveStartedListener { reason -> cameraMovementReason = reason }
             }
         }
 
@@ -138,8 +134,9 @@ class ExploreMapFragment : SupportMapFragment() {
 
             if (state == ScreenState.Details || state == ScreenState.DetailsGrouped) {
                 showSelectedMarker(state)
-            } else if (viewModel.isLocationEnabled.value == true &&
-                (state == ScreenState.MerchantLocations || viewModel.filterMode.value != FilterMode.Online)
+            } else if (
+                viewModel.isLocationEnabled.value == true &&
+                    (state == ScreenState.MerchantLocations || viewModel.filterMode.value != FilterMode.Online)
             ) {
                 showMarkerSet(state)
             }
@@ -187,7 +184,8 @@ class ExploreMapFragment : SupportMapFragment() {
                 }
 
                 val itemLatLng = LatLng(item.latitude!!, item.longitude!!)
-                val zoom = if (map.cameraPosition.zoom > DETAILS_ZOOM_LEVEL) map.cameraPosition.zoom else DETAILS_ZOOM_LEVEL
+                val zoom =
+                    if (map.cameraPosition.zoom > DETAILS_ZOOM_LEVEL) map.cameraPosition.zoom else DETAILS_ZOOM_LEVEL
                 val position = CameraPosition(itemLatLng, zoom, 0f, 0f)
                 map.animateCamera(CameraUpdateFactory.newCameraPosition(position))
             }
@@ -202,8 +200,8 @@ class ExploreMapFragment : SupportMapFragment() {
                 if (prevScreenState == ScreenState.Details && prevBounds != null) {
                     savedMerchantLocationsBounds = null
                     map.animateCamera(CameraUpdateFactory.newLatLngBounds(prevBounds, 0))
-                } else if (prevScreenState == ScreenState.DetailsGrouped ||
-                           prevScreenState == ScreenState.SearchResults
+                } else if (
+                    prevScreenState == ScreenState.DetailsGrouped || prevScreenState == ScreenState.SearchResults
                 ) {
                     val mapCenter = map.projection.visibleRegion.latLngBounds.center
                     val radiusBounds = getRadiusBounds(mapCenter, viewModel.radius)
@@ -231,7 +229,7 @@ class ExploreMapFragment : SupportMapFragment() {
         if (isGooglePlayServicesAvailable()) {
             markerCollection = MarkerManager(googleMap).newCollection()
             markerCollection?.setOnMarkerClickListener { marker ->
-                if (viewModel.exploreTopic == ExploreTopic.Merchants){
+                if (viewModel.exploreTopic == ExploreTopic.Merchants) {
                     viewModel.logEvent(AnalyticsConstants.Explore.SELECT_MERCHANT_MARKER)
                 } else {
                     viewModel.logEvent(AnalyticsConstants.Explore.SELECT_ATM_MARKER)
@@ -249,21 +247,16 @@ class ExploreMapFragment : SupportMapFragment() {
     private fun isGooglePlayServicesAvailable(): Boolean {
         val googleApiAvailability: GoogleApiAvailability = GoogleApiAvailability.getInstance()
         val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(requireActivity())
-        if (ConnectionResult.SUCCESS == status) return true else {
+        if (ConnectionResult.SUCCESS == status) return true
+        else {
             if (googleApiAvailability.isUserResolvableError(status))
-                Toast.makeText(
-                    requireActivity(),
-                    R.string.common_google_play_services_install_title,
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(requireActivity(), R.string.common_google_play_services_install_title, Toast.LENGTH_LONG)
+                    .show()
         }
         return false
     }
 
-    private fun setResults(
-        results: List<SearchResult>?,
-        inBounds: LatLngBounds? = null
-    ) {
+    private fun setResults(results: List<SearchResult>?, inBounds: LatLngBounds? = null) {
         googleMap?.let { map ->
             if (results.isNullOrEmpty()) {
                 allIconsRequests.forEach { markersGlideRequestManager.clear(it) }
@@ -271,12 +264,17 @@ class ExploreMapFragment : SupportMapFragment() {
                 currentMapItems = listOf()
             } else {
                 val bounds = inBounds ?: map.projection.visibleRegion.latLngBounds
-                val sortedMax = results.sortedBy {
-                    userLocationState.distanceBetween(
-                        bounds.center.latitude, bounds.center.longitude,
-                        it.latitude ?: 0.0, it.longitude ?: 0.0
-                    )
-                }.take(ExploreViewModel.MAX_MARKERS)
+                val sortedMax =
+                    results
+                        .sortedBy {
+                            userLocationState.distanceBetween(
+                                bounds.center.latitude,
+                                bounds.center.longitude,
+                                it.latitude ?: 0.0,
+                                it.longitude ?: 0.0
+                            )
+                        }
+                        .take(ExploreViewModel.MAX_MARKERS)
                 setMarkers(sortedMax)
                 checkCameraFocus(sortedMax)
             }
@@ -284,21 +282,22 @@ class ExploreMapFragment : SupportMapFragment() {
     }
 
     private fun checkCameraFocus(items: List<SearchResult>?) {
-        if (items.isNullOrEmpty() ||
-            viewModel.filterMode.value == FilterMode.Online ||
-            viewModel.isLocationEnabled.value != true
+        if (
+            items.isNullOrEmpty() ||
+                viewModel.filterMode.value == FilterMode.Online ||
+                viewModel.isLocationEnabled.value != true
         ) {
             return
         }
 
         googleMap?.let { map ->
             val mapBounds = map.projection.visibleRegion.latLngBounds
-            val markers = items
-                .filterNot { it.latitude == null || it.longitude == null }
-                .map { LatLng(it.latitude!!, it.longitude!!) }
+            val markers =
+                items
+                    .filterNot { it.latitude == null || it.longitude == null }
+                    .map { LatLng(it.latitude!!, it.longitude!!) }
 
-            if (map.cameraPosition.zoom < ExploreViewModel.MIN_ZOOM_LEVEL ||
-                markers.all { !mapBounds.contains(it) }) {
+            if (map.cameraPosition.zoom < ExploreViewModel.MIN_ZOOM_LEVEL || markers.all { !mapBounds.contains(it) }) {
                 // Focus on results if camera is too far or nothing on the screen
                 focusCamera(markers)
             }
@@ -306,25 +305,31 @@ class ExploreMapFragment : SupportMapFragment() {
     }
 
     private fun addCircleAroundCurrentPosition() {
-        currentLocationCircle = googleMap?.addCircle(CircleOptions().apply {
-            center(mCurrentUserLocation)
-            radius(currentAccuracy)
-            fillColor(resources.getColor(R.color.background_accuracy_circle, null))
-            strokeColor(Color.TRANSPARENT)
-        })
+        currentLocationCircle =
+            googleMap?.addCircle(
+                CircleOptions().apply {
+                    center(mCurrentUserLocation)
+                    radius(currentAccuracy)
+                    fillColor(resources.getColor(R.color.background_accuracy_circle, null))
+                    strokeColor(Color.TRANSPARENT)
+                }
+            )
     }
 
     private fun addMarkerOnCurrentPosition() {
         val bitmap = getBitmapFromDrawable(R.drawable.user_location_map_marker)
-        currentLocationMarker = googleMap?.addMarker(MarkerOptions().apply {
-            position(mCurrentUserLocation)
-            anchor(0.5f, 0.5f)
-            if (bitmap != null) {
-                icon(BitmapDescriptorFactory.fromBitmap(bitmap))
-            }
-            draggable(true)
-            zIndex(5f)
-        })
+        currentLocationMarker =
+            googleMap?.addMarker(
+                MarkerOptions().apply {
+                    position(mCurrentUserLocation)
+                    anchor(0.5f, 0.5f)
+                    if (bitmap != null) {
+                        icon(BitmapDescriptorFactory.fromBitmap(bitmap))
+                    }
+                    draggable(true)
+                    zIndex(5f)
+                }
+            )
     }
 
     private fun showLocationOnMap() {
@@ -346,10 +351,9 @@ class ExploreMapFragment : SupportMapFragment() {
         val lastLng = lastFocusedUserLocation?.longitude
         val radius = viewModel.radius
 
-        if (lastFocusedUserLocation == null ||
-            userLocationState.distanceBetween(
-                userLat, userLng, lastLat ?: 0.0, lastLng ?: 0.0
-            ) > radius / 2
+        if (
+            lastFocusedUserLocation == null ||
+                userLocationState.distanceBetween(userLat, userLng, lastLat ?: 0.0, lastLng ?: 0.0) > radius / 2
         ) {
             setMapDefaultViewLevel(radius)
         }
@@ -369,20 +373,13 @@ class ExploreMapFragment : SupportMapFragment() {
         val heightInPixel = this.requireView().measuredHeight
         val latLngBounds = userLocationState.calculateBounds(center, radius)
         val mapPadding = resources.getDimensionPixelOffset(R.dimen.map_padding)
-        return CameraUpdateFactory.newLatLngBounds(
-            latLngBounds,
-            heightInPixel,
-            heightInPixel,
-            mapPadding
-        )
+        return CameraUpdateFactory.newLatLngBounds(latLngBounds, heightInPixel, heightInPixel, mapPadding)
     }
 
     private fun loadMarkers(items: List<SearchResult>) {
         val markerSize = resources.getDimensionPixelSize(R.dimen.explore_marker_size)
         allIconsRequests.forEach { markersGlideRequestManager.clear(it) }
-        allIconsRequests = items.map { item ->
-            buildMarkerRequest(item, false).submit(markerSize, markerSize)
-        }
+        allIconsRequests = items.map { item -> buildMarkerRequest(item, false).submit(markerSize, markerSize) }
     }
 
     private fun buildMarkerRequest(item: SearchResult, isSelected: Boolean): RequestBuilder<Bitmap> {
@@ -391,25 +388,44 @@ class ExploreMapFragment : SupportMapFragment() {
             .load(item.logoLocation)
             .error(R.drawable.ic_merchant)
             .apply(RequestOptions().centerCrop().circleCrop())
-            .listener(object : RequestListener<Bitmap> {
-                override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Bitmap>?, isFirstResource: Boolean): Boolean {
-                    if (item.latitude != null && item.longitude != null && markerDrawable != null) {
-                        lifecycleScope.launch {
-                            addMarkerItemToMap(isSelected, item.latitude!!, item.longitude!!, markerDrawable!!, item.id)
+            .listener(
+                object : RequestListener<Bitmap> {
+                    override fun onLoadFailed(
+                        e: GlideException?,
+                        model: Any?,
+                        target: Target<Bitmap>?,
+                        isFirstResource: Boolean
+                    ): Boolean {
+                        if (item.latitude != null && item.longitude != null && markerDrawable != null) {
+                            lifecycleScope.launch {
+                                addMarkerItemToMap(
+                                    isSelected,
+                                    item.latitude!!,
+                                    item.longitude!!,
+                                    markerDrawable!!,
+                                    item.id
+                                )
+                            }
                         }
+                        return false
                     }
-                    return false
-                }
 
-                override fun onResourceReady(resource: Bitmap?, model: Any?, target: Target<Bitmap>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
-                    if (item.latitude != null && item.longitude != null && resource != null) {
-                        lifecycleScope.launch {
-                            addMarkerItemToMap(isSelected, item.latitude!!, item.longitude!!, resource, item.id)
+                    override fun onResourceReady(
+                        resource: Bitmap?,
+                        model: Any?,
+                        target: Target<Bitmap>?,
+                        dataSource: DataSource?,
+                        isFirstResource: Boolean
+                    ): Boolean {
+                        if (item.latitude != null && item.longitude != null && resource != null) {
+                            lifecycleScope.launch {
+                                addMarkerItemToMap(isSelected, item.latitude!!, item.longitude!!, resource, item.id)
+                            }
                         }
+                        return false
                     }
-                    return false
                 }
-            })
+            )
     }
 
     private fun removeOldMarkers(newItems: List<SearchResult>) {
@@ -428,21 +444,18 @@ class ExploreMapFragment : SupportMapFragment() {
         bitmap: Bitmap,
         itemId: Int
     ) {
-        val options = MarkerOptions().apply {
-            position(LatLng(latitude, longitude))
-            anchor(0.5f, 0.5f)
-            icon(BitmapDescriptorFactory.fromBitmap(bitmap))
-            draggable(false)
-        }
+        val options =
+            MarkerOptions().apply {
+                position(LatLng(latitude, longitude))
+                anchor(0.5f, 0.5f)
+                icon(BitmapDescriptorFactory.fromBitmap(bitmap))
+                draggable(false)
+            }
 
         if (isSelected) {
-            googleMap?.run {
-                selectedMarker = addMarker(options)?.apply { tag = itemId }
-            }
+            googleMap?.run { selectedMarker = addMarker(options)?.apply { tag = itemId } }
         } else {
-            markerCollection?.addMarker(options)?.apply {
-                tag = itemId
-            }
+            markerCollection?.addMarker(options)?.apply { tag = itemId }
         }
     }
 
@@ -457,40 +470,31 @@ class ExploreMapFragment : SupportMapFragment() {
     private fun focusCamera(markers: List<LatLng>) {
         val padding = resources.getDimensionPixelOffset(R.dimen.markers_offset)
         val width = resources.displayMetrics.widthPixels
-        val height = resources.displayMetrics.heightPixels *
+        val height =
+            resources.displayMetrics.heightPixels *
                 (1 - ResourcesCompat.getFloat(resources, R.dimen.merchant_half_expanded_ratio))
 
-        val cameraUpdate = if (markers.size == 1) {
-            val marker = markers.first()
-            val position = CameraPosition(LatLng(marker.latitude, marker.longitude), 16f, 0f, 0f)
-            CameraUpdateFactory.newCameraPosition(position)
-        } else {
-            val boundsBuilder = LatLngBounds.builder()
-            markers.forEach { boundsBuilder.include(LatLng(it.latitude, it.longitude)) }
-            CameraUpdateFactory.newLatLngBounds(
-                boundsBuilder.build(),
-                width,
-                height.toInt(),
-                padding
-            )
-        }
+        val cameraUpdate =
+            if (markers.size == 1) {
+                val marker = markers.first()
+                val position = CameraPosition(LatLng(marker.latitude, marker.longitude), 16f, 0f, 0f)
+                CameraUpdateFactory.newCameraPosition(position)
+            } else {
+                val boundsBuilder = LatLngBounds.builder()
+                markers.forEach { boundsBuilder.include(LatLng(it.latitude, it.longitude)) }
+                CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), width, height.toInt(), padding)
+            }
 
         googleMap?.animateCamera(cameraUpdate)
     }
 
     private fun canFocusOnItem(item: SearchResult): Boolean =
-        item.type != MerchantType.ONLINE &&
-                item.latitude != null && item.longitude != null
+        item.type != MerchantType.ONLINE && item.latitude != null && item.longitude != null
 
     private fun getBitmapFromDrawable(drawableId: Int): Bitmap? {
         val drawable = AppCompatResources.getDrawable(requireActivity(), drawableId)
-        val bitmap = drawable?.let {
-            Bitmap.createBitmap(
-                it.intrinsicWidth,
-                drawable.intrinsicHeight,
-                Bitmap.Config.ARGB_8888
-            )
-        }
+        val bitmap =
+            drawable?.let { Bitmap.createBitmap(it.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888) }
         val canvas = bitmap?.let { Canvas(it) }
         canvas?.width?.let { drawable.setBounds(0, 0, it, canvas.height) }
         canvas?.let { drawable.draw(it) }
@@ -500,12 +504,13 @@ class ExploreMapFragment : SupportMapFragment() {
     private fun getGeoBounds(map: GoogleMap): GeoBounds {
         val bounds = map.projection.visibleRegion.latLngBounds
         return GeoBounds(
-                bounds.northeast.latitude,
-                bounds.northeast.longitude,
-                bounds.southwest.latitude,
-                bounds.southwest.longitude,
-                bounds.center.latitude,
-                bounds.center.longitude,
-                map.cameraPosition.zoom)
+            bounds.northeast.latitude,
+            bounds.northeast.longitude,
+            bounds.southwest.latitude,
+            bounds.southwest.longitude,
+            bounds.center.latitude,
+            bounds.center.longitude,
+            map.cameraPosition.zoom
+        )
     }
 }

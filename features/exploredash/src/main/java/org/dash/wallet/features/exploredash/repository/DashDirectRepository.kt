@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2021 Dash Core Group.
  *
@@ -18,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.repository
 
+import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
@@ -29,48 +29,50 @@ import org.dash.wallet.features.exploredash.data.model.signin.VerifyEmailRequest
 import org.dash.wallet.features.exploredash.network.service.DashDirectAuthApi
 import org.dash.wallet.features.exploredash.network.service.DashDirectServicesApi
 import org.dash.wallet.features.exploredash.utils.DashDirectConfig
-import javax.inject.Inject
 
-class DashDirectRepository @Inject constructor(
+class DashDirectRepository
+@Inject
+constructor(
     private val servicesApi: DashDirectServicesApi,
     private val authApi: DashDirectAuthApi,
     private val config: DashDirectConfig
 ) : DashDirectRepositoryInt {
-    override suspend fun signIn(
-        email: String
-    ): ResponseResource<Boolean> = safeApiCall {
-        authApi.signIn(email = email)
-            .also {
-                it?.errorMessage?.let { errorMessage ->
-                    if (errorMessage.isNotEmpty()) {
-                        throw Exception(errorMessage)
-                    }
+    override suspend fun signIn(email: String): ResponseResource<Boolean> = safeApiCall {
+        authApi.signIn(email = email).also {
+            it?.errorMessage?.let { errorMessage ->
+                if (errorMessage.isNotEmpty()) {
+                    throw Exception(errorMessage)
                 }
-                if (it?.data?.statusCode == 0) {
-                    createUser(email)
-                }
-                config.setSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
             }
+            if (it?.data?.statusCode == 0) {
+                createUser(email)
+            }
+            config.setSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
+        }
         true
     }
 
     override suspend fun createUser(email: String): ResponseResource<Boolean> = safeApiCall {
-        authApi.createUser(email = email)
-            .also {
-                it?.data?.errorMessage?.let { errorMessage ->
-                    if (errorMessage.isNotEmpty()) {
-                        throw Exception(errorMessage)
-                    }
+        authApi.createUser(email = email).also {
+            it?.data?.errorMessage?.let { errorMessage ->
+                if (errorMessage.isNotEmpty()) {
+                    throw Exception(errorMessage)
                 }
-                config.setSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
             }
+            config.setSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
+        }
         true
     }
 
-    override suspend fun verifyEmail(
-        code: String
-    ): ResponseResource<Boolean> = safeApiCall {
-        authApi.verifyEmail(signInRequest = VerifyEmailRequest(emailAddress = config.getSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL), code = code))
+    override suspend fun verifyEmail(code: String): ResponseResource<Boolean> = safeApiCall {
+        authApi
+            .verifyEmail(
+                signInRequest =
+                    VerifyEmailRequest(
+                        emailAddress = config.getSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL),
+                        code = code
+                    )
+            )
             .also {
                 it?.data?.errorMessage?.let { errorMessage ->
                     if (it?.data?.hasError == true && errorMessage.isNotEmpty()) {
@@ -84,8 +86,9 @@ class DashDirectRepository @Inject constructor(
         config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: false
     }
 
-    override fun isUserSignIn() =
-        runBlocking { config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: false }
+    override fun isUserSignIn() = runBlocking {
+        config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: false
+    }
 
     override fun getDashDirectEmail(): String? {
         return runBlocking { config.getSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL) }
@@ -108,29 +111,21 @@ class DashDirectRepository @Inject constructor(
     ) = safeApiCall {
         servicesApi.purchaseGiftCard(
             deviceID = deviceID,
-            purchaseGiftCardRequest = PurchaseGiftCardRequest(
-                currency = currency,
-                giftCardAmount = giftCardAmount,
-                merchantId = merchantId
-            ),
+            purchaseGiftCardRequest =
+                PurchaseGiftCardRequest(currency = currency, giftCardAmount = giftCardAmount, merchantId = merchantId),
             email = userEmail
         )
     }
 
-    override suspend fun getMerchantById(
-        userEmail: String,
-        merchantId: Long,
-        includeLocations: Boolean?
-    ) = safeApiCall {
-        servicesApi.getMerchantById(
-            email = userEmail,
-            getMerchantByIdRequest = GetMerchantByIdRequest(
-                id = merchantId,
-                includeLocations = includeLocations
+    override suspend fun getMerchantById(userEmail: String, merchantId: Long, includeLocations: Boolean?) =
+        safeApiCall {
+            servicesApi.getMerchantById(
+                email = userEmail,
+                getMerchantByIdRequest = GetMerchantByIdRequest(id = merchantId, includeLocations = includeLocations)
             )
-        )
-    }
+        }
 }
+
 interface DashDirectRepositoryInt {
     suspend fun signIn(email: String): ResponseResource<Boolean>
     suspend fun createUser(email: String): ResponseResource<Boolean>
@@ -138,8 +133,16 @@ interface DashDirectRepositoryInt {
     fun isUserSignIn(): Boolean
     fun getDashDirectEmail(): String?
     suspend fun logout()
-    suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Long, userEmail: String):
-        ResponseResource<PurchaseGiftCardResponse?>
-    suspend fun getMerchantById(userEmail: String, merchantId: Long, includeLocations: Boolean? = false):
-        ResponseResource<GetMerchantByIdResponse?>
+    suspend fun purchaseGiftCard(
+        deviceID: String,
+        currency: String,
+        giftCardAmount: Double,
+        merchantId: Long,
+        userEmail: String
+    ): ResponseResource<PurchaseGiftCardResponse?>
+    suspend fun getMerchantById(
+        userEmail: String,
+        merchantId: Long,
+        includeLocations: Boolean? = false
+    ): ResponseResource<GetMerchantByIdResponse?>
 }

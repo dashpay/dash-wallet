@@ -28,10 +28,12 @@ object AtmType {
 
 @Entity(
     tableName = "atm",
-    indices = [
-        Index("latitude"),
-        Index("longitude"),
-    ])
+    indices =
+        [
+            Index("latitude"),
+            Index("longitude"),
+        ]
+)
 data class Atm(
     var postcode: String? = "",
     var manufacturer: String? = "",

@@ -22,12 +22,12 @@ import androidx.room.Dao
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.model.Atm
-import org.dash.wallet.features.exploredash.data.model.GeoBounds
 
 @Dao
 interface AtmDao : BaseDao<Atm> {
 
-    @Query("""
+    @Query(
+        """
         SELECT * 
         FROM atm 
         WHERE type IN (:types)
@@ -38,7 +38,8 @@ interface AtmDao : BaseDao<Atm> {
         ORDER BY
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
             CASE WHEN :sortByDistance = 0 THEN name END COLLATE NOCASE ASC
-    """)
+    """
+    )
     fun pagingGetByCoordinates(
         types: List<String>,
         northLat: Double,
@@ -50,7 +51,8 @@ interface AtmDao : BaseDao<Atm> {
         anchorLng: Double
     ): PagingSource<Int, Atm>
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(*)
         FROM atm 
         WHERE type IN (:types)
@@ -58,7 +60,8 @@ interface AtmDao : BaseDao<Atm> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
-    """)
+    """
+    )
     suspend fun getByCoordinatesResultCount(
         types: List<String>,
         northLat: Double,
@@ -67,7 +70,8 @@ interface AtmDao : BaseDao<Atm> {
         westLng: Double
     ): Int
 
-    @Query("""
+    @Query(
+        """
         SELECT *
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
@@ -80,7 +84,8 @@ interface AtmDao : BaseDao<Atm> {
         ORDER BY
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
             CASE WHEN :sortByDistance = 0 THEN atm.name END COLLATE NOCASE ASC
-    """)
+    """
+    )
     fun pagingSearchByCoordinates(
         query: String,
         types: List<String>,
@@ -93,7 +98,8 @@ interface AtmDao : BaseDao<Atm> {
         anchorLng: Double
     ): PagingSource<Int, Atm>
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(*)
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
@@ -103,7 +109,8 @@ interface AtmDao : BaseDao<Atm> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
-    """)
+    """
+    )
     suspend fun searchByCoordinatesResultCount(
         query: String,
         types: List<String>,
@@ -113,7 +120,8 @@ interface AtmDao : BaseDao<Atm> {
         westLng: Double
     ): Int
 
-    @Query("""
+    @Query(
+        """
         SELECT * 
         FROM atm 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
@@ -121,7 +129,8 @@ interface AtmDao : BaseDao<Atm> {
         ORDER BY
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
             CASE WHEN :sortByDistance = 0 THEN name END COLLATE NOCASE ASC
-    """)
+    """
+    )
     fun pagingGetByTerritory(
         territoryFilter: String,
         types: List<String>,
@@ -130,18 +139,18 @@ interface AtmDao : BaseDao<Atm> {
         anchorLng: Double
     ): PagingSource<Int, Atm>
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(*) 
         FROM atm 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND type IN (:types)
-    """)
-    suspend fun getByTerritoryResultCount(
-        territoryFilter: String,
-        types: List<String>
-    ): Int
+    """
+    )
+    suspend fun getByTerritoryResultCount(territoryFilter: String, types: List<String>): Int
 
-    @Query("""
+    @Query(
+        """
         SELECT *
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
@@ -151,7 +160,8 @@ interface AtmDao : BaseDao<Atm> {
         ORDER BY
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
             CASE WHEN :sortByDistance = 0 THEN atm.name END COLLATE NOCASE ASC
-    """)
+    """
+    )
     fun pagingSearchByTerritory(
         query: String,
         territoryFilter: String,
@@ -161,21 +171,20 @@ interface AtmDao : BaseDao<Atm> {
         anchorLng: Double
     ): PagingSource<Int, Atm>
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(*)
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
         WHERE atm_fts MATCH :query
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND type IN (:types)
-    """)
-    suspend fun searchByTerritoryResultCount(
-        query: String,
-        territoryFilter: String,
-        types: List<String>
-    ): Int
+    """
+    )
+    suspend fun searchByTerritoryResultCount(query: String, territoryFilter: String, types: List<String>): Int
 
-    @Query("""
+    @Query(
+        """
         SELECT * 
         FROM atm 
         WHERE type IN (:types)
@@ -184,7 +193,8 @@ interface AtmDao : BaseDao<Atm> {
             AND longitude < :eastLng
             AND longitude > :westLng
         ORDER BY name ASC
-    """)
+    """
+    )
     fun observe(
         types: List<String>,
         northLat: Double,
@@ -193,7 +203,8 @@ interface AtmDao : BaseDao<Atm> {
         westLng: Double
     ): Flow<List<Atm>>
 
-    @Query("""
+    @Query(
+        """
         SELECT *
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
@@ -204,7 +215,8 @@ interface AtmDao : BaseDao<Atm> {
             AND longitude < :eastLng
             AND longitude > :westLng
         ORDER BY name ASC
-    """)
+    """
+    )
     fun observeSearchResults(
         query: String,
         types: List<String>,
@@ -214,18 +226,18 @@ interface AtmDao : BaseDao<Atm> {
         westLng: Double
     ): Flow<List<Atm>>
 
-    @Query("""
+    @Query(
+        """
         SELECT * 
         FROM atm 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND type IN (:types)
-        ORDER BY name ASC""")
-    fun observeByTerritory(
-        territoryFilter: String,
-        types: List<String>
-    ): Flow<List<Atm>>
+        ORDER BY name ASC"""
+    )
+    fun observeByTerritory(territoryFilter: String, types: List<String>): Flow<List<Atm>>
 
-    @Query("""
+    @Query(
+        """
         SELECT *
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
@@ -233,19 +245,13 @@ interface AtmDao : BaseDao<Atm> {
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND type IN (:types)
         ORDER BY name ASC
-    """)
-    fun searchByTerritory(
-        query: String,
-        territoryFilter: String,
-        types: List<String>
-    ): Flow<List<Atm>>
+    """
+    )
+    fun searchByTerritory(query: String, territoryFilter: String, types: List<String>): Flow<List<Atm>>
 
-    @Query("SELECT DISTINCT territory FROM atm")
-    suspend fun getTerritories(): List<String>
+    @Query("SELECT DISTINCT territory FROM atm") suspend fun getTerritories(): List<String>
 
-    @Query("DELETE FROM atm")
-    override suspend fun deleteAll(): Int
+    @Query("DELETE FROM atm") override suspend fun deleteAll(): Int
 
-    @Query("SELECT count(*) FROM atm")
-    suspend fun getCount() : Int
+    @Query("SELECT count(*) FROM atm") suspend fun getCount(): Int
 }

@@ -19,30 +19,19 @@ package org.dash.wallet.features.exploredash.data.model.signin
 import com.google.gson.annotations.SerializedName
 
 data class VerifyEmailResponse(
-    @SerializedName("Data")
-    val `data`: Data? = Data(),
-    @SerializedName("DelayedToken")
-    val delayedToken: Any? = Any(),
-    @SerializedName("ErrorMessage")
-    val errorMessage: String? = "",
-    @SerializedName("IsDelayed")
-    val isDelayed: Boolean? = false,
-    @SerializedName("Successful")
-    val successful: Boolean? = false
+    @SerializedName("Data") val `data`: Data? = Data(),
+    @SerializedName("DelayedToken") val delayedToken: Any? = Any(),
+    @SerializedName("ErrorMessage") val errorMessage: String? = "",
+    @SerializedName("IsDelayed") val isDelayed: Boolean? = false,
+    @SerializedName("Successful") val successful: Boolean? = false
 ) {
 
     data class Data(
-        @SerializedName("AccessToken")
-        val accessToken: String? = "",
-        @SerializedName("Email")
-        val email: String? = "",
-        @SerializedName("ErrorMessage")
-        val errorMessage: String? = "",
-        @SerializedName("HasError")
-        val hasError: Boolean? = false,
-        @SerializedName("Message")
-        val message: Any? = Any(),
-        @SerializedName("UserName")
-        val userName: String? = ""
+        @SerializedName("AccessToken") val accessToken: String? = "",
+        @SerializedName("Email") val email: String? = "",
+        @SerializedName("ErrorMessage") val errorMessage: String? = "",
+        @SerializedName("HasError") val hasError: Boolean? = false,
+        @SerializedName("Message") val message: Any? = Any(),
+        @SerializedName("UserName") val userName: String? = ""
     )
 }

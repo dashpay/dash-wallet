@@ -19,8 +19,6 @@ package org.dash.wallet.features.exploredash.data.model.merchant
 import com.google.gson.annotations.SerializedName
 
 data class GetMerchantByIdRequest(
-    @SerializedName("Id")
-    val id: Long? = null,
-    @SerializedName("IncludeLocations")
-    val includeLocations: Boolean? = false
+    @SerializedName("Id") val id: Long? = null,
+    @SerializedName("IncludeLocations") val includeLocations: Boolean? = false
 )

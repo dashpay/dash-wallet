@@ -26,6 +26,9 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import java.io.File
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.RoomConverters
@@ -37,16 +40,8 @@ import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.MerchantFTS
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.slf4j.LoggerFactory
-import java.io.File
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
-@Database(entities = [
-    Merchant::class,
-    MerchantFTS::class,
-    Atm::class,
-    AtmFTS::class
-], version = 2, exportSchema = true)
+@Database(entities = [Merchant::class, MerchantFTS::class, Atm::class, AtmFTS::class], version = 2, exportSchema = true)
 @TypeConverters(RoomConverters::class)
 abstract class ExploreDatabase : RoomDatabase() {
     abstract fun merchantDao(): MerchantDao
@@ -64,19 +59,16 @@ abstract class ExploreDatabase : RoomDatabase() {
         }
 
         @JvmStatic
-        val migration1To2 = object : Migration(1, 2) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE merchant ADD COLUMN minCardPurchase REAL DEFAULT 0.0")
-                database.execSQL("ALTER TABLE merchant ADD COLUMN maxCardPurchase REAL DEFAULT 0.0")
-                database.execSQL("ALTER TABLE merchant ADD COLUMN savingsPercentage REAL DEFAULT 0.0")
+        val migration1To2 =
+            object : Migration(1, 2) {
+                override fun migrate(database: SupportSQLiteDatabase) {
+                    database.execSQL("ALTER TABLE merchant ADD COLUMN minCardPurchase REAL DEFAULT 0.0")
+                    database.execSQL("ALTER TABLE merchant ADD COLUMN maxCardPurchase REAL DEFAULT 0.0")
+                    database.execSQL("ALTER TABLE merchant ADD COLUMN savingsPercentage REAL DEFAULT 0.0")
+                }
             }
-        }
 
-        suspend fun updateDatabase(
-            context: Context,
-            config: Configuration,
-            repository: ExploreRepository
-        ) {
+        suspend fun updateDatabase(context: Context, config: Configuration, repository: ExploreRepository) {
             log.info("force update explore db")
             if (instance != null) {
                 instance!!.close()
@@ -85,15 +77,11 @@ abstract class ExploreDatabase : RoomDatabase() {
         }
 
         private fun open(context: Context, config: Configuration): ExploreDatabase {
-            val dbBuilder = Room.databaseBuilder(
-                context,
-                ExploreDatabase::class.java,
-                config.exploreDatabaseName
-            )
+            val dbBuilder = Room.databaseBuilder(context, ExploreDatabase::class.java, config.exploreDatabaseName)
 
             log.info("Open database {}", config.exploreDatabaseName)
             return dbBuilder
-                //.fallbackToDestructiveMigration()
+                // .fallbackToDestructiveMigration()
                 .addMigrations(migration1To2)
                 .build()
         }
@@ -118,11 +106,7 @@ abstract class ExploreDatabase : RoomDatabase() {
                 exploreDatabaseName = config.setExploreDatabaseName(dbTimestamp)
             }
 
-            val dbBuilder = Room.databaseBuilder(
-                context,
-                ExploreDatabase::class.java,
-                exploreDatabaseName
-            )
+            val dbBuilder = Room.databaseBuilder(context, ExploreDatabase::class.java, exploreDatabaseName)
 
             return preloadAndOpen(dbBuilder, repository, dbUpdateFile)
         }
@@ -133,57 +117,60 @@ abstract class ExploreDatabase : RoomDatabase() {
             repository: ExploreRepository,
             dbUpdateFile: File
         ): ExploreDatabase {
-            require(dbUpdateFile.exists()) { "dbUpdateFile doesn't exist"}
+            require(dbUpdateFile.exists()) { "dbUpdateFile doesn't exist" }
 
             return suspendCancellableCoroutine { coroutine ->
                 var database: ExploreDatabase? = null
 
                 log.info("create explore db from InputStream")
-                dbBuilder.createFromInputStream({
-                    repository.getDatabaseInputStream(dbUpdateFile)
-                }, object : PrepackagedDatabaseCallback() {
-                    override fun onOpenPrepackagedDatabase(db: SupportSQLiteDatabase) {
-                        log.info("onOpenPrepackagedDatabase")
-                    } }
+                dbBuilder.createFromInputStream(
+                    { repository.getDatabaseInputStream(dbUpdateFile) },
+                    object : PrepackagedDatabaseCallback() {
+                        override fun onOpenPrepackagedDatabase(db: SupportSQLiteDatabase) {
+                            log.info("onOpenPrepackagedDatabase")
+                        }
+                    }
                 )
 
-                val onOpenCallback = object : Callback() {
-                    override fun onOpen(db: SupportSQLiteDatabase) {
-                        log.info("opened database: ${db.path}")
-                        if (!dbUpdateFile.delete()) {
-                            log.error("unable to delete " + dbUpdateFile.absolutePath)
-                        }
-
-                        try {
-                            if (hasExpectedData(db)) {
-                                repository.finalizeUpdate()
-                                log.info("successfully loaded new version of explore db")
-
-                                if (coroutine.isActive) {
-                                    coroutine.resume(database!!)
-                                }
-                            } else {
-                                log.info("database update file was empty")
-
-                                if (coroutine.isActive) {
-                                    coroutine.resumeWithException(SQLiteException("Database update file is empty"))
-                                }
+                val onOpenCallback =
+                    object : Callback() {
+                        override fun onOpen(db: SupportSQLiteDatabase) {
+                            log.info("opened database: ${db.path}")
+                            if (!dbUpdateFile.delete()) {
+                                log.error("unable to delete " + dbUpdateFile.absolutePath)
                             }
-                        } catch (ex: Exception) {
-                            log.error("error reading merchant & atm count", ex)
 
-                            if (coroutine.isActive) {
-                                coroutine.resumeWithException(ex)
+                            try {
+                                if (hasExpectedData(db)) {
+                                    repository.finalizeUpdate()
+                                    log.info("successfully loaded new version of explore db")
+
+                                    if (coroutine.isActive) {
+                                        coroutine.resume(database!!)
+                                    }
+                                } else {
+                                    log.info("database update file was empty")
+
+                                    if (coroutine.isActive) {
+                                        coroutine.resumeWithException(SQLiteException("Database update file is empty"))
+                                    }
+                                }
+                            } catch (ex: Exception) {
+                                log.error("error reading merchant & atm count", ex)
+
+                                if (coroutine.isActive) {
+                                    coroutine.resumeWithException(ex)
+                                }
                             }
                         }
                     }
-                }
 
-                database = dbBuilder
-                    //.fallbackToDestructiveMigration()
-                    .addMigrations(migration1To2)
-                    .addCallback(onOpenCallback)
-                    .build()
+                database =
+                    dbBuilder
+                        // .fallbackToDestructiveMigration()
+                        .addMigrations(migration1To2)
+                        .addCallback(onOpenCallback)
+                        .build()
 
                 if (database.isOpen) {
                     log.warn("database is already open")
@@ -206,4 +193,3 @@ abstract class ExploreDatabase : RoomDatabase() {
         }
     }
 }
-
