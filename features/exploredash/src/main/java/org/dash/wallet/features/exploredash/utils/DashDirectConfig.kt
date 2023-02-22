@@ -119,7 +119,7 @@ class DashDirectConfig @Inject constructor(
     ) {
         edit {
             encryptionProvider.encrypt(securityKeyAlias, Json.encodeToString(value))?.let { encryptedValue ->
-                editStore.invoke(it, encryptedValue?.joinToString(bytesToStringSeparator))
+                editStore.invoke(it, encryptedValue.joinToString(bytesToStringSeparator))
             }
         }
     }

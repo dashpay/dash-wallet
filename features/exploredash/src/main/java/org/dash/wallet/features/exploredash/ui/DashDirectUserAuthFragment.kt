@@ -132,6 +132,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             DashDirectUserAuthType.SIGN_IN -> authUserToDashDirect(input, true)
             DashDirectUserAuthType.CREATE_ACCOUNT -> authUserToDashDirect(input, false)
             DashDirectUserAuthType.OTP -> verifyEmail(input)
+            else -> { }
         }
     }
 

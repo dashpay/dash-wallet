@@ -1,10 +1,10 @@
 buildscript {
     ext {
-        kotlin_version = '1.6.10'
+        kotlin_version = '1.7.10'
         coroutines_version = '1.6.1'
         ok_http_version = '4.9.1'
         dashjVersion = '0.18.3'
-        hiltVersion = '2.40.1'
+        hiltVersion = '2.45'
         hiltWorkVersion = '1.0.0'
         workRuntimeVersion='2.7.1'
         firebaseVersion = '28.4.2'
