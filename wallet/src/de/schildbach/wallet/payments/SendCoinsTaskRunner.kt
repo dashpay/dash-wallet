@@ -16,15 +16,21 @@
  */
 package de.schildbach.wallet.payments
 
+import android.net.Uri
 import androidx.annotation.VisibleForTesting
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.offline.DirectPaymentTask
+import de.schildbach.wallet.offline.HttpDirectPaymentTask
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser
+import de.schildbach.wallet_test.BuildConfig
+import de.schildbach.wallet_test.R
 import kotlinx.coroutines.*
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
+import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.script.ScriptException
 import org.bitcoinj.wallet.*
 import org.dash.wallet.common.WalletDataProvider
@@ -105,7 +111,7 @@ class SendCoinsTaskRunner @Inject constructor(
         return suspendCancellableCoroutine { coroutine ->
             object : StringInputParser(dashUri, false) {
                 override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
-                    requestPaymentRequest(coroutine, paymentIntent, wallet)
+                    createPaymentRequest(coroutine, paymentIntent, wallet)
                 }
 
                 override fun handlePrivateKey(key: PrefixedChecksummedBytes) {
@@ -130,18 +136,17 @@ class SendCoinsTaskRunner @Inject constructor(
         }
     }
 
-    private fun createBaseSendRequest(
+    private fun createHTTPSendRequest(
         coroutine: CancellableContinuation<Transaction>,
-        basePaymentIntent: PaymentIntent,
-        finalPaymentIntent: PaymentIntent,
+        paymentIntent: PaymentIntent,
         wallet: Wallet
-    ) {
+    ): SendRequest? {
         if (coroutine.isActive) {
             Context.propagate(de.schildbach.wallet.Constants.CONTEXT)
             try {
                 var sendRequest = createSendRequest(
                     false,
-                    finalPaymentIntent,
+                    paymentIntent,
                     signInputs = false,
                     forceEnsureMinRequiredFee = false
                 )
@@ -150,31 +155,93 @@ class SendCoinsTaskRunner @Inject constructor(
                 if (checkDust(sendRequest)) {
                     sendRequest = createSendRequest(
                         false,
-                        finalPaymentIntent,
+                        paymentIntent,
                         signInputs = false,
                         forceEnsureMinRequiredFee = true
                     )
                     wallet.completeTx(sendRequest)
                 }
-                val scope =
-                    CoroutineScope(coroutine.context)
-                scope.launch(Dispatchers.IO) {
-                    val finalSendRequest = createSendRequest(
-                        basePaymentIntent.mayEditAmount(),
-                        finalPaymentIntent!!,
-                        true,
-                        sendRequest!!.ensureMinRequiredFee
-                    )
-                    coroutine.resume(sendCoins(finalSendRequest, txCompleted = false, checkBalanceConditions = false))
-                }
+
+                return sendRequest
             } catch (x: Exception) {
                 x.printStackTrace()
                 coroutine.resumeWithException(x)
             }
         }
+        return null
     }
 
-    fun requestPaymentRequest(
+    private fun sendPayment(
+        coroutine: CancellableContinuation<Transaction>,
+        basePaymentIntent: PaymentIntent,
+        finalPaymentIntent: PaymentIntent,
+        sendRequest: SendRequest,
+        wallet: Wallet
+    ) {
+        val finalSendRequest = createSendRequest(
+            false,
+            finalPaymentIntent,
+            true,
+            sendRequest.ensureMinRequiredFee
+        )
+        signSendRequest(finalSendRequest)
+        directPay(coroutine, finalSendRequest, wallet, finalPaymentIntent)
+    }
+
+    private fun directPay(
+        coroutine: CancellableContinuation<Transaction>,
+        sendRequest: SendRequest,
+        wallet: Wallet,
+        finalPaymentIntent: PaymentIntent
+    ) {
+        wallet.completeTx(sendRequest)
+        val refundAddress = wallet.freshAddress(KeyChain.KeyPurpose.REFUND)
+        val payment = PaymentProtocol.createPaymentMessage(listOf(sendRequest.tx), finalPaymentIntent.amount, refundAddress, null, finalPaymentIntent.payeeData)
+
+        val callback: DirectPaymentTask.ResultCallback = object : DirectPaymentTask.ResultCallback {
+            override fun onResult(ack: Boolean) {
+                val scope =
+                    CoroutineScope(coroutine.context)
+                scope.launch(Dispatchers.IO) {
+                    coroutine.resume(
+                        sendCoins(
+                            sendRequest,
+                            txCompleted = true,
+                            checkBalanceConditions = true
+                        )
+                    )
+                }
+            }
+
+            override fun onFail(messageResId: Int, vararg messageArgs: Any) {
+                val message = StringBuilder().apply {
+                    if (BuildConfig.DEBUG && messageArgs[0] == 415) {
+                        val host = Uri.parse(finalPaymentIntent!!.paymentUrl).host
+                        appendLine(host)
+                        appendLine(walletApplication.getString(messageResId, *messageArgs))
+                        appendLine(PaymentProtocol.MIMETYPE_PAYMENT)
+                        appendLine()
+                    }
+                    appendLine(walletApplication.getString(R.string.payment_request_problem_message))
+                }
+                coroutine.resumeWithException(Exception(message.toString()))
+            }
+        }
+
+        val scope =
+            CoroutineScope(coroutine.context)
+        scope.launch(Dispatchers.IO) {
+            finalPaymentIntent.paymentUrl?.let {
+                HttpDirectPaymentTask.HttpPaymentTask(
+                    callback,
+                    it,
+                    walletApplication.httpUserAgent()
+                ).send(payment)
+            }
+        }
+    }
+
+    fun createPaymentRequest(
         coroutine: CancellableContinuation<Transaction>,
         basePaymentIntent: PaymentIntent,
         wallet: Wallet
@@ -183,7 +250,9 @@ class SendCoinsTaskRunner @Inject constructor(
 
             override fun onPaymentIntent(paymentIntent: PaymentIntent) {
                 if (basePaymentIntent.isExtendedBy(paymentIntent, true)) {
-                    createBaseSendRequest(coroutine,basePaymentIntent, paymentIntent, wallet)
+                    createHTTPSendRequest(coroutine, paymentIntent, wallet)?.let {
+                        sendPayment(coroutine, basePaymentIntent, paymentIntent, it, wallet)
+                    }
                 } else {
                     log.info("BIP72 trust check failed")
                 }
@@ -196,7 +265,6 @@ class SendCoinsTaskRunner @Inject constructor(
                         if (messageResId > 0) walletApplication.getString(messageResId, *messageArgs)
                         else ex.message!!
                     coroutine.resumeWithException(Exception(errorMessage))
-
                 } else {
                     val errorMessage = walletApplication.getString(messageResId, *messageArgs)
                     coroutine.resumeWithException(Exception(errorMessage))
@@ -215,7 +283,7 @@ class SendCoinsTaskRunner @Inject constructor(
         }
     }
 
-    protected fun createSendRequest(
+    private fun createSendRequest(
         mayEditAmount: Boolean,
         paymentIntent: PaymentIntent,
         signInputs: Boolean,
@@ -259,10 +327,10 @@ class SendCoinsTaskRunner @Inject constructor(
     }
 
     @Throws(LeftoverBalanceException::class)
-    override suspend fun sendCoins(
+    suspend fun sendCoins(
         sendRequest: SendRequest,
-        txCompleted: Boolean,
-        checkBalanceConditions: Boolean
+        txCompleted: Boolean = false,
+        checkBalanceConditions: Boolean = true
     ): Transaction = withContext(Dispatchers.IO) {
         val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
         Context.propagate(wallet.context)
