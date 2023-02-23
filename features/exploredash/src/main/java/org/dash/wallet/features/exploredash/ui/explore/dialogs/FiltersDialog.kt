@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.dialogs
+package org.dash.wallet.features.exploredash.ui.explore.dialogs
 
 import android.content.DialogInterface
 import android.os.Bundle
@@ -24,13 +24,11 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.navGraphViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
-import org.dash.wallet.common.ui.radio_group.*
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
 import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
 import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
@@ -39,10 +37,11 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.PaymentMethod
 import org.dash.wallet.features.exploredash.databinding.DialogFiltersBinding
-import org.dash.wallet.features.exploredash.ui.ExploreTopic
-import org.dash.wallet.features.exploredash.ui.ExploreViewModel
-import org.dash.wallet.features.exploredash.ui.FilterMode
+import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
+import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
+import org.dash.wallet.features.exploredash.ui.explore.FilterMode
 import org.dash.wallet.features.exploredash.ui.extensions.*
+import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -58,7 +57,7 @@ class FiltersDialog : OffsetDialogFragment() {
     private var giftCardPaymentOn: Boolean = true
 
     private val binding by viewBinding(DialogFiltersBinding::bind)
-    private val viewModel: ExploreViewModel by navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
+    private val viewModel by exploreViewModels<ExploreViewModel>()
 
     private var territoriesJob: Deferred<List<String>>? = null
     private var radiusOptionsAdapter: RadioGroupAdapter? = null

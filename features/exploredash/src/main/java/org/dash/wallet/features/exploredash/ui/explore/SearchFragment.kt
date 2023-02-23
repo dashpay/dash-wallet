@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui
+package org.dash.wallet.features.exploredash.ui.explore
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
@@ -38,7 +38,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import androidx.navigation.navGraphViewModels
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -65,9 +64,12 @@ import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderA
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
-import org.dash.wallet.features.exploredash.ui.dialogs.DashDirectLoginInfoDialog
+import org.dash.wallet.features.exploredash.ui.dash_direct.DashDirectUserAuthFragment
+import org.dash.wallet.features.exploredash.ui.dash_direct.DashDirectViewModel
+import org.dash.wallet.features.exploredash.ui.dash_direct.dialogs.DashDirectLoginInfoDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
+import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -80,7 +82,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var analyticsService: AnalyticsService
     private val binding by viewBinding(FragmentSearchBinding::bind)
-    private val viewModel: ExploreViewModel by navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
+    private val viewModel by exploreViewModels<ExploreViewModel>()
+    private val dashDirectViewModel by exploreViewModels<DashDirectViewModel>()
     private val args by navArgs<SearchFragmentArgs>()
 
     private var bottomSheetWasExpanded: Boolean = false
@@ -514,24 +517,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 binding.toolbarTitle.text = getToolbarTitle()
             }
         }
-        binding.itemDetails.setOnNavigationButtonClicked {
-            if (isMerchantTopic) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_NAVIGATION)
-            }
-        }
-        binding.itemDetails.setOnDialPhoneButtonClicked {
-            if (isMerchantTopic) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
-            }
-        }
-        binding.itemDetails.setOnOpenWebsiteButtonClicked {
-            if (isMerchantTopic) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
-            }
-        }
 
         binding.itemDetails.setOnBuyGiftCardButtonClicked {
-            if (!viewModel.isUserSignInDashDirect()) {
+            if (!dashDirectViewModel.isUserSignInDashDirect()) {
                 showLoginDialog()
             } else {
                 openPurchaseGiftCardFragment()
@@ -539,10 +527,16 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         binding.itemDetails.setOnDashDirectLogOutClicked {
-            if (viewModel.isUserSignInDashDirect()) {
-                lifecycleScope.launch { viewModel.logout() }
+            if (dashDirectViewModel.isUserSignInDashDirect()) {
+                lifecycleScope.launch { dashDirectViewModel.logout() }
             }
         }
+
+        dashDirectViewModel.userEmail.observe(viewLifecycleOwner) { email ->
+            binding.itemDetails.setDashDirectLogInUser(email, dashDirectViewModel.isUserSignInDashDirect())
+        }
+
+        trackMerchantDetailsEvents(binding)
     }
 
     private fun setupScreenTransitions() {
@@ -883,6 +877,26 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             isDetails -> BottomSheetBehavior.STATE_HALF_EXPANDED
             nearbySearch -> BottomSheetBehavior.STATE_HALF_EXPANDED
             else -> BottomSheetBehavior.STATE_EXPANDED
+        }
+    }
+
+    private fun trackMerchantDetailsEvents(binding: FragmentSearchBinding) {
+        binding.itemDetails.setOnNavigationButtonClicked {
+            if (isMerchantTopic) {
+                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_NAVIGATION)
+            }
+        }
+
+        binding.itemDetails.setOnDialPhoneButtonClicked {
+            if (isMerchantTopic) {
+                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
+            }
+        }
+
+        binding.itemDetails.setOnOpenWebsiteButtonClicked {
+            if (isMerchantTopic) {
+                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
+            }
         }
     }
 }

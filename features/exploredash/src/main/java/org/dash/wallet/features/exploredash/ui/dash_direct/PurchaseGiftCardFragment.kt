@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui
+package org.dash.wallet.features.exploredash.ui.dash_direct
 
 import android.os.Bundle
 import android.view.View
@@ -24,7 +24,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.navGraphViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -41,8 +40,10 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseGiftCardBinding
-import org.dash.wallet.features.exploredash.ui.dialogs.PurchaseGiftCardConfirmDialog
+import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
+import org.dash.wallet.features.exploredash.ui.dash_direct.dialogs.PurchaseGiftCardConfirmDialog
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
+import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
 
 @FlowPreview
@@ -54,10 +55,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
     }
 
     private val binding by viewBinding(FragmentPurchaseGiftCardBinding::bind)
-    private val viewModel: PurchaseGiftCardViewModel by activityViewModels()
     private var enterAmountFragment: EnterAmountFragment? = null
-    private val exploreViewModel: ExploreViewModel by
-        navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
+    private val viewModel by exploreViewModels<DashDirectViewModel>()
+    private val exploreViewModel by exploreViewModels<ExploreViewModel>()
     private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
 
     var selectedMerchant: Merchant? = null

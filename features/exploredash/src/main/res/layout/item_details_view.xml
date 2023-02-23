@@ -22,7 +22,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     tools:parentTag="android.widget.LinearLayout"
-    tools:context="org.dash.wallet.features.exploredash.ui.ItemDetails">
+    tools:context="org.dash.wallet.features.exploredash.ui.explore.ItemDetails">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/buy_sell_container"

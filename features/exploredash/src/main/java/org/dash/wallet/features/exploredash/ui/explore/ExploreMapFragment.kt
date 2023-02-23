@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui
+package org.dash.wallet.features.exploredash.ui.explore
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -26,7 +26,6 @@ import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.navGraphViewModels
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestBuilder
 import com.bumptech.glide.RequestManager
@@ -52,6 +51,7 @@ import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
+import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -61,7 +61,7 @@ class ExploreMapFragment : SupportMapFragment() {
         const val DETAILS_ZOOM_LEVEL = 14f
     }
 
-    private val viewModel: ExploreViewModel by navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
+    private val viewModel by exploreViewModels<ExploreViewModel>()
     private var savedSearchResultsBounds: LatLngBounds? = null
     private var savedMerchantLocationsBounds: LatLngBounds? = null
     private var prevScreenState: ScreenState = ScreenState.SearchResults

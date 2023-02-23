@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui
+package org.dash.wallet.features.exploredash.ui.explore
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -36,13 +36,11 @@ import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.*
-import javax.inject.Inject
 import org.dash.wallet.common.util.makeLinks
 import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
-import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 
 @AndroidEntryPoint
@@ -58,8 +56,6 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     private var onOpenWebsiteButtonClicked: (() -> Unit)? = null
     private var onBuyGiftCardButtonClicked: (() -> Unit)? = null
     private var onDashDirectLogOutClicked: (() -> Unit)? = null
-
-    @Inject lateinit var repository: DashDirectRepositoryInt
 
     init {
         orientation = VERTICAL
@@ -112,8 +108,8 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     }
 
     @SuppressLint("SetTextI18n")
-    fun setDashDirectLogInUser(isDash: Boolean, email: String?, userSignIn: Boolean) {
-        binding.loginDashDirectUser.isVisible = !isDash && email?.isNotEmpty() == true && userSignIn
+    fun setDashDirectLogInUser(email: String?, userSignIn: Boolean) {
+        binding.loginDashDirectUser.isVisible = email?.isNotEmpty() == true && userSignIn
         email?.let {
             binding.loginDashDirectUser.text =
                 context.resources.getString(R.string.logged_in_as, email.maskEmail()) +
@@ -132,6 +128,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             )
         }
     }
+
     fun getMerchantType(type: String?): String {
         return when (cleanMerchantTypeValue(type)) {
             MerchantType.ONLINE -> resources.getString(R.string.explore_online_merchant)
@@ -211,7 +208,6 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
                 payBtn.setOnClickListener { onBuyGiftCardButtonClicked?.invoke() }
             }
 
-            setDashDirectLogInUser(isDash, repository.getDashDirectEmail(), repository.isUserSignIn())
             showAllBtn.setOnClickListener { onShowAllLocationsClicked?.invoke() }
             backButton.setOnClickListener { onBackButtonClicked?.invoke() }
 

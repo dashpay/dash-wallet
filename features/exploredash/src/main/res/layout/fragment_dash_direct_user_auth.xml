@@ -19,7 +19,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary">
+    android:background="@color/background_primary"
+    tools:context="org.dash.wallet.features.exploredash.ui.DashDirectUserAuthFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/title_bar"

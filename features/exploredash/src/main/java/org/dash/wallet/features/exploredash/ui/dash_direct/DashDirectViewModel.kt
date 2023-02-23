@@ -15,12 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui
+package org.dash.wallet.features.exploredash.ui.dash_direct
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.*
 import javax.inject.Inject
@@ -42,7 +39,7 @@ import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCard
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 
 @HiltViewModel
-class PurchaseGiftCardViewModel
+class DashDirectViewModel
 @Inject
 constructor(
     walletDataProvider: WalletDataProvider,
@@ -59,6 +56,8 @@ constructor(
     private val _balance = MutableLiveData<Coin>()
     val balance: LiveData<Coin>
         get() = _balance
+
+    val userEmail = repository.userEmail.asLiveData()
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
     val usdExchangeRate: LiveData<ExchangeRate>
@@ -131,4 +130,14 @@ constructor(
     fun getDiscountedAmount(fullAmount: Fiat, savingsPercentage: Double): Fiat {
         return Fiat.valueOf(Constants.USD_CURRENCY, (fullAmount.value * (100.0 - savingsPercentage) / 100).toLong())
     }
+
+    fun isUserSignInDashDirect() = repository.isUserSignIn()
+
+    suspend fun signInToDashDirect(email: String) = repository.signIn(email)
+
+    suspend fun createUserToDashDirect(email: String) = repository.createUser(email)
+
+    suspend fun verifyEmail(code: String) = repository.verifyEmail(code)
+
+    suspend fun logout() = repository.logout()
 }

@@ -1,20 +1,21 @@
 /*
- * Copyright 2021 Gabor Varadi
+ * Copyright 2023 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui
+package org.dash.wallet.features.exploredash.ui.dash_direct
 
 import android.content.Context
 import android.os.Build
@@ -30,7 +31,6 @@ import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.navGraphViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -40,6 +40,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentDashDirectUserAuthBinding
+import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
 
 @FlowPreview
@@ -52,8 +53,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
 
     private var currentDirectUserAuthType: DashDirectUserAuthType? = null
     private val binding by viewBinding(FragmentDashDirectUserAuthBinding::bind)
-    private val exploreViewModel: ExploreViewModel by
-        navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
+    private val viewModel by exploreViewModels<DashDirectViewModel>()
 
     enum class DashDirectUserAuthType(
         @StringRes val screenTitle: Int,
@@ -65,7 +65,6 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         OTP(R.string.enter_verification_code, R.string.check_your_email_and_verification_code, R.string.password)
     }
 
-    @RequiresApi(Build.VERSION_CODES.R)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.titleBar.setNavigationOnClickListener {
@@ -109,7 +108,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         }
     }
 
-    val continueAction = {
+    private fun continueAction() {
         val input = binding.input.text.toString()
         when (currentDirectUserAuthType) {
             DashDirectUserAuthType.SIGN_IN -> authUserToDashDirect(input, true)
@@ -123,8 +122,8 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         lifecycleScope.launch {
             when (
                 val response =
-                    if (isSignIn) exploreViewModel.signInToDashDirect(email)
-                    else exploreViewModel.createUserToDashDirect(email)
+                    if (isSignIn) viewModel.signInToDashDirect(email)
+                    else viewModel.createUserToDashDirect(email)
             ) {
                 is ResponseResource.Success -> {
                     if (response.value) {
@@ -136,7 +135,6 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
                     }
                 }
                 is ResponseResource.Failure -> {
-
                     binding.inputWrapper.isErrorEnabled = true
                     binding.inputErrorTv.text =
                         if (response.errorBody.isNullOrEmpty()) getString(R.string.error) else response.errorBody
@@ -148,7 +146,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
 
     private fun verifyEmail(code: String) {
         lifecycleScope.launch {
-            when (val response = exploreViewModel.verifyEmail(code)) {
+            when (val response = viewModel.verifyEmail(code)) {
                 is ResponseResource.Success -> {
                     if (response.value) {
                         hideKeyboard()

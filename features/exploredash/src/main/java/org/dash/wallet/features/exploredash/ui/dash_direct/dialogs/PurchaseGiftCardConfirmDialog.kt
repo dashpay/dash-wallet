@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,14 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.dialogs
+package org.dash.wallet.features.exploredash.ui.dash_direct.dialogs
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.StyleRes
-import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
@@ -37,8 +37,9 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.GiftCardDetailsDialogModel
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
-import org.dash.wallet.features.exploredash.ui.PurchaseGiftCardViewModel
+import org.dash.wallet.features.exploredash.ui.dash_direct.DashDirectViewModel
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
+import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -47,7 +48,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
     @StyleRes override val backgroundStyle = R.style.PrimaryBackground
 
     private val binding by viewBinding(DialogConfirmPurchaseGiftCardBinding::bind)
-    private val purchaseGiftCardViewModel: PurchaseGiftCardViewModel by activityViewModels()
+    private val dashDirectViewModel by exploreViewModels<DashDirectViewModel>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_confirm_purchase_gift_card, container, false)
@@ -56,8 +57,8 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val merchant = purchaseGiftCardViewModel.purchaseGiftCardDataMerchant
-        val paymentValue = purchaseGiftCardViewModel.purchaseGiftCardDataPaymentValue
+        val merchant = dashDirectViewModel.purchaseGiftCardDataMerchant
+        val paymentValue = dashDirectViewModel.purchaseGiftCardDataPaymentValue
         val savingsPercentage = merchant?.savingsPercentage ?: DEFAULT_DISCOUNT
         merchant?.let {
             binding.merchentName.text = it.name
@@ -75,7 +76,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
         paymentValue?.let {
             binding.giftCardTotalValue.text = GenericUtils.fiatToString(it.second)
 
-            val discountedValue = purchaseGiftCardViewModel.getDiscountedAmount(it.second, savingsPercentage)
+            val discountedValue = dashDirectViewModel.getDiscountedAmount(it.second, savingsPercentage)
             binding.giftCardYouPayValue.text = GenericUtils.fiatToStringRoundUp(discountedValue)
 
             binding.purchaseCardValue.text = GenericUtils.fiatToString(it.second)
@@ -85,15 +86,16 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
 
         binding.confirmButton.setOnClickListener {
             lifecycleScope.launch {
-                purchaseGiftCardViewModel.purchaseGiftCard()
+                val response = dashDirectViewModel.purchaseGiftCard()
+                Log.i("DASHDIRECT", response.toString())
                 // TODO Change to response from API
                 GiftCardDetailsDialog.newInstance(
-                        GiftCardDetailsDialogModel(
-                            merchantName = merchant?.name,
-                            merchantLogo = merchant?.logoLocation,
-                            giftCardPrice = GenericUtils.fiatToString(paymentValue?.second)
-                        )
+                    GiftCardDetailsDialogModel(
+                        merchantName = merchant?.name,
+                        merchantLogo = merchant?.logoLocation,
+                        giftCardPrice = GenericUtils.fiatToString(paymentValue?.second)
                     )
+                )
                     .show(requireActivity())
                     .also {
                         val navController = findNavController()

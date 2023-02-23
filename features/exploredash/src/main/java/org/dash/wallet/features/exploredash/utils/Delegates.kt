@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,18 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.dialogs
+package org.dash.wallet.features.exploredash.utils
 
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModel
+import androidx.navigation.navGraphViewModels
 import org.dash.wallet.features.exploredash.R
 
-class BuyGiftCardDescriptionDialog : OffsetDialogFragment() {
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.buy_gift_card_description, container, false)
-    }
+inline fun <reified VM : ViewModel> Fragment.exploreViewModels(): Lazy<VM> {
+    return navGraphViewModels(R.id.nav_explore) { defaultViewModelProviderFactory }
 }

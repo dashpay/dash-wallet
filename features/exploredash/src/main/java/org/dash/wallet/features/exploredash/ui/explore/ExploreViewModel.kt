@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui
+package org.dash.wallet.features.exploredash.ui.explore
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
@@ -39,13 +39,11 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
-import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.extensions.Const
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
-import org.slf4j.LoggerFactory
 
 enum class ExploreTopic {
     Merchants,
@@ -68,7 +66,12 @@ enum class ScreenState {
     Details
 }
 
-data class FilterOptions(val query: String, val territory: String, val payment: String, val radius: Int)
+data class FilterOptions(
+    val query: String,
+    val territory: String,
+    val payment: String,
+    val radius: Int
+)
 
 @ExperimentalCoroutinesApi
 @FlowPreview
@@ -80,8 +83,7 @@ constructor(
     private val exploreData: ExploreDataSource,
     private val locationProvider: UserLocationStateInt,
     private val syncStatusService: DataSyncStatusService,
-    private val analyticsService: AnalyticsService,
-    private val repository: DashDirectRepositoryInt
+    private val analyticsService: AnalyticsService
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -91,7 +93,6 @@ constructor(
         const val DEFAULT_RADIUS_OPTION = 20
         const val MAX_MARKERS = 100
         const val DEFAULT_SORT_BY_DISTANCE = true
-        private val log = LoggerFactory.getLogger(ExploreViewModel::class.java)
     }
 
     private val workerJob = SupervisorJob()
@@ -130,7 +131,8 @@ constructor(
     // In meters
     val radius: Double
         get() =
-            if (isMetric) (selectedRadiusOption.value ?: DEFAULT_RADIUS_OPTION) * Const.METERS_IN_KILOMETER
+            if (isMetric)
+                (selectedRadiusOption.value ?: DEFAULT_RADIUS_OPTION) * Const.METERS_IN_KILOMETER
             else (selectedRadiusOption.value ?: DEFAULT_RADIUS_OPTION) * Const.METERS_IN_MILE
 
     // Bounded only by selected radius
@@ -217,14 +219,16 @@ constructor(
                                 clearSearchResults()
                                 _searchBounds
                                     .filter {
-                                        (mode != FilterMode.Nearby || _isLocationEnabled.value == true) &&
+                                        (mode != FilterMode.Nearby ||
+                                            _isLocationEnabled.value == true) &&
                                             screenState.value == ScreenState.SearchResults
                                     }
                                     .map { bounds ->
                                         if (
                                             bounds != null &&
                                                 isLocationEnabled.value == true &&
-                                                (exploreTopic == ExploreTopic.ATMs || mode == FilterMode.Nearby)
+                                                (exploreTopic == ExploreTopic.ATMs ||
+                                                    mode == FilterMode.Nearby)
                                         ) {
                                             val radiusBounds =
                                                 locationProvider.getRadiusBounds(
@@ -243,7 +247,14 @@ constructor(
                                         _appliedFilters.postValue(
                                             FilterOptions(query, territory, payment, selectedRadius)
                                         )
-                                        getPagingFlow(query, territory, payment, mode, bounds, sortByDistance)
+                                        getPagingFlow(
+                                                query,
+                                                territory,
+                                                payment,
+                                                mode,
+                                                bounds,
+                                                sortByDistance
+                                            )
                                             .cachedIn(viewModelScope)
                                     }
                             }
@@ -265,7 +276,9 @@ constructor(
                             .flatMapLatest { bounds ->
                                 _filterMode
                                     .filterNot { it == FilterMode.Online }
-                                    .flatMapLatest { mode -> getBoundedFlow(query, territory, payment, mode, bounds) }
+                                    .flatMapLatest { mode ->
+                                        getBoundedFlow(query, territory, payment, mode, bounds)
+                                    }
                             }
                     }
                 }
@@ -396,18 +409,6 @@ constructor(
         this.allMerchantLocationsJob?.cancel()
     }
 
-    fun isUserSignInDashDirect() = repository.isUserSignIn()
-
-    suspend fun signInToDashDirect(email: String) = repository.signIn(email)
-
-    suspend fun createUserToDashDirect(email: String) = repository.createUser(email)
-
-    suspend fun verifyEmail(code: String) = repository.verifyEmail(code)
-
-    fun getDashDirectEmail() = repository.getDashDirectEmail()
-
-    suspend fun logout() = repository.logout()
-
     fun onMapMarkerSelected(id: Int) {
         val item =
             _allMerchantLocations.value?.firstOrNull { it.id == id }
@@ -431,11 +432,17 @@ constructor(
                 .flatMapLatest { bounds ->
                     val radiusBounds =
                         if (_isLocationEnabled.value == true) {
-                            locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
+                            locationProvider.getRadiusBounds(
+                                bounds.centerLat,
+                                bounds.centerLng,
+                                radius
+                            )
                         } else {
                             GeoBounds.noBounds
                         }
-                    val limitResults = _isLocationEnabled.value != true || selectedTerritory.value?.isNotEmpty() == true
+                    val limitResults =
+                        _isLocationEnabled.value != true ||
+                            selectedTerritory.value?.isNotEmpty() == true
                     val limit = if (limitResults) 100 else -1
                     exploreData.observeMerchantLocations(
                         merchantId,
@@ -451,7 +458,8 @@ constructor(
                     val sorted =
                         if (isLocationEnabled.value == true && location != null) {
                             locations.sortedBy {
-                                it.distance = calculateDistance(it, location.latitude, location.longitude)
+                                it.distance =
+                                    calculateDistance(it, location.latitude, location.longitude)
                                 it.distance
                             }
                         } else {
@@ -487,7 +495,9 @@ constructor(
     fun monitorUserLocation() {
         _isLocationEnabled.value = true
 
-        viewModelScope.launch { locationProvider.observeUpdates().collect { _currentUserLocation.value = it } }
+        viewModelScope.launch {
+            locationProvider.observeUpdates().collect { _currentUserLocation.value = it }
+        }
     }
 
     fun clearFilters() {
@@ -535,7 +545,12 @@ constructor(
                 sortByDistance
         val onlineFirst = _isLocationEnabled.value != true
 
-        val pagerConfig = PagingConfig(pageSize = PAGE_SIZE, enablePlaceholders = false, maxSize = MAX_ITEMS_IN_MEMORY)
+        val pagerConfig =
+            PagingConfig(
+                pageSize = PAGE_SIZE,
+                enablePlaceholders = false,
+                maxSize = MAX_ITEMS_IN_MEMORY
+            )
 
         @Suppress("UNCHECKED_CAST")
         return if (exploreTopic == ExploreTopic.Merchants) {
@@ -578,7 +593,9 @@ constructor(
                     )
                 }
                 .flow
-                .map { data -> data.map { it.apply { distance = calculateDistance(it, userLat, userLng) } } }
+                .map { data ->
+                    data.map { it.apply { distance = calculateDistance(it, userLat, userLng) } }
+                }
         }
             as Flow<PagingData<SearchResult>>
     }
@@ -588,7 +605,9 @@ constructor(
 
         viewModelWorkerScope.launch {
             val radiusBounds =
-                bounds?.let { locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius) }
+                bounds?.let {
+                    locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
+                }
             val result =
                 if (exploreTopic == ExploreTopic.Merchants) {
                     val type = getMerchantType(filterMode.value ?: FilterMode.Online)
@@ -645,7 +664,8 @@ constructor(
     }
 
     private fun ceilByRadius(original: GeoBounds, radius: Double): GeoBounds {
-        val inRadius = locationProvider.getRadiusBounds(original.centerLat, original.centerLng, radius)
+        val inRadius =
+            locationProvider.getRadiusBounds(original.centerLat, original.centerLng, radius)
 
         return GeoBounds(
             min(original.northLat, inRadius.northLat),
@@ -669,9 +689,17 @@ constructor(
 
     private fun calculateDistance(item: SearchResult, userLat: Double?, userLng: Double?): Double {
         return if (
-            item.type != MerchantType.ONLINE && _isLocationEnabled.value == true && userLat != null && userLng != null
+            item.type != MerchantType.ONLINE &&
+                _isLocationEnabled.value == true &&
+                userLat != null &&
+                userLng != null
         ) {
-            locationProvider.distanceBetween(userLat, userLng, item.latitude ?: 0.0, item.longitude ?: 0.0)
+            locationProvider.distanceBetween(
+                userLat,
+                userLng,
+                item.latitude ?: 0.0,
+                item.longitude ?: 0.0
+            )
         } else {
             Double.NaN
         }
@@ -689,7 +717,11 @@ constructor(
             val syncStatusLiveData = syncStatusService.getSyncProgressFlow().asLiveData()
             val observedLastErrorLiveData = syncStatusService.hasObservedLastError().asLiveData()
 
-            fun setSyncStatus(isOnline: Boolean, progress: Resource<Double>, observedLastError: Boolean) {
+            fun setSyncStatus(
+                isOnline: Boolean,
+                progress: Resource<Double>,
+                observedLastError: Boolean
+            ) {
                 value =
                     when {
                         progress.exception != null -> {
@@ -711,17 +743,29 @@ constructor(
             }
             addSource(observedLastErrorLiveData) { hasObservedLastError ->
                 if (connectivityLiveData.value != null && syncStatusLiveData.value != null) {
-                    setSyncStatus(connectivityLiveData.value!!, syncStatusLiveData.value!!, hasObservedLastError)
+                    setSyncStatus(
+                        connectivityLiveData.value!!,
+                        syncStatusLiveData.value!!,
+                        hasObservedLastError
+                    )
                 }
             }
             addSource(syncStatusLiveData) { progress ->
                 if (connectivityLiveData.value != null && observedLastErrorLiveData.value != null) {
-                    setSyncStatus(connectivityLiveData.value!!, progress, observedLastErrorLiveData.value!!)
+                    setSyncStatus(
+                        connectivityLiveData.value!!,
+                        progress,
+                        observedLastErrorLiveData.value!!
+                    )
                 }
             }
             addSource(connectivityLiveData) { isOnline ->
                 if (syncStatusLiveData.value != null && observedLastErrorLiveData.value != null) {
-                    setSyncStatus(isOnline, syncStatusLiveData.value!!, observedLastErrorLiveData.value!!)
+                    setSyncStatus(
+                        isOnline,
+                        syncStatusLiveData.value!!,
+                        observedLastErrorLiveData.value!!
+                    )
                 }
             }
         }
@@ -748,10 +792,12 @@ constructor(
             }
         }
     }
-    private fun hasZoomLevelChanged(currentZoomLevel: Float): Boolean = previousZoomLevel != currentZoomLevel
+    private fun hasZoomLevelChanged(currentZoomLevel: Float): Boolean =
+        previousZoomLevel != currentZoomLevel
 
     private fun hasCameraCenterChanged(currentCenterPosition: GeoBounds): Boolean =
-        locationProvider.distanceBetweenCenters(previousCameraGeoBounds, currentCenterPosition) != 0.0
+        locationProvider.distanceBetweenCenters(previousCameraGeoBounds, currentCenterPosition) !=
+            0.0
 
     fun trackFilterEvents(dashPaymentOn: Boolean, giftCardPaymentOn: Boolean) {
         if (exploreTopic == ExploreTopic.Merchants) {
@@ -795,19 +841,23 @@ constructor(
         logEvent(
             when (_selectedRadiusOption.value) {
                 1 -> {
-                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.Explore.FILTER_MERCHANT_ONE_MILE
+                    if (exploreTopic == ExploreTopic.Merchants)
+                        AnalyticsConstants.Explore.FILTER_MERCHANT_ONE_MILE
                     else AnalyticsConstants.Explore.FILTER_ATM_ONE_MILE
                 }
                 5 -> {
-                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.Explore.FILTER_MERCHANT_FIVE_MILE
+                    if (exploreTopic == ExploreTopic.Merchants)
+                        AnalyticsConstants.Explore.FILTER_MERCHANT_FIVE_MILE
                     else AnalyticsConstants.Explore.FILTER_ATM_FIVE_MILE
                 }
                 50 -> {
-                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.Explore.FILTER_MERCHANT_FIFTY_MILE
+                    if (exploreTopic == ExploreTopic.Merchants)
+                        AnalyticsConstants.Explore.FILTER_MERCHANT_FIFTY_MILE
                     else AnalyticsConstants.Explore.FILTER_ATM_FIFTY_MILE
                 }
                 else -> {
-                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.Explore.FILTER_MERCHANT_TWENTY_MILE
+                    if (exploreTopic == ExploreTopic.Merchants)
+                        AnalyticsConstants.Explore.FILTER_MERCHANT_TWENTY_MILE
                     else AnalyticsConstants.Explore.FILTER_ATM_TWENTY_MILE
                 }
             }

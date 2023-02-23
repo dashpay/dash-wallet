@@ -39,8 +39,8 @@ import org.dash.wallet.features.exploredash.data.model.PaymentMethod
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
-import org.dash.wallet.features.exploredash.ui.ExploreViewModel
-import org.dash.wallet.features.exploredash.ui.FilterMode
+import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
+import org.dash.wallet.features.exploredash.ui.explore.FilterMode
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
