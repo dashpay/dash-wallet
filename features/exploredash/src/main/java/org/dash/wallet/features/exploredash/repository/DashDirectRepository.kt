@@ -21,8 +21,12 @@ package org.dash.wallet.features.exploredash.repository
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
+import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardRequest
+import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdRequest
 import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
+import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusRequest
+import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.signin.VerifyEmailRequest
@@ -130,6 +134,33 @@ class DashDirectRepository @Inject constructor(
             )
         )
     }
+
+    override suspend fun getPaymentStatus(
+        userEmail: String,
+        paymentId: String,
+        orderId: String
+    ) = safeApiCall {
+        servicesApi.getPaymentStatus(
+            email = userEmail,
+            paymentStatusRequest = PaymentStatusRequest(
+                paymentId = paymentId,
+                orderId = orderId
+            )
+        )
+    }
+
+    override suspend fun getGiftCardDetails(
+        userEmail: String,
+        giftCardId: Long
+    ) = safeApiCall {
+        servicesApi.getGiftCard(
+            email = userEmail,
+            getGiftCardRequest = GetGiftCardRequest(
+                id = giftCardId
+
+            )
+        )
+    }
 }
 interface DashDirectRepositoryInt {
     suspend fun signIn(email: String): ResponseResource<Boolean>
@@ -142,4 +173,8 @@ interface DashDirectRepositoryInt {
         ResponseResource<PurchaseGiftCardResponse?>
     suspend fun getMerchantById(userEmail: String, merchantId: Long, includeLocations: Boolean? = false):
         ResponseResource<GetMerchantByIdResponse?>
+    suspend fun getPaymentStatus(userEmail: String, paymentId: String, orderId: String):
+        ResponseResource<PaymentStatusResponse?>
+    suspend fun getGiftCardDetails(userEmail: String, giftCardId: Long):
+        ResponseResource<GetGiftCardResponse?>
 }

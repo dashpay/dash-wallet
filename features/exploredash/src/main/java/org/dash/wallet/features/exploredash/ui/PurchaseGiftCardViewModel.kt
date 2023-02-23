@@ -37,7 +37,9 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
+import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import java.util.*
@@ -98,6 +100,27 @@ class PurchaseGiftCardViewModel @Inject constructor(
                     )
                 }
             }
+        }
+        return null
+    }
+
+    suspend fun getPaymentStatus(paymentId: String, orderId: String): ResponseResource<PaymentStatusResponse?>? {
+        repository.getDashDirectEmail()?.let { email ->
+            return repository.getPaymentStatus(
+                userEmail = email,
+                paymentId = paymentId,
+                orderId = orderId
+            )
+        }
+        return null
+    }
+
+    suspend fun getGiftCardDetails(giftCardId: Long): ResponseResource<GetGiftCardResponse?>? {
+        repository.getDashDirectEmail()?.let { email ->
+            return repository.getGiftCardDetails(
+                userEmail = email,
+                giftCardId = giftCardId
+            )
         }
         return null
     }

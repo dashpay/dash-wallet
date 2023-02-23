@@ -208,4 +208,5 @@
     <string name="log_out"> Log out</string>
     <string name="invaild_code">You entered the wrong code. Please check your email and try again.</string>
     <string name="something_wrong_title">Something went wrong!</string>
+    <string name="retry">Retry</string>
 </resources>

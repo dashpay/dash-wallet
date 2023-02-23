@@ -22,7 +22,6 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.CoinSelector
-import org.bitcoinj.wallet.SendRequest
 
 class LeftoverBalanceException(missing: Coin, message: String) : InsufficientMoneyException(missing, message)
 
@@ -49,10 +48,4 @@ interface SendPaymentService {
     )
 
     suspend fun createSendingRequestFromDashUri(dashUri: String): Transaction
-
-    suspend fun sendCoins(
-        sendRequest: SendRequest,
-        txCompleted: Boolean = false,
-        checkBalanceConditions: Boolean = true
-    ): Transaction
 }

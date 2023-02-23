@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -109,7 +110,17 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
                             response.value?.data?.uri?.let {
                                 try {
                                     val transaction = purchaseGiftCardViewModel.createSendingRequestFromDashUri(it)
-                                    showGiftCardDetailsDialog(merchant, paymentValue, transaction.txId)
+                                    response.value?.data?.paymentId?.let { paymentId ->
+                                        response.value?.data?.orderId?.let { orderId ->
+                                            getPaymentStatus(
+                                                paymentId,
+                                                orderId,
+                                                transaction,
+                                                merchant,
+                                                paymentValue
+                                            )
+                                        }
+                                    }
                                 } catch (x: InsufficientMoneyException) {
                                     Log.e(this::class.java.simpleName, "purchaseGiftCard InsufficientMoneyException")
                                     AdaptiveDialog.create(
@@ -144,6 +155,61 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
         }
     }
 
+    private suspend fun getPaymentStatus(
+        paymentId: String,
+        orderId: String,
+        transaction: Transaction,
+        merchant: Merchant?,
+        paymentValue: Pair<Coin, Fiat>?
+    ) {
+        when (val response = purchaseGiftCardViewModel.getPaymentStatus(paymentId, orderId)) {
+            is ResponseResource.Success -> {
+                if (response.value?.data?.status == "paid") {
+                    response.value?.data?.giftCardId?.let {
+                        getGift(it, transaction, merchant, paymentValue)
+                    }
+                } else {
+                    AdaptiveDialog.create(
+                        R.drawable.ic_info_red,
+                        getString(R.string.something_wrong_title),
+                        getString(R.string.retry),
+                        getString(R.string.retry)
+                    ).show(requireActivity()) {
+                        lifecycleScope.launch {
+                            getPaymentStatus(
+                                paymentId,
+                                orderId,
+                                transaction,
+                                merchant,
+                                paymentValue
+                            )
+                        }
+                    }
+                }
+            }
+            is ResponseResource.Failure -> {
+                Log.e(this::class.java.simpleName, response.errorBody ?: "purchaseGiftCard error")
+            }
+        }
+    }
+
+    private suspend fun getGift(
+        giftCardId: Long,
+        transaction: Transaction,
+        merchant: Merchant?,
+        paymentValue: Pair<Coin, Fiat>?
+    ) {
+        when (val response = purchaseGiftCardViewModel.getGiftCardDetails(giftCardId)) {
+            is ResponseResource.Success -> {
+                if (response.value?.successful == true) {
+                    showGiftCardDetailsDialog(merchant, paymentValue, transaction.txId)
+                }
+            }
+            is ResponseResource.Failure -> {
+                Log.e(this::class.java.simpleName, response.errorBody ?: "purchaseGiftCard error")
+            }
+        }
+    }
     private fun showGiftCardDetailsDialog(
         merchant: Merchant?,
         paymentValue: Pair<Coin, Fiat>?,
