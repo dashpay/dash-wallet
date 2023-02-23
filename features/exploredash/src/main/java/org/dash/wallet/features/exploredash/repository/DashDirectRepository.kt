@@ -22,8 +22,12 @@ import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
+import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardRequest
+import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdRequest
 import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
+import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusRequest
+import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.signin.VerifyEmailRequest
@@ -115,19 +119,55 @@ constructor(
     ) = safeApiCall {
         servicesApi.purchaseGiftCard(
             deviceID = deviceID,
-            purchaseGiftCardRequest =
-                PurchaseGiftCardRequest(currency = currency, giftCardAmount = giftCardAmount, merchantId = merchantId),
+            purchaseGiftCardRequest = PurchaseGiftCardRequest(
+                currency = currency,
+                giftCardAmount = 0.03,
+                merchantId = 318
+            ),
             email = userEmail
         )
     }
 
-    override suspend fun getMerchantById(userEmail: String, merchantId: Long, includeLocations: Boolean?) =
-        safeApiCall {
-            servicesApi.getMerchantById(
-                email = userEmail,
-                getMerchantByIdRequest = GetMerchantByIdRequest(id = merchantId, includeLocations = includeLocations)
+    override suspend fun getMerchantById(
+        userEmail: String,
+        merchantId: Long,
+        includeLocations: Boolean?
+    ) = safeApiCall {
+        servicesApi.getMerchantById(
+            email = userEmail,
+            getMerchantByIdRequest = GetMerchantByIdRequest(
+                id = 318,
+                includeLocations = includeLocations
             )
-        }
+        )
+    }
+
+    override suspend fun getPaymentStatus(
+        userEmail: String,
+        paymentId: String,
+        orderId: String
+    ) = safeApiCall {
+        servicesApi.getPaymentStatus(
+            email = userEmail,
+            paymentStatusRequest = PaymentStatusRequest(
+                paymentId = paymentId,
+                orderId = orderId
+            )
+        )
+    }
+
+    override suspend fun getGiftCardDetails(
+        userEmail: String,
+        giftCardId: Long
+    ) = safeApiCall {
+        servicesApi.getGiftCard(
+            email = userEmail,
+            getGiftCardRequest = GetGiftCardRequest(
+                id = giftCardId
+
+            )
+        )
+    }
 }
 
 interface DashDirectRepositoryInt {
@@ -138,16 +178,12 @@ interface DashDirectRepositoryInt {
     fun isUserSignIn(): Boolean
     suspend fun getDashDirectEmail(): String?
     suspend fun logout()
-    suspend fun purchaseGiftCard(
-        deviceID: String,
-        currency: String,
-        giftCardAmount: Double,
-        merchantId: Long,
-        userEmail: String
-    ): ResponseResource<PurchaseGiftCardResponse?>
-    suspend fun getMerchantById(
-        userEmail: String,
-        merchantId: Long,
-        includeLocations: Boolean? = false
-    ): ResponseResource<GetMerchantByIdResponse?>
+    suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Long, userEmail: String):
+        ResponseResource<PurchaseGiftCardResponse?>
+    suspend fun getMerchantById(userEmail: String, merchantId: Long, includeLocations: Boolean? = false):
+        ResponseResource<GetMerchantByIdResponse?>
+    suspend fun getPaymentStatus(userEmail: String, paymentId: String, orderId: String):
+        ResponseResource<PaymentStatusResponse?>
+    suspend fun getGiftCardDetails(userEmail: String, giftCardId: Long):
+        ResponseResource<GetGiftCardResponse?>
 }

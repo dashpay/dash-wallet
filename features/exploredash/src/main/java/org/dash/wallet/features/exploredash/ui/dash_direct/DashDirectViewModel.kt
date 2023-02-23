@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
@@ -32,9 +33,12 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
+import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 
@@ -45,6 +49,7 @@ constructor(
     walletDataProvider: WalletDataProvider,
     exchangeRates: ExchangeRatesProvider,
     var configuration: Configuration,
+    private val sendPaymentService: SendPaymentService,
     private val repository: DashDirectRepositoryInt
 ) : ViewModel() {
 
@@ -97,6 +102,30 @@ constructor(
         return null
     }
 
+    suspend fun getPaymentStatus(paymentId: String, orderId: String): ResponseResource<PaymentStatusResponse?>? {
+        repository.getDashDirectEmail()?.let { email ->
+            return repository.getPaymentStatus(
+                userEmail = email,
+                paymentId = paymentId,
+                orderId = orderId
+            )
+        }
+        return null
+    }
+
+    suspend fun getGiftCardDetails(giftCardId: Long): ResponseResource<GetGiftCardResponse?>? {
+        repository.getDashDirectEmail()?.let { email ->
+            return repository.getGiftCardDetails(
+                userEmail = email,
+                giftCardId = giftCardId
+            )
+        }
+        return null
+    }
+
+    suspend fun createSendingRequestFromDashUri(paymentURi: String): Transaction {
+        return sendPaymentService.createSendingRequestFromDashUri(paymentURi)
+    }
     suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>? {
         repository.getDashDirectEmail()?.let { email ->
             return repository.getMerchantById(merchantId = merchantId, includeLocations = false, userEmail = email)

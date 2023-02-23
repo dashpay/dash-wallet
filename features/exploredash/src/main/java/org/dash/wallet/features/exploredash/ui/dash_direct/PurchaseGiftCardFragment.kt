@@ -141,7 +141,6 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
     }
 
     private fun showCardPurchaseLimits() {
-
         val purchaseAmount = enterAmountViewModel.amount.value
         purchaseAmount?.let {
             if (

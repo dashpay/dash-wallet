@@ -16,8 +16,12 @@
  */
 package org.dash.wallet.features.exploredash.network.service
 
+import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardRequest
+import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdRequest
 import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
+import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusRequest
+import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
@@ -38,4 +42,16 @@ interface DashDirectServicesApi {
         @Header(DashDirectConstants.EMAIL) email: String,
         @Body getMerchantByIdRequest: GetMerchantByIdRequest
     ): GetMerchantByIdResponse?
+
+    @POST("PaymentStatus")
+    suspend fun getPaymentStatus(
+        @Header(DashDirectConstants.EMAIL) email: String,
+        @Body paymentStatusRequest: PaymentStatusRequest
+    ): PaymentStatusResponse?
+
+    @POST("GetGiftCard")
+    suspend fun getGiftCard(
+        @Header(DashDirectConstants.EMAIL) email: String,
+        @Body getGiftCardRequest: GetGiftCardRequest
+    ): GetGiftCardResponse?
 }
