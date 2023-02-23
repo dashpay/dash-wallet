@@ -241,7 +241,9 @@ class CoinJoinMixingService @Inject constructor(
     override suspend fun prepareAndStartMixing() {
         // do we need to mix?
         val wallet = walletDataProvider.wallet!! as WalletEx
-        if (wallet.coinJoinBalance.isGreaterThanOrEqualTo(CoinJoinClientOptions.getAmount())) {
+        // the mixed balance must meet the getAmount() requirement and all denominated coins must be mixed
+        if (wallet.coinJoinBalance.isGreaterThanOrEqualTo(CoinJoinClientOptions.getAmount()) &&
+                wallet.coinJoinBalance.equals(wallet.denominatedBalance)) {
             setMixingComplete()
         } else {
             updateMixingStatus(MixingStatus.MIXING)
