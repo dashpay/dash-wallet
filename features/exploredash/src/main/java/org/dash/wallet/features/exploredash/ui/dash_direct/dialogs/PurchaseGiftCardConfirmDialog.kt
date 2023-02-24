@@ -160,22 +160,22 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
                         getGift(it, transaction, merchant, paymentValue)
                     }
                 } else {
-                    AdaptiveDialog.create(
-                        R.drawable.ic_info_red,
-                        getString(R.string.something_wrong_title),
-                        getString(R.string.retry),
-                        getString(R.string.retry)
-                    ).show(requireActivity()) {
-                        lifecycleScope.launch {
-                            getPaymentStatus(
-                                paymentId,
-                                orderId,
-                                transaction,
-                                merchant,
-                                paymentValue
-                            )
-                        }
-                    }
+//                    AdaptiveDialog.create(
+//                        R.drawable.ic_info_red,
+//                        getString(R.string.something_wrong_title),
+//                        getString(R.string.retry),
+//                        getString(R.string.retry)
+//                    ).show(requireActivity()) {
+//                        lifecycleScope.launch {
+//                            getPaymentStatus(
+//                                paymentId,
+//                                orderId,
+//                                transaction,
+//                                merchant,
+//                                paymentValue
+//                            )
+//                        }
+//                    }
                 }
             }
             is ResponseResource.Failure -> {
