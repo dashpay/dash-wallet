@@ -159,7 +159,7 @@ class FiltersDialog : OffsetDialogFragment() {
 
             val initialIndex = if (sortByDistance) 1 else 0
             val adapter =
-                RadioGroupAdapter(initialIndex) { _, optionIndex ->
+                RadioGroupAdapter(initialIndex, isCheckMark = true) { _, optionIndex ->
                     sortByDistance = optionIndex == 1
                     checkResetButton()
                 }
@@ -193,7 +193,7 @@ class FiltersDialog : OffsetDialogFragment() {
 
             val radiusOption = selectedRadiusOption
             val adapter =
-                RadioGroupAdapter(radiusOptions.indexOf(radiusOption)) { _, optionIndex ->
+                RadioGroupAdapter(radiusOptions.indexOf(radiusOption), isCheckMark = true) { _, optionIndex ->
                     selectedRadiusOption = radiusOptions[optionIndex]
                     checkResetButton()
                 }
@@ -249,11 +249,10 @@ class FiltersDialog : OffsetDialogFragment() {
                     }
 
                 val dialogTitle = getString(R.string.explore_location)
-                OptionPickerDialog(dialogTitle, allTerritories, currentIndex) { item, index, dialog ->
-                        dialog.dismiss()
-                        setTerritoryName(if (index == 0) "" else item.title)
-                    }
-                    .show(parentFragmentManager, "territory_filter")
+                OptionPickerDialog(dialogTitle, allTerritories, currentIndex, useCheckMark = true) { item, index, dialog ->
+                    dialog.dismiss()
+                    setTerritoryName(if (index == 0) "" else item.title)
+                }.show(requireActivity())
             }
         }
     }

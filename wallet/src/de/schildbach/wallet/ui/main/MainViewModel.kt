@@ -28,7 +28,7 @@ import de.schildbach.wallet.Constants
 import org.dash.wallet.common.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.security.BiometricHelper
-import de.schildbach.wallet.transactions.TxDirection
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.*
@@ -79,8 +79,8 @@ class MainViewModel @Inject constructor(
     val transactions: LiveData<List<TransactionRowView>>
         get() = _transactions
 
-    private val _transactionsDirection = MutableStateFlow(TxDirection.ALL)
-    var transactionsDirection: TxDirection
+    private val _transactionsDirection = MutableStateFlow(TxFilterType.ALL)
+    var transactionsDirection: TxFilterType
         get() = _transactionsDirection.value
         set(value) {
             _transactionsDirection.value = value
@@ -124,7 +124,7 @@ class MainViewModel @Inject constructor(
 
     init {
         _hideBalance.value = config.hideBalance
-        transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxDirection.ALL
+        transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxFilterType.ALL
 
         _transactionsDirection
             .flatMapLatest { direction ->
@@ -207,11 +207,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun logDirectionChangedEvent(direction: TxDirection) {
+    fun logDirectionChangedEvent(direction: TxFilterType) {
         val directionParameter = when (direction) {
-            TxDirection.ALL -> "all_transactions"
-            TxDirection.SENT -> "sent_transactions"
-            TxDirection.RECEIVED -> "received_transactions"
+            TxFilterType.ALL -> "all_transactions"
+            TxFilterType.SENT -> "sent_transactions"
+            TxFilterType.RECEIVED -> "received_transactions"
+            TxFilterType.GIFT_CARD -> "gift_cards"
         }
         analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
             "filter_value" to directionParameter

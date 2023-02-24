@@ -178,12 +178,10 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         }
 
         binding.amountView.setOnCurrencyToggleClicked {
-            parentFragmentManager.let { fragmentManager ->
-                ExchangeRatesDialog(viewModel.selectedCurrencyCode) { rate, _, dialog ->
-                    viewModel.selectedCurrencyCode = rate.currencyCode
-                    dialog.dismiss()
-                }.show(fragmentManager, "payment_method")
-            }
+            ExchangeRatesDialog(viewModel.selectedCurrencyCode) { rate, _, dialog ->
+                viewModel.selectedCurrencyCode = rate.currencyCode
+                dialog.dismiss()
+            }.show(requireActivity())
         }
 
         binding.amountView.setOnDashToFiatChanged { isDashToFiat ->

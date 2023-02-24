@@ -51,4 +51,5 @@
     <dimen name="char_counter_end_padding">12dp</dimen>
     <dimen name="transaction_row_vertical_padding">13dp</dimen>
     <dimen name="transaction_row_extended_padding">17dp</dimen>
+    <dimen name="transaction_filter_separator_start">57dp</dimen>
 </resources>

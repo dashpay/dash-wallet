@@ -24,7 +24,7 @@ import de.schildbach.wallet.Constants
 import androidx.lifecycle.SavedStateHandle
 import org.dash.wallet.common.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.transactions.TxDirection
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
@@ -106,8 +106,8 @@ class MainViewModelTest {
                 0)
         }
 
-        every { savedStateMock.get<TxDirection>(eq("tx_direction")) } returns TxDirection.ALL
-        every { savedStateMock.set<TxDirection>(any(), any()) } just runs
+        every { savedStateMock.get<TxFilterType>(eq("tx_direction")) } returns TxFilterType.ALL
+        every { savedStateMock.set<TxFilterType>(any(), any()) } just runs
     }
 
     @Test

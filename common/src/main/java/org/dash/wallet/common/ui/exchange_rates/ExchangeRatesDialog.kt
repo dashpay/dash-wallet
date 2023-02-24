@@ -69,7 +69,7 @@ class ExchangeRatesDialog(
 
         binding.searchTitle.text = getString(R.string.select_currency)
 
-        val adapter = RadioGroupAdapter(0, true) { item, index ->
+        val adapter = RadioGroupAdapter(0) { item, index ->
             viewModel.exchangeRates.value?.firstOrNull {
                 it.currencyCode == item.additionalInfo
             }?.let {
@@ -116,6 +116,7 @@ class ExchangeRatesDialog(
                     it.getCurrencyName(requireContext()),
                     Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode().format(it.fiat).toString(),
                     getFlagFromCurrencyCode(it.currencyCode),
+                    null,
                     IconSelectMode.None,
                     it.currencyCode
                 )

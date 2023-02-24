@@ -76,7 +76,7 @@ class CryptoWalletsDialog(
         binding.progressRing.isVisible = true
         binding.searchTitle.text = getString(R.string.select_a_coin)
 
-        this.adapter = RadioGroupAdapter(0, true) { item, _ ->
+        this.adapter = RadioGroupAdapter(0) { item, _ ->
             val index = itemList.indexOfFirst { it.title == item.title }
             clickListener.invoke(index, this)
         }
@@ -132,32 +132,30 @@ class CryptoWalletsDialog(
 
     private fun refreshItems(rate: ExchangeRate?, dataList: List<CoinBaseUserAccountDataUIModel>) {
         itemList = dataList.map {
-            val icon = getFlagFromCurrencyCode(it.coinBaseUserAccountData.currency?.code ?: "")
-            val iconUrl =
-                if (icon == R.drawable.ic_default_flag && it.coinBaseUserAccountData.currency?.code.isNullOrEmpty()
-                        .not()
-                ) {
-                    "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/${it.coinBaseUserAccountData.currency?.code?.lowercase()}.png"
-                } else {
-                    null
-                }
+            val accountData = it.coinBaseUserAccountData
+            val icon = getFlagFromCurrencyCode(accountData.currency?.code ?: "")
+            val iconUrl = if (icon == null && !accountData.currency?.code.isNullOrEmpty()) {
+                "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/${accountData.currency?.code?.lowercase()}.png"
+            } else {
+                null
+            }
 
             val cryptoCurrencyBalance =
-                if (it.coinBaseUserAccountData.balance?.amount.isNullOrEmpty() || it.coinBaseUserAccountData.balance?.amount?.toDouble() == 0.0) {
+                if (accountData.balance?.amount.isNullOrEmpty() || accountData.balance?.amount?.toDouble() == 0.0) {
                     MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
                         .noCode().minDecimals(2).optionalDecimals().format(Coin.ZERO).toString()
                 } else {
-                    it.coinBaseUserAccountData.balance?.amount
+                    accountData.balance?.amount
                 }
 
             IconifiedViewItem(
-                it.coinBaseUserAccountData.currency?.code ?: "",
-                it.coinBaseUserAccountData.currency?.name ?: "",
+                accountData.currency?.code ?: "",
+                accountData.currency?.name ?: "",
                 icon,
+                iconUrl,
                 IconSelectMode.None,
                 setLocalFaitAmount(rate, it)?.first,
                 subtitleAdditionalInfo = cryptoCurrencyBalance,
-                iconUrl = iconUrl
             )
         }
 
@@ -216,11 +214,11 @@ class CryptoWalletsDialog(
         }
     }
 
-    private fun getFlagFromCurrencyCode(currencyCode: String): Int {
+    private fun getFlagFromCurrencyCode(currencyCode: String): Int? {
         val resourceId = resources.getIdentifier(
             "currency_code_" + currencyCode.lowercase(),
             "drawable", requireContext().packageName
         )
-        return if (resourceId == 0) R.drawable.ic_default_flag else resourceId
+        return if (resourceId == 0) null else resourceId
     }
 }

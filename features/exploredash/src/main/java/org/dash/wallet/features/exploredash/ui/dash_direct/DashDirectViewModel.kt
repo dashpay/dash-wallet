@@ -32,8 +32,10 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
@@ -50,7 +52,8 @@ constructor(
     exchangeRates: ExchangeRatesProvider,
     var configuration: Configuration,
     private val sendPaymentService: SendPaymentService,
-    private val repository: DashDirectRepositoryInt
+    private val repository: DashDirectRepositoryInt,
+    private val transactionMetadata: TransactionMetadataProvider
 ) : ViewModel() {
 
     val isUserSettingFiatIsNotUSD = (configuration.exchangeCurrencyCode != Constants.USD_CURRENCY)
@@ -124,7 +127,9 @@ constructor(
     }
 
     suspend fun createSendingRequestFromDashUri(paymentURi: String): Transaction {
-        return sendPaymentService.createSendingRequestFromDashUri(paymentURi)
+        val transaction = sendPaymentService.createSendingRequestFromDashUri(paymentURi)
+        transactionMetadata.setTransactionService(transaction.txId, ServiceName.DashDirect)
+        return transaction
     }
     suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>? {
         repository.getDashDirectEmail()?.let { email ->
@@ -135,9 +140,7 @@ constructor(
 
     fun setMinMaxCardPurchaseValues(minCardPurchase: Double, maximumCardPurchase: Double) {
         minCardPurchaseFiat = Fiat.parseFiat(Constants.USD_CURRENCY, minCardPurchase.toString())
-
         maxCardPurchaseFiat = Fiat.parseFiat(Constants.USD_CURRENCY, maximumCardPurchase.toString())
-
         updatePurchaseLimits()
     }
 
