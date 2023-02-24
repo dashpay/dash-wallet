@@ -20,7 +20,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_primary"
-    tools:context="org.dash.wallet.features.exploredash.ui.DashDirectUserAuthFragment">
+    tools:context="org.dash.wallet.features.exploredash.ui.dash_direct.DashDirectUserAuthFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/title_bar"
@@ -89,7 +89,7 @@
 
     <Button
         android:id="@+id/continue_button"
-        style="@style/Button.Primary.Blue"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="15dp"

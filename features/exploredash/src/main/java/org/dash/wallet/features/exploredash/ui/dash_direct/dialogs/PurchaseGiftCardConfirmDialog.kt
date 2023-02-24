@@ -100,6 +100,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
                             response.value?.data?.uri?.let {
                                 try {
                                     val transaction = viewModel.createSendingRequestFromDashUri(it)
+                                    Log.i("DASHDIRECT", transaction.txId.toString())
                                     response.value?.data?.paymentId?.let { paymentId ->
                                         response.value?.data?.orderId?.let { orderId ->
                                             getPaymentStatus(
