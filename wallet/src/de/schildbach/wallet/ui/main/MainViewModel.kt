@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.main
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
@@ -34,18 +35,23 @@ import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
+import java.util.HashMap
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -58,6 +64,7 @@ class MainViewModel @Inject constructor(
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
     private val savedStateHandle: SavedStateHandle,
+    private val metadataProvider: TransactionMetadataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
     val biometricHelper: BiometricHelper
 ) : ViewModel() {
@@ -128,11 +135,15 @@ class MainViewModel @Inject constructor(
 
         _transactionsDirection
             .flatMapLatest { direction ->
-                val filter = TxDirectionFilter(direction, walletData.wallet!!)
-                refreshTransactions(filter)
-                walletData.observeWalletChanged()
-                    .debounce(THROTTLE_DURATION)
-                    .onEach { refreshTransactions(filter) }
+                metadataProvider.observePresentableMetadata()
+                    .distinctUntilChanged()
+                    .flatMapLatest { memos ->
+                        val filter = TxDirectionFilter(direction, walletData.wallet!!)
+                        refreshTransactions(filter, memos)
+                        walletData.observeWalletChanged()
+                            .debounce(THROTTLE_DURATION)
+                            .onEach { refreshTransactions(filter, memos) }
+                    }
             }
             .catch { analytics.logError(it, "is wallet null: ${walletData.wallet == null}") }
             .launchIn(viewModelWorkerScope)
@@ -234,7 +245,7 @@ class MainViewModel @Inject constructor(
         config.unregisterOnSharedPreferenceChangeListener(listener)
     }
 
-    private fun refreshTransactions(filter: TransactionFilter) {
+    private fun refreshTransactions(filter: TransactionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
         walletData.wallet?.let { wallet ->
             val transactionViews = walletData.wrapAllTransactions(
                 FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)

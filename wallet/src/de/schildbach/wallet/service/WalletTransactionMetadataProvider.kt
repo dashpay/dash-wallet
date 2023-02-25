@@ -272,6 +272,12 @@ class WalletTransactionMetadataProvider @Inject constructor(
         return metadataList
     }
 
+    override suspend fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>> {
+        return transactionMetadataDao.observePresentableMetadata().map { list ->
+            list.associateBy( {it.txId}, {it} )
+        }
+    }
+
     override suspend fun markAddressWithTaxCategory(
         address: String,
         isInput: Boolean,

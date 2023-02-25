@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.TransactionMetadata
 
@@ -45,6 +46,8 @@ interface TransactionMetadataProvider {
     fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?>
 
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
+
+    suspend fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>>
 
     // Address methods
     /**
