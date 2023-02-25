@@ -26,9 +26,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
@@ -39,6 +37,7 @@ import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
 import org.dash.wallet.common.ui.CurrencyTextView
+import org.dash.wallet.common.util.currencySymbol
 
 /**
  * @author Samuel Barbosa
