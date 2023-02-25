@@ -25,8 +25,9 @@ import android.view.ViewGroup
 import androidx.annotation.StyleRes
 import androidx.core.view.isVisible
 import androidx.navigation.fragment.findNavController
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import coil.load
+import coil.size.Scale
+import coil.transform.RoundedCornersTransformation
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -66,12 +67,12 @@ class GiftCardDetailsDialog : OffsetDialogFragment() {
         giftCardDetailsDialogModel?.let {
             binding.merchentName.text = it.merchantName
             it.merchantLogo?.let { url ->
-                Glide.with(requireContext())
-                    .load(url)
-                    .placeholder(org.dash.wallet.common.R.drawable.ic_image_placeholder)
-                    .error(org.dash.wallet.common.R.drawable.ic_image_placeholder)
-                    .transition(DrawableTransitionOptions.withCrossFade(200))
-                    .into(binding.merchentLogo)
+                binding.merchentLogo.load(url) {
+                    crossfade(200)
+                    scale(Scale.FILL)
+                    placeholder(R.drawable.ic_image_placeholder)
+                    error(R.drawable.ic_image_placeholder)
+                }
             }
         }
 

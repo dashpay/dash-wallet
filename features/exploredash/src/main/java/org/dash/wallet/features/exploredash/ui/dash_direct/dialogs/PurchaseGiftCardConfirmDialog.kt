@@ -25,8 +25,9 @@ import android.view.ViewGroup
 import androidx.annotation.StyleRes
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import coil.load
+import coil.size.Scale
+import coil.transform.RoundedCornersTransformation
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -71,12 +72,13 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
         merchant?.let {
             binding.merchentName.text = it.name
             it.logoLocation?.let { logoLocation ->
-                Glide.with(requireContext())
-                    .load(logoLocation)
-                    .placeholder(org.dash.wallet.common.R.drawable.ic_image_placeholder)
-                    .error(org.dash.wallet.common.R.drawable.ic_image_placeholder)
-                    .transition(DrawableTransitionOptions.withCrossFade(200))
-                    .into(binding.merchentLogo)
+                binding.merchentLogo.load(logoLocation) {
+                    crossfade(200)
+                    scale(Scale.FILL)
+                    placeholder(R.drawable.ic_image_placeholder)
+                    error(R.drawable.ic_image_placeholder)
+                    transformations(RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat()))
+                }
             }
             binding.giftCardDiscountValue.text = GenericUtils.formatPercent(savingsPercentage)
         }

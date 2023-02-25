@@ -31,9 +31,9 @@ import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePaddingRelative
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.bitmap.RoundedCorners
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import coil.load
+import coil.size.Scale
+import coil.transform.RoundedCornersTransformation
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.*
 import org.dash.wallet.common.util.makeLinks
@@ -252,13 +252,13 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     }
 
     private fun loadImage(image: String?, into: ImageView) {
-        Glide.with(context)
-            .load(image)
-            .placeholder(R.drawable.ic_image_placeholder)
-            .error(R.drawable.ic_image_placeholder)
-            .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
-            .transition(DrawableTransitionOptions.withCrossFade(200))
-            .into(into)
+        into.load(image) {
+            crossfade(200)
+            scale(Scale.FILL)
+            placeholder(R.drawable.ic_image_placeholder)
+            error(R.drawable.ic_image_placeholder)
+            transformations(RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat()))
+        }
     }
 
     private fun openMaps(item: SearchResult) {
@@ -280,11 +280,6 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
 
     private fun openWebsite(website: String) {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(website))
-        context.startActivity(intent)
-    }
-
-    private fun openDeeplink(link: String) {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
         context.startActivity(intent)
     }
 

@@ -25,16 +25,12 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
-import com.bumptech.glide.RequestBuilder
-import com.bumptech.glide.RequestManager
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.FutureTarget
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.RequestOptions
-import com.bumptech.glide.request.target.Target
+import coil.ImageLoader
+import coil.request.Disposable
+import coil.request.ImageRequest
+import coil.transform.CircleCropTransformation
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.maps.*
@@ -78,17 +74,19 @@ class ExploreMapFragment : SupportMapFragment() {
     private var markerCollection: MarkerManager.Collection? = null
     private var selectedMarker: Marker? = null
 
-    private var allIconsRequests = listOf<FutureTarget<Bitmap>>()
-    private var selectedIconRequest: FutureTarget<Bitmap>? = null
-    private lateinit var markersGlideRequestManager: RequestManager
+    private lateinit var imageLoader: ImageLoader
+    private var allIconsRequests = listOf<Disposable>()
+    private var selectedIconRequest: Disposable? = null
+
     private var markerDrawable: Bitmap? = null
 
     @Inject lateinit var userLocationState: UserLocationStateInt
     private var cameraMovementReason: Int = -1
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        markersGlideRequestManager = Glide.with(this)
+        imageLoader = ImageLoader.Builder(requireContext()).crossfade(false).build()
         markerDrawable = getBitmapFromDrawable(R.drawable.ic_merchant)
 
         lifecycleScope.launchWhenStarted {
@@ -130,7 +128,7 @@ class ExploreMapFragment : SupportMapFragment() {
 
         viewModel.screenState.observe(viewLifecycleOwner) { state ->
             selectedMarker?.remove()
-            markersGlideRequestManager.clear(selectedIconRequest)
+            selectedIconRequest?.dispose()
 
             if (state == ScreenState.Details || state == ScreenState.DetailsGrouped) {
                 showSelectedMarker(state)
@@ -179,8 +177,7 @@ class ExploreMapFragment : SupportMapFragment() {
                 }
 
                 if (markerCollection?.markers?.firstOrNull { it.tag == item.id } == null) {
-                    val markerSize = resources.getDimensionPixelSize(R.dimen.explore_marker_size)
-                    selectedIconRequest = buildMarkerRequest(item, true).submit(markerSize, markerSize)
+                    selectedIconRequest = buildMarkerRequest(item, true)
                 }
 
                 val itemLatLng = LatLng(item.latitude!!, item.longitude!!)
@@ -259,7 +256,7 @@ class ExploreMapFragment : SupportMapFragment() {
     private fun setResults(results: List<SearchResult>?, inBounds: LatLngBounds? = null) {
         googleMap?.let { map ->
             if (results.isNullOrEmpty()) {
-                allIconsRequests.forEach { markersGlideRequestManager.clear(it) }
+                allIconsRequests.forEach { it.dispose() }
                 markerCollection?.clear()
                 currentMapItems = listOf()
             } else {
@@ -377,55 +374,37 @@ class ExploreMapFragment : SupportMapFragment() {
     }
 
     private fun loadMarkers(items: List<SearchResult>) {
-        val markerSize = resources.getDimensionPixelSize(R.dimen.explore_marker_size)
-        allIconsRequests.forEach { markersGlideRequestManager.clear(it) }
-        allIconsRequests = items.map { item -> buildMarkerRequest(item, false).submit(markerSize, markerSize) }
+        allIconsRequests.forEach { it.dispose() }
+        allIconsRequests = items.map { item -> buildMarkerRequest(item, false) }
     }
 
-    private fun buildMarkerRequest(item: SearchResult, isSelected: Boolean): RequestBuilder<Bitmap> {
-        return markersGlideRequestManager
-            .asBitmap()
-            .load(item.logoLocation)
+    private fun buildMarkerRequest(item: SearchResult, isSelected: Boolean): Disposable {
+        val request = ImageRequest.Builder(requireContext())
+            .data(item.logoLocation)
             .error(R.drawable.ic_merchant)
-            .apply(RequestOptions().centerCrop().circleCrop())
-            .listener(
-                object : RequestListener<Bitmap> {
-                    override fun onLoadFailed(
-                        e: GlideException?,
-                        model: Any?,
-                        target: Target<Bitmap>?,
-                        isFirstResource: Boolean
-                    ): Boolean {
-                        if (item.latitude != null && item.longitude != null && markerDrawable != null) {
-                            lifecycleScope.launch {
-                                addMarkerItemToMap(
-                                    isSelected,
-                                    item.latitude!!,
-                                    item.longitude!!,
-                                    markerDrawable!!,
-                                    item.id
-                                )
-                            }
-                        }
-                        return false
+            .size(resources.getDimensionPixelSize(R.dimen.explore_marker_size))
+            .transformations(CircleCropTransformation())
+            .target(
+                onSuccess = { resource ->
+                    if (item.latitude != null && item.longitude != null) {
+                        addMarkerItemToMap(isSelected, item.latitude!!, item.longitude!!, resource.toBitmap(), item.id)
                     }
-
-                    override fun onResourceReady(
-                        resource: Bitmap?,
-                        model: Any?,
-                        target: Target<Bitmap>?,
-                        dataSource: DataSource?,
-                        isFirstResource: Boolean
-                    ): Boolean {
-                        if (item.latitude != null && item.longitude != null && resource != null) {
-                            lifecycleScope.launch {
-                                addMarkerItemToMap(isSelected, item.latitude!!, item.longitude!!, resource, item.id)
-                            }
-                        }
-                        return false
+                },
+                onError = {
+                    if (item.latitude != null && item.longitude != null && markerDrawable != null) {
+                        addMarkerItemToMap(
+                            isSelected,
+                            item.latitude!!,
+                            item.longitude!!,
+                            markerDrawable!!,
+                            item.id
+                        )
                     }
                 }
             )
+            .build()
+
+        return imageLoader.enqueue(request)
     }
 
     private fun removeOldMarkers(newItems: List<SearchResult>) {

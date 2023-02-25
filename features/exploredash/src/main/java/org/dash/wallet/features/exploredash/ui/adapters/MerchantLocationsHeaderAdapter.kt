@@ -20,9 +20,9 @@ package org.dash.wallet.features.exploredash.ui.adapters
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.bitmap.RoundedCorners
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import coil.load
+import coil.size.Scale
+import coil.transform.RoundedCornersTransformation
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.MerchantLocationsHeaderBinding
 
@@ -45,12 +45,12 @@ class MerchantLocationsHeaderAdapter(private val name: String, private val type:
         binding.itemName.text = name
         binding.itemType.text = type
 
-        Glide.with(binding.itemImage.context)
-            .load(image)
-            .placeholder(R.drawable.ic_image_placeholder)
-            .error(R.drawable.ic_image_placeholder)
-            .transform(RoundedCorners(binding.itemImage.resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
-            .transition(DrawableTransitionOptions.withCrossFade(200))
-            .into(binding.itemImage)
+        binding.itemImage.load(image) {
+            crossfade(200)
+            scale(Scale.FILL)
+            placeholder(R.drawable.ic_image_placeholder)
+            error(R.drawable.ic_image_placeholder)
+            transformations(RoundedCornersTransformation(binding.itemImage.resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat()))
+        }
     }
 }

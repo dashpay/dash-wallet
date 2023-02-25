@@ -92,9 +92,8 @@ dependencies {
     // UI
     implementation "com.google.android.material:material:$materialVersion"
     implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
-    implementation "com.github.bumptech.glide:glide:$glideVersion"
-    kapt "com.github.bumptech.glide:compiler:$glideVersion"
     api 'androidx.paging:paging-runtime-ktx:3.1.1'
+    implementation "io.coil-kt:coil:$coilVersion"
 
     // Maps & Location
     implementation 'com.google.android.gms:play-services-location:18.0.0'
