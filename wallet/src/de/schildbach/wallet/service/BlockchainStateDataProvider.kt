@@ -62,7 +62,7 @@ class BlockchainStateDataProvider @Inject constructor(
         Executors.newFixedThreadPool(2).asCoroutineDispatcher()
     )
 
-    private val networkStatusFlow = MutableStateFlow(NetworkStatus.STOPPED)
+    private val networkStatusFlow = MutableStateFlow(NetworkStatus.UNKNOWN)
     private val blockchainFlow = MutableStateFlow<AbstractBlockChain?>(null)
 
     override suspend fun getState(): BlockchainState? {

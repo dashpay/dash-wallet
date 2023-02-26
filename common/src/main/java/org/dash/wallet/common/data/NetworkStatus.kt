@@ -24,6 +24,7 @@ package org.dash.wallet.common.data
  * Describes the network connection status with the Dash Network
  */
 enum class NetworkStatus {
+    UNKNOWN,
     CONNECTING,
     CONNECTED,
     DISCONNECTING,

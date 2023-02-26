@@ -182,6 +182,11 @@ class PlatformSynchronizationService @Inject constructor(
      */
     override suspend fun updateContactRequests() {
 
+        // if there is no wallet or identity, then skip the remaining steps of the update
+        if (platformRepo.getBlockchainIdentity() == null || walletApplication.wallet == null) {
+            return
+        }
+
         // only allow this method to execute once at a time
         if (updatingContacts.get()) {
             log.info("updateContactRequests is already running")
@@ -765,7 +770,7 @@ class PlatformSynchronizationService @Inject constructor(
             TxMetadataItem(it.txId.bytes, it.sentTimestamp, it.memo, it.rate?.toDouble(), it.currencyCode, it.taxCategory?.name?.lowercase(), it.service)
         }
         val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
-        platformRepo.getBlockchainIdentity()!!.publishTxMetaData(metadataList, walletEncryptionKey)
+        platformRepo.getBlockchainIdentity()?.publishTxMetaData(metadataList, walletEncryptionKey)
     }
 
     suspend fun publishChangeCache() {

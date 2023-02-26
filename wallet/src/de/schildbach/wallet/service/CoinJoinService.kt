@@ -21,6 +21,8 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -62,8 +64,6 @@ interface CoinJoinService {
     )
 
     suspend fun prepareAndStartMixing()
-    fun startMixing(): Boolean
-    fun stopMixing()
     fun getMixingStatus(): MixingStatus
     suspend fun waitForMixing()
     suspend fun waitForMixingWithException()
@@ -97,14 +97,14 @@ class CoinJoinMixingService @Inject constructor(
 
     private var mixingStatus: MixingStatus = MixingStatus.NOT_STARTED
 
-    private val syncScope = CoroutineScope(
+    private val coroutineScope = CoroutineScope(
         Executors.newFixedThreadPool(5).asCoroutineDispatcher()
     )
 
     private var blockChain: AbstractBlockChain? = null
     private val isBlockChainSet: Boolean
         get() = blockChain != null
-    private var networkStatus: NetworkStatus = NetworkStatus.STOPPED
+    private var networkStatus: NetworkStatus = NetworkStatus.UNKNOWN
 
     // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
     private val mixingMutex = Mutex(locked = true)
@@ -122,25 +122,25 @@ class CoinJoinMixingService @Inject constructor(
 
     init {
         blockchainStateProvider.observeNetworkStatus()
+            .filterNot { it == NetworkStatus.UNKNOWN }
             .onEach { status ->
                 updateNetworkStatus(status)
             }
-            .launchIn(syncScope)
+            .launchIn(coroutineScope)
 
         blockchainStateProvider.observeBlockChain()
             .filterNotNull()
             .onEach { blockChain ->
                 updateBlockChain(blockChain)
             }
-            .launchIn(syncScope)
+            .launchIn(coroutineScope)
     }
 
     private suspend fun updateState(mixingStatus: MixingStatus, networkStatus: NetworkStatus, blockChain: AbstractBlockChain?) {
-
-        log.info("coinjoin-updateState: $mixingStatus, $networkStatus, ${blockChain != null}")
         setBlockchain(blockChain)
 
         when {
+            networkStatus == NetworkStatus.UNKNOWN -> return
             mixingStatus == MixingStatus.MIXING && networkStatus == NetworkStatus.CONNECTED && isBlockChainSet-> {
                 // start mixing
                 prepareMixing()
@@ -162,6 +162,7 @@ class CoinJoinMixingService @Inject constructor(
             }
             mixingStatus == MixingStatus.ERROR -> setMixingComplete()
         }
+        log.info("coinjoin-updateState: $mixingStatus, $networkStatus, ${blockChain != null}")
         this.networkStatus = networkStatus
         this.mixingStatus = mixingStatus
     }
@@ -258,6 +259,10 @@ class CoinJoinMixingService @Inject constructor(
         coinJoinManager?.run {
             clientManager = CoinJoinClientManager(wallet)
             coinJoinClientManagers[wallet.description] = clientManager
+            // this allows mixing to wait for the last transaction to be confirmed
+            clientManager.addContinueMixingOnError(PoolStatus.ERR_NOT_ENOUGH_FUNDS)
+            // wait until the masternode sync system fixes itself
+            clientManager.addContinueMixingOnError(PoolStatus.ERR_NO_MASTERNODES_DETECTED)
             clientManager.setStopOnNothingToDo(true)
             val mixingFinished = clientManager.mixingFinishedFuture
 
@@ -266,7 +271,7 @@ class CoinJoinMixingService @Inject constructor(
                     statusList?.let {
                         for (status in it) {
                             if (status != PoolStatus.FINISHED) {
-                                syncScope.launch { updateMixingStatus(MixingStatus.ERROR) }
+                                coroutineScope.launch { updateMixingStatus(MixingStatus.ERROR) }
                                 exception = Exception("Mixing stopped before completion ${status.name}")
                             }
                         }
@@ -277,9 +282,9 @@ class CoinJoinMixingService @Inject constructor(
                 log.info("Mixing complete.")
                 removeMixingCompleteListener(mixingCompleteListener)
                 if (mixingFinished.get()) {
-                    syncScope.launch { updateMixingStatus(MixingStatus.FINISHED) }
+                    coroutineScope.launch { updateMixingStatus(MixingStatus.FINISHED) }
                 } else {
-                    syncScope.launch { updateMixingStatus(MixingStatus.PAUSED) }
+                    coroutineScope.launch { updateMixingStatus(MixingStatus.PAUSED) }
                 }
             }, Threading.SAME_THREAD)
 
@@ -287,20 +292,25 @@ class CoinJoinMixingService @Inject constructor(
         }
     }
 
-    override fun startMixing(): Boolean {
+    private suspend fun startMixing(): Boolean {
         Context.propagate(walletDataProvider.wallet!!.context)
         clientManager.setBlockChain(blockChain)
         return if (!clientManager.startMixing()) {
             log.info("Mixing has been started already.")
             false
         } else {
-            val result = clientManager.doAutomaticDenominating()
+            // run this on a different thread?
+            val asyncStart = coroutineScope.async {
+                Context.propagate(walletDataProvider.wallet!!.context)
+                clientManager.doAutomaticDenominating()
+            }
+            val result = asyncStart.await()
             log.info("Mixing " + if (result) "started successfully" else "start failed: " + clientManager.statuses + ", will retry")
             true
         }
     }
 
-    override fun stopMixing() {
+    private fun stopMixing() {
         log.info("Mixing process will stop...")
         if (coinJoinManager == null || !this::clientManager.isInitialized) {
             return
