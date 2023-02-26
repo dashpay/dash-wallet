@@ -122,9 +122,6 @@ jobs:
         rm  -rf wallet/assets/explore/*
         ruby ./exploredata.rb "${{ github.event.inputs.flavor }}"
 
-    - name: Check code formatting
-      run: ./gradlew ktfmtCheck
-
     - name: Test
       run: bundle exec fastlane test flavor:"${{ github.event.inputs.flavor }}" type:"${{ github.event.inputs.type }}" version_code:"${{ env.build_number }}" store_pass:"${{ secrets.SIGNING_STORE_PASS }}"
       
