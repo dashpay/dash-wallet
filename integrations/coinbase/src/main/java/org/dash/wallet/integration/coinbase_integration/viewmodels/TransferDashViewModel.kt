@@ -17,7 +17,7 @@ import org.bitcoinj.wallet.Wallet.DustySendRequested
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.R
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.NetworkStateInt

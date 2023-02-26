@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2022. Dash Core Group.
+ * Copyright 2023 Dash Core Group.
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -14,14 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.data
+package de.schildbach.wallet.database.dao
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.TaxCategory
-import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.data.entity.TransactionMetadata
 
 /**
  * @author Eric Britten

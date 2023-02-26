@@ -63,7 +63,7 @@ class BuyAndSellViewModel @Inject constructor(
         private const val ZERO_BALANCE = "0.0"
     }
 
-    private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
+    private var currentExchangeRate: org.dash.wallet.common.data.entity.ExchangeRate? = null
 
     private val _servicesList = MutableLiveData(BuyAndSellDashServicesModel.getBuyAndSellDashServicesList())
     val servicesList: LiveData<List<BuyAndSellDashServicesModel>>

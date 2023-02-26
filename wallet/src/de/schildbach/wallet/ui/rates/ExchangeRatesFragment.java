@@ -49,7 +49,7 @@ import com.google.common.base.Strings;
 
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.entity.ExchangeRate;
 
 import java.util.ArrayList;
 import java.util.Collections;

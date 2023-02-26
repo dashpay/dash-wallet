@@ -48,7 +48,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     private val binding by viewBinding(FragmentCoinbaseServicesBinding::bind)
     private val viewModel by viewModels<CoinbaseServicesViewModel>()
     private var loadingDialog: AdaptiveDialog? = null
-    private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
+    private var currentExchangeRate: org.dash.wallet.common.data.entity.ExchangeRate? = null
     private val sharedViewModel: CoinbaseActivityViewModel by activityViewModels()
 
     @Inject lateinit var analyticsService: AnalyticsService

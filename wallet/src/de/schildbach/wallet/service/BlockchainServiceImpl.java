@@ -121,9 +121,9 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.AddressBookProvider;
-import org.dash.wallet.common.data.BlockchainState;
-import de.schildbach.wallet.data.BlockchainStateDao;
-import de.schildbach.wallet.rates.ExchangeRatesDao;
+import org.dash.wallet.common.data.entity.BlockchainState;
+import de.schildbach.wallet.database.dao.BlockchainStateDao;
+import de.schildbach.wallet.database.dao.ExchangeRatesDao;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.staking.StakingActivity;
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
@@ -245,7 +245,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     || insideTxExchangeRateTimeThreshold
                     || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
                 try {
-                    final org.dash.wallet.common.data.ExchangeRate exchangeRate =
+                    final org.dash.wallet.common.data.entity.ExchangeRate exchangeRate =
                             exchangeRatesDao.getRateSync(config.getExchangeCurrencyCode());
                     if (exchangeRate != null) {
                         log.info("Setting exchange rate on received transaction.  Rate:  " + exchangeRate + " tx: " + tx.getTxId().toString());

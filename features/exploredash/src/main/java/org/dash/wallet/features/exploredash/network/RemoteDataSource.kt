@@ -43,9 +43,9 @@ class RemoteDataSource @Inject constructor(private val config: DashDirectConfig)
     private fun getOkHttpClient(authenticator: Authenticator? = null): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(HeadersInterceptor(config))
-            .connectTimeout(20.seconds.toJavaDuration())
-            .callTimeout(20.seconds.toJavaDuration())
-            .readTimeout(20.seconds.toJavaDuration())
+            .connectTimeout(120.seconds.toJavaDuration())
+            .callTimeout(120.seconds.toJavaDuration())
+            .readTimeout(120.seconds.toJavaDuration())
             .also { client ->
                 authenticator?.let { client.authenticator(it) }
                 if (BuildConfig.DEBUG) {

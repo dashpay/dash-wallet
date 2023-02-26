@@ -32,7 +32,7 @@ import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.BlockchainStateProvider

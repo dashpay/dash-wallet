@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.data
+package org.dash.wallet.common.data.entity
 
 import android.content.Context
 import android.os.Parcel
@@ -24,6 +24,7 @@ import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.data.CurrencyInfo
 import java.lang.IllegalArgumentException
 import java.math.BigDecimal
 import java.util.*

@@ -16,13 +16,17 @@
 
 package org.dash.wallet.common.services
 
+import android.graphics.Bitmap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.TaxCategory
-import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.data.entity.TransactionMetadata
+import java.io.ByteArrayOutputStream
 
 interface TransactionMetadataProvider {
     suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata)
@@ -97,6 +101,18 @@ interface TransactionMetadataProvider {
      */
     fun markAddressAsTransferInAsync(address: String, service: String) {
         markAddressAsync(address, false, TaxCategory.TransferIn, service)
+    }
+
+    /**
+     * Mark a transaction as DashDirect gift card purchase with an icon
+     */
+    suspend fun markGiftCardTransaction(hash: Sha256Hash, icon: Bitmap) {
+        withContext(Dispatchers.IO) {
+            ByteArrayOutputStream().use {
+                icon.compress(Bitmap.CompressFormat.PNG, 100, it)
+                it.toByteArray()
+            }
+        }
     }
 
     // Reset methods

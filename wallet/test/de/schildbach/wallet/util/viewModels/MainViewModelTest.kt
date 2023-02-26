@@ -22,8 +22,8 @@ import android.content.ClipboardManager
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import de.schildbach.wallet.Constants
 import androidx.lifecycle.SavedStateHandle
-import org.dash.wallet.common.data.BlockchainState
-import de.schildbach.wallet.data.BlockchainStateDao
+import org.dash.wallet.common.data.entity.BlockchainState
+import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
@@ -41,7 +41,7 @@ import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.junit.Before

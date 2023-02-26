@@ -19,20 +19,18 @@ package org.dash.wallet.features.exploredash.ui.dash_direct
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.util.*
-import javax.inject.Inject
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -43,6 +41,8 @@ import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdR
 import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
+import java.util.*
+import javax.inject.Inject
 
 @HiltViewModel
 class DashDirectViewModel
@@ -128,9 +128,13 @@ constructor(
 
     suspend fun createSendingRequestFromDashUri(paymentURi: String): Transaction {
         val transaction = sendPaymentService.createSendingRequestFromDashUri(paymentURi)
-        transactionMetadata.setTransactionService(transaction.txId, ServiceName.DashDirect)
+        purchaseGiftCardDataMerchant?.iconBitmap?.let {
+            val hash = Sha256Hash.wrap("8A9138FA8094227AA031247BF49EDB5CF1C64F68A7032F0474C0AD680E94D315") // TODO transaction.txId
+            transactionMetadata.markGiftCardTransaction(hash, it)
+        }
         return transaction
     }
+
     suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>? {
         repository.getDashDirectEmail()?.let { email ->
             return repository.getMerchantById(merchantId = merchantId, includeLocations = false, userEmail = email)

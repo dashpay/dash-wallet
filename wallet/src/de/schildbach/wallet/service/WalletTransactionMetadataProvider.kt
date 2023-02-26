@@ -16,8 +16,8 @@
 
 package de.schildbach.wallet.service
 
-import de.schildbach.wallet.data.AddressMetadataDao
-import de.schildbach.wallet.data.TransactionMetadataDao
+import de.schildbach.wallet.database.dao.AddressMetadataDao
+import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Address
@@ -33,7 +33,9 @@ import org.dash.wallet.common.data.*
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.transactions.TransactionCategory
-import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.data.entity.TransactionMetadata
+import org.dash.wallet.common.data.entity.AddressMetadata
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors

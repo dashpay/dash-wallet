@@ -3,7 +3,7 @@ package de.schildbach.wallet.service
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.database.dao.BlockchainStateDao
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Block
 import org.bitcoinj.core.CheckpointManager
@@ -13,7 +13,7 @@ import org.bitcoinj.core.StoredBlock
 import org.bitcoinj.store.BlockStoreException
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.BlockchainState
+import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.BlockchainStateProvider
 import java.io.IOException
 import java.io.InputStream

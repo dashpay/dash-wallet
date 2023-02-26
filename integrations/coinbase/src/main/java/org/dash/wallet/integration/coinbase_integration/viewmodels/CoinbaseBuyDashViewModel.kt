@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.livedata.NetworkStateInt
@@ -37,7 +37,6 @@ import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt

@@ -46,7 +46,7 @@ import org.bitcoinj.wallet.KeyChain.KeyPurpose
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.slf4j.LoggerFactory
 import javax.inject.Inject

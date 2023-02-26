@@ -213,7 +213,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
         }
     }
 
-    private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.ExchangeRate?) {
+    private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.entity.ExchangeRate?) {
         val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, it.fiat) }
         var balanceText = viewModel.dashFormat.format(balance).toString()
         exchangeRate?.let { balanceText += " ~ ${GenericUtils.fiatToString(exchangeRate.coinToFiat(balance))}" }

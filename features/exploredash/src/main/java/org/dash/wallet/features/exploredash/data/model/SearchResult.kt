@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.data.model
 
+import android.graphics.Bitmap
 import androidx.room.ColumnInfo
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
@@ -42,7 +43,8 @@ open class SearchResult(
     var googleMaps: String? = "",
     var coverImage: String? = "",
     var type: String? = "",
-    @Ignore var distance: Double = Double.NaN
+    @Ignore var distance: Double = Double.NaN,
+    @Ignore var iconBitmap: Bitmap? = null
 ) {
     fun getDisplayAddress(separator: String = "\n"): String {
         val addressBuilder = StringBuilder()

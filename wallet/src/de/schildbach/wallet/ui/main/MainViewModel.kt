@@ -20,14 +20,13 @@ package de.schildbach.wallet.ui.main
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
-import org.dash.wallet.common.data.BlockchainState
-import de.schildbach.wallet.data.BlockchainStateDao
+import org.dash.wallet.common.data.entity.BlockchainState
+import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.transactions.TxDirectionFilter
@@ -40,18 +39,16 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
-import java.util.HashMap
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
