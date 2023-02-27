@@ -49,6 +49,11 @@ interface TransactionMetadataProvider {
     suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata?
     fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?>
 
+    /**
+     * Mark a transaction as DashDirect gift card purchase with an icon
+     */
+    suspend fun markGiftCardTransaction(txId: Sha256Hash, icon: Bitmap)
+
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 
     suspend fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>>
@@ -101,18 +106,6 @@ interface TransactionMetadataProvider {
      */
     fun markAddressAsTransferInAsync(address: String, service: String) {
         markAddressAsync(address, false, TaxCategory.TransferIn, service)
-    }
-
-    /**
-     * Mark a transaction as DashDirect gift card purchase with an icon
-     */
-    suspend fun markGiftCardTransaction(hash: Sha256Hash, icon: Bitmap) {
-        withContext(Dispatchers.IO) {
-            ByteArrayOutputStream().use {
-                icon.compress(Bitmap.CompressFormat.PNG, 100, it)
-                it.toByteArray()
-            }
-        }
     }
 
     // Reset methods

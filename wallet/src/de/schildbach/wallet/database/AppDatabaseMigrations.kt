@@ -22,17 +22,14 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 class AppDatabaseMigrations {
     companion object {
-        // this is a place holder for future migrations post version 11
-        // that will need to preserve the transaction_metadata and address_metadata tables
-        // If new tables are added in version 12, then we will need something like this:
         val migration11To12 =
             object : Migration(11, 12) {
                 override fun migrate(database: SupportSQLiteDatabase) {
                     database.execSQL(
-                        "ALTER TABLE transaction_metadata ADD COLUMN customIconId TEXT"
+                        "ALTER TABLE transaction_metadata ADD COLUMN customIconId BLOB"
                     )
                     database.execSQL(
-                        "CREATE TABLE IF NOT EXISTS icon_bitmaps (id TEXT NOT NULL PRIMARY KEY, imageData BLOB NOT NULL, height INTEGER NOT NULL, width INTEGER NOT NULL)"
+                        "CREATE TABLE IF NOT EXISTS icon_bitmaps (id BLOB NOT NULL PRIMARY KEY, imageData BLOB NOT NULL, height INTEGER NOT NULL, width INTEGER NOT NULL)"
                     )
                 }
             }

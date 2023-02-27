@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
@@ -129,8 +128,8 @@ constructor(
     suspend fun createSendingRequestFromDashUri(paymentURi: String): Transaction {
         val transaction = sendPaymentService.createSendingRequestFromDashUri(paymentURi)
         purchaseGiftCardDataMerchant?.iconBitmap?.let {
-            val hash = Sha256Hash.wrap("8A9138FA8094227AA031247BF49EDB5CF1C64F68A7032F0474C0AD680E94D315") // TODO transaction.txId
-            transactionMetadata.markGiftCardTransaction(hash, it)
+            transactionMetadata.markGiftCardTransaction(transaction.txId, it)
+            purchaseGiftCardDataMerchant?.iconBitmap = null
         }
         return transaction
     }

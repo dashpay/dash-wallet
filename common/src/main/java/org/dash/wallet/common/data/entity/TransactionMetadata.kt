@@ -35,7 +35,7 @@ data class TransactionMetadata(
     var rate: String? = null,
     var memo: String = "",
     var service: String? = null,
-    var customIconId: String? = null
+    var customIconId: Sha256Hash? = null
 ) {
     @Ignore
     val canToggle = type.canToggle

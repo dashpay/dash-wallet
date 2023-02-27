@@ -73,8 +73,7 @@ data class FilterOptions(
     val radius: Int
 )
 
-@ExperimentalCoroutinesApi
-@FlowPreview
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ExploreViewModel
 @Inject

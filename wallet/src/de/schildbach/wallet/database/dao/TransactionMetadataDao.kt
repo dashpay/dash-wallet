@@ -32,6 +32,9 @@ interface TransactionMetadataDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(transactionMetadata: TransactionMetadata)
 
+    @Update(entity = TransactionMetadata::class)
+    suspend fun update(transactionMetadata: TransactionMetadata)
+
     @Query("SELECT * FROM transaction_metadata")
     suspend fun load(): List<TransactionMetadata>
 

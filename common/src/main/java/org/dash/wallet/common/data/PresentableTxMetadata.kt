@@ -22,5 +22,6 @@ import org.bitcoinj.core.Sha256Hash
 data class PresentableTxMetadata(
     var txId: Sha256Hash,
     var memo: String = "",
-    var service: String? = null
+    var service: String? = null,
+    var customIconId: String? = null
 )

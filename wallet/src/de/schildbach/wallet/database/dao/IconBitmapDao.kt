@@ -18,28 +18,13 @@
 package de.schildbach.wallet.database.dao
 
 import androidx.room.*
-import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.data.entity.AddressMetadata
-import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.data.entity.IconBitmap
 
 @Dao
 interface IconBitmapDao {
-    @Query("SELECT COUNT(1) FROM address_metadata WHERE address = :address AND isInput = :isInput;")
-    suspend fun exists(address: String, isInput: Boolean): Boolean
+    @Insert(onConflict = OnConflictStrategy.IGNORE) // Ignore if the image hash already exists
+    suspend fun addBitmap(bitmap: IconBitmap)
 
-    @Query("SELECT * FROM address_metadata WHERE address = :address AND isInput = 0")
-    suspend fun loadRecipient(address: String): AddressMetadata?
-
-    @Query("SELECT * FROM address_metadata WHERE address = :address AND isInput = 1")
-    suspend fun loadSender(address: String): AddressMetadata?
-
-    @Query("INSERT into address_metadata (address, isInput, taxCategory, service) VALUES (:address, :isInput, :taxCategory, :service)")
-    suspend fun markAddress(address: String, isInput: Boolean, taxCategory: TaxCategory, service: String)
-
-    @Query("SELECT * FROM address_metadata WHERE address = :address")
-    fun observe(address: Sha256Hash): Flow<AddressMetadata?>
-
-    @Query("DELETE FROM address_metadata")
+    @Query("DELETE FROM icon_bitmaps")
     suspend fun clear()
 }

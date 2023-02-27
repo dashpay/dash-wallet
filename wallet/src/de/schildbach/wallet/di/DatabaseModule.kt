@@ -26,10 +26,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.database.AppDatabase
 import de.schildbach.wallet.database.AppDatabaseMigrations
-import de.schildbach.wallet.database.dao.AddressMetadataDao
-import de.schildbach.wallet.database.dao.BlockchainStateDao
-import de.schildbach.wallet.database.dao.ExchangeRatesDao
-import de.schildbach.wallet.database.dao.TransactionMetadataDao
+import de.schildbach.wallet.database.dao.*
 import javax.inject.Singleton
 
 @Module
@@ -63,5 +60,10 @@ object DatabaseModule {
     @Provides
     fun provideAddressMetadata(appDatabase: AppDatabase): AddressMetadataDao {
         return appDatabase.addressMetadataDao()
+    }
+
+    @Provides
+    fun provideIconBitmaps(appDatabase: AppDatabase): IconBitmapDao {
+        return appDatabase.iconBitmapDao()
     }
 }

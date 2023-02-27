@@ -16,7 +16,9 @@
 
 package de.schildbach.wallet.service
 
+import android.graphics.Bitmap
 import de.schildbach.wallet.database.dao.AddressMetadataDao
+import de.schildbach.wallet.database.dao.IconBitmapDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -36,14 +38,17 @@ import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.data.entity.AddressMetadata
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.data.entity.IconBitmap
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.slf4j.LoggerFactory
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executors
 import javax.inject.Inject
 
 class WalletTransactionMetadataProvider @Inject constructor(
     private val transactionMetadataDao: TransactionMetadataDao,
     private val addressMetadataDao: AddressMetadataDao,
+    private val iconBitmapDao: IconBitmapDao,
     private val walletData: WalletDataProvider
 ) : TransactionMetadataProvider {
 
@@ -55,7 +60,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         Executors.newFixedThreadPool(5).asCoroutineDispatcher()
     )
 
-    private suspend fun insertTransactionMetadata(txId: Sha256Hash) {
+    private suspend fun insertTransactionMetadata(txId: Sha256Hash): TransactionMetadata? {
         val walletTx = walletData.wallet!!.getTransaction(txId)
         Context.propagate(walletData.wallet!!.context)
         walletTx?.run {
@@ -80,15 +85,20 @@ class WalletTransactionMetadataProvider @Inject constructor(
             )
             transactionMetadataDao.insert(metadata)
             log.info("txmetadata: inserting $metadata")
+
+            return metadata
         }
+
+        return null
     }
 
-    private suspend fun updateAndInsertIfNotExist(txId: Sha256Hash, update: suspend () -> Unit) {
-        if (transactionMetadataDao.exists(txId)) {
-            update()
+    private suspend fun updateAndInsertIfNotExist(txId: Sha256Hash, update: suspend (TransactionMetadata) -> Unit) {
+        val existing = transactionMetadataDao.load(txId)
+
+        if (existing != null) {
+            update(existing)
         } else {
-            insertTransactionMetadata(txId)
-            update()
+            insertTransactionMetadata(txId)?.let { update(it) }
         }
     }
 
@@ -131,6 +141,24 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override suspend fun setTransactionService(txId: Sha256Hash, service: String) {
         updateAndInsertIfNotExist(txId) {
             transactionMetadataDao.updateService(txId, service)
+        }
+    }
+
+    override suspend fun markGiftCardTransaction(txId: Sha256Hash, icon: Bitmap) {
+        withContext(Dispatchers.IO) {
+            val stream = ByteArrayOutputStream()
+            stream.use { icon.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            val imageData = stream.toByteArray()
+            val imageHash = Sha256Hash.of(imageData)
+            iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, icon.height, icon.width))
+
+            updateAndInsertIfNotExist(txId) {
+                transactionMetadataDao.update(it.copy(
+                    service = ServiceName.DashDirect,
+                    customIconId = imageHash,
+                    taxCategory = TaxCategory.Expense
+                ))
+            }
         }
     }
 
@@ -322,8 +350,6 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-
-    @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?> {
         return transactionMetadataDao.observe(txId).map { transactionMetadata ->
             // if there is no user specified tax category, then look at address_metadata
@@ -338,6 +364,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         syncScope.launch {
             transactionMetadataDao.clear()
             addressMetadataDao.clear()
+            iconBitmapDao.clear()
         }
     }
 }

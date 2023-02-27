@@ -20,7 +20,6 @@ package org.dash.wallet.features.exploredash.ui.explore
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.AttributeSet
 import android.view.LayoutInflater
@@ -28,14 +27,12 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.graphics.drawable.toBitmap
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePaddingRelative
 import coil.load
 import coil.size.Scale
-import coil.target.ImageViewTarget
 import coil.transform.RoundedCornersTransformation
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.*
@@ -186,7 +183,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             locationHint.isVisible = false
             backButton.isVisible = !isOnline && !isGrouped
 
-            loadImage(merchant.logoLocation, itemImage, merchant)
+            loadImage(merchant.logoLocation, itemImage)
             itemType.text = getMerchantType(merchant.type)
             itemAddress.isVisible = !isOnline
             showAllBtn.isVisible = !isOnline && isGrouped && merchant.physicalAmount > 1
@@ -254,19 +251,13 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
         }
     }
 
-    private fun loadImage(image: String?, into: ImageView, item: SearchResult? = null) {
+    private fun loadImage(image: String?, into: ImageView) {
         into.load(image) {
             crossfade(200)
             scale(Scale.FILL)
             placeholder(R.drawable.ic_image_placeholder)
             error(R.drawable.ic_image_placeholder)
             transformations(RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat()))
-            target(object: ImageViewTarget(into) {
-                override fun onSuccess(result: Drawable) {
-                    super.onSuccess(result)
-                    item?.iconBitmap = result.toBitmap()
-                }
-            })
         }
     }
 

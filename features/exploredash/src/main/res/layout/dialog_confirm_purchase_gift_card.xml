@@ -85,7 +85,6 @@
                 style="@style/Caption.Medium.Tertiary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="15dp"
                 android:layout_marginTop="12dp"
                 android:ellipsize="end"
                 android:maxLines="1"
@@ -117,7 +116,6 @@
                 style="@style/Caption.Medium.Tertiary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="15dp"
                 android:layout_marginTop="12dp"
                 android:ellipsize="end"
                 android:maxLines="1"
@@ -128,16 +126,16 @@
                 app:layout_constraintTop_toBottomOf="@+id/from_label" />
 
             <androidx.appcompat.widget.AppCompatImageView
-                android:id="@+id/merchent_logo"
+                android:id="@+id/merchant_logo"
                 android:layout_width="18dp"
                 android:layout_height="18dp"
                 android:layout_marginEnd="10dp"
-                app:layout_constraintEnd_toStartOf="@+id/merchent_name"
+                app:layout_constraintEnd_toStartOf="@+id/merchant_name"
                 app:layout_constraintTop_toTopOf="@+id/to_label"
                 tools:src="@drawable/ic_dash_pay" />
 
             <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/merchent_name"
+                android:id="@+id/merchant_name"
                 style="@style/Caption.Medium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -150,7 +148,6 @@
                 style="@style/Caption.Medium.Tertiary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="15dp"
                 android:layout_marginTop="12dp"
                 android:ellipsize="end"
                 android:maxLines="1"
@@ -174,7 +171,6 @@
                 style="@style/Caption.Medium.Tertiary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="15dp"
                 android:layout_marginTop="12dp"
                 android:ellipsize="end"
                 android:maxLines="1"
@@ -198,7 +194,6 @@
                 style="@style/Caption.Medium.Tertiary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="15dp"
                 android:layout_marginTop="12dp"
                 android:ellipsize="end"
                 android:maxLines="1"
