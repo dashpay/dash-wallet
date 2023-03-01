@@ -44,9 +44,11 @@ import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 @InstallIn(SingletonComponent::class)
 abstract class ExploreDashModule {
     companion object {
+        val PREFERENCES_FILENAME = "explore"
+
         @Provides
         fun provideSharedPrefs(@ApplicationContext context: Context): SharedPreferences {
-            return context.getSharedPreferences("explore", Context.MODE_PRIVATE)
+            return context.getSharedPreferences(PREFERENCES_FILENAME, Context.MODE_PRIVATE)
         }
 
         @Provides
