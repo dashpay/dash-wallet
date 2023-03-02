@@ -167,6 +167,26 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    fun getWalletSeed(): DeterministicSeed? {
+        val wallet = walletApplication.wallet!!
+        return if (wallet.isEncrypted) {
+            val password = try {
+                // always create a SecurityGuard when it is required
+                val securityGuard = SecurityGuard()
+                securityGuard.retrievePassword()
+            } catch (e: IllegalArgumentException) {
+                log.error("There was an error retrieving the wallet password", e)
+                analytics.logError(e, "There was an error retrieving the wallet password")
+                null
+            }
+            // Don't bother with DeriveKeyTask here, just call deriveKey
+            val encryptionKey = wallet.keyCrypter!!.deriveKey(password)
+            wallet.keyChainSeed.decrypt(wallet.keyCrypter, "", encryptionKey)
+        } else {
+            null
+        }
+    }
+
     /**
      * This method looks at all items in the database tables
      * that have existing identites and saves them for future use.

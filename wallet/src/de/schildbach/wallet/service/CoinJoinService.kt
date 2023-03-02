@@ -20,6 +20,7 @@ package de.schildbach.wallet.service
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.filterNot
@@ -98,7 +99,7 @@ class CoinJoinMixingService @Inject constructor(
     private var mixingStatus: MixingStatus = MixingStatus.NOT_STARTED
 
     private val coroutineScope = CoroutineScope(
-        Executors.newFixedThreadPool(5).asCoroutineDispatcher()
+        Executors.newFixedThreadPool(2).asCoroutineDispatcher()
     )
 
     private var blockChain: AbstractBlockChain? = null
@@ -271,7 +272,7 @@ class CoinJoinMixingService @Inject constructor(
                     statusList?.let {
                         for (status in it) {
                             if (status != PoolStatus.FINISHED) {
-                                coroutineScope.launch { updateMixingStatus(MixingStatus.ERROR) }
+                                coroutineScope.launch(Dispatchers.IO) { updateMixingStatus(MixingStatus.ERROR) }
                                 exception = Exception("Mixing stopped before completion ${status.name}")
                             }
                         }
@@ -282,9 +283,9 @@ class CoinJoinMixingService @Inject constructor(
                 log.info("Mixing complete.")
                 removeMixingCompleteListener(mixingCompleteListener)
                 if (mixingFinished.get()) {
-                    coroutineScope.launch { updateMixingStatus(MixingStatus.FINISHED) }
+                    coroutineScope.launch(Dispatchers.IO) { updateMixingStatus(MixingStatus.FINISHED) }
                 } else {
-                    coroutineScope.launch { updateMixingStatus(MixingStatus.PAUSED) }
+                    coroutineScope.launch(Dispatchers.IO) { updateMixingStatus(MixingStatus.PAUSED) }
                 }
             }, Threading.SAME_THREAD)
 
@@ -300,7 +301,7 @@ class CoinJoinMixingService @Inject constructor(
             false
         } else {
             // run this on a different thread?
-            val asyncStart = coroutineScope.async {
+            val asyncStart = coroutineScope.async(Dispatchers.IO) {
                 Context.propagate(walletDataProvider.wallet!!.context)
                 clientManager.doAutomaticDenominating()
             }
