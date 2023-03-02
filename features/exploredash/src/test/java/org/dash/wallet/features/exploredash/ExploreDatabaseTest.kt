@@ -24,7 +24,11 @@ import android.database.sqlite.SQLiteException
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import java.io.File
+import java.lang.IllegalArgumentException
+import java.lang.RuntimeException
 import junit.framework.TestCase.*
+import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.runBlocking
 import net.lingala.zip4j.ZipFile
 import org.dash.wallet.features.exploredash.repository.GCExploreDatabase
@@ -35,33 +39,30 @@ import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.kotlin.*
 import org.robolectric.RobolectricTestRunner
-import java.io.File
-import java.lang.IllegalArgumentException
-import java.lang.RuntimeException
-import kotlin.time.ExperimentalTime
 
 @ExperimentalTime
 @RunWith(RobolectricTestRunner::class)
 class ExploreDatabaseTest {
-    @get:Rule
-    var instantTaskExecutorRule = InstantTaskExecutorRule()
+    @get:Rule var instantTaskExecutorRule = InstantTaskExecutorRule()
 
     private var timestamp = -1L
     private val editor = mock<SharedPreferences.Editor>()
-    private val mockPreferences = mock<SharedPreferences> {
-        on { getLong(any(), any()) } doReturn timestamp
-        on { edit() } doReturn editor
-    }
+    private val mockPreferences =
+        mock<SharedPreferences> {
+            on { getLong(any(), any()) } doReturn timestamp
+            on { edit() } doReturn editor
+        }
     private val appContext = ApplicationProvider.getApplicationContext<Context>()
     private val repo = GCExploreDatabase(appContext, mockPreferences, mock(), mock())
 
     @Before
     fun setup() {
         editor.stub {
-            on { putLong(any(), anyLong()) } doAnswer { i ->
-                timestamp = i.arguments[1] as Long
-                editor
-            }
+            on { putLong(any(), anyLong()) } doAnswer
+                { i ->
+                    timestamp = i.arguments[1] as Long
+                    editor
+                }
         }
     }
 
@@ -69,11 +70,8 @@ class ExploreDatabaseTest {
     fun noPreloadedDb_throwAndDoesNotUpdateLocalTimestamp() = runBlocking {
         timestamp = -1L
 
-        val dbBuilder = Room.databaseBuilder(
-            appContext,
-            ExploreDatabase::class.java,
-            "explore.db"
-        ).allowMainThreadQueries()
+        val dbBuilder =
+            Room.databaseBuilder(appContext, ExploreDatabase::class.java, "explore.db").allowMainThreadQueries()
 
         val updateFile = File("/not/existing/file.db")
         var database: ExploreDatabase? = null
@@ -93,15 +91,11 @@ class ExploreDatabaseTest {
     fun emptyPreloadedDb_throwDoesNotUpdateLocalTimestamp() = runBlocking {
         timestamp = -1L
 
-        val dbBuilder = Room.databaseBuilder(
-            appContext,
-            ExploreDatabase::class.java,
-            "explore.db"
-        ).allowMainThreadQueries()
+        val dbBuilder =
+            Room.databaseBuilder(appContext, ExploreDatabase::class.java, "explore.db").allowMainThreadQueries()
 
         val resource = javaClass.classLoader?.getResource("empty_explore.db")
-        val updateFile =
-            File(resource?.file ?: throw Resources.NotFoundException("explore.db not found"))
+        val updateFile = File(resource?.file ?: throw Resources.NotFoundException("explore.db not found"))
 
         var database: ExploreDatabase? = null
 
@@ -120,11 +114,8 @@ class ExploreDatabaseTest {
     fun badPreloadedDb_throwsAndDoesNotUpdateLocalTimestamp() = runBlocking {
         timestamp = -1L
 
-        val dbBuilder = Room.databaseBuilder(
-            appContext,
-            ExploreDatabase::class.java,
-            "explore.db"
-        ).allowMainThreadQueries()
+        val dbBuilder =
+            Room.databaseBuilder(appContext, ExploreDatabase::class.java, "explore.db").allowMainThreadQueries()
 
         val updateFile = File.createTempFile("temp", "file")
         var database: ExploreDatabase? = null
@@ -144,15 +135,11 @@ class ExploreDatabaseTest {
     fun goodPreloadedDb_updatesLocalTimestamp() = runBlocking {
         timestamp = -1L
 
-        val dbBuilder = Room.databaseBuilder(
-            appContext,
-            ExploreDatabase::class.java,
-            "explore.db"
-        ).allowMainThreadQueries()
+        val dbBuilder =
+            Room.databaseBuilder(appContext, ExploreDatabase::class.java, "explore.db").allowMainThreadQueries()
 
         val resource = javaClass.classLoader?.getResource("explore.db")
-        val updateFile =
-            File(resource?.file ?: throw Resources.NotFoundException("explore.db not found"))
+        val updateFile = File(resource?.file ?: throw Resources.NotFoundException("explore.db not found"))
         val zipFile = ZipFile(updateFile)
         val comment = zipFile.comment.split("#".toRegex()).toTypedArray()
         val databaseTimestamp = comment[0].toLong()
