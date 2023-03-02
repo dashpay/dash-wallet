@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash.ui
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -28,9 +27,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.widget.AppCompatEditText
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
@@ -38,7 +35,6 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.*
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -64,12 +60,9 @@ import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.DashDirectLoginInfoDialog
@@ -214,8 +207,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         lifecycleScope.launch {
-          viewModel.getMerchantById()
-
+          viewModel.insertTestMerchent()
         }
 
         viewModel.syncStatus.observe(viewLifecycleOwner) { syncProgress ->

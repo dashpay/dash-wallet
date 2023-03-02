@@ -322,7 +322,7 @@ open class MerchantAtmDataSource @Inject constructor(
         return "\"$escapedQuotes*\""
     }
 
-    override suspend fun insertMerchant(vararg merchant: Merchant){
+    override suspend fun insertMerchant(vararg merchant: Merchant) {
         merchantDao.insertMerchant(merchant = merchant)
-}
+    }
 }

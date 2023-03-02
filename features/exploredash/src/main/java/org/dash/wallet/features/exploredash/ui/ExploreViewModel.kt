@@ -449,36 +449,34 @@ class ExploreViewModel @Inject constructor(
             .launchIn(viewModelWorkerScope)
     }
 
-    //TODO Remove the test merchent
-    suspend fun getMerchantById(){
+    // TODO Remove the test merchent
+    suspend fun insertTestMerchent() {
         repository.getDashDirectEmail()?.let { email ->
-        val response =repository.getMerchantById(
-            merchantId = 318,
-            includeLocations = false,
-            userEmail = email
-        )
-        if (response is ResponseResource.Success) {
+            val response = repository.getMerchantById(
+                merchantId = 318,
+                includeLocations = false,
+                userEmail = email
+            )
+            if (response is ResponseResource.Success) {
                 response.value?.data?.merchant?.let {
-                   var merchant = Merchant().apply {
-                       id=318
-                       name ="Cray Pay"
-                       website= "http://www.craypay.com"
-                       deeplink="http://www.craypay.com"
-                       merchantId=318
-                       coverImage="https://craypaystorage.blob.core.windows.net/prod/content/craypay.png"
-                       source="DashDirect"
-                       type= MerchantType.ONLINE
-                       maxCardPurchase=it.maximumCardPurchase
-                       minCardPurchase =it.minimumCardPurchase
-                       savingsPercentage = it.savingsPercentage
-                   }
-                   exploreData.insertMerchant(merchant )
-
+                    var merchant = Merchant().apply {
+                        id = 318
+                        name = "Cray Pay"
+                        website = "http://www.craypay.com"
+                        deeplink = "http://www.craypay.com"
+                        merchantId = 318
+                        coverImage = "https://craypaystorage.blob.core.windows.net/prod/content/craypay.png"
+                        source = "DashDirect"
+                        type = MerchantType.ONLINE
+                        maxCardPurchase = it.maximumCardPurchase
+                        minCardPurchase = it.minimumCardPurchase
+                        savingsPercentage = it.savingsPercentage
+                    }
+                    exploreData.insertMerchant(merchant)
+                }
             }
         }
-        }
     }
-
 
     fun canShowNearestLocation(item: SearchResult? = null): Boolean {
         val nearest = item ?: nearestLocation
