@@ -26,11 +26,7 @@ import org.dash.wallet.features.exploredash.R
 
 class BuyGiftCardDescriptionDialog : OffsetDialogFragment() {
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.buy_gift_card_description, container, false)
     }
 }

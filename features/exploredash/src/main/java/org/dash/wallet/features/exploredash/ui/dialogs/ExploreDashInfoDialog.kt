@@ -23,6 +23,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -30,20 +31,14 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.dialogSafeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.ExploreDashMainInfoBinding
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class ExploreDashInfoDialog : OffsetDialogFragment() {
 
     private val binding by viewBinding(ExploreDashMainInfoBinding::bind)
-    @Inject
-    lateinit var analyticsService: AnalyticsService
+    @Inject lateinit var analyticsService: AnalyticsService
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.explore_dash_main_info, container, false)
     }
 

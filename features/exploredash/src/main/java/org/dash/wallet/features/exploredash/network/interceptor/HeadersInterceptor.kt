@@ -16,17 +16,15 @@
  */
 package org.dash.wallet.features.exploredash.network.interceptor
 
+import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
 import org.dash.wallet.features.exploredash.network.service.DashDirectClientConstants
 import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
-import javax.inject.Inject
 
-class HeadersInterceptor @Inject constructor(
-    private val config: DashDirectConfig
-) : Interceptor {
+class HeadersInterceptor @Inject constructor(private val config: DashDirectConfig) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()

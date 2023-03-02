@@ -25,9 +25,8 @@ import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.MerchantLocationRowBinding
 
-class MerchantsLocationsAdapter(
-    private val clickListener: (Merchant, RecyclerView.ViewHolder) -> Unit
-) : ListAdapter<Merchant, MerchantLocationViewHolder>(SearchResultDiffCallback()) {
+class MerchantsLocationsAdapter(private val clickListener: (Merchant, RecyclerView.ViewHolder) -> Unit) :
+    ListAdapter<Merchant, MerchantLocationViewHolder>(SearchResultDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MerchantLocationViewHolder {
         val inflater = LayoutInflater.from(parent.context)

@@ -19,61 +19,34 @@ package org.dash.wallet.features.exploredash.data.model.signin
 import com.google.gson.annotations.SerializedName
 
 data class SignInResponse(
-    @SerializedName("AccessToken")
-    val accessToken: Any? = Any(),
-    @SerializedName("Data")
-    val `data`: Data? = Data(),
-    @SerializedName("DelayedToken")
-    val delayedToken: Any? = Any(),
-    @SerializedName("ErrorMessage")
-    val errorMessage: String? = "",
-    @SerializedName("IsDelayed")
-    val isDelayed: Boolean? = false,
-    @SerializedName("Successful")
-    val successful: Boolean? = false
+    @SerializedName("AccessToken") val accessToken: Any? = Any(),
+    @SerializedName("Data") val `data`: Data? = Data(),
+    @SerializedName("DelayedToken") val delayedToken: Any? = Any(),
+    @SerializedName("ErrorMessage") val errorMessage: String? = "",
+    @SerializedName("IsDelayed") val isDelayed: Boolean? = false,
+    @SerializedName("Successful") val successful: Boolean? = false
 ) {
     data class Data(
-        @SerializedName("Birthday")
-        val birthday: String? = "",
-        @SerializedName("Email")
-        val email: String? = "",
-        @SerializedName("EmailNotifications")
-        val emailNotifications: Boolean? = false,
-        @SerializedName("FirstName")
-        val firstName: String? = "",
-        @SerializedName("HasAgreedToBetaTesting")
-        val hasAgreedToBetaTesting: Boolean? = false,
-        @SerializedName("HasReadTerms")
-        val hasReadTerms: Boolean? = false,
-        @SerializedName("HomePhone")
-        val homePhone: String? = "",
-        @SerializedName("Id")
-        val id: Int? = 0,
-        @SerializedName("IsMember")
-        val isMember: Boolean? = false,
-        @SerializedName("IsVerified")
-        val isVerified: Boolean? = false,
-        @SerializedName("JoinRewards")
-        val joinRewards: Boolean? = false,
-        @SerializedName("LastName")
-        val lastName: String? = "",
-        @SerializedName("MemberNumber")
-        val memberNumber: Any? = Any(),
-        @SerializedName("MiddleName")
-        val middleName: String? = "",
-        @SerializedName("MobilePhone")
-        val mobilePhone: String? = "",
-        @SerializedName("PrimaryAddressId")
-        val primaryAddressId: Any? = Any(),
-        @SerializedName("StatusCode")
-        val statusCode: Int? = 0,
-        @SerializedName("StatusText")
-        val statusText: String? = "",
-        @SerializedName("UseEmail")
-        val useEmail: Boolean? = false,
-        @SerializedName("UseSms")
-        val useSms: Boolean? = false,
-        @SerializedName("Username")
-        val username: String? = ""
+        @SerializedName("Birthday") val birthday: String? = "",
+        @SerializedName("Email") val email: String? = "",
+        @SerializedName("EmailNotifications") val emailNotifications: Boolean? = false,
+        @SerializedName("FirstName") val firstName: String? = "",
+        @SerializedName("HasAgreedToBetaTesting") val hasAgreedToBetaTesting: Boolean? = false,
+        @SerializedName("HasReadTerms") val hasReadTerms: Boolean? = false,
+        @SerializedName("HomePhone") val homePhone: String? = "",
+        @SerializedName("Id") val id: Int? = 0,
+        @SerializedName("IsMember") val isMember: Boolean? = false,
+        @SerializedName("IsVerified") val isVerified: Boolean? = false,
+        @SerializedName("JoinRewards") val joinRewards: Boolean? = false,
+        @SerializedName("LastName") val lastName: String? = "",
+        @SerializedName("MemberNumber") val memberNumber: Any? = Any(),
+        @SerializedName("MiddleName") val middleName: String? = "",
+        @SerializedName("MobilePhone") val mobilePhone: String? = "",
+        @SerializedName("PrimaryAddressId") val primaryAddressId: Any? = Any(),
+        @SerializedName("StatusCode") val statusCode: Int? = 0,
+        @SerializedName("StatusText") val statusText: String? = "",
+        @SerializedName("UseEmail") val useEmail: Boolean? = false,
+        @SerializedName("UseSms") val useSms: Boolean? = false,
+        @SerializedName("Username") val username: String? = ""
     )
 }
