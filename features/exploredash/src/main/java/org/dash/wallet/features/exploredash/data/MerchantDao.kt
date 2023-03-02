@@ -19,6 +19,8 @@ package org.dash.wallet.features.exploredash.data
 
 import androidx.paging.PagingSource
 import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
@@ -397,4 +399,7 @@ interface MerchantDao : BaseDao<Merchant> {
 
     @Query("SELECT count(*) FROM merchant")
     suspend fun getCount() : Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMerchant(vararg merchant: Merchant)
 }

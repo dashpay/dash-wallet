@@ -86,6 +86,7 @@ interface ExploreDataSource {
     suspend fun getMerchantTerritories(): List<String>
     suspend fun getAtmTerritories(): List<String>
     fun sanitizeQuery(query: String): String
+    suspend fun insertMerchant(vararg merchant: Merchant)
 }
 
 open class MerchantAtmDataSource @Inject constructor(
@@ -320,4 +321,8 @@ open class MerchantAtmDataSource @Inject constructor(
         val escapedQuotes = query.replace(Regex.fromLiteral("\""), "\"\"")
         return "\"$escapedQuotes*\""
     }
+
+    override suspend fun insertMerchant(vararg merchant: Merchant){
+        merchantDao.insertMerchant(merchant = merchant)
+}
 }
