@@ -19,10 +19,7 @@ package org.dash.wallet.features.exploredash.data.model.purchase
 import com.google.gson.annotations.SerializedName
 
 data class PurchaseGiftCardRequest(
-    @SerializedName("Currency")
-    val currency: String? = null,
-    @SerializedName("GiftCardAmount")
-    val giftCardAmount: Double? = null,
-    @SerializedName("MerchantId")
-    val merchantId: Long? = null
+    @SerializedName("Currency") val currency: String? = null,
+    @SerializedName("GiftCardAmount") val giftCardAmount: Double? = null,
+    @SerializedName("MerchantId") val merchantId: Long? = null
 )

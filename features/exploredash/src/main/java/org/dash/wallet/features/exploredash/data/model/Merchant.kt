@@ -34,10 +34,12 @@ object MerchantType {
 
 @Entity(
     tableName = "merchant",
-    indices = [
-        Index("latitude"),
-        Index("longitude"),
-    ])
+    indices =
+        [
+            Index("latitude"),
+            Index("longitude"),
+        ]
+)
 data class Merchant(
     var deeplink: String? = "",
     var plusCode: String? = "",
@@ -48,7 +50,5 @@ data class Merchant(
     var minCardPurchase: Double? = 0.0,
     var maxCardPurchase: Double? = 0.0,
     var savingsPercentage: Double? = 0.0,
-
-    @Ignore
-    var physicalAmount: Int = 0
+    @Ignore var physicalAmount: Int = 0
 ) : SearchResult()

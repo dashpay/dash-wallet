@@ -19,31 +19,18 @@ package org.dash.wallet.features.exploredash.data.model.merchant
 import com.google.gson.annotations.SerializedName
 
 data class GetMerchantByIdResponse(
-    @SerializedName("AccessToken")
-    val accessToken: Any? = null,
-    @SerializedName("Data")
-    val `data`: Data? = null,
-    @SerializedName("DelayedToken")
-    val delayedToken: Any? = null,
-    @SerializedName("ErrorMessage")
-    val errorMessage: String? = null,
-    @SerializedName("IsDelayed")
-    val isDelayed: Boolean? = null,
-    @SerializedName("Successful")
-    val successful: Boolean? = null
+    @SerializedName("AccessToken") val accessToken: Any? = null,
+    @SerializedName("Data") val `data`: Data? = null,
+    @SerializedName("DelayedToken") val delayedToken: Any? = null,
+    @SerializedName("ErrorMessage") val errorMessage: String? = null,
+    @SerializedName("IsDelayed") val isDelayed: Boolean? = null,
+    @SerializedName("Successful") val successful: Boolean? = null
 ) {
-    data class Data(
-        @SerializedName("Merchant")
-        val merchant: Merchant? = Merchant()
-    )
+    data class Data(@SerializedName("Merchant") val merchant: Merchant? = Merchant())
     data class Merchant(
-        @SerializedName("Id")
-        val id: Int? = 0,
-        @SerializedName("MinimumCardPurchase")
-        val minimumCardPurchase: Double? = 0.0,
-        @SerializedName("MaximumCardPurchase")
-        val maximumCardPurchase: Double? = 0.0,
-        @SerializedName("SavingsPercentage")
-        val savingsPercentage: Double? = 0.0
+        @SerializedName("Id") val id: Int? = 0,
+        @SerializedName("MinimumCardPurchase") val minimumCardPurchase: Double? = 0.0,
+        @SerializedName("MaximumCardPurchase") val maximumCardPurchase: Double? = 0.0,
+        @SerializedName("SavingsPercentage") val savingsPercentage: Double? = 0.0
     )
 }

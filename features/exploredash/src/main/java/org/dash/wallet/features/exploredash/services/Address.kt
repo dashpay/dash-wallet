@@ -17,7 +17,4 @@
 
 package org.dash.wallet.features.exploredash.services
 
-data class Address(
-    val country: String,
-    val city: String
-)
+data class Address(val country: String, val city: String)

@@ -17,16 +17,16 @@
 
 package org.dash.wallet.features.exploredash.repository
 
+import java.lang.Exception
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.dash.wallet.common.data.Resource
 import org.slf4j.LoggerFactory
-import java.lang.Exception
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
-class ExploreDataSyncStatus @Inject constructor(): DataSyncStatusService {
+class ExploreDataSyncStatus @Inject constructor() : DataSyncStatusService {
     companion object {
         private val log = LoggerFactory.getLogger(ExploreDataSyncStatus::class.java)
     }
@@ -50,10 +50,12 @@ class ExploreDataSyncStatus @Inject constructor(): DataSyncStatusService {
 
     suspend fun setSyncProgress(progress: Double) {
         log.info("sync explore data progress: {}", progress)
-        _syncProgressFlow.emit(if (progress < 100.0) {
-            Resource.loading(progress)
-        } else {
-            Resource.success(100.0)
-        })
+        _syncProgressFlow.emit(
+            if (progress < 100.0) {
+                Resource.loading(progress)
+            } else {
+                Resource.success(100.0)
+            }
+        )
     }
 }

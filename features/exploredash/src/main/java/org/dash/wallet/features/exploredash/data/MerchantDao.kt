@@ -32,7 +32,8 @@ interface MerchantDao : BaseDao<Merchant> {
     // Sorting by distance is approximate - it's done using "flat-earth" Pythagorean formula.
     // It's good enough for our purposes, but if there is a need to display the distance
     // in UI it should be done using map APIs.
-    @Query("""
+    @Query(
+        """
         SELECT *
         FROM merchant
         WHERE (:merchantId = -1 OR merchantId = :merchantId)
@@ -44,7 +45,8 @@ interface MerchantDao : BaseDao<Merchant> {
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
             CASE WHEN :sortByDistance = 0 THEN merchant.name END COLLATE NOCASE ASC
         LIMIT :limit
-    """)
+    """
+    )
     suspend fun getByTerritory(
         merchantId: Long,
         source: String,
@@ -58,7 +60,8 @@ interface MerchantDao : BaseDao<Merchant> {
     ): List<Merchant>
 
     @Transaction
-    @Query("""
+    @Query(
+        """
         SELECT *, COUNT(*) AS physical_amount
         FROM merchant 
         WHERE type IN (:types)
@@ -72,7 +75,8 @@ interface MerchantDao : BaseDao<Merchant> {
         ORDER BY
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
             CASE WHEN :sortByDistance = 0 THEN name END COLLATE NOCASE ASC
-    """)
+    """
+    )
     fun pagingGetByCoordinates(
         types: List<String>,
         paymentMethod: String,
@@ -85,7 +89,8 @@ interface MerchantDao : BaseDao<Merchant> {
         anchorLng: Double
     ): PagingSource<Int, MerchantInfo>
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(DISTINCT merchantId)
         FROM merchant
         WHERE type IN (:types)
@@ -94,7 +99,8 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
-    """)
+    """
+    )
     suspend fun getByCoordinatesResultCount(
         types: List<String>,
         paymentMethod: String,
@@ -105,7 +111,8 @@ interface MerchantDao : BaseDao<Merchant> {
     ): Int
 
     @Transaction
-    @Query("""
+    @Query(
+        """
         SELECT *, COUNT(*) AS physical_amount
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
@@ -121,7 +128,8 @@ interface MerchantDao : BaseDao<Merchant> {
         ORDER BY
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
             CASE WHEN :sortByDistance = 0 THEN merchant.name END COLLATE NOCASE ASC
-    """)
+    """
+    )
     fun pagingSearchByCoordinates(
         query: String,
         types: List<String>,
@@ -135,7 +143,8 @@ interface MerchantDao : BaseDao<Merchant> {
         anchorLng: Double
     ): PagingSource<Int, MerchantInfo>
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(DISTINCT merchantId)
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
@@ -146,7 +155,8 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
-    """)
+    """
+    )
     suspend fun searchByCoordinatesResultCount(
         query: String,
         types: List<String>,
@@ -158,7 +168,8 @@ interface MerchantDao : BaseDao<Merchant> {
     ): Int
 
     @Transaction
-    @Query("""
+    @Query(
+        """
         SELECT *, COUNT(*) AS physical_amount
         FROM merchant 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
@@ -174,7 +185,8 @@ interface MerchantDao : BaseDao<Merchant> {
             END,
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
             CASE WHEN :sortByDistance = 0 THEN merchant.name END COLLATE NOCASE ASC
-    """)
+    """
+    )
     fun pagingGetByTerritory(
         territoryFilter: String,
         types: List<String>,
@@ -186,21 +198,20 @@ interface MerchantDao : BaseDao<Merchant> {
         physicalOrder: Int
     ): PagingSource<Int, MerchantInfo>
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(DISTINCT merchantId)
         FROM merchant 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
-    """)
-    suspend fun getByTerritoryResultCount(
-        territoryFilter: String,
-        types: List<String>,
-        paymentMethod: String
-    ): Int
+    """
+    )
+    suspend fun getByTerritoryResultCount(territoryFilter: String, types: List<String>, paymentMethod: String): Int
 
     @Transaction
-    @Query("""
+    @Query(
+        """
         SELECT *, COUNT(*) AS physical_amount
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
@@ -218,7 +229,8 @@ interface MerchantDao : BaseDao<Merchant> {
             END,
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
             CASE WHEN :sortByDistance = 0 THEN merchant.name END COLLATE NOCASE ASC
-    """)
+    """
+    )
     fun pagingSearchByTerritory(
         query: String,
         territoryFilter: String,
@@ -231,7 +243,8 @@ interface MerchantDao : BaseDao<Merchant> {
         physicalOrder: Int
     ): PagingSource<Int, MerchantInfo>
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(DISTINCT merchantId)
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
@@ -239,7 +252,8 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
-    """)
+    """
+    )
     suspend fun searchByTerritoryResultCount(
         query: String,
         territoryFilter: String,
@@ -248,7 +262,8 @@ interface MerchantDao : BaseDao<Merchant> {
     ): Int
 
     @Transaction
-    @Query("""
+    @Query(
+        """
         SELECT *, COUNT(*) AS physical_amount
         FROM merchant
         WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
@@ -256,7 +271,8 @@ interface MerchantDao : BaseDao<Merchant> {
         GROUP BY source, merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY name COLLATE NOCASE ASC
-    """)
+    """
+    )
     fun pagingGetGrouped(
         types: List<String>,
         paymentMethod: String,
@@ -264,19 +280,19 @@ interface MerchantDao : BaseDao<Merchant> {
         anchorLng: Double
     ): PagingSource<Int, MerchantInfo>
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(DISTINCT merchantId)
         FROM merchant
         WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
-    """)
-    suspend fun getGroupedResultCount(
-        types: List<String>,
-        paymentMethod: String
-    ): Int
+    """
+    )
+    suspend fun getGroupedResultCount(types: List<String>, paymentMethod: String): Int
 
     @Transaction
-    @Query("""
+    @Query(
+        """
         SELECT *, COUNT(*) AS physical_amount
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
@@ -286,7 +302,8 @@ interface MerchantDao : BaseDao<Merchant> {
         GROUP BY source, merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY name COLLATE NOCASE ASC
-    """)
+    """
+    )
     fun pagingSearchGrouped(
         query: String,
         types: List<String>,
@@ -295,21 +312,20 @@ interface MerchantDao : BaseDao<Merchant> {
         anchorLng: Double
     ): PagingSource<Int, MerchantInfo>
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(DISTINCT merchantId)
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
-    """)
-    suspend fun searchGroupedResultCount(
-        query: String,
-        types: List<String>,
-        paymentMethod: String
-    ): Int
+    """
+    )
+    suspend fun searchGroupedResultCount(query: String, types: List<String>, paymentMethod: String): Int
 
-    @Query("""
+    @Query(
+        """
         SELECT * 
         FROM merchant
         WHERE (:merchantId = -1 OR merchantId = :merchantId)
@@ -321,7 +337,8 @@ interface MerchantDao : BaseDao<Merchant> {
             AND longitude < :eastLng
             AND longitude > :westLng
         LIMIT :limit
-    """)
+    """
+    )
     fun observe(
         merchantId: Long,
         source: String,
@@ -334,7 +351,8 @@ interface MerchantDao : BaseDao<Merchant> {
         limit: Int
     ): Flow<List<Merchant>>
 
-    @Query("""
+    @Query(
+        """
         SELECT *
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
@@ -345,7 +363,8 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
-    """)
+    """
+    )
     fun observeSearchResults(
         query: String,
         excludeType: String,
@@ -356,7 +375,8 @@ interface MerchantDao : BaseDao<Merchant> {
         westLng: Double
     ): Flow<List<Merchant>>
 
-    @Query("""
+    @Query(
+        """
         SELECT * 
         FROM merchant 
         WHERE (:merchantId = -1 OR merchantId = :merchantId)
@@ -365,7 +385,8 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND (:excludeType = '' OR type != :excludeType)
         LIMIT :limit
-    """)
+    """
+    )
     fun observeByTerritory(
         merchantId: Long,
         source: String,
@@ -375,7 +396,8 @@ interface MerchantDao : BaseDao<Merchant> {
         limit: Int
     ): Flow<List<Merchant>>
 
-    @Query("""
+    @Query(
+        """
         SELECT *
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
@@ -383,7 +405,8 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND (:excludeType = '' OR type != :excludeType)
-    """)
+    """
+    )
     fun searchByTerritory(
         query: String,
         territoryFilter: String,
@@ -391,15 +414,11 @@ interface MerchantDao : BaseDao<Merchant> {
         paymentMethod: String
     ): Flow<List<Merchant>>
 
-    @Query("SELECT DISTINCT territory FROM merchant")
-    suspend fun getTerritories(): List<String>
+    @Query("SELECT DISTINCT territory FROM merchant") suspend fun getTerritories(): List<String>
 
-    @Query("DELETE FROM merchant")
-    override suspend fun deleteAll(): Int
+    @Query("DELETE FROM merchant") override suspend fun deleteAll(): Int
 
-    @Query("SELECT count(*) FROM merchant")
-    suspend fun getCount() : Int
+    @Query("SELECT count(*) FROM merchant") suspend fun getCount(): Int
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMerchant(vararg merchant: Merchant)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertMerchant(vararg merchant: Merchant)
 }

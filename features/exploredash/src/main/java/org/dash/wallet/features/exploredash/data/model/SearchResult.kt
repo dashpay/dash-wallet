@@ -23,10 +23,8 @@ import androidx.room.PrimaryKey
 import org.dash.wallet.features.exploredash.ui.extensions.Const
 
 open class SearchResult(
-    @PrimaryKey(autoGenerate = true)
-    var id: Int = 0,
-    @ColumnInfo(name = "active", defaultValue = "1")
-    var active: Boolean? = true,
+    @PrimaryKey(autoGenerate = true) var id: Int = 0,
+    @ColumnInfo(name = "active", defaultValue = "1") var active: Boolean? = true,
     var name: String? = "",
     var address1: String? = "",
     var address2: String? = "",
@@ -44,9 +42,7 @@ open class SearchResult(
     var googleMaps: String? = "",
     var coverImage: String? = "",
     var type: String? = "",
-
-    @Ignore
-    var distance: Double = Double.NaN
+    @Ignore var distance: Double = Double.NaN
 ) {
     fun getDisplayAddress(separator: String = "\n"): String {
         val addressBuilder = StringBuilder()
@@ -66,16 +62,17 @@ open class SearchResult(
 
         return addressBuilder.toString()
     }
-    
+
     fun getDistanceStr(isMetric: Boolean): String {
         return if (distance.isNaN()) {
             ""
         } else {
-            val distance = if (isMetric) {
-                distance / Const.METERS_IN_KILOMETER
-            } else {
-                distance / Const.METERS_IN_MILE
-            }
+            val distance =
+                if (isMetric) {
+                    distance / Const.METERS_IN_KILOMETER
+                } else {
+                    distance / Const.METERS_IN_MILE
+                }
 
             if (distance < 10) {
                 String.format("%.1f", distance)
@@ -84,12 +81,10 @@ open class SearchResult(
             }
         }
     }
-    
+
     override fun equals(other: Any?): Boolean {
         val second = other as SearchResult
-        return id == second.id &&
-                name == second.name &&
-                active == second.active
+        return id == second.id && name == second.name && active == second.active
     }
 
     override fun hashCode(): Int {

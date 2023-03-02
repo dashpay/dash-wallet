@@ -43,8 +43,7 @@ import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class GiftCardDetailsDialog : OffsetDialogFragment() {
-    @StyleRes
-    override val backgroundStyle = R.style.PrimaryBackground
+    @StyleRes override val backgroundStyle = R.style.PrimaryBackground
     override val forceExpand = true
 
     // private var purchaseGiftCardData: Pair<Pair<Coin, Fiat>, Merchant>? = null
@@ -54,16 +53,10 @@ class GiftCardDetailsDialog : OffsetDialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        arguments?.let {
-            giftCardDetailsDialogModel = it.getParcelable(ARG_MODEL)
-        }
+        arguments?.let { giftCardDetailsDialogModel = it.getParcelable(ARG_MODEL) }
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_gift_card_details, container, false)
     }
 
@@ -99,9 +92,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment() {
             binding.purchaseSeeHowToUseGiftCardLabel.isVisible = false
             binding.purchaseSeeHowToUseGiftCard.isVisible = true
         }
-        binding.collapseButton.setOnClickListener {
-            dismiss()
-        }
+        binding.collapseButton.setOnClickListener { dismiss() }
 
         binding.viewTransactionDetailsCard.setOnClickListener {
             giftCardDetailsDialogModel?.transactionId?.let {
@@ -120,10 +111,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment() {
     companion object {
         private const val ARG_MODEL = "argModel"
 
-        fun newInstance(model: GiftCardDetailsDialogModel) = GiftCardDetailsDialog().apply {
-            arguments = Bundle().apply {
-                putParcelable(ARG_MODEL, model)
-            }
-        }
+        fun newInstance(model: GiftCardDetailsDialogModel) =
+            GiftCardDetailsDialog().apply { arguments = Bundle().apply { putParcelable(ARG_MODEL, model) } }
     }
 }

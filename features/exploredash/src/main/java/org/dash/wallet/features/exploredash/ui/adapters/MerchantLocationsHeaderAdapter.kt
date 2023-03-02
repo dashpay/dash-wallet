@@ -26,11 +26,8 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.MerchantLocationsHeaderBinding
 
-class MerchantLocationsHeaderAdapter(
-    private val name: String,
-    private val type: String,
-    private val image: String
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+class MerchantLocationsHeaderAdapter(private val name: String, private val type: String, private val image: String) :
+    RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private lateinit var binding: MerchantLocationsHeaderBinding
 
     override fun getItemCount() = 1
