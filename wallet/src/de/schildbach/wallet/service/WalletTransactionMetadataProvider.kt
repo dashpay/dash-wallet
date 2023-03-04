@@ -17,16 +17,13 @@
 package de.schildbach.wallet.service
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import de.schildbach.wallet.database.dao.AddressMetadataDao
 import de.schildbach.wallet.database.dao.IconBitmapDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Context
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.*
 import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
@@ -45,6 +42,7 @@ import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executors
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class WalletTransactionMetadataProvider @Inject constructor(
     private val transactionMetadataDao: TransactionMetadataDao,
     private val addressMetadataDao: AddressMetadataDao,
@@ -303,9 +301,30 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     override suspend fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>> {
-        return transactionMetadataDao.observePresentableMetadata().map { list ->
-            list.associateBy( {it.txId}, {it} )
+        return iconBitmapDao.observeBitmaps()
+            .distinctUntilChanged()
+            .flatMapLatest { bitmaps ->
+                transactionMetadataDao.observePresentableMetadata()
+                .distinctUntilChanged()
+                .map { metadataList ->
+                    metadataList.values.forEach { metadata ->
+                        metadata.customIconId?.let { iconId ->
+                            val bitmapRow = bitmaps[iconId]!!
+                            val bitmap = BitmapFactory.decodeByteArray(bitmapRow.imageData, 0, bitmapRow.imageData.size)
+                            metadata.icon = bitmap
+                        }
+                    }
+                    metadataList
+                }
+            }
+    }
+
+    override suspend fun getIcon(iconId: Sha256Hash): Bitmap? {
+        iconBitmapDao.getBitmap(iconId)?.let {
+            return BitmapFactory.decodeByteArray(it.imageData, 0, it.imageData.size)
         }
+
+        return null
     }
 
     override suspend fun markAddressWithTaxCategory(

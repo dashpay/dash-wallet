@@ -27,7 +27,6 @@ import androidx.core.view.isVisible
 import androidx.navigation.fragment.findNavController
 import coil.load
 import coil.size.Scale
-import coil.transform.RoundedCornersTransformation
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview

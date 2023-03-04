@@ -97,9 +97,11 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         }
 
         viewModel.transactionMetadata.observe(this) { metadata ->
-            if(metadata != null && tx.txId == metadata.txId) {
-                transactionResultViewBinder.setTransactionMetadata(metadata)
-            }
+            transactionResultViewBinder.setTransactionMetadata(metadata)
+        }
+
+        viewModel.transactionIcon.observe(this) {
+            transactionResultViewBinder.setTransactionIcon(it, R.drawable.ic_gift_card_tx)
         }
 
         contentBinding.openExplorerCard.setOnClickListener { viewOnBlockExplorer() }

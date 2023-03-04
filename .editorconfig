@@ -1,0 +1,6 @@
+# https://editorconfig.org
+root = true
+
+[*.{kt,kts}]
+max_line_length = 120
+ktlint-disable spacing-between-declarations-with-annotations

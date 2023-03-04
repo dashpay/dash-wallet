@@ -20,6 +20,7 @@ package org.dash.wallet.features.exploredash.ui.explore
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.AttributeSet
 import android.view.LayoutInflater
@@ -27,12 +28,16 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.drawable.toBitmap
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePaddingRelative
+import coil.imageLoader
 import coil.load
+import coil.request.ImageRequest
 import coil.size.Scale
+import coil.target.ImageViewTarget
 import coil.transform.RoundedCornersTransformation
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.*
@@ -113,8 +118,8 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
         email?.let {
             binding.loginDashDirectUser.text =
                 context.resources.getString(R.string.logged_in_as, email.maskEmail()) +
-                    " " +
-                    context.resources.getString(R.string.log_out)
+                " " +
+                context.resources.getString(R.string.log_out)
 
             binding.loginDashDirectUser.makeLinks(
                 Pair(
@@ -183,7 +188,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             locationHint.isVisible = false
             backButton.isVisible = !isOnline && !isGrouped
 
-            loadImage(merchant.logoLocation, itemImage)
+            loadIconAndCacheForDatabase(merchant, itemImage)
             itemType.text = getMerchantType(merchant.type)
             itemAddress.isVisible = !isOnline
             showAllBtn.isVisible = !isOnline && isGrouped && merchant.physicalAmount > 1
@@ -212,14 +217,20 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             backButton.setOnClickListener { onBackButtonClicked?.invoke() }
 
             if (isOnline) {
-                root.updateLayoutParams<ConstraintLayout.LayoutParams> { matchConstraintPercentHeight = 1f }
-                updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_online_margin_top))
+                root.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                    matchConstraintPercentHeight = 1f
+                }
+                updatePaddingRelative(
+                    top = resources.getDimensionPixelOffset(R.dimen.details_online_margin_top)
+                )
             } else {
                 root.updateLayoutParams<ConstraintLayout.LayoutParams> {
                     matchConstraintPercentHeight =
                         ResourcesCompat.getFloat(resources, R.dimen.merchant_details_height_ratio)
                 }
-                updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_physical_margin_top))
+                updatePaddingRelative(
+                    top = resources.getDimensionPixelOffset(R.dimen.details_physical_margin_top)
+                )
             }
 
             bindCommonDetails(merchant, isOnline)
@@ -241,7 +252,10 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             sellBtn.isVisible = atm.type != AtmType.BUY
 
             root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                matchConstraintPercentHeight = ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)
+                matchConstraintPercentHeight = ResourcesCompat.getFloat(
+                    resources,
+                    R.dimen.atm_details_height_ratio
+                )
             }
 
             loadImage(atm.logoLocation, logoImg)
@@ -255,10 +269,39 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
         into.load(image) {
             crossfade(200)
             scale(Scale.FILL)
-            placeholder(R.drawable.ic_image_placeholder)
             error(R.drawable.ic_image_placeholder)
-            transformations(RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat()))
+            transformations(
+                RoundedCornersTransformation(
+                    resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat()
+                )
+            )
         }
+    }
+
+    private fun loadIconAndCacheForDatabase(merchant: Merchant, into: ImageView) {
+        val request = ImageRequest.Builder(into.context)
+            .data(merchant.logoLocation)
+            .crossfade(200)
+            .scale(Scale.FILL)
+            .size(150) // This size is for the stored merchant icon. 50x3 for xxhdpi screens.
+            .error(R.drawable.ic_image_placeholder)
+            .transformations(
+                RoundedCornersTransformation(
+                    resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat()
+                )
+            )
+            .target(object : ImageViewTarget(into) {
+                override fun onSuccess(result: Drawable) {
+                    super.onSuccess(result)
+                    merchant.iconBitmap = result.toBitmap()
+                }
+                override fun onError(error: Drawable?) {
+                    super.onError(error)
+                    merchant.iconBitmap = null
+                }
+            })
+            .build()
+        into.context.imageLoader.enqueue(request)
     }
 
     private fun openMaps(item: SearchResult) {
@@ -266,7 +309,11 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             if (!item.googleMaps.isNullOrBlank()) {
                 item.googleMaps
             } else {
-                context.getString(R.string.explore_maps_intent_uri, item.latitude!!, item.longitude!!)
+                context.getString(
+                    R.string.explore_maps_intent_uri,
+                    item.latitude!!,
+                    item.longitude!!
+                )
             }
 
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))

@@ -30,7 +30,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.MerchantAtmDataSource
 import org.dash.wallet.features.exploredash.network.RemoteDataSource
@@ -82,9 +81,7 @@ abstract class ExploreDashModule {
 
     @Binds abstract fun bindExploreRepository(exploreRepository: GCExploreDatabase): ExploreRepository
 
-    @ExperimentalCoroutinesApi
-    @Binds
-    abstract fun bindUserLocationState(userLocationState: UserLocationState): UserLocationStateInt
+    @Binds abstract fun bindUserLocationState(userLocationState: UserLocationState): UserLocationStateInt
 
     @Binds abstract fun bindExploreDataSource(exploreDatabase: MerchantAtmDataSource): ExploreDataSource
 

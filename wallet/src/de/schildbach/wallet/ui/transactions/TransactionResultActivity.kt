@@ -25,7 +25,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
-import de.schildbach.wallet.WalletApplication
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory
 /**
  * @author Samuel Barbosa
  */
+@AndroidEntryPoint
 class TransactionResultActivity : LockScreenActivity() {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
@@ -110,12 +111,10 @@ class TransactionResultActivity : LockScreenActivity() {
             }
 
             viewModel.transactionMetadata.observe(this) {
-                if(it != null) {
-                    transactionResultViewBinder.setTransactionMetadata(it)
-                }
+                transactionResultViewBinder.setTransactionMetadata(it)
             }
         } else {
-            log.error("Transaction not found. TxId:", txId)
+            log.error("Transaction not found. TxId: {}", txId)
             finish()
             return
         }
@@ -138,7 +137,7 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private fun showReportIssue() {
-        ReportIssueDialogBuilder.createReportIssueDialog(this, WalletApplication.getInstance())
+        ReportIssueDialogBuilder.createReportIssueDialog(this, walletApplication)
             .buildAlertDialog().show()
     }
 

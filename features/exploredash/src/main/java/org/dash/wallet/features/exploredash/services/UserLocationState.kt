@@ -28,7 +28,6 @@ import com.google.maps.android.SphericalUtil
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.*
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -48,7 +47,6 @@ interface UserLocationStateInt {
     fun getRadiusBounds(centerLat: Double, centerLng: Double, radius: Double): GeoBounds
 }
 
-@ExperimentalCoroutinesApi
 class UserLocationState
 @Inject
 constructor(private val context: Context, private val client: FusedLocationProviderClient) : UserLocationStateInt {

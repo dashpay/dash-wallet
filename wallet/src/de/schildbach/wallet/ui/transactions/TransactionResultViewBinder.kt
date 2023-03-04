@@ -17,14 +17,18 @@
 
 package de.schildbach.wallet.ui.transactions
 
+import android.graphics.Bitmap
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
+import coil.load
+import coil.transform.RoundedCornersTransformation
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
@@ -47,10 +51,11 @@ class TransactionResultViewBinder(
     private val dashFormat: MonetaryFormat,
     private val containerView: View
 ) {
+    private val iconSize = containerView.resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
     private val ctx by lazy { containerView.context }
     private val checkIcon by lazy { containerView.findViewById<ImageView>(R.id.check_icon) }
+    private val secondaryIcon by lazy { containerView.findViewById<ImageView>(R.id.secondary_icon) }
     private val transactionAmountSignal by lazy { containerView.findViewById<TextView>(R.id.transaction_amount_signal) }
-    private val dashAmountSymbol by lazy { containerView.findViewById<ImageView>(R.id.dash_amount_symbol) }
     private val transactionTitle by lazy { containerView.findViewById<TextView>(R.id.transaction_title) }
     private val dashAmount by lazy { containerView.findViewById<CurrencyTextView>(R.id.dash_amount) }
     private val transactionFee by lazy { containerView.findViewById<CurrencyTextView>(R.id.transaction_fee) }
@@ -87,28 +92,15 @@ class TransactionResultViewBinder(
         TaxCategory.TransferOut to R.string.tax_category_transfer_out
     )
 
+    private lateinit var transaction: Transaction
+    private var customIcon: Bitmap? = null
+    private var secondaryIconRes: Int? = null
+
     fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
+        this.transaction = tx
+
         val value = tx.getValue(wallet)
         val isSent = value.signum() < 0
-
-        val primaryStatus = resourceMapper.getTransactionTypeName(tx, wallet)
-        val secondaryStatus = resourceMapper.getReceivedStatusString(tx, wallet.context)
-        val errorStatus = resourceMapper.getErrorName(tx)
-        var primaryStatusStr = if (tx.type != Transaction.Type.TRANSACTION_NORMAL || tx.isCoinBase) {
-            ctx.getString(primaryStatus)
-        } else {
-            ""
-        }
-        var secondaryStatusStr = if (secondaryStatus != -1) {
-            ctx.getString(secondaryStatus)
-        } else {
-            ""
-        }
-        val errorStatusStr = if (errorStatus != -1) {
-            ctx.getString(errorStatus)
-        } else {
-            ""
-        }
 
         if (payeeName != null) {
             this.paymentMemo.text = payeeName
@@ -123,11 +115,7 @@ class TransactionResultViewBinder(
             }
         }
 
-        // handle sending
-        if (resourceMapper.isSending(tx, wallet)) {
-            primaryStatusStr = ctx.getString(R.string.transaction_row_status_sending)
-            secondaryStatusStr = ""
-        }
+        updateStatus()
 
         //Address List
         val inputAddresses: List<Address>
@@ -150,20 +138,8 @@ class TransactionResultViewBinder(
         }
 
         val inflater = LayoutInflater.from(containerView.context)
-        inputsContainer.visibility = if (inputAddresses.isEmpty()) View.GONE else View.VISIBLE
-        inputAddresses.forEach {
-            val addressView = inflater.inflate(R.layout.transaction_result_address_row,
-                    inputsAddressesContainer, false) as TextView
-            addressView.text = it.toBase58()
-            inputsAddressesContainer.addView(addressView)
-        }
-        outputsContainer.visibility = if (outputAddresses.isEmpty()) View.GONE else View.VISIBLE
-        outputAddresses.forEach {
-            val addressView = inflater.inflate(R.layout.transaction_result_address_row,
-                    outputsAddressesContainer, false) as TextView
-            addressView.text = it.toBase58()
-            outputsAddressesContainer.addView(addressView)
-        }
+        setInputs(inputAddresses, inflater)
+        setOutputs(outputAddresses, inflater)
 
         dashAmount.setFormat(dashFormat)
         //For displaying purposes only
@@ -188,51 +164,17 @@ class TransactionResultViewBinder(
         } else {
             fiatValue.isVisible = false
         }
-
-        setTransactionDirection(tx, wallet, errorStatusStr)
     }
 
-    private fun setTransactionDirection(
-        tx: Transaction,
-        wallet: Wallet,
-        errorStatusStr: String
-    ) {
-        if (errorStatusStr.isNotEmpty()){
-            errorContainer.isVisible = true
-            reportIssueContainer.isVisible = true
-            outputsContainer.isVisible = false
-            inputsContainer.isVisible = false
-            feeRow.isVisible = false
-            dateContainer.isVisible = false
-            explorerContainer.isVisible = false
-            checkIcon.setImageResource(R.drawable.ic_transaction_failed)
-            transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.content_warning))
-            transactionTitle.text = ctx.getText(R.string.transaction_failed_details)
-            errorDescription.text = errorStatusStr
-            transactionAmountSignal.text = "-"
+    private fun updateStatus(fromConfidence: Boolean = false) {
+        val errorStatus = resourceMapper.getErrorName(transaction)
+        val errorStatusStr = if (errorStatus != -1) {
+            ctx.getString(errorStatus)
         } else {
-            if (tx.getValue(wallet).signum() < 0) {
-                checkIcon.setImageResource(if (TransactionUtils.isEntirelySelf(tx, wallet)) {
-                    R.drawable.ic_shuffle
-                } else {
-                    R.drawable.ic_transaction_sent
-                })
-
-                transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
-                transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
-                transactionAmountSignal.text = "-"
-                transactionAmountSignal.isVisible = true
-            } else {
-                checkIcon.setImageResource(R.drawable.ic_transaction_received)
-                transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.system_green))
-                transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
-                transactionAmountSignal.isVisible = true
-                transactionAmountSignal.text = "+"
-            }
-            checkIcon.isVisible = true
+            ""
         }
 
-        feeRow.visibility = if (isFeeAvailable(tx.fee)) View.VISIBLE else View.GONE
+        setTransactionDirection(errorStatusStr, fromConfidence)
     }
 
     fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
@@ -244,7 +186,95 @@ class TransactionResultViewBinder(
         taxCategory.text = containerView.resources.getString(strResource!!)
     }
 
+    fun setTransactionIcon(bitmap: Bitmap, @DrawableRes secondaryRes: Int?) {
+        customIcon = bitmap
+        checkIcon.load(bitmap) {
+            transformations(RoundedCornersTransformation(iconSize*2.toFloat()))
+        }
+        secondaryIcon.isVisible = true
+        secondaryRes?.let { secondaryIcon.setImageResource(secondaryRes) }
+        secondaryIconRes = secondaryRes
+    }
+
+    private fun setTransactionDirection(errorStatusStr: String, fromConfidence: Boolean) {
+        @DrawableRes val imageResource: Int
+
+        if (errorStatusStr.isNotEmpty()) {
+            if (customIcon != null) {
+                secondaryIcon.isVisible = true
+                secondaryIcon.setImageResource(R.drawable.ic_transaction_failed)
+            } else {
+                checkIcon.setImageResource(R.drawable.ic_transaction_failed)
+            }
+
+            errorContainer.isVisible = true
+            reportIssueContainer.isVisible = true
+            outputsContainer.isVisible = false
+            inputsContainer.isVisible = false
+            feeRow.isVisible = false
+            dateContainer.isVisible = false
+            explorerContainer.isVisible = false
+            transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.content_warning))
+            transactionTitle.text = ctx.getText(R.string.transaction_failed_details)
+            errorDescription.text = errorStatusStr
+            transactionAmountSignal.text = "-"
+        } else {
+            if (transaction.getValue(wallet).signum() < 0) {
+                imageResource = if (TransactionUtils.isEntirelySelf(transaction, wallet)) {
+                    R.drawable.ic_shuffle
+                } else {
+                    R.drawable.ic_transaction_sent
+                }
+
+                transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
+                transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
+                transactionAmountSignal.text = "-"
+                transactionAmountSignal.isVisible = true
+            } else {
+                imageResource = R.drawable.ic_transaction_received
+                transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.system_green))
+                transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
+                transactionAmountSignal.isVisible = true
+                transactionAmountSignal.text = "+"
+            }
+            checkIcon.isVisible = true
+
+            if (!fromConfidence) {
+                // If it's a confidence update, not need to set the send/receive icons again.
+                // Some hosts are replacing those with custom animated ones.
+                if (customIcon == null) {
+                    checkIcon.setImageResource(imageResource)
+                } else if (secondaryIconRes == null) {
+                    secondaryIcon.isVisible = true
+                    secondaryIcon.setImageResource(imageResource)
+                }
+            }
+        }
+
+        feeRow.isVisible = isFeeAvailable(transaction.fee)
+    }
+
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {
         return transactionFee != null && transactionFee.isPositive
+    }
+
+    private fun setInputs(inputAddresses: List<Address>, inflater: LayoutInflater) {
+        inputsContainer.isVisible = inputAddresses.isNotEmpty()
+        inputAddresses.forEach {
+            val addressView = inflater.inflate(R.layout.transaction_result_address_row,
+                inputsAddressesContainer, false) as TextView
+            addressView.text = it.toBase58()
+            inputsAddressesContainer.addView(addressView)
+        }
+    }
+
+    private fun setOutputs(outputAddresses: List<Address>, inflater: LayoutInflater) {
+        outputsContainer.isVisible = outputAddresses.isNotEmpty()
+        outputAddresses.forEach {
+            val addressView = inflater.inflate(R.layout.transaction_result_address_row,
+                outputsAddressesContainer, false) as TextView
+            addressView.text = it.toBase58()
+            outputsAddressesContainer.addView(addressView)
+        }
     }
 }

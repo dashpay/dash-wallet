@@ -28,8 +28,8 @@ import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -127,8 +127,8 @@ constructor(
 
     suspend fun createSendingRequestFromDashUri(paymentURi: String): Transaction {
         val transaction = sendPaymentService.createSendingRequestFromDashUri(paymentURi)
-        purchaseGiftCardDataMerchant?.iconBitmap?.let {
-            transactionMetadata.markGiftCardTransaction(transaction.txId, it)
+        purchaseGiftCardDataMerchant?.iconBitmap?.let {bitmap ->
+            transactionMetadata.markGiftCardTransaction(transaction.txId, bitmap)
             purchaseGiftCardDataMerchant?.iconBitmap = null
         }
         return transaction

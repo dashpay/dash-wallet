@@ -17,21 +17,16 @@
 
 package org.dash.wallet.features.exploredash.ui.dash_direct.dialogs
 
-import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.StyleRes
-import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import coil.imageLoader
-import coil.request.ImageRequest
+import coil.load
 import coil.size.Scale
-import coil.target.ImageViewTarget
-import coil.transform.RoundedCornersTransformation
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -75,7 +70,14 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
         val savingsPercentage = merchant?.savingsPercentage ?: DEFAULT_DISCOUNT
         merchant?.let {
             binding.merchantName.text = it.name
-            loadIconAndCacheForDatabase(it)
+            it.logoLocation?.let { logoLocation ->
+                binding.merchantLogo.load(logoLocation) {
+                    crossfade(true)
+                    scale(Scale.FILL)
+                    placeholder(R.drawable.ic_image_placeholder)
+                    error(R.drawable.ic_image_placeholder)
+                }
+            }
             binding.giftCardDiscountValue.text = GenericUtils.formatPercent(savingsPercentage)
         }
 
@@ -220,24 +222,5 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
 
             this@PurchaseGiftCardConfirmDialog.dismiss()
         }
-    }
-
-    private fun loadIconAndCacheForDatabase(merchant: Merchant) {
-        val request = ImageRequest.Builder(requireContext())
-            .data(merchant.logoLocation)
-            .crossfade(200)
-            .scale(Scale.FILL)
-            .size(150) // This size is for the stored merchant icon. 50x3 for xxhdpi screens.
-            .placeholder(R.drawable.ic_image_placeholder)
-            .error(R.drawable.ic_image_placeholder)
-            .transformations(RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat()))
-            .target(object: ImageViewTarget(binding.merchantLogo) {
-                override fun onSuccess(result: Drawable) {
-                    super.onSuccess(result)
-                    merchant.iconBitmap = result.toBitmap()
-                }
-            })
-            .build()
-        requireContext().imageLoader.enqueue(request)
     }
 }

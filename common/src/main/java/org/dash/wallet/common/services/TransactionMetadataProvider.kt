@@ -58,6 +58,8 @@ interface TransactionMetadataProvider {
 
     suspend fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>>
 
+    suspend fun getIcon(iconId: Sha256Hash): Bitmap?
+
     // Address methods
     /**
      * mark an address with a tax category.  This will replace existing data

@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.transactions
 
+import android.graphics.Bitmap
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.annotation.StyleRes
@@ -33,7 +34,8 @@ data class TransactionRowView(
     val value: Coin,
     val exchangeRate: ExchangeRate?,
     @DrawableRes val icon: Int,
-    @StyleRes val iconBackground: Int,
+    val iconBitmap: Bitmap?,
+    @StyleRes val iconBackground: Int?,
     @StringRes val titleRes: Int,
     @StringRes val statusRes: Int,
     val transactionAmount: Int,
@@ -46,7 +48,8 @@ data class TransactionRowView(
         fun fromTransactionWrapper(
             txWrapper: TransactionWrapper,
             bag: TransactionBag,
-            context: Context
+            context: Context,
+            giftCardIcon: Bitmap?
         ): TransactionRowView {
             val lastTx = txWrapper.transactions.last()
 
@@ -56,6 +59,7 @@ data class TransactionRowView(
                     txWrapper.getValue(bag),
                     lastTx.exchangeRate,
                     R.drawable.ic_crowdnode_logo,
+                    null,
                     R.style.TxNoBackground,
                     R.string.crowdnode_account,
                     -1,
@@ -66,7 +70,7 @@ data class TransactionRowView(
                     txWrapper
                 )
             } else {
-                fromTransaction(lastTx, bag, context)
+                fromTransaction(lastTx, bag, context, giftCardIcon)
             }
         }
 
@@ -74,27 +78,28 @@ data class TransactionRowView(
             tx: Transaction,
             bag: TransactionBag,
             context: Context,
+            giftCardIcon: Bitmap? = null,
             resourceMapper: TxResourceMapper = TxResourceMapper()
         ): TransactionRowView {
             val value = tx.getValue(bag)
             val isInternal = TransactionUtils.isEntirelySelf(tx, bag)
             val isSent = value.signum() < 0
             val removeFee = isSent && tx.fee != null && !tx.fee.isZero
+            @DrawableRes val icon: Int
+            @StyleRes val iconBackground: Int
 
-            val icon = if (isInternal) {
-                R.drawable.ic_shuffle
+            if (giftCardIcon != null) {
+                icon = R.drawable.ic_gift_card_tx
+                iconBackground = R.style.TxGiftCardBackground
+            } else if (isInternal) {
+                icon = R.drawable.ic_shuffle
+                iconBackground = R.style.TxSentBackground
             } else if (isSent) {
-                R.drawable.ic_transaction_sent
+                icon = R.drawable.ic_transaction_sent
+                iconBackground = R.style.TxSentBackground
             } else {
-                R.drawable.ic_transaction_received
-            }
-
-            val iconBackground = if (isInternal) {
-                R.style.TxSentBackground
-            } else if (isSent) {
-                R.style.TxSentBackground
-            } else {
-                R.style.TxReceivedBackground
+                icon = R.drawable.ic_transaction_received
+                iconBackground = R.style.TxReceivedBackground
             }
 
             val status = if (tx.confidence.hasErrors()) {
@@ -110,6 +115,7 @@ data class TransactionRowView(
                 if (removeFee) value.add(tx.fee) else value,
                 tx.exchangeRate,
                 icon,
+                giftCardIcon,
                 iconBackground,
                 resourceMapper.getTransactionTypeName(tx, bag),
                 status,

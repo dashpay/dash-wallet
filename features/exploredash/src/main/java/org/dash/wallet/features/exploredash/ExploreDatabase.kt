@@ -81,7 +81,7 @@ abstract class ExploreDatabase : RoomDatabase() {
 
             log.info("Open database {}", config.exploreDatabaseName)
             return dbBuilder
-                // .fallbackToDestructiveMigration()
+                //                 .fallbackToDestructiveMigration()
                 .addMigrations(migration1To2)
                 .build()
         }
@@ -167,7 +167,7 @@ abstract class ExploreDatabase : RoomDatabase() {
 
                 database =
                     dbBuilder
-                        // .fallbackToDestructiveMigration()
+                        //                         .fallbackToDestructiveMigration()
                         .addMigrations(migration1To2)
                         .addCallback(onOpenCallback)
                         .build()

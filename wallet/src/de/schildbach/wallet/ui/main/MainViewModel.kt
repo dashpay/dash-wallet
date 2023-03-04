@@ -133,13 +133,12 @@ class MainViewModel @Inject constructor(
         _transactionsDirection
             .flatMapLatest { direction ->
                 metadataProvider.observePresentableMetadata()
-                    .distinctUntilChanged()
-                    .flatMapLatest { memos ->
+                    .flatMapLatest { metadata ->
                         val filter = TxDirectionFilter(direction, walletData.wallet!!)
-                        refreshTransactions(filter, memos)
+                        refreshTransactions(filter, metadata)
                         walletData.observeWalletChanged()
                             .debounce(THROTTLE_DURATION)
-                            .onEach { refreshTransactions(filter, memos) }
+                            .onEach { refreshTransactions(filter, metadata) }
                     }
             }
             .catch { analytics.logError(it, "is wallet null: ${walletData.wallet == null}") }
@@ -251,7 +250,8 @@ class MainViewModel @Inject constructor(
              .map {
                  TransactionRowView.fromTransactionWrapper(
                      it, walletData.transactionBag,
-                     Constants.CONTEXT
+                     Constants.CONTEXT,
+                     metadata[it.transactions.first().txId]?.icon
                  )
              }
             _transactions.postValue(transactionViews)

@@ -48,7 +48,15 @@ class TransactionResultViewModel @Inject constructor(
 
     private val _transactionMetadata: MutableStateFlow<TransactionMetadata?> = MutableStateFlow(null)
     val transactionMetadata
-        get() = _transactionMetadata.asLiveData()
+        get() = _transactionMetadata.filterNotNull().asLiveData()
+
+    val transactionIcon = _transactionMetadata
+        .filterNotNull()
+        .map { it.customIconId }
+        .filterNotNull()
+        .map { transactionMetadataProvider.getIcon(it) }
+        .filterNotNull()
+        .asLiveData()
 
     fun init(txId: Sha256Hash?) {
         txId?.let {
