@@ -41,12 +41,13 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.PresentableTxMetadata
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.transactions.filters.TransactionFilter
+import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
@@ -241,11 +242,11 @@ class MainViewModel @Inject constructor(
         config.unregisterOnSharedPreferenceChangeListener(listener)
     }
 
-    private fun refreshTransactions(filter: TransactionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
+    private fun refreshTransactions(filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
         walletData.wallet?.let { wallet ->
             val transactionViews = walletData.wrapAllTransactions(
                 FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
-            ).filter { it.transactions.any { tx -> filter.matches(tx) } }
+            ).filter { it.passesFilter(filter, metadata) }
              .sortedWith(TransactionWrapperComparator())
              .map {
                  TransactionRowView.fromTransactionWrapper(
@@ -285,5 +286,16 @@ class MainViewModel @Inject constructor(
             percentage = 0
         }
         _blockchainSyncPercentage.postValue(percentage)
+    }
+
+    private fun TransactionWrapper.passesFilter(
+        filter: TxDirectionFilter,
+        metadata: Map<Sha256Hash, PresentableTxMetadata>
+    ): Boolean {
+       return (filter.direction == TxFilterType.GIFT_CARD && isGiftCard(metadata)) ||
+                transactions.any { tx -> filter.matches(tx) }
+    }
+    private fun TransactionWrapper.isGiftCard(metadata: Map<Sha256Hash, PresentableTxMetadata>): Boolean {
+        return metadata[transactions.first().txId]?.service == ServiceName.DashDirect
     }
 }

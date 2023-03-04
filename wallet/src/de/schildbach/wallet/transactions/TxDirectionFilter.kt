@@ -26,7 +26,7 @@ enum class TxFilterType {
 }
 
 class TxDirectionFilter(
-    private val direction: TxFilterType,
+    val direction: TxFilterType,
     private val bag: TransactionBag
 ): TransactionFilter {
     override fun matches(tx: Transaction): Boolean {
