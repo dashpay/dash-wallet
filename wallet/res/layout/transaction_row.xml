@@ -26,6 +26,7 @@
     android:paddingEnd="15dp"
     android:paddingTop="@dimen/transaction_row_vertical_padding"
     android:paddingBottom="@dimen/transaction_row_vertical_padding"
+    android:clipToPadding="false"
     android:tag="transaction"
     tools:context="de.schildbach.wallet.ui.main.TransactionAdapter">
 

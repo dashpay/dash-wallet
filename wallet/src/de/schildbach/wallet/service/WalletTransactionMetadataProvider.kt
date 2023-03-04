@@ -306,15 +306,17 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override suspend fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>> {
         return iconBitmapDao.observeBitmaps()
             .distinctUntilChanged()
+            .map { rows -> rows.mapValues {
+                // Only keep a single bitmap instance per unique data row
+                BitmapFactory.decodeByteArray(it.value.imageData, 0, it.value.imageData.size)
+            } }
             .flatMapLatest { bitmaps ->
                 transactionMetadataDao.observePresentableMetadata()
                 .distinctUntilChanged()
                 .map { metadataList ->
                     metadataList.values.forEach { metadata ->
                         metadata.customIconId?.let { iconId ->
-                            val bitmapRow = bitmaps[iconId]!!
-                            val bitmap = BitmapFactory.decodeByteArray(bitmapRow.imageData, 0, bitmapRow.imageData.size)
-                            metadata.icon = bitmap
+                            metadata.icon = bitmaps[iconId]!!
                         }
                     }
                     metadataList
