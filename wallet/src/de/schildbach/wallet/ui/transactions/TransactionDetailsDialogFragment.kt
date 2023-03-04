@@ -34,6 +34,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
@@ -52,6 +53,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
     private val binding by viewBinding(TransactionDetailsDialogBinding::bind)
     private lateinit var contentBinding: TransactionResultContentBinding
     private val viewModel: TransactionResultViewModel by viewModels()
+    @Inject lateinit var walletApplication: WalletApplication
 
     override val backgroundStyle = R.style.PrimaryBackground
     override val forceExpand = true
@@ -91,7 +93,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         if (tx != null) {
             transactionResultViewBinder.bind(tx)
         } else {
-            log.error("Transaction not found. TxId:", txId)
+            log.error("Transaction not found. TxId: {}", txId)
             dismiss()
             return
         }
@@ -101,7 +103,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         }
 
         viewModel.transactionIcon.observe(this) {
-            transactionResultViewBinder.setTransactionIcon(it, R.drawable.ic_gift_card_tx)
+            transactionResultViewBinder.setTransactionIcon(it)
         }
 
         contentBinding.openExplorerCard.setOnClickListener { viewOnBlockExplorer() }
@@ -116,9 +118,8 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
     private fun showReportIssue() {
         ReportIssueDialogBuilder.createReportIssueDialog(
             requireActivity(),
-            WalletApplication.getInstance()
-        )
-            .buildAlertDialog().show()
+            walletApplication
+        ).buildAlertDialog().show()
     }
 
     private fun viewOnBlockExplorer() {

@@ -26,6 +26,7 @@ import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -76,7 +77,7 @@ abstract class TransactionExporter(
     }
 
     protected fun isInternal(tx: Transaction) : Boolean {
-        return TransactionUtils.isEntirelySelf(tx, wallet)
+        return tx.isEntirelySelf(wallet)
     }
 
     /**

@@ -127,10 +127,9 @@ constructor(
 
     suspend fun createSendingRequestFromDashUri(paymentURi: String): Transaction {
         val transaction = sendPaymentService.createSendingRequestFromDashUri(paymentURi)
-        purchaseGiftCardDataMerchant?.iconBitmap?.let {bitmap ->
-            transactionMetadata.markGiftCardTransaction(transaction.txId, bitmap)
-            purchaseGiftCardDataMerchant?.iconBitmap = null
-        }
+        transactionMetadata.markGiftCardTransaction(transaction.txId, purchaseGiftCardDataMerchant?.iconBitmap)
+        purchaseGiftCardDataMerchant?.iconBitmap = null
+
         return transaction
     }
 

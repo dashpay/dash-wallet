@@ -86,7 +86,7 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
                             tx.txId,
                             tx.updateTime.time,
                             tx.getValue(wallet),
-                            TransactionCategory.fromTransaction(tx.type, tx.getValue(wallet), isEntirelySelf(tx, wallet))
+                            TransactionCategory.fromTransaction(tx.type, tx.getValue(wallet), isEntirelySelf(wallet))
                         )
                     )
                 }

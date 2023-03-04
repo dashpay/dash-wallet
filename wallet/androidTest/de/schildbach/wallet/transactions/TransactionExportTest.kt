@@ -26,6 +26,7 @@ import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -70,7 +71,7 @@ class TransactionExportTest {
                 tx.txId,
                 tx.updateTime?.time ?: System.currentTimeMillis(),
                 tx.outputSum,
-                TransactionCategory.fromTransaction(tx.type, tx.outputSum, TransactionUtils.isEntirelySelf(tx, wallet)),
+                TransactionCategory.fromTransaction(tx.type, tx.outputSum, tx.isEntirelySelf(wallet)),
                 TaxCategory.TransferIn
             )
         )

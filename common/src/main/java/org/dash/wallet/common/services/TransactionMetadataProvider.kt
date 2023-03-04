@@ -52,7 +52,7 @@ interface TransactionMetadataProvider {
     /**
      * Mark a transaction as DashDirect gift card purchase with an icon
      */
-    suspend fun markGiftCardTransaction(txId: Sha256Hash, icon: Bitmap)
+    suspend fun markGiftCardTransaction(txId: Sha256Hash, icon: Bitmap?)
 
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 

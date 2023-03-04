@@ -25,7 +25,10 @@ import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.data.PresentableTxMetadata
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 
@@ -49,7 +52,7 @@ data class TransactionRowView(
             txWrapper: TransactionWrapper,
             bag: TransactionBag,
             context: Context,
-            giftCardIcon: Bitmap?
+            metadata: PresentableTxMetadata? = null
         ): TransactionRowView {
             val lastTx = txWrapper.transactions.last()
 
@@ -70,7 +73,7 @@ data class TransactionRowView(
                     txWrapper
                 )
             } else {
-                fromTransaction(lastTx, bag, context, giftCardIcon)
+                fromTransaction(lastTx, bag, context, metadata)
             }
         }
 
@@ -78,22 +81,22 @@ data class TransactionRowView(
             tx: Transaction,
             bag: TransactionBag,
             context: Context,
-            giftCardIcon: Bitmap? = null,
+            metadata: PresentableTxMetadata? = null,
             resourceMapper: TxResourceMapper = TxResourceMapper()
         ): TransactionRowView {
             val value = tx.getValue(bag)
-            val isInternal = TransactionUtils.isEntirelySelf(tx, bag)
+            val isInternal = tx.isEntirelySelf(bag)
             val isSent = value.signum() < 0
             val removeFee = isSent && tx.fee != null && !tx.fee.isZero
             @DrawableRes val icon: Int
             @StyleRes val iconBackground: Int
 
-            if (giftCardIcon != null) {
+            if (metadata?.service == ServiceName.DashDirect) {
                 icon = R.drawable.ic_gift_card_tx
-                iconBackground = R.style.TxGiftCardBackground
+                iconBackground = R.style.TxTangerineBackground
             } else if (isInternal) {
                 icon = R.drawable.ic_shuffle
-                iconBackground = R.style.TxSentBackground
+                iconBackground = R.style.TxTangerineBackground
             } else if (isSent) {
                 icon = R.drawable.ic_transaction_sent
                 iconBackground = R.style.TxSentBackground
@@ -115,7 +118,7 @@ data class TransactionRowView(
                 if (removeFee) value.add(tx.fee) else value,
                 tx.exchangeRate,
                 icon,
-                giftCardIcon,
+                metadata?.icon,
                 iconBackground,
                 resourceMapper.getTransactionTypeName(tx, bag),
                 status,

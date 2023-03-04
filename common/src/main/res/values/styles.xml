@@ -1172,6 +1172,12 @@
         <item name="cornerRadius">19dp</item>
     </style>
 
+    <style name="TxTangerineBackground">
+        <item name="backgroundColor">@color/tx_tangerine_background</item>
+        <item name="strokeColor">@color/tx_tangerine_background</item>
+        <item name="cornerRadius">19dp</item>
+    </style>
+
     <style name="TxNoBackground">
         <item name="backgroundColor">@android:color/transparent</item>
         <item name="strokeColor">@android:color/transparent</item>

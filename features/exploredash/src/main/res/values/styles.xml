@@ -47,10 +47,4 @@
         <item name="strokeColor">@color/dash_blue</item>
         <item name="cornerRadius">13dp</item>
     </style>
-
-    <style name="TxGiftCardBackground">
-        <item name="backgroundColor">@color/tx_gift_card_background</item>
-        <item name="strokeColor">@color/tx_gift_card_background</item>
-        <item name="cornerRadius">19dp</item>
-    </style>
 </resources>

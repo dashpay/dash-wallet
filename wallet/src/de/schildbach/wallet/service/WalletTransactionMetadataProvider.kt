@@ -68,7 +68,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             if (sentTime != null && sentTime < updateTime) {
                 updateTime = sentTime
             }
-            val isInternal = isEntirelySelf(this, walletData.wallet!!)
+            val isInternal = isEntirelySelf(walletData.wallet!!)
 
             val metadata = TransactionMetadata(
                 txId,
@@ -142,13 +142,16 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun markGiftCardTransaction(txId: Sha256Hash, icon: Bitmap) {
+    override suspend fun markGiftCardTransaction(txId: Sha256Hash, icon: Bitmap?) {
         withContext(Dispatchers.IO) {
-            val stream = ByteArrayOutputStream()
-            stream.use { icon.compress(Bitmap.CompressFormat.PNG, 100, it) }
-            val imageData = stream.toByteArray()
-            val imageHash = Sha256Hash.of(imageData)
-            iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, icon.height, icon.width))
+            val imageHash = icon?.let {
+                val stream = ByteArrayOutputStream()
+                stream.use { icon.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                val imageData = stream.toByteArray()
+                val imageHash = Sha256Hash.of(imageData)
+                iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, icon.height, icon.width))
+                imageHash
+            }
 
             updateAndInsertIfNotExist(txId) {
                 transactionMetadataDao.update(it.copy(

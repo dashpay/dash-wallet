@@ -252,7 +252,7 @@ class MainViewModel @Inject constructor(
                  TransactionRowView.fromTransactionWrapper(
                      it, walletData.transactionBag,
                      Constants.CONTEXT,
-                     metadata[it.transactions.first().txId]?.icon
+                     metadata[it.transactions.first().txId]
                  )
              }
             _transactions.postValue(transactionViews)

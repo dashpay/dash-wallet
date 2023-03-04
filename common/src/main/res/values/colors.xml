@@ -77,6 +77,7 @@
     <color name="input_error_background">#1AE85C4A</color>
     <color name="tx_sent_background">#08008DE4</color>
     <color name="tx_received_background">#083CB878</color>
+    <color name="tx_tangerine_background">#1AFA9269</color>
     <color name="tx_category_example_background">@color/extra_light_gray</color>
 
     <!-- Strokes -->
