@@ -303,7 +303,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         return metadataList
     }
 
-    override suspend fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>> {
+    override fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>> {
         return iconBitmapDao.observeBitmaps()
             .distinctUntilChanged()
             .map { rows -> rows.mapValues {
