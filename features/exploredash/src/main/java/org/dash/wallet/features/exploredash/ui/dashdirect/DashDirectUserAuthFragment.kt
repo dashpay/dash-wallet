@@ -15,16 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.dash_direct
+package org.dash.wallet.features.exploredash.ui.dashdirect
 
 import android.content.Context
-import android.os.Build
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import androidx.annotation.RequiresApi
 import androidx.annotation.StringRes
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged

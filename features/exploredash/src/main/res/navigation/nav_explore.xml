@@ -57,7 +57,7 @@
 
     <fragment
         android:id="@+id/dashDirectUserAuthFragment"
-        android:name="org.dash.wallet.features.exploredash.ui.dash_direct.DashDirectUserAuthFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment"
         android:label="fragment_dashDirectUserAuthFragment"
         tools:layout="@layout/fragment_dash_direct_user_auth">
 
@@ -78,12 +78,12 @@
 
         <argument
             android:name="dashDirectUserAuthType"
-            app:argType="org.dash.wallet.features.exploredash.ui.dash_direct.DashDirectUserAuthFragment$DashDirectUserAuthType" />
+            app:argType="org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment$DashDirectUserAuthType" />
     </fragment>
 
     <fragment
         android:id="@+id/purchaseGiftCardFragment"
-        android:name="org.dash.wallet.features.exploredash.ui.dash_direct.PurchaseGiftCardFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.dashdirect.PurchaseGiftCardFragment"
         android:label="fragment_purchase_gift_card"
         tools:layout="@layout/fragment_purchase_gift_card"/>
 
@@ -100,7 +100,7 @@
 
     <dialog
         android:id="@+id/buyGiftCardInfoDialog"
-        android:name="org.dash.wallet.features.exploredash.ui.dash_direct.dialogs.BuyGiftCardDescriptionDialog"
+        android:name="org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.BuyGiftCardDescriptionDialog"
         android:label="buy_gift_card_info"
         tools:layout="@layout/buy_gift_card_description" />
 

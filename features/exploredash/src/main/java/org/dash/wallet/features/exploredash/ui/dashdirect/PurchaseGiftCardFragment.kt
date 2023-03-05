@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.dash_direct
+package org.dash.wallet.features.exploredash.ui.dashdirect
 
 import android.os.Bundle
 import android.view.View
@@ -41,7 +41,7 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
-import org.dash.wallet.features.exploredash.ui.dash_direct.dialogs.PurchaseGiftCardConfirmDialog
+import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.PurchaseGiftCardConfirmDialog
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory

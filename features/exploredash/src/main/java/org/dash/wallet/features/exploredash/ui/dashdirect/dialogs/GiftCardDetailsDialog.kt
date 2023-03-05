@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.features.exploredash.ui.dash_direct.dialogs
+package org.dash.wallet.features.exploredash.ui.dashdirect.dialogs
 
 import android.content.Intent
 import android.net.Uri

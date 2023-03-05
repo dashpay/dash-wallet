@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.dash_direct.dialogs
+package org.dash.wallet.features.exploredash.ui.dashdirect.dialogs
 
 import android.os.Bundle
 import android.view.LayoutInflater
