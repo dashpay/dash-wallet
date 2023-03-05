@@ -19,6 +19,8 @@ package org.dash.wallet.features.exploredash.ui.dash_direct
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.*
+import javax.inject.Inject
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -34,14 +36,14 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
-import java.util.*
-import javax.inject.Inject
 
 @HiltViewModel
 class DashDirectViewModel
@@ -52,7 +54,8 @@ constructor(
     var configuration: Configuration,
     private val sendPaymentService: SendPaymentService,
     private val repository: DashDirectRepositoryInt,
-    private val transactionMetadata: TransactionMetadataProvider
+    private val transactionMetadata: TransactionMetadataProvider,
+    private val exploreData: ExploreDataSource
 ) : ViewModel() {
 
     val isUserSettingFiatIsNotUSD = (configuration.exchangeCurrencyCode != Constants.USD_CURRENCY)
@@ -174,4 +177,30 @@ constructor(
     suspend fun verifyEmail(code: String) = repository.verifyEmail(code)
 
     suspend fun logout() = repository.logout()
+
+    // TODO Remove the test merchent
+    suspend fun insertTestMerchent() {
+        repository.getDashDirectEmail()?.let { email ->
+            val response = repository.getMerchantById(merchantId = 318, includeLocations = false, userEmail = email)
+            if (response is ResponseResource.Success) {
+                response.value?.data?.merchant?.let {
+                    var merchant =
+                        Merchant().apply {
+                            id = 318
+                            name = "Cray Pay"
+                            website = "http://www.craypay.com"
+                            deeplink = "http://www.craypay.com"
+                            merchantId = 318
+                            coverImage = "https://craypaystorage.blob.core.windows.net/prod/content/craypay.png"
+                            source = "DashDirect"
+                            type = MerchantType.ONLINE
+                            maxCardPurchase = it.maximumCardPurchase
+                            minCardPurchase = it.minimumCardPurchase
+                            savingsPercentage = it.savingsPercentage
+                        }
+                    exploreData.insertMerchant(merchant)
+                }
+            }
+        }
+    }
 }

@@ -205,6 +205,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.allMerchantLocations.observe(viewLifecycleOwner) { merchantLocations ->
             merchantLocationsAdapter.submitList(merchantLocations)
         }
+
+        lifecycleScope.launch { dashDirectViewModel.insertTestMerchent() }
+
         viewModel.syncStatus.observe(viewLifecycleOwner) { syncProgress ->
             lastSyncProgress = syncProgress
             when (syncProgress.status) {

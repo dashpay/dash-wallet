@@ -32,6 +32,7 @@ import kotlin.math.min
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.livedata.ConnectionLiveData
@@ -66,12 +67,7 @@ enum class ScreenState {
     Details
 }
 
-data class FilterOptions(
-    val query: String,
-    val territory: String,
-    val payment: String,
-    val radius: Int
-)
+data class FilterOptions(val query: String, val territory: String, val payment: String, val radius: Int)
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -275,9 +271,7 @@ constructor(
                             .flatMapLatest { bounds ->
                                 _filterMode
                                     .filterNot { it == FilterMode.Online }
-                                    .flatMapLatest { mode ->
-                                        getBoundedFlow(query, territory, payment, mode, bounds)
-                                    }
+                                    .flatMapLatest { mode -> getBoundedFlow(query, territory, payment, mode, bounds) }
                             }
                     }
                 }
@@ -663,8 +657,7 @@ constructor(
     }
 
     private fun ceilByRadius(original: GeoBounds, radius: Double): GeoBounds {
-        val inRadius =
-            locationProvider.getRadiusBounds(original.centerLat, original.centerLng, radius)
+        val inRadius = locationProvider.getRadiusBounds(original.centerLat, original.centerLng, radius)
 
         return GeoBounds(
             min(original.northLat, inRadius.northLat),
@@ -791,8 +784,7 @@ constructor(
             }
         }
     }
-    private fun hasZoomLevelChanged(currentZoomLevel: Float): Boolean =
-        previousZoomLevel != currentZoomLevel
+    private fun hasZoomLevelChanged(currentZoomLevel: Float): Boolean = previousZoomLevel != currentZoomLevel
 
     private fun hasCameraCenterChanged(currentCenterPosition: GeoBounds): Boolean =
         locationProvider.distanceBetweenCenters(previousCameraGeoBounds, currentCenterPosition) !=
