@@ -5,7 +5,7 @@ plugins {
     id 'androidx.navigation.safeargs.kotlin'
     id 'dagger.hilt.android.plugin'
     id 'kotlin-parcelize'
-    id 'com.ncorti.ktfmt.gradle'
+    id 'org.jlleitschuh.gradle.ktlint'
 }
 
 android {
@@ -55,11 +55,6 @@ kapt {
 
 hilt {
     enableAggregatingTask = true
-}
-
-ktfmt {
-    kotlinLangStyle()
-    maxWidth.set(120)
 }
 
 dependencies {
