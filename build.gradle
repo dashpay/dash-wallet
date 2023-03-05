@@ -51,7 +51,7 @@ buildscript {
         classpath "com.google.dagger:hilt-android-gradle-plugin:$hiltVersion"
         classpath "androidx.navigation:navigation-safe-args-gradle-plugin:$navigationVersion"
         classpath "com.google.android.libraries.mapsplatform.secrets-gradle-plugin:secrets-gradle-plugin:2.0.1"
-        classpath "com.ncorti.ktfmt.gradle:plugin:0.11.0"
+        classpath "org.jlleitschuh.gradle:ktlint-gradle:11.3.1"
     }
 }
 
