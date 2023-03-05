@@ -62,9 +62,9 @@ import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderA
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
-import org.dash.wallet.features.exploredash.ui.dash_direct.DashDirectUserAuthFragment
-import org.dash.wallet.features.exploredash.ui.dash_direct.DashDirectViewModel
-import org.dash.wallet.features.exploredash.ui.dash_direct.dialogs.DashDirectLoginInfoDialog
+import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment
+import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectViewModel
+import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.DashDirectLoginInfoDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import org.dash.wallet.features.exploredash.utils.exploreViewModels

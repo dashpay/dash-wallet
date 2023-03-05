@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.dash_direct
+package org.dash.wallet.features.exploredash.ui.dashdirect
 
 import android.content.Context
 import android.os.Bundle
