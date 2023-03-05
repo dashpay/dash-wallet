@@ -56,7 +56,7 @@ interface TransactionMetadataProvider {
 
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 
-    suspend fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>>
+    fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>>
 
     suspend fun getIcon(iconId: Sha256Hash): Bitmap?
 
