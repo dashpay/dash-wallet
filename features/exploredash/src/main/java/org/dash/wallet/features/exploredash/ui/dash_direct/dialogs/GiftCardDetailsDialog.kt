@@ -28,8 +28,6 @@ import androidx.navigation.fragment.findNavController
 import coil.load
 import coil.size.Scale
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
@@ -39,8 +37,6 @@ import org.dash.wallet.features.exploredash.data.model.GiftCardDetailsDialogMode
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 
-@FlowPreview
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class GiftCardDetailsDialog : OffsetDialogFragment() {
     @StyleRes override val backgroundStyle = R.style.PrimaryBackground

@@ -39,7 +39,6 @@ import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
-import kotlinx.coroutines.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
@@ -49,8 +48,6 @@ import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
-@FlowPreview
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class ExploreMapFragment : SupportMapFragment() {
     companion object {

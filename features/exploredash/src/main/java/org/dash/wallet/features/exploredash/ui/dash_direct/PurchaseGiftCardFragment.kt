@@ -25,8 +25,6 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
@@ -46,8 +44,6 @@ import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DI
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
 
-@FlowPreview
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) {
     companion object {

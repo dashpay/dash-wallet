@@ -28,8 +28,6 @@ import androidx.navigation.fragment.findNavController
 import coil.load
 import coil.size.Scale
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
@@ -49,8 +47,6 @@ import org.dash.wallet.features.exploredash.ui.dash_direct.DashDirectViewModel
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
-@FlowPreview
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
     @StyleRes override val backgroundStyle = R.style.PrimaryBackground

@@ -18,13 +18,11 @@
 package org.dash.wallet.features.exploredash.ui.dash_direct
 
 import android.content.Context
-import android.os.Build
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import androidx.annotation.RequiresApi
 import androidx.annotation.StringRes
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
@@ -32,8 +30,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.ui.viewBinding
@@ -43,8 +39,6 @@ import org.dash.wallet.features.exploredash.databinding.FragmentDashDirectUserAu
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
 
-@FlowPreview
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_auth) {
     companion object {

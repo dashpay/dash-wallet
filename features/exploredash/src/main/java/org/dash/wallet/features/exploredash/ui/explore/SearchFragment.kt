@@ -44,8 +44,6 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
@@ -71,8 +69,6 @@ import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
-@FlowPreview
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class SearchFragment : Fragment(R.layout.fragment_search) {
     companion object {

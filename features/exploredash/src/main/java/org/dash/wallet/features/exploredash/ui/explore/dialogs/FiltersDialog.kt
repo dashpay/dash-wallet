@@ -29,7 +29,6 @@ import javax.inject.Inject
 import kotlinx.coroutines.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
-import org.dash.wallet.common.ui.radio_group.*
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
 import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
 import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
@@ -44,8 +43,6 @@ import org.dash.wallet.features.exploredash.ui.explore.FilterMode
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
-@FlowPreview
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class FiltersDialog : OffsetDialogFragment() {
     override val backgroundStyle = R.style.PrimaryBackground

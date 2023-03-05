@@ -32,7 +32,6 @@ import kotlin.math.min
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.livedata.ConnectionLiveData
