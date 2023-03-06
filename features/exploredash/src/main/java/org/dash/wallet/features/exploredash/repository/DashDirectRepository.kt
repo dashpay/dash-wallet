@@ -124,49 +124,30 @@ constructor(
                 giftCardAmount = 0.03,
                 merchantId = 318
             ),
+            // TODO:
+            // purchaseGiftCardRequest =
+            //     PurchaseGiftCardRequest(currency = currency, giftCardAmount = giftCardAmount, merchantId = merchantId),
             email = userEmail
         )
     }
 
-    override suspend fun getMerchantById(
-        userEmail: String,
-        merchantId: Long,
-        includeLocations: Boolean?
-    ) = safeApiCall {
-        servicesApi.getMerchantById(
-            email = userEmail,
-            getMerchantByIdRequest = GetMerchantByIdRequest(
-                id = 318,
-                includeLocations = includeLocations
+    override suspend fun getMerchantById(userEmail: String, merchantId: Long, includeLocations: Boolean?) =
+        safeApiCall {
+            servicesApi.getMerchantById(
+                email = userEmail,
+                getMerchantByIdRequest = GetMerchantByIdRequest(id = 318, /* TODO: merchantId, */ includeLocations = includeLocations)
             )
-        )
-    }
+        }
 
-    override suspend fun getPaymentStatus(
-        userEmail: String,
-        paymentId: String,
-        orderId: String
-    ) = safeApiCall {
+    override suspend fun getPaymentStatus(userEmail: String, paymentId: String, orderId: String) = safeApiCall {
         servicesApi.getPaymentStatus(
             email = userEmail,
-            paymentStatusRequest = PaymentStatusRequest(
-                paymentId = paymentId,
-                orderId = orderId
-            )
+            paymentStatusRequest = PaymentStatusRequest(paymentId = paymentId, orderId = orderId)
         )
     }
 
-    override suspend fun getGiftCardDetails(
-        userEmail: String,
-        giftCardId: Long
-    ) = safeApiCall {
-        servicesApi.getGiftCard(
-            email = userEmail,
-            getGiftCardRequest = GetGiftCardRequest(
-                id = giftCardId
-
-            )
-        )
+    override suspend fun getGiftCardDetails(userEmail: String, giftCardId: Long) = safeApiCall {
+        servicesApi.getGiftCard(email = userEmail, getGiftCardRequest = GetGiftCardRequest(id = giftCardId))
     }
 }
 
@@ -178,12 +159,22 @@ interface DashDirectRepositoryInt {
     fun isUserSignIn(): Boolean
     suspend fun getDashDirectEmail(): String?
     suspend fun logout()
-    suspend fun purchaseGiftCard(deviceID: String, currency: String, giftCardAmount: Double, merchantId: Long, userEmail: String):
-        ResponseResource<PurchaseGiftCardResponse?>
-    suspend fun getMerchantById(userEmail: String, merchantId: Long, includeLocations: Boolean? = false):
-        ResponseResource<GetMerchantByIdResponse?>
-    suspend fun getPaymentStatus(userEmail: String, paymentId: String, orderId: String):
-        ResponseResource<PaymentStatusResponse?>
-    suspend fun getGiftCardDetails(userEmail: String, giftCardId: Long):
-        ResponseResource<GetGiftCardResponse?>
+    suspend fun purchaseGiftCard(
+        deviceID: String,
+        currency: String,
+        giftCardAmount: Double,
+        merchantId: Long,
+        userEmail: String
+    ): ResponseResource<PurchaseGiftCardResponse?>
+    suspend fun getMerchantById(
+        userEmail: String,
+        merchantId: Long,
+        includeLocations: Boolean? = false
+    ): ResponseResource<GetMerchantByIdResponse?>
+    suspend fun getPaymentStatus(
+        userEmail: String,
+        paymentId: String,
+        orderId: String
+    ): ResponseResource<PaymentStatusResponse?>
+    suspend fun getGiftCardDetails(userEmail: String, giftCardId: Long): ResponseResource<GetGiftCardResponse?>
 }
