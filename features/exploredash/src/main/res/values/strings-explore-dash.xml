@@ -212,5 +212,5 @@
     <string name="gift_card_purchase_failed">Gift card purchase failed</string>
     <string name="try_again">Try Again</string>
     <string name="cancel">Cancel</string>
-    <string name="for_some_reason_we_were_not_able_to_buy_a_gift_card_please_try_again"> For some reason we were not able to buy a gift card. Please, try again.</string>
+    <string name="gift_card_error"> For some reason we were not able to buy a gift card. Please, try again.</string>
 </resources>
