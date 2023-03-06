@@ -106,7 +106,7 @@ class SendCoinsTaskRunner @Inject constructor(
         return SendPaymentService.TransactionDetails(txFee?.toPlainString() ?: "", amountToSend, totalAmount)
     }
 
-    override suspend fun createSendingRequestFromDashUri(dashUri: String): Transaction {
+    override suspend fun payWithDashUrl(dashUri: String): Transaction {
         val wallet = walletData.wallet!!
         return suspendCancellableCoroutine { coroutine ->
             object : StringInputParser(dashUri, false) {
