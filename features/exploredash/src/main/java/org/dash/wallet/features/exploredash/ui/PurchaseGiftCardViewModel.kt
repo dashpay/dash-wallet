@@ -125,7 +125,7 @@ constructor(
     }
 
     suspend fun createSendingRequestFromDashUri(paymentURi: String): Transaction {
-        return sendPaymentService.createSendingRequestFromDashUri(paymentURi)
+        return sendPaymentService.payWithDashUrl(paymentURi)
     }
     suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>? {
         repository.getDashDirectEmail()?.let { email ->
