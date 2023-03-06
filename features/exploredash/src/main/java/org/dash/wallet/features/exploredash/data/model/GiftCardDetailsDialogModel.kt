@@ -9,7 +9,7 @@ data class GiftCardDetailsDialogModel(
     val merchantLogo: String? = "",
     val barcodeImg: String? = "",
     val giftCardPrice: String? = "",
-    val giftCardCheckCurrentBalance: String? = "",
+    val giftCardCheckCurrentBalanceUrl: String? = "",
     val giftCardNumber: String? = "",
     val giftCardPin: String? = "",
     val transactionId: String? = ""

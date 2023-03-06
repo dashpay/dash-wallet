@@ -21,6 +21,7 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.*
 import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -37,6 +38,7 @@ import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
@@ -44,6 +46,7 @@ import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdR
 import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
+import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 
 @HiltViewModel
 class DashDirectViewModel
@@ -94,9 +97,12 @@ constructor(
         purchaseGiftCardDataMerchant?.merchantId?.let {
             purchaseGiftCardDataPaymentValue?.let { amountValue ->
                 repository.getDashDirectEmail()?.let { email ->
+                    val savingsPercentage =
+                        purchaseGiftCardDataMerchant?.savingsPercentage ?: DashDirectConstants.DEFAULT_DISCOUNT
+                    val discountedValue = getDiscountedAmount(amountValue.second, savingsPercentage)
                     return repository.purchaseGiftCard(
                         merchantId = it,
-                        giftCardAmount = amountValue.first.toPlainString().toDouble(),
+                        giftCardAmount = discountedValue.toBigDecimal().toDouble(),
                         currency = Constants.DASH_CURRENCY,
                         deviceID = UUID.randomUUID().toString(),
                         userEmail = email
@@ -108,22 +114,16 @@ constructor(
     }
 
     suspend fun getPaymentStatus(paymentId: String, orderId: String): ResponseResource<PaymentStatusResponse?>? {
+        delay(2000)
         repository.getDashDirectEmail()?.let { email ->
-            return repository.getPaymentStatus(
-                userEmail = email,
-                paymentId = paymentId,
-                orderId = orderId
-            )
+            return repository.getPaymentStatus(userEmail = email, paymentId = paymentId, orderId = orderId)
         }
         return null
     }
 
     suspend fun getGiftCardDetails(giftCardId: Long): ResponseResource<GetGiftCardResponse?>? {
         repository.getDashDirectEmail()?.let { email ->
-            return repository.getGiftCardDetails(
-                userEmail = email,
-                giftCardId = giftCardId
-            )
+            return repository.getGiftCardDetails(userEmail = email, giftCardId = giftCardId)
         }
         return null
     }

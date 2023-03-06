@@ -37,7 +37,6 @@ import org.dash.wallet.common.util.copy
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.GiftCardDetailsDialogModel
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
-import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -103,8 +102,10 @@ class GiftCardDetailsDialog : OffsetDialogFragment() {
         }
 
         binding.checkCurrentBalance.setOnClickListener {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(DashDirectConstants.CHECK_BALANCE_URL))
-            requireContext().startActivity(intent)
+            giftCardDetailsDialogModel?.giftCardCheckCurrentBalanceUrl?.let {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
+                requireContext().startActivity(intent)
+            }
         }
     }
 
