@@ -38,12 +38,14 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
+import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 
 @HiltViewModel
 class PurchaseGiftCardViewModel
@@ -90,9 +92,12 @@ constructor(
         purchaseGiftCardDataMerchant?.merchantId?.let {
             purchaseGiftCardDataPaymentValue?.let { amountValue ->
                 repository.getDashDirectEmail()?.let { email ->
+                    val savingsPercentage =
+                        purchaseGiftCardDataMerchant?.savingsPercentage ?: DashDirectConstants.DEFAULT_DISCOUNT
+                    val discountedValue = getDiscountedAmount(amountValue.second, savingsPercentage)
                     return repository.purchaseGiftCard(
                         merchantId = it,
-                        giftCardAmount = amountValue.first.toPlainString().toDouble(),
+                        giftCardAmount = discountedValue.toBigDecimal().toDouble(),
                         currency = Constants.DASH_CURRENCY,
                         deviceID = UUID.randomUUID().toString(),
                         userEmail = email

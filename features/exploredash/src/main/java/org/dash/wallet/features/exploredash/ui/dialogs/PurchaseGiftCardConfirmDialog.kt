@@ -135,6 +135,9 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
                     is ResponseResource.Failure -> {
                         Log.e(this::class.java.simpleName, response.errorBody ?: "purchaseGiftCard error")
                     }
+                    else -> {
+                        Log.e(this::class.java.simpleName, "purchaseGiftCard error")
+                    }
                 }
             }
         }
@@ -173,6 +176,9 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
             is ResponseResource.Failure -> {
                 Log.e(this::class.java.simpleName, response.errorBody ?: "purchaseGiftCard error")
             }
+            else -> {
+                Log.e(this::class.java.simpleName, "purchaseGiftCard error")
+            }
         }
     }
 
@@ -190,6 +196,9 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
             }
             is ResponseResource.Failure -> {
                 Log.e(this::class.java.simpleName, response.errorBody ?: "purchaseGiftCard error")
+            }
+            else -> {
+                Log.e(this::class.java.simpleName, "purchaseGiftCard error")
             }
         }
     }

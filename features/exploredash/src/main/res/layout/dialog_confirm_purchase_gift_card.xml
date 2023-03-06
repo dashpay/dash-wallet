@@ -231,4 +231,17 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/purchase_card_info" />
 
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/confirm_button_loading"
+        android:layout_width="wrap_content"
+        style="@style/Widget.Material3.CircularProgressIndicator.Small"
+        app:trackThickness="3dp"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@+id/confirm_button"
+        app:layout_constraintStart_toStartOf="@+id/confirm_button"
+        app:layout_constraintTop_toTopOf="@id/confirm_button"
+        app:layout_constraintBottom_toBottomOf="@id/confirm_button" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

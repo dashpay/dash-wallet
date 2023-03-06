@@ -1,7 +1,5 @@
 package org.dash.wallet.features.exploredash.data.model.paymentstatus
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.google.gson.annotations.SerializedName
 
-@Serializable
-data class PaymentStatusRequest(@SerialName("order_id") val orderId: String? = "", val paymentId: String? = "")
+data class PaymentStatusRequest(@SerializedName("order_id") val orderId: String? = "", val paymentId: String? = "")
