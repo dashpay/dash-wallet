@@ -22,6 +22,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.*
+import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
@@ -45,8 +47,6 @@ import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStat
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
-import java.util.*
-import javax.inject.Inject
 
 @HiltViewModel
 class PurchaseGiftCardViewModel
