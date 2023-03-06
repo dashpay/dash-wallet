@@ -102,41 +102,36 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
                                     val transaction = purchaseGiftCardViewModel.createSendingRequestFromDashUri(it)
                                     response.value?.data?.paymentId?.let { paymentId ->
                                         response.value?.data?.orderId?.let { orderId ->
-                                            getPaymentStatus(
-                                                paymentId,
-                                                orderId,
-                                                transaction,
-                                                merchant,
-                                                paymentValue
-                                            )
+                                            getPaymentStatus(paymentId, orderId, transaction, merchant, paymentValue)
                                         }
                                     }
                                 } catch (x: InsufficientMoneyException) {
                                     Log.e(this::class.java.simpleName, "purchaseGiftCard InsufficientMoneyException")
                                     AdaptiveDialog.create(
-                                        R.drawable.ic_info_red,
-                                        getString(R.string.insufficient_money_title),
-                                        getString(R.string.insufficient_money_msg),
-                                        getString(R.string.close)
-                                    ).show(requireActivity())
+                                            R.drawable.ic_info_red,
+                                            getString(R.string.insufficient_money_title),
+                                            getString(R.string.insufficient_money_msg),
+                                            getString(R.string.close)
+                                        )
+                                        .show(requireActivity())
                                     x.printStackTrace()
                                     false
                                 } catch (ex: Exception) {
                                     Log.e(this::class.java.simpleName, "purchaseGiftCard error")
 
                                     AdaptiveDialog.create(
-                                        R.drawable.ic_info_red,
-                                        getString(R.string.send_coins_error_msg),
-                                        getString(R.string.insufficient_money_msg),
-                                        getString(R.string.close)
-                                    ).show(requireActivity())
+                                            R.drawable.ic_info_red,
+                                            getString(R.string.send_coins_error_msg),
+                                            getString(R.string.insufficient_money_msg),
+                                            getString(R.string.close)
+                                        )
+                                        .show(requireActivity())
                                     ex.printStackTrace()
                                     false
                                 }
                             }
                         }
                     }
-
                     is ResponseResource.Failure -> {
                         Log.e(this::class.java.simpleName, response.errorBody ?: "purchaseGiftCard error")
                     }
@@ -155,26 +150,24 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
         when (val response = purchaseGiftCardViewModel.getPaymentStatus(paymentId, orderId)) {
             is ResponseResource.Success -> {
                 if (response.value?.data?.status == "paid") {
-                    response.value?.data?.giftCardId?.let {
-                        getGift(it, transaction, merchant, paymentValue)
-                    }
+                    response.value?.data?.giftCardId?.let { getGift(it, transaction, merchant, paymentValue) }
                 } else {
-//                    AdaptiveDialog.create(
-//                        R.drawable.ic_info_red,
-//                        getString(R.string.something_wrong_title),
-//                        getString(R.string.retry),
-//                        getString(R.string.retry)
-//                    ).show(requireActivity()) {
-//                        lifecycleScope.launch {
-//                            getPaymentStatus(
-//                                paymentId,
-//                                orderId,
-//                                transaction,
-//                                merchant,
-//                                paymentValue
-//                            )
-//                        }
-//                    }
+                    //                    AdaptiveDialog.create(
+                    //                        R.drawable.ic_info_red,
+                    //                        getString(R.string.something_wrong_title),
+                    //                        getString(R.string.retry),
+                    //                        getString(R.string.retry)
+                    //                    ).show(requireActivity()) {
+                    //                        lifecycleScope.launch {
+                    //                            getPaymentStatus(
+                    //                                paymentId,
+                    //                                orderId,
+                    //                                transaction,
+                    //                                merchant,
+                    //                                paymentValue
+                    //                            )
+                    //                        }
+                    //                    }
                 }
             }
             is ResponseResource.Failure -> {
@@ -200,24 +193,22 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
             }
         }
     }
-    private fun showGiftCardDetailsDialog(
-        merchant: Merchant?,
-        paymentValue: Pair<Coin, Fiat>?,
-        txId: Sha256Hash
+    private fun showGiftCardDetailsDialog(merchant: Merchant?, paymentValue: Pair<Coin, Fiat>?, txId: Sha256Hash) {
 
-    ) {
         GiftCardDetailsDialog.newInstance(
-            GiftCardDetailsDialogModel(
-                merchantName = merchant?.name,
-                merchantLogo = merchant?.logoLocation,
-                giftCardPrice = GenericUtils.fiatToString(paymentValue?.second),
-                transactionId = txId.toString()
+                GiftCardDetailsDialogModel(
+                    merchantName = merchant?.name,
+                    merchantLogo = merchant?.logoLocation,
+                    giftCardPrice = GenericUtils.fiatToString(paymentValue?.second),
+                    transactionId = txId.toString()
+                )
             )
-        ).show(requireActivity()).also {
-            val navController = findNavController()
-            navController.popBackStack(navController.graph.startDestinationId, false)
+            .show(requireActivity())
+            .also {
+                val navController = findNavController()
+                navController.popBackStack(navController.graph.startDestinationId, false)
 
-            this@PurchaseGiftCardConfirmDialog.dismiss()
-        }
+                this@PurchaseGiftCardConfirmDialog.dismiss()
+            }
     }
 }

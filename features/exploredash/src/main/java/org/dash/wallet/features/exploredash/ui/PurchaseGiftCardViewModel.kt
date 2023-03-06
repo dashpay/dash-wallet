@@ -105,21 +105,14 @@ constructor(
 
     suspend fun getPaymentStatus(paymentId: String, orderId: String): ResponseResource<PaymentStatusResponse?>? {
         repository.getDashDirectEmail()?.let { email ->
-            return repository.getPaymentStatus(
-                userEmail = email,
-                paymentId = paymentId,
-                orderId = orderId
-            )
+            return repository.getPaymentStatus(userEmail = email, paymentId = paymentId, orderId = orderId)
         }
         return null
     }
 
     suspend fun getGiftCardDetails(giftCardId: Long): ResponseResource<GetGiftCardResponse?>? {
         repository.getDashDirectEmail()?.let { email ->
-            return repository.getGiftCardDetails(
-                userEmail = email,
-                giftCardId = giftCardId
-            )
+            return repository.getGiftCardDetails(userEmail = email, giftCardId = giftCardId)
         }
         return null
     }
