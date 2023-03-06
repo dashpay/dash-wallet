@@ -29,7 +29,8 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.MnemonicException
-import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.script.Script
+import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -57,7 +58,7 @@ class OnboardingViewModel @Inject constructor(
 
     fun createNewWallet(onboardingInvite: InvitationLinkData?) {
         walletApplication.initEnvironmentIfNeeded()
-        val wallet = Wallet(Constants.NETWORK_PARAMETERS)
+        val wallet = WalletEx.createDeterministic(Constants.NETWORK_PARAMETERS, Script.ScriptType.P2PKH)
         log.info("successfully created new wallet")
         walletApplication.setWallet(wallet)
         walletApplication.configuration.armBackupSeedReminder()

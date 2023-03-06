@@ -44,6 +44,7 @@ import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletEx;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.transactions.TransactionUtils;
 
@@ -182,7 +183,7 @@ public class WalletUtils {
                             .build())
                     .build();
 
-            final Wallet wallet = new Wallet(Constants.NETWORK_PARAMETERS, group);
+            final Wallet wallet = new WalletEx(Constants.NETWORK_PARAMETERS, group);
 
             if (!wallet.getParams().equals(expectedNetworkParameters))
                 throw new IOException("bad wallet backup network parameters: " + wallet.getParams().getId());
@@ -204,7 +205,7 @@ public class WalletUtils {
         final KeyChainGroup group = KeyChainGroup.builder(expectedNetworkParameters).build();
 
         group.importKeys(WalletUtils.readKeys(keyReader, expectedNetworkParameters));
-        return new Wallet(expectedNetworkParameters, group);
+        return new WalletEx(expectedNetworkParameters, group);
     }
 
     public static void writeKeys(final Writer out, final List<ECKey> keys) throws IOException {

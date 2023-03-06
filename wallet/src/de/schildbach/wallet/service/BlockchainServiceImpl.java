@@ -83,12 +83,11 @@ import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.data.NetworkStatus;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
-import org.dashj.platform.dapiclient.DapiClient;
 import org.dash.wallet.common.services.NotificationService;
 import org.dash.wallet.common.transactions.filters.NotFromAddressTxFilter;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
-import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.transactions.TransactionUtils;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationHandler;
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi;
@@ -131,7 +130,6 @@ import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 import de.schildbach.wallet.service.platform.PlatformSyncService;
 import de.schildbach.wallet.ui.OnboardingActivity;
-import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet.ui.dashpay.PreBlockStage;
@@ -160,6 +158,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject TransactionMetadataProvider transactionMetadataProvider;
     @Inject PlatformSyncService platformSyncService;
     @Inject PlatformRepo platformRepo;
+    @Inject BlockchainStateDataProvider blockchainStateDataProvider;
 
     private BlockStore blockStore;
     private BlockStore headerStore;
@@ -444,6 +443,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         private void changed(final int numPeers) {
             if (stopped.get())
                 return;
+            NetworkStatus networkStatus = blockchainStateDataProvider.getNetworkStatus();
+            if (numPeers > 0 && networkStatus == NetworkStatus.CONNECTING)
+                blockchainStateDataProvider.setNetworkStatus(NetworkStatus.CONNECTED);
+            else if (numPeers == 0 && networkStatus == NetworkStatus.DISCONNECTING)
+                blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTED);
 
             handler.post(() -> {
                 final boolean connectivityNotificationEnabled = config.getConnectivityNotificationEnabled();
@@ -775,10 +779,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 wallet.setRiskAnalyzer(riskAnalyzer);
 
                 // start peergroup
+                blockchainStateDataProvider.setNetworkStatus(NetworkStatus.CONNECTING);
                 peerGroup.startAsync();
                 peerGroup.startBlockChainDownload(blockchainDownloadListener);
                 platformSyncService.addPreBlockProgressListener(blockchainDownloadListener);
+
             } else if (!impediments.isEmpty() && peerGroup != null) {
+                blockchainStateDataProvider.setNetworkStatus(NetworkStatus.NOT_AVAILABLE);
                 application.getWallet().getContext().close();
                 log.info("stopping peergroup");
                 peerGroup.removeDisconnectedEventListener(peerConnectivityListener);
@@ -789,6 +796,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup.stopAsync();
                 wallet.setRiskAnalyzer(defaultRiskAnalyzer);
                 riskAnalyzer.shutdown();
+
                 peerGroup = null;
 
                 log.debug("releasing wakelock");
@@ -969,6 +977,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         try {
             blockChain = new BlockChain(Constants.NETWORK_PARAMETERS, wallet, blockStore);
             headerChain = new BlockChain(Constants.NETWORK_PARAMETERS, headerStore);
+            blockchainStateDataProvider.setBlockChain(blockChain);
         } catch (final BlockStoreException x) {
             throw new Error("blockchain cannot be created", x);
         }
@@ -1102,7 +1111,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         unregisterReceiver(connectivityReceiver);
 
-        platformSyncService.shutdown(); //PlatformRepo.getInstance().shutdown();
+        platformSyncService.shutdown();
 
         if (peerGroup != null) {
             application.getWallet().getContext().close();
@@ -1110,7 +1119,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             peerGroup.removeConnectedEventListener(peerConnectivityListener);
             peerGroup.removeWallet(application.getWallet());
             platformSyncService.removePreBlockProgressListener(blockchainDownloadListener);
+            blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING);
             peerGroup.stop();
+            blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED);
             application.getWallet().setRiskAnalyzer(defaultRiskAnalyzer);
             riskAnalyzer.shutdown();
 
@@ -1124,6 +1135,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         try {
             blockStore.close();
             headerStore.close();
+            blockchainStateDataProvider.setBlockChain(null);
         } catch (final BlockStoreException x) {
             throw new RuntimeException(x);
         }

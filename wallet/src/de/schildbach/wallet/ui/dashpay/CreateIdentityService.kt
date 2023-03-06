@@ -3,10 +3,7 @@ package de.schildbach.wallet.ui.dashpay
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.os.Handler
-import android.os.HandlerThread
 import android.os.PowerManager
-import android.os.Process
 import androidx.core.os.bundleOf
 import androidx.lifecycle.LifecycleService
 import dagger.hilt.android.AndroidEntryPoint
@@ -17,9 +14,8 @@ import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainIdentityData.CreationState
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.InvitationLinkData
-import de.schildbach.wallet.payments.DecryptSeedTask
-import de.schildbach.wallet.payments.DeriveKeyTask
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet_test.R
@@ -29,9 +25,7 @@ import kotlinx.coroutines.*
 import org.bitcoinj.core.RejectMessage
 import org.bitcoinj.core.RejectedTransactionException
 import org.bitcoinj.core.TransactionConfidence
-import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
-import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -45,10 +39,8 @@ import org.dashj.platform.dpp.errors.concensus.basic.identity.IdentityAssetLockT
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofSignatureException
 import org.dashj.platform.dpp.identity.Identity
 import org.slf4j.LoggerFactory
-import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
@@ -69,6 +61,7 @@ class CreateIdentityService : LifecycleService() {
         private const val ACTION_RETRY_INVITE_AFTER_INTERRUPTION = "org.dash.dashpay.action.ACTION_RETRY_INVITE_AFTER_INTERRUPTION"
 
         private const val ACTION_RESTORE_IDENTITY = "org.dash.dashpay.action.RESTORE_IDENTITY"
+        private const val ACTION_MIXING_COMPLETE = "org.dash.dashpay.action.MIXING_COMPLETE"
 
         private const val EXTRA_USERNAME = "org.dash.dashpay.extra.USERNAME"
         private const val EXTRA_START_FOREGROUND_PROMISED = "org.dash.dashpay.extra.EXTRA_START_FOREGROUND_PROMISED"
@@ -137,13 +130,8 @@ class CreateIdentityService : LifecycleService() {
     private val walletApplication by lazy { application as WalletApplication }
     private val platformRepo by lazy { PlatformRepo.getInstance() }
     @Inject lateinit var platformSyncService: PlatformSyncService
+    @Inject lateinit var coinJoinService: CoinJoinService
     private lateinit var securityGuard: SecurityGuard
-
-    private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
-    private val backgroundHandler by lazy {
-        backgroundThread.start()
-        Handler(backgroundThread.looper)
-    }
 
     private val wakeLock by lazy {
         val lockName = "$packageName create identity"
@@ -154,7 +142,7 @@ class CreateIdentityService : LifecycleService() {
     private val createIdentityNotification by lazy { CreateIdentityNotification(this) }
 
     private val serviceJob = Job()
-    private var serviceScope = CoroutineScope(serviceJob + Dispatchers.Main)
+    private var serviceScope = CoroutineScope(serviceJob + Dispatchers.IO)
 
     lateinit var blockchainIdentity: BlockchainIdentity
     lateinit var blockchainIdentityData: BlockchainIdentityData
@@ -317,19 +305,35 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.resetIdentityCreationStateError(blockchainIdentityData)
 
         val wallet = walletApplication.wallet!!
-        val password = securityGuard.retrievePassword()
 
-
-        val encryptionKey = deriveKey(backgroundHandler, wallet, password)
+        val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
 
         if (blockchainIdentityData.creationState <= CreationState.UPGRADING_WALLET) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.UPGRADING_WALLET)
-            val seed = decryptSeed(backgroundHandler, wallet, encryptionKey)
-            platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+            val seed = platformRepo.getWalletSeed() ?: throw IllegalStateException("cannot obtain wallet seed")
+            platformRepo.addWalletKeyChainsAsync(seed, encryptionKey)
         }
 
         val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
+        // look for the credit funding tx in case there was an error in the next step previously
+        for (tx in wallet.creditFundingTransactions) {
+            tx as CreditFundingTransaction
+            if (walletApplication.wallet!!.blockchainIdentityFundingKeyChain.findKeyFromPubHash(tx.creditBurnPublicKeyId.bytes) != null) {
+                blockchainIdentity.initializeCreditFundingTransaction(tx)
+            }
+        }
 
+        if (blockchainIdentityData.creationState <= CreationState.MIXING_FUNDS) {
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.MIXING_FUNDS)
+            coinJoinService.configureMixing(
+                Constants.DASH_PAY_FEE,
+                { encryptionKey },
+                { it.decrypt(encryptionKey) })
+
+            coinJoinService.prepareAndStartMixing()
+
+            coinJoinService.waitForMixing();
+        }
 
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CREATING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_CREATING)
@@ -342,11 +346,17 @@ class CreateIdentityService : LifecycleService() {
             }
         }
 
-        //TODO: check to see if the funding transaction has been sent
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_SENDING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_SENDING)
             val timerIsLock = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_ISLOCK)
-            sendTransaction(blockchainIdentity.creditFundingTransaction!!)
+            // check to see if the funding transaction has been sent previously
+            val sent = blockchainIdentity.creditFundingTransaction!!.confidence?.let {
+                it.isSent || it.isIX || it.numBroadcastPeers() > 0 || it.confidenceType == TransactionConfidence.ConfidenceType.BUILDING
+            } ?: false
+
+            if (!sent) {
+                sendTransaction(blockchainIdentity.creditFundingTransaction!!)
+            }
             timerIsLock.logTiming()
         }
 
@@ -449,15 +459,13 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.resetIdentityCreationStateError(blockchainIdentityData)
 
         val wallet = walletApplication.wallet!!
-        val password = securityGuard.retrievePassword()
 
-
-        val encryptionKey = deriveKey(backgroundHandler, wallet, password)
+        val encryptionKey = platformRepo.getWalletEncryptionKey()  ?: throw IllegalStateException("cannot obtain wallet encryption key")
 
         if (blockchainIdentityData.creationState <= CreationState.UPGRADING_WALLET) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.UPGRADING_WALLET)
-            val seed = decryptSeed(backgroundHandler, wallet, encryptionKey)
-            platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+            val seed = platformRepo.getWalletSeed() ?: throw IllegalStateException("cannot obtain wallet seed")
+            platformRepo.addWalletKeyChainsAsync(seed, encryptionKey)
         }
 
         val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
@@ -664,16 +672,14 @@ class CreateIdentityService : LifecycleService() {
         }
 
         val wallet = walletApplication.wallet!!
-        val password = securityGuard.retrievePassword()
-
-        val encryptionKey = deriveKey(backgroundHandler, wallet, password)
-        val seed = decryptSeed(backgroundHandler, wallet, encryptionKey)
+        val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
+        val seed = platformRepo.getWalletSeed() ?: throw IllegalStateException("cannot obtain wallet seed")
 
         // create the Blockchain Identity object
         val blockchainIdentity = BlockchainIdentity(platformRepo.platform, 0, wallet)
         // this process should have been done already, otherwise the credit funding transaction
         // will not have the credit burn keys associated with it
-        platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+        platformRepo.addWalletKeyChainsAsync(seed, encryptionKey)
         platformSyncService.updateSyncStatus(PreBlockStage.InitWallet)
 
         //
@@ -687,7 +693,6 @@ class CreateIdentityService : LifecycleService() {
         if (loadingFromCreditFundingTransaction) {
             platformRepo.recoverIdentityAsync(blockchainIdentity, creditFundingTransaction!!)
         } else {
-            val encryptionKey = platformRepo.getWalletEncryptionKey()
             val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
             platformRepo.recoverIdentityAsync(blockchainIdentity,
                 firstIdentityKey.pubKeyHash)
@@ -729,44 +734,6 @@ class CreateIdentityService : LifecycleService() {
 
         platformSyncService.updateSyncStatus(PreBlockStage.RecoveryComplete)
         PlatformRepo.getInstance().init()
-    }
-
-    /**
-     * Wraps callbacks of DeriveKeyTask as Coroutine
-     */
-    private suspend fun deriveKey(handler: Handler, wallet: Wallet, password: String): KeyParameter {
-        return suspendCoroutine { continuation ->
-            object : DeriveKeyTask(handler, walletApplication.scryptIterationsTarget()) {
-
-                override fun onSuccess(encryptionKey: KeyParameter, wasChanged: Boolean) {
-                    continuation.resume(encryptionKey)
-                }
-
-                override fun onFailure(ex: KeyCrypterException?) {
-                    log.error("unable to decrypt wallet", ex)
-                    continuation.resumeWithException(ex as Throwable)
-                }
-
-            }.deriveKey(wallet, password)
-        }
-    }
-
-    /**
-     * Wraps callbacks of DecryptSeedTask as Coroutine
-     */
-    private suspend fun decryptSeed(handler: Handler, wallet: Wallet, encryptionKey: KeyParameter): DeterministicSeed {
-        return suspendCoroutine { continuation ->
-            object : DecryptSeedTask(handler) {
-                override fun onSuccess(seed: DeterministicSeed) {
-                    continuation.resume(seed)
-                }
-
-                override fun onBadPassphrase() {
-                    continuation.resumeWithException(IOException("this should never happen in this scenario"))
-
-                }
-            }.decryptSeed(wallet.activeKeyChain.seed, wallet.keyCrypter, encryptionKey)
-        }
     }
 
     /**
@@ -847,8 +814,6 @@ class CreateIdentityService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         serviceJob.cancel()
-        if (backgroundThread.isAlive)
-            backgroundThread.looper.quit()
 
         if (wakeLock.isHeld) {
             log.debug("wakelock still held, releasing")
