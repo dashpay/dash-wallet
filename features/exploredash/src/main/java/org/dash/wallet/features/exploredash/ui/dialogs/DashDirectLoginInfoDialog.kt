@@ -30,33 +30,27 @@ class DashDirectLoginInfoDialog : OffsetDialogFragment() {
             positiveButtonText: String? = null,
             extraMessage: String? = null
         ): DashDirectLoginInfoDialog {
-            val args = Bundle().apply {
-                icon?.let { putInt(ICON_RES_ARG, icon) }
-                putString(TITLE_ARG, title)
-                putString(MESSAGE_ARG, message)
-                putString(NEG_BUTTON_ARG, negativeButtonText)
-                putString(POS_BUTTON_ARG, positiveButtonText)
-                putString(EXTRA_MESSAGE_BUTTON_ARG, extraMessage)
-            }
-            return DashDirectLoginInfoDialog().apply {
-                arguments = args
-            }
+            val args =
+                Bundle().apply {
+                    icon?.let { putInt(ICON_RES_ARG, icon) }
+                    putString(TITLE_ARG, title)
+                    putString(MESSAGE_ARG, message)
+                    putString(NEG_BUTTON_ARG, negativeButtonText)
+                    putString(POS_BUTTON_ARG, positiveButtonText)
+                    putString(EXTRA_MESSAGE_BUTTON_ARG, extraMessage)
+                }
+            return DashDirectLoginInfoDialog().apply { arguments = args }
         }
     }
 
     private var onExtraMessageListener: (() -> Unit)? = null
     private var onResultListener: ((Boolean?) -> Unit)? = null
 
-    @StyleRes
-    override val backgroundStyle = R.style.PrimaryBackground
+    @StyleRes override val backgroundStyle = R.style.PrimaryBackground
 
     private val binding by viewBinding(DialogDashDirectLoginInfoBinding::bind)
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_dash_direct_login_info, container, false)
     }
 
@@ -69,17 +63,11 @@ class DashDirectLoginInfoDialog : OffsetDialogFragment() {
         binding.dialogExtraMessage.text = args.getString(EXTRA_MESSAGE_BUTTON_ARG)
         binding.dialogNegativeButton.text = args.getString(NEG_BUTTON_ARG)
         binding.dialogPositiveButton.text = args.getString(POS_BUTTON_ARG)
-        binding.dialogPositiveButton.setOnClickListener {
-            onPositiveAction()
-        }
+        binding.dialogPositiveButton.setOnClickListener { onPositiveAction() }
 
-        binding.dialogNegativeButton.setOnClickListener {
-            onNegativeAction()
-        }
+        binding.dialogNegativeButton.setOnClickListener { onNegativeAction() }
 
-        binding.dialogExtraMessage.setOnClickListener {
-            onExtraMessageAction()
-        }
+        binding.dialogExtraMessage.setOnClickListener { onExtraMessageAction() }
     }
 
     private fun onPositiveAction() {

@@ -60,11 +60,9 @@ abstract class ExploreDashModule {
             return LocationServices.getFusedLocationProviderClient(context)
         }
 
-        @Provides
-        fun provideFirebaseAuth() = Firebase.auth
+        @Provides fun provideFirebaseAuth() = Firebase.auth
 
-        @Provides
-        fun provideFirebaseStorage() = Firebase.storage
+        @Provides fun provideFirebaseStorage() = Firebase.storage
 
         @Provides
         fun provideRemoteDataSource(config: DashDirectConfig): RemoteDataSource {
@@ -72,43 +70,25 @@ abstract class ExploreDashModule {
         }
 
         @Provides
-        fun provideAuthApi(
-            remoteDataSource: RemoteDataSource
-        ): DashDirectAuthApi {
+        fun provideAuthApi(remoteDataSource: RemoteDataSource): DashDirectAuthApi {
             return remoteDataSource.buildApi(DashDirectAuthApi::class.java)
         }
 
         @Provides
-        fun provideDashDirectApi(
-            remoteDataSource: RemoteDataSource
-        ): DashDirectServicesApi {
+        fun provideDashDirectApi(remoteDataSource: RemoteDataSource): DashDirectServicesApi {
             return remoteDataSource.buildApi(DashDirectServicesApi::class.java)
         }
     }
 
-    @Binds
-    abstract fun bindExploreRepository(
-        exploreRepository: GCExploreDatabase
-    ): ExploreRepository
+    @Binds abstract fun bindExploreRepository(exploreRepository: GCExploreDatabase): ExploreRepository
 
     @ExperimentalCoroutinesApi
     @Binds
-    abstract fun bindUserLocationState(
-        userLocationState: UserLocationState
-    ): UserLocationStateInt
+    abstract fun bindUserLocationState(userLocationState: UserLocationState): UserLocationStateInt
 
-    @Binds
-    abstract fun bindExploreDataSource(
-        exploreDatabase: MerchantAtmDataSource
-    ): ExploreDataSource
+    @Binds abstract fun bindExploreDataSource(exploreDatabase: MerchantAtmDataSource): ExploreDataSource
 
-    @Binds
-    abstract fun bindDataSyncService(
-        exploreDatabase: ExploreDataSyncStatus
-    ): DataSyncStatusService
+    @Binds abstract fun bindDataSyncService(exploreDatabase: ExploreDataSyncStatus): DataSyncStatusService
 
-    @Binds
-    abstract fun provideDashDirectRepository(
-        dashDirectRepository: DashDirectRepository
-    ): DashDirectRepositoryInt
+    @Binds abstract fun provideDashDirectRepository(dashDirectRepository: DashDirectRepository): DashDirectRepositoryInt
 }

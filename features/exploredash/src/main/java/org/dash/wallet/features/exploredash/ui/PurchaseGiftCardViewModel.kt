@@ -22,6 +22,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.*
+import javax.inject.Inject
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -42,11 +44,11 @@ import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdR
 import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
-import java.util.*
-import javax.inject.Inject
 
 @HiltViewModel
-class PurchaseGiftCardViewModel @Inject constructor(
+class PurchaseGiftCardViewModel
+@Inject
+constructor(
     walletDataProvider: WalletDataProvider,
     exchangeRates: ExchangeRatesProvider,
     var configuration: Configuration,
@@ -81,10 +83,7 @@ class PurchaseGiftCardViewModel @Inject constructor(
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
 
-        walletDataProvider.observeBalance()
-            .distinctUntilChanged()
-            .onEach(_balance::postValue)
-            .launchIn(viewModelScope)
+        walletDataProvider.observeBalance().distinctUntilChanged().onEach(_balance::postValue).launchIn(viewModelScope)
     }
 
     suspend fun purchaseGiftCard(): ResponseResource<PurchaseGiftCardResponse?>? {
@@ -130,28 +129,15 @@ class PurchaseGiftCardViewModel @Inject constructor(
     }
     suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>? {
         repository.getDashDirectEmail()?.let { email ->
-            return repository.getMerchantById(
-                merchantId = merchantId,
-                includeLocations = false,
-                userEmail = email
-            )
+            return repository.getMerchantById(merchantId = merchantId, includeLocations = false, userEmail = email)
         }
         return null
     }
 
-    fun setMinMaxCardPurchaseValues(
-        minCardPurchase: Double,
-        maximumCardPurchase: Double
-    ) {
-        minCardPurchaseFiat = Fiat.parseFiat(
-            Constants.USD_CURRENCY,
-            minCardPurchase.toString()
-        )
+    fun setMinMaxCardPurchaseValues(minCardPurchase: Double, maximumCardPurchase: Double) {
+        minCardPurchaseFiat = Fiat.parseFiat(Constants.USD_CURRENCY, minCardPurchase.toString())
 
-        maxCardPurchaseFiat = Fiat.parseFiat(
-            Constants.USD_CURRENCY,
-            maximumCardPurchase.toString()
-        )
+        maxCardPurchaseFiat = Fiat.parseFiat(Constants.USD_CURRENCY, maximumCardPurchase.toString())
 
         updatePurchaseLimits()
     }

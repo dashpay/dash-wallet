@@ -19,18 +19,12 @@ package org.dash.wallet.features.exploredash.data.model.purchase
 import com.google.gson.annotations.SerializedName
 
 data class PurchaseGiftCardResponse(
-    @SerializedName("AccessToken")
-    val accessToken: Any? = null,
-    @SerializedName("Data")
-    val `data`: Data? = null,
-    @SerializedName("DelayedToken")
-    val delayedToken: Any? = null,
-    @SerializedName("ErrorMessage")
-    val errorMessage: String? = null,
-    @SerializedName("IsDelayed")
-    val isDelayed: Boolean? = null,
-    @SerializedName("Successful")
-    val successful: Boolean? = null
+    @SerializedName("AccessToken") val accessToken: Any? = null,
+    @SerializedName("Data") val `data`: Data? = null,
+    @SerializedName("DelayedToken") val delayedToken: Any? = null,
+    @SerializedName("ErrorMessage") val errorMessage: String? = null,
+    @SerializedName("IsDelayed") val isDelayed: Boolean? = null,
+    @SerializedName("Successful") val successful: Boolean? = null
 ) {
     data class Data(
         val amount: Double? = null,
@@ -41,8 +35,7 @@ data class PurchaseGiftCardResponse(
         val giftCardId: Any? = null,
         val name: Any? = null,
         val notes: Any? = null,
-        @SerializedName("order_id")
-        val orderId: String? = null,
+        @SerializedName("order_id") val orderId: String? = null,
         val paymentId: String? = null,
         val status: String? = null,
         val success: Boolean? = null,

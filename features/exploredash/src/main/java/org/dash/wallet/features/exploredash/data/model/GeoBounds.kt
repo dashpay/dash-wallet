@@ -17,13 +17,14 @@
 
 package org.dash.wallet.features.exploredash.data.model
 
-data class GeoBounds(val northLat: Double,
-                     val eastLng: Double,
-                     val southLat: Double,
-                     val westLng: Double,
-                     val centerLat: Double,
-                     val centerLng: Double,
-                     var zoomLevel: Float = 0f,
+data class GeoBounds(
+    val northLat: Double,
+    val eastLng: Double,
+    val southLat: Double,
+    val westLng: Double,
+    val centerLat: Double,
+    val centerLng: Double,
+    var zoomLevel: Float = 0f,
 ) {
     companion object {
         val noBounds: GeoBounds
@@ -36,12 +37,12 @@ data class GeoBounds(val northLat: Double,
         }
 
         return northLat == other.northLat &&
-               eastLng == other.eastLng &&
-               southLat == other.southLat &&
-               westLng == other.westLng &&
-               centerLat == other.centerLat &&
-               centerLng == other.centerLng &&
-               zoomLevel == other.zoomLevel
+            eastLng == other.eastLng &&
+            southLat == other.southLat &&
+            westLng == other.westLng &&
+            centerLat == other.centerLat &&
+            centerLng == other.centerLng &&
+            zoomLevel == other.zoomLevel
     }
 
     override fun hashCode(): Int {

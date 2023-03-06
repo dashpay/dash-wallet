@@ -23,7 +23,4 @@ import androidx.room.Fts4
 // Virtual table for Full-Text Search over Atm table
 @Entity(tableName = "atm_fts")
 @Fts4(contentEntity = Atm::class)
-data class AtmFTS(
-    val name: String,
-    var manufacturer: String
-)
+data class AtmFTS(val name: String, var manufacturer: String)

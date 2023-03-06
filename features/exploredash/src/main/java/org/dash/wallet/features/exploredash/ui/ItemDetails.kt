@@ -35,6 +35,8 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.*
+import javax.inject.Inject
 import org.dash.wallet.common.util.makeLinks
 import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
@@ -42,11 +44,9 @@ import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
-import java.util.*
-import javax.inject.Inject
 
 @AndroidEntryPoint
-class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, attrs) {
+class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
     private val binding = ItemDetailsViewBinding.inflate(LayoutInflater.from(context), this)
 
     private var onSendDashClicked: ((isPayingWithDash: Boolean) -> Unit)? = null
@@ -116,18 +116,13 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
         binding.loginDashDirectUser.isVisible = !isDash && email?.isNotEmpty() == true && userSignIn
         email?.let {
             binding.loginDashDirectUser.text =
-                context.resources.getString(R.string.logged_in_as, email.maskEmail()) + " " +
-                context.resources.getString(
-                    R.string
-                        .log_out
-                )
+                context.resources.getString(R.string.logged_in_as, email.maskEmail()) +
+                    " " +
+                    context.resources.getString(R.string.log_out)
 
             binding.loginDashDirectUser.makeLinks(
                 Pair(
-                    context.resources.getString(
-                        R.string
-                            .log_out
-                    ),
+                    context.resources.getString(R.string.log_out),
                     OnClickListener {
                         onDashDirectLogOutClicked?.invoke()
                         binding.loginDashDirectUser.isGone = true
@@ -153,11 +148,12 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
 
             val isMetric = Locale.getDefault().isMetric
             val distanceStr = item.getDistanceStr(isMetric)
-            itemDistance.text = when {
-                distanceStr.isEmpty() -> ""
-                isMetric -> resources.getString(R.string.distance_kilometers, distanceStr)
-                else -> resources.getString(R.string.distance_miles, distanceStr)
-            }
+            itemDistance.text =
+                when {
+                    distanceStr.isEmpty() -> ""
+                    isMetric -> resources.getString(R.string.distance_kilometers, distanceStr)
+                    else -> resources.getString(R.string.distance_miles, distanceStr)
+                }
             itemDistance.isVisible = !isOnline && distanceStr.isNotEmpty()
 
             linkBtn.isVisible = !item.website.isNullOrEmpty()
@@ -166,9 +162,8 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
                 onOpenWebsiteButtonClicked?.invoke()
             }
 
-            directionBtn.isVisible = !isOnline &&
-                    ((item.latitude != null && item.longitude != null) ||
-                            !item.googleMaps.isNullOrBlank())
+            directionBtn.isVisible =
+                !isOnline && ((item.latitude != null && item.longitude != null) || !item.googleMaps.isNullOrBlank())
             directionBtn.setOnClickListener {
                 openMaps(item)
                 onNavigationButtonClicked?.invoke()
@@ -197,10 +192,12 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
             showAllBtn.isVisible = !isOnline && isGrouped && merchant.physicalAmount > 1
 
             val isDash = merchant.paymentMethod?.trim()?.lowercase() == PaymentMethod.DASH
-            val drawable = ResourcesCompat.getDrawable(
-                resources,
-                if (isDash) R.drawable.ic_dash else R.drawable.ic_gift_card, null
-            )
+            val drawable =
+                ResourcesCompat.getDrawable(
+                    resources,
+                    if (isDash) R.drawable.ic_dash else R.drawable.ic_gift_card,
+                    null
+                )
             payBtn.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
 
             if (isDash) {
@@ -211,9 +208,7 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
                 // DashDirect allows payments via API, other sources require a deeplink
                 payBtn.isVisible = merchant.source == "DashDirect" || !merchant.deeplink.isNullOrBlank()
                 payBtn.text = context.getText(R.string.explore_buy_gift_card)
-                payBtn.setOnClickListener {
-                    onBuyGiftCardButtonClicked?.invoke()
-                }
+                payBtn.setOnClickListener { onBuyGiftCardButtonClicked?.invoke() }
             }
 
             setDashDirectLogInUser(isDash, repository.getDashDirectEmail(), repository.isUserSignIn())
@@ -221,9 +216,7 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
             backButton.setOnClickListener { onBackButtonClicked?.invoke() }
 
             if (isOnline) {
-                root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                    matchConstraintPercentHeight = 1f
-                }
+                root.updateLayoutParams<ConstraintLayout.LayoutParams> { matchConstraintPercentHeight = 1f }
                 updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_online_margin_top))
             } else {
                 root.updateLayoutParams<ConstraintLayout.LayoutParams> {
@@ -252,8 +245,7 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
             sellBtn.isVisible = atm.type != AtmType.BUY
 
             root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                matchConstraintPercentHeight =
-                    ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)
+                matchConstraintPercentHeight = ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)
             }
 
             loadImage(atm.logoLocation, logoImg)
@@ -274,11 +266,12 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
     }
 
     private fun openMaps(item: SearchResult) {
-        val uri = if (!item.googleMaps.isNullOrBlank()) {
-            item.googleMaps
-        } else {
-            context.getString(R.string.explore_maps_intent_uri, item.latitude!!, item.longitude!!)
-        }
+        val uri =
+            if (!item.googleMaps.isNullOrBlank()) {
+                item.googleMaps
+            } else {
+                context.getString(R.string.explore_maps_intent_uri, item.latitude!!, item.longitude!!)
+            }
 
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
         context.startActivity(intent)

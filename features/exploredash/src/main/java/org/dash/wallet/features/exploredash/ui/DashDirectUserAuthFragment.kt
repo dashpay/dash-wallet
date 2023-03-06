@@ -23,7 +23,6 @@ import android.util.Patterns
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.annotation.StringRes
 import androidx.core.view.isVisible
@@ -51,30 +50,19 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         private val log = LoggerFactory.getLogger(DashDirectUserAuthFragment::class.java)
     }
 
-    private var currentDirectUserAuthType: DashDirectUserAuthType?=null
+    private var currentDirectUserAuthType: DashDirectUserAuthType? = null
     private val binding by viewBinding(FragmentDashDirectUserAuthBinding::bind)
-    private val exploreViewModel: ExploreViewModel by navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
+    private val exploreViewModel: ExploreViewModel by
+        navGraphViewModels(R.id.explore_dash) { defaultViewModelProviderFactory }
 
     enum class DashDirectUserAuthType(
         @StringRes val screenTitle: Int,
         @StringRes val screenSubtitle: Int,
         @StringRes val textInputHint: Int
     ) {
-        CREATE_ACCOUNT(
-            R.string.create_dash_direct_account,
-            R.string.log_in_to_dashdirect_account_desc,
-            R.string.email
-        ),
-        SIGN_IN(
-            R.string.log_in_to_dashdirect_account,
-            R.string.log_in_to_dashdirect_account_desc,
-            R.string.email
-        ),
-        OTP(
-            R.string.enter_verification_code,
-            R.string.check_your_email_and_verification_code,
-            R.string.password
-        );
+        CREATE_ACCOUNT(R.string.create_dash_direct_account, R.string.log_in_to_dashdirect_account_desc, R.string.email),
+        SIGN_IN(R.string.log_in_to_dashdirect_account, R.string.log_in_to_dashdirect_account_desc, R.string.email),
+        OTP(R.string.enter_verification_code, R.string.check_your_email_and_verification_code, R.string.password)
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
@@ -87,27 +75,22 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         }
         binding.continueButton.isEnabled = false
 
-        binding.input.postDelayed({
-               showKeyboard()
-            },
-            100
-        )
+        binding.input.postDelayed({ showKeyboard() }, 100)
 
-        currentDirectUserAuthType=   (arguments?.getSerializable("dashDirectUserAuthType") as? DashDirectUserAuthType)?.also {
-             binding.title.setText(it.screenTitle)
-             binding.descLabel.setText(it.screenSubtitle)
-             binding.inputWrapper.setHint(it.textInputHint)
-        }
+        currentDirectUserAuthType =
+            (arguments?.getSerializable("dashDirectUserAuthType") as? DashDirectUserAuthType)?.also {
+                binding.title.setText(it.screenTitle)
+                binding.descLabel.setText(it.screenSubtitle)
+                binding.inputWrapper.setHint(it.textInputHint)
+            }
 
         binding.input.doOnTextChanged { text, _, _, _ ->
-
             binding.inputWrapper.isErrorEnabled = false
             binding.inputErrorTv.isVisible = false
 
-            if(currentDirectUserAuthType!=DashDirectUserAuthType.OTP )
-                binding.continueButton.isEnabled =isEmail(text)
-            else
-                binding.continueButton.isEnabled = !text.isNullOrEmpty()
+            if (currentDirectUserAuthType != DashDirectUserAuthType.OTP)
+                binding.continueButton.isEnabled = isEmail(text)
+            else binding.continueButton.isEnabled = !text.isNullOrEmpty()
         }
 
         binding.input.setOnEditorActionListener { _, actionId, _ ->
@@ -132,33 +115,31 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             DashDirectUserAuthType.SIGN_IN -> authUserToDashDirect(input, true)
             DashDirectUserAuthType.CREATE_ACCOUNT -> authUserToDashDirect(input, false)
             DashDirectUserAuthType.OTP -> verifyEmail(input)
+            else -> {}
         }
     }
 
-    private fun authUserToDashDirect(
-        email: String,
-        isSignIn:Boolean
-    ) {
+    private fun authUserToDashDirect(email: String, isSignIn: Boolean) {
         lifecycleScope.launch {
-            when (val response = if(isSignIn )
-                exploreViewModel.signInToDashDirect(email)
-            else
-                exploreViewModel.createUserToDashDirect(email)) {
+            when (
+                val response =
+                    if (isSignIn) exploreViewModel.signInToDashDirect(email)
+                    else exploreViewModel.createUserToDashDirect(email)
+            ) {
                 is ResponseResource.Success -> {
                     if (response.value) {
-                        safeNavigate(DashDirectUserAuthFragmentDirections.
-                                authToDashDirectUserAuthFragment(
-                                DashDirectUserAuthType.OTP))
+                        safeNavigate(
+                            DashDirectUserAuthFragmentDirections.authToDashDirectUserAuthFragment(
+                                DashDirectUserAuthType.OTP
+                            )
+                        )
                     }
                 }
-
                 is ResponseResource.Failure -> {
 
                     binding.inputWrapper.isErrorEnabled = true
-                    binding.inputErrorTv.text = if( response.errorBody.isNullOrEmpty())
-                        getString(R.string.error)
-                    else
-                        response.errorBody
+                    binding.inputErrorTv.text =
+                        if (response.errorBody.isNullOrEmpty()) getString(R.string.error) else response.errorBody
                     binding.inputErrorTv.isVisible = true
                 }
             }
@@ -167,26 +148,24 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
 
     private fun verifyEmail(code: String) {
         lifecycleScope.launch {
-                when (val response = exploreViewModel.verifyEmail(code)) {
-                    is ResponseResource.Success -> {
-                        if (response.value) {
-                            hideKeyboard()
-                           safeNavigate(DashDirectUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
-                        }
-                    }
-
-                    is ResponseResource.Failure -> {
-                    binding.inputWrapper.isErrorEnabled = true
-                    binding.inputErrorTv.text =  getString(R.string.invaild_code)
-                        binding.inputErrorTv.isVisible = true
+            when (val response = exploreViewModel.verifyEmail(code)) {
+                is ResponseResource.Success -> {
+                    if (response.value) {
+                        hideKeyboard()
+                        safeNavigate(DashDirectUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
                     }
                 }
+                is ResponseResource.Failure -> {
+                    binding.inputWrapper.isErrorEnabled = true
+                    binding.inputErrorTv.text = getString(R.string.invaild_code)
+                    binding.inputErrorTv.isVisible = true
+                }
             }
+        }
     }
 
     private fun isEmail(text: CharSequence?): Boolean {
-        return !text.isNullOrEmpty() &&
-                Patterns.EMAIL_ADDRESS.matcher(text).matches()
+        return !text.isNullOrEmpty() && Patterns.EMAIL_ADDRESS.matcher(text).matches()
     }
 
     private fun showKeyboard() {

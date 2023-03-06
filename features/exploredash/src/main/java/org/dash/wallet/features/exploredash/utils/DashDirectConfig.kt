@@ -22,6 +22,10 @@ import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import java.io.IOException
+import java.security.KeyStore
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -30,16 +34,9 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.dash.wallet.common.util.security.EncryptionProvider
-import java.io.IOException
-import java.security.KeyStore
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
-class DashDirectConfig @Inject constructor(
-    private val context: Context,
-    private val prefs: SharedPreferences
-) {
+class DashDirectConfig @Inject constructor(private val context: Context, private val prefs: SharedPreferences) {
     private val securityKeyAlias = "dash_direct_data-store"
     private val bytesToStringSeparator = "|"
     companion object {
@@ -47,20 +44,14 @@ class DashDirectConfig @Inject constructor(
         val PREFS_KEY_DASH_DIRECT_EMAIL = stringPreferencesKey("dash_direct_email")
     }
 
-    private val keyStore by lazy {
-        KeyStore.getInstance("AndroidKeyStore").apply {
-            load(null)
-        }
-    }
+    private val keyStore by lazy { KeyStore.getInstance("AndroidKeyStore").apply { load(null) } }
 
     private val Context.dataStore by preferencesDataStore("dashdirect")
 
-    private val encryptionProvider by lazy {
-        EncryptionProvider(keyStore, prefs)
-    }
+    private val encryptionProvider by lazy { EncryptionProvider(keyStore, prefs) }
 
-    private val dataStore = context.dataStore.data
-        .catch { exception ->
+    private val dataStore =
+        context.dataStore.data.catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
             } else {
@@ -77,35 +68,31 @@ class DashDirectConfig @Inject constructor(
     }
 
     suspend fun <T> setPreference(key: Preferences.Key<T>, value: T) {
-        context.dataStore.edit { preferences ->
-            preferences[key] = value
-        }
+        context.dataStore.edit { preferences -> preferences[key] = value }
     }
 
     suspend fun getSecuredData(key: Preferences.Key<String>) =
-        dataStore.secureMap<String> { preferences ->
-            preferences[key].orEmpty()
-        }.first()
+        dataStore.secureMap<String> { preferences -> preferences[key].orEmpty() }.first()
 
     suspend fun setSecuredData(key: Preferences.Key<String>, value: String) {
-        context.dataStore.secureEdit(value) { preferences, encryptedValue ->
-            preferences[key] = encryptedValue
-        }
+        context.dataStore.secureEdit(value) { preferences, encryptedValue -> preferences[key] = encryptedValue }
     }
 
     suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
     }
 
-    private inline fun <reified T> Flow<Preferences>.secureMap(crossinline fetchValue: (value: Preferences) -> String): Flow<T?> {
+    private inline fun <reified T> Flow<Preferences>.secureMap(
+        crossinline fetchValue: (value: Preferences) -> String
+    ): Flow<T?> {
         return map {
             try {
-                encryptionProvider.decrypt(
-                    securityKeyAlias,
-                    fetchValue(it).split(bytesToStringSeparator).map { result ->
-                        result.toByte()
-                    }.toByteArray()
-                )?.let { data -> Json { encodeDefaults = true }.decodeFromString(data) }
+                encryptionProvider
+                    .decrypt(
+                        securityKeyAlias,
+                        fetchValue(it).split(bytesToStringSeparator).map { result -> result.toByte() }.toByteArray()
+                    )
+                    ?.let { data -> Json { encodeDefaults = true }.decodeFromString(data) }
             } catch (e: Exception) {
                 e.printStackTrace()
                 null
@@ -119,7 +106,7 @@ class DashDirectConfig @Inject constructor(
     ) {
         edit {
             encryptionProvider.encrypt(securityKeyAlias, Json.encodeToString(value))?.let { encryptedValue ->
-                editStore.invoke(it, encryptedValue?.joinToString(bytesToStringSeparator))
+                editStore.invoke(it, encryptedValue.joinToString(bytesToStringSeparator))
             }
         }
     }

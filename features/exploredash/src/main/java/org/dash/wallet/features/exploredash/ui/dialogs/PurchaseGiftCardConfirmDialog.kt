@@ -53,17 +53,12 @@ import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DI
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
-    @StyleRes
-    override val backgroundStyle = R.style.PrimaryBackground
+    @StyleRes override val backgroundStyle = R.style.PrimaryBackground
 
     private val binding by viewBinding(DialogConfirmPurchaseGiftCardBinding::bind)
     private val purchaseGiftCardViewModel: PurchaseGiftCardViewModel by activityViewModels()
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_confirm_purchase_gift_card, container, false)
     }
 
@@ -87,20 +82,15 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
         }
 
         paymentValue?.let {
-            binding.giftCardTotalValue.text =
-                GenericUtils.fiatToString(it.second)
+            binding.giftCardTotalValue.text = GenericUtils.fiatToString(it.second)
 
             val discountedValue = purchaseGiftCardViewModel.getDiscountedAmount(it.second, savingsPercentage)
-            binding.giftCardYouPayValue.text =
-                GenericUtils.fiatToStringRoundUp(discountedValue)
+            binding.giftCardYouPayValue.text = GenericUtils.fiatToStringRoundUp(discountedValue)
 
-            binding.purchaseCardValue.text =
-                GenericUtils.fiatToString(it.second)
+            binding.purchaseCardValue.text = GenericUtils.fiatToString(it.second)
         }
 
-        binding.collapseButton.setOnClickListener {
-            dismiss()
-        }
+        binding.collapseButton.setOnClickListener { dismiss() }
 
         binding.confirmButton.setOnClickListener {
             lifecycleScope.launch {
