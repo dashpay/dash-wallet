@@ -47,6 +47,7 @@ import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStat
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
+import org.slf4j.LoggerFactory
 
 @HiltViewModel
 class DashDirectViewModel
@@ -60,6 +61,10 @@ constructor(
     private val transactionMetadata: TransactionMetadataProvider,
     private val exploreData: ExploreDataSource
 ) : ViewModel() {
+
+    companion object {
+        private val log = LoggerFactory.getLogger(DashDirectViewModel::class.java)
+    }
 
     val isUserSettingFiatIsNotUSD = (configuration.exchangeCurrencyCode != Constants.USD_CURRENCY)
 
@@ -130,6 +135,7 @@ constructor(
 
     suspend fun createSendingRequestFromDashUri(paymentURi: String): Transaction {
         val transaction = sendPaymentService.createSendingRequestFromDashUri(paymentURi)
+        log.info("dash direct transaction: ${transaction.txId}")
         transactionMetadata.markGiftCardTransaction(transaction.txId, purchaseGiftCardDataMerchant?.iconBitmap)
         purchaseGiftCardDataMerchant?.iconBitmap = null
 

@@ -25,7 +25,6 @@ import android.view.ViewGroup
 import androidx.annotation.StyleRes
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
-import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import coil.load
