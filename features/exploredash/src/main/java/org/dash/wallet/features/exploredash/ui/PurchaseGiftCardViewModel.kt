@@ -24,6 +24,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.*
 import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -109,8 +110,15 @@ constructor(
     }
 
     suspend fun getPaymentStatus(paymentId: String, orderId: String): ResponseResource<PaymentStatusResponse?>? {
+        delay(2000)
         repository.getDashDirectEmail()?.let { email ->
-            return repository.getPaymentStatus(userEmail = email, paymentId = paymentId, orderId = orderId)
+            //   return repository.getPaymentStatus(userEmail = email, paymentId = paymentId,
+            // orderId = orderId)
+            return ResponseResource.Success(
+                PaymentStatusResponse(
+                    data = PaymentStatusResponse.Data(orderId = orderId, paymentId = paymentId, status = "unpaid")
+                )
+            )
         }
         return null
     }
