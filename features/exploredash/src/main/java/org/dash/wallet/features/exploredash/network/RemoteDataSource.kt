@@ -16,17 +16,18 @@
  */
 package org.dash.wallet.features.exploredash.network
 
-import javax.inject.Inject
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.toJavaDuration
 import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.dash.wallet.features.exploredash.BuildConfig
 import org.dash.wallet.features.exploredash.network.interceptor.HeadersInterceptor
 import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 class RemoteDataSource @Inject constructor(private val config: DashDirectConfig) {
 
@@ -47,11 +48,11 @@ class RemoteDataSource @Inject constructor(private val config: DashDirectConfig)
             .readTimeout(20.seconds.toJavaDuration())
             .also { client ->
                 authenticator?.let { client.authenticator(it) }
-                // if (BuildConfig.DEBUG) {
-                val logging = HttpLoggingInterceptor()
-                logging.level = HttpLoggingInterceptor.Level.BODY
-                client.addInterceptor(logging)
-                // }
+                if (BuildConfig.DEBUG) {
+                    val logging = HttpLoggingInterceptor()
+                    logging.level = HttpLoggingInterceptor.Level.BODY
+                    client.addInterceptor(logging)
+                }
             }
             .build()
     }
