@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.transactions
 
 import android.graphics.Bitmap
+import android.graphics.drawable.Animatable
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -208,6 +209,11 @@ class TransactionResultViewBinder(
         updateIcon()
     }
 
+    fun setTransactionIcon(@DrawableRes drawableRes: Int) {
+        iconRes = drawableRes
+        updateIcon()
+    }
+
     private fun updateIcon() {
         val iconRes = if (isError) {
             R.drawable.ic_transaction_failed
@@ -224,6 +230,14 @@ class TransactionResultViewBinder(
         if (iconBitmap == null) {
             checkIcon.setImageResource(iconRes)
             secondaryIcon.isVisible = false
+
+            if (checkIcon.drawable is Animatable) {
+                checkIcon.isVisible = false
+                checkIcon.postDelayed({
+                    checkIcon.isVisible = true
+                    (checkIcon.drawable as Animatable).start()
+                }, 300)
+            }
         } else {
             checkIcon.load(iconBitmap) {
                 transformations(RoundedCornersTransformation(iconSize*2.toFloat()))

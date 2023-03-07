@@ -20,11 +20,8 @@ package de.schildbach.wallet.ui.transactions
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.graphics.drawable.Animatable
 import android.os.Bundle
-import android.view.View
 import androidx.activity.viewModels
-import androidx.core.content.ContextCompat
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
@@ -101,6 +98,7 @@ class TransactionResultActivity : LockScreenActivity() {
             val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
             val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
             transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
+            transactionResultViewBinder.setTransactionIcon(R.drawable.check_animated)
             open_explorer_card.setOnClickListener { viewOnExplorer(tx) }
             tax_category_layout.setOnClickListener { viewOnTaxCategory()}
             transaction_close_btn.setOnClickListener {
@@ -118,13 +116,6 @@ class TransactionResultActivity : LockScreenActivity() {
             finish()
             return
         }
-
-        check_icon.setImageDrawable(ContextCompat.getDrawable(this,
-                R.drawable.check_animated))
-        check_icon.postDelayed({
-            check_icon.visibility = View.VISIBLE
-            (check_icon.drawable as Animatable).start()
-        }, 400)
     }
 
     private fun viewOnExplorer(tx: Transaction) {
