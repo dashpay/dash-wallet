@@ -44,7 +44,6 @@ open class SearchResult(
     var coverImage: String? = "",
     var type: String? = "",
     @Ignore var distance: Double = Double.NaN,
-    @Ignore var iconBitmap: Bitmap? = null
 ) {
     fun getDisplayAddress(separator: String = "\n"): String {
         val addressBuilder = StringBuilder()

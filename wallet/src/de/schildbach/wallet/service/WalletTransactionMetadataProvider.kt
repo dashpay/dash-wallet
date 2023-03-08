@@ -18,27 +18,31 @@ package de.schildbach.wallet.service
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.AddressMetadataDao
 import de.schildbach.wallet.database.dao.IconBitmapDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import okhttp3.*
 import org.bitcoinj.core.*
+import org.bitcoinj.core.Address
 import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.*
-import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.data.TaxCategory
-import org.dash.wallet.common.transactions.TransactionCategory
-import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.data.entity.AddressMetadata
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.IconBitmap
+import org.dash.wallet.common.data.entity.TransactionMetadata
+import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.slf4j.LoggerFactory
+import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.util.concurrent.Executors
 import javax.inject.Inject
 
@@ -51,7 +55,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
 ) : TransactionMetadataProvider {
 
     companion object {
-        val log = LoggerFactory.getLogger(WalletTransactionMetadataProvider::class.java)
+        private val log = LoggerFactory.getLogger(WalletTransactionMetadataProvider::class.java)
     }
 
     private val syncScope = CoroutineScope(
@@ -142,25 +146,18 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun markGiftCardTransaction(txId: Sha256Hash, icon: Bitmap?) {
-        withContext(Dispatchers.IO) {
-            val imageHash = icon?.let {
-                val stream = ByteArrayOutputStream()
-                stream.use { icon.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                val imageData = stream.toByteArray()
-                val imageHash = Sha256Hash.of(imageData)
-                iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, icon.height, icon.width))
-                imageHash
-            }
-
-            updateAndInsertIfNotExist(txId) {
-                transactionMetadataDao.update(it.copy(
-                    service = ServiceName.DashDirect,
-                    customIconId = imageHash,
-                    taxCategory = TaxCategory.Expense
-                ))
-            }
+    override suspend fun markGiftCardTransaction(txId: Sha256Hash, iconUrl: String?) {
+        var transactionMetadata: TransactionMetadata
+        updateAndInsertIfNotExist(txId) {
+            transactionMetadata = it.copy(
+            service = ServiceName.DashDirect,
+            taxCategory = TaxCategory.Expense
+            )
+            transactionMetadataDao.update(transactionMetadata)
         }
+
+        val icon = iconUrl ?: return
+        updateIcon(txId, icon)
     }
 
     override fun syncTransactionBlocking(tx: Transaction) {
@@ -316,7 +313,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 .map { metadataList ->
                     metadataList.values.forEach { metadata ->
                         metadata.customIconId?.let { iconId ->
-                            metadata.icon = bitmaps[iconId]!!
+                            metadata.icon = bitmaps[iconId]
                         }
                     }
                     metadataList
@@ -382,6 +379,66 @@ class WalletTransactionMetadataProvider @Inject constructor(
             }
             transactionMetadata
         }
+    }
+
+    private fun updateIcon(txId: Sha256Hash, iconUrl: String) {
+        val request = Request.Builder().url(iconUrl).get().build()
+        Constants.HTTP_CLIENT.newCall(request).enqueue(object: Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                log.error("Failed to fetch the icon for url: $iconUrl", e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.body?.let {
+                    syncScope.launch {
+                        try {
+                            val bitmap = decodeBitmap(it)
+                            val icon = resizeIcon(bitmap)
+                            val imageData = getBitmapData(icon)
+                            val imageHash = Sha256Hash.of(imageData)
+
+                            iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, icon.height, icon.width))
+                            transactionMetadataDao.updateIconId(txId, imageHash)
+                        } catch (ex: Exception) {
+                            log.error("Failed to resize and save the icon for url: $iconUrl", ex)
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    private fun decodeBitmap(responseBody: ResponseBody): Bitmap {
+        return BufferedInputStream(responseBody.byteStream()).use { inputStream ->
+            return@use BitmapFactory.decodeStream(inputStream)
+        }
+    }
+
+    private fun resizeIcon(bitmap: Bitmap): Bitmap {
+        var width = bitmap.width
+        var height = bitmap.height
+        val destSize = 150.0
+
+        if (width > destSize || height > destSize) {
+            if (width < height) {
+                val scale = destSize / height
+                height = destSize.toInt()
+                width = (width * scale).toInt()
+            } else if (width > height) {
+                val scale = destSize / width
+                width = destSize.toInt()
+                height = (height * scale).toInt()
+            }
+        }
+
+        return Bitmap.createScaledBitmap(bitmap, width, height, false)
+    }
+
+    private fun getBitmapData(bitmap: Bitmap): ByteArray {
+        val outputStream = ByteArrayOutputStream()
+        outputStream.use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+
+        return outputStream.toByteArray()
     }
 
     override fun clear() {
