@@ -21,7 +21,7 @@ import android.graphics.Bitmap
 import androidx.room.Ignore
 import org.bitcoinj.core.Sha256Hash
 
-class PresentableTxMetadata(
+data class PresentableTxMetadata(
     var txId: Sha256Hash,
     var memo: String = "",
     var service: String? = null,

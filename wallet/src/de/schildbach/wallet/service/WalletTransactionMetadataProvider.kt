@@ -313,7 +313,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 .map { metadataList ->
                     metadataList.values.forEach { metadata ->
                         metadata.customIconId?.let { iconId ->
-                            metadata.icon = bitmaps[iconId]!!
+                            metadata.icon = bitmaps[iconId]
                         }
                     }
                     metadataList
@@ -385,7 +385,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         val request = Request.Builder().url(iconUrl).get().build()
         Constants.HTTP_CLIENT.newCall(request).enqueue(object: Callback {
             override fun onFailure(call: Call, e: IOException) {
-                log.error("Failed to fetch the icon", e)
+                log.error("Failed to fetch the icon for url: $iconUrl", e)
             }
 
             override fun onResponse(call: Call, response: Response) {
@@ -400,7 +400,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                             iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, icon.height, icon.width))
                             transactionMetadataDao.updateIconId(txId, imageHash)
                         } catch (ex: Exception) {
-                            log.error("Failed to resize and save the icon", ex)
+                            log.error("Failed to resize and save the icon for url: $iconUrl", ex)
                         }
                     }
                 }
