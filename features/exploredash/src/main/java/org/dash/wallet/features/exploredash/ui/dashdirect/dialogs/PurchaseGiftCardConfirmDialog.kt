@@ -190,7 +190,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
         AdaptiveDialog.create(
                 R.drawable.ic_info_red,
                 getString(R.string.gift_card_purchase_failed),
-                getString(R.string.for_some_reason_we_were_not_able_to_buy_a_gift_card_please_try_again),
+                getString(R.string.gift_card_error),
                 getString(R.string.cancel),
                 getString(R.string.try_again)
             )

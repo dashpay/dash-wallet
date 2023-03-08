@@ -20,7 +20,7 @@ import com.google.gson.annotations.SerializedName
 
 data class GetMerchantByIdResponse(
     @SerializedName("AccessToken") val accessToken: Any? = null,
-    @SerializedName("Data") val `data`: Data? = null,
+    @SerializedName("Data") val `data`: Data? = Data(),
     @SerializedName("DelayedToken") val delayedToken: Any? = null,
     @SerializedName("ErrorMessage") val errorMessage: String? = null,
     @SerializedName("IsDelayed") val isDelayed: Boolean? = null,
