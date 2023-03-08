@@ -112,15 +112,6 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         })
 
-        binding.walletTransactionsList.addItemDecoration(
-            ListDividerDecorator(
-                ResourcesCompat.getDrawable(resources, R.drawable.list_divider, null)!!,
-                showAfterLast = false,
-                marginStart = horizontalMargin + resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start),
-                marginEnd = horizontalMargin
-            )
-        )
-
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
@@ -133,7 +124,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate()
                 }.map {
                     val outList = mutableListOf<HistoryRowView>()
-                    outList.add(HistoryRowView(it.key.toString(), "Tuesedey", it.key))
+                    outList.add(HistoryRowView(it.key.toString(), it.key))
                     outList.apply { addAll(it.value) }
                 }.reduce { acc, list -> acc.apply { addAll(list) }}
 
