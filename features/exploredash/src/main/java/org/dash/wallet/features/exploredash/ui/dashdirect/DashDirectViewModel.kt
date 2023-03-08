@@ -136,8 +136,7 @@ constructor(
     suspend fun createSendingRequestFromDashUri(paymentURi: String): Transaction {
         val transaction = sendPaymentService.payWithDashUrl(paymentURi)
         log.info("dash direct transaction: ${transaction.txId}")
-        transactionMetadata.markGiftCardTransaction(transaction.txId, purchaseGiftCardDataMerchant?.iconBitmap)
-        purchaseGiftCardDataMerchant?.iconBitmap = null
+        transactionMetadata.markGiftCardTransaction(transaction.txId, purchaseGiftCardDataMerchant?.logoLocation)
 
         return transaction
     }

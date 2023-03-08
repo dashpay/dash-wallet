@@ -68,6 +68,9 @@ interface TransactionMetadataDao {
     @Query("UPDATE transaction_metadata SET service = :service WHERE txid = :txId")
     suspend fun updateService(txId: Sha256Hash, service: String)
 
+    @Query("UPDATE transaction_metadata SET customIconId = :iconId WHERE txId = :txId")
+    suspend fun updateIconId(txId: Sha256Hash, iconId: Sha256Hash)
+
     @Query("DELETE FROM transaction_metadata")
     suspend fun clear()
 }
