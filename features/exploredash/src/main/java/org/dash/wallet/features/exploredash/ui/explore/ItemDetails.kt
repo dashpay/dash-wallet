@@ -264,6 +264,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
         into.load(image) {
             crossfade(200)
             scale(Scale.FILL)
+            placeholder(R.drawable.ic_image_placeholder)
             error(R.drawable.ic_image_placeholder)
             transformations(
                 RoundedCornersTransformation(
