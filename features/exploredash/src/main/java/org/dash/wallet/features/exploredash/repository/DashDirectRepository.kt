@@ -83,7 +83,7 @@ constructor(
             )
             .also {
                 it?.data?.errorMessage?.let { errorMessage ->
-                    if (it?.data?.hasError == true && errorMessage.isNotEmpty()) {
+                    if (it.data.hasError == true && errorMessage.isNotEmpty()) {
                         throw Exception(errorMessage)
                     }
                 }
@@ -119,14 +119,13 @@ constructor(
     ) = safeApiCall {
         servicesApi.purchaseGiftCard(
             deviceID = deviceID,
-            purchaseGiftCardRequest = PurchaseGiftCardRequest(
-                currency = currency,
-                giftCardAmount = 0.03,
-                merchantId = 318
-            ),
-            // TODO:
-            // purchaseGiftCardRequest =
-            //     PurchaseGiftCardRequest(currency = currency, giftCardAmount = giftCardAmount, merchantId = merchantId),
+//            purchaseGiftCardRequest = PurchaseGiftCardRequest(
+//                currency = currency,
+//                giftCardAmount = 0.03,
+//                merchantId = 318
+//            ),
+             purchaseGiftCardRequest =
+                 PurchaseGiftCardRequest(currency = currency, giftCardAmount = giftCardAmount, merchantId = merchantId),
             email = userEmail
         )
     }
@@ -135,7 +134,7 @@ constructor(
         safeApiCall {
             servicesApi.getMerchantById(
                 email = userEmail,
-                getMerchantByIdRequest = GetMerchantByIdRequest(id = 318, /* TODO: merchantId, */ includeLocations = includeLocations)
+                getMerchantByIdRequest = GetMerchantByIdRequest(id = /*318,*/ merchantId, includeLocations = includeLocations)
             )
         }
 
