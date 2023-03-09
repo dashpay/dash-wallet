@@ -7,7 +7,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:paddingBottom="18dp"
-    tools:context="de.schildbach.wallet.ui.VerifySeedWarningDialog">
+    tools:context="org.dash.wallet.common.ui.dialogs.OffsetDialogFragment">
 
     <ImageButton
         android:id="@+id/collapse_button"

@@ -22,6 +22,7 @@ import android.os.Bundle
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_view_seed.*
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 
 /**
  * @author Eric Britten
@@ -66,7 +67,7 @@ class ViewSeedActivity : BaseMenuActivity() {
         }
 
         explanation_btn.setOnClickListener {
-            VerifySeedWarningDialog().show(supportFragmentManager, "verify_seed_warning")
+            OffsetDialogFragment(R.layout.dialog_verify_seed_warning).show(this)
         }
 
         setTitle(R.string.view_seed_title)

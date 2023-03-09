@@ -17,9 +17,7 @@
 package de.schildbach.wallet.ui.transactions
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,7 +38,7 @@ import javax.inject.Inject
  * @author Samuel Barbosa
  */
 @AndroidEntryPoint
-class TransactionDetailsDialogFragment : OffsetDialogFragment() {
+class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transaction_details_dialog) {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
     private val txId by lazy {
@@ -71,10 +69,6 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
             }
             return fragment
         }
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.transaction_details_dialog, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

@@ -23,6 +23,7 @@ import android.view.ViewGroup
 import androidx.appcompat.widget.Toolbar
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.verify_seed_write_down.*
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 
 /**
  * @author Samuel Barbosa
@@ -65,7 +66,7 @@ class VerifySeedWriteDownFragment : VerifySeedBaseFragment() {
         }
 
         explanationBtn.setOnClickListener {
-            VerifySeedWarningDialog().show(parentFragmentManager, "verify_seed_warning")
+            OffsetDialogFragment(R.layout.dialog_verify_seed_warning).show(requireActivity())
         }
     }
 }

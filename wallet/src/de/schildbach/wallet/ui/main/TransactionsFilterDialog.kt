@@ -17,9 +17,7 @@
 package de.schildbach.wallet.ui.main
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.annotation.StyleRes
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
@@ -31,21 +29,16 @@ import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.radio_group.IconSelectMode
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
 import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
+import org.dash.wallet.common.ui.viewBinding
 
 class TransactionsFilterDialog(
     private val selectedOption: TxFilterType,
     private val clickListener: (TxFilterType, DialogFragment) -> Unit
-) : OffsetDialogFragment() {
+) : OffsetDialogFragment(R.layout.dialog_transactions_filter) {
     @StyleRes
     override val backgroundStyle: Int = R.style.PrimaryBackground
-    private lateinit var binding: DialogTransactionsFilterBinding
+    private val binding by viewBinding(DialogTransactionsFilterBinding::bind)
     private val options = listOf(TxFilterType.ALL, TxFilterType.SENT, TxFilterType.RECEIVED, TxFilterType.GIFT_CARD)
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        super.onCreate(savedInstanceState)
-        binding = DialogTransactionsFilterBinding.inflate(layoutInflater)
-        return binding.root
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -62,29 +55,31 @@ class TransactionsFilterDialog(
         )
         binding.directionList.addItemDecoration(decorator)
         binding.directionList.adapter = adapter
-        adapter.submitList(options.map {
-            when (it) {
-                TxFilterType.ALL -> IconifiedViewItem(
-                    getString(R.string.all_transactions),
-                    iconRes = R.drawable.ic_filter_all,
-                    iconSelectMode = IconSelectMode.None
-                )
-                TxFilterType.SENT -> IconifiedViewItem(
-                    getString(R.string.sent_transactions),
-                    iconRes = R.drawable.ic_filter_sent,
-                    iconSelectMode = IconSelectMode.None
-                )
-                TxFilterType.RECEIVED -> IconifiedViewItem(
-                    getString(R.string.received_transactions),
-                    iconRes = R.drawable.ic_filter_received,
-                    iconSelectMode = IconSelectMode.None
-                )
-                TxFilterType.GIFT_CARD -> IconifiedViewItem(
-                    getString(R.string.explore_filter_gift_cards),
-                    iconRes = R.drawable.ic_filter_gift_card,
-                    iconSelectMode = IconSelectMode.None
-                )
+        adapter.submitList(
+            options.map {
+                when (it) {
+                    TxFilterType.ALL -> IconifiedViewItem(
+                        getString(R.string.all_transactions),
+                        iconRes = R.drawable.ic_filter_all,
+                        iconSelectMode = IconSelectMode.None
+                    )
+                    TxFilterType.SENT -> IconifiedViewItem(
+                        getString(R.string.sent_transactions),
+                        iconRes = R.drawable.ic_filter_sent,
+                        iconSelectMode = IconSelectMode.None
+                    )
+                    TxFilterType.RECEIVED -> IconifiedViewItem(
+                        getString(R.string.received_transactions),
+                        iconRes = R.drawable.ic_filter_received,
+                        iconSelectMode = IconSelectMode.None
+                    )
+                    TxFilterType.GIFT_CARD -> IconifiedViewItem(
+                        getString(R.string.explore_filter_gift_cards),
+                        iconRes = R.drawable.ic_filter_gift_card,
+                        iconSelectMode = IconSelectMode.None
+                    )
+                }
             }
-        })
+        )
     }
 }

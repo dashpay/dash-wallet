@@ -91,18 +91,7 @@
         android:id="@+id/infoDialog"
         android:name="org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog"
         android:label="explore_dash_info"
-        tools:layout="@layout/explore_dash_main_info">
-
-        <action
-            android:id="@+id/info_to_gift_card_detail"
-            app:destination="@id/buyGiftCardInfoDialog" />
-    </dialog>
-
-    <dialog
-        android:id="@+id/buyGiftCardInfoDialog"
-        android:name="org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.BuyGiftCardDescriptionDialog"
-        android:label="buy_gift_card_info"
-        tools:layout="@layout/buy_gift_card_description" />
+        tools:layout="@layout/explore_dash_main_info"/>
 
     <dialog
         android:id="@+id/filtersDialog"

@@ -17,9 +17,7 @@
 package de.schildbach.wallet.ui.payments
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.view.isVisible
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
@@ -35,7 +33,7 @@ import org.dash.wallet.common.util.GenericUtils
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class ReceiveDetailsDialog : OffsetDialogFragment() {
+class ReceiveDetailsDialog : OffsetDialogFragment(R.layout.dialog_receive_details) {
     companion object {
         private const val ARG_DASH_AMOUNT = "arg_dash_amount"
         private const val ARG_FIAT_AMOUNT = "arg_fiat_amount"
@@ -56,10 +54,6 @@ class ReceiveDetailsDialog : OffsetDialogFragment() {
     override val backgroundStyle = R.style.PrimaryBackground
     private val binding by viewBinding(DialogReceiveDetailsBinding::bind)
     @Inject lateinit var configuration: Configuration
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_receive_details, container, false)
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

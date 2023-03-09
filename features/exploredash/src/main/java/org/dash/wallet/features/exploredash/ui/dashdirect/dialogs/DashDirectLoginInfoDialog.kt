@@ -18,9 +18,7 @@
 package org.dash.wallet.features.exploredash.ui.dashdirect.dialogs
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.annotation.DrawableRes
 import androidx.annotation.StyleRes
 import androidx.fragment.app.FragmentActivity
@@ -29,7 +27,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.DialogDashDirectLoginInfoBinding
 
-class DashDirectLoginInfoDialog : OffsetDialogFragment() {
+class DashDirectLoginInfoDialog : OffsetDialogFragment(R.layout.dialog_dash_direct_login_info) {
     companion object {
         private const val ICON_RES_ARG = "icon_res"
         private const val TITLE_ARG = "title"
@@ -66,10 +64,6 @@ class DashDirectLoginInfoDialog : OffsetDialogFragment() {
     @StyleRes override val backgroundStyle = R.style.PrimaryBackground
 
     private val binding by viewBinding(DialogDashDirectLoginInfoBinding::bind)
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_dash_direct_login_info, container, false)
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

@@ -19,14 +19,13 @@ package org.dash.wallet.features.exploredash.ui.explore.dialogs
 
 import android.content.DialogInterface
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
@@ -40,11 +39,15 @@ import org.dash.wallet.features.exploredash.databinding.DialogFiltersBinding
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.explore.FilterMode
-import org.dash.wallet.features.exploredash.ui.extensions.*
+import org.dash.wallet.features.exploredash.ui.extensions.isLocationPermissionGranted
+import org.dash.wallet.features.exploredash.ui.extensions.openAppSettings
+import org.dash.wallet.features.exploredash.ui.extensions.registerPermissionLauncher
+import org.dash.wallet.features.exploredash.ui.extensions.runLocationFlow
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
+import javax.inject.Inject
 
 @AndroidEntryPoint
-class FiltersDialog : OffsetDialogFragment() {
+class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     override val backgroundStyle = R.style.PrimaryBackground
 
     private val radiusOptions = listOf(1, 5, 20, 50)
@@ -69,10 +72,6 @@ class FiltersDialog : OffsetDialogFragment() {
         } else {
             openAppSettings()
         }
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_filters, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -184,8 +183,11 @@ class FiltersDialog : OffsetDialogFragment() {
             val optionNames =
                 binding.root.resources
                     .getStringArray(
-                        if (viewModel.isMetric) R.array.radius_filter_options_kilometers
-                        else R.array.radius_filter_options_miles
+                        if (viewModel.isMetric) {
+                            R.array.radius_filter_options_kilometers
+                        } else {
+                            R.array.radius_filter_options_miles
+                        }
                     )
                     .map { IconifiedViewItem(it, "") }
 
@@ -247,7 +249,12 @@ class FiltersDialog : OffsetDialogFragment() {
                     }
 
                 val dialogTitle = getString(R.string.explore_location)
-                OptionPickerDialog(dialogTitle, allTerritories, currentIndex, useCheckMark = true) { item, index, dialog ->
+                OptionPickerDialog(
+                    dialogTitle,
+                    allTerritories,
+                    currentIndex,
+                    useCheckMark = true
+                ) { item, index, dialog ->
                     dialog.dismiss()
                     setTerritoryName(if (index == 0) "" else item.title)
                 }.show(requireActivity())
