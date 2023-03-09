@@ -20,6 +20,7 @@ buildscript {
         // Utils
         slf4jVersion = '1.7.32'
         desugaringLibraryVersion = '1.1.5'
+        zxingVersion = '3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
 
         // UI
         materialVersion = "1.6.1"
