@@ -68,7 +68,7 @@
                 android:layout_height="wrap_content">
 
                 <androidx.appcompat.widget.AppCompatImageView
-                    android:id="@+id/merchent_logo"
+                    android:id="@+id/merchant_logo"
                     android:layout_width="50dp"
                     android:layout_height="50dp"
                     app:layout_constraintStart_toStartOf="parent"
@@ -76,14 +76,15 @@
                     tools:src="@drawable/ic_dash_pay" />
 
                 <androidx.appcompat.widget.AppCompatTextView
-                    android:id="@+id/merchent_name"
+                    android:id="@+id/merchant_name"
                     style="@style/Body2.Medium"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     app:layout_constraintBottom_toTopOf="@+id/purchase_date"
-                    app:layout_constraintStart_toEndOf="@+id/merchent_logo"
-                    app:layout_constraintTop_toTopOf="@+id/merchent_logo"
+                    app:layout_constraintStart_toEndOf="@+id/merchant_logo"
+                    app:layout_constraintTop_toTopOf="@+id/merchant_logo"
+                    app:layout_constraintVertical_chainStyle="packed"
                     tools:text="@string/dash_wallet_name" />
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -92,10 +93,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
-                    app:layout_constraintBottom_toBottomOf="@+id/merchent_logo"
-                    app:layout_constraintStart_toEndOf="@+id/merchent_logo"
-                    app:layout_constraintTop_toBottomOf="@+id/merchent_name"
-                    tools:text="@string/dash_wallet_name" />
+                    app:layout_constraintBottom_toBottomOf="@+id/merchant_logo"
+                    app:layout_constraintStart_toEndOf="@+id/merchant_logo"
+                    app:layout_constraintTop_toBottomOf="@+id/merchant_name"
+                    tools:text="August 26, 2022 at 10:56 AM" />
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <androidx.cardview.widget.CardView
@@ -114,8 +115,8 @@
                     android:paddingHorizontal="15dp"
                     android:paddingVertical="5dp">
 
-                    <androidx.appcompat.widget.AppCompatImageView
-                        android:id="@+id/purchase_card_bar_code"
+                    <ImageView
+                        android:id="@+id/purchase_card_barcode"
                         android:layout_width="0dp"
                         android:layout_height="65dp"
                         android:layout_marginStart="15dp"
@@ -127,7 +128,30 @@
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
                         tools:src="@drawable/ic_dash_pay"
-                        tools:visibility="gone" />
+                        tools:visibility="visible" />
+
+                    <ProgressBar
+                        android:id="@+id/barcode_loading_indicator"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone"
+                        app:layout_constraintBottom_toTopOf="@+id/original_purchase_label"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        tools:visibility="visible" />
+
+                    <TextView
+                        android:id="@+id/barcode_loading_error"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/gift_card_barcode_failed"
+                        android:visibility="gone"
+                        app:layout_constraintBottom_toTopOf="@+id/original_purchase_label"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        tools:visibility="visible"/>
 
                     <androidx.appcompat.widget.AppCompatTextView
                         android:id="@+id/original_purchase_label"
@@ -141,7 +165,7 @@
                         android:textSize="13sp"
                         app:layout_constraintBottom_toTopOf="@id/original_purchase_divider"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/purchase_card_bar_code" />
+                        app:layout_constraintTop_toBottomOf="@id/purchase_card_barcode" />
 
                     <androidx.appcompat.widget.AppCompatTextView
                         android:id="@+id/original_purchase_value"
@@ -175,7 +199,6 @@
                         style="@style/Caption.Medium.Tertiary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-
                         android:layout_marginTop="12dp"
                         android:ellipsize="end"
                         android:maxLines="1"
@@ -300,7 +323,7 @@
             </androidx.cardview.widget.CardView>
 
             <Button
-                android:id="@+id/purchase_see_how_to_use_gift_card_label"
+                android:id="@+id/how_to_use_button"
                 style="@style/Button.Tertiary.Large.Blue"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -309,7 +332,7 @@
                 tools:visibility="visible" />
 
             <androidx.cardview.widget.CardView
-                android:id="@+id/purchase_see_how_to_use_gift_card"
+                android:id="@+id/how_to_use_info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:visibility="gone"

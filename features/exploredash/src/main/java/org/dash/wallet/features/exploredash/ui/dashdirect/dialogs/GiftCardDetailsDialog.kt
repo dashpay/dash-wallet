@@ -19,13 +19,13 @@ package org.dash.wallet.features.exploredash.ui.dashdirect.dialogs
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.annotation.StyleRes
 import androidx.core.view.isVisible
 import androidx.navigation.fragment.findNavController
+import coil.imageLoader
 import coil.load
+import coil.request.ImageRequest
 import coil.size.Scale
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -33,35 +33,35 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.copy
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.GiftCardDetailsDialogModel
+import org.dash.wallet.features.exploredash.data.model.GiftCard
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 
 @AndroidEntryPoint
-class GiftCardDetailsDialog : OffsetDialogFragment() {
+class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_details) {
+    companion object {
+        private const val ARG_MODEL = "argModel"
+
+        fun newInstance(model: GiftCard) =
+            GiftCardDetailsDialog().apply { arguments = Bundle().apply { putParcelable(ARG_MODEL, model) } }
+    }
+
     @StyleRes override val backgroundStyle = R.style.PrimaryBackground
     override val forceExpand = true
-
-    // private var purchaseGiftCardData: Pair<Pair<Coin, Fiat>, Merchant>? = null
     private val binding by viewBinding(DialogGiftCardDetailsBinding::bind)
-
-    private var giftCardDetailsDialogModel: GiftCardDetailsDialogModel? = null
+    private var giftCard: GiftCard? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        arguments?.let { giftCardDetailsDialogModel = it.getParcelable(ARG_MODEL) }
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_gift_card_details, container, false)
+        arguments?.let { giftCard = it.getParcelable(ARG_MODEL) }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        giftCardDetailsDialogModel?.let {
-            binding.merchentName.text = it.merchantName
+        giftCard?.let {
+            binding.merchantName.text = it.merchantName
             it.merchantLogo?.let { url ->
-                binding.merchentLogo.load(url) {
+                binding.merchantLogo.load(url) {
                     crossfade(200)
                     scale(Scale.FILL)
                     placeholder(R.drawable.ic_image_placeholder)
@@ -70,10 +70,10 @@ class GiftCardDetailsDialog : OffsetDialogFragment() {
             }
         }
 
-        binding.originalPurchaseValue.text = giftCardDetailsDialogModel?.giftCardPrice
+        binding.originalPurchaseValue.text = giftCard?.price
 
-        binding.purchaseCardNumber.text = giftCardDetailsDialogModel?.giftCardNumber
-        binding.purchaseCardPin.text = giftCardDetailsDialogModel?.giftCardPin
+        binding.purchaseCardNumber.text = giftCard?.number
+        binding.purchaseCardPin.text = giftCard?.pin
 
         binding.copyCardNumber.setOnClickListener {
             binding.purchaseCardNumber.text.toString().copy(requireActivity(), "card number")
@@ -83,32 +83,48 @@ class GiftCardDetailsDialog : OffsetDialogFragment() {
             binding.purchaseCardPin.text.toString().copy(requireActivity(), "card pin")
         }
 
-        binding.purchaseSeeHowToUseGiftCardLabel.setOnClickListener {
-            binding.purchaseSeeHowToUseGiftCardLabel.isVisible = false
-            binding.purchaseSeeHowToUseGiftCard.isVisible = true
+        binding.howToUseButton.setOnClickListener {
+            binding.howToUseButton.isVisible = false
+            binding.howToUseInfo.isVisible = true
         }
         binding.collapseButton.setOnClickListener { dismiss() }
 
         binding.viewTransactionDetailsCard.setOnClickListener {
-            giftCardDetailsDialogModel?.transactionId?.let {
+            giftCard?.transactionId?.let {
                 if (it.isNotEmpty()) {
                     findNavController().navigate(Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/$it"))
                 }
             }
         }
 
+        binding.checkCurrentBalance.isVisible = giftCard?.checkCurrentBalanceUrl?.isNotEmpty() == true
         binding.checkCurrentBalance.setOnClickListener {
-            giftCardDetailsDialogModel?.giftCardCheckCurrentBalanceUrl?.let {
+            giftCard?.checkCurrentBalanceUrl?.let {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
                 requireContext().startActivity(intent)
             }
         }
-    }
 
-    companion object {
-        private const val ARG_MODEL = "argModel"
-
-        fun newInstance(model: GiftCardDetailsDialogModel) =
-            GiftCardDetailsDialog().apply { arguments = Bundle().apply { putParcelable(ARG_MODEL, model) } }
+        if (giftCard?.barcodeImg?.isNotEmpty() == true) {
+            binding.purchaseCardBarcode.isVisible = true
+            val imageRequest = ImageRequest.Builder(requireContext())
+                .data(giftCard?.barcodeImg)
+                .target(binding.purchaseCardBarcode)
+                .scale(Scale.FILL)
+                .listener(
+                    onStart = {
+                        binding.barcodeLoadingIndicator.isVisible = true
+                    },
+                    onSuccess = { _, _ ->
+                        binding.barcodeLoadingIndicator.isVisible = false
+                    },
+                    onError = { _, _ ->
+                        binding.barcodeLoadingIndicator.isVisible = false
+                        binding.barcodeLoadingError.isVisible = true
+                    }
+                )
+                .build()
+            requireContext().imageLoader.enqueue(imageRequest)
+        }
     }
 }

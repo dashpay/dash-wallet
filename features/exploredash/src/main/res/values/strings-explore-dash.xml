@@ -194,6 +194,8 @@
     <string name="insufficient_money_msg">The amount of coins in the wallet is too small for sweeping.</string>
     <string name="send_coins_error_msg">Problem sending coins!</string>
     <string name="close">Close</string>
+    <string name="gift_card_barcode_failed">Failed to load the barcode</string>
+
     <!-- dash direct login-->
     <string name="create_dash_direct_account">Create DashDirect account</string>
     <string name="log_in_to_dashdirect_account">Log in to DashDirect account</string>
