@@ -28,7 +28,8 @@ enum class PaymentMethodType:Parcelable {
     BankAccount,
     WireTransfer,
     PayPal,
-    GooglePay
+    GooglePay,
+    ApplePay
 }
 
 @Parcelize
