@@ -70,7 +70,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        //Make the whole row clickable
+        // Make the whole row clickable
         binding.payByQrButton.setOnClickListener {
             handleScan(it)
             analytics.logEvent(AnalyticsConstants.SendReceive.SCAN_TO_SEND, bundleOf())

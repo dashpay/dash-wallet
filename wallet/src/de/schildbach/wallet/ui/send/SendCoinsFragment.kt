@@ -69,7 +69,6 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     @Inject lateinit var authManager: AuthenticationManager
     private var userAuthorizedDuring = false
     private var enterAmountFragment: EnterAmountFragment? = null
-    private var revealBalance = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -100,13 +99,17 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             enterAmountFragment = fragment
         }
 
-        binding.hideButton.setOnClickListener {
-            revealBalance = !revealBalance
-            viewModel.logEvent(if (revealBalance) {
-                AnalyticsConstants.SendReceive.ENTER_AMOUNT_SHOW_BALANCE
-            } else {
-                AnalyticsConstants.SendReceive.ENTER_AMOUNT_HIDE_BALANCE
-            })
+        binding.paymentHeader.setTitle(getString(R.string.send_coins_fragment_button_send))
+        binding.paymentHeader.setProposition(getString(R.string.to))
+        binding.paymentHeader.setOnShowHideBalanceClicked { shown ->
+            viewModel.logEvent(
+                if (shown) {
+                    AnalyticsConstants.SendReceive.ENTER_AMOUNT_SHOW_BALANCE
+                } else {
+                    AnalyticsConstants.SendReceive.ENTER_AMOUNT_HIDE_BALANCE
+                }
+            )
+
             viewModel.maxOutputAmount.value?.let { balance ->
                 updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
             }
@@ -122,14 +125,14 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             }
         }
         viewModel.state.observe(viewLifecycleOwner) { updateView() }
-        viewModel.address.observe(viewLifecycleOwner) { binding.address.text = it }
+        viewModel.address.observe(viewLifecycleOwner) { binding.paymentHeader.setSubtitle(it) }
         viewModel.maxOutputAmount.observe(viewLifecycleOwner) { balance ->
             enterAmountViewModel.setMaxAmount(balance)
             updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
         }
 
         enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.currentAmount = it }
-        enterAmountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) { viewModel.isDashToFiatPreferred = it}
+        enterAmountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) { viewModel.isDashToFiatPreferred = it }
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             lifecycleScope.launch { authenticateOrConfirm() }
         }
@@ -154,15 +157,19 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
         enterAmountFragment?.setError(errorMessage)
         enterAmountViewModel.blockContinue = errorMessage.isNotEmpty() ||
-                !viewModel.everythingPlausible() ||
-                viewModel.isBlockchainReplaying.value ?: false
+            !viewModel.everythingPlausible() ||
+            viewModel.isBlockchainReplaying.value ?: false
 
-        enterAmountFragment?.setViewDetails(getString(when (state) {
-            SendCoinsViewModel.State.INPUT -> R.string.send_coins_fragment_button_send
-            SendCoinsViewModel.State.SENDING -> R.string.send_coins_sending_msg
-            SendCoinsViewModel.State.SENT -> R.string.send_coins_sent_msg
-            SendCoinsViewModel.State.FAILED -> R.string.send_coins_failed_msg
-        }))
+        enterAmountFragment?.setViewDetails(
+            getString(
+                when (state) {
+                    SendCoinsViewModel.State.INPUT -> R.string.send_coins_fragment_button_send
+                    SendCoinsViewModel.State.SENDING -> R.string.send_coins_sending_msg
+                    SendCoinsViewModel.State.SENT -> R.string.send_coins_sent_msg
+                    SendCoinsViewModel.State.FAILED -> R.string.send_coins_failed_msg
+                }
+            )
+        )
     }
 
     private suspend fun authenticateOrConfirm() {
@@ -257,8 +264,13 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val fee = txFee?.toPlainString() ?: ""
 
         val confirmed = ConfirmTransactionDialog.showDialogAsync(
-            requireActivity(), address, amountStr, amountFiat,
-            fiatSymbol, fee, total ?: ""
+            requireActivity(),
+            address,
+            amountStr,
+            amountFiat,
+            fiatSymbol,
+            fee,
+            total ?: ""
         )
 
         if (confirmed) {
@@ -292,7 +304,9 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
         val transactionResultIntent = TransactionResultActivity.createIntent(
             requireActivity(),
-            requireActivity().intent.action, transaction, false
+            requireActivity().intent.action,
+            transaction,
+            false
         )
         startActivity(transactionResultIntent)
     }
@@ -308,21 +322,17 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         if (soundResId > 0) {
             RingtoneManager.getRingtone(
                 requireActivity(),
-                Uri.parse("android.resource://" + requireActivity().packageName + "/" + soundResId))
+                Uri.parse("android.resource://" + requireActivity().packageName + "/" + soundResId)
+            )
                 .play()
         }
     }
 
     private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.entity.ExchangeRate?) {
         val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, it.fiat) }
-
-        if (revealBalance) {
-            var balanceText = viewModel.dashFormat.format(balance).toString()
-            exchangeRate?.let { balanceText += " ~ ${exchangeRate.coinToFiat(balance).toFormattedString()}" }
-            binding.balanceLabel.text = balanceText
-        } else {
-            binding.balanceLabel.text = "**********"
-        }
+        var balanceText = viewModel.dashFormat.format(balance).toString()
+        exchangeRate?.let { balanceText += " ~ ${exchangeRate.coinToFiat(balance).toFormattedString()}" }
+        binding.paymentHeader.setBalanceValue(balanceText)
     }
 
     private suspend fun showInsufficientMoneyDialog(missing: Coin) {

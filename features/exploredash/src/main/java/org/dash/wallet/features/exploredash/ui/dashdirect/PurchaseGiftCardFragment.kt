@@ -29,7 +29,6 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.ui.OnHideBalanceClickedListener
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
@@ -40,18 +39,13 @@ import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseGiftCardBinding
-import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.PurchaseGiftCardConfirmDialog
+import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
-import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) {
-    companion object {
-        private val log = LoggerFactory.getLogger(PurchaseGiftCardFragment::class.java)
-    }
-
     private val binding by viewBinding(FragmentPurchaseGiftCardBinding::bind)
     private var enterAmountFragment: EnterAmountFragment? = null
     private val viewModel by exploreViewModels<DashDirectViewModel>()
@@ -97,7 +91,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
         exploreViewModel.selectedItem.value?.let { merchant ->
             if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
                 this.selectedMerchant = merchant
-                binding.paymentHeaderView.setPaymentAddressViewSubtitle(merchant.name.orEmpty())
+                binding.paymentHeaderView.setSubtitle(merchant.name.orEmpty())
                 binding.paymentHeaderView.setPaymentAddressViewIcon(merchant.logoLocation)
 
                 lifecycleScope.launch {
@@ -141,9 +135,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
     private fun showCardPurchaseLimits() {
         val purchaseAmount = enterAmountViewModel.amount.value
         purchaseAmount?.let {
-            if (
-                purchaseAmount.isLessThan(viewModel.minCardPurchaseCoin) ||
-                    purchaseAmount.isGreaterThan(viewModel.maxCardPurchaseCoin)
+            if (purchaseAmount.isLessThan(viewModel.minCardPurchaseCoin) ||
+                purchaseAmount.isGreaterThan(viewModel.maxCardPurchaseCoin)
             ) {
                 binding.minValue.text =
                     getString(R.string.purchase_gift_card_min, viewModel.minCardPurchaseFiat.toFormattedString())
@@ -173,7 +166,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
                         getString(
                             R.string.purchase_gift_card_discount_hint,
                             myRate.coinToFiat(purchaseAmount).toFormattedString(),
-                            viewModel.getDiscountedAmount(purchaseAmount, savingsPercentage)?.toFormattedStringRoundUp() ?: "",
+                            viewModel.getDiscountedAmount(
+                                purchaseAmount,
+                                savingsPercentage
+                            )?.toFormattedStringRoundUp() ?: "",
                             GenericUtils.formatPercent(savingsPercentage)
                         )
                     binding.discountValue.isVisible = true
@@ -191,18 +187,13 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
     }
 
     private fun setPaymentHeader() {
-        binding.paymentHeaderView.setPaymentAddressViewTitle(getString(R.string.explore_option_buy))
-        binding.paymentHeaderView.setPaymentAddressViewProposition(getString(R.string.purchase_gift_card_at))
-        binding.paymentHeaderView.setOnHideBalanceClickedListener(
-            onHideBalanceClickedListener =
-                object : OnHideBalanceClickedListener {
-                    override fun onHideBalanceClicked(view: View) {
-                        viewModel.balance.value?.let { balance ->
-                            updateBalanceLabel(balance, viewModel.usdExchangeRate.value)
-                        }
-                    }
-                }
-        )
+        binding.paymentHeaderView.setTitle(getString(R.string.explore_option_buy))
+        binding.paymentHeaderView.setProposition(getString(R.string.purchase_gift_card_at))
+        binding.paymentHeaderView.setOnShowHideBalanceClicked {
+            viewModel.balance.value?.let { balance ->
+                updateBalanceLabel(balance, viewModel.usdExchangeRate.value)
+            }
+        }
 
         viewModel.balance.observe(viewLifecycleOwner) { balance ->
             updateBalanceLabel(balance, viewModel.usdExchangeRate.value)
