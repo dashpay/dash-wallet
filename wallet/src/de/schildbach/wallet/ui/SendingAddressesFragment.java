@@ -29,6 +29,7 @@ import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.util.Qr;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +41,6 @@ import de.schildbach.wallet.ui.util.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.BitmapFragment;
-import org.dash.wallet.common.util.Qr;
 import de.schildbach.wallet.util.Toast;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet.util.WholeStringBuilder;
@@ -341,7 +341,7 @@ public final class SendingAddressesFragment extends FancyListFragment
 
     private void handleShowQr(final String address, final String label) {
         final String uri = BitcoinURI.convertToBitcoinURI(Constants.NETWORK_PARAMETERS, address, null, label, null);
-        BitmapFragment.show(getFragmentManager(), Qr.bitmap(uri));
+        BitmapFragment.show(getFragmentManager(), Qr.INSTANCE.qrBitmap(uri));
     }
 
     private void handleCopyToClipboard(final String address) {

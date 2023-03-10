@@ -154,6 +154,8 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 if (response.value?.data?.status == "paid") {
                     response.value?.data?.giftCardId?.let { getGiftCard(it, transaction, merchant, paymentValue) }
                 } else if (response.value?.data?.status == "unpaid") {
+                    // TODO: tx sent and gift card is bought, but status is unpaid.
+                    // Need to insert gift card into db and recheck status
                     hideLoading()
                     showErrorRetryDialog {
                         if (it == true) {

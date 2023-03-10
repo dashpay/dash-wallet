@@ -46,12 +46,7 @@ class QRDialog(
         )
 
         val paymentRequestUri = BitcoinURI.convertToBitcoinURI(address, amount, "", "")
-        val qrCodeBitmap = BitmapDrawable(resources, Qr.bitmap(paymentRequestUri))
-        qrCodeBitmap.isFilterBitmap = false
-        qrCodeBitmap.colorFilter = PorterDuffColorFilter(
-            resources.getColor(org.dash.wallet.common.R.color.content_primary, null),
-            PorterDuff.Mode.SRC_IN
-        )
+        val qrCodeBitmap = Qr.themeAwareDrawable(paymentRequestUri, resources)
         binding.qrPreview.setImageDrawable(qrCodeBitmap)
     }
 }

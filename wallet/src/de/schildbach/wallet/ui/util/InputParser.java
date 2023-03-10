@@ -41,6 +41,7 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.protocols.payments.PaymentSession;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
+import org.dash.wallet.common.util.Qr;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +61,6 @@ import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.AddressUtil;
 import de.schildbach.wallet.util.Io;
-import org.dash.wallet.common.util.Qr;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -88,7 +88,7 @@ public abstract class InputParser {
         public void parse() {
             if (input.startsWith(SendCoinsActivity.DASH_SCHEME.toUpperCase() + ":-")) {
                 try {
-                    final byte[] serializedPaymentRequest = Qr.decodeBinary(input.substring(9));
+                    final byte[] serializedPaymentRequest = Qr.INSTANCE.decodeBinary(input.substring(9));
 
                     parseAndHandlePaymentRequest(serializedPaymentRequest);
                 } catch (final IOException x) {
@@ -154,7 +154,7 @@ public abstract class InputParser {
             } else if (PATTERN_TRANSACTION.matcher(input).matches()) {
                 try {
                     final Transaction tx = new Transaction(Constants.NETWORK_PARAMETERS,
-                            Qr.decodeDecompressBinary(input));
+                            Qr.INSTANCE.decodeDecompressBinary(input));
 
                     handleDirectTransaction(tx);
                 } catch (final IOException x) {

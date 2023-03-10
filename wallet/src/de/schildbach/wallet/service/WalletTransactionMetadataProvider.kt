@@ -18,6 +18,7 @@ package de.schildbach.wallet.service
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import com.google.zxing.*
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.AddressMetadataDao
 import de.schildbach.wallet.database.dao.IconBitmapDao
@@ -39,6 +40,7 @@ import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import org.dash.wallet.common.util.Qr
 import org.slf4j.LoggerFactory
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream

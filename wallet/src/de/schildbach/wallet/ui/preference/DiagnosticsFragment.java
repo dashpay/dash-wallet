@@ -23,6 +23,7 @@ import java.util.Locale;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.dash.wallet.common.services.LockScreenBroadcaster;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.util.Qr;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,6 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder;
 import de.schildbach.wallet.util.CrashReporter;
-import org.dash.wallet.common.util.Qr;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
@@ -183,7 +183,7 @@ public final class DiagnosticsFragment extends PreferenceFragmentCompat {
 	private void showExtendedPublicKeyDialog(final String xpub) {
 		final View view = LayoutInflater.from(activity).inflate(R.layout.extended_public_key_dialog, null);
 
-		final BitmapDrawable bitmap = new BitmapDrawable(getResources(), Qr.bitmap(xpub));
+		final BitmapDrawable bitmap = new BitmapDrawable(getResources(), Qr.INSTANCE.qrBitmap(xpub));
 		bitmap.setFilterBitmap(false);
 		final ImageView imageView = (ImageView) view.findViewById(R.id.extended_public_key_dialog_image);
 		imageView.setImageDrawable(bitmap);

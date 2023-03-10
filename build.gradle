@@ -4,8 +4,6 @@ buildscript {
         coroutines_version = '1.6.4'
         ok_http_version = '4.9.1'
         dashjVersion = '0.18.3'
-        hiltVersion = '2.45'
-        hiltWorkVersion = '1.0.0'
         workRuntimeVersion='2.7.1'
         firebaseVersion = '28.4.2'
         roomVersion = '2.4.3'
@@ -16,11 +14,12 @@ buildscript {
         lifecycleVersion = '2.3.1'
         navigationVersion = '2.5.3'
         datastoreVersion = "1.0.0"
+        hiltVersion = '2.45'
+        hiltWorkVersion = '1.0.0'
 
         // Utils
         slf4jVersion = '1.7.32'
         desugaringLibraryVersion = '1.1.5'
-        zxingVersion = '3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
 
         // UI
         materialVersion = "1.6.1"
@@ -28,6 +27,7 @@ buildscript {
         constrainLayoutVersion = '2.1.4'
         recyclerViewVersion = "1.2.1"
         glideVersion = '4.12.0'
+        zxingVersion = '3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
 
         // Tests
         junitVersion = '4.13.2'

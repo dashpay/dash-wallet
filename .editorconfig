@@ -7,3 +7,4 @@ ktlint_standard_no-wildcard-imports = disabled
 ktlint_disabled_rules = no-wildcard-imports
 ktlint_standard_package-name = disabled
 ktlint_standard_spacing-between-declarations-with-annotations = disabled
+ktlint_standard_colon-spacing = disabled

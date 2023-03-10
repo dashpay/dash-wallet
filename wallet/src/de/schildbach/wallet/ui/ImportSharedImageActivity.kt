@@ -36,6 +36,7 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.util.Qr
 import org.slf4j.LoggerFactory
 
 /**
@@ -86,7 +87,7 @@ class ImportSharedImageActivity : AppCompatActivity() {
                     .load(imageUri).into(object : CustomTarget<Bitmap>() {
 
                         override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                            val qrCode = scanQRImage(resource)
+                            val qrCode = Qr.scanQRImage(resource)
                             if (qrCode != null) {
                                 handleQRCode(qrCode)
                             } else {
@@ -120,34 +121,6 @@ class ImportSharedImageActivity : AppCompatActivity() {
             getString(msg),
             getString(R.string.button_ok)
         ).show(this)
-    }
-
-    /**
-     * Scan QR code directly from bitmap
-     * https://stackoverflow.com/a/32135865/795721
-     */
-    fun scanQRImage(bitmap: Bitmap): String? {
-        val intArray = IntArray(bitmap.width * bitmap.height)
-        bitmap.getPixels(intArray, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-        val source: LuminanceSource = RGBLuminanceSource(bitmap.width, bitmap.height, intArray)
-        val reader: Reader = MultiFormatReader()
-        return try {
-            val result = reader.decode(BinaryBitmap(HybridBinarizer(source)))
-            log.info("successfully decoded QR code from bitmap")
-            result.text
-        } catch (e: ReaderException) {
-            try {
-                // Invert and check for a code
-                val invertedSource = source.invert()
-                val invertedBitmap = BinaryBitmap(HybridBinarizer(invertedSource))
-                val invertedResult = reader.decode(invertedBitmap)
-                log.info("successfully decoded inverted QR code from bitmap")
-                invertedResult.text
-            } catch (ex: ReaderException) {
-                log.warn("error decoding barcode", e)
-                null
-            }
-        }
     }
 
     private fun handleQRCode(input: String) {
