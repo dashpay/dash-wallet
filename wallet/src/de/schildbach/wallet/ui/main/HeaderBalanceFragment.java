@@ -149,7 +149,7 @@ public final class HeaderBalanceFragment extends Fragment {
                     );
                     final Fiat localValue = rate.coinToFiat(balance);
                     viewBalanceLocal.setVisibility(View.VISIBLE);
-                    String currencySymbol = GenericUtils.currencySymbol(exchangeRate.getCurrencyCode());
+                    String currencySymbol = GenericUtils.INSTANCE.currencySymbol(exchangeRate.getCurrencyCode());
                     viewBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0, currencySymbol));
                     viewBalanceLocal.setAmount(localValue);
                 } else {

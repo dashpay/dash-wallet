@@ -35,6 +35,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.PaymentMethodsUiState
@@ -184,9 +185,8 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
     private fun setLocalFaitAmount(balance: String) {
         val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
-        val localValue =
-            exchangeRate.coinToFiat(Coin.parseCoin(balance))
-        binding.walletBalanceLocal.text = GenericUtils.fiatToString(localValue)
+        val localValue = exchangeRate.coinToFiat(Coin.parseCoin(balance))
+        binding.walletBalanceLocal.text = localValue.toFormattedString()
     }
 
     private fun showProgress(messageResId: Int) {

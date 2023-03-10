@@ -36,6 +36,7 @@ import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.isCurrencyFirst
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.EnterAmountToTransferFragmentBinding
@@ -110,7 +111,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             if (binding.currencyOptions.pickedOptionIndex == 0){
                 spanAmount(this, viewModel.formattedValue.length, text.length)
             } else {
-                if (GenericUtils.isCurrencyFirst(viewModel.fiatAmount) && text.length - viewModel.fiatBalance.length > 0) {
+                if (viewModel.fiatAmount?.isCurrencyFirst() == true && text.length - viewModel.fiatBalance.length > 0) {
                     spanAmount(this, 0, text.length - viewModel.fiatBalance.length)
                 } else {
                     spanAmount(this, viewModel.inputValue.length, text.length)

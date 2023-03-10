@@ -14,6 +14,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard
+package org.dash.wallet.features.exploredash.data.model.giftcard
 
 data class GetGiftCardRequest(val id: Long = 0)

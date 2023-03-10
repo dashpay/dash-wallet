@@ -38,10 +38,12 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
+import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.GiftCard
 import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
+import org.dash.wallet.features.exploredash.data.model.giftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectViewModel
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
@@ -79,12 +81,12 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         }
 
         paymentValue?.let {
-            binding.giftCardTotalValue.text = GenericUtils.fiatToString(it.second)
+            binding.giftCardTotalValue.text = it.second.toFormattedString()
 
             val discountedValue = viewModel.getDiscountedAmount(it.second, savingsPercentage)
-            binding.giftCardYouPayValue.text = GenericUtils.fiatToStringRoundUp(discountedValue)
+            binding.giftCardYouPayValue.text = discountedValue.toFormattedStringRoundUp()
 
-            binding.purchaseCardValue.text = GenericUtils.fiatToString(it.second)
+            binding.purchaseCardValue.text = it.second.toFormattedString()
         }
 
         binding.collapseButton.setOnClickListener { dismiss() }
@@ -226,23 +228,22 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     ) {
         GiftCardDetailsDialog.newInstance(
             GiftCard(
-                merchantName = merchant?.name,
+                merchantName = merchant?.name ?: "", // TODO
                 merchantLogo = merchant?.logoLocation,
-                price = GenericUtils.fiatToString(paymentValue?.second),
-                transactionId = txId.toString(),
+                merchantId = "32232", // TODO
+                price = paymentValue?.second ?: Fiat.valueOf("USD", 0), // TODO
+                transactionId = txId,
                 number = data?.cardNumber,
                 pin = data?.cardPin,
-//                    barcodeImg = data?.barcodeUrl, TODO
-                checkCurrentBalanceUrl = merchant?.website
+                barcodeImg = "https://api.giftango.com/cards/WR23RS63MGW/barcode?token=b4262f79aa5a6d5b0251eca2197ca9374fc69d146157882079a62cc4c506b794",//data?.barcodeUrl,
+                currentBalanceUrl = merchant?.website
             )
-        )
-            .show(requireActivity())
-            .also {
-                val navController = findNavController()
-                navController.popBackStack(navController.graph.startDestinationId, false)
+        ).show(requireActivity()).also {
+            val navController = findNavController()
+            navController.popBackStack(navController.graph.startDestinationId, false)
 
-                this@PurchaseGiftCardConfirmDialog.dismiss()
-            }
+            this@PurchaseGiftCardConfirmDialog.dismiss()
+        }
     }
 
     private fun showLoading() {

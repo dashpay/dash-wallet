@@ -36,6 +36,7 @@ import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.wallet.SendRequest;
+import org.dash.wallet.common.util.GenericUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +44,6 @@ import com.google.common.io.BaseEncoding;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.Bluetooth;
-import org.dash.wallet.common.util.GenericUtils;
 
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -358,8 +358,8 @@ public final class PaymentIntent implements Parcelable {
     }
 
     public boolean isHttpPaymentUrl() {
-        return paymentUrl != null && (GenericUtils.startsWithIgnoreCase(paymentUrl, "http:")
-                || GenericUtils.startsWithIgnoreCase(paymentUrl, "https:"));
+        return paymentUrl != null && (GenericUtils.INSTANCE.startsWithIgnoreCase(paymentUrl, "http:")
+                || GenericUtils.INSTANCE.startsWithIgnoreCase(paymentUrl, "https:"));
     }
 
     public boolean isBluetoothPaymentUrl() {
@@ -375,8 +375,8 @@ public final class PaymentIntent implements Parcelable {
     }
 
     public boolean isHttpPaymentRequestUrl() {
-        return paymentRequestUrl != null && (GenericUtils.startsWithIgnoreCase(paymentRequestUrl, "http:")
-                || GenericUtils.startsWithIgnoreCase(paymentRequestUrl, "https:"));
+        return paymentRequestUrl != null && (GenericUtils.INSTANCE.startsWithIgnoreCase(paymentRequestUrl, "http:")
+                || GenericUtils.INSTANCE.startsWithIgnoreCase(paymentRequestUrl, "https:"));
     }
 
     public boolean isBluetoothPaymentRequestUrl() {

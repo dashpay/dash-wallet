@@ -19,8 +19,6 @@ package org.dash.wallet.features.exploredash.ui.dashdirect
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.util.*
-import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
@@ -37,17 +35,19 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.MerchantType
-import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
+import org.dash.wallet.features.exploredash.data.model.giftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import org.slf4j.LoggerFactory
+import java.util.*
+import javax.inject.Inject
 
 @HiltViewModel
 class DashDirectViewModel

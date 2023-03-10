@@ -39,6 +39,7 @@ import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseBuyDashBinding
 import org.dash.wallet.integration.coinbase_integration.databinding.KeyboardHeaderViewBinding
@@ -85,7 +86,7 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
                 binding.toolbarSubtitle.text = getString(
                     R.string.exchange_rate_template,
                     Coin.COIN.toPlainString(),
-                    GenericUtils.fiatToString(rate.fiat)
+                    rate.fiat.toFormattedString()
                 )
             }
         }

@@ -32,6 +32,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.ConvertViewBinding
@@ -145,10 +146,10 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
     }
 
     @SuppressLint("SetTextI18n")
-    private fun updateAmount(){
-        if (walletToCoinbase){
+    private fun updateAmount() {
+        if (walletToCoinbase) {
             exchangeRate?.let { rate ->
-                val fiatAmount = GenericUtils.fiatToString(rate.coinToFiat(inputInDash))
+                val fiatAmount = rate.coinToFiat(inputInDash).toFormattedString()
                 binding.convertFromDashBalance.text = "${dashFormat
                     .format(inputInDash)} ${Constants.DASH_CURRENCY}"
                 binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"

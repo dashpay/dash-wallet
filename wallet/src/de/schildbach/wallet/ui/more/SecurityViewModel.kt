@@ -37,6 +37,7 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import javax.inject.Inject
 
 @HiltViewModel
@@ -84,7 +85,7 @@ class SecurityViewModel @Inject constructor(
     fun getBalanceInLocalFormat(): String {
         selectedExchangeRate?.fiat?.let {
             val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it)
-            return GenericUtils.fiatToString(exchangeRate.coinToFiat(balance))
+            return exchangeRate.coinToFiat(balance).toFormattedString()
         }
 
         return ""

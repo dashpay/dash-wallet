@@ -45,6 +45,7 @@ import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseConvertCryptoBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
@@ -108,7 +109,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             binding.toolbarSubtitle.text = getString(
                 R.string.exchange_rate_template,
                 Coin.COIN.toPlainString(),
-                GenericUtils.fiatToString(rate.fiat)
+                rate.fiat.toFormattedString()
             )
         }
 
@@ -349,7 +350,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             viewModel.dashWalletBalance.value?.let { dash ->
                 convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
                     val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
-                    val fiatAmount = GenericUtils.fiatToString(currencyRate.coinToFiat(dash))
+                    val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
 
                     binding.limitDesc.text = "${
                     getString(
@@ -375,21 +376,20 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 val fiatAmount = Fiat.parseFiat(currencyRate.fiat.currencyCode, convertViewModel.minAllowedSwapAmount)
                 binding.limitDesc.text = "${getString(
                     R.string.entered_amount_is_too_low
-                )} ${GenericUtils.fiatToString(fiatAmount)}"
+                )} ${fiatAmount.toFormattedString()}"
             }
         }
     }
 
     private fun setConvertViewInput() {
         convertViewModel.selectedCryptoCurrencyAccount.value?.let {
-            val iconUrl =
-                if (it.coinBaseUserAccountData.balance?.currency.isNullOrEmpty()
-                    .not()
-                ) {
-                    GenericUtils.getCoinIcon(it.coinBaseUserAccountData.balance?.currency?.lowercase())
-                } else {
-                    null
-                }
+            val accountData = it.coinBaseUserAccountData
+            val currency = accountData.balance?.currency?.lowercase()
+            val iconUrl = if (!accountData.balance?.currency.isNullOrEmpty() && currency != null) {
+                GenericUtils.getCoinIcon(currency)
+            } else {
+                null
+            }
 
             convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
                 binding.convertView.input = ServiceWallet(

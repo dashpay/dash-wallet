@@ -30,6 +30,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -68,7 +69,7 @@ class ReceiveDetailsDialog : OffsetDialogFragment(R.layout.dialog_receive_detail
                 .minDecimals(0).noCode().format(dashAmount)
 
             if (fiatAmount != null) {
-                binding.amount.fiatValue.text = GenericUtils.fiatToString(fiatAmount)
+                binding.amount.fiatValue.text = fiatAmount.toFormattedString()
             } else {
                 binding.amount.fiatValue.isVisible = false
             }

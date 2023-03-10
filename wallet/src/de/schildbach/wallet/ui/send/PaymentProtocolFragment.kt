@@ -41,6 +41,7 @@ import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -248,11 +249,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
 
         val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount)
-        val fiatAmountStr = if (fiatAmount != null) {
-            GenericUtils.fiatToString(fiatAmount)
-        } else {
-            getString(R.string.transaction_row_rate_not_available)
-        }
+        val fiatAmountStr = fiatAmount?.toFormattedString() ?: getString(R.string.transaction_row_rate_not_available)
         val txFee = if (sendRequest != null) sendRequest.tx.fee else PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
 
         binding.paymentRequest.amount.inputValue.text = amountStr
@@ -262,7 +259,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
 
         binding.paymentRequest.memo.text = paymentIntent.memo
         binding.paymentRequest.payeeSecuredBy.text = paymentIntent.payeeVerifiedBy
-                ?: getString(R.string.send_coins_fragment_payee_verified_by_unknown)
+            ?: getString(R.string.send_coins_fragment_payee_verified_by_unknown)
 
         val forceMarqueeOnClickListener = View.OnClickListener {
             it.isSelected = false

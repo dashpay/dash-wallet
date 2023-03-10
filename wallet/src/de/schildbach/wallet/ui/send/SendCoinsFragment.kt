@@ -50,6 +50,7 @@ import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -317,7 +318,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
         if (revealBalance) {
             var balanceText = viewModel.dashFormat.format(balance).toString()
-            exchangeRate?.let { balanceText += " ~ ${GenericUtils.fiatToString(exchangeRate.coinToFiat(balance))}" }
+            exchangeRate?.let { balanceText += " ~ ${exchangeRate.coinToFiat(balance).toFormattedString()}" }
             binding.balanceLabel.text = balanceText
         } else {
             binding.balanceLabel.text = "**********"

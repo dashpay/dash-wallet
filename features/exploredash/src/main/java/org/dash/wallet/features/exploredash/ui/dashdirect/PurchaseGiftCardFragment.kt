@@ -35,6 +35,8 @@ import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
+import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseGiftCardBinding
@@ -144,9 +146,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
                     purchaseAmount.isGreaterThan(viewModel.maxCardPurchaseCoin)
             ) {
                 binding.minValue.text =
-                    getString(R.string.purchase_gift_card_min, GenericUtils.fiatToString(viewModel.minCardPurchaseFiat))
+                    getString(R.string.purchase_gift_card_min, viewModel.minCardPurchaseFiat.toFormattedString())
                 binding.maxValue.text =
-                    getString(R.string.purchase_gift_card_max, GenericUtils.fiatToString(viewModel.maxCardPurchaseFiat))
+                    getString(R.string.purchase_gift_card_max, viewModel.maxCardPurchaseFiat.toFormattedString())
                 binding.minValue.isVisible = true
                 binding.maxValue.isVisible = true
                 hideDiscountHint()
@@ -170,10 +172,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
                     binding.discountValue.text =
                         getString(
                             R.string.purchase_gift_card_discount_hint,
-                            GenericUtils.fiatToString(myRate.coinToFiat(purchaseAmount)),
-                            GenericUtils.fiatToStringRoundUp(
-                                viewModel.getDiscountedAmount(purchaseAmount, savingsPercentage)
-                            ),
+                            myRate.coinToFiat(purchaseAmount).toFormattedString(),
+                            viewModel.getDiscountedAmount(purchaseAmount, savingsPercentage)?.toFormattedStringRoundUp() ?: "",
                             GenericUtils.formatPercent(savingsPercentage)
                         )
                     binding.discountValue.isVisible = true
@@ -212,7 +212,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
     private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.entity.ExchangeRate?) {
         val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, it.fiat) }
         var balanceText = viewModel.dashFormat.format(balance).toString()
-        exchangeRate?.let { balanceText += " ~ ${GenericUtils.fiatToString(exchangeRate.coinToFiat(balance))}" }
+        exchangeRate?.let { balanceText += " ~ ${exchangeRate.coinToFiat(balance).toFormattedString()}" }
         binding.paymentHeaderView.setBalanceValue(balanceText)
     }
 }
