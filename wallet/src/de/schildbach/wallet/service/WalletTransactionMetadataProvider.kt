@@ -18,6 +18,7 @@ package de.schildbach.wallet.service
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.Log
 import com.google.zxing.*
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.AddressMetadataDao
@@ -152,8 +153,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
         var transactionMetadata: TransactionMetadata
         updateAndInsertIfNotExist(txId) {
             transactionMetadata = it.copy(
-            service = ServiceName.DashDirect,
-            taxCategory = TaxCategory.Expense
+                service = ServiceName.DashDirect,
+                taxCategory = TaxCategory.Expense
             )
             transactionMetadataDao.update(transactionMetadata)
         }
@@ -305,21 +306,23 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>> {
         return iconBitmapDao.observeBitmaps()
             .distinctUntilChanged()
-            .map { rows -> rows.mapValues {
-                // Only keep a single bitmap instance per unique data row
-                BitmapFactory.decodeByteArray(it.value.imageData, 0, it.value.imageData.size)
-            } }
+            .map { rows ->
+                rows.mapValues {
+                    // Only keep a single bitmap instance per unique data row
+                    BitmapFactory.decodeByteArray(it.value.imageData, 0, it.value.imageData.size)
+                }
+            }
             .flatMapLatest { bitmaps ->
                 transactionMetadataDao.observePresentableMetadata()
-                .distinctUntilChanged()
-                .map { metadataList ->
-                    metadataList.values.forEach { metadata ->
-                        metadata.customIconId?.let { iconId ->
-                            metadata.icon = bitmaps[iconId]
+                    .distinctUntilChanged()
+                    .map { metadataList ->
+                        metadataList.values.forEach { metadata ->
+                            metadata.customIconId?.let { iconId ->
+                                metadata.icon = bitmaps[iconId]
+                            }
                         }
+                        metadataList
                     }
-                    metadataList
-                }
             }
     }
 
@@ -449,5 +452,31 @@ class WalletTransactionMetadataProvider @Inject constructor(
             addressMetadataDao.clear()
             iconBitmapDao.clear()
         }
+    }
+
+    private fun checkBarcode(iconUrl: String) {
+        val request = Request.Builder().url(iconUrl).get().build()
+        Constants.HTTP_CLIENT.newCall(request).enqueue(object: Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                log.error("Failed to fetch barcode: $iconUrl", e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.body?.let {
+                    syncScope.launch {
+                        try {
+                            val bitmap = decodeBitmap(it)
+                            val decodeResult = Qr.scanBarcode(bitmap, BarcodeFormat.PDF_417)
+                            Log.i("DASHDIRECT", "Decoded barcode: ${decodeResult}")
+                            val barcodeBitmap = Qr.bitmap(decodeResult!!, BarcodeFormat.PDF_417)
+
+                            Log.i("DASHDIRECT", "Barcode bitmap: ${barcodeBitmap!!.width}")
+                        } catch (ex: Exception) {
+                            log.error("Failed to resize nd decode barcode: $iconUrl", ex)
+                        }
+                    }
+                }
+            }
+        })
     }
 }

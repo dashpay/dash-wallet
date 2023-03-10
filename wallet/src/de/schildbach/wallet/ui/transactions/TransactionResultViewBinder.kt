@@ -54,7 +54,7 @@ class TransactionResultViewBinder(
     private val dashFormat: MonetaryFormat,
     private val containerView: View
 ) {
-    private val iconSize = containerView.resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
+    private val iconSize = containerView.resources.getDimensionPixelSize(R.dimen.transaction_icon_size)
     private val ctx by lazy { containerView.context }
     private val checkIcon by lazy { containerView.findViewById<ImageView>(R.id.check_icon) }
     private val secondaryIcon by lazy { containerView.findViewById<ImageView>(R.id.secondary_icon) }

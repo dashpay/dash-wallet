@@ -17,5 +17,4 @@
 <resources>
     <dimen name="transaction_icon_size">38dp</dimen>
     <dimen name="transaction_icon_padding">8dp</dimen>
-    <dimen name="transaction_details_icon_size">50dp</dimen>
 </resources>

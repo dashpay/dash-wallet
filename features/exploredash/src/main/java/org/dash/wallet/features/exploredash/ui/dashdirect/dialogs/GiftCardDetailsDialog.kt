@@ -27,6 +27,7 @@ import coil.imageLoader
 import coil.load
 import coil.request.ImageRequest
 import coil.size.Scale
+import coil.transform.RoundedCornersTransformation
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
@@ -61,9 +62,11 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         giftCard?.let {
             binding.merchantName.text = it.merchantName
             it.merchantLogo?.let { url ->
+                val iconSize = resources.getDimensionPixelSize(R.dimen.transaction_icon_size)
                 binding.merchantLogo.load(url) {
                     crossfade(200)
                     scale(Scale.FILL)
+                    transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
                     placeholder(R.drawable.ic_image_placeholder)
                     error(R.drawable.ic_image_placeholder)
                 }
