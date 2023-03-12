@@ -103,13 +103,10 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
             }
         }
 
-        viewModel.placeBuyOrder.observe(viewLifecycleOwner) { placeBuyOrderEvent ->
-            placeBuyOrderEvent.getContentIfNotHandled()?.let {
-                safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToOrderReview(
-                    binding.paymentMethodPicker.paymentMethods[binding.paymentMethodPicker.selectedMethodIndex], it))
-            }
+        viewModel.placeBuyOrder.observe(viewLifecycleOwner) {
+            safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToOrderReview(
+                binding.paymentMethodPicker.paymentMethods[binding.paymentMethodPicker.selectedMethodIndex], it))
         }
-
 
         viewModel.showLoading.observe(viewLifecycleOwner){
             if (it) {

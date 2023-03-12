@@ -29,7 +29,6 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -61,9 +60,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
     private val _baseIdForFaitModelCoinBase: MutableLiveData<List<BaseIdForUSDData>> = MutableLiveData()
 
-    private val _swapTradeOrder: MutableLiveData<Event<SwapTradeUIModel>> = MutableLiveData()
-    val swapTradeOrder: LiveData<Event<SwapTradeUIModel>>
-        get() = _swapTradeOrder
+    val swapTradeOrder = SingleLiveEvent<SwapTradeUIModel>()
 
     val swapTradeFailedCallback = SingleLiveEvent<String?>()
 
@@ -116,7 +113,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
                         this.outputCurrencyName = if (dashToCrypt) selectedCoinBaseAccount.coinBaseUserAccountData.currency?.name ?: ""
                         else
                             "Dash"
-                        _swapTradeOrder.value = Event(this)
+                        swapTradeOrder.value = this
                     }
                 }
             }
