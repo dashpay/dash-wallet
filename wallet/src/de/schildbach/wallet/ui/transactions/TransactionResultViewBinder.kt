@@ -100,6 +100,7 @@ class TransactionResultViewBinder(
     private var iconBitmap: Bitmap? = null
     @DrawableRes
     private var iconRes: Int? = null
+    private var customTitle: String? = null
 
     fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
         this.transaction = tx
@@ -122,7 +123,7 @@ class TransactionResultViewBinder(
 
         updateStatus()
 
-        //Address List
+        // Address List
         val inputAddresses: List<Address>
         val outputAddresses: List<Address>
 
@@ -147,7 +148,7 @@ class TransactionResultViewBinder(
         setOutputs(outputAddresses, inflater)
 
         dashAmount.setFormat(dashFormat)
-        //For displaying purposes only
+        // For displaying purposes only
         if (value.isNegative) {
             dashAmount.setAmount(value.negate())
         } else {
@@ -214,6 +215,11 @@ class TransactionResultViewBinder(
         updateIcon()
     }
 
+    fun setCustomTitle(title: String) {
+        customTitle = title
+        transactionTitle.text = customTitle
+    }
+
     private fun updateIcon() {
         val iconRes = if (isError) {
             R.drawable.ic_transaction_failed
@@ -240,7 +246,7 @@ class TransactionResultViewBinder(
             }
         } else {
             checkIcon.load(iconBitmap) {
-                transformations(RoundedCornersTransformation(iconSize*2.toFloat()))
+                transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
             }
             secondaryIcon.isVisible = true
             secondaryIcon.setImageResource(iconRes)
@@ -284,8 +290,11 @@ class TransactionResultViewBinder(
     private fun setInputs(inputAddresses: List<Address>, inflater: LayoutInflater) {
         inputsContainer.isVisible = inputAddresses.isNotEmpty()
         inputAddresses.forEach {
-            val addressView = inflater.inflate(R.layout.transaction_result_address_row,
-                inputsAddressesContainer, false) as TextView
+            val addressView = inflater.inflate(
+                R.layout.transaction_result_address_row,
+                inputsAddressesContainer,
+                false
+            ) as TextView
             addressView.text = it.toBase58()
             inputsAddressesContainer.addView(addressView)
         }
@@ -294,8 +303,11 @@ class TransactionResultViewBinder(
     private fun setOutputs(outputAddresses: List<Address>, inflater: LayoutInflater) {
         outputsContainer.isVisible = outputAddresses.isNotEmpty()
         outputAddresses.forEach {
-            val addressView = inflater.inflate(R.layout.transaction_result_address_row,
-                outputsAddressesContainer, false) as TextView
+            val addressView = inflater.inflate(
+                R.layout.transaction_result_address_row,
+                outputsAddressesContainer,
+                false
+            ) as TextView
             addressView.text = it.toBase58()
             outputsAddressesContainer.addView(addressView)
         }

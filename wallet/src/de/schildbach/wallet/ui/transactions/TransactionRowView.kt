@@ -27,24 +27,25 @@ import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 
 data class TransactionRowView(
+    override val title: ResourceString?,
     val txId: Sha256Hash,
     val value: Coin,
     val exchangeRate: ExchangeRate?,
     @DrawableRes val icon: Int,
     val iconBitmap: Bitmap?,
     @StyleRes val iconBackground: Int?,
-    @StringRes val titleRes: Int,
     @StringRes val statusRes: Int,
     val transactionAmount: Int,
     val time: Long,
     val timeFormat: Int,
     val hasErrors: Boolean,
+    val service: String?,
     val txWrapper: TransactionWrapper?
 ): HistoryRowView() {
     companion object {
@@ -58,18 +59,19 @@ data class TransactionRowView(
 
             return if (txWrapper is FullCrowdNodeSignUpTxSet) {
                 TransactionRowView(
+                    ResourceString(R.string.crowdnode_account),
                     lastTx.txId,
                     txWrapper.getValue(bag),
                     lastTx.exchangeRate,
                     R.drawable.ic_crowdnode_logo,
                     null,
                     R.style.TxNoBackground,
-                    R.string.crowdnode_account,
                     -1,
                     txWrapper.transactions.size,
                     lastTx.updateTime.time,
                     TxResourceMapper().dateTimeFormat,
                     false,
+                    ServiceName.CrowdNode,
                     txWrapper
                 )
             } else {
@@ -90,10 +92,12 @@ data class TransactionRowView(
             val removeFee = isSent && tx.fee != null && !tx.fee.isZero
             @DrawableRes val icon: Int
             @StyleRes val iconBackground: Int
+            var title = ResourceString(resourceMapper.getTransactionTypeName(tx, bag))
 
             if (metadata?.service == ServiceName.DashDirect) {
                 icon = R.drawable.ic_gift_card_tx
                 iconBackground = R.style.TxTangerineBackground
+                title = ResourceString(R.string.gift_card_tx_title, listOf(metadata.service ?: ""))
             } else if (isInternal) {
                 icon = R.drawable.ic_shuffle
                 iconBackground = R.style.TxTangerineBackground
@@ -114,18 +118,19 @@ data class TransactionRowView(
             }
 
             return TransactionRowView(
+                title,
                 tx.txId,
                 if (removeFee) value.add(tx.fee) else value,
                 tx.exchangeRate,
                 icon,
                 metadata?.icon,
                 iconBackground,
-                resourceMapper.getTransactionTypeName(tx, bag),
                 status,
                 1,
                 tx.updateTime.time,
                 resourceMapper.dateTimeFormat,
                 tx.confidence.hasErrors(),
+                metadata?.service,
                 null
             )
         }

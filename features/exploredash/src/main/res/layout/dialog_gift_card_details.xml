@@ -61,13 +61,28 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <androidx.appcompat.widget.AppCompatImageView
+                <ImageView
                     android:id="@+id/merchant_logo"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
+                    android:layout_width="@dimen/transaction_icon_size"
+                    android:layout_height="@dimen/transaction_icon_size"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     tools:src="@drawable/ic_dash_pay" />
+
+                <ImageView
+                    android:id="@+id/secondary_icon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:padding="2dp"
+                    android:layout_marginBottom="-2dp"
+                    android:layout_marginEnd="-2dp"
+                    android:src="@drawable/ic_gift_card_tx"
+                    android:background="@drawable/rounded_background"
+                    android:theme="@style/SecondaryBackground"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="@id/merchant_logo"
+                    app:layout_constraintEnd_toEndOf="@id/merchant_logo"
+                    tools:visibility="visible" />
 
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/merchant_name"

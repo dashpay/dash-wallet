@@ -15,6 +15,5 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <dimen name="transaction_icon_size">38dp</dimen>
     <dimen name="transaction_icon_padding">8dp</dimen>
 </resources>

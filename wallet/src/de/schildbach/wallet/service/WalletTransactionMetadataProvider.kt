@@ -42,6 +42,7 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.util.Qr
+import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
 import org.slf4j.LoggerFactory
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
@@ -54,7 +55,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
     private val transactionMetadataDao: TransactionMetadataDao,
     private val addressMetadataDao: AddressMetadataDao,
     private val iconBitmapDao: IconBitmapDao,
-    private val walletData: WalletDataProvider
+    private val walletData: WalletDataProvider,
+    private val giftCardDao: GiftCardDao
 ) : TransactionMetadataProvider {
 
     companion object {
@@ -319,6 +321,10 @@ class WalletTransactionMetadataProvider @Inject constructor(
                         metadataList.values.forEach { metadata ->
                             metadata.customIconId?.let { iconId ->
                                 metadata.icon = bitmaps[iconId]
+                            }
+
+                            if (metadata.service == ServiceName.DashDirect) {
+                                metadata.title = giftCardDao.getCardForTransaction(metadata.txId)?.merchantName
                             }
                         }
                         metadataList

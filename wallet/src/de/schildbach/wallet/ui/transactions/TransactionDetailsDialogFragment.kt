@@ -42,7 +42,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
     private val txId by lazy {
-        if (arguments?.get(TX_ID)is Sha256Hash) {
+        if (arguments?.get(TX_ID) is Sha256Hash) {
             arguments?.get(TX_ID) as Sha256Hash
         } else {
             Sha256Hash.wrap(arguments?.get(TX_ID) as String)
@@ -98,6 +98,10 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
         viewModel.transactionIcon.observe(this) {
             transactionResultViewBinder.setTransactionIcon(it)
+        }
+
+        viewModel.merchantName.observe(this) {
+            transactionResultViewBinder.setCustomTitle(getString(R.string.gift_card_tx_title, it))
         }
 
         contentBinding.openExplorerCard.setOnClickListener { viewOnBlockExplorer() }

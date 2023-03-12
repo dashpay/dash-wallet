@@ -110,7 +110,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                                         R.drawable.ic_info_red,
                                         getString(R.string.insufficient_money_title),
                                         getString(R.string.insufficient_money_msg),
-                                        getString(R.string.close)
+                                        getString(R.string.button_close)
                                     ).show(requireActivity())
                                     ex.printStackTrace()
                                 } catch (ex: Exception) {
@@ -120,7 +120,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                                         R.drawable.ic_info_red,
                                         getString(R.string.send_coins_error_msg),
                                         getString(R.string.insufficient_money_msg),
-                                        getString(R.string.close)
+                                        getString(R.string.button_close)
                                     )
                                         .show(requireActivity())
                                     ex.printStackTrace()
@@ -232,7 +232,6 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         val giftCard = GiftCard(
             id = giftCardId,
             merchantName = merchant.name ?: "",
-            merchantLogo = merchant.logoLocation,
             price = paymentValue?.second?.value ?: 0,
             currency = paymentValue?.second?.currencyCode ?: Constants.USD_CURRENCY,
             transactionId = txId,

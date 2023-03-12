@@ -29,5 +29,5 @@ interface GiftCardDao {
     suspend fun insertGiftCard(giftCard: GiftCard)
 
     @Query("SELECT * FROM gift_cards WHERE transactionId = :transactionId")
-    suspend fun getForTransactionId(transactionId: Sha256Hash): GiftCard?
+    suspend fun getCardForTransaction(transactionId: Sha256Hash): GiftCard?
 }

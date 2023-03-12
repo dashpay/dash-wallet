@@ -15,18 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.data
+package org.dash.wallet.common.util
 
-import android.graphics.Bitmap
-import androidx.room.Ignore
-import org.bitcoinj.core.Sha256Hash
+import androidx.annotation.StringRes
 
-data class PresentableTxMetadata(
-    var txId: Sha256Hash,
-    var memo: String = "",
-    var service: String? = null,
-    var customIconId: Sha256Hash? = null
-) {
-    @Ignore var icon: Bitmap? = null
-    @Ignore var title: String? = null
-}
+data class ResourceString(
+    @StringRes val resourceId: Int,
+    val args: List<Any> = listOf()
+)

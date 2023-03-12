@@ -26,14 +26,17 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
 import javax.inject.Inject
 
 @HiltViewModel
 class TransactionResultViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider,
+    private val giftCardDao: GiftCardDao,
     private val walletData: WalletDataProvider,
     configuration: Configuration
 ) : ViewModel() {
@@ -58,6 +61,13 @@ class TransactionResultViewModel @Inject constructor(
         .filterNotNull()
         .asLiveData()
 
+    val merchantName = _transactionMetadata
+        .filterNotNull()
+        .filter { it.service == ServiceName.DashDirect }
+        .map { giftCardDao.getCardForTransaction(it.txId)?.merchantName }
+        .filterNotNull()
+        .asLiveData()
+
     fun init(txId: Sha256Hash?) {
         txId?.let {
             this.transaction = walletData.wallet!!.getTransaction(txId)
@@ -78,7 +88,7 @@ class TransactionResultViewModel @Inject constructor(
 
     fun toggleTaxCategory() {
         transaction?.let { tx ->
-            val metadata = _transactionMetadata.value  // can be null if there is no metadata in the table
+            val metadata = _transactionMetadata.value // can be null if there is no metadata in the table
 
             var currentTaxCategory = metadata?.taxCategory // can be null if user never specified a value
 

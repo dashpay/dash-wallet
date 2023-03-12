@@ -42,10 +42,8 @@ data class GiftCard(
     var currency: String = Constants.USD_CURRENCY,
     var number: String = "",
     var pin: String? = null,
-    var iconId: Sha256Hash? = null, // TODO: check if needed
     var barcodeValue: String? = null,
     var barcodeFormat: BarcodeFormat? = null,
     var currentBalanceUrl: String? = null,
-    @Ignore var merchantLogo: String? = null,
     @Ignore var barcodeImg: String? = null
 ) : Parcelable // TODO: check if needed
