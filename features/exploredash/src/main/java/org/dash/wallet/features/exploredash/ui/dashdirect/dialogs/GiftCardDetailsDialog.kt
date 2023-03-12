@@ -30,14 +30,14 @@ import coil.request.ImageRequest
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
 import dagger.hilt.android.AndroidEntryPoint
+import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.copy
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.GiftCard
+import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 
 @AndroidEntryPoint
@@ -56,6 +56,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // TODO: might crash if restored by OS. Revert
         requireArguments().apply { giftCard = getParcelable(ARG_MODEL)!! }
     }
 
@@ -72,7 +73,8 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             error(R.drawable.ic_image_placeholder)
         }
 
-        binding.originalPurchaseValue.text = giftCard.price.toFormattedString()
+        val price = Fiat.valueOf(giftCard.currency, giftCard.price)
+        binding.originalPurchaseValue.text = price.toFormattedString()
 
         binding.purchaseCardNumber.text = giftCard.number
         binding.purchaseCardPin.text = giftCard.pin
@@ -92,23 +94,21 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.collapseButton.setOnClickListener { dismiss() }
 
         binding.viewTransactionDetailsCard.setOnClickListener {
-            giftCard?.transactionId?.let {
-                findNavController().navigate(Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/$it"))
-            }
+            findNavController().navigate(Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/$it"))
         }
 
-        binding.checkCurrentBalance.isVisible = giftCard?.currentBalanceUrl?.isNotEmpty() == true
+        binding.checkCurrentBalance.isVisible = giftCard.currentBalanceUrl?.isNotEmpty() == true
         binding.checkCurrentBalance.setOnClickListener {
-            giftCard?.currentBalanceUrl?.let {
+            giftCard.currentBalanceUrl?.let {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
                 requireContext().startActivity(intent)
             }
         }
 
-        if (giftCard?.barcodeImg?.isNotEmpty() == true) {
+        if (giftCard.barcodeImg?.isNotEmpty() == true) {
             binding.purchaseCardBarcode.isVisible = true
             val imageRequest = ImageRequest.Builder(requireContext())
-                .data(giftCard?.barcodeImg)
+                .data(giftCard.barcodeImg)
                 .target(binding.purchaseCardBarcode)
                 .scale(Scale.FILL)
                 .listener(

@@ -16,10 +16,10 @@
  */
 package org.dash.wallet.features.exploredash.network.service
 
-import org.dash.wallet.features.exploredash.data.model.signin.CreateUserResponse
-import org.dash.wallet.features.exploredash.data.model.signin.SignInResponse
-import org.dash.wallet.features.exploredash.data.model.signin.VerifyEmailRequest
-import org.dash.wallet.features.exploredash.data.model.signin.VerifyEmailResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.signin.CreateUserResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.signin.SignInResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.signin.VerifyEmailRequest
+import org.dash.wallet.features.exploredash.data.dashdirect.model.signin.VerifyEmailResponse
 import retrofit2.http.Body
 import retrofit2.http.POST
 import retrofit2.http.PUT

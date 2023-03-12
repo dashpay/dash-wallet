@@ -23,6 +23,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
@@ -36,13 +37,15 @@ import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.features.exploredash.data.ExploreDataSource
-import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.MerchantType
-import org.dash.wallet.features.exploredash.data.model.giftcard.GetGiftCardResponse
-import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
-import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
-import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
+import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
+import org.dash.wallet.features.exploredash.data.dashdirect.model.giftcard.GetGiftCardResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.merchant.GetMerchantByIdResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.paymentstatus.PaymentStatusResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.purchase.PurchaseGiftCardResponse
+import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
+import org.dash.wallet.features.exploredash.data.explore.model.Merchant
+import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import org.slf4j.LoggerFactory
@@ -59,7 +62,8 @@ constructor(
     private val sendPaymentService: SendPaymentService,
     private val repository: DashDirectRepositoryInt,
     private val transactionMetadata: TransactionMetadataProvider,
-    private val exploreData: ExploreDataSource
+    private val exploreData: ExploreDataSource,
+    private val giftCardDao: GiftCardDao
 ) : ViewModel() {
 
     companion object {
@@ -182,6 +186,12 @@ constructor(
     suspend fun verifyEmail(code: String) = repository.verifyEmail(code)
 
     suspend fun logout() = repository.logout()
+
+    fun saveGiftCard(giftCard: GiftCard) {
+        viewModelScope.launch {
+            giftCardDao.insertGiftCard(giftCard)
+        }
+    }
 
     // TODO Remove the test merchent
     suspend fun insertTestMerchent() {

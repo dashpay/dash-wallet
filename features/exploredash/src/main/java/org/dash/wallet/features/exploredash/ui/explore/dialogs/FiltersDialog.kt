@@ -34,7 +34,7 @@ import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
 import org.dash.wallet.common.ui.radio_group.setupRadioGroup
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.PaymentMethod
+import org.dash.wallet.features.exploredash.data.explore.model.PaymentMethod
 import org.dash.wallet.features.exploredash.databinding.DialogFiltersBinding
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel

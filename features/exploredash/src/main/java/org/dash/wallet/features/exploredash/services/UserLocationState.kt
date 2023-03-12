@@ -32,7 +32,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.features.exploredash.data.model.GeoBounds
+import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
 import org.slf4j.LoggerFactory
 
 data class UserLocation(var latitude: Double, var longitude: Double, var accuracy: Double)

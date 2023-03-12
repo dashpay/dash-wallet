@@ -30,7 +30,7 @@ import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
 import java.util.*
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.*
+import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.AtmRowBinding
 import org.dash.wallet.features.exploredash.databinding.MerchantRowBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric

@@ -15,25 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.database.dao
+package org.dash.wallet.features.exploredash.data.explore
 
-import androidx.room.*
-import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.data.entity.IconBitmap
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import org.dash.wallet.features.exploredash.data.explore.model.SearchResult
 
-@Dao
-interface IconBitmapDao {
-    @Insert(onConflict = OnConflictStrategy.IGNORE) // Ignore if the image hash already exists
-    suspend fun addBitmap(bitmap: IconBitmap)
+interface BaseDao<T : SearchResult> {
 
-    @Query("SELECT * FROM icon_bitmaps WHERE id = :id")
-    suspend fun getBitmap(id: Sha256Hash): IconBitmap?
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun save(list: List<T>)
 
-    @MapInfo(keyColumn = "id")
-    @Query("SELECT * FROM icon_bitmaps")
-    fun observeBitmaps(): Flow<Map<Sha256Hash, IconBitmap>>
-
-    @Query("DELETE FROM icon_bitmaps")
-    suspend fun clear()
+    // add @Query(...) in sub classes to avoid build failures
+    suspend fun deleteAll(): Int
 }

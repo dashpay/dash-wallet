@@ -131,6 +131,7 @@
                 
                 <TextView
                     android:id="@+id/barcode_loading_error"
+                    style="@style/Overline.Red"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="15dp"

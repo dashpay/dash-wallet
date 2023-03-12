@@ -14,26 +14,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package org.dash.wallet.features.exploredash.data.dashdirect.model.giftcard
 
-package de.schildbach.wallet.database.dao
-
-import androidx.room.*
-import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.data.entity.IconBitmap
-
-@Dao
-interface IconBitmapDao {
-    @Insert(onConflict = OnConflictStrategy.IGNORE) // Ignore if the image hash already exists
-    suspend fun addBitmap(bitmap: IconBitmap)
-
-    @Query("SELECT * FROM icon_bitmaps WHERE id = :id")
-    suspend fun getBitmap(id: Sha256Hash): IconBitmap?
-
-    @MapInfo(keyColumn = "id")
-    @Query("SELECT * FROM icon_bitmaps")
-    fun observeBitmaps(): Flow<Map<Sha256Hash, IconBitmap>>
-
-    @Query("DELETE FROM icon_bitmaps")
-    suspend fun clear()
-}
+data class GetGiftCardRequest(val id: Long = 0)

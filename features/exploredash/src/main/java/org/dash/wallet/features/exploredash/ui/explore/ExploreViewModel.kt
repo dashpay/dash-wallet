@@ -37,8 +37,8 @@ import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.livedata.ConnectionLiveData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.features.exploredash.data.ExploreDataSource
-import org.dash.wallet.features.exploredash.data.model.*
+import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
+import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt

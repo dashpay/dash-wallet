@@ -56,7 +56,10 @@ import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.*
+import org.dash.wallet.features.exploredash.data.explore.model.Atm
+import org.dash.wallet.features.exploredash.data.explore.model.Merchant
+import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
+import org.dash.wallet.features.exploredash.data.explore.model.PaymentMethod
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter

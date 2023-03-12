@@ -34,16 +34,18 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.GiftCard
-import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.giftcard.GetGiftCardResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
+import org.dash.wallet.features.exploredash.data.explore.model.Merchant
+import org.dash.wallet.features.exploredash.data.dashdirect.model.giftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectViewModel
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
@@ -126,7 +128,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                                 transaction?.let {
                                     response.value?.data?.paymentId?.let { paymentId ->
                                         response.value?.data?.orderId?.let { orderId ->
-                                            getPaymentStatus(paymentId, orderId, it, merchant, paymentValue)
+                                            getPaymentStatus(paymentId, orderId, it, merchant!!, paymentValue)
                                         }
                                     }
                                 }
@@ -148,7 +150,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         paymentId: String,
         orderId: String,
         transaction: Transaction,
-        merchant: Merchant?,
+        merchant: Merchant,
         paymentValue: Pair<Coin, Fiat>?
     ) {
         when (val response = viewModel.getPaymentStatus(paymentId, orderId)) {
@@ -198,13 +200,13 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     private suspend fun getGiftCard(
         giftCardId: Long,
         transaction: Transaction,
-        merchant: Merchant?,
+        merchant: Merchant,
         paymentValue: Pair<Coin, Fiat>?
     ) {
         when (val response = viewModel.getGiftCardDetails(giftCardId)) {
             is ResponseResource.Success -> {
-                if (response.value?.successful == true) {
-                    showGiftCardDetailsDialog(merchant, paymentValue, transaction.txId, response.value?.data)
+                if (response.value?.successful == true && response.value?.data != null) {
+                    showGiftCardDetailsDialog(merchant, paymentValue, transaction.txId, response.value!!.data!!)
                 }
             }
             is ResponseResource.Failure -> {
@@ -221,24 +223,26 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         }
     }
     private fun showGiftCardDetailsDialog(
-        merchant: Merchant?,
+        merchant: Merchant,
         paymentValue: Pair<Coin, Fiat>?,
         txId: Sha256Hash,
-        data: GetGiftCardResponse.Data?
+        data: GetGiftCardResponse.Data
     ) {
-        GiftCardDetailsDialog.newInstance(
-            GiftCard(
-                merchantName = merchant?.name ?: "", // TODO
-                merchantLogo = merchant?.logoLocation,
-                merchantId = "32232", // TODO
-                price = paymentValue?.second ?: Fiat.valueOf("USD", 0), // TODO
-                transactionId = txId,
-                number = data?.cardNumber,
-                pin = data?.cardPin,
-                barcodeImg = "https://api.giftango.com/cards/WR23RS63MGW/barcode?token=b4262f79aa5a6d5b0251eca2197ca9374fc69d146157882079a62cc4c506b794",//data?.barcodeUrl,
-                currentBalanceUrl = merchant?.website
-            )
-        ).show(requireActivity()).also {
+        val giftCardId = "${ServiceName.DashDirect.lowercase()}+${data.id ?: -1}" // e.g. dashdirect+1234
+        val giftCard = GiftCard(
+            id = giftCardId,
+            merchantName = merchant.name ?: "",
+            merchantLogo = merchant.logoLocation,
+            price = paymentValue?.second?.value ?: 0,
+            currency = paymentValue?.second?.currencyCode ?: Constants.USD_CURRENCY,
+            transactionId = txId,
+            number = data.cardNumber ?: "",
+            pin = data.cardPin,
+            barcodeImg = "https://api.giftango.com/cards/WR23RS63MGW/barcode?token=b4262f79aa5a6d5b0251eca2197ca9374fc69d146157882079a62cc4c506b794",//data?.barcodeUrl,
+            currentBalanceUrl = merchant.website
+        )
+        viewModel.saveGiftCard(giftCard)
+        GiftCardDetailsDialog.newInstance(giftCard).show(requireActivity()).also {
             val navController = findNavController()
             navController.popBackStack(navController.graph.startDestinationId, false)
 

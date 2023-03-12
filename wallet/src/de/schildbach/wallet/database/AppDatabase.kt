@@ -21,22 +21,25 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import de.schildbach.wallet.database.dao.*
-import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.RoomConverters
 import org.dash.wallet.common.data.entity.AddressMetadata
+import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.IconBitmap
 import org.dash.wallet.common.data.entity.TransactionMetadata
+import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
+import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
 
 @Database(
     entities =
-        [
-            ExchangeRate::class,
-            BlockchainState::class,
-            TransactionMetadata::class,
-            AddressMetadata::class,
-            IconBitmap::class
-        ],
+    [
+        ExchangeRate::class,
+        BlockchainState::class,
+        TransactionMetadata::class,
+        AddressMetadata::class,
+        IconBitmap::class,
+        GiftCard::class
+    ],
     version = 12 // if increasing version, we need migrations to preserve tx/addr metadata
 )
 @TypeConverters(RoomConverters::class, BlockchainStateRoomConverters::class)
@@ -46,4 +49,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionMetadataDao(): TransactionMetadataDao
     abstract fun addressMetadataDao(): AddressMetadataDao
     abstract fun iconBitmapDao(): IconBitmapDao
+    abstract fun giftCardDao(): GiftCardDao
 }

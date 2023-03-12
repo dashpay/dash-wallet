@@ -32,12 +32,12 @@ import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.RoomConverters
-import org.dash.wallet.features.exploredash.data.AtmDao
-import org.dash.wallet.features.exploredash.data.MerchantDao
-import org.dash.wallet.features.exploredash.data.model.Atm
-import org.dash.wallet.features.exploredash.data.model.AtmFTS
-import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.MerchantFTS
+import org.dash.wallet.features.exploredash.data.explore.AtmDao
+import org.dash.wallet.features.exploredash.data.explore.MerchantDao
+import org.dash.wallet.features.exploredash.data.explore.model.Atm
+import org.dash.wallet.features.exploredash.data.explore.model.AtmFTS
+import org.dash.wallet.features.exploredash.data.explore.model.Merchant
+import org.dash.wallet.features.exploredash.data.explore.model.MerchantFTS
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.slf4j.LoggerFactory
 

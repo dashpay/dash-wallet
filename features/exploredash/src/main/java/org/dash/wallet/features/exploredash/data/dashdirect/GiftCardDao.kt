@@ -15,25 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.database.dao
+package org.dash.wallet.features.exploredash.data.dashdirect
 
-import androidx.room.*
-import kotlinx.coroutines.flow.Flow
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.Query
 import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.data.entity.IconBitmap
+import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
 
 @Dao
-interface IconBitmapDao {
-    @Insert(onConflict = OnConflictStrategy.IGNORE) // Ignore if the image hash already exists
-    suspend fun addBitmap(bitmap: IconBitmap)
+interface GiftCardDao {
+    @Insert
+    suspend fun insertGiftCard(giftCard: GiftCard)
 
-    @Query("SELECT * FROM icon_bitmaps WHERE id = :id")
-    suspend fun getBitmap(id: Sha256Hash): IconBitmap?
-
-    @MapInfo(keyColumn = "id")
-    @Query("SELECT * FROM icon_bitmaps")
-    fun observeBitmaps(): Flow<Map<Sha256Hash, IconBitmap>>
-
-    @Query("DELETE FROM icon_bitmaps")
-    suspend fun clear()
+    @Query("SELECT * FROM gift_cards WHERE transactionId = :transactionId")
+    suspend fun getForTransactionId(transactionId: Sha256Hash): GiftCard?
 }

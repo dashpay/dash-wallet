@@ -39,7 +39,7 @@ import java.util.*
 import org.dash.wallet.common.util.makeLinks
 import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.*
+import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 

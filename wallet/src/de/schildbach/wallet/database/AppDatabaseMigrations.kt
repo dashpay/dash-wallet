@@ -24,13 +24,24 @@ class AppDatabaseMigrations {
     companion object {
         val migration11To12 =
             object : Migration(11, 12) {
+                // Migrations for the DashDirect gift cards integration.
+                // We save gift cards and merchant icons into the database.
                 override fun migrate(database: SupportSQLiteDatabase) {
                     database.execSQL(
                         "ALTER TABLE transaction_metadata ADD COLUMN customIconId BLOB"
                     )
                     database.execSQL(
-                        "CREATE TABLE IF NOT EXISTS icon_bitmaps (id BLOB NOT NULL PRIMARY KEY, imageData BLOB NOT NULL, height INTEGER NOT NULL, width INTEGER NOT NULL)"
+                        "CREATE TABLE IF NOT EXISTS icon_bitmaps (id BLOB NOT NULL PRIMARY KEY, " +
+                            "imageData BLOB NOT NULL, height INTEGER NOT NULL, width INTEGER NOT NULL)"
                     )
+                    database.execSQL(
+                        "CREATE TABLE IF NOT EXISTS gift_cards (id TEXT NOT NULL PRIMARY KEY, " +
+                            "merchantName TEXT NOT NULL, transactionId BLOB NOT NULL, " +
+                            "price INTEGER NOT NULL, currency TEXT NOT NULL, number TEXT NOT NULL, " +
+                            "pin TEXT, barcodeValue TEXT, barcodeFormat TEXT, " +
+                            "iconId BLOB, currentBalanceUrl TEXT)"
+                    )
+                    database.execSQL("CREATE UNIQUE INDEX index_gift_cards_transactionId ON  gift_cards(transactionId)")
                 }
             }
     }
