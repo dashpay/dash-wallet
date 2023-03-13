@@ -77,8 +77,8 @@
 
     <ImageView
         android:id="@+id/check_icon"
-        android:layout_width="@dimen/transaction_icon_size"
-        android:layout_height="@dimen/transaction_icon_size"
+        android:layout_width="@dimen/transaction_details_icon_size"
+        android:layout_height="@dimen/transaction_details_icon_size"
         app:layout_constraintBottom_toBottomOf="@id/fiat_value"
         app:layout_constraintEnd_toStartOf="@id/right_guideline"
         app:layout_constraintTop_toTopOf="@id/transaction_title"

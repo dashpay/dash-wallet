@@ -53,5 +53,5 @@
     <dimen name="transaction_row_vertical_padding">10dp</dimen>
     <dimen name="transaction_row_extended_padding">17dp</dimen>
     <dimen name="transaction_filter_separator_start">57dp</dimen>
-    <dimen name="transaction_icon_size">52dp</dimen>
+    <dimen name="transaction_details_icon_size">52dp</dimen>
 </resources>

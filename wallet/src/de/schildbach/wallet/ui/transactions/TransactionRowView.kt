@@ -97,7 +97,7 @@ data class TransactionRowView(
             if (metadata?.service == ServiceName.DashDirect) {
                 icon = R.drawable.ic_gift_card_tx
                 iconBackground = R.style.TxTangerineBackground
-                title = ResourceString(R.string.gift_card_tx_title, listOf(metadata.service ?: ""))
+                title = ResourceString(R.string.gift_card_tx_title, listOf(metadata.title ?: ""))
             } else if (isInternal) {
                 icon = R.drawable.ic_shuffle
                 iconBackground = R.style.TxTangerineBackground

@@ -159,7 +159,7 @@ class TransactionAdapter(
             )
 
             txView.title?.let {
-                binding.primaryStatus.text = resources.getString(it.resourceId, it.args)
+                binding.primaryStatus.text = resources.getString(it.resourceId, *it.args.toTypedArray())
                 binding.primaryStatus.setTextColor(
                     if (txView.hasErrors) {
                         warningColor

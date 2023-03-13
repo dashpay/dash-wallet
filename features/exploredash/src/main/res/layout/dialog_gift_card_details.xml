@@ -63,8 +63,8 @@
 
                 <ImageView
                     android:id="@+id/merchant_logo"
-                    android:layout_width="@dimen/transaction_icon_size"
-                    android:layout_height="@dimen/transaction_icon_size"
+                    android:layout_width="@dimen/transaction_details_icon_size"
+                    android:layout_height="@dimen/transaction_details_icon_size"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     tools:src="@drawable/ic_dash_pay" />

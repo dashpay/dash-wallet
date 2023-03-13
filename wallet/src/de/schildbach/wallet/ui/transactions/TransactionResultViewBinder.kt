@@ -54,7 +54,7 @@ class TransactionResultViewBinder(
     private val dashFormat: MonetaryFormat,
     private val containerView: View
 ) {
-    private val iconSize = containerView.resources.getDimensionPixelSize(R.dimen.transaction_icon_size)
+    private val iconSize = containerView.resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
     private val ctx by lazy { containerView.context }
     private val checkIcon by lazy { containerView.findViewById<ImageView>(R.id.check_icon) }
     private val secondaryIcon by lazy { containerView.findViewById<ImageView>(R.id.secondary_icon) }
@@ -218,6 +218,7 @@ class TransactionResultViewBinder(
     fun setCustomTitle(title: String) {
         customTitle = title
         transactionTitle.text = customTitle
+        transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.content_primary))
     }
 
     private fun updateIcon() {
@@ -267,16 +268,18 @@ class TransactionResultViewBinder(
             errorDescription.text = errorStatusStr
             transactionAmountSignal.text = "-"
         } else {
-            if (transaction.getValue(wallet).signum() < 0) {
-                transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
-                transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
-                transactionAmountSignal.text = "-"
-                transactionAmountSignal.isVisible = true
-            } else {
-                transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.system_green))
-                transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
-                transactionAmountSignal.isVisible = true
-                transactionAmountSignal.text = "+"
+            transactionAmountSignal.isVisible = true
+            val isSent = transaction.getValue(wallet).signum() < 0
+            transactionAmountSignal.text = if (isSent) "-" else "+"
+
+            if (customTitle == null) {
+                if (isSent) {
+                    transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
+                    transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
+                } else {
+                    transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.system_green))
+                    transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
+                }
             }
         }
 

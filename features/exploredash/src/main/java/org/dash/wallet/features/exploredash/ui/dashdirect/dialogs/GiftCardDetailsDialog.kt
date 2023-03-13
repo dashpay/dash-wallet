@@ -24,7 +24,6 @@ import androidx.annotation.StyleRes
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import coil.imageLoader
 import coil.load
@@ -32,7 +31,6 @@ import coil.request.ImageRequest
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -43,6 +41,8 @@ import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @AndroidEntryPoint
 class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_details) {
@@ -90,7 +90,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             }
 
             viewModel.value.icon.observe(viewLifecycleOwner) { bitmap ->
-                val iconSize = resources.getDimensionPixelSize(R.dimen.transaction_icon_size)
+                val iconSize = resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
 
                 binding.merchantLogo.load(bitmap) {
                     crossfade(200)
@@ -104,6 +104,11 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                     binding.secondaryIcon.isVisible = true
                     binding.secondaryIcon.setImageResource(R.drawable.ic_gift_card_tx)
                 }
+            }
+
+            viewModel.value.date.observe(viewLifecycleOwner) {
+                val formatter = DateTimeFormatter.ofPattern("MMMM dd, yyyy, hh:mm a")
+                binding.purchaseDate.text = it.format(formatter)
             }
 
             val transactionId = arguments?.getSerializable(ARG_TRANSACTION_ID) as Sha256Hash
