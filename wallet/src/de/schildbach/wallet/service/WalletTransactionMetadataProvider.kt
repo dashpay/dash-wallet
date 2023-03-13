@@ -18,9 +18,7 @@ package de.schildbach.wallet.service
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.util.Log
 import com.google.zxing.*
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.AddressMetadataDao
 import de.schildbach.wallet.database.dao.IconBitmapDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
@@ -41,10 +39,10 @@ import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
-import org.dash.wallet.common.util.Qr
+import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.decodeBitmap
 import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
 import org.slf4j.LoggerFactory
-import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -315,20 +313,22 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 }
             }
             .flatMapLatest { bitmaps ->
-                transactionMetadataDao.observePresentableMetadata()
-                    .distinctUntilChanged()
-                    .map { metadataList ->
-                        metadataList.values.forEach { metadata ->
-                            metadata.customIconId?.let { iconId ->
-                                metadata.icon = bitmaps[iconId]
-                            }
+                giftCardDao.observeGiftCards().distinctUntilChanged().flatMapLatest { giftCards ->
+                    transactionMetadataDao.observePresentableMetadata()
+                        .distinctUntilChanged()
+                        .map { metadataList ->
+                            metadataList.values.forEach { metadata ->
+                                metadata.customIconId?.let { iconId ->
+                                    metadata.icon = bitmaps[iconId]
+                                }
 
-                            if (metadata.service == ServiceName.DashDirect) {
-                                metadata.title = giftCardDao.getCardForTransaction(metadata.txId)?.merchantName
+                                if (metadata.service == ServiceName.DashDirect) {
+                                    metadata.title = giftCards[metadata.txId]?.merchantName
+                                }
                             }
+                            metadataList
                         }
-                        metadataList
-                    }
+                }
             }
     }
 
@@ -403,7 +403,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 response.body?.let {
                     syncScope.launch {
                         try {
-                            val bitmap = decodeBitmap(it)
+                            val bitmap = it.decodeBitmap()
                             val icon = resizeIcon(bitmap)
                             val imageData = getBitmapData(icon)
                             val imageHash = Sha256Hash.of(imageData)
@@ -417,12 +417,6 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 }
             }
         })
-    }
-
-    private fun decodeBitmap(responseBody: ResponseBody): Bitmap {
-        return BufferedInputStream(responseBody.byteStream()).use { inputStream ->
-            return@use BitmapFactory.decodeStream(inputStream)
-        }
     }
 
     private fun resizeIcon(bitmap: Bitmap): Bitmap {
@@ -458,31 +452,5 @@ class WalletTransactionMetadataProvider @Inject constructor(
             addressMetadataDao.clear()
             iconBitmapDao.clear()
         }
-    }
-
-    private fun checkBarcode(iconUrl: String) {
-        val request = Request.Builder().url(iconUrl).get().build()
-        Constants.HTTP_CLIENT.newCall(request).enqueue(object: Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                log.error("Failed to fetch barcode: $iconUrl", e)
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                response.body?.let {
-                    syncScope.launch {
-                        try {
-                            val bitmap = decodeBitmap(it)
-                            val decodeResult = Qr.scanBarcode(bitmap, BarcodeFormat.PDF_417)
-                            Log.i("DASHDIRECT", "Decoded barcode: ${decodeResult}")
-                            val barcodeBitmap = Qr.bitmap(decodeResult!!, BarcodeFormat.PDF_417)
-
-                            Log.i("DASHDIRECT", "Barcode bitmap: ${barcodeBitmap!!.width}")
-                        } catch (ex: Exception) {
-                            log.error("Failed to resize nd decode barcode: $iconUrl", ex)
-                        }
-                    }
-                }
-            }
-        })
     }
 }

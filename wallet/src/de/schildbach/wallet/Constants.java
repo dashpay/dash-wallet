@@ -232,24 +232,6 @@ public final class Constants {
     public static final int ELECTRUM_SERVER_DEFAULT_PORT_TLS = NETWORK_PARAMETERS.getId()
             .equals(NetworkParameters.ID_MAINNET) ? 50002 : 51002;
 
-    /** Shared HTTP client, can reuse connections */
-    public static final OkHttpClient HTTP_CLIENT = new OkHttpClient.Builder()
-            .followRedirects(false)
-            .followSslRedirects(true)
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .addInterceptor(new HttpLoggingInterceptor(
-                    new HttpLoggingInterceptor.Logger() {
-                        @Override
-                        public void log(final String message) {
-                            log.debug(message);
-                        }
-                    }).setLevel(HttpLoggingInterceptor.Level.BASIC))
-            .build();
-
-    private static final Logger log = LoggerFactory.getLogger(Constants.class);
-
     //Dash Specific
     public static long EARLIEST_HD_SEED_CREATION_TIME = 1427610960L;
 

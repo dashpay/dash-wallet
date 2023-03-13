@@ -19,7 +19,10 @@ package org.dash.wallet.features.exploredash.data.dashdirect
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.MapInfo
 import androidx.room.Query
+import com.google.zxing.BarcodeFormat
+import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
 
@@ -30,4 +33,11 @@ interface GiftCardDao {
 
     @Query("SELECT * FROM gift_cards WHERE transactionId = :transactionId")
     suspend fun getCardForTransaction(transactionId: Sha256Hash): GiftCard?
+
+    @Query("UPDATE gift_cards SET barcodeValue = :value, barcodeFormat = :barcodeFormat WHERE transactionId = :txId")
+    suspend fun updateBarcode(txId: Sha256Hash, value: String, barcodeFormat: BarcodeFormat)
+
+    @MapInfo(keyColumn = "transactionId")
+    @Query("SELECT * FROM gift_cards")
+    fun observeGiftCards(): Flow<Map<Sha256Hash, GiftCard>>
 }

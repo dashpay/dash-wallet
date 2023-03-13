@@ -28,7 +28,7 @@
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp">
+        android:layout_marginTop="4dp">
 
         <TextView
             android:id="@+id/search_title"
@@ -53,13 +53,14 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:clipToPadding="false"
             android:orientation="vertical"
-            android:paddingHorizontal="15dp"
-            android:clipToPadding="false">
+            android:paddingHorizontal="15dp">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp">
 
                 <ImageView
                     android:id="@+id/merchant_logo"
@@ -73,11 +74,11 @@
                     android:id="@+id/secondary_icon"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:padding="2dp"
-                    android:layout_marginBottom="-2dp"
                     android:layout_marginEnd="-2dp"
-                    android:src="@drawable/ic_gift_card_tx"
+                    android:layout_marginBottom="-2dp"
                     android:background="@drawable/rounded_background"
+                    android:padding="2dp"
+                    android:src="@drawable/ic_gift_card_tx"
                     android:theme="@style/SecondaryBackground"
                     android:visibility="gone"
                     app:layout_constraintBottom_toBottomOf="@id/merchant_logo"
@@ -114,9 +115,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:paddingVertical="5dp"
-                android:paddingStart="15dp"
                 android:background="@drawable/rounded_background"
+                android:paddingTop="15dp"
+                android:paddingBottom="5dp"
+                android:paddingStart="15dp"
                 android:theme="@style/SecondaryBackground">
 
                 <ImageView
@@ -143,7 +145,7 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     tools:visibility="visible" />
-                
+
                 <TextView
                     android:id="@+id/barcode_loading_error"
                     style="@style/Overline.Red"
@@ -165,16 +167,15 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:paddingBottom="12dp"
+                    android:layout_marginBottom="12dp"
                     android:text="@string/purchase_original_purchase"
-                    android:textSize="13sp"
-                    app:layout_constraintBottom_toTopOf="@id/original_purchase_divider"
+                    app:layout_constraintBottom_toTopOf="@id/check_current_balance"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/purchase_card_barcode" />
 
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/original_purchase_value"
-                    style="@style/Overline"
+                    style="@style/Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="15dp"
@@ -192,37 +193,26 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toBottomOf="@+id/original_purchase_value" />
 
-                <View
-                    android:id="@+id/original_purchase_divider"
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="12dp"
-                    android:background="@color/divider_color"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/check_current_balance" />
-
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/purchase_card_number_label"
                     style="@style/Caption.Medium.Tertiary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="22dp"
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:text="@string/purchase_card_number"
-                    android:textSize="13sp"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/original_purchase_divider" />
+                    app:layout_constraintTop_toBottomOf="@+id/check_current_balance" />
 
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/purchase_card_number"
-                    style="@style/Overline"
+                    style="@style/Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="8dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textSize="13sp"
                     app:layout_constraintEnd_toStartOf="@+id/copy_card_number"
                     app:layout_constraintTop_toTopOf="@id/purchase_card_number_label"
                     tools:text="6006491727005748764" />
@@ -230,9 +220,9 @@
                 <ImageButton
                     android:id="@+id/copy_card_number"
                     style="@style/Button.Tertiary.Square"
-                    android:layout_width="40dp"
+                    android:layout_width="32dp"
                     android:layout_height="40dp"
-                    android:layout_marginEnd="4dp"
+                    android:layout_marginEnd="10dp"
                     android:src="@drawable/ic_copy_blue"
                     app:layout_constraintBottom_toBottomOf="@+id/purchase_card_number"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -240,38 +230,26 @@
                     app:tint="@color/content_primary"
                     tools:tint="@color/content_primary" />
 
-                <View
-                    android:id="@+id/purchase_card_number_divider"
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="12dp"
-                    android:background="@color/divider_color"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/purchase_card_number_label" />
-
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/purchase_card_pin_label"
                     style="@style/Caption.Medium.Tertiary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="22dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:paddingBottom="12dp"
                     android:text="@string/purchase_card_pin"
-                    android:textSize="13sp"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/purchase_card_number_divider" />
+                    app:layout_constraintTop_toBottomOf="@+id/purchase_card_number_label" />
 
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/purchase_card_pin"
-                    style="@style/Overline"
+                    style="@style/Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="8dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textSize="13sp"
                     app:layout_constraintEnd_toStartOf="@+id/copy_card_pin"
                     app:layout_constraintTop_toTopOf="@id/purchase_card_pin_label"
                     tools:text="1411" />
@@ -279,15 +257,21 @@
                 <ImageButton
                     android:id="@+id/copy_card_pin"
                     style="@style/Button.Tertiary.Square"
-                    android:layout_width="40dp"
+                    android:layout_width="32dp"
                     android:layout_height="40dp"
-                    android:layout_marginEnd="4dp"
+                    android:layout_marginEnd="10dp"
                     android:src="@drawable/ic_copy_blue"
                     app:layout_constraintBottom_toBottomOf="@+id/purchase_card_pin"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@+id/purchase_card_pin"
                     app:tint="@color/content_primary"
                     tools:tint="@color/content_primary" />
+
+                <androidx.constraintlayout.widget.Group
+                    android:id="@+id/pin_code_group"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:constraint_referenced_ids="purchase_card_pin_label, purchase_card_pin, copy_card_pin" />
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -325,7 +309,7 @@
 
             <Button
                 android:id="@+id/how_to_use_button"
-                style="@style/Button.Tertiary.Large.Blue"
+                style="@style/Button.Tertiary.Blue"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/purchase_see_how_to_use_gift_card"
@@ -366,7 +350,7 @@
                         android:layout_height="24dp"
                         android:layout_marginStart="30dp"
                         android:layout_marginTop="29dp"
-                        android:src="@drawable/ic_self_chekout_blue"
+                        android:src="@drawable/ic_self_checkout_blue"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@+id/purchase_how_to_use_gift_card_label" />
 
@@ -471,9 +455,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:layout_marginTop="20dp"
-                android:text="@string/purchase_powered_by"
-                android:textSize="14sp" />
+                android:layout_marginTop="30dp"
+                android:text="@string/purchase_powered_by" />
 
             <androidx.appcompat.widget.AppCompatImageView
                 android:layout_width="wrap_content"

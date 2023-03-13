@@ -49,8 +49,10 @@ interface TransactionMetadataDao {
     fun observe(txId: Sha256Hash): Flow<TransactionMetadata?>
 
     @MapInfo(keyColumn = "txId")
-    @Query("""SELECT txId, memo, service, customIconId FROM transaction_metadata 
-        WHERE memo != '' OR service IS NOT NULL OR customIconId IS NOT NULL""")
+    @Query(
+        """SELECT txId, memo, service, customIconId FROM transaction_metadata 
+        WHERE memo != '' OR service IS NOT NULL OR customIconId IS NOT NULL"""
+    )
     fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>>
 
     @Query("SELECT * FROM transaction_metadata WHERE timestamp <= :end and timestamp >= :start")

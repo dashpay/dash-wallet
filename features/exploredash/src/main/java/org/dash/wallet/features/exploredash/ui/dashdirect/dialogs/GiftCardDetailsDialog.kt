@@ -42,25 +42,26 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 @AndroidEntryPoint
 class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_details) {
     companion object {
-        private const val ARG_MODEL = "argModel"
+        private const val ARG_BARCODE = "barcodeUrl"
         private const val ARG_TRANSACTION_ID = "transactionId"
 
-        fun newInstance(model: GiftCard) =
-            GiftCardDetailsDialog().apply { arguments = bundleOf(ARG_MODEL to model) }
-
-        fun newInstance(transactionId: Sha256Hash) =
-            GiftCardDetailsDialog().apply { arguments = bundleOf(ARG_TRANSACTION_ID to transactionId) }
+        fun newInstance(transactionId: Sha256Hash, barcodeUrl: String? = null) =
+            GiftCardDetailsDialog().apply {
+                arguments = bundleOf(
+                    ARG_TRANSACTION_ID to transactionId,
+                    ARG_BARCODE to barcodeUrl
+                )
+            }
     }
 
     @StyleRes override val backgroundStyle = R.style.PrimaryBackground
     override val forceExpand = true
     private val binding by viewBinding(DialogGiftCardDetailsBinding::bind)
-    private val viewModel by lazy { viewModels<GiftCardDetailsViewModel>() } // TODO: remove lazy if not needed
+    private val viewModel by viewModels<GiftCardDetailsViewModel>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -80,39 +81,49 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             binding.howToUseInfo.isVisible = true
         }
 
-        val giftCard: GiftCard? = arguments?.getParcelable(ARG_MODEL)
+        viewModel.giftCard.observe(viewLifecycleOwner) {
+            it?.let { bindGiftCardDetails(binding, it) }
+        }
 
-        if (giftCard != null) {
-            bindGiftCardDetails(binding, giftCard)
-        } else {
-            viewModel.value.giftCard.observe(viewLifecycleOwner) {
-                it?.let { bindGiftCardDetails(binding, it) }
-            }
+        viewModel.icon.observe(viewLifecycleOwner) { bitmap ->
+            val iconSize = resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
 
-            viewModel.value.icon.observe(viewLifecycleOwner) { bitmap ->
-                val iconSize = resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
-
+            if (bitmap != null) {
                 binding.merchantLogo.load(bitmap) {
-                    crossfade(200)
+                    crossfade(true)
                     scale(Scale.FILL)
                     transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
                     placeholder(R.drawable.ic_gift_card_tx)
                     error(R.drawable.ic_gift_card_tx)
                 }
 
-                if (bitmap != null) {
-                    binding.secondaryIcon.isVisible = true
-                    binding.secondaryIcon.setImageResource(R.drawable.ic_gift_card_tx)
+                binding.secondaryIcon.isVisible = true
+                binding.secondaryIcon.setImageResource(R.drawable.ic_gift_card_tx)
+            } else {
+                binding.secondaryIcon.isVisible = false
+                binding.merchantLogo.setImageResource(R.drawable.ic_gift_card_tx)
+            }
+        }
+
+        viewModel.date.observe(viewLifecycleOwner) {
+            val formatter = DateTimeFormatter.ofPattern("MMMM dd, yyyy, hh:mm a")
+            binding.purchaseDate.text = it.format(formatter)
+        }
+
+        viewModel.barcode.observe(viewLifecycleOwner) { barcode ->
+            val barcodeUrl = requireArguments().getString(ARG_BARCODE)
+
+            if (barcodeUrl.isNullOrEmpty() && barcode != null) {
+                binding.purchaseCardBarcode.isVisible = true
+                binding.purchaseCardBarcode.load(barcode) {
+                    crossfade(true)
+                    scale(Scale.FILL)
                 }
             }
+        }
 
-            viewModel.value.date.observe(viewLifecycleOwner) {
-                val formatter = DateTimeFormatter.ofPattern("MMMM dd, yyyy, hh:mm a")
-                binding.purchaseDate.text = it.format(formatter)
-            }
-
-            val transactionId = arguments?.getSerializable(ARG_TRANSACTION_ID) as Sha256Hash
-            viewModel.value.init(transactionId)
+        (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let { transactionId ->
+            viewModel.init(transactionId)
         }
     }
 
@@ -124,6 +135,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
         binding.purchaseCardNumber.text = giftCard.number
         binding.purchaseCardPin.text = giftCard.pin
+        binding.pinCodeGroup.isVisible = !giftCard.pin.isNullOrEmpty()
 
         binding.checkCurrentBalance.isVisible = giftCard.currentBalanceUrl?.isNotEmpty() == true
         binding.checkCurrentBalance.setOnClickListener {
@@ -139,12 +151,16 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             )
         }
 
-        if (giftCard.barcodeImg?.isNotEmpty() == true) {
+        val barcodeImg = requireArguments().getString(ARG_BARCODE)
+
+        if (barcodeImg?.isNotEmpty() == true) {
+            viewModel.saveBarcode(giftCard.transactionId, barcodeImg)
             binding.purchaseCardBarcode.isVisible = true
             val imageRequest = ImageRequest.Builder(requireContext())
-                .data(giftCard.barcodeImg)
+                .data(barcodeImg)
                 .target(binding.purchaseCardBarcode)
                 .scale(Scale.FILL)
+                .crossfade(true)
                 .listener(
                     onStart = {
                         binding.barcodeLoadingIndicator.isVisible = true

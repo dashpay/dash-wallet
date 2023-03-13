@@ -22,6 +22,7 @@ import android.graphics.Bitmap
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.drawable.BitmapDrawable
+import android.util.Size
 import com.google.zxing.*
 import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
@@ -39,28 +40,28 @@ object Qr {
     private val log = LoggerFactory.getLogger(Qr::class.java)
 
     fun scanQRImage(bitmap: Bitmap): String? {
-        return scanBarcode(bitmap, BarcodeFormat.QR_CODE)
+        return scanBarcode(bitmap, BarcodeFormat.QR_CODE)?.first
     }
 
     /**
      * Scan barcode directly from bitmap
      * https://stackoverflow.com/a/32135865/795721
      */
-    fun scanBarcode(bitmap: Bitmap, suggestedFormat: BarcodeFormat? = null): String? {
+    fun scanBarcode(bitmap: Bitmap, knownFormat: BarcodeFormat? = null): Pair<String, BarcodeFormat>? {
         val intArray = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(intArray, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
         val source: LuminanceSource = RGBLuminanceSource(bitmap.width, bitmap.height, intArray)
         val reader = MultiFormatReader()
-        val hints = if (suggestedFormat == null) {
+        val hints = if (knownFormat == null) {
             mapOf()
         } else {
-            mapOf(DecodeHintType.POSSIBLE_FORMATS to listOf(suggestedFormat))
+            mapOf(DecodeHintType.POSSIBLE_FORMATS to listOf(knownFormat))
         }
 
         return try {
             val result = reader.decode(BinaryBitmap(HybridBinarizer(source)), hints)
             log.info("successfully decoded barcode from bitmap")
-            result.text
+            Pair(result.text, result.barcodeFormat)
         } catch (e: ReaderException) {
             try {
                 // Invert and check for a code
@@ -68,7 +69,7 @@ object Qr {
                 val invertedBitmap = BinaryBitmap(HybridBinarizer(invertedSource))
                 val invertedResult = reader.decode(invertedBitmap, hints)
                 log.info("successfully decoded inverted barcode from bitmap")
-                invertedResult.text
+                Pair(invertedResult.text, invertedResult.barcodeFormat)
             } catch (ex: ReaderException) {
                 log.warn("error decoding barcode", e)
                 null
@@ -81,12 +82,17 @@ object Qr {
             EncodeHintType.MARGIN to 0,
             EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.H
         )
-        return bitmap(content, BarcodeFormat.QR_CODE, hints)
+        return bitmap(content, BarcodeFormat.QR_CODE, hints = hints)
     }
 
-    fun bitmap(content: String, format: BarcodeFormat, hints: Map<EncodeHintType, Any?> = mapOf()): Bitmap? {
+    fun bitmap(
+        content: String,
+        format: BarcodeFormat,
+        size: Size = Size(0, 0),
+        hints: Map<EncodeHintType, Any?> = mapOf()
+    ): Bitmap? {
         return try {
-            val result = MultiFormatWriter().encode(content, format, 0, 0, hints)
+            val result = MultiFormatWriter().encode(content, format, size.width, size.height, hints)
             val width = result.width
             val height = result.height
             val pixels = ByteArray(width * height)

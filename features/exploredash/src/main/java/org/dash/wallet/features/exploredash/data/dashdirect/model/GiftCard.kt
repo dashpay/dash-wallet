@@ -17,17 +17,13 @@
 
 package org.dash.wallet.features.exploredash.data.dashdirect.model
 
-import android.os.Parcelable
 import androidx.room.Entity
-import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.google.zxing.BarcodeFormat
-import kotlinx.parcelize.Parcelize
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.util.Constants
 
-@Parcelize
 @Entity(
     tableName = "gift_cards",
     indices = [
@@ -44,6 +40,5 @@ data class GiftCard(
     var pin: String? = null,
     var barcodeValue: String? = null,
     var barcodeFormat: BarcodeFormat? = null,
-    var currentBalanceUrl: String? = null,
-    @Ignore var barcodeImg: String? = null
-) : Parcelable // TODO: check if needed
+    var currentBalanceUrl: String? = null
+)
