@@ -96,53 +96,70 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment() {
         binding.collapseButton.setOnClickListener { dismiss() }
 
         binding.confirmButton.setOnClickListener {
-            showLoading()
-            lifecycleScope.launch {
-                when (val response = purchaseGiftCardViewModel.purchaseGiftCard()) {
-                    is ResponseResource.Success -> {
-                        if (response.value?.data?.success == true) {
-                            response.value?.data?.uri?.let {
-                                var transaction: Transaction? = null
-                                try {
-                                    transaction = purchaseGiftCardViewModel.createSendingRequestFromDashUri(it)
-                                } catch (x: InsufficientMoneyException) {
-                                    hideLoading()
-                                    Log.e(this::class.java.simpleName, "purchaseGiftCard InsufficientMoneyException")
-                                    AdaptiveDialog.create(
-                                            R.drawable.ic_info_red,
-                                            getString(R.string.insufficient_money_title),
-                                            getString(R.string.insufficient_money_msg),
-                                            getString(R.string.close)
+            onConfirmButtonClicked(merchant, paymentValue)
+        }
+    }
+
+    private fun onConfirmButtonClicked(
+        merchant: Merchant?,
+        paymentValue: Pair<Coin, Fiat>?
+    ) {
+        showLoading()
+        lifecycleScope.launch {
+            when (val response = purchaseGiftCardViewModel.purchaseGiftCard()) {
+                is ResponseResource.Success -> {
+                    if (response.value?.data?.success == true) {
+                        response.value?.data?.uri?.let {
+                            var transaction: Transaction? = null
+                            try {
+                                transaction =
+                                    purchaseGiftCardViewModel.createSendingRequestFromDashUri(it)
+                            } catch (x: InsufficientMoneyException) {
+                                hideLoading()
+                                Log.e(
+                                    this::class.java.simpleName,
+                                    "purchaseGiftCard InsufficientMoneyException"
+                                )
+                                AdaptiveDialog.create(
+                                    R.drawable.ic_info_red,
+                                    getString(R.string.insufficient_money_title),
+                                    getString(R.string.insufficient_money_msg),
+                                    getString(R.string.close)
+                                )
+                                    .show(requireActivity())
+                                x.printStackTrace()
+                            } catch (ex: Exception) {
+                                Log.e(this::class.java.simpleName, "purchaseGiftCard error")
+                                hideLoading()
+                                AdaptiveDialog.create(
+                                    R.drawable.ic_info_red,
+                                    getString(R.string.send_coins_error_msg),
+                                    getString(R.string.insufficient_money_msg),
+                                    getString(R.string.close)
+                                )
+                                    .show(requireActivity())
+                                ex.printStackTrace()
+                            }
+                            transaction?.let {
+                                response.value?.data?.paymentId?.let { paymentId ->
+                                    response.value?.data?.orderId?.let { orderId ->
+                                        getPaymentStatus(
+                                            paymentId,
+                                            orderId,
+                                            it,
+                                            merchant,
+                                            paymentValue
                                         )
-                                        .show(requireActivity())
-                                    x.printStackTrace()
-                                } catch (ex: Exception) {
-                                    Log.e(this::class.java.simpleName, "purchaseGiftCard error")
-                                    hideLoading()
-                                    AdaptiveDialog.create(
-                                            R.drawable.ic_info_red,
-                                            getString(R.string.send_coins_error_msg),
-                                            getString(R.string.insufficient_money_msg),
-                                            getString(R.string.close)
-                                        )
-                                        .show(requireActivity())
-                                    ex.printStackTrace()
-                                }
-                                transaction?.let {
-                                    response.value?.data?.paymentId?.let { paymentId ->
-                                        response.value?.data?.orderId?.let { orderId ->
-                                            getPaymentStatus(paymentId, orderId, it, merchant, paymentValue)
-                                        }
                                     }
                                 }
                             }
                         }
                     }
-                    else -> {
-                        hideLoading()
-                        Log.e(this::class.java.simpleName, "purchaseGiftCard error")
-                        showErrorRetryDialog { dismiss() }
-                    }
+                }
+                else -> {
+                    hideLoading()
+                    Log.e(this::class.java.simpleName, "purchaseGiftCard error")
+                    showErrorRetryDialog { dismiss() }
                 }
             }
         }
