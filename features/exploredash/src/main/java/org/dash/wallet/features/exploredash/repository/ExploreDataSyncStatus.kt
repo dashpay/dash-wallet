@@ -17,13 +17,13 @@
 
 package org.dash.wallet.features.exploredash.repository
 
-import java.lang.Exception
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.dash.wallet.common.data.Resource
 import org.slf4j.LoggerFactory
+import java.lang.Exception
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class ExploreDataSyncStatus @Inject constructor() : DataSyncStatusService {

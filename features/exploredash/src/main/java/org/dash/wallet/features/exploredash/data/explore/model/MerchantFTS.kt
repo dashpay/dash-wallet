@@ -21,4 +21,6 @@ import androidx.room.Entity
 import androidx.room.Fts4
 
 // Virtual table for Full-Text Search over Merchant table
-@Entity(tableName = "merchant_fts") @Fts4(contentEntity = Merchant::class) data class MerchantFTS(val name: String)
+@Entity(tableName = "merchant_fts")
+@Fts4(contentEntity = Merchant::class)
+data class MerchantFTS(val name: String)

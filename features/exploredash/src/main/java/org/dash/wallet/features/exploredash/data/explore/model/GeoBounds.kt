@@ -24,7 +24,7 @@ data class GeoBounds(
     val westLng: Double,
     val centerLat: Double,
     val centerLng: Double,
-    var zoomLevel: Float = 0f,
+    var zoomLevel: Float = 0f
 ) {
     companion object {
         val noBounds: GeoBounds

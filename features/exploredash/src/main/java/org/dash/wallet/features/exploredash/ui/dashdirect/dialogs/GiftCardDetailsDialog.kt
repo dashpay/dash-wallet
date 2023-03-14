@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash.ui.dashdirect.dialogs
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.util.Size
 import android.view.View
 import android.view.ViewGroup

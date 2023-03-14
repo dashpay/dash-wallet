@@ -43,7 +43,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
@@ -71,6 +70,7 @@ import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.DashDirectLogi
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class SearchFragment : Fragment(R.layout.fragment_search) {
@@ -79,6 +79,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     @Inject lateinit var configuration: Configuration
+
     @Inject lateinit var analyticsService: AnalyticsService
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel by exploreViewModels<ExploreViewModel>()
@@ -172,8 +173,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         bottomSheet.halfExpandedRatio =
             ResourcesCompat.getFloat(
                 resources,
-                if (args.type == ExploreTopic.Merchants) R.dimen.merchant_half_expanded_ratio
-                else R.dimen.atm_half_expanded_ratio
+                if (args.type == ExploreTopic.Merchants) {
+                    R.dimen.merchant_half_expanded_ratio
+                } else {
+                    R.dimen.atm_half_expanded_ratio
+                }
             )
 
         searchHeaderAdapter = SearchHeaderAdapter(args.type)
@@ -387,13 +391,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun showLoginDialog() {
         DashDirectLoginInfoDialog.custom(
-                R.drawable.ic_dashdirect_logo,
-                getString(R.string.buy_a_gift_card_with_your_dash_direct_account),
-                getString(R.string.create_an_account_at_dash_direct_or_log_in_to_the_existing_one),
-                getString(R.string.login),
-                getString(R.string.create_new_account),
-                "dashdirect.org"
-            )
+            R.drawable.ic_dashdirect_logo,
+            getString(R.string.buy_a_gift_card_with_your_dash_direct_account),
+            getString(R.string.create_an_account_at_dash_direct_or_log_in_to_the_existing_one),
+            getString(R.string.login),
+            getString(R.string.create_new_account),
+            "dashdirect.org"
+        )
             .show(
                 requireActivity(),
                 onResult = {
@@ -479,9 +483,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             searchHeaderAdapter.subtitle = getSearchSubtitle()
             binding.resetFiltersBtn.isEnabled =
                 filters.query.isNotEmpty() ||
-                    filters.radius != ExploreViewModel.DEFAULT_RADIUS_OPTION ||
-                    filters.payment.isNotEmpty() ||
-                    filters.territory.isNotEmpty()
+                filters.radius != ExploreViewModel.DEFAULT_RADIUS_OPTION ||
+                filters.payment.isNotEmpty() ||
+                filters.territory.isNotEmpty()
         }
 
         viewModel.selectedTerritory.observe(viewLifecycleOwner) {
@@ -839,9 +843,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun shouldShowFiltersPanel(): Boolean {
         return viewModel.selectedItem.value == null &&
             viewModel.isLocationEnabled.value == true &&
-            (isPhysicalSearch ||
-                viewModel.paymentMethodFilter.isNotEmpty() ||
-                viewModel.selectedTerritory.value?.isNotEmpty() == true)
+            (
+                isPhysicalSearch ||
+                    viewModel.paymentMethodFilter.isNotEmpty() ||
+                    viewModel.selectedTerritory.value?.isNotEmpty() == true
+                )
     }
 
     private fun openFilters() {

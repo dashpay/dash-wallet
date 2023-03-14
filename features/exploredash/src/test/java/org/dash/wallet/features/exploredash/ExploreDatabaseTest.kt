@@ -24,11 +24,7 @@ import android.database.sqlite.SQLiteException
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import java.io.File
-import java.lang.IllegalArgumentException
-import java.lang.RuntimeException
 import junit.framework.TestCase.*
-import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.runBlocking
 import net.lingala.zip4j.ZipFile
 import org.dash.wallet.features.exploredash.repository.GCExploreDatabase
@@ -39,6 +35,10 @@ import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.kotlin.*
 import org.robolectric.RobolectricTestRunner
+import java.io.File
+import java.lang.IllegalArgumentException
+import java.lang.RuntimeException
+import kotlin.time.ExperimentalTime
 
 @ExperimentalTime
 @RunWith(RobolectricTestRunner::class)

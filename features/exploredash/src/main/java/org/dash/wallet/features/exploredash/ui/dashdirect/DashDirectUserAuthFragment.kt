@@ -81,9 +81,11 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             binding.inputWrapper.isErrorEnabled = false
             binding.inputErrorTv.isVisible = false
 
-            if (currentDirectUserAuthType != DashDirectUserAuthType.OTP)
+            if (currentDirectUserAuthType != DashDirectUserAuthType.OTP) {
                 binding.continueButton.isEnabled = isEmail(text)
-            else binding.continueButton.isEnabled = !text.isNullOrEmpty()
+            } else {
+                binding.continueButton.isEnabled = !text.isNullOrEmpty()
+            }
         }
 
         binding.input.setOnEditorActionListener { _, actionId, _ ->

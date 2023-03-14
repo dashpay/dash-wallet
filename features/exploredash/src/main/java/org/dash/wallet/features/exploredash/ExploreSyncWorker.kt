@@ -24,9 +24,6 @@ import com.google.firebase.FirebaseNetworkException
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.util.*
-import java.util.concurrent.TimeUnit
-import kotlin.system.measureTimeMillis
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.Configuration
@@ -34,6 +31,9 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.slf4j.LoggerFactory
+import java.util.*
+import java.util.concurrent.TimeUnit
+import kotlin.system.measureTimeMillis
 
 @HiltWorker
 class ExploreSyncWorker
@@ -89,7 +89,7 @@ constructor(
 
                         if (
                             exploreRepository.localDatabaseTimestamp == 0L ||
-                                exploreRepository.localDatabaseTimestamp < preloadedDbTimestamp
+                            exploreRepository.localDatabaseTimestamp < preloadedDbTimestamp
                         ) {
                             // force data preloading for fresh installs
                             // and a newer preloaded DB
@@ -141,7 +141,7 @@ constructor(
             } catch (ex: Exception) {
                 analytics.logError(
                     ex,
-                    "local: $localDataTimestamp, preloaded: ${preloadedDbTimestamp}, remote: $remoteDataTimestamp"
+                    "local: $localDataTimestamp, preloaded: $preloadedDbTimestamp, remote: $remoteDataTimestamp"
                 )
                 log.error("sync explore db crashed ${ex.message}", ex)
                 syncStatus.setSyncError(ex)

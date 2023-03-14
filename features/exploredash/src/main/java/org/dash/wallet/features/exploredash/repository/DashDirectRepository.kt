@@ -119,13 +119,16 @@ constructor(
     ) = safeApiCall {
         servicesApi.purchaseGiftCard(
             deviceID = deviceID,
+//            purchaseGiftCardRequest = PurchaseGiftCardRequest(
+//                currency = currency,
+//                giftCardAmount = 0.03,
+//                merchantId = 318
+//            ),
             purchaseGiftCardRequest = PurchaseGiftCardRequest(
                 currency = currency,
-                giftCardAmount = 0.03,
-                merchantId = 318
+                giftCardAmount = giftCardAmount,
+                merchantId = merchantId
             ),
-//             purchaseGiftCardRequest =
-//                 PurchaseGiftCardRequest(currency = currency, giftCardAmount = giftCardAmount, merchantId = merchantId),
             email = userEmail
         )
     }
@@ -135,7 +138,7 @@ constructor(
             servicesApi.getMerchantById(
                 email = userEmail,
                 getMerchantByIdRequest = GetMerchantByIdRequest(
-                    id = 318, /*merchantId,*/
+                    id = /*318*/ merchantId,
                     includeLocations = includeLocations
                 )
             )

@@ -49,15 +49,15 @@ open class SearchResult(
         addressBuilder.append(address1)
 
         if (!address2.isNullOrBlank()) {
-            addressBuilder.append("${separator}${address2}")
+            addressBuilder.append("${separator}$address2")
         }
 
         if (!address3.isNullOrBlank()) {
-            addressBuilder.append("${separator}${address3}")
+            addressBuilder.append("${separator}$address3")
         }
 
         if (!address4.isNullOrBlank()) {
-            addressBuilder.append("${separator}${address4}")
+            addressBuilder.append("${separator}$address4")
         }
 
         return addressBuilder.toString()

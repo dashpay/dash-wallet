@@ -22,5 +22,7 @@ import androidx.room.Embedded
 
 class MerchantInfo {
     @Embedded var merchant: Merchant? = null
-    @ColumnInfo(name = "physical_amount") var physicalAmount: Int? = null
+
+    @ColumnInfo(name = "physical_amount")
+    var physicalAmount: Int? = null
 }

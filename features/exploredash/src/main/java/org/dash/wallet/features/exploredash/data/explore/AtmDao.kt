@@ -249,9 +249,12 @@ interface AtmDao : BaseDao<Atm> {
     )
     fun searchByTerritory(query: String, territoryFilter: String, types: List<String>): Flow<List<Atm>>
 
-    @Query("SELECT DISTINCT territory FROM atm") suspend fun getTerritories(): List<String>
+    @Query("SELECT DISTINCT territory FROM atm")
+    suspend fun getTerritories(): List<String>
 
-    @Query("DELETE FROM atm") override suspend fun deleteAll(): Int
+    @Query("DELETE FROM atm")
+    override suspend fun deleteAll(): Int
 
-    @Query("SELECT count(*) FROM atm") suspend fun getCount(): Int
+    @Query("SELECT count(*) FROM atm")
+    suspend fun getCount(): Int
 }

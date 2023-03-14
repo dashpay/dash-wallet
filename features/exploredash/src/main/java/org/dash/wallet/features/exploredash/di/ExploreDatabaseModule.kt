@@ -23,11 +23,11 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.features.exploredash.ExploreDatabase
 import org.dash.wallet.features.exploredash.data.explore.AtmDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)

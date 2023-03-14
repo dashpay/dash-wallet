@@ -26,9 +26,6 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import java.io.File
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.RoomConverters
@@ -40,6 +37,9 @@ import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantFTS
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.slf4j.LoggerFactory
+import java.io.File
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 @Database(entities = [Merchant::class, MerchantFTS::class, Atm::class, AtmFTS::class], version = 2, exportSchema = true)
 @TypeConverters(RoomConverters::class)

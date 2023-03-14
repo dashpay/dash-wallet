@@ -38,7 +38,6 @@ import com.google.android.gms.maps.model.*
 import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
@@ -47,6 +46,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.dash.wallet.features.exploredash.data.explore.model.SearchResult
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class ExploreMapFragment : SupportMapFragment() {
@@ -131,7 +131,7 @@ class ExploreMapFragment : SupportMapFragment() {
                 showSelectedMarker(state)
             } else if (
                 viewModel.isLocationEnabled.value == true &&
-                    (state == ScreenState.MerchantLocations || viewModel.filterMode.value != FilterMode.Online)
+                (state == ScreenState.MerchantLocations || viewModel.filterMode.value != FilterMode.Online)
             ) {
                 showMarkerSet(state)
             }
@@ -241,11 +241,13 @@ class ExploreMapFragment : SupportMapFragment() {
     private fun isGooglePlayServicesAvailable(): Boolean {
         val googleApiAvailability: GoogleApiAvailability = GoogleApiAvailability.getInstance()
         val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(requireActivity())
-        if (ConnectionResult.SUCCESS == status) return true
-        else {
-            if (googleApiAvailability.isUserResolvableError(status))
+        if (ConnectionResult.SUCCESS == status) {
+            return true
+        } else {
+            if (googleApiAvailability.isUserResolvableError(status)) {
                 Toast.makeText(requireActivity(), R.string.common_google_play_services_install_title, Toast.LENGTH_LONG)
                     .show()
+            }
         }
         return false
     }
@@ -278,8 +280,8 @@ class ExploreMapFragment : SupportMapFragment() {
     private fun checkCameraFocus(items: List<SearchResult>?) {
         if (
             items.isNullOrEmpty() ||
-                viewModel.filterMode.value == FilterMode.Online ||
-                viewModel.isLocationEnabled.value != true
+            viewModel.filterMode.value == FilterMode.Online ||
+            viewModel.isLocationEnabled.value != true
         ) {
             return
         }
@@ -347,7 +349,7 @@ class ExploreMapFragment : SupportMapFragment() {
 
         if (
             lastFocusedUserLocation == null ||
-                userLocationState.distanceBetween(userLat, userLng, lastLat ?: 0.0, lastLng ?: 0.0) > radius / 2
+            userLocationState.distanceBetween(userLat, userLng, lastLat ?: 0.0, lastLng ?: 0.0) > radius / 2
         ) {
             setMapDefaultViewLevel(radius)
         }

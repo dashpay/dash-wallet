@@ -26,9 +26,12 @@ import retrofit2.http.PUT
 import retrofit2.http.Query
 
 interface DashDirectAuthApi {
-    @PUT("SignIn") suspend fun signIn(@Query("emailAddress") email: String): SignInResponse?
+    @PUT("SignIn")
+    suspend fun signIn(@Query("emailAddress") email: String): SignInResponse?
 
-    @POST("CreateUser") suspend fun createUser(@Query("emailAddress") email: String): CreateUserResponse?
+    @POST("CreateUser")
+    suspend fun createUser(@Query("emailAddress") email: String): CreateUserResponse?
 
-    @PUT("VerifyEmail") suspend fun verifyEmail(@Body signInRequest: VerifyEmailRequest): VerifyEmailResponse?
+    @PUT("VerifyEmail")
+    suspend fun verifyEmail(@Body signInRequest: VerifyEmailRequest): VerifyEmailResponse?
 }

@@ -44,8 +44,8 @@ import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
-import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.dashdirect.model.giftcard.GetGiftCardResponse
+import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectViewModel
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
@@ -103,8 +103,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         viewModel.purchaseGiftCardData.observe(viewLifecycleOwner) { data ->
             lifecycleScope.launch {
                 data?.uri?.let {
-                    var transaction: Transaction? = null
-                    transaction = createSendingRequestFromDashUri(it)
+                    val transaction: Transaction? = createSendingRequestFromDashUri(it)
                     transaction?.let {
                         data.paymentId?.let { paymentId ->
                             data.orderId?.let { orderId ->
@@ -130,22 +129,22 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             hideLoading()
             log.error("purchaseGiftCard InsufficientMoneyException", x)
             AdaptiveDialog.create(
-                    R.drawable.ic_info_red,
-                    getString(R.string.insufficient_money_title),
-                    getString(R.string.insufficient_money_msg),
-                    getString(R.string.button_close)
-                )
+                R.drawable.ic_info_red,
+                getString(R.string.insufficient_money_title),
+                getString(R.string.insufficient_money_msg),
+                getString(R.string.button_close)
+            )
                 .show(requireActivity())
             x.printStackTrace()
         } catch (ex: Exception) {
             log.error("purchaseGiftCard error", ex)
             hideLoading()
             AdaptiveDialog.create(
-                    R.drawable.ic_info_red,
-                    getString(R.string.send_coins_error_msg),
-                    getString(R.string.insufficient_money_msg),
-                    getString(R.string.button_close)
-                )
+                R.drawable.ic_info_red,
+                getString(R.string.send_coins_error_msg),
+                getString(R.string.insufficient_money_msg),
+                getString(R.string.button_close)
+            )
                 .show(requireActivity())
             ex.printStackTrace()
         }
@@ -245,9 +244,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         )
         viewModel.saveGiftCard(giftCard)
 
-        // TODO: val barcodeImg = data?.barcodeUrl,
-        val barcodeImg = "https://api.giftango.com/cards/D66TRHZF5KR/barcode?token=3755b509339988c6b042e41319a734eabff6ed8d11b585c3f76fc7d36c2d2214"
-        GiftCardDetailsDialog.newInstance(txId, barcodeImg).show(requireActivity()).also {
+        GiftCardDetailsDialog.newInstance(txId, data.barcodeUrl).show(requireActivity()).also {
             val navController = findNavController()
             navController.popBackStack(navController.graph.startDestinationId, false)
 

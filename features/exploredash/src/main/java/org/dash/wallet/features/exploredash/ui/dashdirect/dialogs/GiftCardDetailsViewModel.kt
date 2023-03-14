@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.ui.dashdirect.dialogs
 
 import android.graphics.Bitmap
-import android.util.Size
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -44,7 +43,7 @@ import javax.inject.Inject
 class GiftCardDetailsViewModel @Inject constructor(
     private val giftCardDao: GiftCardDao,
     private val metadataProvider: TransactionMetadataProvider
-): ViewModel() {
+) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(GiftCardDetailsViewModel::class.java)
     }
