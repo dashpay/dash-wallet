@@ -32,6 +32,7 @@ import org.dash.wallet.common.util.Qr
 import org.dash.wallet.common.util.decodeBitmap
 import org.dash.wallet.common.util.get
 import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
+import org.dash.wallet.features.exploredash.data.dashdirect.model.Barcode
 import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -56,8 +57,8 @@ class GiftCardDetailsViewModel @Inject constructor(
     val icon: LiveData<Bitmap?>
         get() = _icon
 
-    private val _barcode: MutableLiveData<Bitmap?> = MutableLiveData()
-    val barcode: LiveData<Bitmap?>
+    private val _barcode: MutableLiveData<Barcode?> = MutableLiveData()
+    val barcode: LiveData<Barcode?>
         get() = _barcode
 
     private val _date: MutableLiveData<LocalDateTime> = MutableLiveData()
@@ -77,9 +78,7 @@ class GiftCardDetailsViewModel @Inject constructor(
             }
 
             _giftCard.value?.barcodeValue?.let { value ->
-                _barcode.value = withContext(Dispatchers.Default) {
-                    Qr.bitmap(value, _giftCard.value!!.barcodeFormat!!, Size(300, 300))
-                }
+                _barcode.value = Barcode(value, _giftCard.value!!.barcodeFormat!!)
             }
         }
     }

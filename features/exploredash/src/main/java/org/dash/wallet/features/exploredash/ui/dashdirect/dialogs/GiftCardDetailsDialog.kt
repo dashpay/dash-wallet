@@ -19,26 +19,37 @@ package org.dash.wallet.features.exploredash.ui.dashdirect.dialogs
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
+import android.util.Size
 import android.view.View
+import android.view.ViewGroup
 import androidx.annotation.StyleRes
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import coil.imageLoader
 import coil.load
 import coil.request.ImageRequest
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
+import com.google.zxing.BarcodeFormat
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.Qr
 import org.dash.wallet.common.util.copy
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.dashdirect.model.Barcode
 import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 import java.time.format.DateTimeFormatter
@@ -114,11 +125,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             val barcodeUrl = requireArguments().getString(ARG_BARCODE)
 
             if (barcodeUrl.isNullOrEmpty() && barcode != null) {
-                binding.purchaseCardBarcode.isVisible = true
-                binding.purchaseCardBarcode.load(barcode) {
-                    crossfade(true)
-                    scale(Scale.FILL)
-                }
+                decodeBarcode(barcode)
             }
         }
 
@@ -175,6 +182,32 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 )
                 .build()
             requireContext().imageLoader.enqueue(imageRequest)
+        }
+    }
+
+    private fun decodeBarcode(barcode: Barcode) {
+        lifecycleScope.launch {
+            binding.purchaseCardBarcode.isVisible = true
+
+            if (barcode.barcodeFormat == BarcodeFormat.QR_CODE) {
+                binding.purchaseCardBarcode.updateLayoutParams<ViewGroup.LayoutParams> {
+                    height = resources.getDimensionPixelSize(R.dimen.barcode_qr_size)
+                }
+            }
+
+            val margin = resources.getDimensionPixelOffset(R.dimen.details_horizontal_margin)
+            val bitmap = withContext(Dispatchers.Default) {
+                val size = Size(
+                    binding.purchaseCardInfo.measuredWidth - margin * 2,
+                    binding.purchaseCardBarcode.layoutParams.height
+                )
+                Qr.bitmap(barcode.value, barcode.barcodeFormat, size)
+            }
+
+            binding.purchaseCardBarcode.load(bitmap) {
+                crossfade(true)
+                scale(Scale.FILL)
+            }
         }
     }
 }

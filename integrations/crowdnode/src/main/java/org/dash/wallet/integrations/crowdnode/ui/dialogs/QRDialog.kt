@@ -17,9 +17,6 @@
 
 package org.dash.wallet.integrations.crowdnode.ui.dialogs
 
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffColorFilter
-import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.view.View
 import org.bitcoinj.core.Address

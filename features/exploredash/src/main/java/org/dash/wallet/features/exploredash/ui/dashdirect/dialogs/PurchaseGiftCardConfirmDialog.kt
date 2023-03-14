@@ -164,8 +164,6 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 if (response.value?.data?.status == "paid") {
                     response.value?.data?.giftCardId?.let { getGiftCard(it, transaction, merchant, paymentValue) }
                 } else if (response.value?.data?.status == "unpaid") {
-                    // TODO: tx sent and gift card is bought, but status is unpaid.
-                    // Need to insert gift card into db and recheck status
                     hideLoading()
                     showErrorRetryDialog {
                         if (it == true) {
@@ -247,9 +245,8 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         )
         viewModel.saveGiftCard(giftCard)
 
-        //val barcodeImg = "https://api.giftango.com/cards/WR23RS63MGW/barcode?token=b4262f79aa5a6d5b0251eca2197ca9374fc69d146157882079a62cc4c506b794",//data?.barcodeUrl,
+        // TODO: val barcodeImg = data?.barcodeUrl,
         val barcodeImg = "https://api.giftango.com/cards/D66TRHZF5KR/barcode?token=3755b509339988c6b042e41319a734eabff6ed8d11b585c3f76fc7d36c2d2214"
-//           val barcodeImg = "https://www.cilips.org.uk/wp-content/uploads/2021/09/qr-code-7-768x768.png",
         GiftCardDetailsDialog.newInstance(txId, barcodeImg).show(requireActivity()).also {
             val navController = findNavController()
             navController.popBackStack(navController.graph.startDestinationId, false)

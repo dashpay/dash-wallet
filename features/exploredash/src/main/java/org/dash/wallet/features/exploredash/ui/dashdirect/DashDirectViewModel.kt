@@ -150,7 +150,9 @@ constructor(
     }
 
     suspend fun getPaymentStatus(paymentId: String, orderId: String): ResponseResource<PaymentStatusResponse?>? {
-        delay(2000)
+        delay(2000) // TODO: this is not great. What if we still can't get it after 2 seconds?
+        // TODO: If we don't know when the status is updated, we should poll the server periodically
+        // TODO: and/or have some other way of displaying it to the user
         repository.getDashDirectEmail()?.let { email ->
             return repository.getPaymentStatus(userEmail = email, paymentId = paymentId, orderId = orderId)
         }
