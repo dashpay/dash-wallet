@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -24,22 +25,32 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.*
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
+import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
+import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 
 @HiltViewModel
 class PurchaseGiftCardViewModel
@@ -48,6 +59,7 @@ constructor(
     walletDataProvider: WalletDataProvider,
     exchangeRates: ExchangeRatesProvider,
     var configuration: Configuration,
+    private val sendPaymentService: SendPaymentService,
     private val repository: DashDirectRepositoryInt
 ) : ViewModel() {
 
@@ -72,6 +84,11 @@ constructor(
     var maxCardPurchaseCoin: Coin = Coin.ZERO
     var maxCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
 
+    val purchaseGiftCardFailedCallback = SingleLiveEvent<String>()
+    private val _purchaseGiftCardData: MutableLiveData<PurchaseGiftCardResponse.Data?> = MutableLiveData()
+    val purchaseGiftCardData: LiveData<PurchaseGiftCardResponse.Data?>
+        get() = _purchaseGiftCardData
+
     init {
         exchangeRates
             .observeExchangeRate(Constants.USD_CURRENCY)
@@ -81,13 +98,31 @@ constructor(
         walletDataProvider.observeBalance().distinctUntilChanged().onEach(_balance::postValue).launchIn(viewModelScope)
     }
 
-    suspend fun purchaseGiftCard(): ResponseResource<PurchaseGiftCardResponse?>? {
+    fun callPurchaseGiftCard() =
+        viewModelScope.launch(Dispatchers.Main) {
+            when (val response = purchaseGiftCard()) {
+                is ResponseResource.Success -> {
+                    if (response.value?.data?.success == true) {
+                        _purchaseGiftCardData.value = response.value?.data
+                    }
+                }
+                else -> {
+                    Log.e(this::class.java.simpleName, "purchaseGiftCard error")
+                    purchaseGiftCardFailedCallback.call()
+                }
+            }
+        }
+
+    private suspend fun purchaseGiftCard(): ResponseResource<PurchaseGiftCardResponse?>? {
         purchaseGiftCardDataMerchant?.merchantId?.let {
             purchaseGiftCardDataPaymentValue?.let { amountValue ->
                 repository.getDashDirectEmail()?.let { email ->
+                    val savingsPercentage =
+                        purchaseGiftCardDataMerchant?.savingsPercentage ?: DashDirectConstants.DEFAULT_DISCOUNT
+                    val discountedValue = getDiscountedAmount(amountValue.second, savingsPercentage)
                     return repository.purchaseGiftCard(
                         merchantId = it,
-                        giftCardAmount = amountValue.first.toPlainString().toDouble(),
+                        giftCardAmount = discountedValue.toBigDecimal().toDouble(),
                         currency = Constants.DASH_CURRENCY,
                         deviceID = UUID.randomUUID().toString(),
                         userEmail = email
@@ -98,6 +133,24 @@ constructor(
         return null
     }
 
+    suspend fun getPaymentStatus(paymentId: String, orderId: String): ResponseResource<PaymentStatusResponse?>? {
+        delay(2000)
+        repository.getDashDirectEmail()?.let { email ->
+            return repository.getPaymentStatus(userEmail = email, paymentId = paymentId, orderId = orderId)
+        }
+        return null
+    }
+
+    suspend fun getGiftCardDetails(giftCardId: Long): ResponseResource<GetGiftCardResponse?>? {
+        repository.getDashDirectEmail()?.let { email ->
+            return repository.getGiftCardDetails(userEmail = email, giftCardId = giftCardId)
+        }
+        return null
+    }
+
+    suspend fun createSendingRequestFromDashUri(paymentURi: String): Transaction {
+        return sendPaymentService.payWithDashUrl(paymentURi)
+    }
     suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>? {
         repository.getDashDirectEmail()?.let { email ->
             return repository.getMerchantById(merchantId = merchantId, includeLocations = false, userEmail = email)

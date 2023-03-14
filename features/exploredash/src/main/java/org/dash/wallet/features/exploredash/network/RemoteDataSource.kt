@@ -22,7 +22,7 @@ import kotlin.time.toJavaDuration
 import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import org.dash.wallet.common.BuildConfig
+import org.dash.wallet.features.exploredash.BuildConfig
 import org.dash.wallet.features.exploredash.network.interceptor.HeadersInterceptor
 import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
