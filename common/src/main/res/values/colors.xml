@@ -32,7 +32,6 @@
     <color name="fg_error">#ffff0000</color>
     <color name="fg_network_significant">#ffffffff</color>
     <color name="fg_network_insignificant">#ffa0a0a0</color>
-    <color name="gift_card_orange">#FA9269</color>
 
     <!-- background -->
     <color name="bg_bright">#ffffffff</color>
@@ -76,8 +75,9 @@
     <color name="text_highlight_blue_bg">#14008DE4</color>
     <color name="warning_yellow">#fff9ed</color>
     <color name="input_error_background">#1AE85C4A</color>
-    <color name="tx_sent_background">#08008DE4</color>
-    <color name="tx_received_background">#083CB878</color>
+    <color name="tx_sent_background">#E7F4FB</color>
+    <color name="tx_received_background">#EDF8F2</color>
+    <color name="tx_tangerine_background">#FDF5F1</color>
     <color name="tx_category_example_background">@color/extra_light_gray</color>
 
     <!-- Strokes -->

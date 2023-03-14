@@ -27,8 +27,8 @@ import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.SearchHeaderViewBinding
-import org.dash.wallet.features.exploredash.ui.ExploreTopic
-import org.dash.wallet.features.exploredash.ui.FilterMode
+import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
+import org.dash.wallet.features.exploredash.ui.explore.FilterMode
 
 class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private lateinit var binding: SearchHeaderViewBinding

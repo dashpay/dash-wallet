@@ -82,6 +82,7 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
                     name,
                     listOf(method.account, method.accountType).filterNot { it.isNullOrEmpty() }.joinToString(" • "),
                     paymentMethodIcon,
+                    null,
                     if (paymentMethodIcon != null) IconSelectMode.Encircle else IconSelectMode.Tint,
                     null,
                     cardIcon

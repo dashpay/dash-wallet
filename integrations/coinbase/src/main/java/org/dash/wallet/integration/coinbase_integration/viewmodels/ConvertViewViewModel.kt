@@ -30,9 +30,8 @@ import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants

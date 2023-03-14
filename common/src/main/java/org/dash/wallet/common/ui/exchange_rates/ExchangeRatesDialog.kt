@@ -36,7 +36,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.R
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.databinding.DialogOptionPickerBinding
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -69,7 +69,7 @@ class ExchangeRatesDialog(
 
         binding.searchTitle.text = getString(R.string.select_currency)
 
-        val adapter = RadioGroupAdapter(0, true) { item, index ->
+        val adapter = RadioGroupAdapter(0) { item, index ->
             viewModel.exchangeRates.value?.firstOrNull {
                 it.currencyCode == item.additionalInfo
             }?.let {
@@ -116,6 +116,7 @@ class ExchangeRatesDialog(
                     it.getCurrencyName(requireContext()),
                     Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode().format(it.fiat).toString(),
                     getFlagFromCurrencyCode(it.currencyCode),
+                    null,
                     IconSelectMode.None,
                     it.currencyCode
                 )

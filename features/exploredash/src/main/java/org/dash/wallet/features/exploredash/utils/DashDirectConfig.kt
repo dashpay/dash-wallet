@@ -63,6 +63,10 @@ class DashDirectConfig @Inject constructor(private val context: Context, private
         return dataStore.map { preferences -> preferences[key] }
     }
 
+    fun observeSecurePreference(key: Preferences.Key<String>): Flow<String?> {
+        return dataStore.secureMap { preferences -> preferences[key].orEmpty() }
+    }
+
     suspend fun <T> getPreference(key: Preferences.Key<T>): T? {
         return dataStore.map { preferences -> preferences[key] }.first()
     }

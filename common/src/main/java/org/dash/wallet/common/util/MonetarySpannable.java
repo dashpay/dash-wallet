@@ -17,8 +17,6 @@
 
 package org.dash.wallet.common.util;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.util.regex.Matcher;
 
 import org.bitcoinj.core.Monetary;

@@ -20,12 +20,17 @@ package org.dash.wallet.common.ui.receive
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Color
+import android.graphics.ColorFilter
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -130,6 +135,10 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             paymentRequestUri = BitcoinURI.convertToBitcoinURI(address, amount, null, null)
             val qrCodeBitmap = BitmapDrawable(resources, Qr.bitmap(paymentRequestUri))
             qrCodeBitmap.isFilterBitmap = false
+            qrCodeBitmap.colorFilter = PorterDuffColorFilter(
+                resources.getColor(R.color.content_primary, null),
+                PorterDuff.Mode.SRC_IN
+            )
             binding.qrPreview.setImageDrawable(qrCodeBitmap)
         } else {
             paymentRequestUri = ""

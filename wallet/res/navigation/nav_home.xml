@@ -85,7 +85,7 @@
 
         <action
             android:id="@+id/explore_to_search"
-            app:destination="@id/explore_dash"
+            app:destination="@id/nav_explore"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left">
@@ -93,7 +93,7 @@
             <argument
                 android:name="type"
                 android:defaultValue="Merchants"
-                app:argType="org.dash.wallet.features.exploredash.ui.ExploreTopic" />
+                app:argType="org.dash.wallet.features.exploredash.ui.explore.ExploreTopic" />
         </action>
 
         <action
@@ -148,5 +148,5 @@
             app:argType="de.schildbach.wallet.data.ServiceType" />
     </fragment>
 
-    <include app:graph="@navigation/explore_dash" />
+    <include app:graph="@navigation/nav_explore" />
 </navigation>

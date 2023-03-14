@@ -38,7 +38,7 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.utils.Fiat;
-import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.entity.ExchangeRate;
 import org.dash.wallet.common.ui.CurrencyTextView;
 
 import javax.annotation.Nullable;
@@ -162,15 +162,12 @@ public final class WalletBalanceToolbarFragment extends Fragment {
 		loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
 
 		exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
-				new Observer<ExchangeRate>() {
-			@Override
-			public void onChanged(ExchangeRate rate) {
-				if (rate != null) {
-					exchangeRate = rate;
-					updateView();
-				}
-			}
-		});
+				rate -> {
+					if (rate != null) {
+						exchangeRate = rate;
+						updateView();
+					}
+				});
 
 		updateView();
 	}

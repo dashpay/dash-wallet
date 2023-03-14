@@ -82,7 +82,7 @@ class TransactionGroupViewModel @Inject constructor(
 
         _transactions.value = transactionWrapper.transactions.map {
             TransactionRowView.fromTransaction(
-                it, walletData.wallet!!, walletData.wallet!!.context, resourceMapper
+                it, walletData.wallet!!, walletData.wallet!!.context, null, resourceMapper
             )
         }
         _dashValue.value = transactionWrapper.getValue(walletData.transactionBag)

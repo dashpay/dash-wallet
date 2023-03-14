@@ -59,7 +59,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.entity.ExchangeRate;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;

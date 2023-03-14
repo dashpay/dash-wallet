@@ -27,7 +27,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.transactions.TransactionCategory
-import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
@@ -86,7 +86,7 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
                             tx.txId,
                             tx.updateTime.time,
                             tx.getValue(wallet),
-                            TransactionCategory.fromTransaction(tx.type, tx.getValue(wallet), isEntirelySelf(tx, wallet))
+                            TransactionCategory.fromTransaction(tx.type, tx.getValue(wallet), isEntirelySelf(wallet))
                         )
                     )
                 }

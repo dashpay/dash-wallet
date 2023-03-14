@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.transactions
 
+import android.graphics.Bitmap
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.annotation.StyleRes
@@ -24,7 +25,10 @@ import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.data.PresentableTxMetadata
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 
@@ -33,7 +37,8 @@ data class TransactionRowView(
     val value: Coin,
     val exchangeRate: ExchangeRate?,
     @DrawableRes val icon: Int,
-    @StyleRes val iconBackground: Int,
+    val iconBitmap: Bitmap?,
+    @StyleRes val iconBackground: Int?,
     @StringRes val titleRes: Int,
     @StringRes val statusRes: Int,
     val transactionAmount: Int,
@@ -46,7 +51,8 @@ data class TransactionRowView(
         fun fromTransactionWrapper(
             txWrapper: TransactionWrapper,
             bag: TransactionBag,
-            context: Context
+            context: Context,
+            metadata: PresentableTxMetadata? = null
         ): TransactionRowView {
             val lastTx = txWrapper.transactions.last()
 
@@ -56,6 +62,7 @@ data class TransactionRowView(
                     txWrapper.getValue(bag),
                     lastTx.exchangeRate,
                     R.drawable.ic_crowdnode_logo,
+                    null,
                     R.style.TxNoBackground,
                     R.string.crowdnode_account,
                     -1,
@@ -66,7 +73,7 @@ data class TransactionRowView(
                     txWrapper
                 )
             } else {
-                fromTransaction(lastTx, bag, context)
+                fromTransaction(lastTx, bag, context, metadata)
             }
         }
 
@@ -74,27 +81,28 @@ data class TransactionRowView(
             tx: Transaction,
             bag: TransactionBag,
             context: Context,
+            metadata: PresentableTxMetadata? = null,
             resourceMapper: TxResourceMapper = TxResourceMapper()
         ): TransactionRowView {
             val value = tx.getValue(bag)
-            val isInternal = TransactionUtils.isEntirelySelf(tx, bag)
+            val isInternal = tx.isEntirelySelf(bag)
             val isSent = value.signum() < 0
             val removeFee = isSent && tx.fee != null && !tx.fee.isZero
+            @DrawableRes val icon: Int
+            @StyleRes val iconBackground: Int
 
-            val icon = if (isInternal) {
-                R.drawable.ic_shuffle
+            if (metadata?.service == ServiceName.DashDirect) {
+                icon = R.drawable.ic_gift_card_tx
+                iconBackground = R.style.TxTangerineBackground
+            } else if (isInternal) {
+                icon = R.drawable.ic_shuffle
+                iconBackground = R.style.TxTangerineBackground
             } else if (isSent) {
-                R.drawable.ic_transaction_sent
+                icon = R.drawable.ic_transaction_sent
+                iconBackground = R.style.TxSentBackground
             } else {
-                R.drawable.ic_transaction_received
-            }
-
-            val iconBackground = if (isInternal) {
-                R.style.TxSentBackground
-            } else if (isSent) {
-                R.style.TxSentBackground
-            } else {
-                R.style.TxReceivedBackground
+                icon = R.drawable.ic_transaction_received
+                iconBackground = R.style.TxReceivedBackground
             }
 
             val status = if (tx.confidence.hasErrors()) {
@@ -110,6 +118,7 @@ data class TransactionRowView(
                 if (removeFee) value.add(tx.fee) else value,
                 tx.exchangeRate,
                 icon,
+                metadata?.icon,
                 iconBackground,
                 resourceMapper.getTransactionTypeName(tx, bag),
                 status,

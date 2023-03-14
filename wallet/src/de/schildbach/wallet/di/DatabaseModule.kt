@@ -17,15 +17,16 @@
 
 package de.schildbach.wallet.di
 
+import android.content.Context
+import androidx.room.Room
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.data.AddressMetadataDao
-import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.data.TransactionMetadataDao
-import de.schildbach.wallet.rates.ExchangeRatesDao
+import de.schildbach.wallet.database.AppDatabase
+import de.schildbach.wallet.database.AppDatabaseMigrations
+import de.schildbach.wallet.database.dao.*
 import javax.inject.Singleton
 
 @Module
@@ -33,8 +34,12 @@ import javax.inject.Singleton
 object DatabaseModule {
     @Singleton
     @Provides
-    fun provideDatabase(): AppDatabase {
-        return AppDatabase.getAppDatabase()
+    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
+        return Room.databaseBuilder(context, AppDatabase::class.java, "dash-wallet-database")
+            .addMigrations(AppDatabaseMigrations.migration11To12)
+            // destructive migrations are used from versions 1 to 10
+            .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+            .build()
     }
 
     @Provides
@@ -55,5 +60,10 @@ object DatabaseModule {
     @Provides
     fun provideAddressMetadata(appDatabase: AppDatabase): AddressMetadataDao {
         return appDatabase.addressMetadataDao()
+    }
+
+    @Provides
+    fun provideIconBitmaps(appDatabase: AppDatabase): IconBitmapDao {
+        return appDatabase.iconBitmapDao()
     }
 }

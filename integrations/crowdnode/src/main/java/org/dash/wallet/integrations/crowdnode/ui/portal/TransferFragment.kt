@@ -34,7 +34,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants

@@ -18,7 +18,7 @@ import com.bumptech.glide.request.RequestOptions;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.entity.ExchangeRate;
 import org.dash.wallet.common.ui.CurrencyTextView;
 
 import java.util.List;

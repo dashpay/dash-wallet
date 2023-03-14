@@ -21,6 +21,7 @@ import org.bitcoinj.core.*
 import org.dash.wallet.common.transactions.TransactionComparator
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 
 open class FullCrowdNodeSignUpTxSet(
@@ -57,7 +58,7 @@ open class FullCrowdNodeSignUpTxSet(
             return false
         }
 
-        if (TransactionUtils.isEntirelySelf(tx, bag)) {
+        if (tx.isEntirelySelf(bag)) {
             // We might not have our CrowdNode account address by the time the topUp
             // transaction is found, which means we need to check its `spentBy`
             for (output in tx.outputs) {

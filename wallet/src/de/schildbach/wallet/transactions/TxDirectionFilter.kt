@@ -21,23 +21,23 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 
-enum class TxDirection {
-    RECEIVED, SENT, ALL
+enum class TxFilterType {
+    RECEIVED, SENT, ALL, GIFT_CARD
 }
 
 class TxDirectionFilter(
-    private val direction: TxDirection,
+    val direction: TxFilterType,
     private val bag: TransactionBag
 ): TransactionFilter {
     override fun matches(tx: Transaction): Boolean {
-        if (direction == TxDirection.ALL) {
+        if (direction == TxFilterType.ALL) {
             return true
         }
 
         val isSent = tx.getValue(bag).signum() < 0
         val isInternal = tx.purpose == Transaction.Purpose.KEY_ROTATION
 
-        return !isInternal && ((direction == TxDirection.SENT && isSent) ||
-                               (direction == TxDirection.RECEIVED && !isSent))
+        return !isInternal && ((direction == TxFilterType.SENT && isSent) ||
+                               (direction == TxFilterType.RECEIVED && !isSent))
     }
 }

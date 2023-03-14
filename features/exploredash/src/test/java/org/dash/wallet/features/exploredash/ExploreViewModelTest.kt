@@ -36,11 +36,10 @@ import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.PaymentMethod
-import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
-import org.dash.wallet.features.exploredash.ui.ExploreViewModel
-import org.dash.wallet.features.exploredash.ui.FilterMode
+import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
+import org.dash.wallet.features.exploredash.ui.explore.FilterMode
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -303,17 +302,8 @@ class ExploreViewModelTest {
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
             val analyticsService = mock<AnalyticsService>()
-            val dashDirectRepository = mock<DashDirectRepositoryInt>()
 
-            val viewModel =
-                ExploreViewModel(
-                    context,
-                    dataSource,
-                    locationState,
-                    dataSyncStatus,
-                    analyticsService,
-                    dashDirectRepository
-                )
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService)
             viewModel.setSelectedTerritory(territory)
             viewModel.setFilterMode(FilterMode.All)
             viewModel.searchBounds = GeoBounds.noBounds
@@ -360,17 +350,8 @@ class ExploreViewModelTest {
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
             val analyticsService = mock<AnalyticsService>()
-            val dashDirectRepository = mock<DashDirectRepositoryInt>()
 
-            val viewModel =
-                ExploreViewModel(
-                    context,
-                    dataSource,
-                    locationState,
-                    dataSyncStatus,
-                    analyticsService,
-                    dashDirectRepository
-                )
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService)
             viewModel.setFilterMode(FilterMode.Nearby)
             viewModel.searchBounds = bounds
             viewModel.paymentMethodFilter = PaymentMethod.DASH
@@ -421,17 +402,8 @@ class ExploreViewModelTest {
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
             val analyticsService = mock<AnalyticsService>()
-            val dashDirectRepository = mock<DashDirectRepositoryInt>()
 
-            val viewModel =
-                ExploreViewModel(
-                    context,
-                    dataSource,
-                    locationState,
-                    dataSyncStatus,
-                    analyticsService,
-                    dashDirectRepository
-                )
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService)
             viewModel.setSelectedTerritory(territory)
             viewModel.searchBounds = GeoBounds.noBounds
             viewModel.setFilterMode(FilterMode.All)
@@ -493,17 +465,8 @@ class ExploreViewModelTest {
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
             val analyticsService = mock<AnalyticsService>()
-            val dashDirectRepository = mock<DashDirectRepositoryInt>()
 
-            val viewModel =
-                ExploreViewModel(
-                    context,
-                    dataSource,
-                    locationMock,
-                    dataSyncStatus,
-                    analyticsService,
-                    dashDirectRepository
-                )
+            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus, analyticsService)
             viewModel.searchBounds =
                 GeoBounds(90.0, 180.0, -90.0, -180.0, userLat, userLng).apply {
                     zoomLevel = ExploreViewModel.MIN_ZOOM_LEVEL + 1
@@ -542,16 +505,7 @@ class ExploreViewModelTest {
                 }
             val analyticsService = mock<AnalyticsService>()
 
-            val dashDirectRepository = mock<DashDirectRepositoryInt>()
-            val viewModel =
-                ExploreViewModel(
-                    context,
-                    dataSource,
-                    locationMock,
-                    dataSyncStatus,
-                    analyticsService,
-                    dashDirectRepository
-                )
+            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus, analyticsService)
             viewModel.setPhysicalResults(merchants)
             viewModel.onMapMarkerSelected(5)
 

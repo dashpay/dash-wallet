@@ -19,7 +19,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary">
+    android:background="@color/background_primary"
+    tools:context="org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/title_bar"
@@ -88,7 +89,7 @@
 
     <Button
         android:id="@+id/continue_button"
-        style="@style/Button.Primary.Blue"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="15dp"

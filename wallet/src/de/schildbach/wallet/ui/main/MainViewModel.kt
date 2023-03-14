@@ -25,25 +25,29 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
-import org.dash.wallet.common.data.BlockchainState
-import de.schildbach.wallet.data.BlockchainStateDao
+import org.dash.wallet.common.data.entity.BlockchainState
+import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.security.BiometricHelper
-import de.schildbach.wallet.transactions.TxDirection
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.data.PresentableTxMetadata
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.transactions.filters.TransactionFilter
+import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
@@ -58,6 +62,7 @@ class MainViewModel @Inject constructor(
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
     private val savedStateHandle: SavedStateHandle,
+    private val metadataProvider: TransactionMetadataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
     val biometricHelper: BiometricHelper
 ) : ViewModel() {
@@ -79,8 +84,8 @@ class MainViewModel @Inject constructor(
     val transactions: LiveData<List<TransactionRowView>>
         get() = _transactions
 
-    private val _transactionsDirection = MutableStateFlow(TxDirection.ALL)
-    var transactionsDirection: TxDirection
+    private val _transactionsDirection = MutableStateFlow(TxFilterType.ALL)
+    var transactionsDirection: TxFilterType
         get() = _transactionsDirection.value
         set(value) {
             _transactionsDirection.value = value
@@ -124,15 +129,18 @@ class MainViewModel @Inject constructor(
 
     init {
         _hideBalance.value = config.hideBalance
-        transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxDirection.ALL
+        transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxFilterType.ALL
 
         _transactionsDirection
             .flatMapLatest { direction ->
-                val filter = TxDirectionFilter(direction, walletData.wallet!!)
-                refreshTransactions(filter)
-                walletData.observeWalletChanged()
-                    .debounce(THROTTLE_DURATION)
-                    .onEach { refreshTransactions(filter) }
+                metadataProvider.observePresentableMetadata()
+                    .flatMapLatest { metadata ->
+                        val filter = TxDirectionFilter(direction, walletData.wallet!!)
+                        refreshTransactions(filter, metadata)
+                        walletData.observeWalletChanged()
+                            .debounce(THROTTLE_DURATION)
+                            .onEach { refreshTransactions(filter, metadata) }
+                    }
             }
             .catch { analytics.logError(it, "is wallet null: ${walletData.wallet == null}") }
             .launchIn(viewModelWorkerScope)
@@ -207,11 +215,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun logDirectionChangedEvent(direction: TxDirection) {
+    fun logDirectionChangedEvent(direction: TxFilterType) {
         val directionParameter = when (direction) {
-            TxDirection.ALL -> "all_transactions"
-            TxDirection.SENT -> "sent_transactions"
-            TxDirection.RECEIVED -> "received_transactions"
+            TxFilterType.ALL -> "all_transactions"
+            TxFilterType.SENT -> "sent_transactions"
+            TxFilterType.RECEIVED -> "received_transactions"
+            TxFilterType.GIFT_CARD -> "gift_cards"
         }
         analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
             "filter_value" to directionParameter
@@ -233,16 +242,17 @@ class MainViewModel @Inject constructor(
         config.unregisterOnSharedPreferenceChangeListener(listener)
     }
 
-    private fun refreshTransactions(filter: TransactionFilter) {
+    private fun refreshTransactions(filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
         walletData.wallet?.let { wallet ->
             val transactionViews = walletData.wrapAllTransactions(
                 FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
-            ).filter { it.transactions.any { tx -> filter.matches(tx) } }
+            ).filter { it.passesFilter(filter, metadata) }
              .sortedWith(TransactionWrapperComparator())
              .map {
                  TransactionRowView.fromTransactionWrapper(
                      it, walletData.transactionBag,
-                     Constants.CONTEXT
+                     Constants.CONTEXT,
+                     metadata[it.transactions.first().txId]
                  )
              }
             _transactions.postValue(transactionViews)
@@ -276,5 +286,16 @@ class MainViewModel @Inject constructor(
             percentage = 0
         }
         _blockchainSyncPercentage.postValue(percentage)
+    }
+
+    private fun TransactionWrapper.passesFilter(
+        filter: TxDirectionFilter,
+        metadata: Map<Sha256Hash, PresentableTxMetadata>
+    ): Boolean {
+       return (filter.direction == TxFilterType.GIFT_CARD && isGiftCard(metadata)) ||
+                transactions.any { tx -> filter.matches(tx) }
+    }
+    private fun TransactionWrapper.isGiftCard(metadata: Map<Sha256Hash, PresentableTxMetadata>): Boolean {
+        return metadata[transactions.first().txId]?.service == ServiceName.DashDirect
     }
 }

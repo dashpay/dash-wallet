@@ -17,6 +17,8 @@
 
 package org.dash.wallet.integrations.crowdnode.ui.dialogs
 
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -59,6 +61,10 @@ class QRDialog(
         val paymentRequestUri = BitcoinURI.convertToBitcoinURI(address, amount, "", "")
         val qrCodeBitmap = BitmapDrawable(resources, Qr.bitmap(paymentRequestUri))
         qrCodeBitmap.isFilterBitmap = false
+        qrCodeBitmap.colorFilter = PorterDuffColorFilter(
+            resources.getColor(org.dash.wallet.common.R.color.content_primary, null),
+            PorterDuff.Mode.SRC_IN
+        )
         binding.qrPreview.setImageDrawable(qrCodeBitmap)
     }
 }

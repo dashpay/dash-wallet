@@ -21,7 +21,7 @@ import android.content.Context;
 import androidx.annotation.Nullable;
 import android.text.format.DateUtils;
 
-import org.dash.wallet.common.data.BlockchainState;
+import org.dash.wallet.common.data.entity.BlockchainState;
 import de.schildbach.wallet_test.R;
 
 /**

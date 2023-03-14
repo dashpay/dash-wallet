@@ -83,12 +83,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         })
 
         binding.transactionFilterBtn.setOnClickListener {
-            val dialogFragment = TransactionsFilterDialog { direction, _ ->
+            val dialogFragment = TransactionsFilterDialog(viewModel.transactionsDirection) { direction, _ ->
                 viewModel.transactionsDirection = direction
                 viewModel.logDirectionChangedEvent(direction)
             }
 
-            dialogFragment.show(childFragmentManager, null)
+            dialogFragment.show(requireActivity())
         }
 
         binding.walletTransactionsList.setHasFixedSize(true)

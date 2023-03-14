@@ -18,20 +18,25 @@
 package de.schildbach.wallet.ui.rates
 
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.rates.ExchangeRatesRepository
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
+import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
  */
 @Deprecated("Inject ExchangeRatesProvider into your viewModel instead")
-class ExchangeRatesViewModel : ViewModel() {
-    private val exchangeRatesRepository = ExchangeRatesRepository.instance
+@HiltViewModel
+class ExchangeRatesViewModel @Inject constructor(
+    private val exchangeRatesRepository: ExchangeRatesRepository
+) : ViewModel() {
 
     val rates: LiveData<List<ExchangeRate>>
-        get() = exchangeRatesRepository.rates
+        get() = exchangeRatesRepository.observeExchangeRates().asLiveData()
 
     val isLoading: LiveData<Boolean>
         get() = exchangeRatesRepository.isLoading
@@ -40,14 +45,10 @@ class ExchangeRatesViewModel : ViewModel() {
         get() = exchangeRatesRepository.hasError
 
     fun getRate(currencyCode: String?): LiveData<ExchangeRate> {
-        return exchangeRatesRepository.getRate(currencyCode)
-    }
-
-    fun searchRates(query: String?): LiveData<List<ExchangeRate>> {
-        return if (query != null) {
-            exchangeRatesRepository.searchRates(query)
-        } else {
-            exchangeRatesRepository.rates
+        currencyCode?.let {
+            return exchangeRatesRepository.observeExchangeRate(currencyCode).asLiveData()
         }
+
+        return MutableLiveData()
     }
 }

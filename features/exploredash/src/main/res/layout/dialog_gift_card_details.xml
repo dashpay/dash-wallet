@@ -23,7 +23,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:background="@color/background_primary"
-    tools:context="org.dash.wallet.features.exploredash.ui.dialogs.GiftCardDetailsDialog">
+    tools:context="org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.GiftCardDetailsDialog">
 
     <FrameLayout
         android:id="@+id/header"

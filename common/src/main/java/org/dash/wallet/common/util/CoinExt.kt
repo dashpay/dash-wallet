@@ -32,3 +32,6 @@ fun Coin.toBigDecimal() : BigDecimal {
 fun Fiat.toBigDecimal() : BigDecimal {
     return BigDecimal(this.value).scaleByPowerOfTen(-Fiat.SMALLEST_UNIT_EXPONENT)
 }
+
+val Fiat.currencySymbol: String
+    get() = GenericUtils.currencySymbol(currencyCode)

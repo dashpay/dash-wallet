@@ -92,8 +92,8 @@
         android:layout_marginTop="38dp"
         android:src="@drawable/ic_gift_card"
         android:scaleType="centerCrop"
-        app:tint="@color/gift_card_orange"
-        tools:tint="@color/gift_card_orange"
+        app:tint="@color/tangerine"
+        tools:tint="@color/tangerine"
         />
 
     <TextView

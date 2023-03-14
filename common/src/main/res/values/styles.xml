@@ -1083,6 +1083,7 @@
     <style name="Button.Tertiary.Small">
         <item name="android:textSize">13sp</item>
         <item name="android:minHeight">36dp</item>
+        <item name="android:minWidth">50dp</item>
         <item name="android:theme">@style/TertiaryButtonTheme.Small</item>
     </style>
 
@@ -1169,6 +1170,12 @@
     <style name="TxReceivedBackground">
         <item name="backgroundColor">@color/tx_received_background</item>
         <item name="strokeColor">@color/tx_received_background</item>
+        <item name="cornerRadius">19dp</item>
+    </style>
+
+    <style name="TxTangerineBackground">
+        <item name="backgroundColor">@color/tx_tangerine_background</item>
+        <item name="strokeColor">@color/tx_tangerine_background</item>
         <item name="cornerRadius">19dp</item>
     </style>
 

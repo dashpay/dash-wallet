@@ -20,7 +20,7 @@ import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.util.GenericUtils
 import java.math.RoundingMode
 

@@ -1,7 +1,7 @@
 package org.dash.wallet.common.services
 
 import kotlinx.coroutines.flow.Flow
-import org.dash.wallet.common.data.BlockchainState
+import org.dash.wallet.common.data.entity.BlockchainState
 
 /**
  * Blockchain state provider

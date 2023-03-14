@@ -22,14 +22,17 @@ import kotlin.time.toJavaDuration
 import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import org.dash.wallet.features.exploredash.BuildConfig
 import org.dash.wallet.features.exploredash.network.interceptor.HeadersInterceptor
 import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
+import org.slf4j.LoggerFactory
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 class RemoteDataSource @Inject constructor(private val config: DashDirectConfig) {
+    companion object {
+        private val log = LoggerFactory.getLogger(RemoteDataSource::class.java)
+    }
 
     fun <Api> buildApi(api: Class<Api>): Api {
         return Retrofit.Builder()
@@ -48,11 +51,11 @@ class RemoteDataSource @Inject constructor(private val config: DashDirectConfig)
             .readTimeout(20.seconds.toJavaDuration())
             .also { client ->
                 authenticator?.let { client.authenticator(it) }
-                if (BuildConfig.DEBUG) {
-                    val logging = HttpLoggingInterceptor()
-                    logging.level = HttpLoggingInterceptor.Level.BODY
-                    client.addInterceptor(logging)
-                }
+                //                if (BuildConfig.DEBUG) { TODO
+                val logging = HttpLoggingInterceptor { message -> log.info(message) }
+                logging.level = HttpLoggingInterceptor.Level.BODY
+                client.addInterceptor(logging)
+                //                }
             }
             .build()
     }

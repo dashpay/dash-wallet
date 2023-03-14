@@ -312,7 +312,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
     }
 
-    private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.ExchangeRate?) {
+    private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.entity.ExchangeRate?) {
         val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, it.fiat) }
 
         if (revealBalance) {

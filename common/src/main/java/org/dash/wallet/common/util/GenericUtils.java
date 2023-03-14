@@ -149,24 +149,6 @@ public class GenericUtils {
         return new Locale(deviceLocaleLanguage, countryCode);
     }
 
-    public static FiatAmountFormat formatFiatFromLocale(CharSequence fiatValue) {
-        String valWithoutLetters = stripLettersFromString(fiatValue.toString());
-        String valWithoutComma = formatFiatWithoutComma(valWithoutLetters);
-        Double fiatAsDouble;
-        // we may get a NumberFormatException
-        try {
-            fiatAsDouble = valWithoutComma.length() == 0 ? 0.00 : Double.parseDouble(valWithoutComma);
-        } catch (NumberFormatException x) {
-            fiatAsDouble = 0.00;
-        }
-        NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
-        String formattedStringValue = numberFormat.format(fiatAsDouble);
-        // get currency symbol and code to remove explicitly
-        String currencyCode = numberFormat.getCurrency().getCurrencyCode();
-        String currencySymbol = numberFormat.getCurrency().getSymbol();
-        return new FiatAmountFormat(Character.isDigit(formattedStringValue.charAt(0)), stripCurrencyFromString(formattedStringValue, currencySymbol, currencyCode));
-    }
-
     /**
      * Keep numericals, minus, dot, comma
      */

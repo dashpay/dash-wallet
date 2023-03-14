@@ -25,9 +25,9 @@ import androidx.core.view.isVisible
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.bitmap.RoundedCorners
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import coil.load
+import coil.size.Scale
+import coil.transform.RoundedCornersTransformation
 import java.util.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.*
@@ -114,12 +114,15 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
         binding.subtitle.text = getDistanceText(resources, merchant)
         binding.subtitle.isVisible = merchant?.type != MerchantType.ONLINE && binding.subtitle.text.isNotEmpty()
 
-        Glide.with(binding.root.context)
-            .load(merchant?.logoLocation)
-            .error(R.drawable.ic_image_placeholder)
-            .transition(DrawableTransitionOptions.withCrossFade(200))
-            .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
-            .into(binding.logoImg)
+        binding.logoImg.load(merchant?.logoLocation) {
+            crossfade(200)
+            scale(Scale.FILL)
+            placeholder(R.drawable.ic_image_placeholder)
+            error(R.drawable.ic_image_placeholder)
+            transformations(
+                RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
+            )
+        }
 
         when (merchant?.paymentMethod?.trim()?.lowercase()) {
             PaymentMethod.DASH -> binding.methodImg.setImageResource(R.drawable.ic_dash_pay)
@@ -142,12 +145,15 @@ class AtmViewHolder(val binding: AtmRowBinding) : ExploreViewHolder(binding.root
             }
         binding.subtitle.isVisible = binding.subtitle.text.isNotEmpty()
 
-        Glide.with(binding.root.context)
-            .load(atm?.logoLocation)
-            .error(R.drawable.ic_image_placeholder)
-            .transition(DrawableTransitionOptions.withCrossFade(200))
-            .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
-            .into(binding.logoImg)
+        binding.logoImg.load(atm?.logoLocation) {
+            crossfade(200)
+            scale(Scale.FILL)
+            placeholder(R.drawable.ic_image_placeholder)
+            error(R.drawable.ic_image_placeholder)
+            transformations(
+                RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
+            )
+        }
 
         binding.buyIcon.isVisible = atm?.type == AtmType.BOTH || atm?.type == AtmType.BUY
         binding.sellIcon.isVisible = atm?.type == AtmType.BOTH || atm?.type == AtmType.SELL

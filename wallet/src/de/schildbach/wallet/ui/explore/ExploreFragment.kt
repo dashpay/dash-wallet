@@ -40,7 +40,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.databinding.FragmentExploreBinding
-import org.dash.wallet.features.exploredash.ui.ExploreTopic
+import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import java.util.*
 
 @AndroidEntryPoint

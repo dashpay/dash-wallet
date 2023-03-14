@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.ui.ExploreTopic
+import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 
 val Fragment.isLocationPermissionGranted: Boolean
     get() =

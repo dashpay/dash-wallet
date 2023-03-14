@@ -18,6 +18,7 @@
 package org.dash.wallet.features.exploredash.repository
 
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
@@ -41,6 +42,9 @@ constructor(
     private val authApi: DashDirectAuthApi,
     private val config: DashDirectConfig
 ) : DashDirectRepositoryInt {
+
+    override val userEmail: Flow<String?> = config.observeSecurePreference(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL)
+
     override suspend fun signIn(email: String): ResponseResource<Boolean> = safeApiCall {
         authApi.signIn(email = email).also {
             it?.errorMessage?.let { errorMessage ->
@@ -79,7 +83,7 @@ constructor(
             )
             .also {
                 it?.data?.errorMessage?.let { errorMessage ->
-                    if (it?.data?.hasError == true && errorMessage.isNotEmpty()) {
+                    if (it.data.hasError == true && errorMessage.isNotEmpty()) {
                         throw Exception(errorMessage)
                     }
                 }
@@ -94,8 +98,8 @@ constructor(
         config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: false
     }
 
-    override fun getDashDirectEmail(): String? {
-        return runBlocking { config.getSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL) }
+    override suspend fun getDashDirectEmail(): String? {
+        return config.getSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL)
     }
 
     override suspend fun logout() {
@@ -115,6 +119,11 @@ constructor(
     ) = safeApiCall {
         servicesApi.purchaseGiftCard(
             deviceID = deviceID,
+            //            purchaseGiftCardRequest = PurchaseGiftCardRequest(
+            //                currency = currency,
+            //                giftCardAmount = 0.03,
+            //                merchantId = 318
+            //            ),
             purchaseGiftCardRequest =
                 PurchaseGiftCardRequest(currency = currency, giftCardAmount = giftCardAmount, merchantId = merchantId),
             email = userEmail
@@ -125,7 +134,8 @@ constructor(
         safeApiCall {
             servicesApi.getMerchantById(
                 email = userEmail,
-                getMerchantByIdRequest = GetMerchantByIdRequest(id = merchantId, includeLocations = includeLocations)
+                getMerchantByIdRequest =
+                    GetMerchantByIdRequest(id = /*318,*/ merchantId, includeLocations = includeLocations)
             )
         }
 
@@ -142,11 +152,12 @@ constructor(
 }
 
 interface DashDirectRepositoryInt {
+    val userEmail: Flow<String?>
     suspend fun signIn(email: String): ResponseResource<Boolean>
     suspend fun createUser(email: String): ResponseResource<Boolean>
     suspend fun verifyEmail(code: String): ResponseResource<Boolean>
     fun isUserSignIn(): Boolean
-    fun getDashDirectEmail(): String?
+    suspend fun getDashDirectEmail(): String?
     suspend fun logout()
     suspend fun purchaseGiftCard(
         deviceID: String,

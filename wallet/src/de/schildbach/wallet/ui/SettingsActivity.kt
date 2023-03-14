@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui
 
 import android.app.Activity
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
@@ -29,7 +28,7 @@ import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.ui.rates.ExchangeRatesActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_settings.*
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService

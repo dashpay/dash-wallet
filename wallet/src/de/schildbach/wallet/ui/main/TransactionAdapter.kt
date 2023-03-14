@@ -28,6 +28,8 @@ import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
+import coil.transform.RoundedCornersTransformation
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.transactions.TransactionGroupHeaderViewHolder
 import de.schildbach.wallet.ui.transactions.TransactionRowView
@@ -112,6 +114,7 @@ class TransactionAdapter(
     inner class TransactionViewHolder(
         val binding: TransactionRowBinding
     ) : HistoryViewHolder(binding.root) {
+        private val iconSize = resources.getDimensionPixelSize(R.dimen.transaction_icon_size)
         private val resourceMapper = TxResourceMapper()
 
         init {
@@ -146,9 +149,6 @@ class TransactionAdapter(
                 R.dimen.transaction_row_vertical_padding
             }))
 
-            binding.icon.setImageResource(txView.icon)
-            binding.icon.background = resources.getRoundedBackground(txView.iconBackground)
-
             binding.primaryStatus.text = resources.getString(txView.titleRes)
             binding.primaryStatus.setTextColor(if (txView.hasErrors) {
                 warningColor
@@ -167,10 +167,32 @@ class TransactionAdapter(
                 })
             }
 
+            setIcon(txView)
             setValue(txView.value, txView.hasErrors)
             setFiatValue(txView.value, txView.exchangeRate)
             setTime(txView.time, resourceMapper.dateTimeFormat)
             setDetails(txView.transactionAmount)
+        }
+
+        private fun setIcon(txView: TransactionRowView) {
+            val iconBackground = txView.iconBackground
+            val icon = txView.icon
+
+            if (txView.iconBitmap != null) {
+                binding.primaryIcon.updatePadding(0, 0, 0, 0)
+                binding.primaryIcon.background = null
+                binding.primaryIcon.load(txView.iconBitmap) {
+                    transformations(RoundedCornersTransformation(iconSize*2.toFloat()))
+                }
+                binding.secondaryIcon.isVisible = true
+                binding.secondaryIcon.setImageResource(icon)
+            } else {
+                val padding = resources.getDimensionPixelOffset(R.dimen.transaction_icon_padding)
+                binding.primaryIcon.updatePadding(padding, padding, padding, padding)
+                binding.primaryIcon.background = resources.getRoundedBackground(iconBackground!!)
+                binding.primaryIcon.load(icon)
+                binding.secondaryIcon.isVisible = false
+            }
         }
 
         private fun setDetails(transactionAmount: Int) {
