@@ -18,7 +18,12 @@
 package org.dash.wallet.features.exploredash.ui.dashdirect
 
 import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
@@ -31,6 +36,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.SendPaymentService
@@ -93,6 +99,11 @@ constructor(
     var maxCardPurchaseCoin: Coin = Coin.ZERO
     var maxCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
 
+    val purchaseGiftCardFailedCallback = SingleLiveEvent<String>()
+    private val _purchaseGiftCardData: MutableLiveData<PurchaseGiftCardResponse.Data?> = MutableLiveData()
+    val purchaseGiftCardData: LiveData<PurchaseGiftCardResponse.Data?>
+        get() = _purchaseGiftCardData
+
     init {
         exchangeRates
             .observeExchangeRate(Constants.USD_CURRENCY)
@@ -102,7 +113,23 @@ constructor(
         walletDataProvider.observeBalance().distinctUntilChanged().onEach(_balance::postValue).launchIn(viewModelScope)
     }
 
-    suspend fun purchaseGiftCard(): ResponseResource<PurchaseGiftCardResponse?>? {
+    fun callPurchaseGiftCard() =
+        viewModelScope.launch(Dispatchers.Main) {
+            when (val response = purchaseGiftCard()) {
+                is ResponseResource.Success -> {
+                    if (response.value?.data?.success == true) {
+                        _purchaseGiftCardData.value = response.value?.data
+                    }
+                }
+                is ResponseResource.Failure -> {
+                    log.error("purchaseGiftCard error ${response.errorCode}: ${response.errorBody}")
+                    purchaseGiftCardFailedCallback.call()
+                }
+                else -> { }
+            }
+        }
+
+    private suspend fun purchaseGiftCard(): ResponseResource<PurchaseGiftCardResponse?>? {
         purchaseGiftCardDataMerchant?.merchantId?.let {
             purchaseGiftCardDataPaymentValue?.let { amountValue ->
                 repository.getDashDirectEmail()?.let { email ->

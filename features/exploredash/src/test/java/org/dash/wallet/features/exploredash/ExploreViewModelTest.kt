@@ -303,14 +303,7 @@ class ExploreViewModelTest {
                 }
             val analyticsService = mock<AnalyticsService>()
 
-            val viewModel =
-                ExploreViewModel(
-                    context,
-                    dataSource,
-                    locationState,
-                    dataSyncStatus,
-                    analyticsService
-                )
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService)
             viewModel.setSelectedTerritory(territory)
             viewModel.setFilterMode(FilterMode.All)
             viewModel.searchBounds = GeoBounds.noBounds
@@ -358,14 +351,7 @@ class ExploreViewModelTest {
                 }
             val analyticsService = mock<AnalyticsService>()
 
-            val viewModel =
-                ExploreViewModel(
-                    context,
-                    dataSource,
-                    locationState,
-                    dataSyncStatus,
-                    analyticsService
-                )
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService)
             viewModel.setFilterMode(FilterMode.Nearby)
             viewModel.searchBounds = bounds
             viewModel.paymentMethodFilter = PaymentMethod.DASH
@@ -417,14 +403,7 @@ class ExploreViewModelTest {
                 }
             val analyticsService = mock<AnalyticsService>()
 
-            val viewModel =
-                ExploreViewModel(
-                    context,
-                    dataSource,
-                    locationState,
-                    dataSyncStatus,
-                    analyticsService
-                )
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService)
             viewModel.setSelectedTerritory(territory)
             viewModel.searchBounds = GeoBounds.noBounds
             viewModel.setFilterMode(FilterMode.All)
@@ -487,14 +466,7 @@ class ExploreViewModelTest {
                 }
             val analyticsService = mock<AnalyticsService>()
 
-            val viewModel =
-                ExploreViewModel(
-                    context,
-                    dataSource,
-                    locationMock,
-                    dataSyncStatus,
-                    analyticsService
-                )
+            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus, analyticsService)
             viewModel.searchBounds =
                 GeoBounds(90.0, 180.0, -90.0, -180.0, userLat, userLng).apply {
                     zoomLevel = ExploreViewModel.MIN_ZOOM_LEVEL + 1
@@ -533,14 +505,7 @@ class ExploreViewModelTest {
                 }
             val analyticsService = mock<AnalyticsService>()
 
-            val viewModel =
-                ExploreViewModel(
-                    context,
-                    dataSource,
-                    locationMock,
-                    dataSyncStatus,
-                    analyticsService
-                )
+            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus, analyticsService)
             viewModel.setPhysicalResults(merchants)
             viewModel.onMapMarkerSelected(5)
 

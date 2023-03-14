@@ -51,11 +51,11 @@ class RemoteDataSource @Inject constructor(private val config: DashDirectConfig)
             .readTimeout(20.seconds.toJavaDuration())
             .also { client ->
                 authenticator?.let { client.authenticator(it) }
-//                if (BuildConfig.DEBUG) { TODO
-                    val logging = HttpLoggingInterceptor { message -> log.info(message) }
-                    logging.level = HttpLoggingInterceptor.Level.BODY
-                    client.addInterceptor(logging)
-//                }
+                //                if (BuildConfig.DEBUG) { TODO
+                val logging = HttpLoggingInterceptor { message -> log.info(message) }
+                logging.level = HttpLoggingInterceptor.Level.BODY
+                client.addInterceptor(logging)
+                //                }
             }
             .build()
     }

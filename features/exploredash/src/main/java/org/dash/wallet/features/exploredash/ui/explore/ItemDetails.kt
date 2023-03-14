@@ -113,8 +113,8 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
         email?.let {
             binding.loginDashDirectUser.text =
                 context.resources.getString(R.string.logged_in_as, email.maskEmail()) +
-                " " +
-                context.resources.getString(R.string.log_out)
+                    " " +
+                    context.resources.getString(R.string.log_out)
 
             binding.loginDashDirectUser.makeLinks(
                 Pair(
@@ -212,20 +212,14 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             backButton.setOnClickListener { onBackButtonClicked?.invoke() }
 
             if (isOnline) {
-                root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                    matchConstraintPercentHeight = 1f
-                }
-                updatePaddingRelative(
-                    top = resources.getDimensionPixelOffset(R.dimen.details_online_margin_top)
-                )
+                root.updateLayoutParams<ConstraintLayout.LayoutParams> { matchConstraintPercentHeight = 1f }
+                updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_online_margin_top))
             } else {
                 root.updateLayoutParams<ConstraintLayout.LayoutParams> {
                     matchConstraintPercentHeight =
                         ResourcesCompat.getFloat(resources, R.dimen.merchant_details_height_ratio)
                 }
-                updatePaddingRelative(
-                    top = resources.getDimensionPixelOffset(R.dimen.details_physical_margin_top)
-                )
+                updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_physical_margin_top))
             }
 
             bindCommonDetails(merchant, isOnline)
@@ -247,10 +241,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             sellBtn.isVisible = atm.type != AtmType.BUY
 
             root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                matchConstraintPercentHeight = ResourcesCompat.getFloat(
-                    resources,
-                    R.dimen.atm_details_height_ratio
-                )
+                matchConstraintPercentHeight = ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)
             }
 
             loadImage(atm.logoLocation, logoImg)
@@ -267,9 +258,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             placeholder(R.drawable.ic_image_placeholder)
             error(R.drawable.ic_image_placeholder)
             transformations(
-                RoundedCornersTransformation(
-                    resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat()
-                )
+                RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
             )
         }
     }
@@ -279,11 +268,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             if (!item.googleMaps.isNullOrBlank()) {
                 item.googleMaps
             } else {
-                context.getString(
-                    R.string.explore_maps_intent_uri,
-                    item.latitude!!,
-                    item.longitude!!
-                )
+                context.getString(R.string.explore_maps_intent_uri, item.latitude!!, item.longitude!!)
             }
 
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))

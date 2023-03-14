@@ -116,8 +116,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         lifecycleScope.launch {
             when (
                 val response =
-                    if (isSignIn) viewModel.signInToDashDirect(email)
-                    else viewModel.createUserToDashDirect(email)
+                    if (isSignIn) viewModel.signInToDashDirect(email) else viewModel.createUserToDashDirect(email)
             ) {
                 is ResponseResource.Success -> {
                     if (response.value) {

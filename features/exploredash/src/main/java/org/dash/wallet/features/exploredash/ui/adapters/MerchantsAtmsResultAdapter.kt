@@ -119,7 +119,9 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
             scale(Scale.FILL)
             placeholder(R.drawable.ic_image_placeholder)
             error(R.drawable.ic_image_placeholder)
-            transformations(RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat()))
+            transformations(
+                RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
+            )
         }
 
         when (merchant?.paymentMethod?.trim()?.lowercase()) {
@@ -148,7 +150,9 @@ class AtmViewHolder(val binding: AtmRowBinding) : ExploreViewHolder(binding.root
             scale(Scale.FILL)
             placeholder(R.drawable.ic_image_placeholder)
             error(R.drawable.ic_image_placeholder)
-            transformations(RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat()))
+            transformations(
+                RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
+            )
         }
 
         binding.buyIcon.isVisible = atm?.type == AtmType.BOTH || atm?.type == AtmType.BUY

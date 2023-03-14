@@ -93,57 +93,63 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
 
         binding.collapseButton.setOnClickListener { dismiss() }
 
-        binding.confirmButton.setOnClickListener {
-            showLoading()
+        binding.confirmButton.setOnClickListener { onConfirmButtonClicked(merchant, paymentValue) }
+    }
+
+    private fun onConfirmButtonClicked(merchant: Merchant?, paymentValue: Pair<Coin, Fiat>?) {
+        showLoading()
+        viewModel.callPurchaseGiftCard()
+
+        viewModel.purchaseGiftCardData.observe(viewLifecycleOwner) { data ->
             lifecycleScope.launch {
-                when (val response = viewModel.purchaseGiftCard()) {
-                    is ResponseResource.Success -> {
-                        if (response.value?.data?.success == true) {
-                            response.value?.data?.uri?.let {
-                                var transaction: Transaction? = null
-                                try {
-                                    transaction = viewModel.createSendingRequestFromDashUri(it)
-                                } catch (ex: InsufficientMoneyException) {
-                                    hideLoading()
-                                    log.error("purchaseGiftCard error", ex)
-                                    AdaptiveDialog.create(
-                                        R.drawable.ic_info_red,
-                                        getString(R.string.insufficient_money_title),
-                                        getString(R.string.insufficient_money_msg),
-                                        getString(R.string.button_close)
-                                    ).show(requireActivity())
-                                    ex.printStackTrace()
-                                } catch (ex: Exception) {
-                                    log.error("purchaseGiftCard error", ex)
-                                    hideLoading()
-                                    AdaptiveDialog.create(
-                                        R.drawable.ic_info_red,
-                                        getString(R.string.send_coins_error_msg),
-                                        getString(R.string.insufficient_money_msg),
-                                        getString(R.string.button_close)
-                                    )
-                                        .show(requireActivity())
-                                    ex.printStackTrace()
-                                }
-                                transaction?.let {
-                                    response.value?.data?.paymentId?.let { paymentId ->
-                                        response.value?.data?.orderId?.let { orderId ->
-                                            getPaymentStatus(paymentId, orderId, it, merchant!!, paymentValue)
-                                        }
-                                    }
-                                }
+                data?.uri?.let {
+                    var transaction: Transaction? = null
+                    transaction = createSendingRequestFromDashUri(it)
+                    transaction?.let {
+                        data.paymentId?.let { paymentId ->
+                            data.orderId?.let { orderId ->
+                                getPaymentStatus(paymentId, orderId, it, merchant!!, paymentValue)
                             }
                         }
                     }
-                    is ResponseResource.Failure -> {
-                        hideLoading()
-                        log.error("purchaseGiftCard error ${response.errorCode}: ${response.errorBody}")
-                        showErrorRetryDialog { dismiss() }
-                    }
-                    else -> { }
                 }
             }
         }
+
+        viewModel.purchaseGiftCardFailedCallback.observe(viewLifecycleOwner) {
+            hideLoading()
+            showErrorRetryDialog { dismiss() }
+        }
+    }
+
+    private suspend fun createSendingRequestFromDashUri(it: String): Transaction? {
+        var transaction: Transaction? = null
+        try {
+            transaction = viewModel.createSendingRequestFromDashUri(it)
+        } catch (x: InsufficientMoneyException) {
+            hideLoading()
+            log.error("purchaseGiftCard InsufficientMoneyException", x)
+            AdaptiveDialog.create(
+                    R.drawable.ic_info_red,
+                    getString(R.string.insufficient_money_title),
+                    getString(R.string.insufficient_money_msg),
+                    getString(R.string.button_close)
+                )
+                .show(requireActivity())
+            x.printStackTrace()
+        } catch (ex: Exception) {
+            log.error("purchaseGiftCard error", ex)
+            hideLoading()
+            AdaptiveDialog.create(
+                    R.drawable.ic_info_red,
+                    getString(R.string.send_coins_error_msg),
+                    getString(R.string.insufficient_money_msg),
+                    getString(R.string.button_close)
+                )
+                .show(requireActivity())
+            ex.printStackTrace()
+        }
+        return transaction
     }
 
     private suspend fun getPaymentStatus(
