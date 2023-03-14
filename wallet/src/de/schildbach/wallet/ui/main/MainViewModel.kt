@@ -303,3 +303,4 @@ class MainViewModel @Inject constructor(
         return metadata[transactions.first().txId]?.service == ServiceName.DashDirect
     }
 }
+

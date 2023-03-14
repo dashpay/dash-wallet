@@ -23,3 +23,4 @@ data class ResourceString(
     @StringRes val resourceId: Int,
     val args: List<Any> = listOf()
 )
+

@@ -14,20 +14,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package org.dash.wallet.features.exploredash.data.model.paymentstatus
 
-package org.dash.wallet.common.data
+import com.google.gson.annotations.SerializedName
 
-import android.graphics.Bitmap
-import androidx.room.Ignore
-import org.bitcoinj.core.Sha256Hash
-
-data class PresentableTxMetadata(
-    var txId: Sha256Hash,
-    var memo: String = "",
-    var service: String? = null,
-    var customIconId: Sha256Hash? = null
-) {
-    @Ignore var icon: Bitmap? = null
-    @Ignore var title: String? = null
-}
-
+data class PaymentStatusRequest(@SerializedName("order_id") val orderId: String? = "", val paymentId: String? = "")
