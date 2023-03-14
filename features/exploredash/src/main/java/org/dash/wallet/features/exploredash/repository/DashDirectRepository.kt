@@ -17,8 +17,8 @@
 
 package org.dash.wallet.features.exploredash.repository
 
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
@@ -119,13 +119,13 @@ constructor(
     ) = safeApiCall {
         servicesApi.purchaseGiftCard(
             deviceID = deviceID,
-//            purchaseGiftCardRequest = PurchaseGiftCardRequest(
-//                currency = currency,
-//                giftCardAmount = 0.03,
-//                merchantId = 318
-//            ),
-             purchaseGiftCardRequest =
-                 PurchaseGiftCardRequest(currency = currency, giftCardAmount = giftCardAmount, merchantId = merchantId),
+            //            purchaseGiftCardRequest = PurchaseGiftCardRequest(
+            //                currency = currency,
+            //                giftCardAmount = 0.03,
+            //                merchantId = 318
+            //            ),
+            purchaseGiftCardRequest =
+                PurchaseGiftCardRequest(currency = currency, giftCardAmount = giftCardAmount, merchantId = merchantId),
             email = userEmail
         )
     }
@@ -134,7 +134,8 @@ constructor(
         safeApiCall {
             servicesApi.getMerchantById(
                 email = userEmail,
-                getMerchantByIdRequest = GetMerchantByIdRequest(id = /*318,*/ merchantId, includeLocations = includeLocations)
+                getMerchantByIdRequest =
+                    GetMerchantByIdRequest(id = /*318,*/ merchantId, includeLocations = includeLocations)
             )
         }
 

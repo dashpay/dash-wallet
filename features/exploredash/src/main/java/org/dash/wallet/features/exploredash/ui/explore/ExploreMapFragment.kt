@@ -379,30 +379,31 @@ class ExploreMapFragment : SupportMapFragment() {
     }
 
     private fun buildMarkerRequest(item: SearchResult, isSelected: Boolean): Disposable {
-        val request = ImageRequest.Builder(requireContext())
-            .data(item.logoLocation)
-            .error(R.drawable.ic_merchant)
-            .size(resources.getDimensionPixelSize(R.dimen.explore_marker_size))
-            .transformations(CircleCropTransformation())
-            .target(
-                onSuccess = { resource ->
-                    if (item.latitude != null && item.longitude != null) {
-                        addMarkerItemToMap(isSelected, item.latitude!!, item.longitude!!, resource.toBitmap(), item.id)
+        val request =
+            ImageRequest.Builder(requireContext())
+                .data(item.logoLocation)
+                .error(R.drawable.ic_merchant)
+                .size(resources.getDimensionPixelSize(R.dimen.explore_marker_size))
+                .transformations(CircleCropTransformation())
+                .target(
+                    onSuccess = { resource ->
+                        if (item.latitude != null && item.longitude != null) {
+                            addMarkerItemToMap(
+                                isSelected,
+                                item.latitude!!,
+                                item.longitude!!,
+                                resource.toBitmap(),
+                                item.id
+                            )
+                        }
+                    },
+                    onError = {
+                        if (item.latitude != null && item.longitude != null && markerDrawable != null) {
+                            addMarkerItemToMap(isSelected, item.latitude!!, item.longitude!!, markerDrawable!!, item.id)
+                        }
                     }
-                },
-                onError = {
-                    if (item.latitude != null && item.longitude != null && markerDrawable != null) {
-                        addMarkerItemToMap(
-                            isSelected,
-                            item.latitude!!,
-                            item.longitude!!,
-                            markerDrawable!!,
-                            item.id
-                        )
-                    }
-                }
-            )
-            .build()
+                )
+                .build()
 
         return imageLoader.enqueue(request)
     }

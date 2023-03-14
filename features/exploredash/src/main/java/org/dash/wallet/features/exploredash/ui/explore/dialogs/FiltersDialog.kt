@@ -250,10 +250,12 @@ class FiltersDialog : OffsetDialogFragment() {
                     }
 
                 val dialogTitle = getString(R.string.explore_location)
-                OptionPickerDialog(dialogTitle, allTerritories, currentIndex, useCheckMark = true) { item, index, dialog ->
-                    dialog.dismiss()
-                    setTerritoryName(if (index == 0) "" else item.title)
-                }.show(requireActivity())
+                OptionPickerDialog(dialogTitle, allTerritories, currentIndex, useCheckMark = true) { item, index, dialog
+                        ->
+                        dialog.dismiss()
+                        setTerritoryName(if (index == 0) "" else item.title)
+                    }
+                    .show(requireActivity())
             }
         }
     }

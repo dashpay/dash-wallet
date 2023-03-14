@@ -50,7 +50,11 @@ class MerchantLocationsHeaderAdapter(private val name: String, private val type:
             scale(Scale.FILL)
             placeholder(R.drawable.ic_image_placeholder)
             error(R.drawable.ic_image_placeholder)
-            transformations(RoundedCornersTransformation(binding.itemImage.resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat()))
+            transformations(
+                RoundedCornersTransformation(
+                    binding.itemImage.resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat()
+                )
+            )
         }
     }
 }

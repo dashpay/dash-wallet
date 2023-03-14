@@ -32,7 +32,6 @@ import kotlin.math.min
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.livedata.ConnectionLiveData
@@ -126,8 +125,7 @@ constructor(
     // In meters
     val radius: Double
         get() =
-            if (isMetric)
-                (selectedRadiusOption.value ?: DEFAULT_RADIUS_OPTION) * Const.METERS_IN_KILOMETER
+            if (isMetric) (selectedRadiusOption.value ?: DEFAULT_RADIUS_OPTION) * Const.METERS_IN_KILOMETER
             else (selectedRadiusOption.value ?: DEFAULT_RADIUS_OPTION) * Const.METERS_IN_MILE
 
     // Bounded only by selected radius
@@ -214,16 +212,14 @@ constructor(
                                 clearSearchResults()
                                 _searchBounds
                                     .filter {
-                                        (mode != FilterMode.Nearby ||
-                                            _isLocationEnabled.value == true) &&
+                                        (mode != FilterMode.Nearby || _isLocationEnabled.value == true) &&
                                             screenState.value == ScreenState.SearchResults
                                     }
                                     .map { bounds ->
                                         if (
                                             bounds != null &&
                                                 isLocationEnabled.value == true &&
-                                                (exploreTopic == ExploreTopic.ATMs ||
-                                                    mode == FilterMode.Nearby)
+                                                (exploreTopic == ExploreTopic.ATMs || mode == FilterMode.Nearby)
                                         ) {
                                             val radiusBounds =
                                                 locationProvider.getRadiusBounds(
@@ -242,14 +238,7 @@ constructor(
                                         _appliedFilters.postValue(
                                             FilterOptions(query, territory, payment, selectedRadius)
                                         )
-                                        getPagingFlow(
-                                                query,
-                                                territory,
-                                                payment,
-                                                mode,
-                                                bounds,
-                                                sortByDistance
-                                            )
+                                        getPagingFlow(query, territory, payment, mode, bounds, sortByDistance)
                                             .cachedIn(viewModelScope)
                                     }
                             }
@@ -425,17 +414,11 @@ constructor(
                 .flatMapLatest { bounds ->
                     val radiusBounds =
                         if (_isLocationEnabled.value == true) {
-                            locationProvider.getRadiusBounds(
-                                bounds.centerLat,
-                                bounds.centerLng,
-                                radius
-                            )
+                            locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
                         } else {
                             GeoBounds.noBounds
                         }
-                    val limitResults =
-                        _isLocationEnabled.value != true ||
-                            selectedTerritory.value?.isNotEmpty() == true
+                    val limitResults = _isLocationEnabled.value != true || selectedTerritory.value?.isNotEmpty() == true
                     val limit = if (limitResults) 100 else -1
                     exploreData.observeMerchantLocations(
                         merchantId,
@@ -451,8 +434,7 @@ constructor(
                     val sorted =
                         if (isLocationEnabled.value == true && location != null) {
                             locations.sortedBy {
-                                it.distance =
-                                    calculateDistance(it, location.latitude, location.longitude)
+                                it.distance = calculateDistance(it, location.latitude, location.longitude)
                                 it.distance
                             }
                         } else {
@@ -488,9 +470,7 @@ constructor(
     fun monitorUserLocation() {
         _isLocationEnabled.value = true
 
-        viewModelScope.launch {
-            locationProvider.observeUpdates().collect { _currentUserLocation.value = it }
-        }
+        viewModelScope.launch { locationProvider.observeUpdates().collect { _currentUserLocation.value = it } }
     }
 
     fun clearFilters() {
@@ -538,12 +518,7 @@ constructor(
                 sortByDistance
         val onlineFirst = _isLocationEnabled.value != true
 
-        val pagerConfig =
-            PagingConfig(
-                pageSize = PAGE_SIZE,
-                enablePlaceholders = false,
-                maxSize = MAX_ITEMS_IN_MEMORY
-            )
+        val pagerConfig = PagingConfig(pageSize = PAGE_SIZE, enablePlaceholders = false, maxSize = MAX_ITEMS_IN_MEMORY)
 
         @Suppress("UNCHECKED_CAST")
         return if (exploreTopic == ExploreTopic.Merchants) {
@@ -586,9 +561,7 @@ constructor(
                     )
                 }
                 .flow
-                .map { data ->
-                    data.map { it.apply { distance = calculateDistance(it, userLat, userLng) } }
-                }
+                .map { data -> data.map { it.apply { distance = calculateDistance(it, userLat, userLng) } } }
         }
             as Flow<PagingData<SearchResult>>
     }
@@ -598,9 +571,7 @@ constructor(
 
         viewModelWorkerScope.launch {
             val radiusBounds =
-                bounds?.let {
-                    locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
-                }
+                bounds?.let { locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius) }
             val result =
                 if (exploreTopic == ExploreTopic.Merchants) {
                     val type = getMerchantType(filterMode.value ?: FilterMode.Online)
@@ -681,17 +652,9 @@ constructor(
 
     private fun calculateDistance(item: SearchResult, userLat: Double?, userLng: Double?): Double {
         return if (
-            item.type != MerchantType.ONLINE &&
-                _isLocationEnabled.value == true &&
-                userLat != null &&
-                userLng != null
+            item.type != MerchantType.ONLINE && _isLocationEnabled.value == true && userLat != null && userLng != null
         ) {
-            locationProvider.distanceBetween(
-                userLat,
-                userLng,
-                item.latitude ?: 0.0,
-                item.longitude ?: 0.0
-            )
+            locationProvider.distanceBetween(userLat, userLng, item.latitude ?: 0.0, item.longitude ?: 0.0)
         } else {
             Double.NaN
         }
@@ -709,11 +672,7 @@ constructor(
             val syncStatusLiveData = syncStatusService.getSyncProgressFlow().asLiveData()
             val observedLastErrorLiveData = syncStatusService.hasObservedLastError().asLiveData()
 
-            fun setSyncStatus(
-                isOnline: Boolean,
-                progress: Resource<Double>,
-                observedLastError: Boolean
-            ) {
+            fun setSyncStatus(isOnline: Boolean, progress: Resource<Double>, observedLastError: Boolean) {
                 value =
                     when {
                         progress.exception != null -> {
@@ -735,29 +694,17 @@ constructor(
             }
             addSource(observedLastErrorLiveData) { hasObservedLastError ->
                 if (connectivityLiveData.value != null && syncStatusLiveData.value != null) {
-                    setSyncStatus(
-                        connectivityLiveData.value!!,
-                        syncStatusLiveData.value!!,
-                        hasObservedLastError
-                    )
+                    setSyncStatus(connectivityLiveData.value!!, syncStatusLiveData.value!!, hasObservedLastError)
                 }
             }
             addSource(syncStatusLiveData) { progress ->
                 if (connectivityLiveData.value != null && observedLastErrorLiveData.value != null) {
-                    setSyncStatus(
-                        connectivityLiveData.value!!,
-                        progress,
-                        observedLastErrorLiveData.value!!
-                    )
+                    setSyncStatus(connectivityLiveData.value!!, progress, observedLastErrorLiveData.value!!)
                 }
             }
             addSource(connectivityLiveData) { isOnline ->
                 if (syncStatusLiveData.value != null && observedLastErrorLiveData.value != null) {
-                    setSyncStatus(
-                        isOnline,
-                        syncStatusLiveData.value!!,
-                        observedLastErrorLiveData.value!!
-                    )
+                    setSyncStatus(isOnline, syncStatusLiveData.value!!, observedLastErrorLiveData.value!!)
                 }
             }
         }
@@ -787,8 +734,7 @@ constructor(
     private fun hasZoomLevelChanged(currentZoomLevel: Float): Boolean = previousZoomLevel != currentZoomLevel
 
     private fun hasCameraCenterChanged(currentCenterPosition: GeoBounds): Boolean =
-        locationProvider.distanceBetweenCenters(previousCameraGeoBounds, currentCenterPosition) !=
-            0.0
+        locationProvider.distanceBetweenCenters(previousCameraGeoBounds, currentCenterPosition) != 0.0
 
     fun trackFilterEvents(dashPaymentOn: Boolean, giftCardPaymentOn: Boolean) {
         if (exploreTopic == ExploreTopic.Merchants) {
@@ -832,23 +778,19 @@ constructor(
         logEvent(
             when (_selectedRadiusOption.value) {
                 1 -> {
-                    if (exploreTopic == ExploreTopic.Merchants)
-                        AnalyticsConstants.Explore.FILTER_MERCHANT_ONE_MILE
+                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.Explore.FILTER_MERCHANT_ONE_MILE
                     else AnalyticsConstants.Explore.FILTER_ATM_ONE_MILE
                 }
                 5 -> {
-                    if (exploreTopic == ExploreTopic.Merchants)
-                        AnalyticsConstants.Explore.FILTER_MERCHANT_FIVE_MILE
+                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.Explore.FILTER_MERCHANT_FIVE_MILE
                     else AnalyticsConstants.Explore.FILTER_ATM_FIVE_MILE
                 }
                 50 -> {
-                    if (exploreTopic == ExploreTopic.Merchants)
-                        AnalyticsConstants.Explore.FILTER_MERCHANT_FIFTY_MILE
+                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.Explore.FILTER_MERCHANT_FIFTY_MILE
                     else AnalyticsConstants.Explore.FILTER_ATM_FIFTY_MILE
                 }
                 else -> {
-                    if (exploreTopic == ExploreTopic.Merchants)
-                        AnalyticsConstants.Explore.FILTER_MERCHANT_TWENTY_MILE
+                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.Explore.FILTER_MERCHANT_TWENTY_MILE
                     else AnalyticsConstants.Explore.FILTER_ATM_TWENTY_MILE
                 }
             }
