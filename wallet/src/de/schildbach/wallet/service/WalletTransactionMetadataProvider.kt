@@ -159,8 +159,13 @@ class WalletTransactionMetadataProvider @Inject constructor(
             transactionMetadataDao.update(transactionMetadata)
         }
 
-        val icon = iconUrl ?: return
-        updateIcon(txId, icon)
+        if (!iconUrl.isNullOrEmpty()) {
+            try {
+                updateIcon(txId, iconUrl)
+            } catch (ex: Exception) {
+                log.error("Failed to make an http call for icon: $iconUrl")
+            }
+        }
     }
 
     override fun syncTransactionBlocking(tx: Transaction) {
