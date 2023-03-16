@@ -17,12 +17,10 @@
 
 package org.dash.wallet.features.exploredash.ui.dashdirect
 
-import android.content.Context
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
 import androidx.annotation.StringRes
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
@@ -32,19 +30,16 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentDashDirectUserAuthBinding
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
-import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_auth) {
-    companion object {
-        private val log = LoggerFactory.getLogger(DashDirectUserAuthFragment::class.java)
-    }
-
     private var currentDirectUserAuthType: DashDirectUserAuthType? = null
     private val binding by viewBinding(FragmentDashDirectUserAuthBinding::bind)
     private val viewModel by exploreViewModels<DashDirectViewModel>()
@@ -117,8 +112,11 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
     private fun authUserToDashDirect(email: String, isSignIn: Boolean) {
         lifecycleScope.launch {
             when (
-                val response =
-                    if (isSignIn) viewModel.signInToDashDirect(email) else viewModel.createUserToDashDirect(email)
+                val response = if (isSignIn) {
+                    viewModel.signInToDashDirect(email)
+                } else {
+                    viewModel.createUserToDashDirect(email)
+                }
             ) {
                 is ResponseResource.Success -> {
                     if (response.value) {
@@ -130,6 +128,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
                     }
                 }
                 is ResponseResource.Failure -> {
+                    viewModel.logEvent(AnalyticsConstants.DashDirect.UNSUCCESSFUL_LOGIN)
                     binding.inputWrapper.isErrorEnabled = true
                     binding.inputErrorTv.text =
                         if (response.errorBody.isNullOrEmpty()) getString(R.string.error) else response.errorBody
@@ -144,6 +143,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             when (val response = viewModel.verifyEmail(code)) {
                 is ResponseResource.Success -> {
                     if (response.value) {
+                        viewModel.logEvent(AnalyticsConstants.DashDirect.SUCCESSFUL_LOGIN)
                         hideKeyboard()
                         safeNavigate(DashDirectUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
                     }
@@ -163,13 +163,10 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
 
     private fun showKeyboard() {
         binding.input.requestFocus()
-        val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        inputManager?.showSoftInput(binding.input, InputMethodManager.SHOW_IMPLICIT)
+        KeyboardUtil.showSoftKeyboard(requireContext(), binding.input)
     }
 
     private fun hideKeyboard() {
-        val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        inputManager?.hideSoftInputFromWindow(binding.input.windowToken, 0)
-        binding.root.setPadding(0, 0, 0, 0)
+        KeyboardUtil.hideKeyboard(requireContext(), binding.input)
     }
 }

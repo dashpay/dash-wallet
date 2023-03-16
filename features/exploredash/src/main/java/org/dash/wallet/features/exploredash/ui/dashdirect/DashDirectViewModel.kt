@@ -23,24 +23,25 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
@@ -59,9 +60,7 @@ import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
-class DashDirectViewModel
-@Inject
-constructor(
+class DashDirectViewModel @Inject constructor(
     walletDataProvider: WalletDataProvider,
     exchangeRates: ExchangeRatesProvider,
     var configuration: Configuration,
@@ -69,7 +68,8 @@ constructor(
     private val repository: DashDirectRepositoryInt,
     private val transactionMetadata: TransactionMetadataProvider,
     private val exploreData: ExploreDataSource,
-    private val giftCardDao: GiftCardDao
+    private val giftCardDao: GiftCardDao,
+    private val analyticsService: AnalyticsService
 ) : ViewModel() {
 
     companion object {
@@ -91,18 +91,13 @@ constructor(
     val usdExchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
 
-    var purchaseGiftCardDataMerchant: Merchant? = null
-    var purchaseGiftCardDataPaymentValue: Pair<Coin, Fiat>? = null
+    lateinit var giftCardMerchant: Merchant
+    lateinit var giftCardPaymentValue: Fiat
 
     var minCardPurchaseCoin: Coin = Coin.ZERO
     var minCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
     var maxCardPurchaseCoin: Coin = Coin.ZERO
     var maxCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
-
-    val purchaseGiftCardFailedCallback = SingleLiveEvent<String>()
-    private val _purchaseGiftCardData: MutableLiveData<PurchaseGiftCardResponse.Data?> = MutableLiveData()
-    val purchaseGiftCardData: LiveData<PurchaseGiftCardResponse.Data?>
-        get() = _purchaseGiftCardData
 
     init {
         exchangeRates
@@ -113,36 +108,30 @@ constructor(
         walletDataProvider.observeBalance().distinctUntilChanged().onEach(_balance::postValue).launchIn(viewModelScope)
     }
 
-    fun callPurchaseGiftCard() =
-        viewModelScope.launch(Dispatchers.Main) {
-            when (val response = purchaseGiftCard()) {
-                is ResponseResource.Success -> {
-                    if (response.value?.data?.success == true) {
-                        _purchaseGiftCardData.value = response.value?.data
-                    }
-                }
-                is ResponseResource.Failure -> {
-                    log.error("purchaseGiftCard error ${response.errorCode}: ${response.errorBody}")
-                    purchaseGiftCardFailedCallback.call()
-                }
-                else -> { }
-            }
-        }
+    suspend fun purchaseGiftCard(): PurchaseGiftCardResponse.Data? {
+        giftCardMerchant.merchantId?.let {
+            val amountValue = giftCardPaymentValue
+            repository.getDashDirectEmail()?.let { email ->
+                val savingsPercentage =
+                    giftCardMerchant.savingsPercentage ?: DashDirectConstants.DEFAULT_DISCOUNT
+                val discountedValue = getDiscountedAmount(amountValue, savingsPercentage)
+                val response = repository.purchaseGiftCard(
+                    merchantId = it,
+                    giftCardAmount = discountedValue.toBigDecimal().toDouble(),
+                    currency = Constants.DASH_CURRENCY,
+                    deviceID = UUID.randomUUID().toString(),
+                    userEmail = email
+                )
 
-    private suspend fun purchaseGiftCard(): ResponseResource<PurchaseGiftCardResponse?>? {
-        purchaseGiftCardDataMerchant?.merchantId?.let {
-            purchaseGiftCardDataPaymentValue?.let { amountValue ->
-                repository.getDashDirectEmail()?.let { email ->
-                    val savingsPercentage =
-                        purchaseGiftCardDataMerchant?.savingsPercentage ?: DashDirectConstants.DEFAULT_DISCOUNT
-                    val discountedValue = getDiscountedAmount(amountValue.second, savingsPercentage)
-                    return repository.purchaseGiftCard(
-                        merchantId = it,
-                        giftCardAmount = discountedValue.toBigDecimal().toDouble(),
-                        currency = Constants.DASH_CURRENCY,
-                        deviceID = UUID.randomUUID().toString(),
-                        userEmail = email
-                    )
+                when (response) {
+                    is ResponseResource.Success -> {
+                        if (response.value?.data?.success == true) {
+                            return response.value?.data!!
+                        }
+                    }
+                    is ResponseResource.Failure -> {
+                        log.error("purchaseGiftCard error ${response.errorCode}: ${response.errorBody}")
+                    }
                 }
             }
         }
@@ -166,12 +155,12 @@ constructor(
         return null
     }
 
-    suspend fun createSendingRequestFromDashUri(paymentURi: String): Transaction {
+    suspend fun createSendingRequestFromDashUri(paymentURi: String): Sha256Hash {
         val transaction = sendPaymentService.payWithDashUrl(paymentURi)
         log.info("dash direct transaction: ${transaction.txId}")
-        transactionMetadata.markGiftCardTransaction(transaction.txId, purchaseGiftCardDataMerchant?.logoLocation)
+        transactionMetadata.markGiftCardTransaction(transaction.txId, giftCardMerchant.logoLocation)
 
-        return transaction
+        return transaction.txId
     }
 
     suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>? {
@@ -181,7 +170,9 @@ constructor(
         return null
     }
 
-    fun setMinMaxCardPurchaseValues(minCardPurchase: Double, maximumCardPurchase: Double) {
+    fun refreshMinMaxCardPurchaseValues() {
+        val minCardPurchase = giftCardMerchant.minCardPurchase ?: 0.0
+        val maximumCardPurchase = giftCardMerchant.maxCardPurchase ?: 0.0
         minCardPurchaseFiat = Fiat.parseFiat(Constants.USD_CURRENCY, minCardPurchase.toString())
         maxCardPurchaseFiat = Fiat.parseFiat(Constants.USD_CURRENCY, maximumCardPurchase.toString())
         updatePurchaseLimits()
@@ -216,10 +207,49 @@ constructor(
 
     suspend fun logout() = repository.logout()
 
-    fun saveGiftCard(giftCard: GiftCard) {
+    fun saveGiftCard(
+        txId: Sha256Hash,
+        data: GetGiftCardResponse.Data
+    ) {
+        logOnPurchaseEvents()
+        val giftCardId = "${ServiceName.DashDirect.lowercase()}+${data.id ?: -1}" // e.g. dashdirect+1234
+        val giftCard = GiftCard(
+            id = giftCardId,
+            merchantName = giftCardMerchant.name ?: "",
+            price = giftCardPaymentValue.value,
+            currency = giftCardPaymentValue.currencyCode,
+            transactionId = txId,
+            number = data.cardNumber ?: "",
+            pin = data.cardPin,
+            currentBalanceUrl = giftCardMerchant.website
+        )
         viewModelScope.launch {
             giftCardDao.insertGiftCard(giftCard)
         }
+    }
+
+    fun logEvent(event: String) {
+        analyticsService.logEvent(event, mapOf())
+    }
+
+    private fun logOnPurchaseEvents() {
+        analyticsService.logEvent(AnalyticsConstants.DashDirect.SUCCESSFUL_PURCHASE, mapOf())
+        analyticsService.logEvent(
+            AnalyticsConstants.DashDirect.MERCHANT_NAME,
+            mapOf(AnalyticsConstants.Parameter.VALUE to (giftCardMerchant.name ?: ""))
+        )
+        analyticsService.logEvent(
+            AnalyticsConstants.DashDirect.PURCHASE_AMOUNT,
+            mapOf(AnalyticsConstants.Parameter.VALUE to giftCardPaymentValue.toFriendlyString())
+        )
+
+        val savingsPercentage =
+            giftCardMerchant.savingsPercentage ?: DashDirectConstants.DEFAULT_DISCOUNT
+        val discountedValue = getDiscountedAmount(giftCardPaymentValue, savingsPercentage)
+        analyticsService.logEvent(
+            AnalyticsConstants.DashDirect.DISCOUNT_AMOUNT,
+            mapOf(AnalyticsConstants.Parameter.VALUE to discountedValue.toFriendlyString())
+        )
     }
 
     // TODO Remove the test merchent

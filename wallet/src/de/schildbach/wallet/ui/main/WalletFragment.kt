@@ -150,8 +150,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     findNavController().navigate(
                         R.id.paymentsFragment,
                         bundleOf(
-                            PaymentsFragment.ARG_ACTIVE_TAB to
-                                    PaymentsFragment.ACTIVE_TAB_RECEIVE
+                            PaymentsFragment.ARG_ACTIVE_TAB to PaymentsFragment.ACTIVE_TAB_RECEIVE
                         )
                     )
                 }
@@ -159,6 +158,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     SweepWalletActivity.start(requireContext(), true)
                 }
                 binding.shortcutsPane.explore -> {
+                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_EXPLORE)
                     findNavController().navigate(
                         R.id.exploreFragment,
                         bundleOf(),
@@ -246,7 +246,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 getString(R.string.scan_to_pay_error_dialog_message_no_data),
                 getString(R.string.button_close),
                 null
-            ).show(requireActivity())
+            ).show(requireActivity()) {
+                viewModel.logEvent(AnalyticsConstants.Home.NO_ADDRESS_COPIED)
+            }
         }
     }
 
@@ -292,7 +294,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     null
                 )
                 dialog.isMessageSelectable = true
-                dialog.show(requireActivity())
+                dialog.show(requireActivity()) {
+                    viewModel.logEvent(AnalyticsConstants.Home.NO_ADDRESS_COPIED)
+                }
             }
 
             override fun cannotClassify(input: String) {

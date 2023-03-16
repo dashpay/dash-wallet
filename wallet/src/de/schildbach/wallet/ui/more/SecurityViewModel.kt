@@ -92,7 +92,7 @@ class SecurityViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+        analytics.logEvent(event, mapOf())
     }
 
     fun triggerWipe() {
@@ -109,7 +109,7 @@ class SecurityViewModel @Inject constructor(
                     AnalyticsConstants.Security.FINGERPRINT_ON
                 } else {
                     AnalyticsConstants.Security.FINGERPRINT_OFF
-                }, bundleOf()
+                }, mapOf()
             )
 
             configuration.enableFingerprint = isEnabled
@@ -129,7 +129,7 @@ class SecurityViewModel @Inject constructor(
                     AnalyticsConstants.Security.AUTOHIDE_BALANCE_ON
                 } else {
                     AnalyticsConstants.Security.AUTOHIDE_BALANCE_OFF
-                }, bundleOf()
+                }, mapOf()
             )
             configuration.hideBalance = hide
         }

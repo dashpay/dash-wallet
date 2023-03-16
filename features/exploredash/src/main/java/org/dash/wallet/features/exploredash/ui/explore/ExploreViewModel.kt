@@ -852,6 +852,6 @@ constructor(
     }
 
     fun logEvent(event: String) {
-        analyticsService.logEvent(event, bundleOf())
+        analyticsService.logEvent(event, mapOf())
     }
 }
