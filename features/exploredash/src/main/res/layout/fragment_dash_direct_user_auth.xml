@@ -86,7 +86,6 @@
         android:visibility="gone"
         tools:visibility="visible" />
 
-
     <Button
         android:id="@+id/continue_button"
         style="@style/Button.Primary.Large.Blue"
@@ -98,5 +97,19 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/continue_button_loading"
+        android:layout_width="wrap_content"
+        style="@style/Widget.Material3.CircularProgressIndicator.Small"
+        app:trackThickness="3dp"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        app:indicatorColor="@color/white"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@+id/continue_button"
+        app:layout_constraintStart_toStartOf="@+id/continue_button"
+        app:layout_constraintTop_toTopOf="@id/continue_button"
+        app:layout_constraintBottom_toBottomOf="@id/continue_button" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
