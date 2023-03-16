@@ -128,14 +128,17 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private fun showReportIssue() {
-        ReportIssueDialogBuilder.createReportIssueDialog(this, walletApplication)
-            .buildAlertDialog().show()
+        ReportIssueDialogBuilder.createReportIssueDialog(
+            this,
+            packageInfoProvider,
+            configuration,
+            viewModel.walletData.wallet
+        ).buildAlertDialog().show()
     }
 
-    private fun onTransactionDetailsDismiss(){
+    private fun onTransactionDetailsDismiss() {
         when {
-            intent.action == Intent.ACTION_VIEW ||
-                    intent.action == SendCoinsActivity.ACTION_SEND_FROM_WALLET_URI -> {
+            intent.action == Intent.ACTION_VIEW || intent.action == SendCoinsActivity.ACTION_SEND_FROM_WALLET_URI -> {
                 finish()
             }
             intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {

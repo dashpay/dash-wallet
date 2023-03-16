@@ -44,7 +44,6 @@ import com.google.common.base.Strings;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.crypto.KeyCrypterScrypt;
 import org.bouncycastle.crypto.params.KeyParameter;
-import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.slf4j.Logger;
@@ -58,7 +57,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.security.BiometricHelper;
 import de.schildbach.wallet.security.SecurityFunctions;
 import de.schildbach.wallet.service.RestartService;
-import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.security.PinRetryController;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 

@@ -21,7 +21,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.EncryptWalletLiveData
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.SecurityFunctions
-import de.schildbach.wallet.ui.preference.PinRetryController
+import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -31,7 +31,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SetPinViewModel @Inject constructor(
-    val walletApplication: WalletApplication,
+    private val walletApplication: WalletApplication,
     walletData: WalletDataProvider,
     configuration: Configuration,
     pinRetryController: PinRetryController,
@@ -102,5 +102,12 @@ class SetPinViewModel @Inject constructor(
         val newPassword = getPinAsString()
         encryptWalletLiveData.changePassword(oldPinCache!!, newPassword)
         configuration.updateLastEncryptKeysTime()
+    }
+
+    fun startAutoLogout() {
+        walletApplication.autoLogout.apply {
+            maybeStartAutoLogoutTimer()
+            keepLockedUntilPinEntered = false
+        }
     }
 }

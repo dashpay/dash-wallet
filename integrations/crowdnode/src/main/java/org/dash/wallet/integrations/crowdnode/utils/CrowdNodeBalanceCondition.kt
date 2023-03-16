@@ -21,8 +21,10 @@ import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.services.LeftoverBalanceException
+import kotlin.jvm.Throws
 
 class CrowdNodeBalanceCondition {
+    @Throws(LeftoverBalanceException::class)
     fun check(
         walletBalance: Coin,
         address: Address?,

@@ -42,9 +42,10 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.BiometricLockoutException
+import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.payments.QuickReceiveActivity
-import de.schildbach.wallet.ui.preference.PinRetryController
+import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet.ui.send.SendCoinsQrActivity
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
@@ -79,6 +80,8 @@ open class LockScreenActivity : SecureActivity() {
     @Inject lateinit var restartService: RestartService
     @Inject lateinit var pinRetryController: PinRetryController
     @Inject lateinit var biometricHelper: BiometricHelper
+    @Inject lateinit var packageInfoProvider: PackageInfoProvider
+
     private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
     private val checkPinViewModel by viewModels<CheckPinViewModel>()
     private val pinLength by lazy { configuration.pinLength }

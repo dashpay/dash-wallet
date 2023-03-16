@@ -24,6 +24,7 @@ import de.schildbach.wallet.offline.DirectPaymentTask
 import de.schildbach.wallet.offline.HttpDirectPaymentTask
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
@@ -46,7 +47,8 @@ import kotlin.coroutines.resumeWithException
 class SendCoinsTaskRunner @Inject constructor(
     private val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
-    private val securityFunctions: SecurityFunctions
+    private val securityFunctions: SecurityFunctions,
+    private val packageInfoProvider: PackageInfoProvider
 ) : SendPaymentService {
     private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
 
@@ -173,7 +175,6 @@ class SendCoinsTaskRunner @Inject constructor(
 
     private fun sendPayment(
         coroutine: CancellableContinuation<Transaction>,
-        basePaymentIntent: PaymentIntent,
         finalPaymentIntent: PaymentIntent,
         sendRequest: SendRequest,
         wallet: Wallet
@@ -196,7 +197,13 @@ class SendCoinsTaskRunner @Inject constructor(
     ) {
         wallet.completeTx(sendRequest)
         val refundAddress = wallet.freshAddress(KeyChain.KeyPurpose.REFUND)
-        val payment = PaymentProtocol.createPaymentMessage(listOf(sendRequest.tx), finalPaymentIntent.amount, refundAddress, null, finalPaymentIntent.payeeData)
+        val payment = PaymentProtocol.createPaymentMessage(
+            listOf(sendRequest.tx),
+            finalPaymentIntent.amount,
+            refundAddress,
+            null,
+            finalPaymentIntent.payeeData
+        )
 
         val callback: DirectPaymentTask.ResultCallback = object : DirectPaymentTask.ResultCallback {
             override fun onResult(ack: Boolean) {
@@ -216,7 +223,7 @@ class SendCoinsTaskRunner @Inject constructor(
             override fun onFail(messageResId: Int, vararg messageArgs: Any) {
                 val message = StringBuilder().apply {
                     if (BuildConfig.DEBUG && messageArgs[0] == 415) {
-                        val host = Uri.parse(finalPaymentIntent!!.paymentUrl).host
+                        val host = Uri.parse(finalPaymentIntent.paymentUrl).host
                         appendLine(host)
                         appendLine(walletApplication.getString(messageResId, *messageArgs))
                         appendLine(PaymentProtocol.MIMETYPE_PAYMENT)
@@ -235,7 +242,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 HttpDirectPaymentTask.HttpPaymentTask(
                     callback,
                     it,
-                    walletApplication.httpUserAgent()
+                    packageInfoProvider.httpUserAgent()
                 ).send(payment)
             }
         }
@@ -251,7 +258,7 @@ class SendCoinsTaskRunner @Inject constructor(
             override fun onPaymentIntent(paymentIntent: PaymentIntent) {
                 if (basePaymentIntent.isExtendedBy(paymentIntent, true)) {
                     createHTTPSendRequest(coroutine, paymentIntent, wallet)?.let {
-                        sendPayment(coroutine, basePaymentIntent, paymentIntent, it, wallet)
+                        sendPayment(coroutine, basePaymentIntent, it, wallet)
                     }
                 } else {
                     log.info("BIP72 trust check failed")
@@ -262,8 +269,11 @@ class SendCoinsTaskRunner @Inject constructor(
                 // finalPaymentIntent = null
                 if (ex != null) {
                     val errorMessage =
-                        if (messageResId > 0) walletApplication.getString(messageResId, *messageArgs)
-                        else ex.message!!
+                        if (messageResId > 0) {
+                            walletApplication.getString(messageResId, *messageArgs)
+                        } else {
+                            ex.message!!
+                        }
                     coroutine.resumeWithException(Exception(errorMessage))
                 } else {
                     val errorMessage = walletApplication.getString(messageResId, *messageArgs)
@@ -271,13 +281,12 @@ class SendCoinsTaskRunner @Inject constructor(
                 }
             }
         }
-        val scope =
-            CoroutineScope(coroutine.context)
+        val scope = CoroutineScope(coroutine.context)
         scope.launch(Dispatchers.IO) {
             basePaymentIntent.paymentRequestUrl?.let {
                 HttpRequestTask(
                     requestCallback,
-                    walletApplication.httpUserAgent()
+                    packageInfoProvider.httpUserAgent()
                 ).requestPaymentRequest(it)
             }
         }
