@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.ui.dashdirect.dialogs
 
 import android.graphics.Bitmap
-import androidx.core.os.bundleOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel

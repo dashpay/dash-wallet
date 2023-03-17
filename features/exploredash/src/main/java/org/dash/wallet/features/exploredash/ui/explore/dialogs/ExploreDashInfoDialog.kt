@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash.ui.explore.dialogs
 
 import android.os.Bundle
 import android.view.View
-import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
