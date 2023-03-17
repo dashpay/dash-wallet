@@ -35,13 +35,13 @@ import coil.load
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
 import dagger.hilt.android.AndroidEntryPoint
-import java.util.*
 import org.dash.wallet.common.util.makeLinks
 import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.*
+import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
+import java.util.*
 
 @AndroidEntryPoint
 class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
@@ -113,8 +113,8 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
         email?.let {
             binding.loginDashDirectUser.text =
                 context.resources.getString(R.string.logged_in_as, email.maskEmail()) +
-                    " " +
-                    context.resources.getString(R.string.log_out)
+                " " +
+                context.resources.getString(R.string.log_out)
 
             binding.loginDashDirectUser.makeLinks(
                 Pair(

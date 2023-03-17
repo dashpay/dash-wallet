@@ -113,7 +113,7 @@
                     android:paddingRight="8dp"
                     android:paddingBottom="12dp"
                     android:singleLine="true"
-                    android:textColorHint="@color/steel_gray_300"
+                    android:textColorHint="@color/dark_gray"
                     app:drawableLeftCompat="@drawable/ic_search_exchange_rates" />
 
                 <ImageView

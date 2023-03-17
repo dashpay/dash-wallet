@@ -17,9 +17,7 @@
 package de.schildbach.wallet.ui.transactions
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
@@ -36,7 +34,7 @@ import org.dash.wallet.common.util.currencySymbol
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 
 @AndroidEntryPoint
-class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
+class TransactionGroupDetailsFragment() : OffsetDialogFragment(R.layout.transaction_group_details) {
     private val viewModel: TransactionGroupViewModel by viewModels()
     private val binding by viewBinding(TransactionGroupDetailsBinding::bind)
 
@@ -47,14 +45,6 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment() {
 
     constructor(transactionWrapper: TransactionWrapper) : this() {
         this.transactionWrapper = transactionWrapper
-    }
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        return inflater.inflate(R.layout.transaction_group_details, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

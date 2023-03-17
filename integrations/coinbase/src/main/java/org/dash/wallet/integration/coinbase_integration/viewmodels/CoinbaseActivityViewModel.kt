@@ -107,7 +107,7 @@ class CoinbaseActivityViewModel @Inject constructor(
 
     private fun splitNameAndAccount(nameAccount: String?, type: PaymentMethodType): Pair<String, String> {
         nameAccount?.let {
-            val match = when(type) {
+            val match = when (type) {
                 PaymentMethodType.BankAccount, PaymentMethodType.Card, PaymentMethodType.PayPal -> {
                     "(\\d+)?\\s?[a-z]?\\*+".toRegex().find(nameAccount)
                 }
@@ -135,6 +135,7 @@ class CoinbaseActivityViewModel @Inject constructor(
             "ideal_bank_account", "eft_bank_account", "interac" -> PaymentMethodType.BankAccount
             "bank_wire" -> PaymentMethodType.WireTransfer
             "paypal_account" -> PaymentMethodType.PayPal
+            "apple_pay" -> PaymentMethodType.ApplePay
             else -> PaymentMethodType.Unknown
         }
     }

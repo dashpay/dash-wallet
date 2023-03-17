@@ -152,7 +152,7 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
                             exchangeRate.getFiat());
                     final Fiat localBalance = rate.coinToFiat(balance);
                     final MonetaryFormat localFormat = Constants.LOCAL_FORMAT.code(0,
-                            PREFIX_ALMOST_EQUAL_TO + GenericUtils.currencySymbol(exchangeRate.getCurrencyCode()));
+                            PREFIX_ALMOST_EQUAL_TO + GenericUtils.INSTANCE.currencySymbol(exchangeRate.getCurrencyCode()));
                     final Object[] prefixSpans = new Object[]{MonetarySpannable.SMALLER_SPAN,
                             new ForegroundColorSpan(context.getResources().getColor(R.color.fg_less_significant))};
                     localBalanceStr = new MonetarySpannable(localFormat, localBalance).applyMarkup(prefixSpans,

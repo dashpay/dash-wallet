@@ -37,3 +37,4 @@ interface IconBitmapDao {
     @Query("DELETE FROM icon_bitmaps")
     suspend fun clear()
 }
+

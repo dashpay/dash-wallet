@@ -51,7 +51,6 @@ public class Configuration {
     private final Resources res;
 
     public static final String PREFS_KEY_HIDE_BALANCE = "hide_balance";
-    public static final String PREFS_KEY_SEND_COINS_AUTOCLOSE = "send_coins_autoclose";
     public static final String PREFS_KEY_CONNECTIVITY_NOTIFICATION = "connectivity_notification";
     public static final String PREFS_KEY_EXCHANGE_CURRENCY = "exchange_currency";
     public static final String PREFS_KEY_EXCHANGE_CURRENCY_DETECTED = "exchange_currency_detected";
@@ -61,7 +60,6 @@ public class Configuration {
     public static final String PREFS_KEY_REMIND_BALANCE = "remind_balance";
     public static final String PREFS_KEY_REMIND_BALANCE_TIME = "remind_balance_time";
     public static final String PREFS_KEY_DISCLAIMER = "disclaimer";
-    private static final String PREFS_KEY_LABS_QR_PAYMENT_REQUEST = "labs_qr_payment_request";
     private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
     public static final String PREFS_KEY_AUTO_LOGOUT_ENABLED = "auto_logout_enabled";
     public static final String PREFS_KEY_AUTO_LOGOUT_MINUTES = "auto_logout_minutes";
@@ -160,26 +158,12 @@ public class Configuration {
                 decimalRepetitions);
     }
 
-    public MonetaryFormat getMaxPrecisionFormat() {
-        final int shift = getBtcShift();
-        if (shift == 0)
-            return new MonetaryFormat().shift(0).minDecimals(2).optionalDecimals(2, 2, 2);
-        else if (shift == 3)
-            return new MonetaryFormat().shift(3).minDecimals(2).optionalDecimals(2, 1);
-        else
-            return new MonetaryFormat().shift(6).minDecimals(0).optionalDecimals(2);
-    }
-
     public boolean getHideBalance() {
         return prefs.getBoolean(PREFS_KEY_HIDE_BALANCE, false);
     }
 
     public void setHideBalance(final boolean hideBalance) {
         prefs.edit().putBoolean(PREFS_KEY_HIDE_BALANCE, hideBalance).apply();
-    }
-
-    public boolean getSendCoinsAutoclose() {
-        return prefs.getBoolean(PREFS_KEY_SEND_COINS_AUTOCLOSE, true);
     }
 
     public boolean getConnectivityNotificationEnabled() {
@@ -272,10 +256,6 @@ public class Configuration {
         return prefs.getLong(PREFS_KEY_LAST_RESTORE, 0);
     }
 
-    public void updateLastRestoreTime() {
-        prefs.edit().putLong(PREFS_KEY_LAST_RESTORE, System.currentTimeMillis()).apply();
-    }
-
     public boolean lastBackupSeedReminderMoreThan24hAgo() {
         long lastReminder = prefs.getLong(PREFS_KEY_LAST_BACKUP_SEED_TIME, 0);
         if (lastReminder > 0) {
@@ -335,10 +315,6 @@ public class Configuration {
         return prefs.getInt(PREFS_KEY_PREVIOUS_VERSION, 0) != 0;
     }
 
-    public boolean getQrPaymentRequestEnabled() {
-        return prefs.getBoolean(PREFS_KEY_LABS_QR_PAYMENT_REQUEST, false);
-    }
-
     public boolean versionCodeCrossed(final int currentVersionCode, final int triggeringVersionCode) {
         final boolean wasBelow = lastVersionCode < triggeringVersionCode;
         final boolean wasUsedBefore = lastVersionCode > 0;
@@ -357,10 +333,6 @@ public class Configuration {
             log.info("detected app upgrade: " + lastVersionCode + " -> " + currentVersionCode);
         else if (currentVersionCode < lastVersionCode)
             log.warn("detected app downgrade: " + lastVersionCode + " -> " + currentVersionCode);
-    }
-
-    public boolean hasBeenUsed() {
-        return prefs.contains(PREFS_KEY_LAST_USED);
     }
 
     public long getLastUsedAgo() {
@@ -601,7 +573,7 @@ public class Configuration {
     }
 
     public String getCoinbaseSendLimitCurrency() {
-        return prefs.getString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, GenericUtils.getLocaleCurrencyCode());
+        return prefs.getString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, GenericUtils.INSTANCE.getLocaleCurrencyCode());
     }
 
     // CrowdNode

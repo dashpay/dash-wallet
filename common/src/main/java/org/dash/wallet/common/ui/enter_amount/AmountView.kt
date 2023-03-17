@@ -27,7 +27,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.PopupMenu
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import org.bitcoinj.core.Coin
@@ -38,15 +37,16 @@ import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.AmountViewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.*
 
 class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs) {
     private val binding = AmountViewBinding.inflate(LayoutInflater.from(context), this)
-    val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    val dashFormat: MonetaryFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
-    val fiatFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    val fiatFormat: MonetaryFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(2).optionalDecimals()
 
     private var onCurrencyToggleClicked: (() -> Unit)? = null
@@ -170,7 +170,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             fiatAmount = pair.second
 
             binding.resultAmount.text = if (dashToFiat) {
-                GenericUtils.fiatToString(fiatAmount)
+                fiatAmount.toFormattedString()
             } else {
                 dashFormat.format(dashAmount)
             }

@@ -88,7 +88,7 @@ dependencies {
     implementation "androidx.browser:browser:$browserVersion"
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     //noinspection GradleDependency
-    implementation 'com.google.zxing:core:3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
+    implementation "com.google.zxing:core:$zxingVersion"
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"

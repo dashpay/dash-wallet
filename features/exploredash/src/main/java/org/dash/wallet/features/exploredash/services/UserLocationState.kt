@@ -25,15 +25,15 @@ import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.SphericalUtil
-import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import kotlin.math.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.features.exploredash.data.model.GeoBounds
+import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
 import org.slf4j.LoggerFactory
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import kotlin.math.*
 
 data class UserLocation(var latitude: Double, var longitude: Double, var accuracy: Double)
 

@@ -19,65 +19,64 @@ package org.dash.wallet.features.exploredash.ui.dashdirect.dialogs
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
+import android.util.Size
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.StyleRes
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import coil.imageLoader
 import coil.load
+import coil.request.ImageRequest
 import coil.size.Scale
+import coil.transform.RoundedCornersTransformation
+import com.google.zxing.BarcodeFormat
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.Qr
 import org.dash.wallet.common.util.copy
+import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.GiftCardDetailsDialogModel
+import org.dash.wallet.features.exploredash.data.dashdirect.model.Barcode
+import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
+import java.time.format.DateTimeFormatter
 
-@FlowPreview
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
-class GiftCardDetailsDialog : OffsetDialogFragment() {
+class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_details) {
+    companion object {
+        private const val ARG_BARCODE = "barcodeUrl"
+        private const val ARG_TRANSACTION_ID = "transactionId"
+
+        fun newInstance(transactionId: Sha256Hash, barcodeUrl: String? = null) =
+            GiftCardDetailsDialog().apply {
+                arguments = bundleOf(
+                    ARG_TRANSACTION_ID to transactionId,
+                    ARG_BARCODE to barcodeUrl
+                )
+            }
+    }
+
     @StyleRes override val backgroundStyle = R.style.PrimaryBackground
     override val forceExpand = true
-
-    // private var purchaseGiftCardData: Pair<Pair<Coin, Fiat>, Merchant>? = null
     private val binding by viewBinding(DialogGiftCardDetailsBinding::bind)
-
-    private var giftCardDetailsDialogModel: GiftCardDetailsDialogModel? = null
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let { giftCardDetailsDialogModel = it.getParcelable(ARG_MODEL) }
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_gift_card_details, container, false)
-    }
+    private val viewModel by viewModels<GiftCardDetailsViewModel>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        giftCardDetailsDialogModel?.let {
-            binding.merchentName.text = it.merchantName
-            it.merchantLogo?.let { url ->
-                binding.merchentLogo.load(url) {
-                    crossfade(200)
-                    scale(Scale.FILL)
-                    placeholder(R.drawable.ic_image_placeholder)
-                    error(R.drawable.ic_image_placeholder)
-                }
-            }
-        }
-
-        binding.originalPurchaseValue.text = giftCardDetailsDialogModel?.giftCardPrice
-
-        binding.purchaseCardNumber.text = giftCardDetailsDialogModel?.giftCardNumber
-        binding.purchaseCardPin.text = giftCardDetailsDialogModel?.giftCardPin
+        binding.collapseButton.setOnClickListener { dismiss() }
 
         binding.copyCardNumber.setOnClickListener {
             binding.purchaseCardNumber.text.toString().copy(requireActivity(), "card number")
@@ -87,32 +86,127 @@ class GiftCardDetailsDialog : OffsetDialogFragment() {
             binding.purchaseCardPin.text.toString().copy(requireActivity(), "card pin")
         }
 
-        binding.purchaseSeeHowToUseGiftCardLabel.setOnClickListener {
-            binding.purchaseSeeHowToUseGiftCardLabel.isVisible = false
-            binding.purchaseSeeHowToUseGiftCard.isVisible = true
+        binding.howToUseButton.setOnClickListener {
+            binding.howToUseButton.isVisible = false
+            binding.howToUseInfo.isVisible = true
         }
-        binding.collapseButton.setOnClickListener { dismiss() }
 
-        binding.viewTransactionDetailsCard.setOnClickListener {
-            giftCardDetailsDialogModel?.transactionId?.let {
-                if (it.isNotEmpty()) {
-                    findNavController().navigate(Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/$it"))
+        viewModel.giftCard.observe(viewLifecycleOwner) {
+            it?.let { bindGiftCardDetails(binding, it) }
+        }
+
+        viewModel.icon.observe(viewLifecycleOwner) { bitmap ->
+            val iconSize = resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
+
+            if (bitmap != null) {
+                binding.merchantLogo.load(bitmap) {
+                    crossfade(true)
+                    scale(Scale.FILL)
+                    transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
+                    placeholder(R.drawable.ic_gift_card_tx)
+                    error(R.drawable.ic_gift_card_tx)
                 }
+
+                binding.secondaryIcon.isVisible = true
+                binding.secondaryIcon.setImageResource(R.drawable.ic_gift_card_tx)
+            } else {
+                binding.secondaryIcon.isVisible = false
+                binding.merchantLogo.setImageResource(R.drawable.ic_gift_card_tx)
             }
         }
 
+        viewModel.date.observe(viewLifecycleOwner) {
+            val formatter = DateTimeFormatter.ofPattern("MMMM dd, yyyy, hh:mm a")
+            binding.purchaseDate.text = it.format(formatter)
+        }
+
+        viewModel.barcode.observe(viewLifecycleOwner) { barcode ->
+            val barcodeUrl = requireArguments().getString(ARG_BARCODE)
+
+            if (barcodeUrl.isNullOrEmpty() && barcode != null) {
+                decodeBarcode(barcode)
+            }
+        }
+
+        (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let { transactionId ->
+            viewModel.init(transactionId)
+        }
+    }
+
+    private fun bindGiftCardDetails(binding: DialogGiftCardDetailsBinding, giftCard: GiftCard) {
+        binding.merchantName.text = giftCard.merchantName
+
+        val price = Fiat.valueOf(giftCard.currency, giftCard.price)
+        binding.originalPurchaseValue.text = price.toFormattedString()
+
+        binding.purchaseCardNumber.text = giftCard.number
+        binding.purchaseCardPin.text = giftCard.pin
+        binding.pinCodeGroup.isVisible = !giftCard.pin.isNullOrEmpty()
+
+        binding.checkCurrentBalance.isVisible = giftCard.currentBalanceUrl?.isNotEmpty() == true
         binding.checkCurrentBalance.setOnClickListener {
-            giftCardDetailsDialogModel?.giftCardCheckCurrentBalanceUrl?.let {
+            giftCard.currentBalanceUrl?.let {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
                 requireContext().startActivity(intent)
             }
         }
+
+        binding.viewTransactionDetailsCard.setOnClickListener {
+            findNavController().navigate(
+                Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/${giftCard.transactionId}")
+            )
+        }
+
+        val barcodeImg = requireArguments().getString(ARG_BARCODE)
+
+        if (barcodeImg?.isNotEmpty() == true) {
+            viewModel.saveBarcode(giftCard.transactionId, barcodeImg)
+            binding.purchaseCardBarcode.isVisible = true
+            val imageRequest = ImageRequest.Builder(requireContext())
+                .data(barcodeImg)
+                .target(binding.purchaseCardBarcode)
+                .scale(Scale.FILL)
+                .crossfade(true)
+                .listener(
+                    onStart = {
+                        binding.barcodeLoadingIndicator.isVisible = true
+                    },
+                    onSuccess = { _, _ ->
+                        binding.barcodeLoadingIndicator.isVisible = false
+                    },
+                    onError = { _, _ ->
+                        binding.barcodeLoadingIndicator.isVisible = false
+                        binding.barcodeLoadingError.isVisible = true
+                    }
+                )
+                .build()
+            requireContext().imageLoader.enqueue(imageRequest)
+        }
     }
 
-    companion object {
-        private const val ARG_MODEL = "argModel"
+    private fun decodeBarcode(barcode: Barcode) {
+        lifecycleScope.launch {
+            binding.purchaseCardBarcode.isVisible = true
 
-        fun newInstance(model: GiftCardDetailsDialogModel) =
-            GiftCardDetailsDialog().apply { arguments = Bundle().apply { putParcelable(ARG_MODEL, model) } }
+            if (barcode.barcodeFormat == BarcodeFormat.QR_CODE) {
+                binding.purchaseCardBarcode.updateLayoutParams<ViewGroup.LayoutParams> {
+                    height = resources.getDimensionPixelSize(R.dimen.barcode_qr_size)
+                }
+            }
+
+            val margin = resources.getDimensionPixelOffset(R.dimen.details_horizontal_margin)
+            val bitmap = withContext(Dispatchers.Default) {
+                val size = Size(
+                    binding.purchaseCardInfo.measuredWidth - margin * 2,
+                    binding.purchaseCardBarcode.layoutParams.height
+                )
+                Qr.bitmap(barcode.value, barcode.barcodeFormat, size)
+            }
+
+            binding.purchaseCardBarcode.load(bitmap) {
+                crossfade(true)
+                scale(Scale.FILL)
+            }
+        }
     }
 }

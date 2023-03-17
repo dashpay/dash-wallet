@@ -28,4 +28,6 @@ data class PresentableTxMetadata(
     var customIconId: Sha256Hash? = null
 ) {
     @Ignore var icon: Bitmap? = null
+    @Ignore var title: String? = null
 }
+

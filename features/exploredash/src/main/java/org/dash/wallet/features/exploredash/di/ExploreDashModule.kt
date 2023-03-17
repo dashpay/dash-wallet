@@ -30,8 +30,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import org.dash.wallet.features.exploredash.data.ExploreDataSource
-import org.dash.wallet.features.exploredash.data.MerchantAtmDataSource
+import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
+import org.dash.wallet.features.exploredash.data.explore.MerchantAtmDataSource
 import org.dash.wallet.features.exploredash.network.RemoteDataSource
 import org.dash.wallet.features.exploredash.network.service.DashDirectAuthApi
 import org.dash.wallet.features.exploredash.network.service.DashDirectServicesApi

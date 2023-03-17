@@ -87,8 +87,8 @@
 
     <ImageView
         android:id="@+id/secondary_icon"
-        android:layout_width="19dp"
-        android:layout_height="19dp"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
         android:padding="2dp"
         android:layout_marginBottom="-2dp"
         android:layout_marginEnd="-2dp"
@@ -346,15 +346,16 @@
                 android:src="@drawable/ic_toggle_arrows" />
         </LinearLayout>
     </RelativeLayout>
+
     <RelativeLayout
         android:id="@+id/open_explorer_card"
         style="@style/ViewRaised"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="15dp"
-        android:background="@drawable/rounded_ripple_background"
         android:paddingHorizontal="15dp"
         android:paddingVertical="17dp"
+        android:background="@drawable/rounded_ripple_background"
         android:theme="@style/ListViewButtonBackground"
         app:layout_constraintTop_toBottomOf="@id/open_tax_category_card">
 

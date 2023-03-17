@@ -31,11 +31,11 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.features.exploredash.data.ExploreDataSource
-import org.dash.wallet.features.exploredash.data.model.GeoBounds
-import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.MerchantType
-import org.dash.wallet.features.exploredash.data.model.PaymentMethod
+import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
+import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
+import org.dash.wallet.features.exploredash.data.explore.model.Merchant
+import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
+import org.dash.wallet.features.exploredash.data.explore.model.PaymentMethod
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
@@ -53,12 +53,12 @@ class ExploreViewModelTest {
     private val merchants =
         listOf(
             Merchant(
-                    plusCode = "",
-                    addDate = "2021-09-08 11:22",
-                    updateDate = "2021-09-08 12:22",
-                    deeplink = "",
-                    paymentMethod = "gift card"
-                )
+                plusCode = "",
+                addDate = "2021-09-08 11:22",
+                updateDate = "2021-09-08 12:22",
+                deeplink = "",
+                paymentMethod = "gift card"
+            )
                 .apply {
                     id = 1
                     name = "Google Play"
@@ -76,12 +76,12 @@ class ExploreViewModelTest {
                     logoLocation = ""
                 },
             Merchant(
-                    plusCode = "",
-                    addDate = "2021-09-09 11:23",
-                    updateDate = "2021-09-09 12:23",
-                    deeplink = "",
-                    paymentMethod = "dash"
-                )
+                plusCode = "",
+                addDate = "2021-09-09 11:23",
+                updateDate = "2021-09-09 12:23",
+                deeplink = "",
+                paymentMethod = "dash"
+            )
                 .apply {
                     id = 2
                     name = "Amazon"
@@ -99,12 +99,12 @@ class ExploreViewModelTest {
                     logoLocation = ""
                 },
             Merchant(
-                    plusCode = "",
-                    addDate = "2021-09-10 11:24",
-                    updateDate = "2021-09-10 12:24",
-                    deeplink = "",
-                    paymentMethod = "dash"
-                )
+                plusCode = "",
+                addDate = "2021-09-10 11:24",
+                updateDate = "2021-09-10 12:24",
+                deeplink = "",
+                paymentMethod = "dash"
+            )
                 .apply {
                     id = 3
                     name = "Bark Box"
@@ -122,12 +122,12 @@ class ExploreViewModelTest {
                     logoLocation = ""
                 },
             Merchant(
-                    plusCode = "",
-                    addDate = "2021-09-11 11:25",
-                    updateDate = "2021-09-11 12:25",
-                    deeplink = "",
-                    paymentMethod = "gift card"
-                )
+                plusCode = "",
+                addDate = "2021-09-11 11:25",
+                updateDate = "2021-09-11 12:25",
+                deeplink = "",
+                paymentMethod = "gift card"
+            )
                 .apply {
                     id = 4
                     name = "Dunkin Donuts"
@@ -145,12 +145,12 @@ class ExploreViewModelTest {
                     logoLocation = ""
                 },
             Merchant(
-                    plusCode = "",
-                    addDate = "2021-09-11 11:25",
-                    updateDate = "2021-09-11 12:25",
-                    deeplink = "",
-                    paymentMethod = "dash"
-                )
+                plusCode = "",
+                addDate = "2021-09-11 11:25",
+                updateDate = "2021-09-11 12:25",
+                deeplink = "",
+                paymentMethod = "dash"
+            )
                 .apply {
                     id = 5
                     name = "Merchant 1"
@@ -168,12 +168,12 @@ class ExploreViewModelTest {
                     logoLocation = ""
                 },
             Merchant(
-                    plusCode = "",
-                    addDate = "2021-09-11 11:25",
-                    updateDate = "2021-09-11 12:25",
-                    deeplink = "",
-                    paymentMethod = "gift card"
-                )
+                plusCode = "",
+                addDate = "2021-09-11 11:25",
+                updateDate = "2021-09-11 12:25",
+                deeplink = "",
+                paymentMethod = "gift card"
+            )
                 .apply {
                     id = 6
                     name = "Merchant 2"
@@ -191,12 +191,12 @@ class ExploreViewModelTest {
                     logoLocation = ""
                 },
             Merchant(
-                    plusCode = "",
-                    addDate = "2021-09-11 11:25",
-                    updateDate = "2021-09-11 12:25",
-                    deeplink = "",
-                    paymentMethod = "dash"
-                )
+                plusCode = "",
+                addDate = "2021-09-11 11:25",
+                updateDate = "2021-09-11 12:25",
+                deeplink = "",
+                paymentMethod = "dash"
+            )
                 .apply {
                     id = 7
                     name = "Merchant 3"
@@ -214,12 +214,12 @@ class ExploreViewModelTest {
                     logoLocation = ""
                 },
             Merchant(
-                    plusCode = "",
-                    addDate = "",
-                    updateDate = "",
-                    deeplink = "https://dashdirect.page.link/AMC",
-                    paymentMethod = "gift card"
-                )
+                plusCode = "",
+                addDate = "",
+                updateDate = "",
+                deeplink = "https://dashdirect.page.link/AMC",
+                paymentMethod = "gift card"
+            )
                 .apply {
                     id = 19630
                     name = "AMC Theatres"
@@ -234,12 +234,12 @@ class ExploreViewModelTest {
                     logoLocation = "https://api.giftango.com/imageservice/Images/042507_logo_600x380.png"
                 },
             Merchant(
-                    plusCode = "",
-                    addDate = "",
-                    updateDate = "",
-                    deeplink = "https://dashdirect.page.link/Applebees",
-                    paymentMethod = "gift card"
-                )
+                plusCode = "",
+                addDate = "",
+                updateDate = "",
+                deeplink = "https://dashdirect.page.link/Applebees",
+                paymentMethod = "gift card"
+            )
                 .apply {
                     id = 20826
                     name = "Applebee's"
@@ -447,8 +447,10 @@ class ExploreViewModelTest {
                                 merchants
                                     .filter { it.type != MerchantType.ONLINE }
                                     .filter {
-                                        (it.latitude
-                                            ?: 0.0) < bounds.northLat &&
+                                        (
+                                            it.latitude
+                                                ?: 0.0
+                                            ) < bounds.northLat &&
                                             (it.latitude ?: 0.0) > bounds.southLat &&
                                             (it.longitude ?: 0.0) < bounds.eastLng &&
                                             (it.longitude ?: 0.0) > bounds.westLng
@@ -478,8 +480,10 @@ class ExploreViewModelTest {
                     .filter { (it.type == MerchantType.PHYSICAL || it.type == MerchantType.BOTH) }
                     .filter { it.active != false }
                     .filter {
-                        (it.latitude
-                            ?: 0.0) < bounds.northLat &&
+                        (
+                            it.latitude
+                                ?: 0.0
+                            ) < bounds.northLat &&
                             (it.latitude ?: 0.0) > bounds.southLat &&
                             (it.longitude ?: 0.0) < bounds.eastLng &&
                             (it.longitude ?: 0.0) > bounds.westLng

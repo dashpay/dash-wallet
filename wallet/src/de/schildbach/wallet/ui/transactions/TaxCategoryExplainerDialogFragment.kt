@@ -17,23 +17,17 @@
 package de.schildbach.wallet.ui.transactions
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.FragmentManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogTaxCategoryExplainerBinding
 import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
-import javax.inject.Inject
 
 @AndroidEntryPoint
-class TaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
+class TaxCategoryExplainerDialogFragment : OffsetDialogFragment(R.layout.dialog_tax_category_explainer) {
 
     override val forceExpand = true
     private val binding by viewBinding(DialogTaxCategoryExplainerBinding::bind)
@@ -53,16 +47,6 @@ class TaxCategoryExplainerDialogFragment : OffsetDialogFragment() {
             fragment.arguments = args
             return fragment
         }
-    }
-
-    @Inject
-    lateinit var analyticsService: AnalyticsService
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.dialog_tax_category_explainer, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

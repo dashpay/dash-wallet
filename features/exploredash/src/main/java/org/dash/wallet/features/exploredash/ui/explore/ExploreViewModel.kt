@@ -25,10 +25,6 @@ import androidx.paging.*
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.util.*
-import javax.inject.Inject
-import kotlin.math.max
-import kotlin.math.min
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.dash.wallet.common.data.Resource
@@ -37,13 +33,17 @@ import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.livedata.ConnectionLiveData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.features.exploredash.data.ExploreDataSource
-import org.dash.wallet.features.exploredash.data.model.*
+import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
+import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.extensions.Const
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
+import java.util.*
+import javax.inject.Inject
+import kotlin.math.max
+import kotlin.math.min
 
 enum class ExploreTopic {
     Merchants,
@@ -122,11 +122,15 @@ constructor(
     fun setSelectedRadiusOption(selectedRadius: Int) {
         _selectedRadiusOption.value = selectedRadius
     }
+
     // In meters
     val radius: Double
         get() =
-            if (isMetric) (selectedRadiusOption.value ?: DEFAULT_RADIUS_OPTION) * Const.METERS_IN_KILOMETER
-            else (selectedRadiusOption.value ?: DEFAULT_RADIUS_OPTION) * Const.METERS_IN_MILE
+            if (isMetric) {
+                (selectedRadiusOption.value ?: DEFAULT_RADIUS_OPTION) * Const.METERS_IN_KILOMETER
+            } else {
+                (selectedRadiusOption.value ?: DEFAULT_RADIUS_OPTION) * Const.METERS_IN_MILE
+            }
 
     // Bounded only by selected radius
     private var radiusBounds: GeoBounds? = null
@@ -218,8 +222,8 @@ constructor(
                                     .map { bounds ->
                                         if (
                                             bounds != null &&
-                                                isLocationEnabled.value == true &&
-                                                (exploreTopic == ExploreTopic.ATMs || mode == FilterMode.Nearby)
+                                            isLocationEnabled.value == true &&
+                                            (exploreTopic == ExploreTopic.ATMs || mode == FilterMode.Nearby)
                                         ) {
                                             val radiusBounds =
                                                 locationProvider.getRadiusBounds(
@@ -312,9 +316,11 @@ constructor(
                 val lastResolved = lastResolvedAddress
                 isLocationEnabled.value == true &&
                     it.zoomLevel > MIN_ZOOM_LEVEL &&
-                    (selectedTerritory.value?.isEmpty() == true ||
-                        lastResolved == null ||
-                        locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2)
+                    (
+                        selectedTerritory.value?.isEmpty() == true ||
+                            lastResolved == null ||
+                            locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2
+                        )
             }
             .onEach(::resolveAddress)
             .launchIn(viewModelWorkerScope)
@@ -523,19 +529,19 @@ constructor(
         @Suppress("UNCHECKED_CAST")
         return if (exploreTopic == ExploreTopic.Merchants) {
             Pager(pagerConfig) {
-                    val type = getMerchantType(filterMode)
-                    exploreData.observeMerchantsPaging(
-                        query,
-                        territory,
-                        type,
-                        payment,
-                        bounds,
-                        byDistance,
-                        userLat ?: 0.0,
-                        userLng ?: 0.0,
-                        onlineFirst
-                    )
-                }
+                val type = getMerchantType(filterMode)
+                exploreData.observeMerchantsPaging(
+                    query,
+                    territory,
+                    type,
+                    payment,
+                    bounds,
+                    byDistance,
+                    userLat ?: 0.0,
+                    userLng ?: 0.0,
+                    onlineFirst
+                )
+            }
                 .flow
                 .map { data ->
                     data
@@ -549,17 +555,17 @@ constructor(
                 }
         } else {
             Pager(pagerConfig) {
-                    val types = getAtmTypes(filterMode)
-                    exploreData.observeAtmsPaging(
-                        query,
-                        territory,
-                        types,
-                        bounds,
-                        byDistance,
-                        userLat ?: 0.0,
-                        userLng ?: 0.0
-                    )
-                }
+                val types = getAtmTypes(filterMode)
+                exploreData.observeAtmsPaging(
+                    query,
+                    territory,
+                    types,
+                    bounds,
+                    byDistance,
+                    userLat ?: 0.0,
+                    userLng ?: 0.0
+                )
+            }
                 .flow
                 .map { data -> data.map { it.apply { distance = calculateDistance(it, userLat, userLng) } } }
         }
@@ -778,20 +784,32 @@ constructor(
         logEvent(
             when (_selectedRadiusOption.value) {
                 1 -> {
-                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.Explore.FILTER_MERCHANT_ONE_MILE
-                    else AnalyticsConstants.Explore.FILTER_ATM_ONE_MILE
+                    if (exploreTopic == ExploreTopic.Merchants) {
+                        AnalyticsConstants.Explore.FILTER_MERCHANT_ONE_MILE
+                    } else {
+                        AnalyticsConstants.Explore.FILTER_ATM_ONE_MILE
+                    }
                 }
                 5 -> {
-                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.Explore.FILTER_MERCHANT_FIVE_MILE
-                    else AnalyticsConstants.Explore.FILTER_ATM_FIVE_MILE
+                    if (exploreTopic == ExploreTopic.Merchants) {
+                        AnalyticsConstants.Explore.FILTER_MERCHANT_FIVE_MILE
+                    } else {
+                        AnalyticsConstants.Explore.FILTER_ATM_FIVE_MILE
+                    }
                 }
                 50 -> {
-                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.Explore.FILTER_MERCHANT_FIFTY_MILE
-                    else AnalyticsConstants.Explore.FILTER_ATM_FIFTY_MILE
+                    if (exploreTopic == ExploreTopic.Merchants) {
+                        AnalyticsConstants.Explore.FILTER_MERCHANT_FIFTY_MILE
+                    } else {
+                        AnalyticsConstants.Explore.FILTER_ATM_FIFTY_MILE
+                    }
                 }
                 else -> {
-                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.Explore.FILTER_MERCHANT_TWENTY_MILE
-                    else AnalyticsConstants.Explore.FILTER_ATM_TWENTY_MILE
+                    if (exploreTopic == ExploreTopic.Merchants) {
+                        AnalyticsConstants.Explore.FILTER_MERCHANT_TWENTY_MILE
+                    } else {
+                        AnalyticsConstants.Explore.FILTER_ATM_TWENTY_MILE
+                    }
                 }
             }
         )

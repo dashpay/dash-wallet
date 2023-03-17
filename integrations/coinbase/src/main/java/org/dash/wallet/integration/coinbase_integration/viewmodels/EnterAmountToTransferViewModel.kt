@@ -25,15 +25,13 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.common.util.*
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseToDashExchangeRateUIModel
 import java.math.BigDecimal
@@ -150,7 +148,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
             } else {
                 inputValue
             }
-            if (GenericUtils.isCurrencyFirst(fiatAmount)) {
+            if (fiatAmount!!.isCurrencyFirst()) {
                 "$localCurrencySymbol $fiatBalance"
             } else {
                 "$fiatBalance $localCurrencySymbol"
@@ -276,10 +274,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
         }
     }
 
-    fun getCoinbaseBalanceInFiatFormat(dashAmt: String): String {
-        val fiat = getFiat(dashAmt)
-        return GenericUtils.fiatToString(fiat)
-    }
+    fun getCoinbaseBalanceInFiatFormat(dashAmt: String): String = getFiat(dashAmt).toFormattedString()
 
     private fun scaleValue(valueToScale: String): String {
         return coinbaseExchangeRate?.let {

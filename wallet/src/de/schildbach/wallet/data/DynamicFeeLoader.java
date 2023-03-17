@@ -160,7 +160,7 @@ public class DynamicFeeLoader extends AsyncTaskLoader<Map<FeeCategory, Coin>> {
         if (targetFile.exists())
             requestBuilder.header("If-Modified-Since", HttpDate.format(new Date(targetFile.lastModified())));
 
-        final OkHttpClient httpClient = Constants.HTTP_CLIENT.newBuilder()
+        final OkHttpClient httpClient = org.dash.wallet.common.util.Constants.INSTANCE.getHTTP_CLIENT().newBuilder()
                 .connectTimeout(5, TimeUnit.SECONDS)
                 .writeTimeout(5, TimeUnit.SECONDS)
                 .readTimeout(5, TimeUnit.SECONDS)

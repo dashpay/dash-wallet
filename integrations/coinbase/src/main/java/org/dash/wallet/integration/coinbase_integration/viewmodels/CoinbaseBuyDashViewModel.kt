@@ -28,7 +28,6 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -59,9 +58,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
     val activePaymentMethods: LiveData<List<PaymentMethod>>
         get() = _activePaymentMethods
 
-    private val _placeBuyOrder: MutableLiveData<Event<PlaceBuyOrderUIModel>> = MutableLiveData()
-    val placeBuyOrder: LiveData<Event<PlaceBuyOrderUIModel>>
-        get() = _placeBuyOrder
+    val placeBuyOrder = SingleLiveEvent<PlaceBuyOrderUIModel>()
 
     val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
      var exchangeRate: ExchangeRate?= null
@@ -106,7 +103,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
                     placeBuyOrderFailedCallback.call()
                 } else {
                     _showLoading.value = false
-                    _placeBuyOrder.value = Event(result.value)
+                    placeBuyOrder.value = result.value
                 }
             }
             is ResponseResource.Failure -> {

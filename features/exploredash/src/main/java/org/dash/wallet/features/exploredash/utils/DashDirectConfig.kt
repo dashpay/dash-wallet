@@ -22,10 +22,6 @@ import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
-import java.io.IOException
-import java.security.KeyStore
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -34,6 +30,10 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.dash.wallet.common.util.security.EncryptionProvider
+import java.io.IOException
+import java.security.KeyStore
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class DashDirectConfig @Inject constructor(private val context: Context, private val prefs: SharedPreferences) {

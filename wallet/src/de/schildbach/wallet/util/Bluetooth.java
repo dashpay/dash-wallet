@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import android.bluetooth.BluetoothAdapter;
-import android.os.Build;
 
 /**
  * @author Andreas Schildbach
@@ -93,7 +92,7 @@ public class Bluetooth {
     }
 
     public static boolean isBluetoothUrl(final String url) {
-        return url != null && GenericUtils.startsWithIgnoreCase(url, "bt:");
+        return url != null && GenericUtils.INSTANCE.startsWithIgnoreCase(url, "bt:");
     }
 
     public static String getBluetoothMac(final String url) {

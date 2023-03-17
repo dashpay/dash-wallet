@@ -25,11 +25,10 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
-import org.dash.wallet.common.data.entity.BlockchainState
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.security.BiometricHelper
-import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.transactions.TxDirectionFilter
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -39,9 +38,10 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -194,8 +194,8 @@ class MainViewModel @Inject constructor(
 
             if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
                 input = clip.getItemAt(0).uri?.toString()
-            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)
-                || clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
+            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
+                clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
             ) {
                 input = clip.getItemAt(0).text?.toString()
             }
@@ -222,9 +222,12 @@ class MainViewModel @Inject constructor(
             TxFilterType.RECEIVED -> "received_transactions"
             TxFilterType.GIFT_CARD -> "gift_cards"
         }
-        analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
-            "filter_value" to directionParameter
-        ))
+        analytics.logEvent(
+            AnalyticsConstants.Home.TRANSACTION_FILTER,
+            bundleOf(
+                "filter_value" to directionParameter
+            )
+        )
     }
 
     fun processDirectTransaction(tx: Transaction) {
@@ -247,14 +250,15 @@ class MainViewModel @Inject constructor(
             val transactionViews = walletData.wrapAllTransactions(
                 FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
             ).filter { it.passesFilter(filter, metadata) }
-             .sortedWith(TransactionWrapperComparator())
-             .map {
-                 TransactionRowView.fromTransactionWrapper(
-                     it, walletData.transactionBag,
-                     Constants.CONTEXT,
-                     metadata[it.transactions.first().txId]
-                 )
-             }
+                .sortedWith(TransactionWrapperComparator())
+                .map {
+                    TransactionRowView.fromTransactionWrapper(
+                        it,
+                        walletData.transactionBag,
+                        Constants.CONTEXT,
+                        metadata[it.transactions.first().txId]
+                    )
+                }
             _transactions.postValue(transactionViews)
         }
     }
@@ -281,8 +285,8 @@ class MainViewModel @Inject constructor(
         var percentage = state.percentageSync
 
         if (state.replaying && state.percentageSync == 100) {
-            //This is to prevent showing 100% when using the Rescan blockchain function.
-            //The first few broadcasted blockchainStates are with percentage sync at 100%
+            // This is to prevent showing 100% when using the Rescan blockchain function.
+            // The first few broadcasted blockchainStates are with percentage sync at 100%
             percentage = 0
         }
         _blockchainSyncPercentage.postValue(percentage)
@@ -292,10 +296,11 @@ class MainViewModel @Inject constructor(
         filter: TxDirectionFilter,
         metadata: Map<Sha256Hash, PresentableTxMetadata>
     ): Boolean {
-       return (filter.direction == TxFilterType.GIFT_CARD && isGiftCard(metadata)) ||
-                transactions.any { tx -> filter.matches(tx) }
+        return (filter.direction == TxFilterType.GIFT_CARD && isGiftCard(metadata)) ||
+            transactions.any { tx -> filter.matches(tx) }
     }
     private fun TransactionWrapper.isGiftCard(metadata: Map<Sha256Hash, PresentableTxMetadata>): Boolean {
         return metadata[transactions.first().txId]?.service == ServiceName.DashDirect
     }
 }
+

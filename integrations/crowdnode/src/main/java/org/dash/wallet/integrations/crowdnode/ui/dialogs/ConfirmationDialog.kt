@@ -20,9 +20,7 @@ package org.dash.wallet.integrations.crowdnode.ui.dialogs
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
@@ -35,18 +33,10 @@ import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-class ConfirmationDialog: OffsetDialogFragment() {
+class ConfirmationDialog : OffsetDialogFragment(R.layout.fragment_confirmation) {
     private val binding by viewBinding(FragmentConfirmationBinding::bind)
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
     private var qrDialog: DialogFragment? = null
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_confirmation, container, false)
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

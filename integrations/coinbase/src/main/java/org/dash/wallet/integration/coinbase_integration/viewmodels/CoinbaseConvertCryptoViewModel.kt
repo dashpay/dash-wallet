@@ -29,7 +29,6 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -39,6 +38,7 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.util.toFormattedStringNoCode
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
@@ -60,9 +60,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
     private val _baseIdForFaitModelCoinBase: MutableLiveData<List<BaseIdForUSDData>> = MutableLiveData()
 
-    private val _swapTradeOrder: MutableLiveData<Event<SwapTradeUIModel>> = MutableLiveData()
-    val swapTradeOrder: LiveData<Event<SwapTradeUIModel>>
-        get() = _swapTradeOrder
+    val swapTradeOrder = SingleLiveEvent<SwapTradeUIModel>()
 
     val swapTradeFailedCallback = SingleLiveEvent<String?>()
 
@@ -92,7 +90,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
             _baseIdForFaitModelCoinBase.value?.firstOrNull { it.base == Constants.DASH_CURRENCY }?.base_id ?: ""
 
         val tradesRequest = TradesRequest(
-            GenericUtils.fiatToStringWithoutCurrencyCode(valueToConvert),
+            valueToConvert.toFormattedStringNoCode(),
             userPreference.exchangeCurrencyCode!!,
             source_asset = source_asset,
             target_asset = target_asset
@@ -115,7 +113,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
                         this.outputCurrencyName = if (dashToCrypt) selectedCoinBaseAccount.coinBaseUserAccountData.currency?.name ?: ""
                         else
                             "Dash"
-                        _swapTradeOrder.value = Event(this)
+                        swapTradeOrder.value = this
                     }
                 }
             }

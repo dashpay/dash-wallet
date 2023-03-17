@@ -57,7 +57,8 @@ class TransactionAdapter(
 
     class DiffCallback : DiffUtil.ItemCallback<HistoryRowView>() {
         override fun areItemsTheSame(oldItem: HistoryRowView, newItem: HistoryRowView): Boolean {
-            val sameTransactions = (oldItem is TransactionRowView && newItem is TransactionRowView) && oldItem.txId == newItem.txId
+            val sameTransactions = (oldItem is TransactionRowView && newItem is TransactionRowView) &&
+                oldItem.txId == newItem.txId
             return sameTransactions || oldItem == newItem
         }
 
@@ -105,7 +106,7 @@ class TransactionAdapter(
                 holder.binding.root.setOnClickListener { clickListener.invoke(item, position) }
             }
             is TransactionGroupHeaderViewHolder -> {
-                holder.bind((item as HistoryRowView).localDate)
+                holder.bind((item as HistoryRowView).localDate!!)
                 holder.binding.root.setOnClickListener { clickListener.invoke(item, position) }
             }
         }
@@ -136,35 +137,49 @@ class TransactionAdapter(
                     ResourcesCompat.getDrawable(resources, R.drawable.selectable_rectangle_white, null)
                 }
             } else {
-                binding.root.updatePadding(top = resources.getDimensionPixelOffset(if (position == 0) {
-                    R.dimen.transaction_row_extended_padding
-                } else {
-                    R.dimen.transaction_row_vertical_padding
-                }))
+                binding.root.updatePadding(
+                    top = resources.getDimensionPixelOffset(
+                        if (position == 0) {
+                            R.dimen.transaction_row_extended_padding
+                        } else {
+                            R.dimen.transaction_row_vertical_padding
+                        }
+                    )
+                )
             }
 
-            binding.root.updatePadding(bottom = resources.getDimensionPixelOffset(if (isLastInGroup) {
-                R.dimen.transaction_row_extended_padding
-            } else {
-                R.dimen.transaction_row_vertical_padding
-            }))
+            binding.root.updatePadding(
+                bottom = resources.getDimensionPixelOffset(
+                    if (isLastInGroup) {
+                        R.dimen.transaction_row_extended_padding
+                    } else {
+                        R.dimen.transaction_row_vertical_padding
+                    }
+                )
+            )
 
-            binding.primaryStatus.text = resources.getString(txView.titleRes)
-            binding.primaryStatus.setTextColor(if (txView.hasErrors) {
-                warningColor
-            } else {
-                contentColor
-            })
+            txView.title?.let {
+                binding.primaryStatus.text = resources.getString(it.resourceId, *it.args.toTypedArray())
+                binding.primaryStatus.setTextColor(
+                    if (txView.hasErrors) {
+                        warningColor
+                    } else {
+                        contentColor
+                    }
+                )
+            }
 
             if (txView.statusRes < 0) {
                 binding.secondaryStatus.text = null
             } else {
                 binding.secondaryStatus.text = resources.getString(txView.statusRes)
-                binding.secondaryStatus.setTextColor(if (txView.hasErrors) {
-                    warningColor
-                } else {
-                    colorSecondaryStatus
-                })
+                binding.secondaryStatus.setTextColor(
+                    if (txView.hasErrors) {
+                        warningColor
+                    } else {
+                        colorSecondaryStatus
+                    }
+                )
             }
 
             setIcon(txView)
@@ -182,7 +197,7 @@ class TransactionAdapter(
                 binding.primaryIcon.updatePadding(0, 0, 0, 0)
                 binding.primaryIcon.background = null
                 binding.primaryIcon.load(txView.iconBitmap) {
-                    transformations(RoundedCornersTransformation(iconSize*2.toFloat()))
+                    transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
                 }
                 binding.secondaryIcon.isVisible = true
                 binding.secondaryIcon.setImageResource(icon)
@@ -207,7 +222,8 @@ class TransactionAdapter(
         private fun setTime(time: Long, dateTimeFormat: Int) {
             // Set the time. eg.  "<date> <time>"
             binding.time.text = DateUtils.formatDateTime(
-                itemView.context, time,
+                itemView.context,
+                time,
                 dateTimeFormat
             )
         }
@@ -247,7 +263,9 @@ class TransactionAdapter(
                 if (exchangeRate != null) {
                     val exchangeCurrencyCode = GenericUtils.currencySymbol(exchangeRate.fiat.currencyCode)
                     binding.fiatView.setFiatAmount(
-                        value, exchangeRate, Constants.LOCAL_FORMAT,
+                        value,
+                        exchangeRate,
+                        Constants.LOCAL_FORMAT,
                         exchangeCurrencyCode
                     )
                     binding.fiatView.isVisible = true

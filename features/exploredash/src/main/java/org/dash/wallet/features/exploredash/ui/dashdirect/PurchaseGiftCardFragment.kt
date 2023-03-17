@@ -25,35 +25,27 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.ui.OnHideBalanceClickedListener
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
+import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.PurchaseGiftCardConfirmDialog
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
-import org.slf4j.LoggerFactory
 
-@FlowPreview
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) {
-    companion object {
-        private val log = LoggerFactory.getLogger(PurchaseGiftCardFragment::class.java)
-    }
-
     private val binding by viewBinding(FragmentPurchaseGiftCardBinding::bind)
     private var enterAmountFragment: EnterAmountFragment? = null
     private val viewModel by exploreViewModels<DashDirectViewModel>()
@@ -99,7 +91,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
         exploreViewModel.selectedItem.value?.let { merchant ->
             if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
                 this.selectedMerchant = merchant
-                binding.paymentHeaderView.setPaymentAddressViewSubtitle(merchant.name.orEmpty())
+                binding.paymentHeaderView.setSubtitle(merchant.name.orEmpty())
                 binding.paymentHeaderView.setPaymentAddressViewIcon(merchant.logoLocation)
 
                 lifecycleScope.launch {
@@ -143,14 +135,13 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
     private fun showCardPurchaseLimits() {
         val purchaseAmount = enterAmountViewModel.amount.value
         purchaseAmount?.let {
-            if (
-                purchaseAmount.isLessThan(viewModel.minCardPurchaseCoin) ||
-                    purchaseAmount.isGreaterThan(viewModel.maxCardPurchaseCoin)
+            if (purchaseAmount.isLessThan(viewModel.minCardPurchaseCoin) ||
+                purchaseAmount.isGreaterThan(viewModel.maxCardPurchaseCoin)
             ) {
                 binding.minValue.text =
-                    getString(R.string.purchase_gift_card_min, GenericUtils.fiatToString(viewModel.minCardPurchaseFiat))
+                    getString(R.string.purchase_gift_card_min, viewModel.minCardPurchaseFiat.toFormattedString())
                 binding.maxValue.text =
-                    getString(R.string.purchase_gift_card_max, GenericUtils.fiatToString(viewModel.maxCardPurchaseFiat))
+                    getString(R.string.purchase_gift_card_max, viewModel.maxCardPurchaseFiat.toFormattedString())
                 binding.minValue.isVisible = true
                 binding.maxValue.isVisible = true
                 hideDiscountHint()
@@ -174,10 +165,11 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
                     binding.discountValue.text =
                         getString(
                             R.string.purchase_gift_card_discount_hint,
-                            GenericUtils.fiatToString(myRate.coinToFiat(purchaseAmount)),
-                            GenericUtils.fiatToStringRoundUp(
-                                viewModel.getDiscountedAmount(purchaseAmount, savingsPercentage)
-                            ),
+                            myRate.coinToFiat(purchaseAmount).toFormattedString(),
+                            viewModel.getDiscountedAmount(
+                                purchaseAmount,
+                                savingsPercentage
+                            )?.toFormattedStringRoundUp() ?: "",
                             GenericUtils.formatPercent(savingsPercentage)
                         )
                     binding.discountValue.isVisible = true
@@ -195,18 +187,13 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
     }
 
     private fun setPaymentHeader() {
-        binding.paymentHeaderView.setPaymentAddressViewTitle(getString(R.string.explore_option_buy))
-        binding.paymentHeaderView.setPaymentAddressViewProposition(getString(R.string.purchase_gift_card_at))
-        binding.paymentHeaderView.setOnHideBalanceClickedListener(
-            onHideBalanceClickedListener =
-                object : OnHideBalanceClickedListener {
-                    override fun onHideBalanceClicked(view: View) {
-                        viewModel.balance.value?.let { balance ->
-                            updateBalanceLabel(balance, viewModel.usdExchangeRate.value)
-                        }
-                    }
-                }
-        )
+        binding.paymentHeaderView.setTitle(getString(R.string.explore_option_buy))
+        binding.paymentHeaderView.setProposition(getString(R.string.purchase_gift_card_at))
+        binding.paymentHeaderView.setOnShowHideBalanceClicked {
+            viewModel.balance.value?.let { balance ->
+                updateBalanceLabel(balance, viewModel.usdExchangeRate.value)
+            }
+        }
 
         viewModel.balance.observe(viewLifecycleOwner) { balance ->
             updateBalanceLabel(balance, viewModel.usdExchangeRate.value)
@@ -216,7 +203,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
     private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.entity.ExchangeRate?) {
         val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, it.fiat) }
         var balanceText = viewModel.dashFormat.format(balance).toString()
-        exchangeRate?.let { balanceText += " ~ ${GenericUtils.fiatToString(exchangeRate.coinToFiat(balance))}" }
+        exchangeRate?.let { balanceText += " ~ ${exchangeRate.coinToFiat(balance).toFormattedString()}" }
         binding.paymentHeaderView.setBalanceValue(balanceText)
     }
 }

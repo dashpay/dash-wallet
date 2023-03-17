@@ -18,9 +18,7 @@ package org.dash.wallet.integration.coinbase_integration.ui.dialogs.crypto_walle
 
 import android.content.Context
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.core.content.ContextCompat
@@ -31,7 +29,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
@@ -50,25 +47,16 @@ import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccoun
 import org.dash.wallet.integration.coinbase_integration.model.getCoinBaseExchangeRateConversion
 
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class CryptoWalletsDialog(
     private val selectedCurrencyCode: String = "USD",
     private val clickListener: (Int, DialogFragment) -> Unit
-) : OffsetDialogFragment() {
+) : OffsetDialogFragment(R.layout.dialog_option_picker) {
     override val forceExpand: Boolean = true
     private val binding by viewBinding(DialogOptionPickerBinding::bind)
     private val viewModel: CryptoWalletsDialogViewModel by viewModels()
     private var itemList = listOf<IconifiedViewItem>()
     private var didFocusOnSelected = false
     private var adapter: RadioGroupAdapter? = null
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.dialog_option_picker, container, false)
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -135,7 +123,8 @@ class CryptoWalletsDialog(
             val accountData = it.coinBaseUserAccountData
             val icon = getFlagFromCurrencyCode(accountData.currency?.code ?: "")
             val iconUrl = if (icon == null && !accountData.currency?.code.isNullOrEmpty()) {
-                "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/${accountData.currency?.code?.lowercase()}.png"
+                "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/" +
+                    "${accountData.currency?.code?.lowercase()}.png"
             } else {
                 null
             }
@@ -155,7 +144,7 @@ class CryptoWalletsDialog(
                 iconUrl,
                 IconSelectMode.None,
                 setLocalFaitAmount(rate, it)?.first,
-                subtitleAdditionalInfo = cryptoCurrencyBalance,
+                subtitleAdditionalInfo = cryptoCurrencyBalance
             )
         }
 
@@ -217,7 +206,8 @@ class CryptoWalletsDialog(
     private fun getFlagFromCurrencyCode(currencyCode: String): Int? {
         val resourceId = resources.getIdentifier(
             "currency_code_" + currencyCode.lowercase(),
-            "drawable", requireContext().packageName
+            "drawable",
+            requireContext().packageName
         )
         return if (resourceId == 0) null else resourceId
     }

@@ -17,9 +17,7 @@
 package de.schildbach.wallet.ui.transactions
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,11 +38,11 @@ import javax.inject.Inject
  * @author Samuel Barbosa
  */
 @AndroidEntryPoint
-class TransactionDetailsDialogFragment : OffsetDialogFragment() {
+class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transaction_details_dialog) {
 
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
     private val txId by lazy {
-        if (arguments?.get(TX_ID)is Sha256Hash) {
+        if (arguments?.get(TX_ID) is Sha256Hash) {
             arguments?.get(TX_ID) as Sha256Hash
         } else {
             Sha256Hash.wrap(arguments?.get(TX_ID) as String)
@@ -71,10 +69,6 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
             }
             return fragment
         }
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.transaction_details_dialog, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -104,6 +98,10 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
 
         viewModel.transactionIcon.observe(this) {
             transactionResultViewBinder.setTransactionIcon(it)
+        }
+
+        viewModel.merchantName.observe(this) {
+            transactionResultViewBinder.setCustomTitle(getString(R.string.gift_card_tx_title, it))
         }
 
         contentBinding.openExplorerCard.setOnClickListener { viewOnBlockExplorer() }

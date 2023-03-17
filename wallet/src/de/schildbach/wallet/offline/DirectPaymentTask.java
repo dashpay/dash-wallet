@@ -27,10 +27,10 @@ import javax.annotation.Nullable;
 import org.bitcoin.protocols.payments.Protos;
 import org.bitcoin.protocols.payments.Protos.Payment;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.dash.wallet.common.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet_test.R;
 
@@ -115,7 +115,7 @@ public abstract class DirectPaymentTask {
                         requestBuilder.header("User-Agent", userAgent);
 
 
-                    final Call call = Constants.HTTP_CLIENT.newCall(requestBuilder.build());
+                    final Call call = Constants.INSTANCE.getHTTP_CLIENT().newCall(requestBuilder.build());
                     try {
                         final Response response = call.execute();
                         if (response.isSuccessful()) {

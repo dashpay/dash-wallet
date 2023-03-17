@@ -18,36 +18,30 @@
 package org.dash.wallet.features.exploredash.ui.explore.dialogs
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.dialogSafeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.ExploreDashMainInfoBinding
+import javax.inject.Inject
 
 @AndroidEntryPoint
-class ExploreDashInfoDialog : OffsetDialogFragment() {
+class ExploreDashInfoDialog : OffsetDialogFragment(R.layout.explore_dash_main_info) {
 
     private val binding by viewBinding(ExploreDashMainInfoBinding::bind)
-    @Inject lateinit var analyticsService: AnalyticsService
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.explore_dash_main_info, container, false)
-    }
+    @Inject lateinit var analyticsService: AnalyticsService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.learnMoreLabel.setOnClickListener {
             analyticsService.logEvent(AnalyticsConstants.Explore.LEARN_MORE, bundleOf())
-            dialogSafeNavigate(ExploreDashInfoDialogDirections.infoToGiftCardDetail())
+            OffsetDialogFragment(R.layout.buy_gift_card_description).show(requireActivity())
         }
         binding.exploreDashInfoContinueBtn.setOnClickListener {
             analyticsService.logEvent(AnalyticsConstants.Explore.CONTINUE, bundleOf())

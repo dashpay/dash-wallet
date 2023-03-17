@@ -20,11 +20,9 @@ package org.dash.wallet.common.ui
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
-import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import coil.load
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.PaymentHeaderViewBinding
 
@@ -34,21 +32,21 @@ class PaymentHeaderView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : ConstraintLayout(context, attrs, defStyleAttr) {
 
-    private var binding: PaymentHeaderViewBinding = PaymentHeaderViewBinding.inflate(LayoutInflater.from(context), this, true)
-
+    private var binding = PaymentHeaderViewBinding.inflate(LayoutInflater.from(context), this, true)
     private var revealBalance = false
-
-    private var onHideBalanceClickedListener: OnHideBalanceClickedListener? = null
+    private var onShowHideBalanceClicked: ((Boolean) -> Unit)? = null
 
     init {
         binding.hideButton.setOnClickListener {
             revealBalance = !revealBalance
-            if (revealBalance) {
-                binding.hideButton.setImageResource(R.drawable.ic_show)
-            } else {
-                binding.hideButton.setImageResource(R.drawable.ic_hide)
-            }
-            onHideBalanceClickedListener?.onHideBalanceClicked(it)
+            binding.hideButton.setImageResource(
+                if (revealBalance) {
+                    R.drawable.ic_show
+                } else {
+                    R.drawable.ic_hide
+                }
+            )
+            onShowHideBalanceClicked?.invoke(revealBalance)
         }
     }
 
@@ -59,25 +57,24 @@ class PaymentHeaderView @JvmOverloads constructor(
 
     fun setPaymentAddressViewIcon(imageUrl: String?) {
         imageUrl?.let {
-            Glide.with(context)
-                .load(it)
-                .placeholder(R.drawable.ic_image_placeholder)
-                .error(R.drawable.ic_image_placeholder)
-                .transition(DrawableTransitionOptions.withCrossFade(200))
-                .into(binding.paymentAddressViewIcon)
+            binding.paymentAddressViewIcon.load(it) {
+                crossfade(200)
+                placeholder(R.drawable.ic_image_placeholder)
+                error(R.drawable.ic_image_placeholder)
+            }
             binding.paymentAddressViewIcon.isVisible = true
         }
     }
 
-    fun setPaymentAddressViewTitle(title: String) {
+    fun setTitle(title: String) {
         binding.paymentAddressViewTitle.text = title
     }
 
-    fun setPaymentAddressViewProposition(title: String) {
+    fun setProposition(title: String) {
         binding.paymentAddressViewProposition.text = title
     }
 
-    fun setPaymentAddressViewSubtitle(title: String) {
+    fun setSubtitle(title: String) {
         binding.paymentAddressViewSubtitle.text = title
     }
 
@@ -89,11 +86,7 @@ class PaymentHeaderView @JvmOverloads constructor(
         }
     }
 
-    fun setOnHideBalanceClickedListener(onHideBalanceClickedListener: OnHideBalanceClickedListener) {
-        this.onHideBalanceClickedListener = onHideBalanceClickedListener
+    fun setOnShowHideBalanceClicked(listener: (Boolean) -> Unit) {
+        this.onShowHideBalanceClicked = listener
     }
-}
-
-interface OnHideBalanceClickedListener {
-    fun onHideBalanceClicked(view: View)
 }

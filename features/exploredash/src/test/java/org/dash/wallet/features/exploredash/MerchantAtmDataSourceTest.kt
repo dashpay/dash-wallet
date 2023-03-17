@@ -19,12 +19,12 @@ package org.dash.wallet.features.exploredash
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import org.dash.wallet.features.exploredash.data.AtmDao
-import org.dash.wallet.features.exploredash.data.MerchantAtmDataSource
-import org.dash.wallet.features.exploredash.data.MerchantDao
-import org.dash.wallet.features.exploredash.data.model.GeoBounds
-import org.dash.wallet.features.exploredash.data.model.MerchantInfo
-import org.dash.wallet.features.exploredash.data.model.MerchantType
+import org.dash.wallet.features.exploredash.data.explore.AtmDao
+import org.dash.wallet.features.exploredash.data.explore.MerchantAtmDataSource
+import org.dash.wallet.features.exploredash.data.explore.MerchantDao
+import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
+import org.dash.wallet.features.exploredash.data.explore.model.MerchantInfo
+import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.kotlin.*

@@ -976,22 +976,6 @@
         <item name="android:theme">@style/SecondaryButtonTheme.Small.Blue</item>
     </style>
 
-    <style name="SecondaryButtonTheme.Small.Round">
-        <item name="titleTextColor">@color/content_primary</item>
-        <item name="strokeColor">@color/steel_gray_150</item>
-        <item name="cornerRadius">16dp</item>
-    </style>
-
-    <style name="Button.Secondary.Small.Round">
-        <item name="android:paddingStart">0dp</item>
-        <item name="android:paddingEnd">0dp</item>
-        <item name="android:minHeight">20dp</item>
-        <item name="android:minWidth">20dp</item>
-        <item name="android:textSize">10sp</item>
-        <item name="android:theme">@style/SecondaryButtonTheme.Small.Round</item>
-    </style>
-
-
     <!-- Tertiary -->
 
     <style name="TertiaryButtonTheme">
@@ -1138,14 +1122,6 @@
 
     <style name="bottomSheetStyleWrapper" parent="Widget.Design.BottomSheet.Modal">
         <item name="android:background">@android:color/transparent</item>
-    </style>
-
-    <style name="NavigationIconStyle">
-        <item name="android:layout_width">14dp</item>
-        <item name="android:layout_height">14dp</item>
-        <item name="android:rotation">180</item>
-        <item name="android:src">@drawable/ic_back_arrow</item>
-        <item name="android:tint">@color/steel_gray_200</item>
     </style>
 
     <style name="Explore.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">

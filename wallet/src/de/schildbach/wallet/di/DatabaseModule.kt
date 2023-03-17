@@ -27,6 +27,7 @@ import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.database.AppDatabase
 import de.schildbach.wallet.database.AppDatabaseMigrations
 import de.schildbach.wallet.database.dao.*
+import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
 import javax.inject.Singleton
 
 @Module
@@ -37,8 +38,8 @@ object DatabaseModule {
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
         return Room.databaseBuilder(context, AppDatabase::class.java, "dash-wallet-database")
             .addMigrations(AppDatabaseMigrations.migration11To12)
-            // destructive migrations are used from versions 1 to 10
-            .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+            // destructive migrations are used from versions 1 to 11
+            .fallbackToDestructiveMigration()
             .build()
     }
 
@@ -65,5 +66,10 @@ object DatabaseModule {
     @Provides
     fun provideIconBitmaps(appDatabase: AppDatabase): IconBitmapDao {
         return appDatabase.iconBitmapDao()
+    }
+
+    @Provides
+    fun provideGiftCardDao(appDatabase: AppDatabase): GiftCardDao {
+        return appDatabase.giftCardDao()
     }
 }

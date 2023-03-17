@@ -30,8 +30,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.ui.viewBinding
@@ -41,8 +39,6 @@ import org.dash.wallet.features.exploredash.databinding.FragmentDashDirectUserAu
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
 
-@FlowPreview
-@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_auth) {
     companion object {
@@ -85,9 +81,11 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             binding.inputWrapper.isErrorEnabled = false
             binding.inputErrorTv.isVisible = false
 
-            if (currentDirectUserAuthType != DashDirectUserAuthType.OTP)
+            if (currentDirectUserAuthType != DashDirectUserAuthType.OTP) {
                 binding.continueButton.isEnabled = isEmail(text)
-            else binding.continueButton.isEnabled = !text.isNullOrEmpty()
+            } else {
+                binding.continueButton.isEnabled = !text.isNullOrEmpty()
+            }
         }
 
         binding.input.setOnEditorActionListener { _, actionId, _ ->

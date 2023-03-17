@@ -14,8 +14,7 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
-<androidx.appcompat.widget.LinearLayoutCompat
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root_layout"
@@ -29,7 +28,7 @@
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp">
+        android:layout_marginTop="4dp">
 
         <TextView
             android:id="@+id/search_title"
@@ -41,13 +40,7 @@
 
         <ImageButton
             android:id="@+id/collapse_button"
-            style="@style/Button.Tertiary.Small.Blue"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:paddingVertical="0dp"
-            android:src="@drawable/ic_close"
-            android:text="@string/explore_apply_filter" />
+            style="@style/DialogCloseButton" />
     </FrameLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -60,30 +53,48 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:clipToPadding="false"
             android:orientation="vertical"
             android:paddingHorizontal="15dp">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp">
 
-                <androidx.appcompat.widget.AppCompatImageView
-                    android:id="@+id/merchent_logo"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
+                <ImageView
+                    android:id="@+id/merchant_logo"
+                    android:layout_width="@dimen/transaction_details_icon_size"
+                    android:layout_height="@dimen/transaction_details_icon_size"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     tools:src="@drawable/ic_dash_pay" />
 
+                <ImageView
+                    android:id="@+id/secondary_icon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginEnd="-2dp"
+                    android:layout_marginBottom="-2dp"
+                    android:background="@drawable/rounded_background"
+                    android:padding="2dp"
+                    android:src="@drawable/ic_gift_card_tx"
+                    android:theme="@style/SecondaryBackground"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="@id/merchant_logo"
+                    app:layout_constraintEnd_toEndOf="@id/merchant_logo"
+                    tools:visibility="visible" />
+
                 <androidx.appcompat.widget.AppCompatTextView
-                    android:id="@+id/merchent_name"
+                    android:id="@+id/merchant_name"
                     style="@style/Body2.Medium"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     app:layout_constraintBottom_toTopOf="@+id/purchase_date"
-                    app:layout_constraintStart_toEndOf="@+id/merchent_logo"
-                    app:layout_constraintTop_toTopOf="@+id/merchent_logo"
+                    app:layout_constraintStart_toEndOf="@+id/merchant_logo"
+                    app:layout_constraintTop_toTopOf="@+id/merchant_logo"
+                    app:layout_constraintVertical_chainStyle="packed"
                     tools:text="@string/dash_wallet_name" />
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -92,216 +103,213 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
-                    app:layout_constraintBottom_toBottomOf="@+id/merchent_logo"
-                    app:layout_constraintStart_toEndOf="@+id/merchent_logo"
-                    app:layout_constraintTop_toBottomOf="@+id/merchent_name"
-                    tools:text="@string/dash_wallet_name" />
+                    app:layout_constraintBottom_toBottomOf="@+id/merchant_logo"
+                    app:layout_constraintStart_toEndOf="@+id/merchant_logo"
+                    app:layout_constraintTop_toBottomOf="@+id/merchant_name"
+                    tools:text="August 26, 2022 at 10:56 AM" />
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <androidx.cardview.widget.CardView
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/purchase_card_info"
+                style="@style/ViewRaised"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:paddingHorizontal="15dp"
-                app:cardBackgroundColor="@color/background_secondary"
-                app:cardCornerRadius="10dp"
-                app:cardElevation="0dp">
+                android:background="@drawable/rounded_background"
+                android:paddingTop="15dp"
+                android:paddingBottom="5dp"
+                android:paddingStart="15dp"
+                android:theme="@style/SecondaryBackground">
 
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
+                <ImageView
+                    android:id="@+id/purchase_card_barcode"
+                    android:layout_width="0dp"
+                    android:layout_height="108dp"
+                    android:layout_marginEnd="15dp"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toTopOf="@+id/original_purchase_label"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:src="@drawable/ic_dash_pay"
+                    tools:visibility="visible" />
+
+                <ProgressBar
+                    android:id="@+id/barcode_loading_indicator"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:paddingHorizontal="15dp"
-                    android:paddingVertical="5dp">
+                    android:layout_marginEnd="15dp"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toTopOf="@+id/original_purchase_label"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:visibility="visible" />
 
-                    <androidx.appcompat.widget.AppCompatImageView
-                        android:id="@+id/purchase_card_bar_code"
-                        android:layout_width="0dp"
-                        android:layout_height="65dp"
-                        android:layout_marginStart="15dp"
-                        android:layout_marginTop="25dp"
-                        android:layout_marginBottom="32dp"
-                        android:visibility="gone"
-                        app:layout_constraintBottom_toTopOf="@+id/original_purchase_label"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        tools:src="@drawable/ic_dash_pay"
-                        tools:visibility="gone" />
+                <TextView
+                    android:id="@+id/barcode_loading_error"
+                    style="@style/Overline.Red"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="15dp"
+                    android:text="@string/gift_card_barcode_failed"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toTopOf="@+id/original_purchase_label"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:visibility="visible" />
 
-                    <androidx.appcompat.widget.AppCompatTextView
-                        android:id="@+id/original_purchase_label"
-                        style="@style/Caption.Medium.Tertiary"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:paddingBottom="12dp"
-                        android:text="@string/purchase_original_purchase"
-                        android:textSize="13sp"
-                        app:layout_constraintBottom_toTopOf="@id/original_purchase_divider"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/purchase_card_bar_code" />
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/original_purchase_label"
+                    style="@style/Caption.Medium.Tertiary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:layout_marginVertical="12dp"
+                    android:text="@string/purchase_original_purchase"
+                    app:layout_constraintBottom_toTopOf="@id/check_current_balance"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/purchase_card_barcode" />
 
-                    <androidx.appcompat.widget.AppCompatTextView
-                        android:id="@+id/original_purchase_value"
-                        style="@style/Overline"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="@+id/original_purchase_label"
-                        tools:text="$10.00" />
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/original_purchase_value"
+                    style="@style/Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="15dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@+id/original_purchase_label"
+                    tools:text="$10.00" />
 
-                    <androidx.appcompat.widget.AppCompatTextView
-                        android:id="@+id/check_current_balance"
-                        style="@style/Overline.Medium.Blue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/purchase_check_current_balance"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toBottomOf="@+id/original_purchase_value" />
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/check_current_balance"
+                    style="@style/Overline.Medium.Blue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="15dp"
+                    android:text="@string/purchase_check_current_balance"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/original_purchase_value" />
 
-                    <View
-                        android:id="@+id/original_purchase_divider"
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginTop="12dp"
-                        android:background="@color/divider_color"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@+id/check_current_balance" />
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/purchase_card_number_label"
+                    style="@style/Caption.Medium.Tertiary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/purchase_card_number"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/check_current_balance" />
 
-                    <androidx.appcompat.widget.AppCompatTextView
-                        android:id="@+id/purchase_card_number_label"
-                        style="@style/Caption.Medium.Tertiary"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/purchase_card_number"
+                    style="@style/Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    app:layout_constraintEnd_toStartOf="@+id/copy_card_number"
+                    app:layout_constraintTop_toTopOf="@id/purchase_card_number_label"
+                    tools:text="6006491727005748764" />
 
-                        android:layout_marginTop="12dp"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:text="@string/purchase_card_number"
-                        android:textSize="13sp"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@+id/original_purchase_divider" />
+                <ImageButton
+                    android:id="@+id/copy_card_number"
+                    style="@style/Button.Tertiary.Square"
+                    android:layout_width="32dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="10dp"
+                    android:src="@drawable/ic_copy_blue"
+                    app:layout_constraintBottom_toBottomOf="@+id/purchase_card_number"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@+id/purchase_card_number"
+                    app:tint="@color/content_primary"
+                    tools:tint="@color/content_primary" />
 
-                    <androidx.appcompat.widget.AppCompatTextView
-                        android:id="@+id/purchase_card_number"
-                        style="@style/Overline"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:textSize="13sp"
-                        app:layout_constraintEnd_toStartOf="@+id/copy_card_number"
-                        app:layout_constraintTop_toTopOf="@id/purchase_card_number_label"
-                        tools:text="6006491727005748764" />
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/purchase_card_pin_label"
+                    style="@style/Caption.Medium.Tertiary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/purchase_card_pin"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/purchase_card_number_label" />
 
-                    <androidx.appcompat.widget.AppCompatImageView
-                        android:id="@+id/copy_card_number"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:layout_marginStart="8dp"
-                        android:tint="@color/dash_black"
-                        app:layout_constraintBottom_toBottomOf="@+id/purchase_card_number"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="@+id/purchase_card_number"
-                        android:src="@drawable/ic_copy_blue" />
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/purchase_card_pin"
+                    style="@style/Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    app:layout_constraintEnd_toStartOf="@+id/copy_card_pin"
+                    app:layout_constraintTop_toTopOf="@id/purchase_card_pin_label"
+                    tools:text="1411" />
 
-                    <View
-                        android:id="@+id/purchase_card_number_divider"
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginTop="12dp"
-                        android:background="@color/divider_color"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@+id/purchase_card_number_label" />
+                <ImageButton
+                    android:id="@+id/copy_card_pin"
+                    style="@style/Button.Tertiary.Square"
+                    android:layout_width="32dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="10dp"
+                    android:src="@drawable/ic_copy_blue"
+                    app:layout_constraintBottom_toBottomOf="@+id/purchase_card_pin"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@+id/purchase_card_pin"
+                    app:tint="@color/content_primary"
+                    tools:tint="@color/content_primary" />
 
-                    <androidx.appcompat.widget.AppCompatTextView
-                        android:id="@+id/purchase_card_pin_label"
-                        style="@style/Caption.Medium.Tertiary"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:paddingBottom="12dp"
-                        android:text="@string/purchase_card_pin"
-                        android:textSize="13sp"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@+id/purchase_card_number_divider" />
+                <androidx.constraintlayout.widget.Group
+                    android:id="@+id/pin_code_group"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:constraint_referenced_ids="purchase_card_pin_label, purchase_card_pin, copy_card_pin" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
-                    <androidx.appcompat.widget.AppCompatTextView
-                        android:id="@+id/purchase_card_pin"
-                        style="@style/Overline"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:textSize="13sp"
-                        app:layout_constraintEnd_toStartOf="@+id/copy_card_pin"
-                        app:layout_constraintTop_toTopOf="@id/purchase_card_pin_label"
-                        tools:text="1411" />
-
-                    <androidx.appcompat.widget.AppCompatImageView
-                        android:id="@+id/copy_card_pin"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:layout_marginStart="8dp"
-                        android:tint="@color/dash_black"
-                        app:layout_constraintBottom_toBottomOf="@+id/purchase_card_pin"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="@+id/purchase_card_pin"
-                        android:src="@drawable/ic_copy_blue" />
-
-                </androidx.constraintlayout.widget.ConstraintLayout>
-            </androidx.cardview.widget.CardView>
-
-            <androidx.cardview.widget.CardView
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/view_transaction_details_card"
+                style="@style/ViewRaised"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:layout_marginBottom="20dp"
+                android:background="@drawable/rounded_ripple_background"
+                android:clickable="true"
+                android:focusable="true"
                 android:paddingHorizontal="15dp"
-                app:cardBackgroundColor="@color/background_secondary"
-                app:cardCornerRadius="10dp"
-                app:cardElevation="0dp"
+                android:theme="@style/ListViewButtonBackground"
                 app:layout_constraintTop_toBottomOf="@id/purchase_card_info">
 
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:paddingHorizontal="15dp">
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/view_transaction_details_label"
+                    style="@style/Caption.Medium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingVertical="17dp"
+                    android:text="@string/purchase_view_transaction"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
-                    <androidx.appcompat.widget.AppCompatTextView
-                        android:id="@+id/view_transaction_details_label"
-                        style="@style/Caption.Medium"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:paddingVertical="17dp"
-                        android:text="@string/purchase_view_transaction"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
-
-                    <ImageView
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:rotation="180"
-                        android:src="@drawable/ic_back_arrow"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:tint="@color/steel_gray_150"
-                        tools:tint="@color/steel_gray_150" />
-
-                </androidx.constraintlayout.widget.ConstraintLayout>
-            </androidx.cardview.widget.CardView>
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_light_gray_arrow_right"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
             <Button
-                android:id="@+id/purchase_see_how_to_use_gift_card_label"
-                style="@style/Button.Tertiary.Large.Blue"
+                android:id="@+id/how_to_use_button"
+                style="@style/Button.Tertiary.Blue"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/purchase_see_how_to_use_gift_card"
@@ -309,7 +317,7 @@
                 tools:visibility="visible" />
 
             <androidx.cardview.widget.CardView
-                android:id="@+id/purchase_see_how_to_use_gift_card"
+                android:id="@+id/how_to_use_info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:visibility="gone"
@@ -342,7 +350,7 @@
                         android:layout_height="24dp"
                         android:layout_marginStart="30dp"
                         android:layout_marginTop="29dp"
-                        android:src="@drawable/ic_self_chekout_blue"
+                        android:src="@drawable/ic_self_checkout_blue"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@+id/purchase_how_to_use_gift_card_label" />
 
@@ -447,15 +455,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:layout_marginTop="20dp"
-                android:textSize="14sp"
+                android:layout_marginTop="30dp"
                 android:text="@string/purchase_powered_by" />
 
             <androidx.appcompat.widget.AppCompatImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:layout_marginBottom="20dp"
+                android:layout_marginTop="5dp"
+                android:layout_marginBottom="40dp"
                 android:src="@drawable/ic_dashdirect_logo" />
 
         </LinearLayout>

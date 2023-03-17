@@ -16,19 +16,22 @@
  */
 package org.dash.wallet.features.exploredash.network.service
 
-import org.dash.wallet.features.exploredash.data.model.signin.CreateUserResponse
-import org.dash.wallet.features.exploredash.data.model.signin.SignInResponse
-import org.dash.wallet.features.exploredash.data.model.signin.VerifyEmailRequest
-import org.dash.wallet.features.exploredash.data.model.signin.VerifyEmailResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.signin.CreateUserResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.signin.SignInResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.signin.VerifyEmailRequest
+import org.dash.wallet.features.exploredash.data.dashdirect.model.signin.VerifyEmailResponse
 import retrofit2.http.Body
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Query
 
 interface DashDirectAuthApi {
-    @PUT("SignIn") suspend fun signIn(@Query("emailAddress") email: String): SignInResponse?
+    @PUT("SignIn")
+    suspend fun signIn(@Query("emailAddress") email: String): SignInResponse?
 
-    @POST("CreateUser") suspend fun createUser(@Query("emailAddress") email: String): CreateUserResponse?
+    @POST("CreateUser")
+    suspend fun createUser(@Query("emailAddress") email: String): CreateUserResponse?
 
-    @PUT("VerifyEmail") suspend fun verifyEmail(@Body signInRequest: VerifyEmailRequest): VerifyEmailResponse?
+    @PUT("VerifyEmail")
+    suspend fun verifyEmail(@Body signInRequest: VerifyEmailRequest): VerifyEmailResponse?
 }

@@ -27,6 +27,7 @@ import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 
 import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.dash.wallet.common.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +37,6 @@ import java.io.OutputStream;
 
 import javax.annotation.Nullable;
 
-import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.util.InputParser;
 import de.schildbach.wallet.util.Bluetooth;
@@ -93,7 +93,7 @@ public abstract class RequestPaymentRequestTask {
                     if (userAgent != null)
                         requestBuilder.header("User-Agent", userAgent);
 
-                    final Call call = Constants.HTTP_CLIENT.newCall(requestBuilder.build());
+                    final Call call = Constants.INSTANCE.getHTTP_CLIENT().newCall(requestBuilder.build());
                     try {
                         final Response response = call.execute();
                         if (response.isSuccessful()) {

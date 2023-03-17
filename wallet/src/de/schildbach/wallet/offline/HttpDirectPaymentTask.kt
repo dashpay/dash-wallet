@@ -18,7 +18,6 @@
 
 package de.schildbach.wallet.offline
 
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.offline.DirectPaymentTask.ResultCallback
 import de.schildbach.wallet_test.R
 import okhttp3.CacheControl
@@ -30,6 +29,7 @@ import okio.BufferedSink
 import org.bitcoin.protocols.payments.Protos.Payment
 import org.bitcoin.protocols.payments.Protos.PaymentACK
 import org.bitcoinj.protocols.payments.PaymentProtocol
+import org.dash.wallet.common.util.Constants
 import org.slf4j.LoggerFactory
 import java.io.IOException
 

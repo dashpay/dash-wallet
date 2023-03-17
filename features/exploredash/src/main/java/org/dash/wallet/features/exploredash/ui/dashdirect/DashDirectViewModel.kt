@@ -17,15 +17,12 @@
 
 package org.dash.wallet.features.exploredash.ui.dashdirect
 
-import android.util.Log
 import androidx.lifecycle.*
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.util.*
-import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -46,16 +43,20 @@ import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.features.exploredash.data.ExploreDataSource
-import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.MerchantType
-import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
-import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
-import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
-import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
+import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
+import org.dash.wallet.features.exploredash.data.dashdirect.model.giftcard.GetGiftCardResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.merchant.GetMerchantByIdResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.paymentstatus.PaymentStatusResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.purchase.PurchaseGiftCardResponse
+import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
+import org.dash.wallet.features.exploredash.data.explore.model.Merchant
+import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import org.slf4j.LoggerFactory
+import java.util.*
+import javax.inject.Inject
 
 @HiltViewModel
 class DashDirectViewModel
@@ -67,7 +68,8 @@ constructor(
     private val sendPaymentService: SendPaymentService,
     private val repository: DashDirectRepositoryInt,
     private val transactionMetadata: TransactionMetadataProvider,
-    private val exploreData: ExploreDataSource
+    private val exploreData: ExploreDataSource,
+    private val giftCardDao: GiftCardDao
 ) : ViewModel() {
 
     companion object {
@@ -119,10 +121,11 @@ constructor(
                         _purchaseGiftCardData.value = response.value?.data
                     }
                 }
-                else -> {
-                    Log.e(this::class.java.simpleName, "purchaseGiftCard error")
+                is ResponseResource.Failure -> {
+                    log.error("purchaseGiftCard error ${response.errorCode}: ${response.errorBody}")
                     purchaseGiftCardFailedCallback.call()
                 }
+                else -> { }
             }
         }
 
@@ -147,7 +150,9 @@ constructor(
     }
 
     suspend fun getPaymentStatus(paymentId: String, orderId: String): ResponseResource<PaymentStatusResponse?>? {
-        delay(2000)
+        delay(2000) // TODO: this is not great. What if we still can't get it after 2 seconds?
+        // TODO: If we don't know when the status is updated, we should poll the server periodically
+        // TODO: and/or have some other way of displaying it to the user
         repository.getDashDirectEmail()?.let { email ->
             return repository.getPaymentStatus(userEmail = email, paymentId = paymentId, orderId = orderId)
         }
@@ -210,6 +215,12 @@ constructor(
     suspend fun verifyEmail(code: String) = repository.verifyEmail(code)
 
     suspend fun logout() = repository.logout()
+
+    fun saveGiftCard(giftCard: GiftCard) {
+        viewModelScope.launch {
+            giftCardDao.insertGiftCard(giftCard)
+        }
+    }
 
     // TODO Remove the test merchent
     suspend fun insertTestMerchent() {

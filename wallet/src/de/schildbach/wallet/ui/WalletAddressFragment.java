@@ -26,13 +26,13 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.util.Qr;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import org.dash.wallet.common.util.Qr;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet_test.R;
 
@@ -232,11 +232,8 @@ public final class WalletAddressFragment extends Fragment implements NfcAdapter.
                 final String addressStr = BitcoinURI.convertToBitcoinURI(currentAddressQrAddress.address, null,
                         currentAddressQrAddress.label, null);
 
-                currentAddressQrBitmap = new BitmapDrawable(getResources(), Qr.bitmap(addressStr));
-                currentAddressQrBitmap.setFilterBitmap(false);
-
+                currentAddressQrBitmap = Qr.INSTANCE.themeAwareDrawable(addressStr, getResources());
                 currentAddressUriRef.set(addressStr);
-
                 updateView();
             }
         }

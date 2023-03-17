@@ -16,14 +16,14 @@
  */
 package org.dash.wallet.features.exploredash.network.service
 
-import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardRequest
-import org.dash.wallet.features.exploredash.data.model.dashdirectgiftcard.GetGiftCardResponse
-import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdRequest
-import org.dash.wallet.features.exploredash.data.model.merchant.GetMerchantByIdResponse
-import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusRequest
-import org.dash.wallet.features.exploredash.data.model.paymentstatus.PaymentStatusResponse
-import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardRequest
-import org.dash.wallet.features.exploredash.data.model.purchase.PurchaseGiftCardResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.giftcard.GetGiftCardRequest
+import org.dash.wallet.features.exploredash.data.dashdirect.model.giftcard.GetGiftCardResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.merchant.GetMerchantByIdRequest
+import org.dash.wallet.features.exploredash.data.dashdirect.model.merchant.GetMerchantByIdResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.paymentstatus.PaymentStatusRequest
+import org.dash.wallet.features.exploredash.data.dashdirect.model.paymentstatus.PaymentStatusResponse
+import org.dash.wallet.features.exploredash.data.dashdirect.model.purchase.PurchaseGiftCardRequest
+import org.dash.wallet.features.exploredash.data.dashdirect.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import retrofit2.http.Body
 import retrofit2.http.Header

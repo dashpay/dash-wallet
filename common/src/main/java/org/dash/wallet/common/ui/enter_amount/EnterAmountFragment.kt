@@ -46,7 +46,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         private const val ARG_SHOW_CURRENCY_SELECTOR_BUTTON = "show_currency_selector"
         private const val ARG_CURRENCY_OPTIONS_PICKER_VISIBLE = "currency_options_picker_visible"
         private const val ARG_SHOW_AMOUNT_RESULT_CONTAINER = "show_amount_result_container"
-        private const val ARG_CURRENCY_Code = "CURRENCY_Code"
+        private const val ARG_CURRENCY_CODE = "currency_code"
 
         @JvmStatic
         fun newInstance(
@@ -64,7 +64,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
                 ARG_SHOW_CURRENCY_SELECTOR_BUTTON to showCurrencySelector,
                 ARG_CURRENCY_OPTIONS_PICKER_VISIBLE to isCurrencyOptionsPickerVisible,
                 ARG_SHOW_AMOUNT_RESULT_CONTAINER to showAmountResultContainer,
-                ARG_CURRENCY_Code to faitCurrencyCode
+                ARG_CURRENCY_CODE to faitCurrencyCode
             )
             initialAmount?.let { args.putSerializable(ARG_INITIAL_AMOUNT, it) }
 
@@ -89,7 +89,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         binding.amountView.showResultContainer = args.getBoolean(ARG_SHOW_AMOUNT_RESULT_CONTAINER)
         binding.currencyOptions.isVisible = args.getBoolean(ARG_CURRENCY_OPTIONS_PICKER_VISIBLE)
 
-        args.getString(ARG_CURRENCY_Code)?.let { rateCurrencyCode ->
+        args.getString(ARG_CURRENCY_CODE)?.let { rateCurrencyCode ->
             viewModel.selectedCurrencyCode = rateCurrencyCode
         }
 

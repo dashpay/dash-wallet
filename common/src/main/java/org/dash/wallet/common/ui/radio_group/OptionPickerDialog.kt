@@ -19,9 +19,7 @@ package org.dash.wallet.common.ui.radio_group
 
 import android.content.Context
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.core.content.ContextCompat
@@ -44,16 +42,8 @@ class OptionPickerDialog(
     private val showSearch: Boolean = true,
     private val useCheckMark: Boolean = false,
     private val clickListener: (IconifiedViewItem, Int, DialogFragment) -> Unit
-) : OffsetDialogFragment() {
+) : OffsetDialogFragment(R.layout.dialog_option_picker) {
     private val binding by viewBinding(DialogOptionPickerBinding::bind)
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.dialog_option_picker, container, false)
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
