@@ -61,7 +61,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     val commitBuyOrderSuccessState = SingleLiveEvent<SendTransactionToWalletParams>()
 
     fun commitBuyOrder(params: String) = viewModelScope.launch(Dispatchers.Main) {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_CONFIRM, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_CONFIRM, mapOf())
 
         _showLoading.value = true
         when (val result = coinBaseRepository.commitBuyOrder(params)) {
@@ -101,7 +101,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     }
 
     fun logEvent(eventName: String) {
-        analyticsService.logEvent(eventName, bundleOf())
+        analyticsService.logEvent(eventName, mapOf())
     }
 
     private fun placeBuyOrder(params: PlaceBuyOrderParams) = viewModelScope.launch(Dispatchers.Main) {
@@ -136,7 +136,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     }
 
     fun onRefreshOrderClicked(fiat: Fiat?, paymentMethodId: String) {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_RETRY, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_QUOTE_RETRY, mapOf())
         placeBuyOrder(PlaceBuyOrderParams(fiat?.toPlainString(), fiat?.currencyCode, paymentMethodId))
     }
 }

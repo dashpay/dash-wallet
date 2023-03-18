@@ -73,11 +73,11 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay) {
         // Make the whole row clickable
         binding.payByQrButton.setOnClickListener {
             handleScan(it)
-            analytics.logEvent(AnalyticsConstants.SendReceive.SCAN_TO_SEND, bundleOf())
+            analytics.logEvent(AnalyticsConstants.SendReceive.SCAN_TO_SEND, mapOf())
         }
         binding.payToAddress.setOnClickListener {
             handlePaste(true)
-            analytics.logEvent(AnalyticsConstants.SendReceive.SEND_TO_ADDRESS, bundleOf())
+            analytics.logEvent(AnalyticsConstants.SendReceive.SEND_TO_ADDRESS, mapOf())
         }
         handlePaste(false)
     }

@@ -77,7 +77,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     var isFirstTime = true
 
     fun commitSwapTrade(tradeId: String, inputCurrency: String, inputAmount: String) = viewModelScope.launch(Dispatchers.Main) {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
 
         _showLoading.value = true
         when (val result = coinBaseRepository.commitSwapTrade(tradeId)) {
@@ -168,12 +168,12 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     }
 
     fun onRefreshOrderClicked(swapTradeUIModel: SwapTradeUIModel) {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_RETRY, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_RETRY, mapOf())
         swapTrade(swapTradeUIModel)
     }
 
     fun logEvent(eventName: String) {
-        analyticsService.logEvent(eventName, bundleOf())
+        analyticsService.logEvent(eventName, mapOf())
     }
 
     private suspend fun sellDashToCoinBase(coin: Coin) {

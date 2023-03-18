@@ -26,6 +26,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.Qr
 import org.dash.wallet.common.util.decodeBitmap
@@ -42,7 +43,8 @@ import javax.inject.Inject
 @HiltViewModel
 class GiftCardDetailsViewModel @Inject constructor(
     private val giftCardDao: GiftCardDao,
-    private val metadataProvider: TransactionMetadataProvider
+    private val metadataProvider: TransactionMetadataProvider,
+    private val analyticsService: AnalyticsService
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(GiftCardDetailsViewModel::class.java)
@@ -101,5 +103,9 @@ class GiftCardDetailsViewModel @Inject constructor(
                 log.error("Failed to resize and decode barcode: $barcodeUrl", ex)
             }
         }
+    }
+
+    fun logEvent(event: String) {
+        analyticsService.logEvent(event, mapOf())
     }
 }

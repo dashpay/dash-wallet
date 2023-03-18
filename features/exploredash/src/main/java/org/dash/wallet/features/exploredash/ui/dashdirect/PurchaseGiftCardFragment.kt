@@ -52,8 +52,6 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
     private val exploreViewModel by exploreViewModels<ExploreViewModel>()
     private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
 
-    var selectedMerchant: Merchant? = null
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.titleBar.setNavigationOnClickListener { findNavController().popBackStack() }
@@ -81,31 +79,26 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
         setPaymentHeader()
 
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
-            selectedMerchant?.let { merchant ->
-                viewModel.purchaseGiftCardDataMerchant = merchant
-                viewModel.purchaseGiftCardDataPaymentValue = it
-                PurchaseGiftCardConfirmDialog().show(requireActivity())
-            }
+            viewModel.giftCardPaymentValue = it.second
+            PurchaseGiftCardConfirmDialog().show(requireActivity())
         }
 
         exploreViewModel.selectedItem.value?.let { merchant ->
             if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
-                this.selectedMerchant = merchant
+                viewModel.giftCardMerchant = merchant
                 binding.paymentHeaderView.setSubtitle(merchant.name.orEmpty())
                 binding.paymentHeaderView.setPaymentAddressViewIcon(merchant.logoLocation)
 
                 lifecycleScope.launch {
                     val response = viewModel.getMerchantById(merchant.merchantId!!)
                     if (response is ResponseResource.Success) {
-                        selectedMerchant?.let { merchant ->
-                            response.value?.data?.merchant?.let {
-                                merchant.savingsPercentage = it.savingsPercentage
-                                merchant.minCardPurchase = it.minimumCardPurchase
-                                merchant.maxCardPurchase = it.maximumCardPurchase
+                        response.value?.data?.merchant?.let {
+                            merchant.savingsPercentage = it.savingsPercentage
+                            merchant.minCardPurchase = it.minimumCardPurchase
+                            merchant.maxCardPurchase = it.maximumCardPurchase
 
-                                setCardPurchaseLimits()
-                                setDiscountHint()
-                            }
+                            setCardPurchaseLimits()
+                            setDiscountHint()
                         }
                     }
                 }
@@ -126,10 +119,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
     }
 
     private fun setCardPurchaseLimits() {
-        selectedMerchant?.let {
-            viewModel.setMinMaxCardPurchaseValues(it.minCardPurchase ?: 0.0, it.maxCardPurchase ?: 0.0)
-            showCardPurchaseLimits()
-        }
+        viewModel.refreshMinMaxCardPurchaseValues()
+        showCardPurchaseLimits()
     }
 
     private fun showCardPurchaseLimits() {
@@ -155,30 +146,30 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
     }
 
     private fun setDiscountHint() {
-        selectedMerchant?.let { merchant ->
-            val savingsPercentage = merchant.savingsPercentage ?: DEFAULT_DISCOUNT
-            if (savingsPercentage != DEFAULT_DISCOUNT) {
-                val purchaseAmount = enterAmountViewModel.amount.value
-                if (purchaseAmount != null && purchaseAmount != Coin.ZERO) {
-                    val rate = enterAmountViewModel.selectedExchangeRate.value
-                    val myRate = ExchangeRate(rate!!.fiat)
-                    binding.discountValue.text =
-                        getString(
-                            R.string.purchase_gift_card_discount_hint,
-                            myRate.coinToFiat(purchaseAmount).toFormattedString(),
-                            viewModel.getDiscountedAmount(
-                                purchaseAmount,
-                                savingsPercentage
-                            )?.toFormattedStringRoundUp() ?: "",
-                            GenericUtils.formatPercent(savingsPercentage)
-                        )
-                    binding.discountValue.isVisible = true
-                } else {
-                    hideDiscountHint()
-                }
+        val merchant = viewModel.giftCardMerchant
+        val savingsPercentage = merchant.savingsPercentage ?: DEFAULT_DISCOUNT
+
+        if (savingsPercentage != DEFAULT_DISCOUNT) {
+            val purchaseAmount = enterAmountViewModel.amount.value
+            if (purchaseAmount != null && purchaseAmount != Coin.ZERO) {
+                val rate = enterAmountViewModel.selectedExchangeRate.value
+                val myRate = ExchangeRate(rate!!.fiat)
+                binding.discountValue.text =
+                    getString(
+                        R.string.purchase_gift_card_discount_hint,
+                        myRate.coinToFiat(purchaseAmount).toFormattedString(),
+                        viewModel.getDiscountedAmount(
+                            purchaseAmount,
+                            savingsPercentage
+                        )?.toFormattedStringRoundUp() ?: "",
+                        GenericUtils.formatPercent(savingsPercentage)
+                    )
+                binding.discountValue.isVisible = true
             } else {
                 hideDiscountHint()
             }
+        } else {
+            hideDiscountHint()
         }
     }
 

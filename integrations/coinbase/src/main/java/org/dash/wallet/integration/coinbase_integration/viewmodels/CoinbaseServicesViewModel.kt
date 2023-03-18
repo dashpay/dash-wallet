@@ -109,7 +109,7 @@ class CoinbaseServicesViewModel @Inject constructor(
     }
 
     fun disconnectCoinbaseAccount() = viewModelScope.launch(Dispatchers.Main) {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.DISCONNECT, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.DISCONNECT, mapOf())
 
         _showLoading.value = true
         coinBaseRepository.disconnectCoinbaseAccount()
@@ -118,6 +118,6 @@ class CoinbaseServicesViewModel @Inject constructor(
     }
 
     fun logEvent(eventName: String) {
-        analyticsService.logEvent(eventName, bundleOf())
+        analyticsService.logEvent(eventName, mapOf())
     }
 }

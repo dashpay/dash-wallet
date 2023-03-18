@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash.ui.explore
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import androidx.paging.*
 import com.google.firebase.FirebaseNetworkException
@@ -852,6 +851,6 @@ constructor(
     }
 
     fun logEvent(event: String) {
-        analyticsService.logEvent(event, bundleOf())
+        analyticsService.logEvent(event, mapOf())
     }
 }

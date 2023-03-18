@@ -56,11 +56,11 @@ class SettingsActivity : BaseMenuActivity() {
         super.onCreate(savedInstanceState)
         setTitle(R.string.settings_title)
         about.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.ABOUT, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Settings.ABOUT, mapOf())
             startActivity(Intent(this, AboutActivity::class.java))
         }
         local_currency.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY, mapOf())
             val intent = Intent(this, ExchangeRatesActivity::class.java)
             intent.putExtra(ARG_SHOW_AS_DIALOG, false)
             intent.putExtra(ARG_CURRENCY_CODE, configuration.exchangeCurrencyCode)
@@ -89,14 +89,14 @@ class SettingsActivity : BaseMenuActivity() {
             if (it == true) {
                 isFinished = true
                 log.info("manually initiated blockchain reset")
-                analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, bundleOf())
+                analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, mapOf())
 
                 WalletApplication.getInstance().resetBlockchain()
                 WalletApplication.getInstance().configuration.updateLastBlockchainResetTime()
                 startActivity(WalletActivity.createIntent(this@SettingsActivity))
             } else {
                 if (!isFinished) {
-                    analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, bundleOf())
+                    analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, mapOf())
                 }
             }
         }

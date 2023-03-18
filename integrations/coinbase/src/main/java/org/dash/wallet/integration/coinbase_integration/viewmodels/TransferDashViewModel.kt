@@ -310,29 +310,29 @@ class TransferDashViewModel @Inject constructor(
     }
 
     fun logTransfer(isFiatSelected: Boolean) {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_CONTINUE, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_CONTINUE, mapOf())
         analyticsService.logEvent(if (isFiatSelected) {
             AnalyticsConstants.Coinbase.TRANSFER_ENTER_FIAT
         } else {
             AnalyticsConstants.Coinbase.TRANSFER_ENTER_DASH
-        }, bundleOf())
+        }, mapOf())
     }
 
     fun logEvent(eventName: String) {
-        analyticsService.logEvent(eventName, bundleOf())
+        analyticsService.logEvent(eventName, mapOf())
     }
 
     fun logRetry() {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_RETRY, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_RETRY, mapOf())
     }
 
     fun logClose(type: CoinBaseResultDialog.Type) {
         when (type) {
             CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_SUCCESS_CLOSE, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_SUCCESS_CLOSE, mapOf())
             }
             CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR -> {
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_CLOSE, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_CLOSE, mapOf())
             }
             else -> {}
         }

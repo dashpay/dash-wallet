@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash.ui.explore.dialogs
 
 import android.os.Bundle
 import android.view.View
-import androidx.core.os.bundleOf
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -40,11 +39,11 @@ class ExploreDashInfoDialog : OffsetDialogFragment(R.layout.explore_dash_main_in
         super.onViewCreated(view, savedInstanceState)
 
         binding.learnMoreLabel.setOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.Explore.LEARN_MORE, bundleOf())
+            analyticsService.logEvent(AnalyticsConstants.Explore.LEARN_MORE, mapOf())
             OffsetDialogFragment(R.layout.buy_gift_card_description).show(requireActivity())
         }
         binding.exploreDashInfoContinueBtn.setOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.Explore.CONTINUE, bundleOf())
+            analyticsService.logEvent(AnalyticsConstants.Explore.CONTINUE, mapOf())
             dismissAllowingStateLoss()
         }
     }
