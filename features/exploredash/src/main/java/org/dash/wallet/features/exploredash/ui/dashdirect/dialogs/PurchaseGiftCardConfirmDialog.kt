@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -45,6 +46,7 @@ import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectViewModel
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confirm_purchase_gift_card) {
@@ -56,6 +58,8 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
 
     private val binding by viewBinding(DialogConfirmPurchaseGiftCardBinding::bind)
     private val viewModel by exploreViewModels<DashDirectViewModel>()
+    @Inject
+    lateinit var authManager: AuthenticationManager
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -83,8 +87,12 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     }
 
     private fun onConfirmButtonClicked() {
-        showLoading()
         lifecycleScope.launch {
+            if (authManager.authenticate(requireActivity()) == null) {
+                return@launch
+            }
+
+            showLoading()
             val data = viewModel.purchaseGiftCard()
 
             if (data?.uri != null && data.paymentId != null && data.orderId != null) {
@@ -99,9 +107,9 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         }
     }
 
-    private suspend fun createSendingRequestFromDashUri(it: String): Sha256Hash? {
+    private suspend fun createSendingRequestFromDashUri(url: String): Sha256Hash? {
         return try {
-            viewModel.createSendingRequestFromDashUri(it)
+            viewModel.createSendingRequestFromDashUri(url)
         } catch (x: InsufficientMoneyException) {
             hideLoading()
             log.error("purchaseGiftCard InsufficientMoneyException", x)
