@@ -104,10 +104,12 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
                 binding.continueButtonLayout.isVisible = true
                 binding.bottomCard.isVisible = false
                 binding.input.postDelayed({ showKeyboard() }, 100)
+                binding.input.showSoftInputOnFocus = true
             }
             DashDirectUserAuthType.OTP -> {
                 binding.continueButtonLayout.isVisible = false
                 binding.bottomCard.isVisible = true
+                binding.input.showSoftInputOnFocus = false
             }
             else -> {}
         }
