@@ -33,6 +33,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
@@ -69,8 +70,6 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         }
         binding.continueButton.isEnabled = false
 
-        binding.input.postDelayed({ showKeyboard() }, 100)
-
         currentDirectUserAuthType =
             (arguments?.getSerializable("dashDirectUserAuthType") as? DashDirectUserAuthType)?.also {
                 binding.title.setText(it.screenTitle)
@@ -103,7 +102,66 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             hideKeyboard()
             continueAction()
         }
+
+        when (currentDirectUserAuthType) {
+            DashDirectUserAuthType.SIGN_IN ,
+            DashDirectUserAuthType.CREATE_ACCOUNT -> {
+                binding.continueButtonLayout.isVisible = true
+            binding.bottomCard.isVisible = false
+                binding.input.postDelayed({ showKeyboard() }, 100)
+            }
+            DashDirectUserAuthType.OTP -> {
+                binding.continueButtonLayout.isVisible = false
+                binding.bottomCard.isVisible = true
+
+            }
+            else -> {}
+        }
+
+        binding.verifyBtn.setOnClickListener {
+            val input = binding.input.text.toString()
+            verifyEmail(input)
+        }
+
+        binding.input.doOnTextChanged { text, _, _, _ ->
+            if(currentDirectUserAuthType==DashDirectUserAuthType.OTP )
+            binding.verifyBtn.isEnabled = !text.isNullOrEmpty()
+        }
+        binding.keyboardView.onKeyboardActionListener = keyboardActionListener
     }
+
+
+    private val keyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
+        var value = StringBuilder()
+
+        fun refreshValue(){
+            value.clear()
+            value.append(binding.input.text.toString())
+        }
+
+        override fun onNumber(number: Int) {
+            refreshValue()
+            value.append(number)
+            applyNewValue(value.toString())
+        }
+
+        override fun onBack(longClick: Boolean) {
+            refreshValue()
+            if (longClick){
+                value.clear()
+            } else if (value.isNotEmpty()){
+                value.deleteCharAt(value.length - 1)
+            }
+            applyNewValue(value.toString())
+        }
+
+        override fun onFunction() {}
+    }
+
+    private fun applyNewValue(value: String) {
+        binding.input.setText( value)
+    }
+
 
     private fun continueAction() {
         showLoading()
