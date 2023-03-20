@@ -58,15 +58,15 @@ class ToolsActivity : BaseMenuActivity() {
 
         setTitle(R.string.tools_title)
         address_book.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.ADDRESS_BOOK, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Settings.ADDRESS_BOOK, mapOf())
             startActivity(Intent(this, AddressBookActivity::class.java))
         }
         import_keys.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, mapOf())
             startActivity(Intent(this, SweepWalletActivity::class.java))
         }
         network_monitor.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.NETWORK_MONITORING, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Settings.NETWORK_MONITORING, mapOf())
             startActivity(Intent(this, NetworkMonitorActivity::class.java))
         }
 

@@ -86,7 +86,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     private fun startBuyAndSellActivity() {
-        analytics.logEvent(AnalyticsConstants.MoreMenu.BUY_SELL_MORE, bundleOf())
+        analytics.logEvent(AnalyticsConstants.MoreMenu.BUY_SELL_MORE, mapOf())
         safeNavigate(MoreFragmentDirections.moreToBuySell())
     }
 }

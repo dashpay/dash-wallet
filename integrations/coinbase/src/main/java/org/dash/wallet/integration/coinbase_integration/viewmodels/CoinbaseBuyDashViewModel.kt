@@ -77,14 +77,14 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
             if (paymentMethodIndex < it.size) {
                 val paymentMethod = it[paymentMethodIndex]
 
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_CONTINUE, bundleOf())
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_PAYMENT_METHOD, bundleOf(
-                    AnalyticsConstants.Parameters.VALUE to paymentMethod.paymentMethodType.name
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_CONTINUE, mapOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_PAYMENT_METHOD, mapOf(
+                    AnalyticsConstants.Parameter.VALUE to paymentMethod.paymentMethodType.name
                 ))
                 analyticsService.logEvent(
                     if (dashToFiat) AnalyticsConstants.Coinbase.BUY_ENTER_DASH
                     else AnalyticsConstants.Coinbase.BUY_ENTER_FIAT,
-                    bundleOf()
+                    mapOf()
                 )
 
                 viewModelScope.launch {
@@ -145,7 +145,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
     }
 
     fun logEvent(eventName: String) {
-        analyticsService.logEvent(eventName, bundleOf())
+        analyticsService.logEvent(eventName, mapOf())
     }
 
     private val withdrawalLimitInDash: Double

@@ -41,6 +41,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
@@ -87,6 +88,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         }
 
         binding.howToUseButton.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.DashDirect.HOW_TO_USE)
             binding.howToUseButton.isVisible = false
             binding.howToUseInfo.isVisible = true
         }

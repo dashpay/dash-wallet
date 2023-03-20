@@ -17,8 +17,8 @@
 
 package org.dash.wallet.common.services.analytics
 
-import android.os.Bundle
 import android.util.Log
+import androidx.core.os.bundleOf
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
@@ -26,7 +26,7 @@ import org.dash.wallet.common.BuildConfig
 import javax.inject.Inject
 
 interface AnalyticsService {
-    fun logEvent(event: String, params: Bundle)
+    fun logEvent(event: String, params: Map<AnalyticsConstants.Parameter, Any>)
     fun logError(error: Throwable, details: String? = null)
 }
 
@@ -38,19 +38,19 @@ class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
         crashlytics.setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
     }
 
-    override fun logEvent(event: String, params: Bundle) {
+    override fun logEvent(event: String, params: Map<AnalyticsConstants.Parameter, Any>) {
         if (BuildConfig.DEBUG) {
             Log.i("FIREBASE", "Skip event logging in debug mode: $event")
 
-            if (!params.isEmpty) {
-                Log.i("FIREBASE", "Parameters: ${params.keySet().joinToString("; ") { "${it}: ${params[it]}" } }")
+            if (params.isNotEmpty()) {
+                Log.i("FIREBASE", "Parameters: ${params.keys.joinToString("; ") { "${it.paramName}: ${params[it]}" } }")
             }
 
             return
         }
 
         try {
-            firebaseAnalytics.logEvent(event, params)
+            firebaseAnalytics.logEvent(event, bundleOf(*params.map { it.key.paramName to it.value }.toTypedArray()))
         } catch (ex: Exception) {
             logError(ex)
         }

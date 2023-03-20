@@ -136,7 +136,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     }
 
     suspend fun getUserWalletAccounts(dashToCrypt: Boolean): List<CoinBaseUserAccountDataUIModel> {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SELECT_COIN, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SELECT_COIN, mapOf())
 
         return when (
             val response = coinBaseRepository.getUserAccounts(userPreference.exchangeCurrencyCode!!)
@@ -153,7 +153,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     }
 
     fun logEvent(eventName: String) {
-        analyticsService.logEvent(eventName, bundleOf())
+        analyticsService.logEvent(eventName, mapOf())
     }
 
     suspend fun getLastBalance(): Coin {

@@ -21,7 +21,6 @@ import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
@@ -178,7 +177,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+        analytics.logEvent(event, mapOf())
     }
 
     fun logError(ex: Exception, details: String) {
@@ -224,10 +223,14 @@ class MainViewModel @Inject constructor(
         }
         analytics.logEvent(
             AnalyticsConstants.Home.TRANSACTION_FILTER,
-            bundleOf(
-                "filter_value" to directionParameter
+            mapOf(
+                AnalyticsConstants.Parameter.VALUE to directionParameter
             )
         )
+
+        if (direction == TxFilterType.GIFT_CARD) {
+            analytics.logEvent(AnalyticsConstants.DashDirect.FILTER_GIFT_CARD, mapOf())
+        }
     }
 
     fun processDirectTransaction(tx: Transaction) {

@@ -32,7 +32,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.os.bundleOf
 import androidx.core.view.*
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -78,9 +77,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         private const val SCROLL_OFFSET_FOR_UP = 700
     }
 
-    @Inject lateinit var configuration: Configuration
+    @Inject
+    lateinit var configuration: Configuration
 
-    @Inject lateinit var analyticsService: AnalyticsService
+    @Inject
+    lateinit var analyticsService: AnalyticsService
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel by exploreViewModels<ExploreViewModel>()
     private val dashDirectViewModel by exploreViewModels<DashDirectViewModel>()
@@ -117,10 +118,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         hideKeyboard()
 
         if (item is Merchant) {
-            analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_MERCHANT_LOCATION, bundleOf())
+            analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_MERCHANT_LOCATION, mapOf())
             viewModel.openMerchantDetails(item, true)
         } else if (item is Atm) {
-            analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_ATM_LOCATION, bundleOf())
+            analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_ATM_LOCATION, mapOf())
             viewModel.openAtmDetails(item)
         }
     }
@@ -160,7 +161,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.menu_info) {
                 if (args.type == ExploreTopic.Merchants) {
-                    analyticsService.logEvent(AnalyticsConstants.Explore.INFO_EXPLORE_MERCHANT, bundleOf())
+                    analyticsService.logEvent(AnalyticsConstants.Explore.INFO_EXPLORE_MERCHANT, mapOf())
                 }
                 safeNavigate(SearchFragmentDirections.exploreToInfo())
             }
@@ -325,17 +326,17 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             if (topic == ExploreTopic.Merchants) {
                 when (mode) {
                     FilterMode.Online ->
-                        analyticsService.logEvent(AnalyticsConstants.Explore.ONLINE_MERCHANTS, bundleOf())
+                        analyticsService.logEvent(AnalyticsConstants.Explore.ONLINE_MERCHANTS, mapOf())
                     FilterMode.Nearby ->
-                        analyticsService.logEvent(AnalyticsConstants.Explore.NEARBY_MERCHANTS, bundleOf())
-                    else -> analyticsService.logEvent(AnalyticsConstants.Explore.ALL_MERCHANTS, bundleOf())
+                        analyticsService.logEvent(AnalyticsConstants.Explore.NEARBY_MERCHANTS, mapOf())
+                    else -> analyticsService.logEvent(AnalyticsConstants.Explore.ALL_MERCHANTS, mapOf())
                 }
             } else {
                 when (mode) {
-                    FilterMode.Buy -> analyticsService.logEvent(AnalyticsConstants.Explore.BUY_ATM, bundleOf())
-                    FilterMode.Sell -> analyticsService.logEvent(AnalyticsConstants.Explore.SELL_ATM, bundleOf())
-                    FilterMode.BuySell -> analyticsService.logEvent(AnalyticsConstants.Explore.BUY_SELL_ATM, bundleOf())
-                    else -> analyticsService.logEvent(AnalyticsConstants.Explore.ALL_ATM, bundleOf())
+                    FilterMode.Buy -> analyticsService.logEvent(AnalyticsConstants.Explore.BUY_ATM, mapOf())
+                    FilterMode.Sell -> analyticsService.logEvent(AnalyticsConstants.Explore.SELL_ATM, mapOf())
+                    FilterMode.BuySell -> analyticsService.logEvent(AnalyticsConstants.Explore.BUY_SELL_ATM, mapOf())
+                    else -> analyticsService.logEvent(AnalyticsConstants.Explore.ALL_ATM, mapOf())
                 }
             }
             viewModel.setFilterMode(mode)
@@ -343,18 +344,18 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         searchHeaderAdapter.setOnFilterButtonClicked {
             if (topic == ExploreTopic.Merchants) {
-                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_TOP, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_TOP, mapOf())
             } else {
-                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_TOP, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_TOP, mapOf())
             }
             openFilters()
         }
 
         binding.filterPanel.setOnClickListener {
             if (topic == ExploreTopic.Merchants) {
-                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_BOTTOM, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_BOTTOM, mapOf())
             } else {
-                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_BOTTOM, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_BOTTOM, mapOf())
             }
             openFilters()
         }
@@ -396,30 +397,31 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             getString(R.string.create_an_account_at_dash_direct_or_log_in_to_the_existing_one),
             getString(R.string.login),
             getString(R.string.create_new_account),
-            "dashdirect.org"
-        )
-            .show(
-                requireActivity(),
-                onResult = {
-                    if (it == true) {
-                        safeNavigate(
-                            SearchFragmentDirections.searchToDashDirectUserAuthFragment(
-                                DashDirectUserAuthFragment.DashDirectUserAuthType.CREATE_ACCOUNT
-                            )
+            getString(R.string.dash_direct_url)
+        ).show(
+            requireActivity(),
+            onResult = {
+                if (it == true) {
+                    viewModel.logEvent(AnalyticsConstants.DashDirect.CREATE_ACCOUNT)
+                    safeNavigate(
+                        SearchFragmentDirections.searchToDashDirectUserAuthFragment(
+                            DashDirectUserAuthFragment.DashDirectUserAuthType.CREATE_ACCOUNT
                         )
-                    } else {
-                        safeNavigate(
-                            SearchFragmentDirections.searchToDashDirectUserAuthFragment(
-                                DashDirectUserAuthFragment.DashDirectUserAuthType.SIGN_IN
-                            )
+                    )
+                } else {
+                    viewModel.logEvent(AnalyticsConstants.DashDirect.LOGIN)
+                    safeNavigate(
+                        SearchFragmentDirections.searchToDashDirectUserAuthFragment(
+                            DashDirectUserAuthFragment.DashDirectUserAuthType.SIGN_IN
                         )
-                    }
-                },
-                onExtraMessageAction = {
-                    requireContext()
-                        .startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(DashDirectConstants.DASH_DIRECT_URL)))
+                    )
                 }
-            )
+            },
+            onExtraMessageAction = {
+                requireContext()
+                    .startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(DashDirectConstants.DASH_DIRECT_URL)))
+            }
+        )
     }
 
     private fun openPurchaseGiftCardFragment() {

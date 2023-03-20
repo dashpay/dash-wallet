@@ -155,12 +155,12 @@
     <string name="redeem_gift_card_text">Redeem your gift card online within seconds or at the cashier.</string>
 
     <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">Sync in progress... Results may not be complete.</string>
-    <string name="sync_in_progress_error">Sync in progress... There was an error.</string>
-    <string name="sync_in_progress_canceled">Sync canceled... Another attempt will be made later.</string>
+    <string name="sync_in_progress_not_complete">Sync in progress… Results may not be complete.</string>
+    <string name="sync_in_progress_error">Sync in progress… There was an error.</string>
+    <string name="sync_in_progress_canceled">Sync canceled… Another attempt will be made later.</string>
 
     <string name="sync_in_progress_file_not_found">Build Error: Database not found!</string>
-    <string name="sync_in_progress_network_error">Sync interrupted... Network is offline or unreachable</string>
+    <string name="sync_in_progress_network_error">Sync interrupted… Network is offline or unreachable</string>
 
     <!-- purchase_gift_card -->
     <string name="purchase_gift_card_at">at</string>
@@ -215,5 +215,7 @@
     <string name="gift_card_purchase_failed">Gift card purchase failed</string>
     <string name="try_again">Try Again</string>
     <string name="cancel">Cancel</string>
-    <string name="gift_card_error"> For some reason we were not able to buy a gift card. Please, try again.</string>
+    <string name="gift_card_error">For some reason we were not able to buy a gift card. Please, try again.</string>
+
+    <string name="dash_direct_url" translatable="false">dashdirect.org</string>
 </resources>

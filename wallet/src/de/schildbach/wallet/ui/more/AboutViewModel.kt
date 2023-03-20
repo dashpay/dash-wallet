@@ -90,7 +90,7 @@ class AboutViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+        analytics.logEvent(event, mapOf())
     }
 
     private fun loadFirebaseIds() {

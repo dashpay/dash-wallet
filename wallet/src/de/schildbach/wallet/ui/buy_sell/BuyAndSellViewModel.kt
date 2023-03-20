@@ -211,7 +211,7 @@ class BuyAndSellViewModel @Inject constructor(
             AnalyticsConstants.Uphold.ENTER_CONNECTED
         } else {
             AnalyticsConstants.Uphold.ENTER_DISCONNECTED
-        }, bundleOf())
+        }, mapOf())
     }
 
     fun logEnterCoinbase() {
@@ -219,7 +219,7 @@ class BuyAndSellViewModel @Inject constructor(
             AnalyticsConstants.Coinbase.ENTER_CONNECTED
         } else {
             AnalyticsConstants.Coinbase.ENTER_DISCONNECTED
-        }, bundleOf())
+        }, mapOf())
     }
 
     private suspend fun coinbaseBalanceString(): String =

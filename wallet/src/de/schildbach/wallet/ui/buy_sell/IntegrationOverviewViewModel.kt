@@ -62,6 +62,6 @@ class IntegrationOverviewViewModel @Inject constructor(
     }
 
     fun logEvent(eventName: String) {
-        analyticsService.logEvent(eventName, bundleOf())
+        analyticsService.logEvent(eventName, mapOf())
     }
 }
