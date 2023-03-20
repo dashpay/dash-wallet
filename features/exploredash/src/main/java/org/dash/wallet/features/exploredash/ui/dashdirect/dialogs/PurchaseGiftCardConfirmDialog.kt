@@ -131,9 +131,9 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     ) {
         when (val response = viewModel.getPaymentStatus(paymentId, orderId)) {
             is ResponseResource.Success -> {
-                if (response.value?.data?.status == "paid") {
+                if (response.value?.data?.status == "paid"||response.value?.data?.giftCardId!= null) {
                     response.value?.data?.giftCardId?.let { getGiftCard(it, transactionId) }
-                } else if (response.value?.data?.status == "unpaid") {
+                } else if (response.value?.data?.status == "unpaid"||response.value?.data?.giftCardId== null) {
                     hideLoading()
                     showErrorRetryDialog {
                         if (it == true) {
