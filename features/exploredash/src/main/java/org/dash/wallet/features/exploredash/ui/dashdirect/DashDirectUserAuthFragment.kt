@@ -156,6 +156,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
 
     private fun applyNewValue(value: String) {
         binding.input.setText(value)
+        binding.input.setSelection(value.length)
     }
 
     private fun continueAction() {
