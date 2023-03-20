@@ -99,16 +99,15 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         }
 
         when (currentDirectUserAuthType) {
-            DashDirectUserAuthType.SIGN_IN ,
+            DashDirectUserAuthType.SIGN_IN,
             DashDirectUserAuthType.CREATE_ACCOUNT -> {
                 binding.continueButtonLayout.isVisible = true
-            binding.bottomCard.isVisible = false
+                binding.bottomCard.isVisible = false
                 binding.input.postDelayed({ showKeyboard() }, 100)
             }
             DashDirectUserAuthType.OTP -> {
                 binding.continueButtonLayout.isVisible = false
                 binding.bottomCard.isVisible = true
-
             }
             else -> {}
         }
@@ -119,17 +118,17 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         }
 
         binding.input.doOnTextChanged { text, _, _, _ ->
-            if(currentDirectUserAuthType==DashDirectUserAuthType.OTP )
-            binding.verifyBtn.isEnabled = !text.isNullOrEmpty()
+            if (currentDirectUserAuthType == DashDirectUserAuthType.OTP) {
+                binding.verifyBtn.isEnabled = !text.isNullOrEmpty()
+            }
         }
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
     }
 
-
     private val keyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
         var value = StringBuilder()
 
-        fun refreshValue(){
+        fun refreshValue() {
             value.clear()
             value.append(binding.input.text.toString())
         }
@@ -142,9 +141,9 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
 
         override fun onBack(longClick: Boolean) {
             refreshValue()
-            if (longClick){
+            if (longClick) {
                 value.clear()
-            } else if (value.isNotEmpty()){
+            } else if (value.isNotEmpty()) {
                 value.deleteCharAt(value.length - 1)
             }
             applyNewValue(value.toString())
@@ -154,9 +153,8 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
     }
 
     private fun applyNewValue(value: String) {
-        binding.input.setText( value)
+        binding.input.setText(value)
     }
-
 
     private fun continueAction() {
         showLoading()
@@ -205,7 +203,6 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
                         if (response.errorBody.isNullOrEmpty()) getString(R.string.error) else response.errorBody
                     binding.inputErrorTv.isVisible = true
                 }
-
             }
             hideLoading()
         }
