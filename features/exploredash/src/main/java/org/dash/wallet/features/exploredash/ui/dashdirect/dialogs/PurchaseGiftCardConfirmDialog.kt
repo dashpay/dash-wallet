@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
@@ -108,6 +109,16 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 R.drawable.ic_info_red,
                 getString(R.string.insufficient_money_title),
                 getString(R.string.insufficient_money_msg),
+                getString(R.string.button_close)
+            ).show(requireActivity())
+            null
+        } catch (ex: DirectPayException) {
+            log.error("purchaseGiftCard DirectPayException", ex)
+            hideLoading()
+            AdaptiveDialog.create(
+                R.drawable.ic_info_red,
+                getString(R.string.payment_request_problem_title),
+                getString(R.string.payment_request_problem_message),
                 getString(R.string.button_close)
             ).show(requireActivity())
             null

@@ -105,7 +105,11 @@ class DashDirectViewModel @Inject constructor(
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
 
-        walletDataProvider.observeBalance().distinctUntilChanged().onEach(_balance::postValue).launchIn(viewModelScope)
+        walletDataProvider
+            .observeBalance()
+            .distinctUntilChanged()
+            .onEach(_balance::postValue)
+            .launchIn(viewModelScope)
     }
 
     suspend fun purchaseGiftCard(): PurchaseGiftCardResponse.Data? {
@@ -155,8 +159,8 @@ class DashDirectViewModel @Inject constructor(
         return null
     }
 
-    suspend fun createSendingRequestFromDashUri(paymentURi: String): Sha256Hash {
-        val transaction = sendPaymentService.payWithDashUrl(paymentURi)
+    suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash {
+        val transaction = sendPaymentService.payWithDashUrl(paymentUri)
         log.info("dash direct transaction: ${transaction.txId}")
         transactionMetadata.markGiftCardTransaction(transaction.txId, giftCardMerchant.logoLocation)
 

@@ -41,6 +41,7 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.protocols.payments.PaymentSession;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
+import org.dash.wallet.common.util.Base43;
 import org.dash.wallet.common.util.Qr;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,8 +77,8 @@ public abstract class InputParser {
             if (supportAnypayUrls) {
                 // replaces Anypay scheme with the Dash one
                 // ie "pay:?r=https://(...)" become "dash:?r=https://(...)"
-                if (input.startsWith(SendCoinsActivity.ANYPAY_SCHEME + ":")) {
-                    this.input = input.replaceFirst(SendCoinsActivity.ANYPAY_SCHEME, SendCoinsActivity.DASH_SCHEME);
+                if (input.startsWith(Constants.ANYPAY_SCHEME + ":")) {
+                    this.input = input.replaceFirst(Constants.ANYPAY_SCHEME, Constants.DASH_SCHEME);
                     return;
                 }
             }
@@ -86,17 +87,17 @@ public abstract class InputParser {
 
         @Override
         public void parse() {
-            if (input.startsWith(SendCoinsActivity.DASH_SCHEME.toUpperCase() + ":-")) {
+            if (input.startsWith(Constants.DASH_SCHEME.toUpperCase() + ":-")) {
                 try {
-                    final byte[] serializedPaymentRequest = Qr.INSTANCE.decodeBinary(input.substring(9));
+                    final byte[] serializedPaymentRequest = Base43.decode(input.substring(9));
 
                     parseAndHandlePaymentRequest(serializedPaymentRequest);
-                } catch (final IOException x) {
-                    log.info("i/o error while fetching payment request", x);
+                } catch (final IllegalArgumentException x) {
+                    log.info("error while decoding request", x);
 
                     error(x, R.string.input_parser_io_error, x.getMessage());
                 } catch (final PaymentProtocolException.PkiVerificationException x) {
-                    log.info("got unverifyable payment request", x);
+                    log.info("got unverifiable payment request", x);
 
                     error(x, R.string.input_parser_unverifyable_paymentrequest, x.getMessage());
                 } catch (final PaymentProtocolException x) {
@@ -104,7 +105,7 @@ public abstract class InputParser {
 
                     error(x, R.string.input_parser_invalid_paymentrequest, x.getMessage());
                 }
-            } else if (input.startsWith(SendCoinsActivity.DASH_SCHEME + ":")) {
+            } else if (input.startsWith(Constants.DASH_SCHEME + ":")) {
                 try {
                     final BitcoinURI bitcoinUri = new BitcoinURI(null, input);
                     final Address address = AddressUtil.getCorrectAddress(bitcoinUri);

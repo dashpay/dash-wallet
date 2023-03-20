@@ -173,7 +173,7 @@ class PaymentProtocolViewModel @Inject constructor(
         backgroundHandler.post {
             Context.propagate(Constants.CONTEXT)
             try {
-                var sendRequest = createSendRequest(
+                var sendRequest = sendCoinsTaskRunner.createSendRequest(
                     false,
                     paymentIntent,
                     signInputs = false,
@@ -182,7 +182,7 @@ class PaymentProtocolViewModel @Inject constructor(
 
                 wallet.completeTx(sendRequest)
                 if (checkDust(sendRequest)) {
-                    sendRequest = createSendRequest(
+                    sendRequest = sendCoinsTaskRunner.createSendRequest(
                         false,
                         paymentIntent,
                         signInputs = false,
@@ -204,7 +204,7 @@ class PaymentProtocolViewModel @Inject constructor(
     }
 
     fun sendPayment() {
-        val finalSendRequest = createSendRequest(
+        val finalSendRequest = sendCoinsTaskRunner.createSendRequest(
             basePaymentIntent.mayEditAmount(),
             finalPaymentIntent!!,
             true,

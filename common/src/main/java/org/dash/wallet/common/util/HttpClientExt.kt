@@ -21,10 +21,13 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.*
+import org.slf4j.LoggerFactory
 import java.io.BufferedInputStream
 import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+
+private val log = LoggerFactory.getLogger(OkHttpClient::class.java)
 
 fun ResponseBody.decodeBitmap(): Bitmap {
     return BufferedInputStream(byteStream()).use { inputStream ->
@@ -32,12 +35,14 @@ fun ResponseBody.decodeBitmap(): Bitmap {
     }
 }
 
-suspend fun OkHttpClient.get(url: String): Response {
+suspend fun OkHttpClient.get(url: String): Response = call(Request.Builder().url(url).get().build())
+
+suspend fun OkHttpClient.call(request: Request): Response {
     return suspendCancellableCoroutine { coroutine ->
-        val request = Request.Builder().url(url).get().build()
         newCall(request).enqueue(object: Callback {
             override fun onFailure(call: Call, e: IOException) {
                 if (coroutine.isActive) {
+                    log.error("okHttp call failure", e)
                     coroutine.resumeWithException(e)
                 }
             }
@@ -48,5 +53,12 @@ suspend fun OkHttpClient.get(url: String): Response {
                 }
             }
         })
+    }
+}
+
+fun Response.ensureSuccessful() {
+    if (!isSuccessful) {
+        log.error("got http error {}: {}", code, message)
+        throw IOException("HTTP error: $code; $message")
     }
 }
