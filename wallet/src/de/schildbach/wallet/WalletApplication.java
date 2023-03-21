@@ -30,6 +30,7 @@ import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.database.sqlite.SQLiteException;
@@ -85,6 +86,7 @@ import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
+import org.dash.wallet.features.exploredash.di.ExploreDashModule;
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
@@ -688,6 +690,11 @@ public class WalletApplication extends MultiDexApplication
         }
     }
 
+    private void clearExploreConfig() {
+        SharedPreferences prefs = getSharedPreferences(ExploreDashModule.Companion.getPREFERENCES_FILENAME(), Context.MODE_PRIVATE);
+        prefs.edit().clear().apply();
+    }
+
     private void clearWebCookies() {
         CookieManager.getInstance().removeAllCookies(null);
         CookieManager.getInstance().flush();
@@ -910,6 +917,7 @@ public class WalletApplication extends MultiDexApplication
         shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
+        clearExploreConfig();
         clearDatastorePrefs();
         clearWebCookies();
         notifyWalletWipe();
