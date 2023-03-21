@@ -22,6 +22,7 @@ import android.util.Patterns
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import androidx.annotation.StringRes
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
@@ -31,6 +32,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.safeNavigate
@@ -62,8 +64,6 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             findNavController().popBackStack()
         }
         binding.continueButton.isEnabled = false
-
-        binding.input.postDelayed({ showKeyboard() }, 100)
 
         currentDirectUserAuthType =
             (arguments?.getSerializable("dashDirectUserAuthType") as? DashDirectUserAuthType)?.also {
@@ -97,9 +97,70 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             hideKeyboard()
             continueAction()
         }
+
+        when (currentDirectUserAuthType) {
+            DashDirectUserAuthType.SIGN_IN,
+            DashDirectUserAuthType.CREATE_ACCOUNT -> {
+                binding.continueButtonLayout.isVisible = true
+                binding.bottomCard.isVisible = false
+                binding.input.postDelayed({ showKeyboard() }, 100)
+                binding.input.showSoftInputOnFocus = true
+            }
+            DashDirectUserAuthType.OTP -> {
+                binding.continueButtonLayout.isVisible = false
+                binding.bottomCard.isVisible = true
+                binding.input.showSoftInputOnFocus = false
+            }
+            else -> {}
+        }
+
+        binding.verifyBtn.setOnClickListener {
+            val input = binding.input.text.toString()
+            verifyEmail(input)
+        }
+
+        binding.input.doOnTextChanged { text, _, _, _ ->
+            if (currentDirectUserAuthType == DashDirectUserAuthType.OTP) {
+                binding.verifyBtn.isEnabled = !text.isNullOrEmpty()
+            }
+        }
+        binding.keyboardView.onKeyboardActionListener = keyboardActionListener
+    }
+
+    private val keyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
+        var value = StringBuilder()
+
+        fun refreshValue() {
+            value.clear()
+            value.append(binding.input.text.toString())
+        }
+
+        override fun onNumber(number: Int) {
+            refreshValue()
+            value.append(number)
+            applyNewValue(value.toString())
+        }
+
+        override fun onBack(longClick: Boolean) {
+            refreshValue()
+            if (longClick) {
+                value.clear()
+            } else if (value.isNotEmpty()) {
+                value.deleteCharAt(value.length - 1)
+            }
+            applyNewValue(value.toString())
+        }
+
+        override fun onFunction() {}
+    }
+
+    private fun applyNewValue(value: String) {
+        binding.input.setText(value)
+        binding.input.setSelection(value.length)
     }
 
     private fun continueAction() {
+        showLoading()
         val input = binding.input.text.toString()
         when (currentDirectUserAuthType) {
             DashDirectUserAuthType.SIGN_IN -> authUserToDashDirect(input, true)
@@ -109,6 +170,17 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         }
     }
 
+    private fun showLoading() {
+        binding.continueButton.text = ""
+        binding.continueButtonLoading.isVisible = true
+        binding.continueButton.isClickable = false
+    }
+
+    private fun hideLoading() {
+        binding.continueButton.setText(R.string.continue_text)
+        binding.continueButtonLoading.isGone = true
+        binding.continueButton.isClickable = true
+    }
     private fun authUserToDashDirect(email: String, isSignIn: Boolean) {
         lifecycleScope.launch {
             when (
@@ -135,6 +207,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
                     binding.inputErrorTv.isVisible = true
                 }
             }
+            hideLoading()
         }
     }
 
@@ -154,6 +227,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
                     binding.inputErrorTv.isVisible = true
                 }
             }
+            hideLoading()
         }
     }
 

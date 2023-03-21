@@ -74,29 +74,97 @@
             android:inputType="textEmailAddress" />
 
     </org.dash.wallet.common.ui.text.InputWrapper>
+
     <TextView
         android:id="@+id/input_error_tv"
         style="@style/Overline.Red"
         android:layout_width="0dp"
-        android:layout_marginHorizontal="@dimen/details_horizontal_margin"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@+id/input_wrapper"
-        app:layout_constraintStart_toStartOf="@+id/input_wrapper"
-        app:layout_constraintEnd_toEndOf="@+id/input_wrapper"
+        android:layout_marginHorizontal="@dimen/details_horizontal_margin"
         android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@+id/input_wrapper"
+        app:layout_constraintStart_toStartOf="@+id/input_wrapper"
+        app:layout_constraintTop_toBottomOf="@+id/input_wrapper"
         tools:visibility="visible" />
 
-
-    <Button
-        android:id="@+id/continue_button"
-        style="@style/Button.Primary.Large.Blue"
-        android:layout_width="0dp"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/continue_button_layout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="15dp"
-        android:layout_marginBottom="15dp"
-        android:text="@string/continue_text"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent">
+
+        <Button
+            android:id="@+id/continue_button"
+            style="@style/Button.Primary.Large.Blue"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="15dp"
+            android:layout_marginBottom="15dp"
+            android:text="@string/continue_text"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/continue_button_loading"
+            style="@style/Widget.Material3.CircularProgressIndicator.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:indeterminate="true"
+            android:visibility="gone"
+            app:indicatorColor="@color/white"
+            app:layout_constraintBottom_toBottomOf="@id/continue_button"
+            app:layout_constraintEnd_toEndOf="@+id/continue_button"
+            app:layout_constraintStart_toStartOf="@+id/continue_button"
+            app:layout_constraintTop_toTopOf="@id/continue_button"
+            app:trackThickness="3dp" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/bottom_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="-10dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <LinearLayout
+            android:id="@+id/keyboard_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="@dimen/enter_amount_keyboard_spacing">
+
+            <View
+                android:id="@+id/keyboard_header_divider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginHorizontal="@dimen/divider_margin_horizontal"
+                android:layout_marginVertical="@dimen/enter_amount_keyboard_spacing"
+                android:background="@color/divider_color"
+                android:visibility="gone" />
+
+            <org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
+                android:id="@+id/keyboard_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginBottom="@dimen/enter_amount_keyboard_spacing"
+                app:nk_decSeparatorEnabled="false"
+                app:nk_functionEnabled="false" />
+
+            <Button
+                android:id="@+id/verify_btn"
+                style="@style/Button.Primary.Large.Blue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginBottom="25dp"
+                android:enabled="false"
+                android:text="@string/continue_text" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

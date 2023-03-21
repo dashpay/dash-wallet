@@ -120,6 +120,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
 
     private fun setCardPurchaseLimits() {
         viewModel.refreshMinMaxCardPurchaseValues()
+        enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseCoin, true)
+        enterAmountViewModel.setMaxAmount(viewModel.maxCardPurchaseCoin)
         showCardPurchaseLimits()
     }
 
