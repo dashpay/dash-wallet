@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
@@ -235,7 +236,7 @@ public final class WalletAddressesFragment extends FancyListFragment {
 
     private final KeyChainEventListener walletListener = new KeyChainEventListener() {
         @Override
-        public void onKeysAdded(final List<ECKey> keysAdded) {
+        public void onKeysAdded(final List<IKey> keysAdded) {
             final List<ECKey> derivedKeys = wallet.getIssuedReceiveKeys();
             final List<ECKey> randomKeys = wallet.getImportedKeys();
 
