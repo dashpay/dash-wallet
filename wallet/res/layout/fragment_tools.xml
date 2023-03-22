@@ -7,9 +7,10 @@
     android:animateLayoutChanges="true"
     android:background="@color/background_primary"
     android:orientation="vertical"
-    tools:context="de.schildbach.wallet.ui.ToolsActivity">
+    tools:context="de.schildbach.wallet.ui.more.ToolsFragment">
 
     <include
+        android:id="@+id/app_bar"
         layout="@layout/app_bar_general"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />

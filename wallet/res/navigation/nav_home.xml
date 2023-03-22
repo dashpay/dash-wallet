@@ -106,6 +106,25 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/more_to_tools"
+            app:destination="@id/toolsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/toolsFragment"
+        android:name="de.schildbach.wallet.ui.more.ToolsFragment"
+        android:label="Tools"
+        tools:layout="@layout/fragment_more">
+
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="false" />
+
     </fragment>
 
     <fragment
