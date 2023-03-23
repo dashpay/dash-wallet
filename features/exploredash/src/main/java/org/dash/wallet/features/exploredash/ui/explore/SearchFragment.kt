@@ -32,7 +32,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.os.bundleOf
 import androidx.core.view.*
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -497,7 +496,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             bottomSheet.state = setBottomSheetState()
         }
 
-        viewLifecycleOwner.observeOnDestroy { binding.searchResults.adapter = null }
+        viewLifecycleOwner.observeOnDestroy {
+            binding.searchResults.adapter = null
+        }
     }
 
     private fun setupItemDetails() {
@@ -846,11 +847,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun shouldShowFiltersPanel(): Boolean {
         return viewModel.selectedItem.value == null &&
             viewModel.isLocationEnabled.value == true &&
-            (
-                isPhysicalSearch ||
-                    viewModel.paymentMethodFilter.isNotEmpty() ||
-                    viewModel.selectedTerritory.value?.isNotEmpty() == true
-                )
+                (isPhysicalSearch || viewModel.paymentMethodFilter.isNotEmpty() ||
+                        viewModel.selectedTerritory.value?.isNotEmpty() == true)
     }
 
     private fun openFilters() {

@@ -34,7 +34,6 @@ import java.math.RoundingMode
 import javax.inject.Inject
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.ExperimentalTime
 
 interface CrowdNodeEndpoint {
     @GET("odata/apifundings/GetFunds(address='{address}')")
@@ -71,7 +70,7 @@ interface CrowdNodeEndpoint {
     suspend fun sendSignedMessage(
         @Path("address") address: String,
         @Path("message") message: String,
-        @Path("signature") signature: String,
+        @Path("signature") signature: String
     ): Response<MessageStatus>
 
     @GET("odata/apimessages/GetMessages(address='{address}')")
@@ -80,7 +79,6 @@ interface CrowdNodeEndpoint {
     ): Response<List<MessageStatus>>
 }
 
-@ExperimentalTime
 open class CrowdNodeWebApi @Inject constructor(
     private val endpoint: CrowdNodeEndpoint,
     private val analyticsService: AnalyticsService

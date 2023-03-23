@@ -187,7 +187,6 @@
     <string name="purchase_Request_assistance">Request assistance from an employee to redeem a digital gift card.</string>
     <string name="purchase_in_store">In store</string>
     <string name="purchase_tell_the_cashier">Tell the cashier that you are paying with a digital gift card. Cashier: type the total amount on the Bankcard field, then type the gift card number in the Account field and press Enter.</string>
-    <string name="purchase_online">Online</string>
     <string name="purchase_in_the_payment_section">In the payment section, enter your digital gift card number into the gift card field.</string>
     <string name="purchase_powered_by">Powered by</string>
     <string name="insufficient_money_title">Not enough coins</string>

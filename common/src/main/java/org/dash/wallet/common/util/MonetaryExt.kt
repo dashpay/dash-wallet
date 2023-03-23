@@ -76,3 +76,6 @@ fun Fiat.toFormattedStringNoCode(): String {
     val format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode()
     return format.format(this).toString()
 }
+
+fun Fiat.discountBy(percentage: Double) =
+    Fiat.valueOf(currencyCode, (value * (100.0 - percentage) / 100).toLong())

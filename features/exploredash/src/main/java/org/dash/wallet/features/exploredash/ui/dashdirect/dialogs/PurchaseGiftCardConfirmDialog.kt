@@ -30,18 +30,18 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.dashdirect.model.giftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
+import org.dash.wallet.features.exploredash.repository.DashDirectException
 import org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectViewModel
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants.DEFAULT_DISCOUNT
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
@@ -78,7 +78,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         }
         binding.giftCardDiscountValue.text = GenericUtils.formatPercent(savingsPercentage)
         binding.giftCardTotalValue.text = paymentValue.toFormattedString()
-        val discountedValue = viewModel.getDiscountedAmount(paymentValue, savingsPercentage)
+        val discountedValue = paymentValue.discountBy(savingsPercentage)
         binding.giftCardYouPayValue.text = discountedValue.toFormattedStringRoundUp()
         binding.purchaseCardValue.text = paymentValue.toFormattedString()
 
@@ -93,12 +93,25 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             }
 
             showLoading()
-            val data = viewModel.purchaseGiftCard()
 
-            if (data?.uri != null && data.paymentId != null && data.orderId != null) {
+            val data = try {
+                viewModel.purchaseGiftCard()
+            } catch (ex: DashDirectException) {
+                hideLoading()
+                AdaptiveDialog.create(
+                    R.drawable.ic_info_red,
+                    getString(R.string.gift_card_purchase_failed),
+                    ex.message ?: getString(R.string.gift_card_error),
+                    getString(R.string.button_close)
+                ).show(requireActivity())
+                return@launch
+            }
+
+            if (data?.uri != null && data.orderId != null && data.paymentId != null) {
                 val transactionId = createSendingRequestFromDashUri(data.uri)
                 transactionId?.let {
-                    getPaymentStatus(data.paymentId, data.orderId, it)
+                    viewModel.saveGiftCardDummy(transactionId, data.orderId, data.paymentId)
+                    showGiftCardDetailsDialog(transactionId)
                 }
             } else {
                 hideLoading()
@@ -143,43 +156,6 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         }
     }
 
-    private suspend fun getPaymentStatus(
-        paymentId: String,
-        orderId: String,
-        transactionId: Sha256Hash
-    ) {
-        when (val response = viewModel.getPaymentStatus(paymentId, orderId)) {
-            is ResponseResource.Success -> {
-                if (response.value?.data?.status == "paid") {
-                    response.value?.data?.giftCardId?.let { getGiftCard(it, transactionId) }
-                } else if (response.value?.data?.status == "unpaid") {
-                    hideLoading()
-                    showErrorRetryDialog {
-                        if (it == true) {
-                            showLoading()
-                            lifecycleScope.launch {
-                                getPaymentStatus(paymentId, orderId, transactionId)
-                            }
-                        }
-                    }
-                }
-            }
-            is ResponseResource.Failure -> {
-                hideLoading()
-                log.error("getPaymentStatus error ${response.errorCode}: ${response.errorBody}")
-                showErrorRetryDialog {
-                    if (it == true) {
-                        showLoading()
-                        lifecycleScope.launch {
-                            getPaymentStatus(paymentId, orderId, transactionId)
-                        }
-                    }
-                }
-            }
-            else -> { }
-        }
-    }
-
     private fun showErrorRetryDialog(action: ((Boolean?) -> Unit)? = null) {
         AdaptiveDialog.create(
             R.drawable.ic_info_red,
@@ -190,35 +166,8 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         ).show(requireActivity()) { action?.invoke(it) }
     }
 
-    private suspend fun getGiftCard(
-        giftCardId: Long,
-        transactionId: Sha256Hash
-    ) {
-        when (val response = viewModel.getGiftCardDetails(giftCardId)) {
-            is ResponseResource.Success -> {
-                if (response.value?.successful == true && response.value?.data != null) {
-                    showGiftCardDetailsDialog(transactionId, response.value!!.data!!)
-                }
-            }
-            is ResponseResource.Failure -> {
-                hideLoading()
-                log.error("getGiftCardDetails error ${response.errorCode}: ${response.errorBody}")
-                showErrorRetryDialog {
-                    if (it == true) {
-                        showLoading()
-                        lifecycleScope.launch { getGiftCard(giftCardId, transactionId) }
-                    }
-                }
-            }
-            else -> { }
-        }
-    }
-    private fun showGiftCardDetailsDialog(
-        txId: Sha256Hash,
-        data: GetGiftCardResponse.Data
-    ) {
-        viewModel.saveGiftCard(txId, data)
-        GiftCardDetailsDialog.newInstance(txId, data.barcodeUrl).show(requireActivity()).also {
+    private fun showGiftCardDetailsDialog(txId: Sha256Hash) {
+        GiftCardDetailsDialog.newInstance(txId).show(requireActivity()).also {
             val navController = findNavController()
             navController.popBackStack(navController.graph.startDestinationId, false)
 
@@ -233,8 +182,10 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     }
 
     private fun hideLoading() {
-        binding.confirmButton.setText(R.string.purchase_gift_card_confirm)
-        binding.confirmButtonLoading.isGone = true
-        binding.confirmButton.isClickable = true
+        if (isAdded) {
+            binding.confirmButton.setText(R.string.purchase_gift_card_confirm)
+            binding.confirmButtonLoading.isGone = true
+            binding.confirmButton.isClickable = true
+        }
     }
 }

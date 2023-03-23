@@ -59,7 +59,6 @@ import kotlin.math.pow
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.ExperimentalTime
 
 interface CrowdNodeApi {
     val signUpStatus: StateFlow<SignUpStatus>
@@ -87,9 +86,6 @@ interface CrowdNodeApi {
     suspend fun reset()
 }
 
-@FlowPreview
-@ExperimentalTime
-@ExperimentalCoroutinesApi
 class CrowdNodeApiAggregator @Inject constructor(
     private val webApi: CrowdNodeWebApi,
     private val blockchainApi: CrowdNodeBlockchainApi,

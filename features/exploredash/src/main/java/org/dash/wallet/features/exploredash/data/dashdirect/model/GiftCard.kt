@@ -32,13 +32,16 @@ import org.dash.wallet.common.util.Constants
 )
 data class GiftCard(
     @PrimaryKey var id: String = "",
+    var service: String = "",
     var merchantName: String = "",
     var transactionId: Sha256Hash = Sha256Hash.ZERO_HASH,
     var price: Long = 0,
     var currency: String = Constants.USD_CURRENCY,
-    var number: String = "",
+    var discount: Double = 0.0,
+    var number: String? = null,
     var pin: String? = null,
     var barcodeValue: String? = null,
     var barcodeFormat: BarcodeFormat? = null,
-    var currentBalanceUrl: String? = null
+    var currentBalanceUrl: String? = null,
+    var note: String? = null
 )

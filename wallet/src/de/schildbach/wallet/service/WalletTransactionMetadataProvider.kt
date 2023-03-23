@@ -388,13 +388,15 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     override fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?> {
-        return transactionMetadataDao.observe(txId).map { transactionMetadata ->
-            // if there is no user specified tax category, then look at address_metadata
-            if (transactionMetadata != null && transactionMetadata.taxCategory == null) {
-                transactionMetadata.taxCategory = getDefaultTaxCategory(txId)
+        return transactionMetadataDao.observe(txId)
+            .distinctUntilChanged()
+            .map { transactionMetadata ->
+                // if there is no user specified tax category, then look at address_metadata
+                if (transactionMetadata != null && transactionMetadata.taxCategory == null) {
+                    transactionMetadata.taxCategory = getDefaultTaxCategory(txId)
+                }
+                transactionMetadata
             }
-            transactionMetadata
-        }
     }
 
     private fun updateIcon(txId: Sha256Hash, iconUrl: String) {

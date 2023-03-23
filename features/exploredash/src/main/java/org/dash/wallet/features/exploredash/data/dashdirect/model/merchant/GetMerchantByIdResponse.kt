@@ -31,6 +31,7 @@ data class GetMerchantByIdResponse(
         @SerializedName("Id") val id: Int? = 0,
         @SerializedName("MinimumCardPurchase") val minimumCardPurchase: Double? = 0.0,
         @SerializedName("MaximumCardPurchase") val maximumCardPurchase: Double? = 0.0,
-        @SerializedName("SavingsPercentage") val savingsPercentage: Double? = 0.0
+        @SerializedName("SavingsPercentage") val savingsPercentage: Double? = 0.0,
+        @SerializedName("HasBarcode") val hasBarcode: Boolean? = false
     )
 }

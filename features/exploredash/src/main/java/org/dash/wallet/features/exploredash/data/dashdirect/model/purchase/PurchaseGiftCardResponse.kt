@@ -32,7 +32,7 @@ data class PurchaseGiftCardResponse(
         val currency: String? = null,
         val dashAmount: String? = null,
         val fiatAmount: String? = null,
-        val giftCardId: Any? = null,
+        val giftCardId: String? = null,
         val name: Any? = null,
         val notes: Any? = null,
         @SerializedName("order_id") val orderId: String? = null,

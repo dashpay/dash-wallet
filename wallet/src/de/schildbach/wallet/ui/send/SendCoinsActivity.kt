@@ -126,7 +126,6 @@ open class SendCoinsActivity : LockScreenActivity() {
             intentUri?.hasValidScheme() == true
         ) {
             PaymentIntentParser.parse(intentUri.toString(), true)
-                ?: throw IllegalArgumentException("Invalid Dash URI")
         } else if (action == NfcAdapter.ACTION_NDEF_DISCOVERED && mimeType == PaymentProtocol.MIMETYPE_PAYMENTREQUEST) {
             val ndefMessage = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)?.get(0) as? NdefMessage
             val ndefMessagePayload = ndefMessage?.let {

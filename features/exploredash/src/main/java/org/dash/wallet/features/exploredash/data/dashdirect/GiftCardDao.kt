@@ -21,6 +21,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.MapInfo
 import androidx.room.Query
+import androidx.room.Update
 import com.google.zxing.BarcodeFormat
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
@@ -31,8 +32,14 @@ interface GiftCardDao {
     @Insert
     suspend fun insertGiftCard(giftCard: GiftCard)
 
+    @Update(entity = GiftCard::class)
+    suspend fun updateGiftCard(giftCard: GiftCard)
+
     @Query("SELECT * FROM gift_cards WHERE transactionId = :transactionId")
     suspend fun getCardForTransaction(transactionId: Sha256Hash): GiftCard?
+
+    @Query("SELECT * FROM gift_cards WHERE transactionId = :transactionId")
+    fun observeCardForTransaction(transactionId: Sha256Hash): Flow<GiftCard>
 
     @Query("UPDATE gift_cards SET barcodeValue = :value, barcodeFormat = :barcodeFormat WHERE transactionId = :txId")
     suspend fun updateBarcode(txId: Sha256Hash, value: String, barcodeFormat: BarcodeFormat)
