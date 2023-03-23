@@ -144,7 +144,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             }
 
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.error),
                 message ?: getString(R.string.gift_card_error),
                 getString(R.string.button_close)

@@ -137,6 +137,7 @@
 
                 <ProgressBar
                     android:id="@+id/barcode_loading_indicator"
+                    style="?android:attr/progressBarStyle"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:layout_marginEnd="15dp"
@@ -283,6 +284,7 @@
 
                 <ProgressBar
                     android:id="@+id/info_loading_indicator"
+                    style="?android:attr/progressBarStyle"
                     android:layout_width="28dp"
                     android:layout_height="28dp"
                     android:layout_marginVertical="22dp"

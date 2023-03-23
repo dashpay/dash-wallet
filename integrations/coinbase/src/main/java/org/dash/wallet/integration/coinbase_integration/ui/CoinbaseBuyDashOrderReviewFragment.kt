@@ -159,7 +159,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
 
         viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.something_wrong_title),
                 getString(R.string.retry_later_message),
                 getString(R.string.close)

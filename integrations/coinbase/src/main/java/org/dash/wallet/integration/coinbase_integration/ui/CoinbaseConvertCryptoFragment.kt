@@ -155,7 +155,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             }
 
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.error),
                 message,
                 getString(R.string.close)
@@ -164,7 +164,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
         convertViewModel.userDashAccountEmptyError.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.dont_have_any_dash),
                 "",
                 getString(R.string.close)
@@ -429,7 +429,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
     private fun showNoAssetsError() {
         AdaptiveDialog.create(
-            R.drawable.ic_info_red,
+            R.drawable.ic_error,
             getString(R.string.we_didnt_find_any_assets),
             getString(R.string.you_dont_own_any_crypto),
             getString(R.string.close),

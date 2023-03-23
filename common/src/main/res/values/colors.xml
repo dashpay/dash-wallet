@@ -59,6 +59,7 @@
     <color name="input_hint_gray">#c5c6c7</color>
     <color name="content_loading_track">@color/background_tertiary</color>
     <color name="tertiary_text_highlight">@color/ultra_light_gray</color>
+    <color name="input_background">@color/extra_light_gray</color>
 
     <!-- Background -->
     <color name="background_primary">#f7f7f7</color>

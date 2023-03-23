@@ -37,6 +37,7 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -59,7 +60,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DashDirectViewModel @Inject constructor(
-    walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletDataProvider,
     exchangeRates: ExchangeRatesProvider,
     var configuration: Configuration,
     private val sendPaymentService: SendPaymentService,
@@ -204,6 +205,16 @@ class DashDirectViewModel @Inject constructor(
         )
         viewModelScope.launch {
             giftCardDao.insertGiftCard(giftCard)
+        }
+    }
+
+    fun needsCrowdNodeWarning(dashAmount: String): Boolean {
+        val outputAmount = Coin.parseCoin(dashAmount)
+        return try {
+            walletDataProvider.checkSendingConditions(null, outputAmount)
+            false
+        } catch (ex: LeftoverBalanceException) {
+            true
         }
     }
 

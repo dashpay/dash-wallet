@@ -346,7 +346,7 @@ class SetPinActivity : InteractionAwareActivity() {
     private fun warnLastAttempt() {
         if (viewModel.getRemainingAttempts() == 1) {
             val dialog = AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.wallet_last_attempt),
                 getString(R.string.wallet_last_attempt_message),
                 "",

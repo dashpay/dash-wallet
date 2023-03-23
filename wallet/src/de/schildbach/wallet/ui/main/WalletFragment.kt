@@ -241,7 +241,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
             )
         } else {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.shortcut_pay_to_address),
                 getString(R.string.scan_to_pay_error_dialog_message_no_data),
                 getString(R.string.button_close),
@@ -283,7 +283,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
             override fun error(x: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 val dialog = AdaptiveDialog.create(
-                    R.drawable.ic_info_red,
+                    R.drawable.ic_error,
                     getString(errorDialogTitleResId),
                     if (messageArgs.isNotEmpty()) {
                         getString(messageResId, *messageArgs)

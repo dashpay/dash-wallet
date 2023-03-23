@@ -386,7 +386,7 @@ open class LockScreenActivity : SecureActivity() {
 
                 if (pinRetryController.remainingAttempts == 1) {
                     val dialog = AdaptiveDialog.create(
-                        R.drawable.ic_info_red,
+                        R.drawable.ic_error,
                         getString(R.string.wallet_last_attempt),
                         getString(R.string.wallet_last_attempt_message),
                         "",

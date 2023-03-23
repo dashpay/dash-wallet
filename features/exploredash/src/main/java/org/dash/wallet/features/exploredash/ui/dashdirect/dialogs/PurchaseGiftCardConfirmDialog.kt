@@ -33,6 +33,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -99,7 +100,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             } catch (ex: DashDirectException) {
                 hideLoading()
                 AdaptiveDialog.create(
-                    R.drawable.ic_info_red,
+                    R.drawable.ic_error,
                     getString(R.string.gift_card_purchase_failed),
                     ex.message ?: getString(R.string.gift_card_error),
                     getString(R.string.button_close)
@@ -108,6 +109,15 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             }
 
             if (data?.uri != null && data.orderId != null && data.paymentId != null) {
+                if (!data.dashAmount.isNullOrEmpty() && viewModel.needsCrowdNodeWarning(data.dashAmount)) {
+                    val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
+
+                    if (shouldContinue != true) {
+                        hideLoading()
+                        return@launch
+                    }
+                }
+
                 val transactionId = createSendingRequestFromDashUri(data.uri)
                 transactionId?.let {
                     viewModel.saveGiftCardDummy(transactionId, data.orderId, data.paymentId)
@@ -127,7 +137,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             hideLoading()
             log.error("purchaseGiftCard InsufficientMoneyException", x)
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.insufficient_money_title),
                 getString(R.string.insufficient_money_msg),
                 getString(R.string.button_close)
@@ -137,7 +147,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             log.error("purchaseGiftCard DirectPayException", ex)
             hideLoading()
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.payment_request_problem_title),
                 getString(R.string.payment_request_problem_message),
                 getString(R.string.button_close)
@@ -147,7 +157,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             log.error("purchaseGiftCard error", ex)
             hideLoading()
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.send_coins_error_msg),
                 getString(R.string.gift_card_error),
                 getString(R.string.button_close)
@@ -158,7 +168,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
 
     private fun showErrorRetryDialog(action: ((Boolean?) -> Unit)? = null) {
         AdaptiveDialog.create(
-            R.drawable.ic_info_red,
+            R.drawable.ic_error,
             getString(R.string.gift_card_purchase_failed),
             getString(R.string.gift_card_error),
             getString(R.string.cancel),

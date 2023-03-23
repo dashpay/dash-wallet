@@ -8,6 +8,7 @@
 <!--    <color name="content_warning">@color/system_red</color>-->
 <!--    <color name="content_loading_track">#14171A</color>-->
 <!--    <color name="tertiary_text_highlight">@color/ultra_dark_gray</color>-->
+<!--    <color name="input_background">@color/extra_dark_gray</color>-->
 
 <!--    &lt;!&ndash; Strokes &ndash;&gt;-->
 <!--    <color name="divider_color">@color/extra_dark_gray</color>-->

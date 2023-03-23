@@ -24,14 +24,7 @@
 
     <ImageButton
         android:id="@+id/collapse_button"
-        style="@style/Button.Tertiary.ExtraSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:layout_marginTop="20dp"
-        android:paddingHorizontal="0dp"
-        android:src="@drawable/ic_close"
-        android:text="@string/explore_apply_filter" />
+        style="@style/DialogCloseButton" />
 
     <ImageView
         android:id="@+id/dialog_icon"

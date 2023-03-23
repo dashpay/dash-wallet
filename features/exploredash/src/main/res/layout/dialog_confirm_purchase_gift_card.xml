@@ -41,13 +41,8 @@
 
         <ImageButton
             android:id="@+id/collapse_button"
-            style="@style/Button.Tertiary.Small.Blue"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:paddingVertical="0dp"
-            android:src="@drawable/ic_close"
-            android:text="@string/explore_apply_filter" />
+            style="@style/DialogCloseButton"
+            android:layout_gravity="end" />
     </FrameLayout>
 
     <androidx.appcompat.widget.AppCompatTextView
