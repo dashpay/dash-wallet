@@ -59,6 +59,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
 
     private val binding by viewBinding(DialogConfirmPurchaseGiftCardBinding::bind)
     private val viewModel by exploreViewModels<DashDirectViewModel>()
+
     @Inject
     lateinit var authManager: AuthenticationManager
 
