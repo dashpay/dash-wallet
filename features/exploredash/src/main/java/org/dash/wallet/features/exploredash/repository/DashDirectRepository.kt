@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.repository
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
 import org.dash.wallet.common.util.ResourceString
@@ -34,10 +33,12 @@ import org.dash.wallet.features.exploredash.data.dashdirect.model.signin.VerifyE
 import org.dash.wallet.features.exploredash.network.service.DashDirectAuthApi
 import org.dash.wallet.features.exploredash.network.service.DashDirectServicesApi
 import org.dash.wallet.features.exploredash.utils.DashDirectConfig
+import java.util.UUID
 import javax.inject.Inject
 
 class DashDirectException(message: String) : Exception(message) {
     var resourceString: ResourceString? = null
+
     constructor(message: ResourceString) : this("") {
         this.resourceString = message
     }
@@ -62,6 +63,7 @@ class DashDirectRepository @Inject constructor(
                 createUser(email)
             }
             config.setSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
+            config.setPreference(DashDirectConfig.PREFS_DEVICE_UUID, UUID.randomUUID().toString())
         }
         true
     }
@@ -74,15 +76,16 @@ class DashDirectRepository @Inject constructor(
                 }
             }
             config.setSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
+            config.setPreference(DashDirectConfig.PREFS_DEVICE_UUID, UUID.randomUUID().toString())
         }
         true
     }
 
     override suspend fun verifyEmail(code: String): ResponseResource<Boolean> = safeApiCall {
+        val email = config.getSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL)
         authApi.verifyEmail(
-            signInRequest =
-            VerifyEmailRequest(
-                emailAddress = config.getSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL),
+            signInRequest = VerifyEmailRequest(
+                emailAddress = email,
                 code = code
             )
         ).also {
@@ -92,35 +95,33 @@ class DashDirectRepository @Inject constructor(
                 }
             }
             it?.data?.accessToken?.let { token ->
-                config.setPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN, token)
+                config.setSecuredData(DashDirectConfig.PREFS_KEY_ACCESS_TOKEN, token)
             }
         }
-        config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: false
+        config.getSecuredData(DashDirectConfig.PREFS_KEY_ACCESS_TOKEN)?.isNotEmpty() ?: false
     }
 
-    override fun isUserSignIn() = runBlocking {
-        config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: false
-    }
+    override suspend fun isUserSignIn() =
+        config.getSecuredData(DashDirectConfig.PREFS_KEY_ACCESS_TOKEN)?.isNotEmpty() ?: false
 
-    override suspend fun getDashDirectEmail(): String? {
-        return config.getSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL)
-    }
+    override suspend fun getDashDirectEmail() =
+        config.getSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL)
 
     override suspend fun logout() {
         config.clearAll()
     }
 
-    fun reset() {
-        runBlocking { config.setPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN, "") }
+    suspend fun reset() {
+        config.setSecuredData(DashDirectConfig.PREFS_KEY_ACCESS_TOKEN, "")
     }
 
     override suspend fun purchaseGiftCard(
-        deviceID: String,
         paymentCurrency: String,
         amountUSD: Double,
         merchantId: Long,
         userEmail: String
     ) = safeApiCall {
+        val deviceID = config.getPreference(DashDirectConfig.PREFS_DEVICE_UUID)!!
         servicesApi.purchaseGiftCard(
             deviceID = deviceID,
 //            purchaseGiftCardRequest = PurchaseGiftCardRequest(
@@ -165,11 +166,10 @@ interface DashDirectRepositoryInt {
     suspend fun signIn(email: String): ResponseResource<Boolean>
     suspend fun createUser(email: String): ResponseResource<Boolean>
     suspend fun verifyEmail(code: String): ResponseResource<Boolean>
-    fun isUserSignIn(): Boolean
+    suspend fun isUserSignIn(): Boolean
     suspend fun getDashDirectEmail(): String?
     suspend fun logout()
     suspend fun purchaseGiftCard(
-        deviceID: String,
         paymentCurrency: String,
         amountUSD: Double,
         merchantId: Long,

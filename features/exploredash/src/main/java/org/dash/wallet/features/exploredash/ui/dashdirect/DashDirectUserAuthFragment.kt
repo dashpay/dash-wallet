@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui.dashdirect
 
+import android.os.Build
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
@@ -28,6 +29,7 @@ import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.ResponseResource
@@ -42,9 +44,9 @@ import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 @AndroidEntryPoint
 class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_auth) {
-    private var currentDirectUserAuthType: DashDirectUserAuthType? = null
     private val binding by viewBinding(FragmentDashDirectUserAuthBinding::bind)
     private val viewModel by exploreViewModels<DashDirectViewModel>()
+    private val args by navArgs<DashDirectUserAuthFragmentArgs>()
 
     enum class DashDirectUserAuthType(
         @StringRes val screenTitle: Int,
@@ -60,23 +62,20 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         super.onViewCreated(view, savedInstanceState)
         binding.titleBar.setNavigationOnClickListener {
             hideKeyboard()
-
             findNavController().popBackStack()
         }
         binding.continueButton.isEnabled = false
 
-        currentDirectUserAuthType =
-            (arguments?.getSerializable("dashDirectUserAuthType") as? DashDirectUserAuthType)?.also {
-                binding.title.setText(it.screenTitle)
-                binding.descLabel.setText(it.screenSubtitle)
-                binding.inputWrapper.setHint(it.textInputHint)
-            }
+        val authType = args.dashDirectUserAuthType
+        binding.title.setText(authType.screenTitle)
+        binding.descLabel.setText(authType.screenSubtitle)
+        binding.inputWrapper.setHint(authType.textInputHint)
 
         binding.input.doOnTextChanged { text, _, _, _ ->
             binding.inputWrapper.isErrorEnabled = false
             binding.inputErrorTv.isVisible = false
 
-            if (currentDirectUserAuthType != DashDirectUserAuthType.OTP) {
+            if (authType != DashDirectUserAuthType.OTP) {
                 binding.continueButton.isEnabled = isEmail(text)
             } else {
                 binding.continueButton.isEnabled = !text.isNullOrEmpty()
@@ -98,32 +97,28 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             continueAction()
         }
 
-        when (currentDirectUserAuthType) {
+        when (authType) {
             DashDirectUserAuthType.SIGN_IN,
             DashDirectUserAuthType.CREATE_ACCOUNT -> {
-                binding.continueButtonLayout.isVisible = true
                 binding.bottomCard.isVisible = false
                 binding.input.postDelayed({ showKeyboard() }, 100)
                 binding.input.showSoftInputOnFocus = true
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    binding.input.setAutofillHints(View.AUTOFILL_HINT_EMAIL_ADDRESS)
+                }
             }
             DashDirectUserAuthType.OTP -> {
-                binding.continueButtonLayout.isVisible = false
                 binding.bottomCard.isVisible = true
                 binding.input.showSoftInputOnFocus = false
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    binding.input.setAutofillHints("")
+                }
             }
             else -> {}
         }
 
-        binding.verifyBtn.setOnClickListener {
-            val input = binding.input.text.toString()
-            verifyEmail(input)
-        }
-
-        binding.input.doOnTextChanged { text, _, _, _ ->
-            if (currentDirectUserAuthType == DashDirectUserAuthType.OTP) {
-                binding.verifyBtn.isEnabled = !text.isNullOrEmpty()
-            }
-        }
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
     }
 
@@ -162,7 +157,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
     private fun continueAction() {
         showLoading()
         val input = binding.input.text.toString()
-        when (currentDirectUserAuthType) {
+        when (args.dashDirectUserAuthType) {
             DashDirectUserAuthType.SIGN_IN -> authUserToDashDirect(input, true)
             DashDirectUserAuthType.CREATE_ACCOUNT -> authUserToDashDirect(input, false)
             DashDirectUserAuthType.OTP -> verifyEmail(input)
@@ -181,6 +176,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
         binding.continueButtonLoading.isGone = true
         binding.continueButton.isClickable = true
     }
+
     private fun authUserToDashDirect(email: String, isSignIn: Boolean) {
         lifecycleScope.launch {
             when (

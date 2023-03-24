@@ -49,7 +49,7 @@ class EncryptionProvider(
     }
 
     @Throws(GeneralSecurityException::class)
-    fun decrypt(keyAlias: String, encryptedData: ByteArray?): String? {
+    fun decrypt(keyAlias: String, encryptedData: ByteArray): String {
         val secretKey = getSecretKey(keyAlias)
         val spec = GCMParameterSpec(128, encryptionIv)
         cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)

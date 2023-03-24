@@ -119,7 +119,6 @@ class DashDirectViewModel @Inject constructor(
                     merchantId = it,
                     amountUSD = amountValue.toBigDecimal().toDouble(),
                     paymentCurrency = Constants.DASH_CURRENCY,
-                    deviceID = UUID.randomUUID().toString(), // TODO
                     userEmail = email
                 )
 
@@ -181,7 +180,7 @@ class DashDirectViewModel @Inject constructor(
         }
     }
 
-    fun isUserSignInDashDirect() = repository.isUserSignIn()
+    suspend fun isUserSignInDashDirect() = repository.isUserSignIn()
 
     suspend fun signInToDashDirect(email: String) = repository.signIn(email)
 

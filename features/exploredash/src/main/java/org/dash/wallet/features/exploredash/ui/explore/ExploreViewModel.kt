@@ -41,6 +41,7 @@ import org.dash.wallet.features.exploredash.ui.extensions.Const
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import java.util.*
 import javax.inject.Inject
+import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
 
@@ -69,9 +70,7 @@ data class FilterOptions(val query: String, val territory: String, val payment: 
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
-class ExploreViewModel
-@Inject
-constructor(
+class ExploreViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val exploreData: ExploreDataSource,
     private val locationProvider: UserLocationStateInt,
@@ -314,10 +313,10 @@ constructor(
                 val lastResolved = lastResolvedAddress
                 isLocationEnabled.value == true &&
                     it.zoomLevel > MIN_ZOOM_LEVEL && (
-                    selectedTerritory.value?.isEmpty() == true ||
-                        lastResolved == null ||
-                        locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2
-                    )
+                        selectedTerritory.value?.isEmpty() == true ||
+                            lastResolved == null ||
+                            locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2
+                        )
             }
             .onEach(::resolveAddress)
             .launchIn(viewModelWorkerScope)
@@ -348,6 +347,8 @@ constructor(
     }
 
     fun setFilterMode(mode: FilterMode) {
+        logFilterChange(mode)
+
         if (_filterMode.value != mode) {
             _filterMode.value = mode
         }
@@ -366,7 +367,9 @@ constructor(
     }
 
     fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
+        analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_MERCHANT_LOCATION, mapOf())
         _selectedItem.postValue(merchant)
+
         if (isGrouped) {
             if (canShowNearestLocation(merchant)) {
                 // Opening details screen
@@ -382,6 +385,7 @@ constructor(
     }
 
     fun openAtmDetails(atm: Atm) {
+        analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_ATM_LOCATION, mapOf())
         _selectedItem.postValue(atm)
         _screenState.postValue(ScreenState.Details)
     }
@@ -837,6 +841,41 @@ constructor(
                 logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_SWIPE_ACTION)
             } else {
                 logEvent(AnalyticsConstants.Explore.FILTER_ATM_SWIPE_ACTION)
+            }
+        }
+    }
+
+    private fun logFilterChange(mode: FilterMode) {
+        if (exploreTopic == ExploreTopic.Merchants) {
+            when (mode) {
+                FilterMode.Online ->
+                    analyticsService.logEvent(AnalyticsConstants.Explore.ONLINE_MERCHANTS, mapOf())
+                FilterMode.Nearby ->
+                    analyticsService.logEvent(AnalyticsConstants.Explore.NEARBY_MERCHANTS, mapOf())
+                else -> analyticsService.logEvent(AnalyticsConstants.Explore.ALL_MERCHANTS, mapOf())
+            }
+        } else {
+            when (mode) {
+                FilterMode.Buy -> analyticsService.logEvent(AnalyticsConstants.Explore.BUY_ATM, mapOf())
+                FilterMode.Sell -> analyticsService.logEvent(AnalyticsConstants.Explore.SELL_ATM, mapOf())
+                FilterMode.BuySell -> analyticsService.logEvent(AnalyticsConstants.Explore.BUY_SELL_ATM, mapOf())
+                else -> analyticsService.logEvent(AnalyticsConstants.Explore.ALL_ATM, mapOf())
+            }
+        }
+    }
+
+    fun logFiltersOpened(fromTop: Boolean) {
+        if (fromTop) {
+            if (exploreTopic == ExploreTopic.Merchants) {
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_TOP, mapOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_TOP, mapOf())
+            }
+        } else {
+            if (exploreTopic == ExploreTopic.Merchants) {
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_BOTTOM, mapOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_BOTTOM, mapOf())
             }
         }
     }

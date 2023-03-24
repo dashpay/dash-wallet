@@ -1,5 +1,7 @@
 package de.schildbach.wallet.security;
 
+import static org.dash.wallet.common.util.Constants.ANDROID_KEY_STORE;
+
 import android.content.SharedPreferences;
 
 import java.io.IOException;
@@ -8,8 +10,6 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 
 public class EncryptionProviderFactory {
-
-    private static final String ANDROID_KEY_STORE = "AndroidKeyStore";
 
     public static EncryptionProvider create(SharedPreferences securityPrefs)
             throws GeneralSecurityException, IOException {

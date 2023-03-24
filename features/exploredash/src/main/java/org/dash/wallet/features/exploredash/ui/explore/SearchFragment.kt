@@ -48,7 +48,6 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
@@ -79,9 +78,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     @Inject
     lateinit var configuration: Configuration
-
-    @Inject
-    lateinit var analyticsService: AnalyticsService
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel by exploreViewModels<ExploreViewModel>()
     private val dashDirectViewModel by exploreViewModels<DashDirectViewModel>()
@@ -118,10 +114,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         hideKeyboard()
 
         if (item is Merchant) {
-            analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_MERCHANT_LOCATION, mapOf())
             viewModel.openMerchantDetails(item, true)
         } else if (item is Atm) {
-            analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_ATM_LOCATION, mapOf())
             viewModel.openAtmDetails(item)
         }
     }
@@ -156,12 +150,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.toolbar.menu.findItem(R.id.menu_info).apply { this.isVisible = args.type == ExploreTopic.Merchants }
+        binding.toolbar.menu.findItem(R.id.menu_info).apply { isVisible = args.type == ExploreTopic.Merchants }
 
         binding.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.menu_info) {
                 if (args.type == ExploreTopic.Merchants) {
-                    analyticsService.logEvent(AnalyticsConstants.Explore.INFO_EXPLORE_MERCHANT, mapOf())
+                    viewModel.logEvent(AnalyticsConstants.Explore.INFO_EXPLORE_MERCHANT)
                 }
                 safeNavigate(SearchFragmentDirections.exploreToInfo())
             }
@@ -323,40 +317,16 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.setFilterMode(defaultMode)
 
         searchHeaderAdapter.setOnFilterOptionChosen { mode ->
-            if (topic == ExploreTopic.Merchants) {
-                when (mode) {
-                    FilterMode.Online ->
-                        analyticsService.logEvent(AnalyticsConstants.Explore.ONLINE_MERCHANTS, mapOf())
-                    FilterMode.Nearby ->
-                        analyticsService.logEvent(AnalyticsConstants.Explore.NEARBY_MERCHANTS, mapOf())
-                    else -> analyticsService.logEvent(AnalyticsConstants.Explore.ALL_MERCHANTS, mapOf())
-                }
-            } else {
-                when (mode) {
-                    FilterMode.Buy -> analyticsService.logEvent(AnalyticsConstants.Explore.BUY_ATM, mapOf())
-                    FilterMode.Sell -> analyticsService.logEvent(AnalyticsConstants.Explore.SELL_ATM, mapOf())
-                    FilterMode.BuySell -> analyticsService.logEvent(AnalyticsConstants.Explore.BUY_SELL_ATM, mapOf())
-                    else -> analyticsService.logEvent(AnalyticsConstants.Explore.ALL_ATM, mapOf())
-                }
-            }
             viewModel.setFilterMode(mode)
         }
 
         searchHeaderAdapter.setOnFilterButtonClicked {
-            if (topic == ExploreTopic.Merchants) {
-                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_TOP, mapOf())
-            } else {
-                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_TOP, mapOf())
-            }
+            viewModel.logFiltersOpened(true)
             openFilters()
         }
 
         binding.filterPanel.setOnClickListener {
-            if (topic == ExploreTopic.Merchants) {
-                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_BOTTOM, mapOf())
-            } else {
-                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_BOTTOM, mapOf())
-            }
+            viewModel.logFiltersOpened(false)
             openFilters()
         }
 
@@ -529,21 +499,27 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         binding.itemDetails.setOnBuyGiftCardButtonClicked {
-            if (!dashDirectViewModel.isUserSignInDashDirect()) {
-                showLoginDialog()
-            } else {
-                openPurchaseGiftCardFragment()
+            lifecycleScope.launch {
+                if (!dashDirectViewModel.isUserSignInDashDirect()) {
+                    showLoginDialog()
+                } else {
+                    openPurchaseGiftCardFragment()
+                }
             }
         }
 
         binding.itemDetails.setOnDashDirectLogOutClicked {
-            if (dashDirectViewModel.isUserSignInDashDirect()) {
-                lifecycleScope.launch { dashDirectViewModel.logout() }
+            lifecycleScope.launch {
+                if (dashDirectViewModel.isUserSignInDashDirect()) {
+                    dashDirectViewModel.logout()
+                }
             }
         }
 
         dashDirectViewModel.userEmail.observe(viewLifecycleOwner) { email ->
-            binding.itemDetails.setDashDirectLogInUser(email, dashDirectViewModel.isUserSignInDashDirect())
+            lifecycleScope.launch {
+                binding.itemDetails.setDashDirectLogInUser(email, dashDirectViewModel.isUserSignInDashDirect())
+            }
         }
 
         trackMerchantDetailsEvents(binding)

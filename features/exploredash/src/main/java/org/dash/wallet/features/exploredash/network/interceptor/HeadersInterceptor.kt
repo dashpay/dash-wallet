@@ -32,7 +32,10 @@ class HeadersInterceptor @Inject constructor(private val config: DashDirectConfi
         requestBuilder.header("Accept", "application/json")
         requestBuilder.header(DashDirectConstants.CLIENT_ID, DashDirectClientConstants.CLIENT_ID)
 
-        val accessToken = runBlocking { config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN) }
+        val accessToken = runBlocking {
+            config.getSecuredData(DashDirectConfig.PREFS_KEY_ACCESS_TOKEN)
+        }
+
         if (accessToken?.isNotEmpty() == true) {
             requestBuilder.header("Authorization", "Bearer $accessToken")
         }

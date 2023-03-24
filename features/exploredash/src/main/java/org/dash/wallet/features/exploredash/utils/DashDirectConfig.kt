@@ -26,29 +26,32 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.security.EncryptionProvider
 import java.io.IOException
 import java.security.KeyStore
 import javax.inject.Inject
 import javax.inject.Singleton
 
+@OptIn(ExperimentalSerializationApi::class)
 @Singleton
 class DashDirectConfig @Inject constructor(private val context: Context, private val prefs: SharedPreferences) {
     private val securityKeyAlias = "dash_direct_data-store"
     private val bytesToStringSeparator = "|"
     companion object {
-        val PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN = stringPreferencesKey("last_dash_direct_access_token")
+        val PREFS_KEY_ACCESS_TOKEN = stringPreferencesKey("last_dash_direct_access_token")
         val PREFS_KEY_DASH_DIRECT_EMAIL = stringPreferencesKey("dash_direct_email")
+        val PREFS_DEVICE_UUID = stringPreferencesKey("device_uuid")
     }
 
-    private val keyStore by lazy { KeyStore.getInstance("AndroidKeyStore").apply { load(null) } }
-
+    private val keyStore by lazy { KeyStore.getInstance(Constants.ANDROID_KEY_STORE).apply { load(null) } }
     private val Context.dataStore by preferencesDataStore("dashdirect")
-
     private val encryptionProvider by lazy { EncryptionProvider(keyStore, prefs) }
+    private val json = Json { encodeDefaults = true }
 
     private val dataStore =
         context.dataStore.data.catch { exception ->
@@ -89,14 +92,21 @@ class DashDirectConfig @Inject constructor(private val context: Context, private
     private inline fun <reified T> Flow<Preferences>.secureMap(
         crossinline fetchValue: (value: Preferences) -> String
     ): Flow<T?> {
-        return map {
+        return map { prefs ->
             try {
-                encryptionProvider
-                    .decrypt(
+                val encryptedData = fetchValue(prefs).split(bytesToStringSeparator)
+                    .filterNot { it.isEmpty() }
+                    .map { result -> result.toByte() }.toByteArray()
+
+                if (encryptedData.isNotEmpty()) {
+                    val data = encryptionProvider.decrypt(
                         securityKeyAlias,
-                        fetchValue(it).split(bytesToStringSeparator).map { result -> result.toByte() }.toByteArray()
+                        encryptedData
                     )
-                    ?.let { data -> Json { encodeDefaults = true }.decodeFromString(data) }
+                    json.decodeFromString(data)
+                } else {
+                    null
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
                 null
