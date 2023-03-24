@@ -36,16 +36,23 @@ enum class MasternodeKeyType(val type: Int) {
     }
 }
 
+data class MasternodeKeyTypeData(val type: MasternodeKeyType, var totalKeys: Int, var usedKeys: Int)
+
 class MasternodeKeyTypeAdapter(
     private val clickListener: (MasternodeKeyType) -> Unit
 ) : RecyclerView.Adapter<MasternodeKeyTypeViewHolder>() {
 
-    val viewHolders = listOf(
-        MasternodeKeyType.OWNER,
-        MasternodeKeyType.VOTING,
-        MasternodeKeyType.OPERATOR,
-        MasternodeKeyType.PLATFORM,
+    private val keyChainMap = hashMapOf(
+        MasternodeKeyType.OWNER to MasternodeKeyTypeData(MasternodeKeyType.OWNER, 0, 0),
+        MasternodeKeyType.VOTING to MasternodeKeyTypeData(MasternodeKeyType.VOTING, 0, 0),
+        MasternodeKeyType.OPERATOR to MasternodeKeyTypeData(MasternodeKeyType.OPERATOR, 0, 0),
+        MasternodeKeyType.PLATFORM to MasternodeKeyTypeData(MasternodeKeyType.PLATFORM, 0, 0),
     )
+
+    fun updateKeyChainData(data: MasternodeKeyTypeData) {
+        keyChainMap[data.type] = data
+        notifyItemChanged(data.type.type)
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MasternodeKeyTypeViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -55,12 +62,12 @@ class MasternodeKeyTypeAdapter(
 
     override fun onBindViewHolder(holder: MasternodeKeyTypeViewHolder, position: Int) {
         val type = MasternodeKeyType.fromCode(position)
-        holder.bind(type, position == 0, position == 3)
+        holder.bind(keyChainMap[type]!!, position == 0, position == 3)
         holder.binding.root.setOnClickListener { clickListener.invoke(type) }
     }
 
     override fun getItemCount(): Int {
-        return viewHolders.size
+        return keyChainMap.size
     }
 
     override fun getItemId(position: Int): Long {

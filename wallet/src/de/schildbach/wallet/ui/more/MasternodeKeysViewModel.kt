@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.IKey
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 import org.dash.wallet.common.WalletDataProvider
 import java.util.*
@@ -39,22 +40,26 @@ import javax.inject.Inject
 class MasternodeKeysViewModel @Inject constructor(
     private val walletData: WalletDataProvider,
     private val clipboardManager: ClipboardManager,
-    private val securityFunctions: SecurityFunctions
+    private val securityFunctions: SecurityFunctions,
 ) : ViewModel() {
 
-    val authenticationGroup: AuthenticationGroupExtension = walletData.wallet!!.addOrGetExistingExtension(AuthenticationGroupExtension(walletData.wallet)) as AuthenticationGroupExtension
+    private val authenticationGroup: AuthenticationGroupExtension = walletData.wallet!!.addOrGetExistingExtension(AuthenticationGroupExtension(walletData.wallet)) as AuthenticationGroupExtension
 
     fun hasMasternodeKeys(): Boolean {
         return authenticationGroup.hasKeyChains()
     }
 
-    fun getKeyChain(type: MasternodeKeyType): AuthenticationKeyChain {
+    private fun getAuthenticationKeyChainType(type: MasternodeKeyType): AuthenticationKeyChain.KeyChainType {
         return when (type) {
-            MasternodeKeyType.OWNER -> authenticationGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER)
-            MasternodeKeyType.VOTING -> authenticationGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING)
-            MasternodeKeyType.OPERATOR -> authenticationGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR)
-            MasternodeKeyType.PLATFORM -> authenticationGroup.getKeyChain(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR)
+            MasternodeKeyType.OWNER -> AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER
+            MasternodeKeyType.VOTING -> AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING
+            MasternodeKeyType.OPERATOR -> AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR
+            MasternodeKeyType.PLATFORM -> AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR
         }
+    }
+
+    fun getKeyChain(type: MasternodeKeyType): AuthenticationKeyChain {
+        return authenticationGroup.getKeyChain(getAuthenticationKeyChainType(type))
     }
 
     fun getKey(type: MasternodeKeyType, index: Int): IKey {
@@ -69,8 +74,27 @@ class MasternodeKeysViewModel @Inject constructor(
         return key.decrypt(walletData.wallet!!.keyCrypter, encryptionKey)
     }
 
+    fun getKeyChainData(type: MasternodeKeyType): MasternodeKeyTypeData {
+        val keyChain = getKeyChain(type)
+        val keyChainType = getAuthenticationKeyChainType(type)
+        val usedKeys = authenticationGroup.keyUsage.values.count { usage ->
+            if (usage.type == keyChainType) {
+                usage.status == AuthenticationKeyStatus.CURRENT ||
+                    usage.status == AuthenticationKeyStatus.PREVIOUS ||
+                    usage.status == AuthenticationKeyStatus.REVOKED
+            } else {
+                false
+            }
+        }
+        return MasternodeKeyTypeData(type, keyChain.currentIndex + 1, usedKeys)
+    }
+
+    fun getKeyChainGroup(): List<MasternodeKeyTypeData> {
+        return MasternodeKeyType.values().map { getKeyChainData(it) }
+    }
+
     fun addKeyChains(password: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        //viewModelScope.launch(Dispatchers.IO) {
             val securityGuard = SecurityGuard()
             val password = securityGuard.retrievePassword()
             val encryptionKey = securityFunctions.deriveKey(walletData.wallet!!, password)
@@ -93,7 +117,7 @@ class MasternodeKeysViewModel @Inject constructor(
             authenticationGroup.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR)
 
             // need to save wallet
-        }
+        //}
     }
 
     fun copyToClipboard(text: String) {
@@ -107,5 +131,9 @@ class MasternodeKeysViewModel @Inject constructor(
 
     fun getKeyUsage(): Map<IKey, AuthenticationKeyUsage> {
         return authenticationGroup.keyUsage
+    }
+
+    fun addKey(masternodeKeyType: MasternodeKeyType): IKey {
+        return authenticationGroup.freshKey(getAuthenticationKeyChainType(masternodeKeyType))
     }
 }

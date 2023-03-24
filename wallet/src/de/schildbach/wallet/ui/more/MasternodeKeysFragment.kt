@@ -21,6 +21,7 @@ import android.view.View
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -30,6 +31,7 @@ import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMasternodeKeyTypesBinding
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
@@ -68,13 +70,22 @@ class MasternodeKeysFragment : Fragment(R.layout.fragment_masternode_key_types) 
         binding.keyTypeList.layoutManager = LinearLayoutManager(activity)
         binding.keyTypeList.setHasFixedSize(true)
         if (viewModel.hasMasternodeKeys()) {
-            masternodeKeyTypeAdapter.notifyDataSetChanged()
+            loadKeyTypes()
         } else {
             CheckPinDialog() { password ->
-                viewModel.addKeyChains(password!!)
-                masternodeKeyTypeAdapter.notifyDataSetChanged()
+                lifecycleScope.launch {
+                    viewModel.addKeyChains(password!!)
+                    loadKeyTypes()
+                }
             }.showNow(childFragmentManager, "check-pin")
         }
+    }
+
+    private fun loadKeyTypes() {
+        viewModel.getKeyChainGroup().forEach {
+            masternodeKeyTypeAdapter.updateKeyChainData(it)
+        }
+        masternodeKeyTypeAdapter.notifyDataSetChanged()
     }
 
     private fun handleCopyAddress(text: String) {

@@ -69,6 +69,11 @@ class MasternodeKeyChainFragment : Fragment(R.layout.fragment_masternode_key_cha
         binding.keyTypeList.layoutManager = LinearLayoutManager(activity)
         binding.keyTypeList.setHasFixedSize(true)
         masternodeKeyChainAdapter.notifyDataSetChanged()
+
+        binding.addMasternodeKey.setOnClickListener {
+            val key = viewModel.addKey(masternodeKeyType)
+            masternodeKeyChainAdapter.addKey(key)
+        }
     }
 
     private fun handleCopyAddress(text: String) {

@@ -22,8 +22,8 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.MasternodeKeyTypeRowBinding
 
 class MasternodeKeyTypeViewHolder(val binding: MasternodeKeyTypeRowBinding) : RecyclerView.ViewHolder(binding.root) {
-    fun bind(type: MasternodeKeyType, isTop: Boolean, isBottom: Boolean) {
-        when (type) {
+    fun bind(data: MasternodeKeyTypeData, isTop: Boolean, isBottom: Boolean) {
+        when (data.type) {
             MasternodeKeyType.OWNER -> {
                 binding.keyTypeName.setText(R.string.masternode_key_type_owner)
             }
@@ -38,7 +38,7 @@ class MasternodeKeyTypeViewHolder(val binding: MasternodeKeyTypeRowBinding) : Re
             }
         }
         binding.keyTypeTotalCount.text =
-            itemView.context.getString(R.string.masternode_key_type_total, 5)
-        binding.keyTypeUsedKeys.text = itemView.context.getString(R.string.masternode_key_type_used, 3)
+            itemView.context.getString(R.string.masternode_key_type_total, data.totalKeys)
+        binding.keyTypeUsedKeys.text = itemView.context.getString(R.string.masternode_key_type_used, data.usedKeys)
     }
 }

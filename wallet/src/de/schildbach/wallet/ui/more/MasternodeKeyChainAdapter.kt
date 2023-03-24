@@ -44,10 +44,14 @@ class MasternodeKeyChainAdapter(
     }
 
     override fun getItemCount(): Int {
-        return keyChain.currentIndex + 1
+        return keyChain.issuedKeyCount + 1
     }
 
     override fun getItemId(position: Int): Long {
         return keyChain.getKey(position).hashCode().toLong()
+    }
+
+    fun addKey(key: IKey) {
+        notifyItemInserted(itemCount + 1)
     }
 }
