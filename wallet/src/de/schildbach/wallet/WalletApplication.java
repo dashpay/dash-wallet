@@ -688,7 +688,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void clearExploreConfig() {
-        SharedPreferences prefs = getSharedPreferences(ExploreDashModule.Companion.getPREFERENCES_FILENAME(), Context.MODE_PRIVATE);
+        SharedPreferences prefs = getSharedPreferences(ExploreDashModule.PREFERENCES_FILENAME, Context.MODE_PRIVATE);
         prefs.edit().clear().apply();
     }
 

@@ -44,7 +44,7 @@ import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 @InstallIn(SingletonComponent::class)
 abstract class ExploreDashModule {
     companion object {
-        val PREFERENCES_FILENAME = "explore"
+        const val PREFERENCES_FILENAME = "explore"
 
         @Provides
         fun provideSharedPrefs(@ApplicationContext context: Context): SharedPreferences {
@@ -81,13 +81,18 @@ abstract class ExploreDashModule {
         }
     }
 
-    @Binds abstract fun bindExploreRepository(exploreRepository: GCExploreDatabase): ExploreRepository
+    @Binds
+    abstract fun bindExploreRepository(exploreRepository: GCExploreDatabase): ExploreRepository
 
-    @Binds abstract fun bindUserLocationState(userLocationState: UserLocationState): UserLocationStateInt
+    @Binds
+    abstract fun bindUserLocationState(userLocationState: UserLocationState): UserLocationStateInt
 
-    @Binds abstract fun bindExploreDataSource(exploreDatabase: MerchantAtmDataSource): ExploreDataSource
+    @Binds
+    abstract fun bindExploreDataSource(exploreDatabase: MerchantAtmDataSource): ExploreDataSource
 
-    @Binds abstract fun bindDataSyncService(exploreDatabase: ExploreDataSyncStatus): DataSyncStatusService
+    @Binds
+    abstract fun bindDataSyncService(exploreDatabase: ExploreDataSyncStatus): DataSyncStatusService
 
-    @Binds abstract fun provideDashDirectRepository(dashDirectRepository: DashDirectRepository): DashDirectRepositoryInt
+    @Binds
+    abstract fun provideDashDirectRepository(dashDirectRepository: DashDirectRepository): DashDirectRepositoryInt
 }

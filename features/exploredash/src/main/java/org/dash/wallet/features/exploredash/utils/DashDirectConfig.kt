@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.utils
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
@@ -30,27 +29,27 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.security.EncryptionProvider
 import java.io.IOException
-import java.security.KeyStore
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @OptIn(ExperimentalSerializationApi::class)
 @Singleton
-class DashDirectConfig @Inject constructor(private val context: Context, private val prefs: SharedPreferences) {
-    private val securityKeyAlias = "dash_direct_data-store"
-    private val bytesToStringSeparator = "|"
+class DashDirectConfig @Inject constructor(
+    private val context: Context,
+    private val encryptionProvider: EncryptionProvider
+) {
     companion object {
+        private const val securityKeyAlias = "dash_direct_data-store"
+        private const val bytesToStringSeparator = "|"
+
         val PREFS_KEY_ACCESS_TOKEN = stringPreferencesKey("last_dash_direct_access_token")
         val PREFS_KEY_DASH_DIRECT_EMAIL = stringPreferencesKey("dash_direct_email")
         val PREFS_DEVICE_UUID = stringPreferencesKey("device_uuid")
     }
 
-    private val keyStore by lazy { KeyStore.getInstance(Constants.ANDROID_KEY_STORE).apply { load(null) } }
     private val Context.dataStore by preferencesDataStore("dashdirect")
-    private val encryptionProvider by lazy { EncryptionProvider(keyStore, prefs) }
     private val json = Json { encodeDefaults = true }
 
     private val dataStore =
