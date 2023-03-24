@@ -847,8 +847,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun shouldShowFiltersPanel(): Boolean {
         return viewModel.selectedItem.value == null &&
             viewModel.isLocationEnabled.value == true &&
-                (isPhysicalSearch || viewModel.paymentMethodFilter.isNotEmpty() ||
-                        viewModel.selectedTerritory.value?.isNotEmpty() == true)
+            (
+                isPhysicalSearch || viewModel.paymentMethodFilter.isNotEmpty() ||
+                    viewModel.selectedTerritory.value?.isNotEmpty() == true
+                )
     }
 
     private fun openFilters() {

@@ -36,7 +36,7 @@ import org.dash.wallet.features.exploredash.network.service.DashDirectServicesAp
 import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 import javax.inject.Inject
 
-class DashDirectException(message: String): Exception(message) {
+class DashDirectException(message: String) : Exception(message) {
     var resourceString: ResourceString? = null
     constructor(message: ResourceString) : this("") {
         this.resourceString = message
