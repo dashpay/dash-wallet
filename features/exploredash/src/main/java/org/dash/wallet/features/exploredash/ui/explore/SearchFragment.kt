@@ -554,6 +554,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                             savedLocationsScrollPosition = firstVisiblePosition
                         }
 
+                        launch { dashDirectViewModel.updateMerchantDetails(viewModel.selectedItem.value as Merchant) }
                         transitToDetails()
                     }
                     ScreenState.MerchantLocations -> {

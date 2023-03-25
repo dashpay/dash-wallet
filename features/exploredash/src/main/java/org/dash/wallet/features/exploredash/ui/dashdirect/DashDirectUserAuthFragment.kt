@@ -111,6 +111,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
             DashDirectUserAuthType.OTP -> {
                 binding.bottomCard.isVisible = true
                 binding.input.showSoftInputOnFocus = false
+                binding.input.requestFocus()
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     binding.input.setAutofillHints("")

@@ -28,7 +28,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
@@ -90,17 +89,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
                 binding.paymentHeaderView.setPaymentAddressViewIcon(merchant.logoLocation)
 
                 lifecycleScope.launch {
-                    val response = viewModel.getMerchantById(merchant.merchantId!!)
-                    if (response is ResponseResource.Success) {
-                        response.value?.data?.merchant?.let {
-                            merchant.savingsPercentage = it.savingsPercentage
-                            merchant.minCardPurchase = it.minimumCardPurchase
-                            merchant.maxCardPurchase = it.maximumCardPurchase
-
-                            setCardPurchaseLimits()
-                            setDiscountHint()
-                        }
-                    }
+                    viewModel.updateMerchantDetails(merchant)
+                    setCardPurchaseLimits()
+                    setDiscountHint()
                 }
             }
         }

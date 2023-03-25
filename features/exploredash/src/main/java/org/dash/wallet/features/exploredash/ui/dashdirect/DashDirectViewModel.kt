@@ -150,7 +150,23 @@ class DashDirectViewModel @Inject constructor(
         return transaction.txId
     }
 
-    suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>? {
+    suspend fun updateMerchantDetails(merchant: Merchant) {
+        if (merchant.minCardPurchase != null && merchant.maxCardPurchase != null) {
+            return
+        }
+
+        val response = getMerchantById(merchant.merchantId!!)
+
+        if (response is ResponseResource.Success) {
+            response.value?.data?.merchant?.let {
+                merchant.savingsPercentage = it.savingsPercentage
+                merchant.minCardPurchase = it.minimumCardPurchase
+                merchant.maxCardPurchase = it.maximumCardPurchase
+            }
+        }
+    }
+
+    private suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>? {
         repository.getDashDirectEmail()?.let { email ->
             return repository.getMerchantById(merchantId = merchantId, includeLocations = false, userEmail = email)
         }
