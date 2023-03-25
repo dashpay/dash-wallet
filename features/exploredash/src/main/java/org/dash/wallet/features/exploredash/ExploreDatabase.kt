@@ -24,7 +24,6 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.Configuration
@@ -41,7 +40,16 @@ import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-@Database(entities = [Merchant::class, MerchantFTS::class, Atm::class, AtmFTS::class], version = 2, exportSchema = true)
+@Database(
+    entities = [
+        Merchant::class,
+        MerchantFTS::class,
+        Atm::class,
+        AtmFTS::class
+    ],
+    version = 1,
+    exportSchema = true
+)
 @TypeConverters(RoomConverters::class)
 abstract class ExploreDatabase : RoomDatabase() {
     abstract fun merchantDao(): MerchantDao
@@ -58,16 +66,6 @@ abstract class ExploreDatabase : RoomDatabase() {
             return instance!!
         }
 
-        @JvmStatic
-        val migration1To2 =
-            object : Migration(1, 2) {
-                override fun migrate(database: SupportSQLiteDatabase) {
-                    database.execSQL("ALTER TABLE merchant ADD COLUMN minCardPurchase REAL DEFAULT 0.0")
-                    database.execSQL("ALTER TABLE merchant ADD COLUMN maxCardPurchase REAL DEFAULT 0.0")
-                    database.execSQL("ALTER TABLE merchant ADD COLUMN savingsPercentage REAL DEFAULT 0.0")
-                }
-            }
-
         suspend fun updateDatabase(context: Context, config: Configuration, repository: ExploreRepository) {
             log.info("force update explore db")
             if (instance != null) {
@@ -79,9 +77,7 @@ abstract class ExploreDatabase : RoomDatabase() {
         private fun open(context: Context, config: Configuration): ExploreDatabase {
             val dbBuilder = Room.databaseBuilder(context, ExploreDatabase::class.java, config.exploreDatabaseName)
             log.info("Open database {}", config.exploreDatabaseName)
-            return dbBuilder
-                .addMigrations(migration1To2)
-                .build()
+            return dbBuilder.build()
         }
 
         private suspend fun update(
@@ -163,12 +159,7 @@ abstract class ExploreDatabase : RoomDatabase() {
                         }
                     }
 
-                database =
-                    dbBuilder
-                        // .fallbackToDestructiveMigration()
-                        .addMigrations(migration1To2)
-                        .addCallback(onOpenCallback)
-                        .build()
+                database = dbBuilder.addCallback(onOpenCallback).build()
 
                 if (database.isOpen) {
                     log.warn("database is already open")

@@ -24,7 +24,7 @@ storage.buckets.each do |bucket|
 end
 
 bucket = storage.bucket bucket_name, skip_lookup: true
-file = bucket.file "explore/explore-devnet.db" # TODO: file_name
+file = bucket.file file_name
 timestamp = file.updated_at.strftime("%Q")
 target_file_path = "#{assets_path}#{file_name}"
 
