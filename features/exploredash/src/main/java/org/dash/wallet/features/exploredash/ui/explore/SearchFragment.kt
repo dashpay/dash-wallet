@@ -522,6 +522,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
+        dashDirectViewModel.isBuyGiftCardEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            binding.itemDetails.setGiftCardEnabled(isEnabled)
+        }
+
         trackMerchantDetailsEvents(binding)
     }
 

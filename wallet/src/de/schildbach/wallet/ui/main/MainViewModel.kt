@@ -24,7 +24,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.transactions.TxFilterType
@@ -57,7 +56,6 @@ class MainViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val clipboardManager: ClipboardManager,
     private val config: Configuration,
-    blockchainStateDao: BlockchainStateDao,
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
     private val savedStateHandle: SavedStateHandle,
@@ -144,7 +142,7 @@ class MainViewModel @Inject constructor(
             .catch { analytics.logError(it, "is wallet null: ${walletData.wallet == null}") }
             .launchIn(viewModelWorkerScope)
 
-        blockchainStateDao.observeState()
+        blockchainStateProvider.observeState()
             .filterNotNull()
             .onEach { state ->
                 updateSyncStatus(state)

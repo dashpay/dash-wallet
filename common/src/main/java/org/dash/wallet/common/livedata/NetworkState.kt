@@ -31,7 +31,7 @@ interface NetworkStateInt {
     fun observeNetworkChangeState(): Flow<Boolean>
 }
 
-class NetworkState @Inject constructor (private val connectivityManager: ConnectivityManager): NetworkStateInt {
+class NetworkState @Inject constructor(private val connectivityManager: ConnectivityManager): NetworkStateInt {
 
     private var networkRequestBuilder: NetworkRequest.Builder = NetworkRequest.Builder()
         .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
@@ -72,7 +72,7 @@ class NetworkState @Inject constructor (private val connectivityManager: Connect
  * @author Kebab Krabby
  * https://stackoverflow.com/questions/36421930/connectivitymanager-connectivity-action-deprecated
  */
-@Deprecated ("Use the NetworkState service", ReplaceWith("NetworkState"))
+@Deprecated("Use the NetworkState service", ReplaceWith("NetworkState"))
 class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
 
     private var connectivityManager: ConnectivityManager =

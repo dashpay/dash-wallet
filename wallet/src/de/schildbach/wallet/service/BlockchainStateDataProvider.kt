@@ -5,6 +5,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.bitcoinj.core.Block
 import org.bitcoinj.core.CheckpointManager
 import org.bitcoinj.core.Coin
@@ -54,7 +55,7 @@ class BlockchainStateDataProvider @Inject constructor(
     }
 
     override fun observeState(): Flow<BlockchainState?> {
-        return blockchainStateDao.observeState()
+        return blockchainStateDao.observeState().distinctUntilChanged()
     }
 
     override fun getLastMasternodeAPY(): Double {

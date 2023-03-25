@@ -24,6 +24,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -36,10 +37,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.ExchangeRate
-import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.common.services.LeftoverBalanceException
-import org.dash.wallet.common.services.SendPaymentService
-import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.discountBy
@@ -68,6 +66,7 @@ class DashDirectViewModel @Inject constructor(
     private val transactionMetadata: TransactionMetadataProvider,
     private val exploreData: ExploreDataSource,
     private val giftCardDao: GiftCardDao,
+    private val blockchainState: BlockchainStateProvider,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
 
@@ -90,6 +89,10 @@ class DashDirectViewModel @Inject constructor(
     val usdExchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
 
+    private val _isBuyGiftCardEnabled: MutableLiveData<Boolean> = MutableLiveData()
+    val isBuyGiftCardEnabled: LiveData<Boolean>
+        get() = _isBuyGiftCardEnabled
+
     lateinit var giftCardMerchant: Merchant
     lateinit var giftCardPaymentValue: Fiat
 
@@ -108,6 +111,12 @@ class DashDirectViewModel @Inject constructor(
             .observeBalance()
             .distinctUntilChanged()
             .onEach(_balance::postValue)
+            .launchIn(viewModelScope)
+
+        blockchainState
+            .observeState()
+            .filterNotNull()
+            .onEach { _isBuyGiftCardEnabled.postValue(it.isSynced()) }
             .launchIn(viewModelScope)
     }
 

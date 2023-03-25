@@ -22,6 +22,7 @@
 <!--    <color name="tx_sent_background">#20262E</color>-->
 <!--    <color name="tx_received_background">#232826</color>-->
 <!--    <color name="tx_orange_background">#302D2D</color>-->
+<!--    <color name="disabled_button_bg">#3C3C3C</color>-->
 
 <!--    &lt;!&ndash; Palette &ndash;&gt;-->
 <!--    <color name="dash_blue">#0094F0</color>-->

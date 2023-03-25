@@ -254,7 +254,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
             android:layout_marginBottom="18dp"
-            android:drawableStart="@drawable/ic_dash"
+            android:drawableStart="@drawable/ic_dash_inverted"
             android:drawableTint="@color/dash_white"
             android:paddingStart="92dp"
             android:paddingEnd="76dp"
