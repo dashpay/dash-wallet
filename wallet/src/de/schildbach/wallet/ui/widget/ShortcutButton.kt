@@ -25,6 +25,7 @@ import android.view.View
 import android.widget.LinearLayout
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.res.ResourcesCompat
+import com.tbuonomo.viewpagerdotsindicator.setPaddingVertical
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.shortcut_button.view.*
 import kotlin.math.roundToInt
@@ -48,7 +49,7 @@ class ShortcutButton : LinearLayout {
         setBackgroundResource(R.drawable.white_button_background_no_shadow)
         orientation = VERTICAL
         gravity = Gravity.CENTER
-        setPadding(DEFAULT_MARGIN_PX, DEFAULT_MARGIN_PX, DEFAULT_MARGIN_PX, DEFAULT_MARGIN_PX)
+        setPaddingVertical(DEFAULT_MARGIN_PX)
     }
 
     constructor(context: Context, attrs: AttributeSet) : super(context, attrs) {
@@ -82,8 +83,14 @@ class ShortcutButton : LinearLayout {
         }
     }
 
-    constructor(context: Context, iconResId: Int = 0, textResIt: Int = 0, onClickListener: OnClickListener? = null,
-                backgroundResId: Int = 0, textColorResId: Int = 0) : super(context) {
+    constructor(
+        context: Context,
+        iconResId: Int = 0,
+        textResIt: Int = 0,
+        onClickListener: OnClickListener? = null,
+        backgroundResId: Int = 0,
+        textColorResId: Int = 0
+    ) : super(context) {
         if (iconResId != 0) {
             action_icon.setImageResource(iconResId)
         } else {
@@ -107,8 +114,8 @@ class ShortcutButton : LinearLayout {
         super.onMeasure(heightMeasureSpec, heightMeasureSpec)
         if (!marginsSet) {
             layoutParams = (layoutParams as MarginLayoutParams).run {
-                leftMargin = DEFAULT_MARGIN_PX; topMargin = DEFAULT_MARGIN_PX
-                rightMargin = DEFAULT_MARGIN_PX; bottomMargin = DEFAULT_MARGIN_PX
+                topMargin = DEFAULT_MARGIN_PX
+                bottomMargin = DEFAULT_MARGIN_PX
                 this
             }
             marginsSet = true
