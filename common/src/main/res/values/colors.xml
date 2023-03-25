@@ -13,18 +13,14 @@
     <color name="ripple_light">#60ffffff</color>
     <color name="ripple_dark">#80012060</color>
     <color name="error_red">#BF2827</color>
-    <!-- added for transaction status -->
-    <color name="secondary_status">#E78010</color>
-    <color name="primary_status">#4A4A4A</color>
 
     <color name="darkest_blue">#FF111921</color>
     <color name="vivid_red">#ec2227</color>
     <color name="white">#ffffff</color>
     <color name="menu_gray">#FFC9C9C9</color>
-    <color name="old_gray">#FF979797</color>
     <color name="medium_gray">#ff4a4a4a</color>
-    <color name="black_text">#ff171717</color>
     <color name="shadow_color">#33000000</color>
+
     <!-- foreground -->
     <color name="fg_significant">#66000000</color>
     <color name="fg_less_significant">#ff666666</color>
@@ -35,16 +31,10 @@
 
     <!-- background -->
     <color name="bg_bright">#ffffffff</color>
-    <color name="bg_action_bar">#ff222222</color>
-    <color name="bg_panel">#fff2f2f8</color>
-    <color name="bg_form">@android:color/white</color>
     <color name="bg_list">#40ffffff</color>
     <color name="bg_list_selected">#40808090</color>
     <color name="bg_dialog_title">@android:color/transparent</color>
     <color name="bg_shortcut">@color/colorPrimary</color>
-    <color name="black">#000000</color>
-    <color name="black_liquid">#171717</color>
-    <color name="grey_liquid">#9B9B9B</color>
 
 
     <!-- Design System colors -->
@@ -78,7 +68,7 @@
     <color name="input_error_background">#1AE85C4A</color>
     <color name="tx_sent_background">#E7F4FB</color>
     <color name="tx_received_background">#EDF8F2</color>
-    <color name="tx_tangerine_background">#FDF5F1</color>
+    <color name="tx_orange_background">#FDF5F1</color>
     <color name="tx_category_example_background">@color/extra_light_gray</color>
 
     <!-- Strokes -->
@@ -99,7 +89,7 @@
     <color name="ultra_light_gray">#f5f6f7</color>
     <color name="system_red">#E85C4A</color>
     <color name="system_green">#3CB878</color>
-    <color name="tangerine">#FA9269</color>
+    <color name="orange">#FA9269</color>
 
     <color name="dash_black_0.7">#B3191C1F</color>
     <color name="dash_black_0.05">#0D191C1F</color>

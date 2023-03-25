@@ -28,7 +28,6 @@ import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.findNavController
 import coil.imageLoader
 import coil.load
 import coil.request.ImageRequest
@@ -45,10 +44,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.Qr
-import org.dash.wallet.common.util.copy
-import org.dash.wallet.common.util.toFormattedString
+import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashdirect.model.Barcode
 import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
@@ -177,9 +173,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         }
 
         binding.viewTransactionDetailsCard.setOnClickListener {
-            findNavController().navigate(
-                Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/${giftCard.transactionId}")
-            )
+            deepLinkNavigate(DeepLinkDestination.Transaction(giftCard.transactionId.toString()))
         }
     }
 

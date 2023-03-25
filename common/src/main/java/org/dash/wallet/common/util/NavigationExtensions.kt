@@ -50,9 +50,11 @@ fun DialogFragment.dialogSafeNavigate(directions: NavDirections) {
     }
 }
 
-enum class DeepLinkDestination(val deepLink: Uri) {
-    ReceiveDash(Uri.parse("${Constants.DEEP_LINK_PREFIX}/payments/0")),
-    SendDash(Uri.parse("${Constants.DEEP_LINK_PREFIX}/payments/1"))
+sealed class DeepLinkDestination(val deepLink: Uri) {
+    object ReceiveDash : DeepLinkDestination(Uri.parse("${Constants.DEEP_LINK_PREFIX}/payments/0"))
+    object SendDash : DeepLinkDestination(Uri.parse("${Constants.DEEP_LINK_PREFIX}/payments/1"))
+    data class Transaction(val txId: String) :
+        DeepLinkDestination(Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/$txId"))
 }
 
 fun Fragment.deepLinkNavigate(destination: DeepLinkDestination) {

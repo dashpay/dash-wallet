@@ -242,7 +242,7 @@
             android:layout_marginBottom="10dp"
             android:visibility="gone"
             tools:visibility="visible"
-            tools:text="@string/explore_atm_location_hint"
+            tools:text="@string/logged_in_as"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintBottom_toTopOf="@+id/pay_btn"
             app:layout_constraintEnd_toEndOf="parent" />

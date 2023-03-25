@@ -53,7 +53,7 @@ class TransactionAdapter(
 ) : ListAdapter<HistoryRowView, HistoryViewHolder>(DiffCallback()) {
     private val contentColor = resources.getColor(R.color.content_primary, null)
     private val warningColor = resources.getColor(R.color.content_warning, null)
-    private val colorSecondaryStatus = resources.getColor(R.color.secondary_status, null)
+    private val colorSecondaryStatus = resources.getColor(R.color.orange, null)
 
     class DiffCallback : DiffUtil.ItemCallback<HistoryRowView>() {
         override fun areItemsTheSame(oldItem: HistoryRowView, newItem: HistoryRowView): Boolean {
