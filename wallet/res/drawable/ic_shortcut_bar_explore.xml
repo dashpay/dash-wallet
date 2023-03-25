@@ -10,10 +10,10 @@
       android:fillColor="#ffffff">
     <aapt:attr name="android:strokeColor">
       <gradient 
-          android:startY="0"
           android:startX="0"
-          android:endY="32"
+          android:startY="0"
           android:endX="32"
+          android:endY="32"
           android:type="linear">
         <item android:offset="0" android:color="#FF78C4F5"/>
         <item android:offset="1" android:color="#FF008DE4"/>
@@ -29,13 +29,13 @@
       android:fillColor="#00000000"
       android:strokeColor="#008DE4"/>
   <path
-      android:pathData="M17.918,13.2344L8.8448,8.4987C8.4015,8.2673 7.9306,8.758 8.1801,9.1914L13.2565,18.0082C13.4325,18.3139 13.6861,18.5676 13.9918,18.7435L22.8086,23.8199C23.242,24.0694 23.7327,23.5985 23.5013,23.1552L18.7656,14.082C18.5764,13.7195 18.2805,13.4237 17.918,13.2344Z">
+      android:pathData="M17.918,13.234L8.845,8.499C8.402,8.267 7.931,8.758 8.18,9.191L13.257,18.008C13.433,18.314 13.686,18.567 13.992,18.743L22.809,23.82C23.242,24.069 23.733,23.598 23.501,23.155L18.766,14.082C18.576,13.719 18.281,13.424 17.918,13.234Z">
     <aapt:attr name="android:fillColor">
       <gradient 
-          android:startY="8"
           android:startX="8"
-          android:endY="24"
+          android:startY="8"
           android:endX="24"
+          android:endY="24"
           android:type="linear">
         <item android:offset="0" android:color="#FF64BBF2"/>
         <item android:offset="1" android:color="#FF1597E7"/>
