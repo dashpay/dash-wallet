@@ -96,6 +96,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
             }
         }
 
+        enterAmountViewModel.amount.observe(viewLifecycleOwner) { showCardPurchaseLimits() }
+
         viewModel.usdExchangeRate.observe(viewLifecycleOwner) { rate ->
             if (viewModel.isUserSettingFiatIsNotUSD) {
                 viewModel.balance.value?.let { balance -> updateBalanceLabel(balance, rate) }
@@ -106,7 +108,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
             enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseCoin, true)
             enterAmountViewModel.setMaxAmount(viewModel.maxCardPurchaseCoin)
         }
-        enterAmountViewModel.amount.observe(viewLifecycleOwner) { showCardPurchaseLimits() }
+
+        viewModel.isNetworkAvailable.observe(viewLifecycleOwner) { isConnected ->
+            enterAmountFragment?.handleNetworkState(isConnected)
+        }
     }
 
     private fun setCardPurchaseLimits() {

@@ -237,7 +237,6 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     override fun onResume() {
         super.onResume()
         countDownTimer.start()
-        viewModel.monitorNetworkStateChange()
     }
 
     override fun onPause() {

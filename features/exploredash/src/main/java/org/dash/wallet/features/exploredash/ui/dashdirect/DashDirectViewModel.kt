@@ -66,7 +66,8 @@ class DashDirectViewModel @Inject constructor(
     private val transactionMetadata: TransactionMetadataProvider,
     private val exploreData: ExploreDataSource,
     private val giftCardDao: GiftCardDao,
-    private val blockchainState: BlockchainStateProvider,
+    blockchainState: BlockchainStateProvider,
+    networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
 
@@ -92,6 +93,8 @@ class DashDirectViewModel @Inject constructor(
     private val _isBuyGiftCardEnabled: MutableLiveData<Boolean> = MutableLiveData()
     val isBuyGiftCardEnabled: LiveData<Boolean>
         get() = _isBuyGiftCardEnabled
+
+    val isNetworkAvailable = networkState.isConnected.asLiveData()
 
     lateinit var giftCardMerchant: Merchant
     lateinit var giftCardPaymentValue: Fiat

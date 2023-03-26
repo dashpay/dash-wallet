@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2020 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,22 +17,8 @@
 
 package org.dash.wallet.common.services
 
-import kotlinx.coroutines.flow.Flow
-import org.dash.wallet.common.data.entity.BlockchainState
+import kotlinx.coroutines.flow.StateFlow
 
-/**
- * Blockchain state provider
- *
- * This data provider gives access to the current BlockchainState (block height, isSynced)
- * as well as other data that depends on the current state of the blockchain.
- *
- * This includes:
- *  - Masternode APY (function of block height, difficulty, and network)
- */
-
-interface BlockchainStateProvider {
-    suspend fun getState(): BlockchainState?
-    fun observeState() : Flow<BlockchainState?>
-    fun getMasternodeAPY(): Double
-    fun getLastMasternodeAPY(): Double
+interface NetworkStateInt {
+    val isConnected: StateFlow<Boolean>
 }

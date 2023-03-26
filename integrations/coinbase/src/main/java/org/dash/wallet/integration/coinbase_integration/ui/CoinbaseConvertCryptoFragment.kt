@@ -248,8 +248,6 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             setGuidelinePercent(true)
         }
 
-        monitorNetworkChanges()
-
         sharedViewModel.baseIdForFaitModelCoinBase.observe(viewLifecycleOwner) { uiState ->
             // New value received
             when (uiState) {
@@ -451,11 +449,5 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     override fun onDestroy() {
         super.onDestroy()
         convertViewModel.clear()
-    }
-
-    private fun monitorNetworkChanges() {
-        lifecycleScope.launchWhenResumed {
-            viewModel.monitorNetworkStateChange()
-        }
     }
 }

@@ -149,6 +149,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject ExchangeRatesDao exchangeRatesDao;
     @Inject TransactionMetadataProvider transactionMetadataProvider;
     @Inject PackageInfoProvider packageInfoProvider;
+    @Inject ConnectivityManager connectivityManager;
 
     private BlockStore blockStore;
     private BlockStore headerStore;
@@ -168,7 +169,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private PeerConnectivityListener peerConnectivityListener;
     private NotificationManager nm;
-    private ConnectivityManager connectivityManager;
     private final Set<BlockchainState.Impediment> impediments = EnumSet.noneOf(BlockchainState.Impediment.class);
     private int notificationCount = 0;
     private Coin notificationAccumulatedAmount = Coin.ZERO;
@@ -868,7 +868,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         super.onCreate();
 
         nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
         final String lockName = getPackageName() + " blockchain sync";
 

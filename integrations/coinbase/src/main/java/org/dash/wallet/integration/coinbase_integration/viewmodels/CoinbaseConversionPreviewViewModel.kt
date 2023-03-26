@@ -16,10 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import androidx.core.os.bundleOf
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,16 +27,15 @@ import org.bitcoinj.core.InsufficientMoneyException
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import java.util.*
 import javax.inject.Inject
@@ -50,10 +46,10 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     private val walletDataProvider: WalletDataProvider,
     private val sendPaymentService: SendPaymentService,
-    val networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService,
+    networkState: NetworkStateInt,
     private val transactionMetadataProvider: TransactionMetadataProvider
-) : ConnectivityViewModel(networkState) {
+) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
@@ -65,6 +61,8 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     private val _swapTradeOrder: MutableLiveData<SwapTradeUIModel> = MutableLiveData()
     val swapTradeOrder: LiveData<SwapTradeUIModel>
         get() = _swapTradeOrder
+
+    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
     val commitSwapTradeSuccessState = SingleLiveEvent<SendTransactionToWalletParams>()
     val sellSwapSuccessState = SingleLiveEvent<Unit>()

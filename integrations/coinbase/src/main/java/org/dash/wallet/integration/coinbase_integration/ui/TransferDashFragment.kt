@@ -291,8 +291,6 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             safeNavigate(TransferDashFragmentDirections.transferDashToTwoFaCode(it))
         }
 
-        monitorNetworkChanges()
-
         transferDashViewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
             setInternetAccessState(hasInternet)
         }
@@ -436,12 +434,6 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         binding.authLimitBanner.root.isVisible = false
         binding.topGuideLine.updateLayoutParams<ConstraintLayout.LayoutParams> {
             guidePercent = 0.09f
-        }
-    }
-
-    private fun monitorNetworkChanges(){
-        lifecycleScope.launchWhenResumed {
-            transferDashViewModel.monitorNetworkStateChange()
         }
     }
 }

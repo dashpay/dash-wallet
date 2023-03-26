@@ -325,7 +325,6 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         } else {
             setRetryStatus()
         }
-        viewModel.monitorNetworkStateChange()
     }
 
     override fun onPause() {

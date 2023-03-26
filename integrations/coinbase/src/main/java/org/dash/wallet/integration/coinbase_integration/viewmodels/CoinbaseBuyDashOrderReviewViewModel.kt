@@ -16,7 +16,6 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -26,13 +25,12 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import java.util.*
 import javax.inject.Inject
@@ -42,10 +40,10 @@ import javax.inject.Inject
 class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     private val walletDataProvider: WalletDataProvider,
-    val networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService,
+    networkState: NetworkStateInt,
     private val transactionMetadataProvider: TransactionMetadataProvider
-) : ConnectivityViewModel(networkState) {
+) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
@@ -57,6 +55,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     private val _placeBuyOrder: MutableLiveData<PlaceBuyOrderUIModel> = MutableLiveData()
     val placeBuyOrder: LiveData<PlaceBuyOrderUIModel>
         get() = _placeBuyOrder
+    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
     val commitBuyOrderSuccessState = SingleLiveEvent<SendTransactionToWalletParams>()
 

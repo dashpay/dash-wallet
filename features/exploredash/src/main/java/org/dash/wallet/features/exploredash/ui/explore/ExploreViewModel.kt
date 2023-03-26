@@ -17,19 +17,17 @@
 
 package org.dash.wallet.features.exploredash.ui.explore
 
-import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
 import androidx.paging.*
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
-import org.dash.wallet.common.livedata.ConnectionLiveData
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
@@ -41,7 +39,6 @@ import org.dash.wallet.features.exploredash.ui.extensions.Const
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import java.util.*
 import javax.inject.Inject
-import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
 
@@ -71,10 +68,10 @@ data class FilterOptions(val query: String, val territory: String, val payment: 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
     private val exploreData: ExploreDataSource,
     private val locationProvider: UserLocationStateInt,
     private val syncStatusService: DataSyncStatusService,
+    private val networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
     companion object {
@@ -203,6 +200,49 @@ class ExploreViewModel @Inject constructor(
     val screenState: LiveData<ScreenState>
         get() = _screenState
 
+    var syncStatus: LiveData<Resource<Double>> =
+        MediatorLiveData<Resource<Double>>().apply {
+            // combine connectivity, sync status and if the last error was observed
+            val connectivityLiveData = networkState.isConnected.asLiveData()
+            val syncStatusLiveData = syncStatusService.getSyncProgressFlow().asLiveData()
+            val observedLastErrorLiveData = syncStatusService.hasObservedLastError().asLiveData()
+
+            fun setSyncStatus(isOnline: Boolean, progress: Resource<Double>, observedLastError: Boolean) {
+                value = when {
+                    progress.exception != null -> {
+                        if (!observedLastError) {
+                            progress
+                        } else {
+                            Resource.success(100.0) // hide errors if already observed
+                        }
+                    }
+                    progress.status == Status.LOADING && !isOnline -> {
+                        if (!observedLastError) {
+                            Resource.error(FirebaseNetworkException("network is offline"))
+                        } else {
+                            Resource.success(100.0) // hide errors if already observed
+                        }
+                    }
+                    else -> progress
+                }
+            }
+            addSource(observedLastErrorLiveData) { hasObservedLastError ->
+                if (connectivityLiveData.value != null && syncStatusLiveData.value != null) {
+                    setSyncStatus(connectivityLiveData.value!!, syncStatusLiveData.value!!, hasObservedLastError)
+                }
+            }
+            addSource(syncStatusLiveData) { progress ->
+                if (connectivityLiveData.value != null && observedLastErrorLiveData.value != null) {
+                    setSyncStatus(connectivityLiveData.value!!, progress, observedLastErrorLiveData.value!!)
+                }
+            }
+            addSource(connectivityLiveData) { isOnline ->
+                if (syncStatusLiveData.value != null && observedLastErrorLiveData.value != null) {
+                    setSyncStatus(isOnline, syncStatusLiveData.value!!, observedLastErrorLiveData.value!!)
+                }
+            }
+        }
+
     // Used for the list of search results
     private val pagingSearchFlow: Flow<PagingData<SearchResult>> =
         _searchQuery.debounce(QUERY_DEBOUNCE_VALUE).flatMapLatest { query ->
@@ -324,15 +364,9 @@ class ExploreViewModel @Inject constructor(
         _selectedTerritory
             .onEach { territory ->
                 when {
-                    territory.isNotEmpty() -> {
-                        _searchLocationName.postValue(territory)
-                    }
-                    lastResolvedAddress != null -> {
-                        resolveAddress(lastResolvedAddress!!)
-                    }
-                    else -> {
-                        _searchLocationName.postValue("")
-                    }
+                    territory.isNotEmpty() -> _searchLocationName.postValue(territory)
+                    lastResolvedAddress != null -> resolveAddress(lastResolvedAddress!!)
+                    else -> _searchLocationName.postValue("")
                 }
             }
             .launchIn(viewModelWorkerScope)
@@ -665,49 +699,6 @@ class ExploreViewModel @Inject constructor(
     internal fun setPhysicalResults(results: List<SearchResult>) {
         _physicalSearchResults.value = results
     }
-
-    var syncStatus: LiveData<Resource<Double>> =
-        MediatorLiveData<Resource<Double>>().apply {
-            // combine connectivity, sync status and if the last error was observed
-            val connectivityLiveData = ConnectionLiveData(context)
-            val syncStatusLiveData = syncStatusService.getSyncProgressFlow().asLiveData()
-            val observedLastErrorLiveData = syncStatusService.hasObservedLastError().asLiveData()
-
-            fun setSyncStatus(isOnline: Boolean, progress: Resource<Double>, observedLastError: Boolean) {
-                value = when {
-                    progress.exception != null -> {
-                        if (!observedLastError) {
-                            progress
-                        } else {
-                            Resource.success(100.0) // hide errors if already observed
-                        }
-                    }
-                    progress.status == Status.LOADING && !isOnline -> {
-                        if (!observedLastError) {
-                            Resource.error(FirebaseNetworkException("network is offline"))
-                        } else {
-                            Resource.success(100.0) // hide errors if already observed
-                        }
-                    }
-                    else -> progress
-                }
-            }
-            addSource(observedLastErrorLiveData) { hasObservedLastError ->
-                if (connectivityLiveData.value != null && syncStatusLiveData.value != null) {
-                    setSyncStatus(connectivityLiveData.value!!, syncStatusLiveData.value!!, hasObservedLastError)
-                }
-            }
-            addSource(syncStatusLiveData) { progress ->
-                if (connectivityLiveData.value != null && observedLastErrorLiveData.value != null) {
-                    setSyncStatus(connectivityLiveData.value!!, progress, observedLastErrorLiveData.value!!)
-                }
-            }
-            addSource(connectivityLiveData) { isOnline ->
-                if (syncStatusLiveData.value != null && observedLastErrorLiveData.value != null) {
-                    setSyncStatus(isOnline, syncStatusLiveData.value!!, observedLastErrorLiveData.value!!)
-                }
-            }
-        }
 
     fun setObservedLastError() {
         viewModelScope.launch { syncStatusService.setObservedLastError() }

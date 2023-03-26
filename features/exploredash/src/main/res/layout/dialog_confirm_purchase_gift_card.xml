@@ -22,7 +22,7 @@
     android:layout_height="wrap_content"
     android:paddingBottom="15dp"
     tools:background="@color/background_primary"
-    tools:context="org.dash.wallet.features.exploredash.ui.explore.dialogs.FiltersDialog">
+    tools:context="org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.PurchaseGiftCardConfirmDialog">
 
     <FrameLayout
         android:id="@+id/header"
