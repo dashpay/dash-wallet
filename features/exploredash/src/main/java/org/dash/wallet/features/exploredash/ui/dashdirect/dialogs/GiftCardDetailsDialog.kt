@@ -42,6 +42,7 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
@@ -52,19 +53,18 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashdirect.model.Barcode
 import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
+import org.dash.wallet.features.exploredash.repository.DashDirectException
 import java.time.format.DateTimeFormatter
 
 @AndroidEntryPoint
 class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_details) {
     companion object {
-        private const val ARG_BARCODE = "barcodeUrl"
         private const val ARG_TRANSACTION_ID = "transactionId"
 
-        fun newInstance(transactionId: Sha256Hash, barcodeUrl: String? = null) =
+        fun newInstance(transactionId: Sha256Hash) =
             GiftCardDetailsDialog().apply {
                 arguments = bundleOf(
-                    ARG_TRANSACTION_ID to transactionId,
-                    ARG_BARCODE to barcodeUrl
+                    ARG_TRANSACTION_ID to transactionId
                 )
             }
     }
@@ -123,11 +123,32 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         }
 
         viewModel.barcode.observe(viewLifecycleOwner) { barcode ->
-            val barcodeUrl = requireArguments().getString(ARG_BARCODE)
-
-            if (barcodeUrl.isNullOrEmpty() && barcode != null) {
+            if (viewModel.barcodeUrl.value.isNullOrEmpty() && barcode != null) {
                 decodeBarcode(barcode)
             }
+        }
+
+        viewModel.barcodeUrl.observe(viewLifecycleOwner) { barcodeUrl ->
+            if (!barcodeUrl.isNullOrEmpty()) {
+                loadBarcodeUrl(barcodeUrl)
+            }
+        }
+
+        viewModel.error.observe(viewLifecycleOwner) {
+            binding.infoLoadingIndicator.isVisible = false
+
+            val message = if (it is DashDirectException && it.resourceString != null) {
+                getString(it.resourceString!!.resourceId)
+            } else {
+                it?.message
+            }
+
+            AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.error),
+                message ?: getString(R.string.gift_card_error),
+                getString(R.string.button_close)
+            ).show(requireActivity())
         }
 
         (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let { transactionId ->
@@ -142,8 +163,10 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.originalPurchaseValue.text = price.toFormattedString()
 
         binding.purchaseCardNumber.text = giftCard.number
+        binding.cardNumberGroup.isVisible = !giftCard.number.isNullOrEmpty()
         binding.purchaseCardPin.text = giftCard.pin
-        binding.pinCodeGroup.isVisible = !giftCard.pin.isNullOrEmpty()
+        binding.cardPinGroup.isVisible = !giftCard.pin.isNullOrEmpty()
+        binding.infoLoadingIndicator.isVisible = giftCard.number.isNullOrEmpty()
 
         binding.checkCurrentBalance.isVisible = giftCard.currentBalanceUrl?.isNotEmpty() == true
         binding.checkCurrentBalance.setOnClickListener {
@@ -158,32 +181,29 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/${giftCard.transactionId}")
             )
         }
+    }
 
-        val barcodeImg = requireArguments().getString(ARG_BARCODE)
-
-        if (barcodeImg?.isNotEmpty() == true) {
-            viewModel.saveBarcode(giftCard.transactionId, barcodeImg)
-            binding.purchaseCardBarcode.isVisible = true
-            val imageRequest = ImageRequest.Builder(requireContext())
-                .data(barcodeImg)
-                .target(binding.purchaseCardBarcode)
-                .scale(Scale.FILL)
-                .crossfade(true)
-                .listener(
-                    onStart = {
-                        binding.barcodeLoadingIndicator.isVisible = true
-                    },
-                    onSuccess = { _, _ ->
-                        binding.barcodeLoadingIndicator.isVisible = false
-                    },
-                    onError = { _, _ ->
-                        binding.barcodeLoadingIndicator.isVisible = false
-                        binding.barcodeLoadingError.isVisible = true
-                    }
-                )
-                .build()
-            requireContext().imageLoader.enqueue(imageRequest)
-        }
+    private fun loadBarcodeUrl(barcodeImg: String) {
+        binding.purchaseCardBarcode.isVisible = true
+        val imageRequest = ImageRequest.Builder(requireContext())
+            .data(barcodeImg)
+            .target(binding.purchaseCardBarcode)
+            .scale(Scale.FILL)
+            .crossfade(true)
+            .listener(
+                onStart = {
+                    binding.barcodeLoadingIndicator.isVisible = true
+                },
+                onSuccess = { _, _ ->
+                    binding.barcodeLoadingIndicator.isVisible = false
+                },
+                onError = { _, _ ->
+                    binding.barcodeLoadingIndicator.isVisible = false
+                    binding.barcodeLoadingError.isVisible = true
+                }
+            )
+            .build()
+        requireContext().imageLoader.enqueue(imageRequest)
     }
 
     private fun decodeBarcode(barcode: Barcode) {

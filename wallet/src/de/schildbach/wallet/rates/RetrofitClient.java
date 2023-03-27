@@ -26,7 +26,7 @@ import java.util.concurrent.Executors;
 
 import androidx.annotation.NonNull;
 import org.dash.wallet.common.util.Constants;
-import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.security.PinRetryController;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;

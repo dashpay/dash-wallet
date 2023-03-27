@@ -211,40 +211,39 @@ constructor(
                 _sortByDistance.flatMapLatest { sortByDistance ->
                     _selectedRadiusOption.flatMapLatest { selectedRadius ->
                         _selectedTerritory.flatMapLatest { territory ->
-                            _filterMode.flatMapLatest { mode ->
-                                clearSearchResults()
-                                _searchBounds
-                                    .filter {
-                                        (mode != FilterMode.Nearby || _isLocationEnabled.value == true) &&
-                                            screenState.value == ScreenState.SearchResults
-                                    }
-                                    .map { bounds ->
-                                        if (
-                                            bounds != null &&
-                                            isLocationEnabled.value == true &&
-                                            (exploreTopic == ExploreTopic.ATMs || mode == FilterMode.Nearby)
-                                        ) {
-                                            val radiusBounds =
-                                                locationProvider.getRadiusBounds(
-                                                    bounds.centerLat,
-                                                    bounds.centerLng,
-                                                    radius
-                                                )
-                                            this.radiusBounds = radiusBounds
-                                            radiusBounds
-                                        } else {
-                                            radiusBounds = null
-                                            GeoBounds.noBounds
+                            _filterMode
+                                .filter { screenState.value == ScreenState.SearchResults }
+                                .flatMapLatest { mode ->
+                                    clearSearchResults()
+                                    _searchBounds
+                                        .filter { mode != FilterMode.Nearby || _isLocationEnabled.value == true }
+                                        .map { bounds ->
+                                            if (
+                                                bounds != null &&
+                                                isLocationEnabled.value == true &&
+                                                (exploreTopic == ExploreTopic.ATMs || mode == FilterMode.Nearby)
+                                            ) {
+                                                val radiusBounds =
+                                                    locationProvider.getRadiusBounds(
+                                                        bounds.centerLat,
+                                                        bounds.centerLng,
+                                                        radius
+                                                    )
+                                                this.radiusBounds = radiusBounds
+                                                radiusBounds
+                                            } else {
+                                                radiusBounds = null
+                                                GeoBounds.noBounds
+                                            }
                                         }
-                                    }
-                                    .flatMapLatest { bounds ->
-                                        _appliedFilters.postValue(
-                                            FilterOptions(query, territory, payment, selectedRadius)
-                                        )
-                                        getPagingFlow(query, territory, payment, mode, bounds, sortByDistance)
-                                            .cachedIn(viewModelScope)
-                                    }
-                            }
+                                        .flatMapLatest { bounds ->
+                                            _appliedFilters.postValue(
+                                                FilterOptions(query, territory, payment, selectedRadius)
+                                            )
+                                            getPagingFlow(query, territory, payment, mode, bounds, sortByDistance)
+                                                .cachedIn(viewModelScope)
+                                        }
+                                }
                         }
                     }
                 }
@@ -314,12 +313,11 @@ constructor(
             .filter {
                 val lastResolved = lastResolvedAddress
                 isLocationEnabled.value == true &&
-                    it.zoomLevel > MIN_ZOOM_LEVEL &&
-                    (
-                        selectedTerritory.value?.isEmpty() == true ||
-                            lastResolved == null ||
-                            locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2
-                        )
+                    it.zoomLevel > MIN_ZOOM_LEVEL && (
+                    selectedTerritory.value?.isEmpty() == true ||
+                        lastResolved == null ||
+                        locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2
+                    )
             }
             .onEach(::resolveAddress)
             .launchIn(viewModelWorkerScope)
@@ -540,18 +538,15 @@ constructor(
                     userLng ?: 0.0,
                     onlineFirst
                 )
-            }
-                .flow
-                .map { data ->
-                    data
-                        .filter { it.merchant != null }
-                        .map {
-                            it.merchant!!.apply {
-                                this.physicalAmount = it.physicalAmount ?: 0
-                                this.distance = calculateDistance(this, userLat, userLng)
-                            }
+            }.flow.map { data ->
+                data.filter { it.merchant != null }
+                    .map {
+                        it.merchant!!.apply {
+                            this.physicalAmount = it.physicalAmount ?: 0
+                            this.distance = calculateDistance(this, userLat, userLng)
                         }
-                }
+                    }
+            }
         } else {
             Pager(pagerConfig) {
                 val types = getAtmTypes(filterMode)
@@ -564,11 +559,8 @@ constructor(
                     userLat ?: 0.0,
                     userLng ?: 0.0
                 )
-            }
-                .flow
-                .map { data -> data.map { it.apply { distance = calculateDistance(it, userLat, userLng) } } }
-        }
-            as Flow<PagingData<SearchResult>>
+            }.flow.map { data -> data.map { it.apply { distance = calculateDistance(it, userLat, userLng) } } }
+        } as Flow<PagingData<SearchResult>>
     }
 
     private fun countPagedResults() {
@@ -678,24 +670,23 @@ constructor(
             val observedLastErrorLiveData = syncStatusService.hasObservedLastError().asLiveData()
 
             fun setSyncStatus(isOnline: Boolean, progress: Resource<Double>, observedLastError: Boolean) {
-                value =
-                    when {
-                        progress.exception != null -> {
-                            if (!observedLastError) {
-                                progress
-                            } else {
-                                Resource.success(100.0) // hide errors if already observed
-                            }
+                value = when {
+                    progress.exception != null -> {
+                        if (!observedLastError) {
+                            progress
+                        } else {
+                            Resource.success(100.0) // hide errors if already observed
                         }
-                        progress.status == Status.LOADING && !isOnline -> {
-                            if (!observedLastError) {
-                                Resource.error(FirebaseNetworkException("network is offline"))
-                            } else {
-                                Resource.success(100.0) // hide errors if already observed
-                            }
-                        }
-                        else -> progress
                     }
+                    progress.status == Status.LOADING && !isOnline -> {
+                        if (!observedLastError) {
+                            Resource.error(FirebaseNetworkException("network is offline"))
+                        } else {
+                            Resource.success(100.0) // hide errors if already observed
+                        }
+                    }
+                    else -> progress
+                }
             }
             addSource(observedLastErrorLiveData) { hasObservedLastError ->
                 if (connectivityLiveData.value != null && syncStatusLiveData.value != null) {

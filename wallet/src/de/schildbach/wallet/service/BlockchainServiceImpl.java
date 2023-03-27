@@ -148,6 +148,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Inject BlockchainStateDao blockchainStateDao;
     @Inject ExchangeRatesDao exchangeRatesDao;
     @Inject TransactionMetadataProvider transactionMetadataProvider;
+    @Inject PackageInfoProvider packageInfoProvider;
 
     private BlockStore blockStore;
     private BlockStore headerStore;
@@ -337,7 +338,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         final MonetaryFormat btcFormat = config.getFormat();
 
-        final String packageFlavor = application.applicationPackageFlavor();
+        final String packageFlavor = packageInfoProvider.applicationPackageFlavor();
         String msgSuffix = packageFlavor != null ? " [" + packageFlavor + "]" : "";
 
         if (exchangeRate != null) {
@@ -623,7 +624,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     final String message = "wallet/blockchain out of sync: " + walletLastBlockSeenHeight + "/"
                             + bestChainHeight;
                     log.error(message);
-                    CrashReporter.saveBackgroundTrace(new RuntimeException(message), application.packageInfo());
+                    CrashReporter.saveBackgroundTrace(new RuntimeException(message), packageInfoProvider.getPackageInfo());
                 }
 
                 wallet.getContext().initDashSync(getDir("masternode", MODE_PRIVATE).getAbsolutePath());
@@ -638,7 +639,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
                 peerGroup.setDownloadTxDependencies(0); // recursive implementation causes StackOverflowError
                 peerGroup.addWallet(wallet);
-                peerGroup.setUserAgent(Constants.USER_AGENT, application.packageInfo().versionName);
+                peerGroup.setUserAgent(Constants.USER_AGENT, packageInfoProvider.getVersionName());
                 peerGroup.addConnectedEventListener(peerConnectivityListener);
                 peerGroup.addDisconnectedEventListener(peerConnectivityListener);
 

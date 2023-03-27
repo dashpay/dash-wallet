@@ -161,7 +161,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
         viewModel.userAccountError.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.coinbase_dash_wallet_error_title),
                 getString(R.string.coinbase_dash_wallet_error_message),
                 getString(R.string.close),
@@ -225,7 +225,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
     private fun showNoPaymentMethodsError() {
         AdaptiveDialog.create(
-            R.drawable.ic_info_red,
+            R.drawable.ic_error,
             getString(R.string.coinbase_no_payment_methods_error_title),
             getString(R.string.coinbase_no_payment_methods_error_message),
             getString(R.string.close),
@@ -240,7 +240,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
     private fun showBuyingNotAllowedError() {
         AdaptiveDialog.create(
-            R.drawable.ic_info_red,
+            R.drawable.ic_error,
             getString(R.string.coinbase_unusable_payment_method_error_title),
             getString(R.string.coinbase_unusable_payment_method_error_message),
             getString(R.string.close),

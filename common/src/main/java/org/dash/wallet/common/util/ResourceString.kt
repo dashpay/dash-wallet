@@ -17,10 +17,15 @@
 
 package org.dash.wallet.common.util
 
+import android.content.res.Resources
 import androidx.annotation.StringRes
 
 data class ResourceString(
     @StringRes val resourceId: Int,
     val args: List<Any> = listOf()
-)
+) {
+    fun format(resources: Resources): String {
+        return resources.getString(resourceId, *args.toTypedArray())
+    }
+}
 

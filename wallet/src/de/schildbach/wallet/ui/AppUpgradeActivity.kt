@@ -25,7 +25,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.main.WalletActivity
-import de.schildbach.wallet.ui.preference.PinRetryController
+import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityAppUpdateBinding

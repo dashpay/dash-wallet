@@ -15,7 +15,7 @@
         app:layout_constraintTop_toTopOf="parent"
         android:layout_marginTop="20dp"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_info_red" />
+        android:src="@drawable/ic_error" />
 
     <TextView
         android:id="@+id/coinbase_dialog_title"

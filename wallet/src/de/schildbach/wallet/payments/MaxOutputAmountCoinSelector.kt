@@ -37,7 +37,7 @@ class MaxOutputAmountCoinSelector: CoinSelector {
         // Formula is lifted from DashSync for ios: https://github.com/dashpay/dashsync-iOS/blob/master/DashSync/shared/Models/Wallet/DSAccount.m#L1680-L1711
         // Android has an extra byte per input
         val txSize = 8 + VarInt.sizeOf(inputCount) + (TX_INPUT_SIZE + 1) * inputCount +
-                VarInt.sizeOf(outputCount) + TX_OUTPUT_SIZE * outputCount
+            VarInt.sizeOf(outputCount) + TX_OUTPUT_SIZE * outputCount
         val fee = Transaction.DEFAULT_TX_FEE.multiply(txSize).divide(1000)
 
         return CoinSelection((value - fee).coerceAtLeast(Coin.ZERO), candidates)

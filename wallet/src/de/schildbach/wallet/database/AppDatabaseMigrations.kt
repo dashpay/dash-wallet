@@ -36,9 +36,9 @@ class AppDatabaseMigrations {
                     )
                     database.execSQL(
                         "CREATE TABLE IF NOT EXISTS gift_cards (id TEXT NOT NULL PRIMARY KEY, " +
-                            "merchantName TEXT NOT NULL, transactionId BLOB NOT NULL, " +
-                            "price INTEGER NOT NULL, currency TEXT NOT NULL, number TEXT NOT NULL, " +
-                            "pin TEXT, barcodeValue TEXT, barcodeFormat TEXT, currentBalanceUrl TEXT)"
+                            "service TEXT NOT NULL, merchantName TEXT NOT NULL, transactionId BLOB NOT NULL, " +
+                            "price INTEGER NOT NULL, discount REAL NOT NULL, currency TEXT NOT NULL, number TEXT, " +
+                            "pin TEXT, barcodeValue TEXT, barcodeFormat TEXT, currentBalanceUrl TEXT, note TEXT)"
                     )
                     database.execSQL("CREATE UNIQUE INDEX index_gift_cards_transactionId ON  gift_cards(transactionId)")
                 }

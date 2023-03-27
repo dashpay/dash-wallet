@@ -197,7 +197,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
         enterAmountToTransferViewModel.dashWalletEmptyCallback.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.dont_have_any_dash),
                 "",
                 "",
@@ -275,7 +275,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
         transferDashViewModel.onAddressCreationFailedCallback.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.error),
                 getString(R.string.address_creation_failed),
                 getString(R.string.close)
@@ -299,7 +299,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
         transferDashViewModel.onFetchUserDataOnCoinbaseFailedCallback.observe(viewLifecycleOwner){
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.coinbase_dash_wallet_error_title),
                 getString(R.string.coinbase_dash_wallet_error_message),
                 getString(R.string.close),

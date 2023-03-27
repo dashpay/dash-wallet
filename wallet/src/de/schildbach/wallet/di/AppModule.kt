@@ -26,17 +26,18 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.service.AppRestartService
-import de.schildbach.wallet.service.RestartService
+import de.schildbach.wallet.payments.ConfirmTransactionLauncher
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.service.AndroidActionsService
+import de.schildbach.wallet.service.AppRestartService
+import de.schildbach.wallet.service.PackageInfoProvider
+import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
 import org.dash.wallet.common.services.*
-import de.schildbach.wallet.payments.ConfirmTransactionLauncher
 import org.dash.wallet.common.services.ConfirmTransactionService
+import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
-import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.integration.uphold.api.UpholdClient
@@ -62,6 +63,10 @@ abstract class AppModule {
 
         @Provides
         fun provideUphold(): UpholdClient = UpholdClient.getInstance()
+
+        @Provides
+        @Singleton
+        fun providePackageInfoProvider(@ApplicationContext context: Context) = PackageInfoProvider(context)
     }
 
     @Binds

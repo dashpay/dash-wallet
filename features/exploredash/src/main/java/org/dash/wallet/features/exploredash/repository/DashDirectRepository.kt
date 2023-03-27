@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
+import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.features.exploredash.data.dashdirect.model.giftcard.GetGiftCardRequest
 import org.dash.wallet.features.exploredash.data.dashdirect.model.giftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashdirect.model.merchant.GetMerchantByIdRequest
@@ -35,9 +36,14 @@ import org.dash.wallet.features.exploredash.network.service.DashDirectServicesAp
 import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 import javax.inject.Inject
 
-class DashDirectRepository
-@Inject
-constructor(
+class DashDirectException(message: String) : Exception(message) {
+    var resourceString: ResourceString? = null
+    constructor(message: ResourceString) : this("") {
+        this.resourceString = message
+    }
+}
+
+class DashDirectRepository @Inject constructor(
     private val servicesApi: DashDirectServicesApi,
     private val authApi: DashDirectAuthApi,
     private val config: DashDirectConfig
@@ -49,7 +55,7 @@ constructor(
         authApi.signIn(email = email).also {
             it?.errorMessage?.let { errorMessage ->
                 if (errorMessage.isNotEmpty()) {
-                    throw Exception(errorMessage)
+                    throw DashDirectException(errorMessage)
                 }
             }
             if (it?.data?.statusCode == 0) {
@@ -64,7 +70,7 @@ constructor(
         authApi.createUser(email = email).also {
             it?.data?.errorMessage?.let { errorMessage ->
                 if (errorMessage.isNotEmpty()) {
-                    throw Exception(errorMessage)
+                    throw DashDirectException(errorMessage)
                 }
             }
             config.setSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
@@ -73,24 +79,22 @@ constructor(
     }
 
     override suspend fun verifyEmail(code: String): ResponseResource<Boolean> = safeApiCall {
-        authApi
-            .verifyEmail(
-                signInRequest =
-                VerifyEmailRequest(
-                    emailAddress = config.getSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL),
-                    code = code
-                )
+        authApi.verifyEmail(
+            signInRequest =
+            VerifyEmailRequest(
+                emailAddress = config.getSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL),
+                code = code
             )
-            .also {
-                it?.data?.errorMessage?.let { errorMessage ->
-                    if (it.data.hasError == true && errorMessage.isNotEmpty()) {
-                        throw Exception(errorMessage)
-                    }
-                }
-                it?.data?.accessToken?.let { token ->
-                    config.setPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN, token)
+        ).also {
+            it?.data?.errorMessage?.let { errorMessage ->
+                if (it.data.hasError == true && errorMessage.isNotEmpty()) {
+                    throw DashDirectException(errorMessage)
                 }
             }
+            it?.data?.accessToken?.let { token ->
+                config.setPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN, token)
+            }
+        }
         config.getPreference(DashDirectConfig.PREFS_KEY_LAST_DASH_DIRECT_ACCESS_TOKEN)?.isNotEmpty() ?: false
     }
 
@@ -112,21 +116,21 @@ constructor(
 
     override suspend fun purchaseGiftCard(
         deviceID: String,
-        currency: String,
-        giftCardAmount: Double,
+        paymentCurrency: String,
+        amountUSD: Double,
         merchantId: Long,
         userEmail: String
     ) = safeApiCall {
         servicesApi.purchaseGiftCard(
             deviceID = deviceID,
 //            purchaseGiftCardRequest = PurchaseGiftCardRequest(
-//                currency = currency,
-//                giftCardAmount = 0.03,
+//                paymentCurrency = paymentCurrency,
+//                amountUSD = 0.03,
 //                merchantId = 318
 //            ),
             purchaseGiftCardRequest = PurchaseGiftCardRequest(
-                currency = currency,
-                giftCardAmount = giftCardAmount,
+                paymentCurrency = paymentCurrency,
+                amountUSD = amountUSD,
                 merchantId = merchantId
             ),
             email = userEmail
@@ -138,7 +142,7 @@ constructor(
             servicesApi.getMerchantById(
                 email = userEmail,
                 getMerchantByIdRequest = GetMerchantByIdRequest(
-                    id = /*318*/ merchantId,
+                    id = /* 318, */ merchantId,
                     includeLocations = includeLocations
                 )
             )
@@ -166,8 +170,8 @@ interface DashDirectRepositoryInt {
     suspend fun logout()
     suspend fun purchaseGiftCard(
         deviceID: String,
-        currency: String,
-        giftCardAmount: Double,
+        paymentCurrency: String,
+        amountUSD: Double,
         merchantId: Long,
         userEmail: String
     ): ResponseResource<PurchaseGiftCardResponse?>

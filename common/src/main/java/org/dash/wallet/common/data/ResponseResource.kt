@@ -23,6 +23,7 @@ import retrofit2.HttpException
 sealed class ResponseResource<out T> {
     data class Success<out T>(val value: T) : ResponseResource<T>()
     data class Failure(
+        val throwable: Throwable,
         val isNetworkError: Boolean,
         val errorCode: Int?,
         val errorBody: String?
@@ -40,15 +41,27 @@ suspend fun <T> safeApiCall(
             when (throwable) {
                 is HttpException -> {
                     ResponseResource.Failure(
+                        throwable,
                         false,
                         throwable.code(),
                         throwable.response()?.errorBody()?.string()
                     )
                 }
                 else -> {
-                    ResponseResource.Failure(true, null, throwable.message)
+                    ResponseResource.Failure(throwable, true, null, throwable.message)
                 }
             }
+        }
+    }
+}
+
+fun <T> ResponseResource<T>.unwrap(): T {
+    return when (this) {
+        is ResponseResource.Success -> {
+            this.value
+        }
+        is ResponseResource.Failure -> {
+            throw this.throwable
         }
     }
 }

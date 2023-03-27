@@ -21,7 +21,7 @@ import android.view.View
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.util.WalletUtils
@@ -29,6 +29,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionDetailsDialogBinding
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
@@ -51,7 +52,9 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
     private val binding by viewBinding(TransactionDetailsDialogBinding::bind)
     private lateinit var contentBinding: TransactionResultContentBinding
     private val viewModel: TransactionResultViewModel by viewModels()
-    @Inject lateinit var walletApplication: WalletApplication
+
+    @Inject lateinit var configuration: Configuration
+    @Inject lateinit var packageInfoProvider: PackageInfoProvider
 
     override val backgroundStyle = R.style.PrimaryBackground
     override val forceExpand = true
@@ -116,7 +119,9 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
     private fun showReportIssue() {
         ReportIssueDialogBuilder.createReportIssueDialog(
             requireActivity(),
-            walletApplication
+            packageInfoProvider,
+            configuration,
+            viewModel.walletData.wallet
         ).buildAlertDialog().show()
     }
 

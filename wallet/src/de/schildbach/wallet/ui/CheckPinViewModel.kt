@@ -21,7 +21,7 @@ import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.livedata.CheckPinLiveData
 import de.schildbach.wallet.security.BiometricHelper
-import de.schildbach.wallet.ui.preference.PinRetryController
+import de.schildbach.wallet.security.PinRetryController
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService

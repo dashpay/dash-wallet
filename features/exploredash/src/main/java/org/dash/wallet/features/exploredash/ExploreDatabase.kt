@@ -78,10 +78,8 @@ abstract class ExploreDatabase : RoomDatabase() {
 
         private fun open(context: Context, config: Configuration): ExploreDatabase {
             val dbBuilder = Room.databaseBuilder(context, ExploreDatabase::class.java, config.exploreDatabaseName)
-
             log.info("Open database {}", config.exploreDatabaseName)
             return dbBuilder
-                // .fallbackToDestructiveMigration()
                 .addMigrations(migration1To2)
                 .build()
         }

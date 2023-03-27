@@ -24,6 +24,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.CoinSelector
 
 class LeftoverBalanceException(missing: Coin, message: String) : InsufficientMoneyException(missing, message)
+class DirectPayException(message: String) : Exception(message)
 
 interface SendPaymentService {
     @Throws(LeftoverBalanceException::class)

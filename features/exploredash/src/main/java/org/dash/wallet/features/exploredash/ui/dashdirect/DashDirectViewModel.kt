@@ -23,7 +23,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -38,21 +37,21 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
 import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
-import org.dash.wallet.features.exploredash.data.dashdirect.model.giftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashdirect.model.merchant.GetMerchantByIdResponse
-import org.dash.wallet.features.exploredash.data.dashdirect.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.data.dashdirect.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
+import org.dash.wallet.features.exploredash.repository.DashDirectException
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import org.slf4j.LoggerFactory
@@ -61,7 +60,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DashDirectViewModel @Inject constructor(
-    walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletDataProvider,
     exchangeRates: ExchangeRatesProvider,
     var configuration: Configuration,
     private val sendPaymentService: SendPaymentService,
@@ -105,26 +104,31 @@ class DashDirectViewModel @Inject constructor(
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
 
-        walletDataProvider.observeBalance().distinctUntilChanged().onEach(_balance::postValue).launchIn(viewModelScope)
+        walletDataProvider
+            .observeBalance()
+            .distinctUntilChanged()
+            .onEach(_balance::postValue)
+            .launchIn(viewModelScope)
     }
 
     suspend fun purchaseGiftCard(): PurchaseGiftCardResponse.Data? {
         giftCardMerchant.merchantId?.let {
             val amountValue = giftCardPaymentValue
             repository.getDashDirectEmail()?.let { email ->
-                val savingsPercentage =
-                    giftCardMerchant.savingsPercentage ?: DashDirectConstants.DEFAULT_DISCOUNT
-                val discountedValue = getDiscountedAmount(amountValue, savingsPercentage)
                 val response = repository.purchaseGiftCard(
                     merchantId = it,
-                    giftCardAmount = discountedValue.toBigDecimal().toDouble(),
-                    currency = Constants.DASH_CURRENCY,
-                    deviceID = UUID.randomUUID().toString(),
+                    amountUSD = amountValue.toBigDecimal().toDouble(),
+                    paymentCurrency = Constants.DASH_CURRENCY,
+                    deviceID = UUID.randomUUID().toString(), // TODO
                     userEmail = email
                 )
 
                 when (response) {
                     is ResponseResource.Success -> {
+                        if (response.value?.successful != true && !response.value?.errorMessage.isNullOrEmpty()) {
+                            throw DashDirectException(response.value?.errorMessage!!)
+                        }
+
                         if (response.value?.data?.success == true) {
                             return response.value?.data!!
                         }
@@ -135,28 +139,12 @@ class DashDirectViewModel @Inject constructor(
                 }
             }
         }
+
         return null
     }
 
-    suspend fun getPaymentStatus(paymentId: String, orderId: String): ResponseResource<PaymentStatusResponse?>? {
-        delay(2000) // TODO: this is not great. What if we still can't get it after 2 seconds?
-        // TODO: If we don't know when the status is updated, we should poll the server periodically
-        // TODO: and/or have some other way of displaying it to the user
-        repository.getDashDirectEmail()?.let { email ->
-            return repository.getPaymentStatus(userEmail = email, paymentId = paymentId, orderId = orderId)
-        }
-        return null
-    }
-
-    suspend fun getGiftCardDetails(giftCardId: Long): ResponseResource<GetGiftCardResponse?>? {
-        repository.getDashDirectEmail()?.let { email ->
-            return repository.getGiftCardDetails(userEmail = email, giftCardId = giftCardId)
-        }
-        return null
-    }
-
-    suspend fun createSendingRequestFromDashUri(paymentURi: String): Sha256Hash {
-        val transaction = sendPaymentService.payWithDashUrl(paymentURi)
+    suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash {
+        val transaction = sendPaymentService.payWithDashUrl(paymentUri)
         log.info("dash direct transaction: ${transaction.txId}")
         transactionMetadata.markGiftCardTransaction(transaction.txId, giftCardMerchant.logoLocation)
 
@@ -189,12 +177,8 @@ class DashDirectViewModel @Inject constructor(
     fun getDiscountedAmount(fullAmount: Coin, savingsPercentage: Double): Fiat? {
         return _exchangeRate.value?.let {
             val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
-            return getDiscountedAmount(myRate.coinToFiat(fullAmount), savingsPercentage)
+            return myRate.coinToFiat(fullAmount).discountBy(savingsPercentage)
         }
-    }
-
-    fun getDiscountedAmount(fullAmount: Fiat, savingsPercentage: Double): Fiat {
-        return Fiat.valueOf(Constants.USD_CURRENCY, (fullAmount.value * (100.0 - savingsPercentage) / 100).toLong())
     }
 
     fun isUserSignInDashDirect() = repository.isUserSignIn()
@@ -207,49 +191,35 @@ class DashDirectViewModel @Inject constructor(
 
     suspend fun logout() = repository.logout()
 
-    fun saveGiftCard(
-        txId: Sha256Hash,
-        data: GetGiftCardResponse.Data
-    ) {
-        logOnPurchaseEvents()
-        val giftCardId = "${ServiceName.DashDirect.lowercase()}+${data.id ?: -1}" // e.g. dashdirect+1234
+    fun saveGiftCardDummy(txId: Sha256Hash, orderId: String, paymentId: String) {
         val giftCard = GiftCard(
-            id = giftCardId,
+            id = UUID.randomUUID().toString(),
+            service = ServiceName.DashDirect,
             merchantName = giftCardMerchant.name ?: "",
             price = giftCardPaymentValue.value,
+            discount = giftCardMerchant.savingsPercentage ?: DashDirectConstants.DEFAULT_DISCOUNT,
             currency = giftCardPaymentValue.currencyCode,
             transactionId = txId,
-            number = data.cardNumber ?: "",
-            pin = data.cardPin,
-            currentBalanceUrl = giftCardMerchant.website
+            currentBalanceUrl = giftCardMerchant.website,
+            note = "$orderId+$paymentId"
         )
         viewModelScope.launch {
             giftCardDao.insertGiftCard(giftCard)
         }
     }
 
-    fun logEvent(event: String) {
-        analyticsService.logEvent(event, mapOf())
+    fun needsCrowdNodeWarning(dashAmount: String): Boolean {
+        val outputAmount = Coin.parseCoin(dashAmount)
+        return try {
+            walletDataProvider.checkSendingConditions(null, outputAmount)
+            false
+        } catch (ex: LeftoverBalanceException) {
+            true
+        }
     }
 
-    private fun logOnPurchaseEvents() {
-        analyticsService.logEvent(AnalyticsConstants.DashDirect.SUCCESSFUL_PURCHASE, mapOf())
-        analyticsService.logEvent(
-            AnalyticsConstants.DashDirect.MERCHANT_NAME,
-            mapOf(AnalyticsConstants.Parameter.VALUE to (giftCardMerchant.name ?: ""))
-        )
-        analyticsService.logEvent(
-            AnalyticsConstants.DashDirect.PURCHASE_AMOUNT,
-            mapOf(AnalyticsConstants.Parameter.VALUE to giftCardPaymentValue.toFriendlyString())
-        )
-
-        val savingsPercentage =
-            giftCardMerchant.savingsPercentage ?: DashDirectConstants.DEFAULT_DISCOUNT
-        val discountedValue = getDiscountedAmount(giftCardPaymentValue, savingsPercentage)
-        analyticsService.logEvent(
-            AnalyticsConstants.DashDirect.DISCOUNT_AMOUNT,
-            mapOf(AnalyticsConstants.Parameter.VALUE to discountedValue.toFriendlyString())
-        )
+    fun logEvent(event: String) {
+        analyticsService.logEvent(event, mapOf())
     }
 
     // TODO Remove the test merchent

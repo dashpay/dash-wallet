@@ -37,7 +37,7 @@ import javax.inject.Inject
 class TransactionResultViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
-    private val walletData: WalletDataProvider,
+    val walletData: WalletDataProvider,
     configuration: Configuration
 ) : ViewModel() {
 

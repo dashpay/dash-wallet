@@ -35,7 +35,6 @@ import kotlinx.coroutines.FlowPreview;
 /**
  * @author Andreas Schildbach
  */
-@FlowPreview
 public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
 
     private PeerListFragment peerListFragment;

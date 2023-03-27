@@ -146,9 +146,4 @@ object Qr {
             return outputStream.toByteArray()
         }
     }
-
-    @Throws(IOException::class)
-    fun decodeBinary(content: String?): ByteArray? {
-        return Base43.decode(content)
-    }
 }

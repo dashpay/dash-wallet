@@ -496,7 +496,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             bottomSheet.state = setBottomSheetState()
         }
 
-        viewLifecycleOwner.observeOnDestroy { binding.searchResults.adapter = null }
+        viewLifecycleOwner.observeOnDestroy {
+            binding.searchResults.adapter = null
+        }
     }
 
     private fun setupItemDetails() {
@@ -846,8 +848,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         return viewModel.selectedItem.value == null &&
             viewModel.isLocationEnabled.value == true &&
             (
-                isPhysicalSearch ||
-                    viewModel.paymentMethodFilter.isNotEmpty() ||
+                isPhysicalSearch || viewModel.paymentMethodFilter.isNotEmpty() ||
                     viewModel.selectedTerritory.value?.isNotEmpty() == true
                 )
     }

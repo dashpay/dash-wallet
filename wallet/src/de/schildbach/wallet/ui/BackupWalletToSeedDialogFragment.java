@@ -37,7 +37,6 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.os.CancellationSignal;
 import androidx.fragment.app.FragmentManager;
 
 import org.bitcoinj.wallet.DeterministicSeed;
@@ -57,9 +56,8 @@ import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.security.BiometricHelper;
 import de.schildbach.wallet.security.BiometricLockoutException;
-import de.schildbach.wallet.security.FingerprintStorage;
 import de.schildbach.wallet.security.SecurityFunctions;
-import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.security.PinRetryController;
 import de.schildbach.wallet.payments.DecryptSeedTask;
 import de.schildbach.wallet.payments.DeriveKeyTask;
 import de.schildbach.wallet.ui.widget.FingerprintView;
