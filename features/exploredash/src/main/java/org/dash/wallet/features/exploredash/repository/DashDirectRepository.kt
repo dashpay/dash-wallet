@@ -50,7 +50,7 @@ class DashDirectRepository @Inject constructor(
     private val config: DashDirectConfig
 ) : DashDirectRepositoryInt {
 
-    override val userEmail: Flow<String?> = config.observe(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL)
+    override val userEmail: Flow<String?> = config.observeSecureData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL)
 
     override suspend fun signIn(email: String): ResponseResource<Boolean> = safeApiCall {
         authApi.signIn(email = email).also {

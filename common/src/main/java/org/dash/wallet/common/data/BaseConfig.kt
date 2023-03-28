@@ -18,7 +18,10 @@
 package org.dash.wallet.common.data
 
 import android.content.Context
+import android.util.Base64
+import androidx.datastore.core.DataStore
 import androidx.datastore.migrations.SharedPreferencesMigration
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
@@ -27,13 +30,23 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import org.dash.wallet.common.util.security.EncryptionProvider
 import java.io.IOException
 
+@OptIn(ExperimentalSerializationApi::class)
 abstract class BaseConfig(
     private val context: Context,
-    name: String,
+    private val name: String,
+    private val encryptionProvider: EncryptionProvider? = null,
     migrations: List<SharedPreferencesMigration<Preferences>> = listOf()
 ) {
+    private val securityKeyAlias = "${name}_security_key"
+    private val json = Json { encodeDefaults = true }
+
     protected val Context.dataStore by preferencesDataStore(
         name = name,
         produceMigrations = { migrations }
@@ -62,7 +75,56 @@ abstract class BaseConfig(
         }
     }
 
+    fun observeSecureData(key: Preferences.Key<String>): Flow<String?> {
+        return data.secureMap { preferences -> preferences[key].orEmpty() }
+    }
+
+    suspend fun getSecuredData(key: Preferences.Key<String>) =
+        data.secureMap<String> { preferences -> preferences[key].orEmpty() }.first()
+
+    suspend fun setSecuredData(key: Preferences.Key<String>, value: String) {
+        context.dataStore.secureEdit(value) { preferences, encryptedValue -> preferences[key] = encryptedValue }
+    }
+
     suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
+    }
+
+    private inline fun <reified T> Flow<Preferences>.secureMap(
+        crossinline fetchValue: (value: Preferences) -> String
+    ): Flow<T?> {
+        requireNotNull(encryptionProvider) { "encryptionProvider not provided for $name config" }
+
+        return map { prefs ->
+            try {
+                val encryptedData = Base64.decode(fetchValue(prefs), Base64.NO_WRAP)
+
+                if (encryptedData.isNotEmpty()) {
+                    val data = encryptionProvider.decrypt(
+                        securityKeyAlias,
+                        encryptedData
+                    )
+                    json.decodeFromString(data)
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+
+    private suspend inline fun <reified T> DataStore<Preferences>.secureEdit(
+        value: T,
+        crossinline editStore: (MutablePreferences, String) -> Unit
+    ) {
+        requireNotNull(encryptionProvider) { "encryptionProvider not provided for $name config" }
+
+        edit {
+            encryptionProvider.encrypt(securityKeyAlias, Json.encodeToString(value))?.let { encryptedValue ->
+                editStore.invoke(it, Base64.encodeToString(encryptedValue, Base64.NO_WRAP))
+            }
+        }
     }
 }
