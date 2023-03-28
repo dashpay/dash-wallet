@@ -512,7 +512,6 @@ class CrowdNodeApiAggregator @Inject constructor(
         primaryAddress = null
         linkingApiAddress = null
         apiError.value = null
-        config.clearAll()
     }
 
     private fun isError(): Boolean {

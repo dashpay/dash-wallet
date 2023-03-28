@@ -22,12 +22,16 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-open class CrowdNodeConfig @Inject constructor(context: Context) : BaseConfig(context, PREFERENCES_NAME) {
+open class CrowdNodeConfig @Inject constructor(
+    context: Context,
+    walletDataProvider: WalletDataProvider
+) : BaseConfig(context, PREFERENCES_NAME, walletDataProvider) {
     companion object {
         const val PREFERENCES_NAME = "crowdnode"
 

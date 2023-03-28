@@ -19,6 +19,7 @@ package org.dash.wallet.features.exploredash.utils
 
 import android.content.Context
 import androidx.datastore.preferences.core.stringPreferencesKey
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import org.dash.wallet.common.util.security.EncryptionProvider
 import javax.inject.Inject
@@ -27,8 +28,9 @@ import javax.inject.Singleton
 @Singleton
 class DashDirectConfig @Inject constructor(
     context: Context,
+    walletDataProvider: WalletDataProvider,
     encryptionProvider: EncryptionProvider
-): BaseConfig(context, PREFERENCES_NAME, encryptionProvider) {
+): BaseConfig(context, PREFERENCES_NAME, walletDataProvider, encryptionProvider) {
     companion object {
         const val PREFERENCES_NAME = "dashdirect"
 

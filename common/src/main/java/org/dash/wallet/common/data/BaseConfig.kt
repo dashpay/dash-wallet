@@ -26,14 +26,18 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.util.security.EncryptionProvider
 import java.io.IOException
 
@@ -41,6 +45,7 @@ import java.io.IOException
 abstract class BaseConfig(
     private val context: Context,
     private val name: String,
+    walletDataProvider: WalletDataProvider,
     private val encryptionProvider: EncryptionProvider? = null,
     migrations: List<SharedPreferencesMigration<Preferences>> = listOf()
 ) {
@@ -60,6 +65,13 @@ abstract class BaseConfig(
                 throw exception
             }
         }
+
+    init {
+        walletDataProvider.attachOnWalletWipedListener {
+            @OptIn(DelicateCoroutinesApi::class)
+            GlobalScope.launch { clearAll() }
+        }
+    }
 
     fun <T> observe(key: Preferences.Key<T>): Flow<T?> {
         return data.map { preferences -> preferences[key] }

@@ -66,7 +66,6 @@ class DashDirectViewModel @Inject constructor(
     private val transactionMetadata: TransactionMetadataProvider,
     private val exploreData: ExploreDataSource,
     private val giftCardDao: GiftCardDao,
-    blockchainState: BlockchainStateProvider,
     networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {

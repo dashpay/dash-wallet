@@ -22,6 +22,7 @@ import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,9 +36,13 @@ data class ExploreDatabasePrefs(
 )
 
 @Singleton
-class ExploreConfig @Inject constructor(private val context: Context) : BaseConfig(
+class ExploreConfig @Inject constructor(
+    private val context: Context,
+    walletDataProvider: WalletDataProvider
+) : BaseConfig(
     context,
     PREFERENCES_NAME,
+    walletDataProvider,
     migrations = listOf(
         // Migrating all keys from explore.xml
         SharedPreferencesMigration(context, PREFERENCES_NAME),
