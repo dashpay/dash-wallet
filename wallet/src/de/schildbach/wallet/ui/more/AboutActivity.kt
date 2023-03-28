@@ -25,6 +25,7 @@ import android.os.Bundle
 import android.text.format.DateUtils
 import androidx.activity.viewModels
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.LockScreenActivity
@@ -32,6 +33,7 @@ import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityAboutBinding
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.VersionMessage
 import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -116,21 +118,24 @@ class AboutActivity : LockScreenActivity() {
         }
 
         viewModel.exploreIsSyncing.observe(this) { isSyncing ->
-            binding.exploreDashLastDeviceSync.text = if (isSyncing) {
-                "${getString(R.string.syncing)}…"
-            } else if (viewModel.exploreIsSyncFailed) {
-                getString(
-                    R.string.about_explore_failed_sync,
-                    DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSyncAttempt, formatFlags)
-                )
-            } else if (viewModel.explorePreloadedTimestamp >= viewModel.exploreLastSyncAttempt) {
-                val prefix = if (viewModel.isTestNetPreloaded) "Testnet DB " else ""
-                prefix + getString(
-                    R.string.about_explore_preloaded_on,
-                    DateUtils.formatDateTime(applicationContext, viewModel.explorePreloadedTimestamp, formatFlags)
-                )
-            } else {
-                DateUtils.formatDateTime(applicationContext, viewModel.exploreLastSyncAttempt, formatFlags)
+            lifecycleScope.launch {
+                val dbPrefs = viewModel.databasePrefs
+                binding.exploreDashLastDeviceSync.text = if (isSyncing) {
+                    "${getString(R.string.syncing)}…"
+                } else if (dbPrefs.failedSyncAttempts > 0) {
+                    getString(
+                        R.string.about_explore_failed_sync,
+                        DateUtils.formatDateTime(applicationContext, dbPrefs.lastSyncTimestamp, formatFlags)
+                    )
+                } else if (dbPrefs.preloadedOnTimestamp >= dbPrefs.lastSyncTimestamp) {
+                    val prefix = if (dbPrefs.preloadedTestDb) "Testnet DB " else ""
+                    prefix + getString(
+                        R.string.about_explore_preloaded_on,
+                        DateUtils.formatDateTime(applicationContext, dbPrefs.preloadedOnTimestamp, formatFlags)
+                    )
+                } else {
+                    DateUtils.formatDateTime(applicationContext, dbPrefs.lastSyncTimestamp, formatFlags)
+                }
             }
         }
     }

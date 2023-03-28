@@ -44,7 +44,6 @@ import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -68,7 +67,6 @@ import org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.DashDirectLogi
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class SearchFragment : Fragment(R.layout.fragment_search) {
@@ -76,8 +74,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         private const val SCROLL_OFFSET_FOR_UP = 700
     }
 
-    @Inject
-    lateinit var configuration: Configuration
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel by exploreViewModels<ExploreViewModel>()
     private val dashDirectViewModel by exploreViewModels<DashDirectViewModel>()
@@ -141,9 +137,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (!configuration.hasExploreDashInfoScreenBeenShown() && args.type == ExploreTopic.Merchants) {
-            safeNavigate(SearchFragmentDirections.exploreToInfo())
-            configuration.setHasExploreDashInfoScreenBeenShown(true)
+        lifecycleScope.launch {
+            if (!viewModel.isInfoShown() && args.type == ExploreTopic.Merchants) {
+                safeNavigate(SearchFragmentDirections.exploreToInfo())
+                viewModel.setIsInfoShown(true)
+            }
         }
     }
 
@@ -189,7 +187,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.recenterMapBtn.setOnClickListener { viewModel.recenterMapCallback.call() }
 
         binding.manageGpsView.managePermissionsBtn.setOnClickListener {
-            runLocationFlow(viewModel.exploreTopic, configuration, permissionRequestSettings)
+            lifecycleScope.launch {
+                runLocationFlow(viewModel.exploreTopic, viewModel.exploreConfig, permissionRequestSettings)
+            }
         }
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
@@ -351,10 +351,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     bottomSheet.isDraggable = isBottomSheetDraggable()
                     bottomSheetWasExpanded = false
                 } else if (!hasLocationBeenRequested) {
-                    requestLocationPermission(viewModel.exploreTopic, configuration, permissionRequestLauncher)
-                    // Shouldn't show location request on filter option switch more than once per
-                    // session
-                    hasLocationBeenRequested = true
+                    lifecycleScope.launch {
+                        requestLocationPermission(viewModel.exploreTopic, viewModel.exploreConfig, permissionRequestLauncher)
+                        // Shouldn't show location request on filter option switch more than once per session
+                        hasLocationBeenRequested = true
+                    }
                 }
             }
         }

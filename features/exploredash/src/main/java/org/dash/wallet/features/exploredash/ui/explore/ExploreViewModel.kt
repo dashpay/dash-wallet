@@ -37,6 +37,7 @@ import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.extensions.Const
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
+import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import java.util.*
 import javax.inject.Inject
 import kotlin.math.max
@@ -72,6 +73,7 @@ class ExploreViewModel @Inject constructor(
     private val locationProvider: UserLocationStateInt,
     private val syncStatusService: DataSyncStatusService,
     private val networkState: NetworkStateInt,
+    val exploreConfig: ExploreConfig,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
     companion object {
@@ -519,6 +521,13 @@ class ExploreViewModel @Inject constructor(
         _selectedTerritory.value = ""
         _paymentMethodFilter.value = ""
         _selectedRadiusOption.value = DEFAULT_RADIUS_OPTION
+    }
+
+    suspend fun isInfoShown(): Boolean =
+        exploreConfig.get(ExploreConfig.HAS_INFO_SCREEN_BEEN_SHOWN) ?: false
+
+    suspend fun setIsInfoShown(isShown: Boolean) {
+        exploreConfig.set(ExploreConfig.HAS_INFO_SCREEN_BEEN_SHOWN, isShown)
     }
 
     private fun clearSearchResults() {

@@ -26,7 +26,6 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.suspendCancellableCoroutine
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.RoomConverters
 import org.dash.wallet.features.exploredash.data.explore.AtmDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
@@ -35,6 +34,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.AtmFTS
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantFTS
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
+import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.slf4j.LoggerFactory
 import java.io.File
 import kotlin.coroutines.resume
@@ -59,14 +59,14 @@ abstract class ExploreDatabase : RoomDatabase() {
         private val log = LoggerFactory.getLogger(ExploreDatabase::class.java)
         private var instance: ExploreDatabase? = null
 
-        fun getAppDatabase(context: Context, config: Configuration): ExploreDatabase {
+        suspend fun getAppDatabase(context: Context, config: ExploreConfig): ExploreDatabase {
             if (instance == null) {
                 instance = open(context, config)
             }
             return instance!!
         }
 
-        suspend fun updateDatabase(context: Context, config: Configuration, repository: ExploreRepository) {
+        suspend fun updateDatabase(context: Context, config: ExploreConfig, repository: ExploreRepository) {
             log.info("force update explore db")
             if (instance != null) {
                 instance!!.close()
@@ -74,19 +74,22 @@ abstract class ExploreDatabase : RoomDatabase() {
             instance = update(context, config, repository)
         }
 
-        private fun open(context: Context, config: Configuration): ExploreDatabase {
-            val dbBuilder = Room.databaseBuilder(context, ExploreDatabase::class.java, config.exploreDatabaseName)
-            log.info("Open database {}", config.exploreDatabaseName)
+        private suspend fun open(context: Context, config: ExploreConfig): ExploreDatabase {
+            val exploreDatabaseName = config.get(ExploreConfig.EXPLORE_DATABASE_NAME)
+                ?: ExploreConfig.EXPLORE_DB_PREFIX
+            val dbBuilder = Room.databaseBuilder(context, ExploreDatabase::class.java, exploreDatabaseName)
+            log.info("Open database $exploreDatabaseName")
             return dbBuilder.build()
         }
 
         private suspend fun update(
             context: Context,
-            config: Configuration,
+            config: ExploreConfig,
             repository: ExploreRepository
         ): ExploreDatabase {
             val dbUpdateFile = repository.getUpdateFile()
-            var exploreDatabaseName = config.exploreDatabaseName
+            var exploreDatabaseName = config.get(ExploreConfig.EXPLORE_DATABASE_NAME)
+                ?: ExploreConfig.EXPLORE_DB_PREFIX
 
             if (dbUpdateFile.exists()) {
                 val dbTimestamp = repository.getTimestamp(dbUpdateFile)
@@ -97,7 +100,8 @@ abstract class ExploreDatabase : RoomDatabase() {
                 )
                 val oldDbFile = context.getDatabasePath(exploreDatabaseName)
                 repository.markDbForDeletion(oldDbFile)
-                exploreDatabaseName = config.setExploreDatabaseName(dbTimestamp)
+                exploreDatabaseName = "${ExploreConfig.EXPLORE_DATABASE_NAME}-$dbTimestamp"
+                config.set(ExploreConfig.EXPLORE_DATABASE_NAME, exploreDatabaseName)
             }
 
             val dbBuilder = Room.databaseBuilder(context, ExploreDatabase::class.java, exploreDatabaseName)

@@ -20,6 +20,7 @@ package de.schildbach.wallet.di
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.ConnectivityManager
+import androidx.preference.PreferenceManager
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -31,6 +32,7 @@ import de.schildbach.wallet.payments.ConfirmTransactionLauncher
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.service.*
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.LockScreenBroadcaster
@@ -69,6 +71,11 @@ abstract class AppModule {
         @Provides
         fun provideConnectivityManager(@ApplicationContext context: Context): ConnectivityManager =
             context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        @Singleton
+        @Provides
+        fun provideConfiguration(@ApplicationContext context: Context): Configuration =
+            Configuration(PreferenceManager.getDefaultSharedPreferences(context), context.resources)
     }
 
     @Binds

@@ -94,7 +94,7 @@ dependencies {
     kapt "androidx.room:room-compiler:$roomVersion"
 
     // Prefs
-    implementation 'androidx.preference:preference-ktx:1.1.1'
+    implementation "androidx.preference:preference-ktx:$preferenceVersion"
     implementation 'com.scottyab:secure-preferences-lib:0.1.7'
     implementation "androidx.datastore:datastore-preferences:$datastoreVersion"
 

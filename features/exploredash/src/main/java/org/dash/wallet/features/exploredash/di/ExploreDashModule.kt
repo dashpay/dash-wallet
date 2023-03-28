@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.di
 
 import android.content.Context
-import android.content.SharedPreferences
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.ktx.auth
@@ -44,13 +43,6 @@ import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 @InstallIn(SingletonComponent::class)
 abstract class ExploreDashModule {
     companion object {
-        const val PREFERENCES_FILENAME = "explore"
-
-        @Provides
-        fun provideSharedPrefs(@ApplicationContext context: Context): SharedPreferences {
-            return context.getSharedPreferences(PREFERENCES_FILENAME, Context.MODE_PRIVATE)
-        }
-
         @Provides
         fun provideContext(@ApplicationContext context: Context): Context {
             return context

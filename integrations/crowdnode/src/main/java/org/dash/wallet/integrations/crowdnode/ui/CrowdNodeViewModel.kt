@@ -210,7 +210,7 @@ class CrowdNodeViewModel @Inject constructor(
     fun clearError() {
         if (crowdNodeApi.apiError.value is MessageStatusException) {
             viewModelScope.launch {
-                config.setPreference(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID, -1)
+                config.set(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID, -1)
             }
         }
 
@@ -239,34 +239,34 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     suspend fun getIsInfoShown(): Boolean {
-        return config.getPreference(CrowdNodeConfig.INFO_SHOWN) ?: false
+        return config.get(CrowdNodeConfig.INFO_SHOWN) ?: false
     }
 
     fun setInfoShown(isShown: Boolean) {
         viewModelScope.launch {
-            config.setPreference(CrowdNodeConfig.INFO_SHOWN, isShown)
+            config.set(CrowdNodeConfig.INFO_SHOWN, isShown)
         }
     }
 
     suspend fun getShouldShowConfirmationDialog(): Boolean {
         return crowdNodeApi.onlineAccountStatus.value == OnlineAccountStatus.Confirming &&
-               !(config.getPreference(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN) ?: false)
+               !(config.get(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN) ?: false)
     }
 
     fun setConfirmationDialogShown(isShown: Boolean) {
         viewModelScope.launch {
-            config.setPreference(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN, isShown)
+            config.set(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN, isShown)
         }
     }
 
     suspend fun getShouldShowOnlineInfo(): Boolean {
         return signUpStatus != SignUpStatus.LinkedOnline &&
-                !(config.getPreference(CrowdNodeConfig.ONLINE_INFO_SHOWN) ?: false)
+                !(config.get(CrowdNodeConfig.ONLINE_INFO_SHOWN) ?: false)
     }
 
     fun setOnlineInfoShown(isShown: Boolean) {
         viewModelScope.launch {
-            config.setPreference(CrowdNodeConfig.ONLINE_INFO_SHOWN, isShown)
+            config.set(CrowdNodeConfig.ONLINE_INFO_SHOWN, isShown)
         }
     }
 
@@ -342,13 +342,13 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     suspend fun shouldShowWithdrawalLimitsInfo(): Boolean {
-        val isShown = config.getPreference(CrowdNodeConfig.WITHDRAWAL_LIMITS_SHOWN) ?: false
+        val isShown = config.get(CrowdNodeConfig.WITHDRAWAL_LIMITS_SHOWN) ?: false
         return !crowdNodeApi.hasAnyDeposits() && !isShown
     }
 
     fun triggerWithdrawalLimitsShown() {
         viewModelScope.launch {
-            config.setPreference(CrowdNodeConfig.WITHDRAWAL_LIMITS_SHOWN, true)
+            config.set(CrowdNodeConfig.WITHDRAWAL_LIMITS_SHOWN, true)
         }
     }
 

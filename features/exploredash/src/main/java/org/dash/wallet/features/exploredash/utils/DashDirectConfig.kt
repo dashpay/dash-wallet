@@ -20,17 +20,15 @@ package org.dash.wallet.features.exploredash.utils
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.dash.wallet.common.data.BaseConfig
 import org.dash.wallet.common.util.security.EncryptionProvider
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,8 +37,9 @@ import javax.inject.Singleton
 class DashDirectConfig @Inject constructor(
     private val context: Context,
     private val encryptionProvider: EncryptionProvider
-) {
+): BaseConfig(context, PREFERENCES_NAME) {
     companion object {
+        const val PREFERENCES_NAME = "dashdirect"
         private const val securityKeyAlias = "dash_direct_data-store"
         private const val bytesToStringSeparator = "|"
 
@@ -49,43 +48,13 @@ class DashDirectConfig @Inject constructor(
         val PREFS_DEVICE_UUID = stringPreferencesKey("device_uuid")
     }
 
-    private val Context.dataStore by preferencesDataStore("dashdirect")
     private val json = Json { encodeDefaults = true }
 
-    private val dataStore =
-        context.dataStore.data.catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-
-    fun <T> observePreference(key: Preferences.Key<T>): Flow<T?> {
-        return dataStore.map { preferences -> preferences[key] }
-    }
-
-    fun observeSecurePreference(key: Preferences.Key<String>): Flow<String?> {
-        return dataStore.secureMap { preferences -> preferences[key].orEmpty() }
-    }
-
-    suspend fun <T> getPreference(key: Preferences.Key<T>): T? {
-        return dataStore.map { preferences -> preferences[key] }.first()
-    }
-
-    suspend fun <T> setPreference(key: Preferences.Key<T>, value: T) {
-        context.dataStore.edit { preferences -> preferences[key] = value }
-    }
-
     suspend fun getSecuredData(key: Preferences.Key<String>) =
-        dataStore.secureMap<String> { preferences -> preferences[key].orEmpty() }.first()
+        data.secureMap<String> { preferences -> preferences[key].orEmpty() }.first()
 
     suspend fun setSecuredData(key: Preferences.Key<String>, value: String) {
         context.dataStore.secureEdit(value) { preferences, encryptedValue -> preferences[key] = encryptedValue }
-    }
-
-    suspend fun clearAll() {
-        context.dataStore.edit { it.clear() }
     }
 
     private inline fun <reified T> Flow<Preferences>.secureMap(

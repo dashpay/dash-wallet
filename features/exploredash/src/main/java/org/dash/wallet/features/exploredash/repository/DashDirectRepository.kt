@@ -50,7 +50,7 @@ class DashDirectRepository @Inject constructor(
     private val config: DashDirectConfig
 ) : DashDirectRepositoryInt {
 
-    override val userEmail: Flow<String?> = config.observeSecurePreference(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL)
+    override val userEmail: Flow<String?> = config.observe(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL)
 
     override suspend fun signIn(email: String): ResponseResource<Boolean> = safeApiCall {
         authApi.signIn(email = email).also {
@@ -63,7 +63,7 @@ class DashDirectRepository @Inject constructor(
                 createUser(email)
             }
             config.setSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
-            config.setPreference(DashDirectConfig.PREFS_DEVICE_UUID, UUID.randomUUID().toString())
+            config.set(DashDirectConfig.PREFS_DEVICE_UUID, UUID.randomUUID().toString())
         }
         true
     }
@@ -76,7 +76,7 @@ class DashDirectRepository @Inject constructor(
                 }
             }
             config.setSecuredData(DashDirectConfig.PREFS_KEY_DASH_DIRECT_EMAIL, email)
-            config.setPreference(DashDirectConfig.PREFS_DEVICE_UUID, UUID.randomUUID().toString())
+            config.set(DashDirectConfig.PREFS_DEVICE_UUID, UUID.randomUUID().toString())
         }
         true
     }
@@ -121,7 +121,7 @@ class DashDirectRepository @Inject constructor(
         merchantId: Long,
         userEmail: String
     ) = safeApiCall {
-        val deviceID = config.getPreference(DashDirectConfig.PREFS_DEVICE_UUID)!!
+        val deviceID = config.get(DashDirectConfig.PREFS_DEVICE_UUID)!!
         servicesApi.purchaseGiftCard(
             deviceID = deviceID,
 //            purchaseGiftCardRequest = PurchaseGiftCardRequest(

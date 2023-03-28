@@ -25,26 +25,25 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
+import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.system.measureTimeMillis
 
 @HiltWorker
-class ExploreSyncWorker
-@AssistedInject
-constructor(
+class ExploreSyncWorker @AssistedInject constructor(
     @Assisted private val appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val analytics: AnalyticsService,
     private val exploreRepository: ExploreRepository,
     private val syncStatus: ExploreDataSyncStatus,
-    private val config: Configuration
+    private val exploreConfig: ExploreConfig
 ) : CoroutineWorker(appContext, workerParams) {
     companion object {
         const val USE_TEST_DB_KEY = "use_test_database"
@@ -67,89 +66,94 @@ constructor(
         }
     }
 
-    override suspend fun doWork(): Result =
-        withContext(Dispatchers.IO) {
-            log.info("sync explore db started")
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        log.info("sync explore db started")
 
-            var localDataTimestamp = 0L
-            var remoteDataTimestamp = 0L
-            var preloadedDbTimestamp = 0L
+        var remoteDataTimestamp = 0L
+        var preloadedDbTimestamp = 0L
+        var databasePrefs = exploreConfig.exploreDatabasePrefs.first()
 
-            try {
-                syncStatus.setSyncProgress(0.0)
+        try {
+            syncStatus.setSyncProgress(0.0)
 
-                val timeInMillis = measureTimeMillis {
-                    val updateFile = exploreRepository.getUpdateFile()
-                    val checkTestDB = inputData.getBoolean(USE_TEST_DB_KEY, false)
-                    val hasPreloaded = exploreRepository.preloadFromAssetsInto(updateFile, checkTestDB)
+            val timeInMillis = measureTimeMillis {
+                val updateFile = exploreRepository.getUpdateFile()
+                val checkTestDB = inputData.getBoolean(USE_TEST_DB_KEY, false)
+                val hasPreloaded = exploreRepository.preloadFromAssetsInto(updateFile, checkTestDB)
 
-                    if (hasPreloaded) {
-                        preloadedDbTimestamp = exploreRepository.getTimestamp(updateFile)
-                        log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")
+                if (hasPreloaded) {
+                    preloadedDbTimestamp = exploreRepository.getTimestamp(updateFile)
+                    log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")
 
-                        if (
-                            exploreRepository.localDatabaseTimestamp == 0L ||
-                            exploreRepository.localDatabaseTimestamp < preloadedDbTimestamp
-                        ) {
-                            // force data preloading for fresh installs
-                            // and a newer preloaded DB
-                            ExploreDatabase.updateDatabase(appContext, config, exploreRepository)
-                            exploreRepository.preloadedOnTimestamp = preloadedDbTimestamp
-                        }
+                    if (databasePrefs.localDbTimestamp == 0L ||
+                        databasePrefs.localDbTimestamp < preloadedDbTimestamp
+                    ) {
+                        // force data preloading for fresh installs
+                        // and a newer preloaded DB
+                        ExploreDatabase.updateDatabase(appContext, exploreConfig, exploreRepository)
+                        databasePrefs = databasePrefs.copy(preloadedOnTimestamp = preloadedDbTimestamp)
+                        exploreConfig.saveExploreDatabasePrefs(databasePrefs)
                     }
-
-                    if (!updateFile.delete()) {
-                        log.error("unable to delete " + updateFile.absolutePath)
-                    }
-
-                    localDataTimestamp = exploreRepository.localDatabaseTimestamp
-                    log.info("local data timestamp: $localDataTimestamp (${Date(localDataTimestamp)})")
-
-                    remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
-                    log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
-
-                    if (localDataTimestamp >= remoteDataTimestamp) {
-                        log.info("explore db is up to date, nothing to sync")
-                        syncStatus.setSyncProgress(100.0)
-                        exploreRepository.failedSyncAttempts = 0
-
-                        if (exploreRepository.lastSyncAttemptTimestamp <= 0) {
-                            // Some devices might have this as 0 due to the bug. Need to update
-                            // manually
-                            // TODO: this can be removed after some time
-                            exploreRepository.lastSyncAttemptTimestamp = remoteDataTimestamp
-                        }
-
-                        return@withContext Result.success()
-                    }
-                    syncStatus.setSyncProgress(10.0)
-
-                    exploreRepository.download()
-
-                    syncStatus.setSyncProgress(80.0)
-
-                    ExploreDatabase.updateDatabase(appContext, config, exploreRepository)
                 }
 
-                log.info("sync explore db finished, took $timeInMillis ms")
+                if (!updateFile.delete()) {
+                    log.error("unable to delete " + updateFile.absolutePath)
+                }
 
-                syncStatus.setSyncProgress(100.0)
-            } catch (ex: FirebaseNetworkException) {
-                log.warn("sync explore no network", ex)
-                syncStatus.setSyncError(ex)
-                return@withContext Result.failure()
-            } catch (ex: Exception) {
-                analytics.logError(
-                    ex,
-                    "local: $localDataTimestamp, preloaded: $preloadedDbTimestamp, remote: $remoteDataTimestamp"
+                log.info(
+                    "local data timestamp: ${databasePrefs.localDbTimestamp} (${Date(databasePrefs.localDbTimestamp)})"
                 )
-                log.error("sync explore db crashed ${ex.message}", ex)
-                syncStatus.setSyncError(ex)
-                exploreRepository.failedSyncAttempts += 1
-                return@withContext Result.failure()
+
+                remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
+                log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
+
+                if (databasePrefs.localDbTimestamp >= remoteDataTimestamp) {
+                    log.info("explore db is up to date, nothing to sync")
+                    syncStatus.setSyncProgress(100.0)
+                    databasePrefs = databasePrefs.copy(failedSyncAttempts = 0)
+
+                    if (databasePrefs.lastSyncTimestamp <= 0) {
+                        // Some devices might have this as 0 due to the bug. Need to update
+                        // manually
+                        // TODO: this can be removed after some time
+                        databasePrefs = databasePrefs.copy(lastSyncTimestamp = remoteDataTimestamp)
+                    }
+
+                    exploreConfig.saveExploreDatabasePrefs(databasePrefs)
+
+                    return@withContext Result.success()
+                }
+                syncStatus.setSyncProgress(10.0)
+
+                exploreRepository.download()
+
+                syncStatus.setSyncProgress(80.0)
+
+                ExploreDatabase.updateDatabase(appContext, exploreConfig, exploreRepository)
             }
 
-            exploreRepository.failedSyncAttempts = 0
-            return@withContext Result.success()
+            log.info("sync explore db finished, took $timeInMillis ms")
+
+            syncStatus.setSyncProgress(100.0)
+        } catch (ex: FirebaseNetworkException) {
+            log.warn("sync explore no network", ex)
+            syncStatus.setSyncError(ex)
+            return@withContext Result.failure()
+        } catch (ex: Exception) {
+            analytics.logError(
+                ex,
+                "local: ${databasePrefs.localDbTimestamp}, " +
+                    "preloaded: $preloadedDbTimestamp, remote: $remoteDataTimestamp"
+            )
+            log.error("sync explore db crashed ${ex.message}", ex)
+            syncStatus.setSyncError(ex)
+            exploreConfig.saveExploreDatabasePrefs(
+                databasePrefs.copy(failedSyncAttempts = databasePrefs.failedSyncAttempts + 1)
+            )
+            return@withContext Result.failure()
         }
+
+        exploreConfig.saveExploreDatabasePrefs(databasePrefs.copy(failedSyncAttempts = 0))
+        return@withContext Result.success()
+    }
 }
