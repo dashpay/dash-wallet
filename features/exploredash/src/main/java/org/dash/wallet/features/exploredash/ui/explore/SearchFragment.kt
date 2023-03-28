@@ -352,7 +352,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     bottomSheetWasExpanded = false
                 } else if (!hasLocationBeenRequested) {
                     lifecycleScope.launch {
-                        requestLocationPermission(viewModel.exploreTopic, viewModel.exploreConfig, permissionRequestLauncher)
+                        requestLocationPermission(
+                            viewModel.exploreTopic,
+                            viewModel.exploreConfig,
+                            permissionRequestLauncher
+                        )
                         // Shouldn't show location request on filter option switch more than once per session
                         hasLocationBeenRequested = true
                     }

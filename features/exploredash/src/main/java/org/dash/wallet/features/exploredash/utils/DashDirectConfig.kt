@@ -30,7 +30,7 @@ class DashDirectConfig @Inject constructor(
     context: Context,
     walletDataProvider: WalletDataProvider,
     encryptionProvider: EncryptionProvider
-): BaseConfig(context, PREFERENCES_NAME, walletDataProvider, encryptionProvider) {
+) : BaseConfig(context, PREFERENCES_NAME, walletDataProvider, encryptionProvider) {
     companion object {
         const val PREFERENCES_NAME = "dashdirect"
 
