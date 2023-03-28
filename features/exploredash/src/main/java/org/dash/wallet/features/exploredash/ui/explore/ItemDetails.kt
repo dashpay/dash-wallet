@@ -35,7 +35,6 @@ import coil.load
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
 import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.getRoundedRippleBackground
 import org.dash.wallet.common.util.makeLinks
 import org.dash.wallet.common.util.maskEmail
@@ -136,10 +135,6 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
                 isUnderlineText = true
             )
         }
-    }
-
-    fun setGiftCardEnabled(isEnabled: Boolean) {
-        binding.payBtn.isEnabled = isEnabled
     }
 
     fun getMerchantType(type: String?): String {

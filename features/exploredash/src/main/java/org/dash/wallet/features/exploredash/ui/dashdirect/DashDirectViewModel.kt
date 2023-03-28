@@ -90,10 +90,6 @@ class DashDirectViewModel @Inject constructor(
     val usdExchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
 
-    private val _isBuyGiftCardEnabled: MutableLiveData<Boolean> = MutableLiveData()
-    val isBuyGiftCardEnabled: LiveData<Boolean>
-        get() = _isBuyGiftCardEnabled
-
     val isNetworkAvailable = networkState.isConnected.asLiveData()
 
     lateinit var giftCardMerchant: Merchant
@@ -114,12 +110,6 @@ class DashDirectViewModel @Inject constructor(
             .observeBalance()
             .distinctUntilChanged()
             .onEach(_balance::postValue)
-            .launchIn(viewModelScope)
-
-        blockchainState
-            .observeState()
-            .filterNotNull()
-            .onEach { _isBuyGiftCardEnabled.postValue(it.isSynced()) }
             .launchIn(viewModelScope)
     }
 
