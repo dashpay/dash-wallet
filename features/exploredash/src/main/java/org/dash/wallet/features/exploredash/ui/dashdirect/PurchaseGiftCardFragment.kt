@@ -28,7 +28,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
@@ -90,20 +89,14 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
                 binding.paymentHeaderView.setPaymentAddressViewIcon(merchant.logoLocation)
 
                 lifecycleScope.launch {
-                    val response = viewModel.getMerchantById(merchant.merchantId!!)
-                    if (response is ResponseResource.Success) {
-                        response.value?.data?.merchant?.let {
-                            merchant.savingsPercentage = it.savingsPercentage
-                            merchant.minCardPurchase = it.minimumCardPurchase
-                            merchant.maxCardPurchase = it.maximumCardPurchase
-
-                            setCardPurchaseLimits()
-                            setDiscountHint()
-                        }
-                    }
+                    viewModel.updateMerchantDetails(merchant)
+                    setCardPurchaseLimits()
+                    setDiscountHint()
                 }
             }
         }
+
+        enterAmountViewModel.amount.observe(viewLifecycleOwner) { showCardPurchaseLimits() }
 
         viewModel.usdExchangeRate.observe(viewLifecycleOwner) { rate ->
             if (viewModel.isUserSettingFiatIsNotUSD) {
@@ -115,7 +108,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
             enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseCoin, true)
             enterAmountViewModel.setMaxAmount(viewModel.maxCardPurchaseCoin)
         }
-        enterAmountViewModel.amount.observe(viewLifecycleOwner) { showCardPurchaseLimits() }
+
+        viewModel.isNetworkAvailable.observe(viewLifecycleOwner) { isConnected ->
+            enterAmountFragment?.handleNetworkState(isConnected)
+        }
     }
 
     private fun setCardPurchaseLimits() {

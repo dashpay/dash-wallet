@@ -69,17 +69,17 @@ class SecurityFunctions @Inject constructor(
         pinOnly: Boolean,
         callback: (String?) -> Unit
     ) {
-         if (pinRetryController.isLocked) {
-             val message = pinRetryController.getWalletTemporaryLockedMessage(activity.resources)
-             AdaptiveDialog.create(
-                 R.drawable.ic_warning,
-                 activity.getString(R.string.wallet_lock_wallet_disabled),
-                 message,
-                 activity.getString(android.R.string.ok)
-             ).show(activity)
-             callback.invoke(null)
-             return
-         }
+        if (pinRetryController.isLocked) {
+            val message = pinRetryController.getWalletTemporaryLockedMessage(activity.resources)
+            AdaptiveDialog.create(
+                R.drawable.ic_warning,
+                activity.getString(R.string.wallet_lock_wallet_disabled),
+                message,
+                activity.getString(android.R.string.ok)
+            ).show(activity)
+            callback.invoke(null)
+            return
+        }
 
         if (!pinOnly && biometricHelper.isEnabled) {
             log.info("authenticate with biometric")
@@ -152,8 +152,11 @@ class SecurityFunctions @Inject constructor(
             val scryptIterations = keyCrypter.scryptParameters.n
 
             if (scryptIterations != scryptIterationsTarget.toLong()) {
-                log.info("upgrading scrypt iterations from {} to {}; re-encrypting wallet",
-                    scryptIterations, scryptIterationsTarget)
+                log.info(
+                    "upgrading scrypt iterations from {} to {}; re-encrypting wallet",
+                    scryptIterations,
+                    scryptIterationsTarget
+                )
                 val newKeyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
                 val newKey: KeyParameter = newKeyCrypter.deriveKey(password)
 

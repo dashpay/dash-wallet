@@ -24,10 +24,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.suspendCancellableCoroutine
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.RoomConverters
 import org.dash.wallet.features.exploredash.data.explore.AtmDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
@@ -36,12 +34,22 @@ import org.dash.wallet.features.exploredash.data.explore.model.AtmFTS
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantFTS
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
+import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.slf4j.LoggerFactory
 import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-@Database(entities = [Merchant::class, MerchantFTS::class, Atm::class, AtmFTS::class], version = 2, exportSchema = true)
+@Database(
+    entities = [
+        Merchant::class,
+        MerchantFTS::class,
+        Atm::class,
+        AtmFTS::class
+    ],
+    version = 1,
+    exportSchema = true
+)
 @TypeConverters(RoomConverters::class)
 abstract class ExploreDatabase : RoomDatabase() {
     abstract fun merchantDao(): MerchantDao
@@ -51,24 +59,14 @@ abstract class ExploreDatabase : RoomDatabase() {
         private val log = LoggerFactory.getLogger(ExploreDatabase::class.java)
         private var instance: ExploreDatabase? = null
 
-        fun getAppDatabase(context: Context, config: Configuration): ExploreDatabase {
+        suspend fun getAppDatabase(context: Context, config: ExploreConfig): ExploreDatabase {
             if (instance == null) {
                 instance = open(context, config)
             }
             return instance!!
         }
 
-        @JvmStatic
-        val migration1To2 =
-            object : Migration(1, 2) {
-                override fun migrate(database: SupportSQLiteDatabase) {
-                    database.execSQL("ALTER TABLE merchant ADD COLUMN minCardPurchase REAL DEFAULT 0.0")
-                    database.execSQL("ALTER TABLE merchant ADD COLUMN maxCardPurchase REAL DEFAULT 0.0")
-                    database.execSQL("ALTER TABLE merchant ADD COLUMN savingsPercentage REAL DEFAULT 0.0")
-                }
-            }
-
-        suspend fun updateDatabase(context: Context, config: Configuration, repository: ExploreRepository) {
+        suspend fun updateDatabase(context: Context, config: ExploreConfig, repository: ExploreRepository) {
             log.info("force update explore db")
             if (instance != null) {
                 instance!!.close()
@@ -76,21 +74,22 @@ abstract class ExploreDatabase : RoomDatabase() {
             instance = update(context, config, repository)
         }
 
-        private fun open(context: Context, config: Configuration): ExploreDatabase {
-            val dbBuilder = Room.databaseBuilder(context, ExploreDatabase::class.java, config.exploreDatabaseName)
-            log.info("Open database {}", config.exploreDatabaseName)
-            return dbBuilder
-                .addMigrations(migration1To2)
-                .build()
+        private suspend fun open(context: Context, config: ExploreConfig): ExploreDatabase {
+            val exploreDatabaseName = config.get(ExploreConfig.EXPLORE_DATABASE_NAME)
+                ?: ExploreConfig.EXPLORE_DB_PREFIX
+            val dbBuilder = Room.databaseBuilder(context, ExploreDatabase::class.java, exploreDatabaseName)
+            log.info("Open database $exploreDatabaseName")
+            return dbBuilder.build()
         }
 
         private suspend fun update(
             context: Context,
-            config: Configuration,
+            config: ExploreConfig,
             repository: ExploreRepository
         ): ExploreDatabase {
             val dbUpdateFile = repository.getUpdateFile()
-            var exploreDatabaseName = config.exploreDatabaseName
+            var exploreDatabaseName = config.get(ExploreConfig.EXPLORE_DATABASE_NAME)
+                ?: ExploreConfig.EXPLORE_DB_PREFIX
 
             if (dbUpdateFile.exists()) {
                 val dbTimestamp = repository.getTimestamp(dbUpdateFile)
@@ -101,7 +100,8 @@ abstract class ExploreDatabase : RoomDatabase() {
                 )
                 val oldDbFile = context.getDatabasePath(exploreDatabaseName)
                 repository.markDbForDeletion(oldDbFile)
-                exploreDatabaseName = config.setExploreDatabaseName(dbTimestamp)
+                exploreDatabaseName = "${ExploreConfig.EXPLORE_DATABASE_NAME}-$dbTimestamp"
+                config.set(ExploreConfig.EXPLORE_DATABASE_NAME, exploreDatabaseName)
             }
 
             val dbBuilder = Room.databaseBuilder(context, ExploreDatabase::class.java, exploreDatabaseName)
@@ -163,12 +163,7 @@ abstract class ExploreDatabase : RoomDatabase() {
                         }
                     }
 
-                database =
-                    dbBuilder
-                        // .fallbackToDestructiveMigration()
-                        .addMigrations(migration1To2)
-                        .addCallback(onOpenCallback)
-                        .build()
+                database = dbBuilder.addCallback(onOpenCallback).build()
 
                 if (database.isOpen) {
                     log.warn("database is already open")

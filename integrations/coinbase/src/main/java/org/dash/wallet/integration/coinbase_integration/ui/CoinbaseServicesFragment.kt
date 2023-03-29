@@ -208,11 +208,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         super.onStop()
     }
 
-    override fun onResume() {
-        super.onResume()
-        viewModel.monitorNetworkStateChange()
-    }
-
     private fun setNetworkState(hasInternet: Boolean) {
         binding.lastKnownBalance.isVisible = !hasInternet
         binding.networkStatusStub.isVisible = !hasInternet

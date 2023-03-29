@@ -17,19 +17,17 @@
 
 package org.dash.wallet.features.exploredash.ui.explore
 
-import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
 import androidx.paging.*
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
-import org.dash.wallet.common.livedata.ConnectionLiveData
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
@@ -39,6 +37,7 @@ import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.extensions.Const
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
+import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import java.util.*
 import javax.inject.Inject
 import kotlin.math.max
@@ -69,13 +68,12 @@ data class FilterOptions(val query: String, val territory: String, val payment: 
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
-class ExploreViewModel
-@Inject
-constructor(
-    @ApplicationContext private val context: Context,
+class ExploreViewModel @Inject constructor(
     private val exploreData: ExploreDataSource,
     private val locationProvider: UserLocationStateInt,
     private val syncStatusService: DataSyncStatusService,
+    private val networkState: NetworkStateInt,
+    val exploreConfig: ExploreConfig,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
     companion object {
@@ -204,6 +202,49 @@ constructor(
     val screenState: LiveData<ScreenState>
         get() = _screenState
 
+    var syncStatus: LiveData<Resource<Double>> =
+        MediatorLiveData<Resource<Double>>().apply {
+            // combine connectivity, sync status and if the last error was observed
+            val connectivityLiveData = networkState.isConnected.asLiveData()
+            val syncStatusLiveData = syncStatusService.getSyncProgressFlow().asLiveData()
+            val observedLastErrorLiveData = syncStatusService.hasObservedLastError().asLiveData()
+
+            fun setSyncStatus(isOnline: Boolean, progress: Resource<Double>, observedLastError: Boolean) {
+                value = when {
+                    progress.exception != null -> {
+                        if (!observedLastError) {
+                            progress
+                        } else {
+                            Resource.success(100.0) // hide errors if already observed
+                        }
+                    }
+                    progress.status == Status.LOADING && !isOnline -> {
+                        if (!observedLastError) {
+                            Resource.error(FirebaseNetworkException("network is offline"))
+                        } else {
+                            Resource.success(100.0) // hide errors if already observed
+                        }
+                    }
+                    else -> progress
+                }
+            }
+            addSource(observedLastErrorLiveData) { hasObservedLastError ->
+                if (connectivityLiveData.value != null && syncStatusLiveData.value != null) {
+                    setSyncStatus(connectivityLiveData.value!!, syncStatusLiveData.value!!, hasObservedLastError)
+                }
+            }
+            addSource(syncStatusLiveData) { progress ->
+                if (connectivityLiveData.value != null && observedLastErrorLiveData.value != null) {
+                    setSyncStatus(connectivityLiveData.value!!, progress, observedLastErrorLiveData.value!!)
+                }
+            }
+            addSource(connectivityLiveData) { isOnline ->
+                if (syncStatusLiveData.value != null && observedLastErrorLiveData.value != null) {
+                    setSyncStatus(isOnline, syncStatusLiveData.value!!, observedLastErrorLiveData.value!!)
+                }
+            }
+        }
+
     // Used for the list of search results
     private val pagingSearchFlow: Flow<PagingData<SearchResult>> =
         _searchQuery.debounce(QUERY_DEBOUNCE_VALUE).flatMapLatest { query ->
@@ -325,15 +366,9 @@ constructor(
         _selectedTerritory
             .onEach { territory ->
                 when {
-                    territory.isNotEmpty() -> {
-                        _searchLocationName.postValue(territory)
-                    }
-                    lastResolvedAddress != null -> {
-                        resolveAddress(lastResolvedAddress!!)
-                    }
-                    else -> {
-                        _searchLocationName.postValue("")
-                    }
+                    territory.isNotEmpty() -> _searchLocationName.postValue(territory)
+                    lastResolvedAddress != null -> resolveAddress(lastResolvedAddress!!)
+                    else -> _searchLocationName.postValue("")
                 }
             }
             .launchIn(viewModelWorkerScope)
@@ -348,6 +383,8 @@ constructor(
     }
 
     fun setFilterMode(mode: FilterMode) {
+        logFilterChange(mode)
+
         if (_filterMode.value != mode) {
             _filterMode.value = mode
         }
@@ -366,7 +403,9 @@ constructor(
     }
 
     fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
+        analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_MERCHANT_LOCATION, mapOf())
         _selectedItem.postValue(merchant)
+
         if (isGrouped) {
             if (canShowNearestLocation(merchant)) {
                 // Opening details screen
@@ -382,6 +421,7 @@ constructor(
     }
 
     fun openAtmDetails(atm: Atm) {
+        analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_ATM_LOCATION, mapOf())
         _selectedItem.postValue(atm)
         _screenState.postValue(ScreenState.Details)
     }
@@ -481,6 +521,13 @@ constructor(
         _selectedTerritory.value = ""
         _paymentMethodFilter.value = ""
         _selectedRadiusOption.value = DEFAULT_RADIUS_OPTION
+    }
+
+    suspend fun isInfoShown(): Boolean =
+        exploreConfig.get(ExploreConfig.HAS_INFO_SCREEN_BEEN_SHOWN) ?: false
+
+    suspend fun setIsInfoShown(isShown: Boolean) {
+        exploreConfig.set(ExploreConfig.HAS_INFO_SCREEN_BEEN_SHOWN, isShown)
     }
 
     private fun clearSearchResults() {
@@ -662,49 +709,6 @@ constructor(
         _physicalSearchResults.value = results
     }
 
-    var syncStatus: LiveData<Resource<Double>> =
-        MediatorLiveData<Resource<Double>>().apply {
-            // combine connectivity, sync status and if the last error was observed
-            val connectivityLiveData = ConnectionLiveData(context)
-            val syncStatusLiveData = syncStatusService.getSyncProgressFlow().asLiveData()
-            val observedLastErrorLiveData = syncStatusService.hasObservedLastError().asLiveData()
-
-            fun setSyncStatus(isOnline: Boolean, progress: Resource<Double>, observedLastError: Boolean) {
-                value = when {
-                    progress.exception != null -> {
-                        if (!observedLastError) {
-                            progress
-                        } else {
-                            Resource.success(100.0) // hide errors if already observed
-                        }
-                    }
-                    progress.status == Status.LOADING && !isOnline -> {
-                        if (!observedLastError) {
-                            Resource.error(FirebaseNetworkException("network is offline"))
-                        } else {
-                            Resource.success(100.0) // hide errors if already observed
-                        }
-                    }
-                    else -> progress
-                }
-            }
-            addSource(observedLastErrorLiveData) { hasObservedLastError ->
-                if (connectivityLiveData.value != null && syncStatusLiveData.value != null) {
-                    setSyncStatus(connectivityLiveData.value!!, syncStatusLiveData.value!!, hasObservedLastError)
-                }
-            }
-            addSource(syncStatusLiveData) { progress ->
-                if (connectivityLiveData.value != null && observedLastErrorLiveData.value != null) {
-                    setSyncStatus(connectivityLiveData.value!!, progress, observedLastErrorLiveData.value!!)
-                }
-            }
-            addSource(connectivityLiveData) { isOnline ->
-                if (syncStatusLiveData.value != null && observedLastErrorLiveData.value != null) {
-                    setSyncStatus(isOnline, syncStatusLiveData.value!!, observedLastErrorLiveData.value!!)
-                }
-            }
-        }
-
     fun setObservedLastError() {
         viewModelScope.launch { syncStatusService.setObservedLastError() }
     }
@@ -837,6 +841,41 @@ constructor(
                 logEvent(AnalyticsConstants.Explore.FILTER_MERCHANT_SWIPE_ACTION)
             } else {
                 logEvent(AnalyticsConstants.Explore.FILTER_ATM_SWIPE_ACTION)
+            }
+        }
+    }
+
+    private fun logFilterChange(mode: FilterMode) {
+        if (exploreTopic == ExploreTopic.Merchants) {
+            when (mode) {
+                FilterMode.Online ->
+                    analyticsService.logEvent(AnalyticsConstants.Explore.ONLINE_MERCHANTS, mapOf())
+                FilterMode.Nearby ->
+                    analyticsService.logEvent(AnalyticsConstants.Explore.NEARBY_MERCHANTS, mapOf())
+                else -> analyticsService.logEvent(AnalyticsConstants.Explore.ALL_MERCHANTS, mapOf())
+            }
+        } else {
+            when (mode) {
+                FilterMode.Buy -> analyticsService.logEvent(AnalyticsConstants.Explore.BUY_ATM, mapOf())
+                FilterMode.Sell -> analyticsService.logEvent(AnalyticsConstants.Explore.SELL_ATM, mapOf())
+                FilterMode.BuySell -> analyticsService.logEvent(AnalyticsConstants.Explore.BUY_SELL_ATM, mapOf())
+                else -> analyticsService.logEvent(AnalyticsConstants.Explore.ALL_ATM, mapOf())
+            }
+        }
+    }
+
+    fun logFiltersOpened(fromTop: Boolean) {
+        if (fromTop) {
+            if (exploreTopic == ExploreTopic.Merchants) {
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_TOP, mapOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_TOP, mapOf())
+            }
+        } else {
+            if (exploreTopic == ExploreTopic.Merchants) {
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_MERCHANTS_BOTTOM, mapOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.Explore.FILTER_ATM_BOTTOM, mapOf())
             }
         }
     }

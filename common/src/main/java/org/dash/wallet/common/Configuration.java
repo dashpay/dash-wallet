@@ -94,20 +94,12 @@ public class Configuration {
     public static final String PREFS_KEY_COINBASE_AUTH_INFO_SHOWN = "coinbase_auth_info_shown";
     public static final String PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT = "withdrawal_limit";
     public static final String PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY = "send_limit_currency";
-
-
-
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     public static final int PREFS_DEFAULT_BTC_PRECISION = 8;
     public static final String PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION = "is_dash_to_fiat_direction";
     public static final String PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER = "show_notifications_explainer";
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER = "show_tax_catagory_explainer";
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME = "show_tax_catagory_install_time";
-
-    // Explore Dash
-    public static final String PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY = "has_info_screen_been_shown";
-    public static final String PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN = "has_location_dialog_been_shown";
-    public static final String PREFS_KEY_EXPLORE_DATABASE_NAME = "explore_database_name";
 
     // CrowdNode
     public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
@@ -495,38 +487,8 @@ public class Configuration {
         prefs.edit().putLong(PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME, time).apply();
     }
 
-    // Explore Dash
-
-    public boolean hasExploreDashInfoScreenBeenShown() {
-        return prefs.getBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, false);
-    }
-
-    public void setHasExploreDashInfoScreenBeenShown(boolean isShown){
-        prefs.edit().putBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, isShown).apply();
-    }
-
-    public boolean hasExploreDashLocationDialogBeenShown() {
-        return prefs.getBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, false);
-    }
-
-    public void setHasExploreDashLocationDialogBeenShown(boolean isShown) {
-        prefs.edit().putBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, isShown).apply();
-    }
-
-    public String setExploreDatabaseName(Long timestamp) {
-        String dbName = "explore-database-" + timestamp;
-        prefs.edit().putString(PREFS_KEY_EXPLORE_DATABASE_NAME, dbName).apply();
-        return dbName;
-    }
-
-    @NonNull
-    public String getExploreDatabaseName() {
-        return prefs.getString(PREFS_KEY_EXPLORE_DATABASE_NAME, "explore-database");
-    }
-
     // Coinbase
     // TODO: put new preferences in the CoinbaseConfig and migrate these.
-
     public void setLastCoinBaseAccessToken(String token) {
         prefs.edit().putString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, token).apply();
     }

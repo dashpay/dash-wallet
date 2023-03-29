@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2020 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,19 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.util.security
+package org.dash.wallet.common.services
 
-import java.io.IOException
-import java.security.GeneralSecurityException
-import java.security.KeyStoreException
+import kotlinx.coroutines.flow.StateFlow
 
-interface EncryptionProvider {
-    @Throws(GeneralSecurityException::class, IOException::class)
-    fun encrypt(keyAlias: String, textToEncrypt: String): ByteArray?
-
-    @Throws(GeneralSecurityException::class, IOException::class)
-    fun decrypt(keyAlias: String, encryptedData: ByteArray): String
-
-    @Throws(KeyStoreException::class)
-    fun deleteKey(keyAlias: String)
+interface NetworkStateInt {
+    val isConnected: StateFlow<Boolean>
 }

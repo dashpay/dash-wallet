@@ -45,6 +45,8 @@ object Constants {
         MonetaryFormat().withLocale(GenericUtils.getDeviceLocale()).minDecimals(2)
             .optionalDecimals()
 
+    const val ANDROID_KEY_STORE = "AndroidKeyStore"
+
     lateinit var EXPLORE_GC_FILE_PATH: String
     var DEEP_LINK_PREFIX = "android-app://hashengineering.darkcoin.wallet"
 

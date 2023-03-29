@@ -28,10 +28,10 @@ import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
+import org.dash.wallet.features.exploredash.utils.ExploreConfig
 
 val Fragment.isLocationPermissionGranted: Boolean
     get() =
@@ -45,12 +45,14 @@ fun Fragment.registerPermissionLauncher(onResult: (Boolean) -> Unit): ActivityRe
     }
 }
 
-fun Fragment.requestLocationPermission(
+suspend fun Fragment.requestLocationPermission(
     exploreTopic: ExploreTopic,
-    configuration: Configuration,
+    configuration: ExploreConfig,
     requestLauncher: ActivityResultLauncher<Array<String>>
 ) {
-    if (configuration.hasExploreDashLocationDialogBeenShown()) {
+    val isLocationDialogShown = configuration.get(ExploreConfig.HAS_LOCATION_DIALOG_BEEN_SHOWN) ?: false
+
+    if (isLocationDialogShown) {
         requestLauncher.launch(
             arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
         )
@@ -59,7 +61,7 @@ fun Fragment.requestLocationPermission(
             val result = showPermissionExplainerDialog(exploreTopic)
 
             if (result == true) {
-                configuration.setHasExploreDashLocationDialogBeenShown(true)
+                configuration.set(ExploreConfig.HAS_LOCATION_DIALOG_BEEN_SHOWN, true)
                 requestLauncher.launch(
                     arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
                 )
@@ -94,9 +96,9 @@ suspend fun Fragment.showPermissionExplainerDialog(exploreTopic: ExploreTopic): 
     return dialog.showAsync(requireActivity())
 }
 
-fun Fragment.runLocationFlow(
+suspend fun Fragment.runLocationFlow(
     exploreTopic: ExploreTopic,
-    configuration: Configuration,
+    configuration: ExploreConfig,
     requestLauncher: ActivityResultLauncher<Array<String>>
 ) {
     if (isLocationPermissionGranted) {

@@ -36,10 +36,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.ExchangeRate
-import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.common.services.LeftoverBalanceException
-import org.dash.wallet.common.services.SendPaymentService
-import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.discountBy
@@ -68,6 +65,7 @@ class DashDirectViewModel @Inject constructor(
     private val transactionMetadata: TransactionMetadataProvider,
     private val exploreData: ExploreDataSource,
     private val giftCardDao: GiftCardDao,
+    networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
 
@@ -89,6 +87,8 @@ class DashDirectViewModel @Inject constructor(
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
     val usdExchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
+
+    val isNetworkAvailable = networkState.isConnected.asLiveData()
 
     lateinit var giftCardMerchant: Merchant
     lateinit var giftCardPaymentValue: Fiat
@@ -119,7 +119,6 @@ class DashDirectViewModel @Inject constructor(
                     merchantId = it,
                     amountUSD = amountValue.toBigDecimal().toDouble(),
                     paymentCurrency = Constants.DASH_CURRENCY,
-                    deviceID = UUID.randomUUID().toString(), // TODO
                     userEmail = email
                 )
 
@@ -151,7 +150,23 @@ class DashDirectViewModel @Inject constructor(
         return transaction.txId
     }
 
-    suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>? {
+    suspend fun updateMerchantDetails(merchant: Merchant) {
+        if (merchant.minCardPurchase != null && merchant.maxCardPurchase != null) {
+            return
+        }
+
+        val response = getMerchantById(merchant.merchantId!!)
+
+        if (response is ResponseResource.Success) {
+            response.value?.data?.merchant?.let {
+                merchant.savingsPercentage = it.savingsPercentage
+                merchant.minCardPurchase = it.minimumCardPurchase
+                merchant.maxCardPurchase = it.maximumCardPurchase
+            }
+        }
+    }
+
+    private suspend fun getMerchantById(merchantId: Long): ResponseResource<GetMerchantByIdResponse?>? {
         repository.getDashDirectEmail()?.let { email ->
             return repository.getMerchantById(merchantId = merchantId, includeLocations = false, userEmail = email)
         }
@@ -181,7 +196,7 @@ class DashDirectViewModel @Inject constructor(
         }
     }
 
-    fun isUserSignInDashDirect() = repository.isUserSignIn()
+    suspend fun isUserSignInDashDirect() = repository.isUserSignIn()
 
     suspend fun signInToDashDirect(email: String) = repository.signIn(email)
 

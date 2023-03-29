@@ -112,13 +112,6 @@
         <item name="android:drawablePadding">4dp</item>
     </style>
 
-    <style name="ListSeparator">
-        <item name="android:alpha">0.25</item>
-        <item name="android:background">@color/old_gray</item>
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">1dp</item>
-    </style>
-
     <style name="OldCheckBox">
         <item name="android:layout_marginLeft">-2dp</item>
         <item name="android:layout_marginStart">-2dp</item>
@@ -614,8 +607,8 @@
         <item name="android:textColor">@color/content_tertiary</item>
     </style>
 
-    <style name="Caption.Tangerine">
-        <item name="android:textColor">@color/tangerine</item>
+    <style name="Caption.Orange">
+        <item name="android:textColor">@color/orange</item>
     </style>
 
     <style name="Caption.Medium">
@@ -787,6 +780,12 @@
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
+    <style name="PrimaryButtonTheme.Large.Orange">
+        <item name="backgroundColor">@color/orange</item>
+        <item name="strokeColor">@color/orange</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
     <style name="PrimaryButtonTheme.Large.TransparentBlue">
         <item name="backgroundColor">@color/light_blue</item>
         <item name="strokeColor">@android:color/transparent</item>
@@ -871,6 +870,10 @@
 
     <style name="Button.Primary.Large.Blue">
         <item name="android:theme">@style/PrimaryButtonTheme.Large.Blue</item>
+    </style>
+
+    <style name="Button.Primary.Large.Orange">
+        <item name="android:theme">@style/PrimaryButtonTheme.Large.Orange</item>
     </style>
 
     <style name="Button.Primary.Large.Inverted">
@@ -1147,8 +1150,8 @@
     </style>
 
     <style name="TxTangerineBackground">
-        <item name="backgroundColor">@color/tx_tangerine_background</item>
-        <item name="strokeColor">@color/tx_tangerine_background</item>
+        <item name="backgroundColor">@color/tx_orange_background</item>
+        <item name="strokeColor">@color/tx_orange_background</item>
         <item name="cornerRadius">19dp</item>
     </style>
 

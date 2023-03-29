@@ -34,7 +34,8 @@ import androidx.core.view.updatePaddingRelative
 import coil.load
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
-import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.ui.getRoundedRippleBackground
 import org.dash.wallet.common.util.makeLinks
 import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
@@ -43,7 +44,6 @@ import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import java.util.*
 
-@AndroidEntryPoint
 class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
     private val binding = ItemDetailsViewBinding.inflate(LayoutInflater.from(context), this)
 
@@ -57,6 +57,9 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     private var onBuyGiftCardButtonClicked: (() -> Unit)? = null
     private var onDashDirectLogOutClicked: (() -> Unit)? = null
 
+    private var isLoggedIn = false
+    private var isAtm = false
+
     init {
         orientation = VERTICAL
         val horizontalPadding = resources.getDimensionPixelOffset(R.dimen.details_horizontal_margin)
@@ -65,10 +68,14 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
 
     fun bindItem(item: SearchResult) {
         if (item is Merchant) {
+            isAtm = false
             bindMerchantDetails(item)
         } else if (item is Atm) {
+            isAtm = true
             bindAtmDetails(item)
         }
+
+        refreshEmailVisibility()
     }
 
     fun setOnSendDashClicked(listener: (Boolean) -> Unit) {
@@ -109,7 +116,8 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
 
     @SuppressLint("SetTextI18n")
     fun setDashDirectLogInUser(email: String?, userSignIn: Boolean) {
-        binding.loginDashDirectUser.isVisible = email?.isNotEmpty() == true && userSignIn
+        isLoggedIn = email?.isNotEmpty() == true && userSignIn
+        refreshEmailVisibility()
         email?.let {
             binding.loginDashDirectUser.text =
                 context.resources.getString(R.string.logged_in_as, email.maskEmail()) +
@@ -192,7 +200,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             val drawable =
                 ResourcesCompat.getDrawable(
                     resources,
-                    if (isDash) R.drawable.ic_dash else R.drawable.ic_gift_card,
+                    if (isDash) R.drawable.ic_dash_inverted else R.drawable.ic_gift_card_inverted,
                     null
                 )
             payBtn.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
@@ -200,11 +208,14 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             if (isDash) {
                 payBtn.isVisible = true
                 payBtn.text = context.getText(R.string.explore_pay_with_dash)
+                payBtn.background = resources.getRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Blue)
                 payBtn.setOnClickListener { onSendDashClicked?.invoke(true) }
             } else {
                 // DashDirect allows payments via API, other sources require a deeplink
-                payBtn.isVisible = merchant.source == "DashDirect" || !merchant.deeplink.isNullOrBlank()
+                payBtn.isVisible = merchant.source?.lowercase() == ServiceName.DashDirect ||
+                    !merchant.deeplink.isNullOrBlank()
                 payBtn.text = context.getText(R.string.explore_buy_gift_card)
+                payBtn.background = resources.getRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Orange)
                 payBtn.setOnClickListener { onBuyGiftCardButtonClicked?.invoke() }
             }
 
@@ -287,5 +298,9 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
 
     private fun cleanMerchantTypeValue(value: String?): String? {
         return value?.trim()?.lowercase()?.replace(" ", "_")
+    }
+
+    private fun refreshEmailVisibility() {
+        binding.loginDashDirectUser.isVisible = isLoggedIn && !isAtm
     }
 }

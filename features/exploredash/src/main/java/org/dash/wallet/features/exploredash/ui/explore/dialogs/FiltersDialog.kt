@@ -26,7 +26,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
 import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
@@ -44,7 +43,6 @@ import org.dash.wallet.features.exploredash.ui.extensions.openAppSettings
 import org.dash.wallet.features.exploredash.ui.extensions.registerPermissionLauncher
 import org.dash.wallet.features.exploredash.ui.extensions.runLocationFlow
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
@@ -63,8 +61,6 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     private var territoriesJob: Deferred<List<String>>? = null
     private var radiusOptionsAdapter: RadioGroupAdapter? = null
     private var sortByOptionsAdapter: RadioGroupAdapter? = null
-
-    @Inject lateinit var configuration: Configuration
 
     private val permissionRequestLauncher = registerPermissionLauncher { isGranted ->
         if (isGranted) {
@@ -276,11 +272,15 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             )
 
         binding.locationSettingsBtn.setOnClickListener {
-            runLocationFlow(viewModel.exploreTopic, configuration, permissionRequestLauncher)
+            lifecycleScope.launch {
+                runLocationFlow(viewModel.exploreTopic, viewModel.exploreConfig, permissionRequestLauncher)
+            }
         }
 
         binding.manageGpsView.managePermissionsBtn.setOnClickListener {
-            runLocationFlow(viewModel.exploreTopic, configuration, permissionRequestLauncher)
+            lifecycleScope.launch {
+                runLocationFlow(viewModel.exploreTopic, viewModel.exploreConfig, permissionRequestLauncher)
+            }
         }
     }
 

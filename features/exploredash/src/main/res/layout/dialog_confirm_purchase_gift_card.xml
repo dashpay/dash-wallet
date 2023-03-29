@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-  ~ Copyright 2021 Dash Core Group.
+  ~ Copyright 2023 Dash Core Group.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
     android:layout_height="wrap_content"
     android:paddingBottom="15dp"
     tools:background="@color/background_primary"
-    tools:context="org.dash.wallet.features.exploredash.ui.explore.dialogs.FiltersDialog">
+    tools:context="org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.PurchaseGiftCardConfirmDialog">
 
     <FrameLayout
         android:id="@+id/header"

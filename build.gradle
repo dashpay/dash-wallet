@@ -16,6 +16,8 @@ buildscript {
         datastoreVersion = "1.0.0"
         hiltVersion = '2.45'
         hiltWorkVersion = '1.0.0'
+        serializationVersion = '1.0.1'
+        preferenceVersion = '1.2.0'
 
         // Utils
         slf4jVersion = '1.7.32'

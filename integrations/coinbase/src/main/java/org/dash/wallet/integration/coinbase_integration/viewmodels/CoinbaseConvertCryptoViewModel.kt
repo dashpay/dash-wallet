@@ -20,7 +20,6 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
@@ -29,11 +28,10 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.NetworkStateInt
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.model.*
@@ -43,7 +41,6 @@ import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepos
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
 
-@ExperimentalCoroutinesApi
 @HiltViewModel
 class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
@@ -51,9 +48,9 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val config: CoinbaseConfig,
     private val walletDataProvider: WalletDataProvider,
     var exchangeRates: ExchangeRatesProvider,
-    var networkState: NetworkStateInt,
+    networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
-) : ConnectivityViewModel(networkState) {
+) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
@@ -67,6 +64,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val _dashWalletBalance = MutableLiveData<Coin>()
     val dashWalletBalance: LiveData<Coin>
         get() = this._dashWalletBalance
+
+    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
     lateinit var exchangeRate: ExchangeRate
 

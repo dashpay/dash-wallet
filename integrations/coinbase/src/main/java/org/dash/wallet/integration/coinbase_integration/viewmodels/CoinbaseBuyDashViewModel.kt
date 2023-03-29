@@ -16,7 +16,6 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -28,11 +27,10 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.NetworkStateInt
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
@@ -42,14 +40,14 @@ import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepos
 import java.lang.NumberFormatException
 import javax.inject.Inject
 
-@ExperimentalCoroutinesApi
 @HiltViewModel
-class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepository: CoinBaseRepositoryInt,
-                                                   private val userPreference: Configuration,
-                                                   var exchangeRates: ExchangeRatesProvider,
-                                                   var networkState: NetworkStateInt,
-                                                   private val analyticsService: AnalyticsService
-) : ConnectivityViewModel(networkState) {
+class CoinbaseBuyDashViewModel @Inject constructor(
+    private val coinBaseRepository: CoinBaseRepositoryInt,
+    private val userPreference: Configuration,
+    var exchangeRates: ExchangeRatesProvider,
+    networkState: NetworkStateInt,
+    private val analyticsService: AnalyticsService
+) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
@@ -58,10 +56,13 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
     val activePaymentMethods: LiveData<List<PaymentMethod>>
         get() = _activePaymentMethods
 
-    val placeBuyOrder = SingleLiveEvent<PlaceBuyOrderUIModel>()
+    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
+    val placeBuyOrder = SingleLiveEvent<PlaceBuyOrderUIModel>()
     val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
-     var exchangeRate: ExchangeRate?= null
+
+    var exchangeRate: ExchangeRate? = null
+        private set
 
     init {
         getWithdrawalLimit()

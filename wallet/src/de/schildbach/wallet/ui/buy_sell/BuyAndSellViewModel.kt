@@ -16,27 +16,22 @@
 
 package de.schildbach.wallet.ui.buy_sell
 
-import androidx.core.os.bundleOf
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import de.schildbach.wallet.data.ServiceStatus
 import de.schildbach.wallet.data.ServiceType
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import org.dash.wallet.integration.uphold.api.UpholdClient
@@ -47,17 +42,16 @@ import javax.inject.Inject
 /**
  * @author Eric Britten
  */
-@ExperimentalCoroutinesApi
 @HiltViewModel
 class BuyAndSellViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
     val config: Configuration,
-    val coinbaseConfig: CoinbaseConfig,
+    private val coinbaseConfig: CoinbaseConfig,
     val analytics: AnalyticsService,
     private val upholdClient: UpholdClient,
-    networkState: NetworkStateInt,
+    private val networkState: NetworkStateInt,
     exchangeRates: ExchangeRatesProvider
-): ConnectivityViewModel(networkState) {
+): ViewModel() {
 
     companion object {
         private const val ZERO_BALANCE = "0.0"
@@ -69,6 +63,8 @@ class BuyAndSellViewModel @Inject constructor(
     val servicesList: LiveData<List<BuyAndSellDashServicesModel>>
         get() = _servicesList
 
+    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
+
     val isUpholdAuthenticated: Boolean
         get() = upholdClient.isAuthenticated
 
@@ -77,7 +73,6 @@ class BuyAndSellViewModel @Inject constructor(
 
     val hasValidCredentials: Boolean
         get() = upholdClient.hasValidCredentials
-
 
     init {
         exchangeRates.observeExchangeRate(config.exchangeCurrencyCode!!)
@@ -89,10 +84,12 @@ class BuyAndSellViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        isDeviceConnectedToInternet.observeForever { isConnected ->
-            updateServicesStatus()
-            updateBalances()
-        }
+        networkState.isConnected
+            .onEach {
+                updateServicesStatus()
+                updateBalances()
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun setDashServiceList(list: List<BuyAndSellDashServicesModel>) {
@@ -113,7 +110,7 @@ class BuyAndSellViewModel @Inject constructor(
     }
 
     fun updateBalances() {
-        if (isDeviceConnectedToInternet.value == true) {
+        if (networkState.isConnected.value) {
             if (upholdClient.isAuthenticated) {
                 updateUpholdBalance()
             }
@@ -143,7 +140,7 @@ class BuyAndSellViewModel @Inject constructor(
             return ServiceStatus.IDLE_DISCONNECTED
         }
 
-        val hasNetwork = isDeviceConnectedToInternet.value == true
+        val hasNetwork = networkState.isConnected.value
 
         return if (isAuthenticated) {
             if (hasNetwork) ServiceStatus.CONNECTED else ServiceStatus.DISCONNECTED

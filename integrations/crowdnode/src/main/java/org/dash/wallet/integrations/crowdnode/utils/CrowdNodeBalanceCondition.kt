@@ -32,7 +32,7 @@ class CrowdNodeBalanceCondition {
         crowdNodeConfig: CrowdNodeConfig
     ) {
         runBlocking { // TODO: remove runBlocking when this class is used from Kotlin code only
-            val crowdNodeBalance = crowdNodeConfig.getPreference(CrowdNodeConfig.LAST_BALANCE) ?: 0
+            val crowdNodeBalance = crowdNodeConfig.get(CrowdNodeConfig.LAST_BALANCE) ?: 0
             val crowdNodeAddress = address?.let { CrowdNodeConstants.getCrowdNodeAddress(address.parameters) }
 
             if (crowdNodeBalance <= 0 && (address == null || address != crowdNodeAddress)) {

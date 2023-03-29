@@ -140,7 +140,6 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
             ).show(requireActivity())
         }
 
-        monitorNetworkChanges()
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
             fragment.handleNetworkState(hasInternet)
         }
@@ -166,12 +165,6 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
     private fun dismissProgress() {
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
-        }
-    }
-
-    private fun monitorNetworkChanges(){
-        lifecycleScope.launchWhenResumed {
-            viewModel.monitorNetworkStateChange()
         }
     }
 }

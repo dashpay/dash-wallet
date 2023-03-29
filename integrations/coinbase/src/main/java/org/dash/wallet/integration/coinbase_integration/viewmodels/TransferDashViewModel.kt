@@ -1,7 +1,6 @@
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
 import androidx.annotation.StringRes
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -20,14 +19,8 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.NetworkStateInt
-import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.common.services.LeftoverBalanceException
-import org.dash.wallet.common.services.SendPaymentService
-import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
@@ -36,6 +29,7 @@ import org.dash.wallet.integration.coinbase_integration.model.CoinbaseTransactio
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams
 import org.dash.wallet.integration.coinbase_integration.model.TransactionType
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.*
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapValueErrorType
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
@@ -52,10 +46,10 @@ class TransferDashViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val sendPaymentService: SendPaymentService,
     var exchangeRates: ExchangeRatesProvider,
-    var networkState: NetworkStateInt,
+    networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService,
     private val transactionMetadataProvider: TransactionMetadataProvider
-) : ConnectivityViewModel(networkState) {
+) : ViewModel() {
 
     private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
     val observeLoadingState: LiveData<Boolean>
@@ -90,6 +84,8 @@ class TransferDashViewModel @Inject constructor(
     private val _sendDashToCoinbaseError = MutableLiveData<NetworkFeeExceptionState>()
     val sendDashToCoinbaseError: LiveData<NetworkFeeExceptionState>
         get() = _sendDashToCoinbaseError
+
+    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
     var minAllowedSwapDashCoin: Coin = Coin.ZERO
     var minFaitAmount:Fiat = Fiat.valueOf(config.exchangeCurrencyCode, 0)

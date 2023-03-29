@@ -16,5 +16,5 @@
   -->
 <resources>
     <dimen name="transaction_icon_padding">8dp</dimen>
-    <dimen name="transaction_icon_size">40dp</dimen>
+    <dimen name="transaction_icon_size">38dp</dimen>
 </resources>

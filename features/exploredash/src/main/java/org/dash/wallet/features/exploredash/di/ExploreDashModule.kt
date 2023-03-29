@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.di
 
 import android.content.Context
-import android.content.SharedPreferences
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.ktx.auth
@@ -44,13 +43,6 @@ import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 @InstallIn(SingletonComponent::class)
 abstract class ExploreDashModule {
     companion object {
-        val PREFERENCES_FILENAME = "explore"
-
-        @Provides
-        fun provideSharedPrefs(@ApplicationContext context: Context): SharedPreferences {
-            return context.getSharedPreferences(PREFERENCES_FILENAME, Context.MODE_PRIVATE)
-        }
-
         @Provides
         fun provideContext(@ApplicationContext context: Context): Context {
             return context
@@ -81,13 +73,18 @@ abstract class ExploreDashModule {
         }
     }
 
-    @Binds abstract fun bindExploreRepository(exploreRepository: GCExploreDatabase): ExploreRepository
+    @Binds
+    abstract fun bindExploreRepository(exploreRepository: GCExploreDatabase): ExploreRepository
 
-    @Binds abstract fun bindUserLocationState(userLocationState: UserLocationState): UserLocationStateInt
+    @Binds
+    abstract fun bindUserLocationState(userLocationState: UserLocationState): UserLocationStateInt
 
-    @Binds abstract fun bindExploreDataSource(exploreDatabase: MerchantAtmDataSource): ExploreDataSource
+    @Binds
+    abstract fun bindExploreDataSource(exploreDatabase: MerchantAtmDataSource): ExploreDataSource
 
-    @Binds abstract fun bindDataSyncService(exploreDatabase: ExploreDataSyncStatus): DataSyncStatusService
+    @Binds
+    abstract fun bindDataSyncService(exploreDatabase: ExploreDataSyncStatus): DataSyncStatusService
 
-    @Binds abstract fun provideDashDirectRepository(dashDirectRepository: DashDirectRepository): DashDirectRepositoryInt
+    @Binds
+    abstract fun provideDashDirectRepository(dashDirectRepository: DashDirectRepository): DashDirectRepositoryInt
 }
