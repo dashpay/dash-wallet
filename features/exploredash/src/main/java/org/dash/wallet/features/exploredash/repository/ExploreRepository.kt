@@ -75,6 +75,7 @@ class GCExploreDatabase @Inject constructor(
 
     private var remoteDataRef: StorageReference? = null
     private var updateTimestampCache = -1L
+
     @VisibleForTesting
     val configScope = CoroutineScope(Dispatchers.IO)
 
