@@ -36,7 +36,7 @@ data class ExploreDatabasePrefs(
 )
 
 @Singleton
-class ExploreConfig @Inject constructor(
+open class ExploreConfig @Inject constructor(
     private val context: Context,
     walletDataProvider: WalletDataProvider
 ) : BaseConfig(

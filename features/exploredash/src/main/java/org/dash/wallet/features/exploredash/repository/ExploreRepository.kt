@@ -18,6 +18,7 @@
 package org.dash.wallet.features.exploredash.repository
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
@@ -74,7 +75,8 @@ class GCExploreDatabase @Inject constructor(
 
     private var remoteDataRef: StorageReference? = null
     private var updateTimestampCache = -1L
-    private val configScope = CoroutineScope(Dispatchers.IO)
+    @VisibleForTesting
+    val configScope = CoroutineScope(Dispatchers.IO)
 
     override suspend fun getRemoteTimestamp(): Long {
         val remoteDataInfo =

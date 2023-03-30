@@ -52,7 +52,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
 
     // Firebase
     implementation platform("com.google.firebase:firebase-bom:$firebaseVersion")

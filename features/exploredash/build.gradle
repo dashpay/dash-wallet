@@ -64,7 +64,7 @@ dependencies {
     // Core
     implementation "androidx.core:core-ktx:$jetpackVersion"
     implementation "androidx.appcompat:appcompat:$appCompatVersion"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$coroutines_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$coroutinesVersion"
     implementation "androidx.work:work-runtime-ktx:$workRuntimeVersion"
     implementation "org.dashj:dashj-core:$dashjVersion"
 
@@ -114,7 +114,8 @@ dependencies {
 
     // Tests
     testImplementation "junit:junit:$junitVersion"
-    testImplementation 'androidx.test:core-ktx:1.4.0'
+    testImplementation "androidx.test:core-ktx:$testCoreVersion"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
     testImplementation "androidx.arch.core:core-testing:$coreTestingVersion"
     testImplementation "org.robolectric:robolectric:4.8.1"

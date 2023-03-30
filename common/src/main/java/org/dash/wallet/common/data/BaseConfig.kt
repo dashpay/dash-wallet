@@ -77,11 +77,11 @@ abstract class BaseConfig(
         return data.map { preferences -> preferences[key] }
     }
 
-    suspend fun <T> get(key: Preferences.Key<T>): T? {
+    open suspend fun <T> get(key: Preferences.Key<T>): T? {
         return data.map { preferences -> preferences[key] }.first()
     }
 
-    suspend fun <T> set(key: Preferences.Key<T>, value: T) {
+    open suspend fun <T> set(key: Preferences.Key<T>, value: T) {
         context.dataStore.edit { preferences ->
             preferences[key] = value
         }
