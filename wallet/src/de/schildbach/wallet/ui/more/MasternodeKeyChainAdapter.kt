@@ -21,7 +21,6 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet_test.databinding.MasternodeKeyRowBinding
-import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.crypto.IKey
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
@@ -29,8 +28,17 @@ import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 class MasternodeKeyChainAdapter(
     val keyChain: AuthenticationKeyChain,
     val keyUsage: Map<IKey, AuthenticationKeyUsage>,
-    private val clickListener: (String) -> Unit
+    private val clickListener: (String) -> Unit,
+    private val getDecryptedKey: (IKey, Int) -> Unit,
 ) : RecyclerView.Adapter<MasternodeKeyViewHolder>() {
+
+    val masternodeKeyInfo = arrayListOf<MasternodeKeyInfo>()
+
+    init {
+        for (i in 0..itemCount) {
+            masternodeKeyInfo.add(MasternodeKeyInfo(keyChain.getKey(i, keyChain.hasHardenedKeysOnly()), null, null, null))
+        }
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MasternodeKeyViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -39,8 +47,8 @@ class MasternodeKeyChainAdapter(
     }
 
     override fun onBindViewHolder(holder: MasternodeKeyViewHolder, position: Int) {
-        val key = keyChain.getKey(position)
-        holder.bind(key, keyUsage.get(key), clickListener)
+        val keyInfo = masternodeKeyInfo[position]
+        holder.bind(keyInfo, keyUsage.get(keyInfo.masternodeKey), clickListener, getDecryptedKey, position)
     }
 
     override fun getItemCount(): Int {

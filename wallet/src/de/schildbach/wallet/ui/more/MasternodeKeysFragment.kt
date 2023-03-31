@@ -72,9 +72,9 @@ class MasternodeKeysFragment : Fragment(R.layout.fragment_masternode_key_types) 
         if (viewModel.hasMasternodeKeys()) {
             loadKeyTypes()
         } else {
-            CheckPinDialog() { password ->
+            CheckPinDialog() { pin ->
                 lifecycleScope.launch {
-                    viewModel.addKeyChains(password!!)
+                    viewModel.addKeyChains(pin!!)
                     loadKeyTypes()
                 }
             }.showNow(childFragmentManager, "check-pin")

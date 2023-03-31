@@ -20,18 +20,17 @@ package de.schildbach.wallet.ui.more
 import android.content.ClipData
 import android.content.ClipboardManager
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import org.bitcoinj.core.Utils
 import org.bitcoinj.crypto.IKey
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
+import org.bouncycastle.util.encoders.Base64
 import org.dash.wallet.common.WalletDataProvider
 import java.util.*
 import javax.inject.Inject
@@ -44,9 +43,14 @@ class MasternodeKeysViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val authenticationGroup: AuthenticationGroupExtension = walletData.wallet!!.addOrGetExistingExtension(AuthenticationGroupExtension(walletData.wallet)) as AuthenticationGroupExtension
-
+    private val masternodeKeyChainTypes = EnumSet.of(
+        AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
+        AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
+        AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
+        AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
+    )
     fun hasMasternodeKeys(): Boolean {
-        return authenticationGroup.hasKeyChains()
+        return !authenticationGroup.missingAnyKeyChainTypes(masternodeKeyChainTypes)
     }
 
     private fun getAuthenticationKeyChainType(type: MasternodeKeyType): AuthenticationKeyChain.KeyChainType {
@@ -93,31 +97,25 @@ class MasternodeKeysViewModel @Inject constructor(
         return MasternodeKeyType.values().map { getKeyChainData(it) }
     }
 
-    fun addKeyChains(password: String) {
-        //viewModelScope.launch(Dispatchers.IO) {
+    fun addKeyChains(pin: String) {
+        if (authenticationGroup.missingAnyKeyChainTypes(masternodeKeyChainTypes)) {
             val securityGuard = SecurityGuard()
             val password = securityGuard.retrievePassword()
             val encryptionKey = securityFunctions.deriveKey(walletData.wallet!!, password)
-            // val seed = walletData.wallet!!.keyChainSeed.decrypt(walletData.wallet!!.keyCrypter, "", encryptionKey)
+
             authenticationGroup.addEncryptedKeyChains(
                 Constants.NETWORK_PARAMETERS,
                 walletData.wallet!!.keyChainSeed,
                 encryptionKey,
-                EnumSet.of(
-                    AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
-                    AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
-                    AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
-                    AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
-                ),
+                masternodeKeyChainTypes,
             )
-            //
+
+            // generate 1 fresh key per keychain type
             authenticationGroup.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER)
             authenticationGroup.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING)
             authenticationGroup.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR)
             authenticationGroup.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR)
-
-            // need to save wallet
-        //}
+        }
     }
 
     fun copyToClipboard(text: String) {
@@ -135,5 +133,22 @@ class MasternodeKeysViewModel @Inject constructor(
 
     fun addKey(masternodeKeyType: MasternodeKeyType): IKey {
         return authenticationGroup.freshKey(getAuthenticationKeyChainType(masternodeKeyType))
+    }
+
+    fun getDecryptedKey(key: IKey): MasternodeKeyInfo {
+        val securityGuard = SecurityGuard()
+        val password = securityGuard.retrievePassword()
+        val encryptionKey = securityFunctions.deriveKey(walletData.wallet!!, password)
+
+        val decryptedKey = key.decrypt(walletData.wallet!!.keyCrypter, encryptionKey)
+        val privateKeyHex = Utils.HEX.encode(decryptedKey.privKeyBytes)
+        val privateKeyWif = decryptedKey.getPrivateKeyAsWiF(Constants.NETWORK_PARAMETERS)
+
+        val bytes = ByteArray(64)
+        decryptedKey.privKeyBytes.copyInto(bytes, 0, 0, 32)
+        decryptedKey.pubKey.copyInto(bytes, 32, 1, 32)
+        val privatePublicKeyBase64 = Base64.toBase64String(bytes)
+
+        return MasternodeKeyInfo(key, privateKeyHex, privateKeyWif, privatePublicKeyBase64)
     }
 }

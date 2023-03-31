@@ -78,7 +78,7 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
                 android:layout_toStartOf="@id/copy_address"
-                android:text="Address" />
+                android:text="@string/masternode_key_address" />
 
             <TextView
                 android:id="@+id/address"
@@ -123,7 +123,7 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
                 android:layout_toStartOf="@id/copy_key_id"
-                android:text="Key Id" />
+                android:text="@string/masternode_key_id" />
 
             <TextView
                 android:id="@+id/key_id"
@@ -168,7 +168,7 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
                 android:layout_toStartOf="@id/copy_public_key"
-                android:text="Public Key" />
+                android:text="@string/masternode_key_public" />
 
             <TextView
                 android:id="@+id/public_key"
@@ -214,7 +214,7 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
                 android:layout_toStartOf="@id/copy_private_key"
-                android:text="Private Key" />
+                android:text="@string/masternode_key_private_hex" />
 
             <TextView
                 android:id="@+id/private_key_hex"
@@ -257,7 +257,7 @@
                 style="@style/Caption"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Private Key WIF" />
+                android:text="@string/masternode_key_private_wif" />
 
             <TextView
                 android:id="@+id/private_key_wif"
@@ -278,5 +278,41 @@
                 android:layout_marginEnd="7dp"
                 android:src="@drawable/ic_copy" />
         </RelativeLayout>
+        <RelativeLayout
+            android:id="@+id/private_public_key_base64_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="15dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/private_key_wif_container">
+
+            <TextView
+                android:id="@+id/private_public_key_base64_header"
+                style="@style/Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/masternode_key_private_public_base64" />
+
+            <TextView
+                android:id="@+id/private_public_key_base64"
+                style="@style/Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/private_public_key_base64_header"
+                android:layout_toStartOf="@id/copy_private_public_key_base64"
+                tools:text="03eeda68f0eb482935c7ecbebf7b6497756e471b7a0fad5014bbe6ab593cb6127" />
+
+            <ImageView
+                android:id="@+id/copy_private_public_key_base64"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerInParent="true"
+                android:layout_marginStart="17dp"
+                android:layout_marginEnd="7dp"
+                android:src="@drawable/ic_copy" />
+        </RelativeLayout>
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

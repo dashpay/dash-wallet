@@ -29,13 +29,13 @@ import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 
 class MasternodeKeyViewHolder(val binding: MasternodeKeyRowBinding) : RecyclerView.ViewHolder(binding.root) {
-    fun bind(masternodeKey: IKey, usage: AuthenticationKeyUsage?, clickListener: (String) -> Unit) {
+    fun bind(masternodeKeyInfo: MasternodeKeyInfo, usage: AuthenticationKeyUsage?, clickListener: (String) -> Unit, getDecryptedKey: (IKey, Int) -> Unit, position: Int) {
         binding.apply {
-            val index = if (masternodeKey is IDeterministicKey) {
-                masternodeKey.path.last()?.num() ?: 0
+            val index = if (masternodeKeyInfo.masternodeKey is IDeterministicKey) {
+                masternodeKeyInfo.masternodeKey.path.last()?.num() ?: 0
             } else {
                 // this is for keys that were added by the user -- there is no index for them
-                masternodeKey.pubKeyHash[0].toInt()
+                masternodeKeyInfo.masternodeKey.pubKeyHash[0].toInt()
             }
             keypairIndex.text = itemView.context.getString(R.string.masternode_key_pair_index, index)
             keypairUsage.setText(
@@ -50,11 +50,10 @@ class MasternodeKeyViewHolder(val binding: MasternodeKeyRowBinding) : RecyclerVi
                 },
             )
             // set all of the key serializations
-            address.text = Address.fromKey(Constants.NETWORK_PARAMETERS, masternodeKey).toBase58()
-            keyId.text = Utils.HEX.encode(masternodeKey.pubKeyHash)
-            publicKey.text = Utils.HEX.encode(masternodeKey.pubKey)
-            privateKeyHex.text = "encrypted" // Utils.HEX.encode(masternodeKey.privKeyBytes)
-            privateKeyWif.text = "encrypted" // masternodeKey.getPrivateKeyAsWiF(Constants.NETWORK_PARAMETERS)
+            address.text = Address.fromKey(Constants.NETWORK_PARAMETERS, masternodeKeyInfo.masternodeKey).toBase58()
+            keyId.text = Utils.HEX.encode(masternodeKeyInfo.masternodeKey.pubKeyHash)
+            publicKey.text = Utils.HEX.encode(masternodeKeyInfo.masternodeKey.pubKey)
+            initPrivateKeys(this, getDecryptedKey, masternodeKeyInfo, position)
 
             // set onClickListeners
             addressContainer.setOnClickListener {
@@ -72,6 +71,27 @@ class MasternodeKeyViewHolder(val binding: MasternodeKeyRowBinding) : RecyclerVi
             privateKeyWifContainer.setOnClickListener {
                 clickListener.invoke(privateKeyWif.text.toString())
             }
+            privatePublicKeyBase64.setOnClickListener {
+                clickListener.invoke(privatePublicKeyBase64.text.toString())
+            }
+        }
+    }
+
+    private fun initPrivateKeys(
+        binding: MasternodeKeyRowBinding,
+        getDecryptedKey: (IKey, Int) -> Unit,
+        masternodeKeyInfo: MasternodeKeyInfo,
+        position: Int
+    ) {
+        if (masternodeKeyInfo.privateKeyHex == null) {
+            getDecryptedKey(masternodeKeyInfo.masternodeKey, position)
+            binding.privateKeyHex.text = "encrypted"
+            binding.privateKeyWif.text = "encrypted"
+            binding.privatePublicKeyBase64.text = "encrypted"
+        } else {
+            binding.privateKeyHex.text = masternodeKeyInfo.privateKeyHex
+            binding.privateKeyWif.text = masternodeKeyInfo.privateKeyWif
+            binding.privatePublicKeyBase64.text = masternodeKeyInfo.privatePublicKeyBase64
         }
     }
 }

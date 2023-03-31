@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -27,6 +28,9 @@ import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMasternodeKeyChainBinding
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.bitcoinj.crypto.IKey
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
@@ -62,9 +66,12 @@ class MasternodeKeyChainFragment : Fragment(R.layout.fragment_masternode_key_cha
                 else -> throw IllegalArgumentException("invalid masternode key type")
             },
         )
-        masternodeKeyChainAdapter = MasternodeKeyChainAdapter(viewModel.getKeyChain(masternodeKeyType), viewModel.getKeyUsage()) {
-            handleCopyAddress(it)
-        }
+        masternodeKeyChainAdapter = MasternodeKeyChainAdapter(
+            viewModel.getKeyChain(masternodeKeyType),
+            viewModel.getKeyUsage(),
+            { handleCopyAddress(it) },
+            { key, position -> handleDecryptKey(key, position) },
+        )
         binding.keyTypeList.adapter = masternodeKeyChainAdapter
         binding.keyTypeList.layoutManager = LinearLayoutManager(activity)
         binding.keyTypeList.setHasFixedSize(true)
@@ -81,5 +88,19 @@ class MasternodeKeyChainFragment : Fragment(R.layout.fragment_masternode_key_cha
 
         Toast(requireContext()).toast(R.string.copied)
         log.info("text copied to clipboard: {}", text)
+    }
+
+
+    private fun handleDecryptKey(key: IKey, position: Int) {
+        lifecycleScope.launch {
+            val mninfo = viewModel.getDecryptedKey(key)
+            masternodeKeyChainAdapter.masternodeKeyInfo[position] = mninfo
+            if (binding.keyTypeList.isComputingLayout) {
+                delay(500)
+                handleDecryptKey(key, position)
+            } else {
+                masternodeKeyChainAdapter.notifyItemChanged(position)
+            }
+        }
     }
 }
