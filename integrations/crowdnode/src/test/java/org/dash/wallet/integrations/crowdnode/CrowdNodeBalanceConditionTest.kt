@@ -36,7 +36,7 @@ class CrowdNodeBalanceConditionTest {
     @Test
     fun check_zeroBalance_passes() {
         val crowdNodeConfig = mock<CrowdNodeConfig> {
-            onBlocking { getPreference(CrowdNodeConfig.LAST_BALANCE) } doReturn 0
+            onBlocking { get(CrowdNodeConfig.LAST_BALANCE) } doReturn 0
         }
         CrowdNodeBalanceCondition().check(
             Coin.COIN,
@@ -50,7 +50,7 @@ class CrowdNodeBalanceConditionTest {
     @Test
     fun check_nonZeroBalance_throws() {
         val crowdNodeConfig = mock<CrowdNodeConfig> {
-            onBlocking { getPreference(CrowdNodeConfig.LAST_BALANCE) } doReturn 5000
+            onBlocking { get(CrowdNodeConfig.LAST_BALANCE) } doReturn 5000
         }
 
         val thrown: LeftoverBalanceException = assertThrows(
@@ -70,7 +70,7 @@ class CrowdNodeBalanceConditionTest {
     @Test
     fun check_zeroBalance_sendingToCrowdNode_throws() {
         val crowdNodeConfig = mock<CrowdNodeConfig> {
-            onBlocking { getPreference(CrowdNodeConfig.LAST_BALANCE) } doReturn 0
+            onBlocking { get(CrowdNodeConfig.LAST_BALANCE) } doReturn 0
         }
 
         val thrown: LeftoverBalanceException = assertThrows(
@@ -90,7 +90,7 @@ class CrowdNodeBalanceConditionTest {
     @Test
     fun check_unknownAddress_zeroBalance_passes() {
         val crowdNodeConfig = mock<CrowdNodeConfig> {
-            onBlocking { getPreference(CrowdNodeConfig.LAST_BALANCE) } doReturn 0
+            onBlocking { get(CrowdNodeConfig.LAST_BALANCE) } doReturn 0
         }
         CrowdNodeBalanceCondition().check(
             Coin.COIN,
