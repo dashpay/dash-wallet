@@ -27,6 +27,7 @@ import androidx.lifecycle.ViewModelStoreOwner;
 import com.google.common.base.Charsets;
 
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletExtension;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.slf4j.Logger;
@@ -37,6 +38,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+
+import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
@@ -62,9 +65,9 @@ public class RestoreFromFileHelper {
     @SuppressLint("StringFormatInvalid")
     public static void restoreWalletFromProtobuf(final Activity activity,
                                                  ViewModelStoreOwner viewModelStoreOwner, LifecycleOwner lifecycleOwner,
-                                                 final Uri walletUri, final InputStream is, final OnRestoreWalletListener listener) {
+                                                 final Uri walletUri, final InputStream is, @Nullable final WalletExtension[] walletExtensions, final OnRestoreWalletListener listener) {
         try {
-            listener.onRestoreWallet(WalletUtils.restoreWalletFromProtobuf(is, Constants.NETWORK_PARAMETERS));
+            listener.onRestoreWallet(WalletUtils.restoreWalletFromProtobuf(is, Constants.NETWORK_PARAMETERS, walletExtensions));
 
             log.info("successfully restored unencrypted wallet: {}", walletUri);
         } catch (final IOException x) {

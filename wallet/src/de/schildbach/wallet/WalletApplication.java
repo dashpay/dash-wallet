@@ -76,7 +76,9 @@ import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
@@ -161,6 +163,7 @@ public class WalletApplication extends MultiDexApplication
 
     private File walletFile;
     private Wallet wallet;
+    private AuthenticationGroupExtension authenticationGroupExtension;
     private PackageInfo packageInfo;
 
     public static final String ACTION_WALLET_REFERENCE_CHANGED = WalletApplication.class.getPackage().getName()
@@ -210,6 +213,7 @@ public class WalletApplication extends MultiDexApplication
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         autoLogout = new AutoLogout(config);
+        authenticationGroupExtension = new AuthenticationGroupExtension(Constants.NETWORK_PARAMETERS);
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
             @Override
@@ -543,7 +547,7 @@ public class WalletApplication extends MultiDexApplication
         try {
             final Stopwatch watch = Stopwatch.createStarted();
             walletStream = new FileInputStream(walletFile);
-            wallet = new WalletProtobufSerializer().readWallet(walletStream);
+            wallet = new WalletProtobufSerializer().readWallet(walletStream, authenticationGroupExtension);
 
             if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
                 throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
@@ -590,8 +594,7 @@ public class WalletApplication extends MultiDexApplication
 
         try {
             is = openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
-
-            final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, null);
+            final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, getWalletExtensions());
 
             if (!wallet.isConsistent())
                 throw new Error("inconsistent backup");
@@ -1100,5 +1103,9 @@ public class WalletApplication extends MultiDexApplication
                 amount,
                 crowdNodeConfig
         );
+    }
+
+    public WalletExtension[] getWalletExtensions() {
+        return new WalletExtension[] {authenticationGroupExtension};
     }
 }
