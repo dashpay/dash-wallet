@@ -83,7 +83,7 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
         }
 
         supportFragmentManager.beginTransaction().add(R.id.container,
-                VerifySeedSecureNowFragment.newInstance()).commit()
+            VerifySeedItIsImportantFragment.newInstance()).commit()
     }
 
     private fun initViewModel() {
