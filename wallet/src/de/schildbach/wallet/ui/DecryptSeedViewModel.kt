@@ -50,4 +50,9 @@ class DecryptSeedViewModel @Inject constructor(
         val decryptedSeed = securityFunctions.decryptSeed(password)
         return decryptedSeed.mnemonicCode!!.toTypedArray()
     }
+
+    fun onBackedUp() {
+        configuration.disarmBackupSeedReminder()
+        configuration.setLastBackupSeedTime()
+    }
 }

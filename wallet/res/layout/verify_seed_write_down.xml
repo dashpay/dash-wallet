@@ -43,7 +43,7 @@
         android:clickable="true"
         android:focusable="true"
         android:paddingVertical="10dp"
-        app:layout_constraintBottom_toTopOf="@id/confirm_written_down_btn">
+        app:layout_constraintBottom_toTopOf="@id/confirm_btn">
 
         <TextView
             style="@style/Subtitle2.Blue"
@@ -54,7 +54,7 @@
     </FrameLayout>
 
     <Button
-        android:id="@+id/confirm_written_down_btn"
+        android:id="@+id/confirm_btn"
         style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -17,21 +17,18 @@
 package de.schildbach.wallet.ui
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
 import androidx.appcompat.widget.Toolbar
+import androidx.fragment.app.Fragment
 import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.FragmentItsImportToSecureBinding
+import org.dash.wallet.common.ui.viewBinding
 
 /**
  * @author Samuel Barbosa
  */
-class VerifySeedItIsImportantFragment : VerifySeedBaseFragment() {
-
-    private val showRecoveryPhraseBtn: Button by lazy {
-        requireView().findViewById<Button>(R.id.verify_show_recovery_phrase_button)
-    }
+class VerifySeedItIsImportantFragment : Fragment(R.layout.fragment_its_import_to_secure) {
+    private val binding by viewBinding(FragmentItsImportToSecureBinding::bind)
 
     companion object {
         fun newInstance(): VerifySeedItIsImportantFragment {
@@ -39,15 +36,11 @@ class VerifySeedItIsImportantFragment : VerifySeedBaseFragment() {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_its_import_to_secure, container, false)
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.verify_backup_wallet)
 
-        showRecoveryPhraseBtn.setOnClickListener {
+        binding.showRecoveryPhraseButton.setOnClickListener {
             (activity as VerifySeedActions).showRecoveryPhrase()
         }
     }

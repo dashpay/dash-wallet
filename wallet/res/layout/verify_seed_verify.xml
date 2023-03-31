@@ -13,7 +13,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.google.android.flexbox.FlexboxLayout
-        android:id="@+id/recovery_seed"
+        android:id="@+id/recovery_seed_container"
         style="@style/VerifySeedBox"
         android:animateLayoutChanges="true"
         android:minHeight="180dp"

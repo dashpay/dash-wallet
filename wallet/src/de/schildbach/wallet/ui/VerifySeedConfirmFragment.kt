@@ -20,23 +20,22 @@ import android.graphics.drawable.TransitionDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.widget.Toolbar
+import androidx.fragment.app.Fragment
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.verify_seed_verify.*
+import de.schildbach.wallet_test.databinding.VerifySeedVerifyBinding
+import org.dash.wallet.common.ui.viewBinding
 
 /**
  * @author Samuel Barbosa
  */
-class VerifySeedConfirmFragment : VerifySeedBaseFragment() {
-
+class VerifySeedConfirmFragment : Fragment(R.layout.verify_seed_verify) {
+    private val binding by viewBinding(VerifySeedVerifyBinding::bind)
     private val shakeAnimation by lazy { AnimationUtils.loadAnimation(context, R.anim.shake) }
-    private val wordButtonsContainer by lazy { word_buttons_container }
-    private val recoverySeedContainer by lazy { recovery_seed }
     private val wordButtons = arrayListOf<View>()
     private val inflater by lazy { LayoutInflater.from(context) }
     private val buttonsMap = HashMap<String, Button>()
@@ -52,15 +51,13 @@ class VerifySeedConfirmFragment : VerifySeedBaseFragment() {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.verify_seed_verify, container, false)
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.verify)
 
-        val illegalState = IllegalStateException("This fragment needs to receive a String[] containing the recovery seed")
+        val illegalState = IllegalStateException(
+            "This fragment needs to receive a String[] containing the recovery seed"
+        )
         if (arguments?.containsKey("seed")!!) {
             arguments?.getStringArray("seed")?.let {
                 words.addAll(it)
@@ -69,25 +66,25 @@ class VerifySeedConfirmFragment : VerifySeedBaseFragment() {
             throw illegalState
         }
         for (word in words) {
-            val button = inflater.inflate(R.layout.verify_seed_word_button, wordButtonsContainer, false)
+            val button = inflater.inflate(R.layout.verify_seed_word_button, binding.wordButtonsContainer, false)
             button as Button
             button.setOnClickListener { verifyWord(it as Button) }
             button.text = word
             wordButtons.add(button)
-            wordButtonsContainer.addView(button)
+            binding.wordButtonsContainer.addView(button)
             buttonsMap[word] = button
         }
-        wordButtonsContainer.postDelayed({
+        binding.wordButtonsContainer.postDelayed({
             wordButtons.shuffle()
-            wordButtonsContainer.removeAllViews()
+            binding.wordButtonsContainer.removeAllViews()
             for (b in wordButtons) {
-                wordButtonsContainer.addView(b)
+                binding.wordButtonsContainer.addView(b)
             }
         }, 750)
     }
 
     private val addedWordClickListener = View.OnClickListener {
-        recoverySeedContainer.removeView(it)
+        binding.recoverySeedContainer.removeView(it)
         buttonsMap[(it as TextView).text]?.isEnabled = true
         words.add(0, it.text.toString())
     }
@@ -98,7 +95,6 @@ class VerifySeedConfirmFragment : VerifySeedBaseFragment() {
         transitionDrawable.startTransition(transitionDuration)
         shakeAnimation.setAnimationListener(object : Animation.AnimationListener {
             override fun onAnimationRepeat(p0: Animation?) {
-
             }
 
             override fun onAnimationStart(animation: Animation) {
@@ -112,10 +108,13 @@ class VerifySeedConfirmFragment : VerifySeedBaseFragment() {
         if (words.first() == word) {
             words.removeAt(0)
             button.isEnabled = false
-            val tv: TextView = inflater.inflate(R.layout.verify_seed_word_tv, recoverySeedContainer,
-                    false) as TextView
+            val tv: TextView = inflater.inflate(
+                R.layout.verify_seed_word_tv,
+                binding.recoverySeedContainer,
+                false
+            ) as TextView
             tv.text = word
-            recoverySeedContainer.addView(tv)
+            binding.recoverySeedContainer.addView(tv)
             tv.setOnClickListener(addedWordClickListener)
             if (words.size == 0) {
                 (context as VerifySeedActions).onSeedVerified()
@@ -124,5 +123,4 @@ class VerifySeedConfirmFragment : VerifySeedBaseFragment() {
             button.startAnimation(shakeAnimation)
         }
     }
-
 }

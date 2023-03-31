@@ -17,21 +17,18 @@
 package de.schildbach.wallet.ui
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.appcompat.widget.Toolbar
+import androidx.fragment.app.Fragment
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.verify_seed_write_down.*
+import de.schildbach.wallet_test.databinding.VerifySeedWriteDownBinding
+import org.dash.wallet.common.ui.viewBinding
 
 /**
  * @author Samuel Barbosa
  */
-class VerifySeedWriteDownFragment : VerifySeedBaseFragment() {
-
-    private val recoverySeedTextView by lazy { recovery_seed }
-    private val confirmButton by lazy { confirm_written_down_btn }
-    private val explanationBtn by lazy { explanation_btn }
+class VerifySeedWriteDownFragment : Fragment(R.layout.verify_seed_write_down) {
+    private val binding by viewBinding(VerifySeedWriteDownBinding::bind)
 
     companion object {
         fun newInstance(seed: Array<String>): VerifySeedWriteDownFragment {
@@ -43,10 +40,6 @@ class VerifySeedWriteDownFragment : VerifySeedBaseFragment() {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.verify_seed_write_down, container, false)
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.view_seed_title)
@@ -56,15 +49,15 @@ class VerifySeedWriteDownFragment : VerifySeedBaseFragment() {
             seed.forEach {
                 sb.append("$it ")
             }
-            recoverySeedTextView.text = sb.toString().trim()
+            binding.recoverySeed.text = sb.toString().trim()
         }
-        confirmButton.setOnClickListener {
+        binding.confirmBtn.setOnClickListener {
             if (context is VerifySeedActions) {
                 (context as VerifySeedActions).onVerifyWriteDown()
             }
         }
 
-        explanationBtn.setOnClickListener {
+        binding.explanationBtn.setOnClickListener {
             VerifySeedWarningDialog().show(parentFragmentManager, "verify_seed_warning")
         }
     }

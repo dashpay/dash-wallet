@@ -23,7 +23,6 @@ import android.view.MenuItem
 import androidx.activity.viewModels
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
@@ -141,10 +140,7 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
     }
 
     override fun onSeedVerified() {
-        WalletApplication.getInstance().configuration.apply {
-            disarmBackupSeedReminder()
-            setLastBackupSeedTime()
-        }
+        viewModel.onBackedUp()
         goBack()
     }
 
