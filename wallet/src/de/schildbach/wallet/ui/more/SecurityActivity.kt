@@ -97,7 +97,7 @@ class SecurityActivity : LockScreenActivity() {
 
     fun viewRecoveryPhrase(view: View) {
         DecryptSeedWithPinDialog.show(this) { seed ->
-            if (seed != null) {
+            if (seed.isNotEmpty()) {
                 startViewSeedActivity(seed)
             }
         }
@@ -187,11 +187,9 @@ class SecurityActivity : LockScreenActivity() {
         finishAffinity()
     }
 
-    private fun startViewSeedActivity(seed : DeterministicSeed?) {
+    private fun startViewSeedActivity(seed: Array<String>) {
         viewModel.logEvent(AnalyticsConstants.Security.VIEW_RECOVERY_PHRASE)
-        val mnemonicCode = seed!!.mnemonicCode
-        val seedArray = mnemonicCode!!.toTypedArray()
-        val intent = ViewSeedActivity.createIntent(this, seedArray)
+        val intent = ViewSeedActivity.createIntent(this, seed)
         startActivity(intent)
     }
 

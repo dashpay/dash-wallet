@@ -22,11 +22,13 @@ import android.os.Bundle
 import android.view.MenuItem
 import androidx.activity.viewModels
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.InteractionAwareActivity
+import org.slf4j.LoggerFactory
 
 /**
  * @author Samuel Barbosa
@@ -34,7 +36,7 @@ import org.dash.wallet.common.InteractionAwareActivity
 class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
 
     companion object {
-
+        private val log = LoggerFactory.getLogger(VerifySeedActivity::class.java)
         private const val EXTRA_SEED = "extra_seed"
         private const val EXTRA_PIN = "extra_pin"
         private const val NAVIGATE_TO_HOME = "navigate_to_home"
@@ -64,7 +66,7 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
 
     var currentFragment = VerificationStep.ViewImportantInfo
 
-    private val decryptSeedViewModel: DecryptSeedViewModel by viewModels()
+    private val viewModel: DecryptSeedViewModel by viewModels()
 
     private var seed: Array<String> = arrayOf()
 
@@ -77,39 +79,38 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
         if (intent.extras!!.containsKey(EXTRA_SEED)) {
             seed = intent.extras!!.getStringArray(EXTRA_SEED)!!
         } else {
-            initViewModel()
             val pin = intent.extras!!.getString(EXTRA_PIN)!!
-            decryptSeedViewModel.checkPin(pin)
+            lifecycleScope.launch {
+                checkPin(pin)
+            }
         }
 
-        supportFragmentManager.beginTransaction().add(R.id.container,
-            VerifySeedItIsImportantFragment.newInstance()).commit()
+        supportFragmentManager.beginTransaction().add(
+            R.id.container,
+            VerifySeedItIsImportantFragment.newInstance()
+        ).commit()
     }
 
-    private fun initViewModel() {
-        decryptSeedViewModel.decryptSeedLiveData.observe(this) {
-            when (it.status) {
-                Status.ERROR -> {
-                    finish()
-                }
-                Status.SUCCESS -> {
-                    val deterministicSeed = it.data!!.first
-                    seed = deterministicSeed!!.mnemonicCode!!.toTypedArray()
-                }
-                else -> { }
-            }
+    private suspend fun checkPin(pin: String) {
+        try {
+            seed = viewModel.decryptSeed(pin)
+        } catch (ex: Exception) {
+            log.error("Failed to decrypt seed", ex)
+            finish()
         }
     }
 
     private fun replaceFragment(fragment: Fragment) {
         var enter = R.anim.slide_in_right
-        var exit =  R.anim.slide_out_left
+        var exit = R.anim.slide_out_left
         if (goingBack) {
-            enter =  R.anim.slide_in_left
-            exit =  R.anim.slide_out_right
+            enter = R.anim.slide_in_left
+            exit = R.anim.slide_out_right
         }
-        supportFragmentManager.beginTransaction().setCustomAnimations(enter,
-                exit).replace(R.id.container, fragment).commit()
+        supportFragmentManager.beginTransaction().setCustomAnimations(
+            enter,
+            exit
+        ).replace(R.id.container, fragment).commit()
     }
 
     override fun startSeedVerification() {
@@ -133,8 +134,10 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
     override fun onVerifyWriteDown() {
         super.setSecuredActivity(true)
         currentFragment = VerificationStep.VerifyRecoveryPhrase
-        supportFragmentManager.beginTransaction().replace(R.id.container,
-                VerifySeedConfirmFragment.newInstance(seed)).commit()
+        supportFragmentManager.beginTransaction().replace(
+            R.id.container,
+            VerifySeedConfirmFragment.newInstance(seed)
+        ).commit()
     }
 
     override fun onSeedVerified() {
