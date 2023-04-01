@@ -26,11 +26,12 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
+import de.schildbach.wallet.ui.verify.VerifySeedActivity
+import de.schildbach.wallet.ui.verify.ViewSeedActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySecurityBinding
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.bitcoinj.wallet.DeterministicSeed
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog

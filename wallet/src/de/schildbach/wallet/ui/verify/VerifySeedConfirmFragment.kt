@@ -1,20 +1,21 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2023 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.verify
 
 import android.graphics.drawable.TransitionDrawable
 import android.os.Bundle
@@ -24,47 +25,36 @@ import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.Button
 import android.widget.TextView
-import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
+import de.schildbach.wallet.ui.DecryptSeedViewModel
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.VerifySeedVerifyBinding
+import de.schildbach.wallet_test.databinding.FragmentVerifyConfirmBinding
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 
 /**
  * @author Samuel Barbosa
  */
-class VerifySeedConfirmFragment : Fragment(R.layout.verify_seed_verify) {
-    private val binding by viewBinding(VerifySeedVerifyBinding::bind)
+class VerifySeedConfirmFragment : Fragment(R.layout.fragment_verify_confirm) {
+    private val binding by viewBinding(FragmentVerifyConfirmBinding::bind)
+    private val viewModel: DecryptSeedViewModel by activityViewModels()
+
     private val shakeAnimation by lazy { AnimationUtils.loadAnimation(context, R.anim.shake) }
     private val wordButtons = arrayListOf<View>()
     private val inflater by lazy { LayoutInflater.from(context) }
     private val buttonsMap = HashMap<String, Button>()
     private var words = arrayListOf<String>()
 
-    companion object {
-        fun newInstance(seed: Array<String>): VerifySeedConfirmFragment {
-            val fragment = VerifySeedConfirmFragment()
-            val args = Bundle()
-            args.putStringArray("seed", seed)
-            fragment.arguments = args
-            return fragment
-        }
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.verify)
+        binding.verifyAppbar.toolbar.title = getString(R.string.verify)
+        binding.verifyAppbar.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
 
-        val illegalState = IllegalStateException(
-            "This fragment needs to receive a String[] containing the recovery seed"
-        )
-        if (arguments?.containsKey("seed")!!) {
-            arguments?.getStringArray("seed")?.let {
-                words.addAll(it)
-            } ?: throw illegalState
-        } else {
-            throw illegalState
-        }
+        val seed = viewModel.seed.value ?: throw IllegalStateException("Recovery seed is empty")
+        words.addAll(seed)
+
         for (word in words) {
             val button = inflater.inflate(R.layout.verify_seed_word_button, binding.wordButtonsContainer, false)
             button as Button
@@ -117,7 +107,8 @@ class VerifySeedConfirmFragment : Fragment(R.layout.verify_seed_verify) {
             binding.recoverySeedContainer.addView(tv)
             tv.setOnClickListener(addedWordClickListener)
             if (words.size == 0) {
-                (context as VerifySeedActions).onSeedVerified()
+                viewModel.onBackedUp()
+                safeNavigate(VerifySeedConfirmFragmentDirections.confirmToSuccess())
             }
         } else {
             button.startAnimation(shakeAnimation)

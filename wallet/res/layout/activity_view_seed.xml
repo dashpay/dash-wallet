@@ -8,7 +8,7 @@
     android:layout_height="match_parent"
     android:background="@color/background_primary"
     android:gravity="center_horizontal"
-    tools:context="de.schildbach.wallet.ui.ViewSeedActivity">
+    tools:context="de.schildbach.wallet.ui.verify.ViewSeedActivity">
 
     <include
         android:id="@+id/verify_appbar"

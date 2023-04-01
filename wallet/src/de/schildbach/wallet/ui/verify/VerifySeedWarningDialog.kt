@@ -1,4 +1,4 @@
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.verify
 
 import android.os.Bundle
 import android.view.LayoutInflater

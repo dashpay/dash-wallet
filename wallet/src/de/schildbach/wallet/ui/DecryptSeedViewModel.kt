@@ -16,6 +16,8 @@
 
 package de.schildbach.wallet.ui
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.SecurityFunctions
@@ -41,6 +43,18 @@ class DecryptSeedViewModel @Inject constructor(
 
     private val securityGuard = SecurityGuard()
 
+    private val _seed: MutableLiveData<Array<String>> = MutableLiveData()
+    val seed: LiveData<Array<String>>
+        get() = _seed
+
+    fun init(seed: Array<String>) {
+        _seed.postValue(seed)
+    }
+
+    suspend fun init(pin: String) {
+        _seed.postValue(decryptSeed(pin))
+    }
+
     suspend fun decryptSeed(pin: String): Array<String> {
         if (!securityGuard.checkPin(pin)) {
             throw IllegalArgumentException("wrong pin")
@@ -48,6 +62,7 @@ class DecryptSeedViewModel @Inject constructor(
 
         val password = securityGuard.retrievePassword()
         val decryptedSeed = securityFunctions.decryptSeed(password)
+
         return decryptedSeed.mnemonicCode!!.toTypedArray()
     }
 

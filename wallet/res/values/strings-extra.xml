@@ -209,11 +209,12 @@
     <string name="verify_continue">Continue</string>
     <string name="verify_backup_wallet">Backup Wallet</string>
     <string name="verify_show_recovery_phrase">Show Recovery Phrase</string>
-    <string name="verify_it_is_important">It\'s important</string>
-    <string name="verify_it_is_important_subtitle">We are about to show you the secret key to your wallet.</string>
-    <string name="verify_info_text_1">This recovery phrase is your access to the funds in this wallet.</string>
-    <string name="verify_info_text_2">We do NOT store this recovery phrase.</string>
-    <string name="verify_info_text_3">You will need this recovery phrase to access your funds if this device is lost, damaged or if Dash Wallet ever is accidentally uninstalled from this device.</string>
+    <string name="verify_info_title">Backup your recovery phrase</string>
+    <string name="verify_info_subtitle">You will need this recovery phrase to access your funds if this device is lost, damaged or if Dash Wallet is uninstalled from this device.</string>
+    <string name="verify_info_title_1">Dash Core Group does NOT store this recovery phrase</string>
+    <string name="verify_info_subtitle_1">Anyone that has your recovery phrase can access your funds.</string>
+    <string name="verify_info_title_2">You will NOT be able to restore the wallet without a recovery phrase</string>
+    <string name="verify_info_subtitle_2">Write it in a safe place and don’t show it to anyone.</string>
     <string name="verify_seed_buttons_tip">Please tap on the words from your recovery phrase in the right order</string>
     <string name="verify_seed_success_title">Verified Successfully</string>
     <string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
