@@ -223,7 +223,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun startVerifySeedActivity(pin: String) {
-        val intent: Intent = VerifySeedActivity.createIntent(requireContext(), pin)
+        val intent: Intent = VerifySeedActivity.createIntent(requireContext(), pin, false)
         startActivity(intent)
     }
 

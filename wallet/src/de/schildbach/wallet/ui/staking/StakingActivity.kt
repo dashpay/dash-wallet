@@ -129,7 +129,7 @@ class StakingActivity : LockScreenActivity() {
                 val intent = VerifySeedActivity.createIntent(
                     this@StakingActivity,
                     pin,
-                    goHomeOnClose = false
+                    startMainActivityOnClose = false
                 )
                 startActivity(intent)
             }

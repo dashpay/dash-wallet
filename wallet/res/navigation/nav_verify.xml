@@ -29,24 +29,35 @@
 
         <action
             android:id="@+id/info_to_writeDown"
-            app:destination="@id/verifyWriteDownFragment"
+            app:destination="@id/showSeedFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
-        android:id="@+id/verifyWriteDownFragment"
-        android:name="de.schildbach.wallet.ui.verify.VerifySeedWriteDownFragment"
-        android:label="VerifySeedWriteDownFragment"
-        tools:layout="@layout/fragment_verify_write_down">
+        android:id="@+id/showSeedFragment"
+        android:name="de.schildbach.wallet.ui.verify.ShowSeedFragment"
+        android:label="ShowSeedFragment"
+        tools:layout="@layout/fragment_show_seed">
 
         <action
-            android:id="@+id/writeDown_to_confirm"
+            android:id="@+id/showSeed_to_confirm"
             app:destination="@id/verifyConfirmFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <argument
+            android:name="seed"
+            app:argType="string[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
+
+        <argument
+            android:name="standalone"
+            app:argType="boolean"
+            android:defaultValue="false" />
     </fragment>
 
     <fragment

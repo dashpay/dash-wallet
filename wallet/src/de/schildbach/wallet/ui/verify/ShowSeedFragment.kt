@@ -22,33 +22,45 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import de.schildbach.wallet.ui.DecryptSeedViewModel
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.FragmentVerifyWriteDownBinding
+import de.schildbach.wallet_test.databinding.FragmentShowSeedBinding
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.goBack
 import org.dash.wallet.common.util.safeNavigate
 
 /**
  * @author Samuel Barbosa
  */
-class VerifySeedWriteDownFragment : Fragment(R.layout.fragment_verify_write_down) {
-    private val binding by viewBinding(FragmentVerifyWriteDownBinding::bind)
+class ShowSeedFragment : Fragment(R.layout.fragment_show_seed) {
+    private val binding by viewBinding(FragmentShowSeedBinding::bind)
     private val viewModel: DecryptSeedViewModel by activityViewModels()
+    private val args by navArgs<ShowSeedFragmentArgs>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.verifyAppbar.toolbar.title = getString(R.string.view_seed_title)
         binding.verifyAppbar.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
-        val seed = viewModel.seed.value ?: throw IllegalStateException("Recovery seed is empty")
 
-        val sb = StringBuilder(12)
-        seed.forEach {
-            sb.append("$it ")
+        if (args.standalone) {
+            viewModel.init(args.seed!!)
         }
-        binding.recoverySeed.text = sb.toString().trim()
+
+        viewModel.seed.observe(viewLifecycleOwner) { seed ->
+            val sb = StringBuilder(12)
+            seed.forEach {
+                sb.append("$it ")
+            }
+            binding.recoverySeed.text = sb.toString().trim()
+        }
 
         binding.confirmBtn.setOnClickListener {
-            safeNavigate(VerifySeedWriteDownFragmentDirections.writeDownToConfirm())
+            if (args.standalone) {
+                goBack()
+            } else {
+                safeNavigate(ShowSeedFragmentDirections.showSeedToConfirm())
+            }
         }
 
         binding.explanationBtn.setOnClickListener {

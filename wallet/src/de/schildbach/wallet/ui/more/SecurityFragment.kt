@@ -1,17 +1,18 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2023 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package de.schildbach.wallet.ui.more
@@ -19,47 +20,49 @@ package de.schildbach.wallet.ui.more
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import androidx.activity.viewModels
 import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
-import de.schildbach.wallet.ui.verify.ViewSeedActivity
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.ActivitySecurityBinding
+import de.schildbach.wallet_test.databinding.FragmentSecurityBinding
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
+import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.goBack
+import org.dash.wallet.common.util.safeNavigate
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class SecurityActivity : LockScreenActivity() {
-
+class SecurityFragment : Fragment(R.layout.fragment_security) {
     private val viewModel: SecurityViewModel by viewModels()
-    private lateinit var binding: ActivitySecurityBinding
+    private val binding by viewBinding(FragmentSecurityBinding::bind)
     @Inject lateinit var authManager: SecurityFunctions
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivitySecurityBinding.inflate(layoutInflater)
-        binding.appBar.toolbar.setTitle(R.string.security_title)
-        binding.appBar.toolbar.setNavigationOnClickListener { finish() }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        viewModel.hideBalance.observe(this) {
+        binding.appBar.toolbar.setTitle(R.string.security_title)
+        binding.appBar.toolbar.setNavigationOnClickListener { goBack() }
+
+        viewModel.hideBalance.observe(viewLifecycleOwner) {
             binding.hideBalanceSwitch.isChecked = it
         }
 
-        viewModel.fingerprintIsAvailable.observe(this) {
+        viewModel.fingerprintIsAvailable.observe(viewLifecycleOwner) {
             binding.fingerprintAuthGroup.isVisible = it
         }
 
-        viewModel.fingerprintIsEnabled.observe(this) {
+        viewModel.fingerprintIsEnabled.observe(viewLifecycleOwner) {
             binding.fingerprintAuthSwitch.isChecked = it
         }
 
@@ -84,49 +87,54 @@ class SecurityActivity : LockScreenActivity() {
             }
         }
 
+        binding.changePin.setOnClickListener { changePin() }
+        binding.viewRecoveryPhrase.setOnClickListener { viewRecoveryPhrase() }
+        binding.advancedSecurity.setOnClickListener { openAdvancedSecurity() }
+        binding.resetWallet.setOnClickListener { resetWallet() }
+        binding.backupWallet.setOnClickListener { backupWallet() }
         binding.backupWallet.isVisible = BuildConfig.DEBUG
+
         viewModel.init()
-        setContentView(binding.root)
     }
 
-    fun backupWallet(view: View) {
+    private fun backupWallet() {
         lifecycleScope.launch {
-            val pin = authManager.authenticate(this@SecurityActivity, true)
-            pin?.let { BackupWalletDialogFragment.show(supportFragmentManager) }
+            val pin = authManager.authenticate(requireActivity(), true)
+            pin?.let { BackupWalletDialogFragment.show(requireActivity()) }
         }
     }
 
-    fun viewRecoveryPhrase(view: View) {
-        DecryptSeedWithPinDialog.show(this) { seed ->
+    private fun viewRecoveryPhrase() {
+        DecryptSeedWithPinDialog.show(requireActivity()) { seed ->
             if (seed.isNotEmpty()) {
-                startViewSeedActivity(seed)
+                showSeed(seed)
             }
         }
     }
 
-    fun changePin(view: View) {
+    private fun changePin() {
         viewModel.logEvent(AnalyticsConstants.Security.CHANGE_PIN)
         startActivity(
             SetPinActivity.createIntent(
-                this,
+                requireContext(),
                 R.string.wallet_options_encrypt_keys_change,
                 true
             )
         )
     }
 
-    fun openAdvancedSecurity(view: View) {
+    private fun openAdvancedSecurity() {
         lifecycleScope.launch {
-            val pin = authManager.authenticate(this@SecurityActivity, true)
+            val pin = authManager.authenticate(requireActivity(), true)
             pin?.let {
                 viewModel.logEvent(AnalyticsConstants.Security.ADVANCED_SECURITY)
-                startActivity(Intent(this@SecurityActivity, AdvancedSecurityActivity::class.java))
+                startActivity(Intent(requireActivity(), AdvancedSecurityActivity::class.java))
             }
         }
     }
 
     // TODO: tests
-    fun resetWallet(view: View) {
+    private fun resetWallet() {
         val walletBalance = viewModel.balance
         val fiatBalanceStr = viewModel.getBalanceInLocalFormat()
 
@@ -139,19 +147,23 @@ class SecurityActivity : LockScreenActivity() {
                 getString(R.string.continue_reset),
                 getString(R.string.launch_reset_wallet_extra_message)
             )
-            resetWalletDialog.show(this,
+            resetWalletDialog.show(
+                requireActivity(),
                 onResult = {
                     if (it == true) {
                         val startResetWalletDialog = AdaptiveDialog.create(
                             R.drawable.ic_warning,
-                            getString(R.string.start_reset_wallet_title, fiatBalanceStr.ifEmpty {
-                                walletBalance.toFriendlyString()
-                            }),
+                            getString(
+                                R.string.start_reset_wallet_title,
+                                fiatBalanceStr.ifEmpty {
+                                    walletBalance.toFriendlyString()
+                                }
+                            ),
                             getString(R.string.launch_reset_wallet_message),
                             getString(R.string.button_cancel),
                             getString(R.string.reset_wallet_text)
                         )
-                        startResetWalletDialog.show(this) { confirmed ->
+                        startResetWalletDialog.show(requireActivity()) { confirmed ->
                             if (confirmed == true) {
                                 doReset()
                             }
@@ -159,12 +171,13 @@ class SecurityActivity : LockScreenActivity() {
                     }
                 },
                 onExtraMessageAction = {
-                    authManager.authenticate(this@SecurityActivity) { pin ->
+                    authManager.authenticate(requireActivity()) { pin ->
                         pin?.let {
-                            startActivity(VerifySeedActivity.createIntent(this, pin, false))
+                            startActivity(VerifySeedActivity.createIntent(requireContext(), pin, false))
                         }
                     }
-                })
+                }
+            )
         } else {
             val resetWalletDialog = AdaptiveDialog.create(
                 null,
@@ -173,7 +186,7 @@ class SecurityActivity : LockScreenActivity() {
                 getString(R.string.button_cancel),
                 getString(R.string.positive_reset_text)
             )
-            resetWalletDialog.show(this) {
+            resetWalletDialog.show(requireActivity()) {
                 if (it == true) {
                     doReset()
                 }
@@ -184,21 +197,20 @@ class SecurityActivity : LockScreenActivity() {
     private fun doReset() {
         viewModel.logEvent(AnalyticsConstants.Security.RESET_WALLET)
         viewModel.triggerWipe()
-        startActivity(OnboardingActivity.createIntent(this))
-        finishAffinity()
+        startActivity(OnboardingActivity.createIntent(requireContext()))
+        requireActivity().finishAffinity()
     }
 
-    private fun startViewSeedActivity(seed: Array<String>) {
+    private fun showSeed(seed: Array<String>) {
         viewModel.logEvent(AnalyticsConstants.Security.VIEW_RECOVERY_PHRASE)
-        val intent = ViewSeedActivity.createIntent(this, seed)
-        startActivity(intent)
+        safeNavigate(SecurityFragmentDirections.securityToShowSeed(seed, true))
     }
 
     private suspend fun setupBiometric(): Boolean {
         try {
-            val pin = authManager.authenticate(this@SecurityActivity, true)
+            val pin = authManager.authenticate(requireActivity(), true)
             pin?.let {
-                return viewModel.biometricHelper.savePassword(this@SecurityActivity, pin)
+                return viewModel.biometricHelper.savePassword(requireActivity(), pin)
             }
         } catch (ex: Exception) {
             AdaptiveDialog.create(
@@ -206,7 +218,7 @@ class SecurityActivity : LockScreenActivity() {
                 getString(R.string.error),
                 ex.localizedMessage ?: "",
                 getString(R.string.button_dismiss)
-            ).show(this)
+            ).show(requireActivity())
         }
 
         return false

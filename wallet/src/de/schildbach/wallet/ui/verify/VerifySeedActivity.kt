@@ -41,18 +41,18 @@ class VerifySeedActivity : InteractionAwareActivity() {
         private const val NAVIGATE_TO_HOME = "navigate_to_home"
 
         @JvmStatic
-        fun createIntent(context: Context, seed: Array<String>, goHomeOnClose: Boolean = true): Intent {
+        fun createIntent(context: Context, seed: Array<String>, startMainActivityOnClose: Boolean = true): Intent {
             val intent = Intent(context, VerifySeedActivity::class.java)
             intent.putExtra(EXTRA_SEED, seed)
-            intent.putExtra(NAVIGATE_TO_HOME, goHomeOnClose)
+            intent.putExtra(NAVIGATE_TO_HOME, startMainActivityOnClose)
             return intent
         }
 
         @JvmStatic
-        fun createIntent(context: Context, pin: String, goHomeOnClose: Boolean = true): Intent {
+        fun createIntent(context: Context, pin: String, startMainActivityOnClose: Boolean = true): Intent {
             val intent = Intent(context, VerifySeedActivity::class.java)
             intent.putExtra(EXTRA_PIN, pin)
-            intent.putExtra(NAVIGATE_TO_HOME, goHomeOnClose)
+            intent.putExtra(NAVIGATE_TO_HOME, startMainActivityOnClose)
             return intent
         }
     }
@@ -80,18 +80,14 @@ class VerifySeedActivity : InteractionAwareActivity() {
         }
     }
 
-    private fun goBack() { // TODO
-        val navigateToHome = intent.getBooleanExtra(NAVIGATE_TO_HOME, true)
+    override fun finish() {
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        val launchMainActivity = intent.getBooleanExtra(NAVIGATE_TO_HOME, true)
 
-        if (navigateToHome) {
+        if (launchMainActivity) {
             startActivity(Intent(this, WalletActivity::class.java))
         }
 
-        finish()
-    }
-
-    override fun finish() {
         super.finish()
-        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 }

@@ -58,3 +58,7 @@ enum class DeepLinkDestination(val deepLink: Uri) {
 fun Fragment.deepLinkNavigate(destination: DeepLinkDestination) {
     findNavController().navigate(destination.deepLink)
 }
+
+fun Fragment.goBack() {
+    findNavController().popBackStack()
+}

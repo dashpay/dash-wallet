@@ -238,7 +238,7 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
         List<String> mnemonicCode = seed.getMnemonicCode();
         String[] seedArr = new String[mnemonicCode.size()];
         seedArr = mnemonicCode.toArray(seedArr);
-        Intent intent = VerifySeedActivity.Companion.createIntent(activity, seedArr, true);
+        Intent intent = VerifySeedActivity.Companion.createIntent(activity, seedArr, false);
         startActivity(intent);
     }
 

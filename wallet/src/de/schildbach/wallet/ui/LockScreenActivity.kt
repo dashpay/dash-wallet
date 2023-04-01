@@ -322,7 +322,7 @@ open class LockScreenActivity : SecureActivity() {
         autoLogout.deviceWasLocked = false
         autoLogout.maybeStartAutoLogoutTimer()
         if (shouldShowBackupReminder) {
-            val intent = VerifySeedActivity.createIntent(this, pin)
+            val intent = VerifySeedActivity.createIntent(this, pin, false)
             configuration.resetBackupSeedReminderTimer()
             startActivity(intent)
             finish()

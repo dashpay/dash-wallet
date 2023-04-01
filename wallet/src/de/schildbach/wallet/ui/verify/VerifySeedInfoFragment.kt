@@ -30,8 +30,8 @@ class VerifySeedInfoFragment : Fragment(R.layout.fragment_verify_info) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.closeButton.setOnClickListener { requireActivity().finish() }
 
+        binding.closeButton.setOnClickListener { requireActivity().finish() }
         binding.showRecoveryPhraseButton.setOnClickListener {
             safeNavigate(VerifySeedInfoFragmentDirections.infoToWriteDown())
         }
