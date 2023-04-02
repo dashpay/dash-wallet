@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2023 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ class MasternodeKeyChainFragment : Fragment(R.layout.fragment_masternode_key_cha
             },
         )
         masternodeKeyChainAdapter = MasternodeKeyChainAdapter(
-            viewModel.getKeyChain(masternodeKeyType),
+            viewModel.getKeyChainInfo(masternodeKeyType),
             viewModel.getKeyUsage(),
             { handleCopyAddress(it) },
             { key, position -> handleDecryptKey(key, position) },
@@ -90,11 +90,10 @@ class MasternodeKeyChainFragment : Fragment(R.layout.fragment_masternode_key_cha
         log.info("text copied to clipboard: {}", text)
     }
 
-
     private fun handleDecryptKey(key: IKey, position: Int) {
         lifecycleScope.launch {
             val mninfo = viewModel.getDecryptedKey(key)
-            masternodeKeyChainAdapter.masternodeKeyInfo[position] = mninfo
+            masternodeKeyChainAdapter.keyChainInfo.masternodeKeyInfoList[position] = mninfo
             if (binding.keyTypeList.isComputingLayout) {
                 delay(500)
                 handleDecryptKey(key, position)

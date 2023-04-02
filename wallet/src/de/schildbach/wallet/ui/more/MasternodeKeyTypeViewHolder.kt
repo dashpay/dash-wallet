@@ -40,5 +40,10 @@ class MasternodeKeyTypeViewHolder(val binding: MasternodeKeyTypeRowBinding) : Re
         binding.keyTypeTotalCount.text =
             itemView.context.getString(R.string.masternode_key_type_total, data.totalKeys)
         binding.keyTypeUsedKeys.text = itemView.context.getString(R.string.masternode_key_type_used, data.usedKeys)
+        when {
+            isTop -> binding.root.setBackgroundResource(R.drawable.top_round_corners_white_bg)
+            isBottom -> binding.root.setBackgroundResource(R.drawable.bottom_round_corners_white_bg)
+            else -> binding.root.setBackgroundColor(itemView.context.resources.getColor(R.color.white))
+        }
     }
 }

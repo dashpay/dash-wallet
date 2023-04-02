@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.more
 
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
@@ -24,12 +25,11 @@ import de.schildbach.wallet_test.databinding.MasternodeKeyRowBinding
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Utils
 import org.bitcoinj.crypto.IDeterministicKey
-import org.bitcoinj.crypto.IKey
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 
 class MasternodeKeyViewHolder(val binding: MasternodeKeyRowBinding) : RecyclerView.ViewHolder(binding.root) {
-    fun bind(masternodeKeyInfo: MasternodeKeyInfo, usage: AuthenticationKeyUsage?, clickListener: (String) -> Unit, getDecryptedKey: (IKey, Int) -> Unit, position: Int) {
+    fun bind(masternodeKeyInfo: MasternodeKeyInfo, usage: AuthenticationKeyUsage?, clickListener: (String) -> Unit) {
         binding.apply {
             val index = if (masternodeKeyInfo.masternodeKey is IDeterministicKey) {
                 masternodeKeyInfo.masternodeKey.path.last()?.num() ?: 0
@@ -53,7 +53,7 @@ class MasternodeKeyViewHolder(val binding: MasternodeKeyRowBinding) : RecyclerVi
             address.text = Address.fromKey(Constants.NETWORK_PARAMETERS, masternodeKeyInfo.masternodeKey).toBase58()
             keyId.text = Utils.HEX.encode(masternodeKeyInfo.masternodeKey.pubKeyHash)
             publicKey.text = Utils.HEX.encode(masternodeKeyInfo.masternodeKey.pubKey)
-            initPrivateKeys(this, getDecryptedKey, masternodeKeyInfo, position)
+            initPrivateKeys(this, masternodeKeyInfo)
 
             // set onClickListeners
             addressContainer.setOnClickListener {
@@ -77,18 +77,21 @@ class MasternodeKeyViewHolder(val binding: MasternodeKeyRowBinding) : RecyclerVi
         }
     }
 
-    private fun initPrivateKeys(
-        binding: MasternodeKeyRowBinding,
-        getDecryptedKey: (IKey, Int) -> Unit,
-        masternodeKeyInfo: MasternodeKeyInfo,
-        position: Int
-    ) {
+    private fun initPrivateKeys(binding: MasternodeKeyRowBinding, masternodeKeyInfo: MasternodeKeyInfo) {
         if (masternodeKeyInfo.privateKeyHex == null) {
-            getDecryptedKey(masternodeKeyInfo.masternodeKey, position)
-            binding.privateKeyHex.text = "encrypted"
-            binding.privateKeyWif.text = "encrypted"
-            binding.privatePublicKeyBase64.text = "encrypted"
+            binding.privateKeyHexLoadingIndicator.isVisible = true
+            binding.privateKeyWifLoadingIndicator.isVisible = true
+            binding.privatePublicKeyBase64LoadingIndicator.isVisible = true
+            binding.privateKeyHex.isVisible = false
+            binding.privateKeyWif.isVisible = false
+            binding.privatePublicKeyBase64.isVisible = false
         } else {
+            binding.privateKeyHexLoadingIndicator.isVisible = false
+            binding.privateKeyWifLoadingIndicator.isVisible = false
+            binding.privatePublicKeyBase64LoadingIndicator.isVisible = false
+            binding.privateKeyHex.isVisible = true
+            binding.privateKeyWif.isVisible = true
+            binding.privatePublicKeyBase64.isVisible = true
             binding.privateKeyHex.text = masternodeKeyInfo.privateKeyHex
             binding.privateKeyWif.text = masternodeKeyInfo.privateKeyWif
             binding.privatePublicKeyBase64.text = masternodeKeyInfo.privatePublicKeyBase64

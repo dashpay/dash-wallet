@@ -22,23 +22,14 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet_test.databinding.MasternodeKeyRowBinding
 import org.bitcoinj.crypto.IKey
-import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 
 class MasternodeKeyChainAdapter(
-    val keyChain: AuthenticationKeyChain,
-    val keyUsage: Map<IKey, AuthenticationKeyUsage>,
+    val keyChainInfo: MasternodeKeyChainInfo,
+    private val keyUsage: Map<IKey, AuthenticationKeyUsage>,
     private val clickListener: (String) -> Unit,
-    private val getDecryptedKey: (IKey, Int) -> Unit,
+    private val requestedDecryptedKey: (IKey, Int) -> Unit,
 ) : RecyclerView.Adapter<MasternodeKeyViewHolder>() {
-
-    val masternodeKeyInfo = arrayListOf<MasternodeKeyInfo>()
-
-    init {
-        for (i in 0..itemCount) {
-            masternodeKeyInfo.add(MasternodeKeyInfo(keyChain.getKey(i, keyChain.hasHardenedKeysOnly()), null, null, null))
-        }
-    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MasternodeKeyViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -47,19 +38,27 @@ class MasternodeKeyChainAdapter(
     }
 
     override fun onBindViewHolder(holder: MasternodeKeyViewHolder, position: Int) {
-        val keyInfo = masternodeKeyInfo[position]
-        holder.bind(keyInfo, keyUsage.get(keyInfo.masternodeKey), clickListener, getDecryptedKey, position)
+        val keyInfo = keyChainInfo.masternodeKeyInfoList[position]
+        // if the private keys are not decrypted, then request that they are
+        if (keyInfo.privateKeyHex == null) {
+            requestedDecryptedKey(keyInfo.masternodeKey, position)
+        }
+        holder.bind(
+            keyInfo,
+            keyUsage[keyInfo.masternodeKey],
+            clickListener,
+        )
     }
 
     override fun getItemCount(): Int {
-        return keyChain.issuedKeyCount + 1
+        return keyChainInfo.masternodeKeyInfoList.size
     }
-
     override fun getItemId(position: Int): Long {
-        return keyChain.getKey(position).hashCode().toLong()
+        return keyChainInfo.masternodeKeyChain.getKey(position).hashCode().toLong()
     }
 
-    fun addKey(key: IKey) {
+    fun addKey(keyInfo: MasternodeKeyInfo) {
+        keyChainInfo.masternodeKeyInfoList.add(keyInfo)
         notifyItemInserted(itemCount + 1)
     }
 }

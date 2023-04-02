@@ -66,6 +66,16 @@ class MasternodeKeysViewModel @Inject constructor(
         return authenticationGroup.getKeyChain(getAuthenticationKeyChainType(type))
     }
 
+    fun getKeyChainInfo(type: MasternodeKeyType): MasternodeKeyChainInfo {
+        val keyChain = authenticationGroup.getKeyChain(getAuthenticationKeyChainType(type))
+        val keyInfoList = arrayListOf<MasternodeKeyInfo>()
+
+        for (i in 0..keyChain.issuedKeyCount) {
+            keyInfoList.add(MasternodeKeyInfo(keyChain.getKey(i, keyChain.hasHardenedKeysOnly())))
+        }
+        return MasternodeKeyChainInfo(keyChain, keyInfoList)
+    }
+
     fun getKey(type: MasternodeKeyType, index: Int): IKey {
         val keyChain = getKeyChain(type)
         // this may crash on Platform keys
@@ -131,8 +141,8 @@ class MasternodeKeysViewModel @Inject constructor(
         return authenticationGroup.keyUsage
     }
 
-    fun addKey(masternodeKeyType: MasternodeKeyType): IKey {
-        return authenticationGroup.freshKey(getAuthenticationKeyChainType(masternodeKeyType))
+    fun addKey(masternodeKeyType: MasternodeKeyType): MasternodeKeyInfo {
+        return MasternodeKeyInfo(authenticationGroup.freshKey(getAuthenticationKeyChainType(masternodeKeyType)))
     }
 
     fun getDecryptedKey(key: IKey): MasternodeKeyInfo {
