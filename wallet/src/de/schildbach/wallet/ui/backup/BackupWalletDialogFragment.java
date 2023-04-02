@@ -210,19 +210,19 @@ public class BackupWalletDialogFragment extends DialogFragment {
                 if (passwordLength < 6) {
                     passwordStrengthView.setText(R.string.encrypt_keys_dialog_password_strength_weak);
                     passwordStrengthView
-                            .setTextColor(getResources().getColor(R.color.fg_password_strength_weak));
+                            .setTextColor(getResources().getColor(R.color.system_red));
                 } else if (passwordLength < 8) {
                     passwordStrengthView.setText(R.string.encrypt_keys_dialog_password_strength_fair);
                     passwordStrengthView
-                            .setTextColor(getResources().getColor(R.color.fg_password_strength_fair));
+                            .setTextColor(getResources().getColor(R.color.tangerine));
                 } else if (passwordLength < 10) {
                     passwordStrengthView.setText(R.string.encrypt_keys_dialog_password_strength_good);
                     passwordStrengthView
-                            .setTextColor(getResources().getColor(R.color.fg_password_strength_good));
+                            .setTextColor(getResources().getColor(R.color.content_tertiary));
                 } else {
                     passwordStrengthView.setText(R.string.encrypt_keys_dialog_password_strength_strong);
                     passwordStrengthView.setTextColor(
-                            getResources().getColor(R.color.fg_password_strength_strong));
+                            getResources().getColor(R.color.system_green));
                 }
 
                 if (positiveButton != null) {
