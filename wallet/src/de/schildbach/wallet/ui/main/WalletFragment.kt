@@ -36,13 +36,13 @@ import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.payments.PaymentsFragment
-import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
+import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HomeContentBinding
@@ -107,8 +107,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
         viewModel.mostRecentTransaction.observe(viewLifecycleOwner) { mostRecentTransaction: Transaction ->
             log.info("most recent transaction: {}", mostRecentTransaction.txId)
 
-            if ((activity as? LockScreenActivity)?.lockScreenDisplayed != true && !configuration.hasDisplayedTaxCategoryExplainer
-                && WalletUtils.getTransactionDate(mostRecentTransaction).time >= configuration.taxCategoryInstallTime
+            if ((requireActivity() as? LockScreenActivity)?.lockScreenDisplayed != true &&
+                !configuration.hasDisplayedTaxCategoryExplainer &&
+                WalletUtils.getTransactionDate(mostRecentTransaction).time >= configuration.taxCategoryInstallTime
             ) {
                 val dialogFragment: TaxCategoryExplainerDialogFragment =
                     TaxCategoryExplainerDialogFragment.newInstance(mostRecentTransaction.txId)
@@ -151,7 +152,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                         R.id.paymentsFragment,
                         bundleOf(
                             PaymentsFragment.ARG_ACTIVE_TAB to
-                                    PaymentsFragment.ACTIVE_TAB_RECEIVE
+                                PaymentsFragment.ACTIVE_TAB_RECEIVE
                         )
                     )
                 }

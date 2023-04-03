@@ -26,7 +26,7 @@ open class HistoryRowView(
 ) {
     override fun equals(other: Any?): Boolean {
         return other is HistoryRowView &&
-                other.title == title && other.status == status
+            other.title == title && other.status == status
     }
 
     override fun hashCode(): Int {
