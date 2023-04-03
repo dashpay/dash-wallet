@@ -18,27 +18,38 @@
 package de.schildbach.wallet.ui.widget
 
 import android.content.Context
+import android.content.res.Resources
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.res.ResourcesCompat
+import com.tbuonomo.viewpagerdotsindicator.setPaddingVertical
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.shortcut_button.view.*
-import org.dash.wallet.common.ui.getRoundedBackground
+import kotlin.math.roundToInt
 
 class ShortcutButton : LinearLayout {
+
+    companion object {
+        val DEFAULT_MARGIN_PX = dpToPx(4)
+
+        private fun dpToPx(dp: Int): Int {
+            val density = Resources.getSystem().displayMetrics.density
+            return (dp.toFloat() * density).roundToInt()
+        }
+    }
+
     private var marginsSet = false
     var shouldAppear: Boolean = true
-    private val padding = resources.getDimensionPixelOffset(R.dimen.shortcut_button_padding)
 
     init {
         inflate(context, R.layout.shortcut_button, this)
-        background = resources.getRoundedBackground(R.style.SecondaryBackground)
+        setBackgroundResource(R.drawable.white_button_background_no_shadow)
         orientation = VERTICAL
         gravity = Gravity.CENTER
-        setPadding(padding, padding, padding, padding)
+        setPaddingVertical(DEFAULT_MARGIN_PX)
     }
 
     constructor(context: Context, attrs: AttributeSet) : super(context, attrs) {
@@ -59,7 +70,8 @@ class ShortcutButton : LinearLayout {
             } else {
                 action_text.visibility = View.GONE
             }
-
+            val backgroundResId = attrsArray.getResourceId(R.styleable.ShortcutButton_background, R.drawable.white_button_background_no_shadow)
+            setBackgroundResource(backgroundResId)
             val customTextColor = attrsArray.getColorStateList(R.styleable.ShortcutButton_shortcut_text_color)
             if (customTextColor != null) {
                 action_text.setTextColor(customTextColor)
@@ -71,8 +83,14 @@ class ShortcutButton : LinearLayout {
         }
     }
 
-    constructor(context: Context, iconResId: Int = 0, textResIt: Int = 0, onClickListener: OnClickListener? = null,
-                textColorResId: Int = 0) : super(context) {
+    constructor(
+        context: Context,
+        iconResId: Int = 0,
+        textResIt: Int = 0,
+        onClickListener: OnClickListener? = null,
+        backgroundResId: Int = 0,
+        textColorResId: Int = 0
+    ) : super(context) {
         if (iconResId != 0) {
             action_icon.setImageResource(iconResId)
         } else {
@@ -84,7 +102,9 @@ class ShortcutButton : LinearLayout {
             action_text.visibility = View.GONE
         }
         setOnClickListener(onClickListener)
-
+        if (backgroundResId != 0) {
+            setBackgroundResource(backgroundResId)
+        }
         if (textColorResId != 0) {
             action_text.setTextColor(ResourcesCompat.getColor(resources, textColorResId, null))
         }
@@ -94,8 +114,8 @@ class ShortcutButton : LinearLayout {
         super.onMeasure(heightMeasureSpec, heightMeasureSpec)
         if (!marginsSet) {
             layoutParams = (layoutParams as MarginLayoutParams).run {
-                leftMargin = padding; topMargin = padding
-                rightMargin = padding; bottomMargin = padding
+                topMargin = DEFAULT_MARGIN_PX
+                bottomMargin = DEFAULT_MARGIN_PX
                 this
             }
             marginsSet = true
