@@ -97,11 +97,6 @@
             android:theme="@style/My.Theme.ChildActivity" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.verify.ViewSeedActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
-
-        <activity
             android:name="de.schildbach.wallet.ui.main.WalletActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:exported="true"
