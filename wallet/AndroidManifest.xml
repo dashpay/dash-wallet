@@ -92,12 +92,7 @@
         </activity>
 
         <activity
-            android:name="de.schildbach.wallet.ui.VerifySeedActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
-
-        <activity
-            android:name="de.schildbach.wallet.ui.ViewSeedActivity"
+            android:name="de.schildbach.wallet.ui.verify.VerifySeedActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
@@ -244,11 +239,6 @@
             android:name="de.schildbach.wallet.ui.SetPinActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
-
-        <activity
-            android:name="de.schildbach.wallet.ui.more.SecurityActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
             android:name="de.schildbach.wallet.ui.RestoreWalletFromSeedActivity"
