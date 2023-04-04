@@ -19,6 +19,8 @@ package de.schildbach.wallet.ui.more
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
@@ -32,6 +34,7 @@ import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 import org.bouncycastle.util.encoders.Base64
 import org.dash.wallet.common.WalletDataProvider
+import java.lang.Integer.max
 import java.util.*
 import javax.inject.Inject
 
@@ -49,6 +52,24 @@ class MasternodeKeysViewModel @Inject constructor(
         AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
         AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
     )
+
+    val keyChainMap: HashMap<MasternodeKeyType, MasternodeKeyTypeData>
+
+    private val masternodeKeyChainInfoMap = hashMapOf<MasternodeKeyType, MasternodeKeyChainInfo>()
+
+    init {
+        keyChainMap = hashMapOf()
+        if (authenticationGroup.hasKeyChains()) {
+            initKeyChainInfo()
+        }
+    }
+
+    private fun initKeyChainInfo() {
+        for (keyChainType in MasternodeKeyType.values()) {
+            keyChainMap[keyChainType] = getKeyChainData(keyChainType)
+        }
+    }
+
     fun hasMasternodeKeys(): Boolean {
         return !authenticationGroup.missingAnyKeyChainTypes(masternodeKeyChainTypes)
     }
@@ -67,13 +88,25 @@ class MasternodeKeysViewModel @Inject constructor(
     }
 
     fun getKeyChainInfo(type: MasternodeKeyType): MasternodeKeyChainInfo {
-        val keyChain = authenticationGroup.getKeyChain(getAuthenticationKeyChainType(type))
-        val keyInfoList = arrayListOf<MasternodeKeyInfo>()
+        var keyChainInfo = masternodeKeyChainInfoMap[type]
+        if (keyChainInfo == null) {
+            val keyChain = authenticationGroup.getKeyChain(getAuthenticationKeyChainType(type))
+            val keyInfoList = arrayListOf<MasternodeKeyInfo>()
 
-        for (i in 0..keyChain.issuedKeyCount) {
-            keyInfoList.add(MasternodeKeyInfo(keyChain.getKey(i, keyChain.hasHardenedKeysOnly())))
+            for (i in 0 until max(1, keyChain.issuedKeyCount)) {
+                keyInfoList.add(
+                    MasternodeKeyInfo(
+                        keyChain.getKey(
+                            i,
+                            keyChain.hasHardenedKeysOnly(),
+                        ),
+                    ),
+                )
+            }
+            keyChainInfo = MasternodeKeyChainInfo(keyChain, keyInfoList)
+            masternodeKeyChainInfoMap[type] = keyChainInfo
         }
-        return MasternodeKeyChainInfo(keyChain, keyInfoList)
+        return keyChainInfo
     }
 
     fun getKey(type: MasternodeKeyType, index: Int): IKey {
@@ -100,7 +133,7 @@ class MasternodeKeysViewModel @Inject constructor(
                 false
             }
         }
-        return MasternodeKeyTypeData(type, keyChain.currentIndex + 1, usedKeys)
+        return MasternodeKeyTypeData(type, max(1, keyChain.issuedKeyCount), usedKeys)
     }
 
     fun getKeyChainGroup(): List<MasternodeKeyTypeData> {
@@ -125,6 +158,8 @@ class MasternodeKeysViewModel @Inject constructor(
             authenticationGroup.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING)
             authenticationGroup.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR)
             authenticationGroup.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR)
+
+            initKeyChainInfo()
         }
     }
 
@@ -141,8 +176,11 @@ class MasternodeKeysViewModel @Inject constructor(
         return authenticationGroup.keyUsage
     }
 
-    fun addKey(masternodeKeyType: MasternodeKeyType): MasternodeKeyInfo {
-        return MasternodeKeyInfo(authenticationGroup.freshKey(getAuthenticationKeyChainType(masternodeKeyType)))
+    fun addKey(masternodeKeyType: MasternodeKeyType): Int {
+        val keyChainInfo = masternodeKeyChainInfoMap[masternodeKeyType]
+        keyChainInfo!!.masternodeKeyInfoList.add(MasternodeKeyInfo(authenticationGroup.freshKey(getAuthenticationKeyChainType(masternodeKeyType))))
+        keyChainMap[masternodeKeyType]!!.totalKeys = keyChainInfo.masternodeKeyInfoList.size
+        return keyChainInfo.masternodeKeyInfoList.size - 1
     }
 
     fun getDecryptedKey(key: IKey): MasternodeKeyInfo {

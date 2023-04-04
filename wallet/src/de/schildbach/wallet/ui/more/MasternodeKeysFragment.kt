@@ -20,7 +20,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
@@ -48,16 +48,8 @@ class MasternodeKeysFragment : Fragment(R.layout.fragment_masternode_key_types) 
 
     @Inject
     lateinit var analytics: AnalyticsService
-    private val viewModel: MasternodeKeysViewModel by viewModels()
-    private val masternodeKeyTypeAdapter = MasternodeKeyTypeAdapter {
-        findNavController().navigate(
-            R.id.masternodeKeyChainFragment,
-            bundleOf("type" to it),
-            NavOptions.Builder()
-                .setEnterAnim(R.anim.slide_in_bottom)
-                .build(),
-        )
-    }
+    private val viewModel: MasternodeKeysViewModel by activityViewModels()
+    private lateinit var masternodeKeyTypeAdapter: MasternodeKeyTypeAdapter
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -66,9 +58,20 @@ class MasternodeKeysFragment : Fragment(R.layout.fragment_masternode_key_types) 
             findNavController().popBackStack()
         }
         binding.title.setText(R.string.masternode_keys_title)
+
+        masternodeKeyTypeAdapter = MasternodeKeyTypeAdapter(viewModel.keyChainMap) {
+            findNavController().navigate(
+                R.id.masternodeKeyChainFragment,
+                bundleOf("type" to it),
+                NavOptions.Builder()
+                    .setEnterAnim(R.anim.slide_in_right)
+                    .build(),
+            )
+        }
         binding.keyTypeList.adapter = masternodeKeyTypeAdapter
         binding.keyTypeList.layoutManager = LinearLayoutManager(activity)
         binding.keyTypeList.setHasFixedSize(true)
+
         if (viewModel.hasMasternodeKeys()) {
             loadKeyTypes()
         } else {
@@ -82,9 +85,9 @@ class MasternodeKeysFragment : Fragment(R.layout.fragment_masternode_key_types) 
     }
 
     private fun loadKeyTypes() {
-        viewModel.getKeyChainGroup().forEach {
-            masternodeKeyTypeAdapter.updateKeyChainData(it)
-        }
+        //viewModel.getKeyChainGroup().forEach {
+        //    masternodeKeyTypeAdapter.updateKeyChainData(it)
+        //}
         masternodeKeyTypeAdapter.notifyDataSetChanged()
     }
 

@@ -19,7 +19,7 @@ package de.schildbach.wallet.ui.more
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -47,7 +47,7 @@ class MasternodeKeyChainFragment : Fragment(R.layout.fragment_masternode_key_cha
 
     @Inject
     lateinit var analytics: AnalyticsService
-    private val viewModel: MasternodeKeysViewModel by viewModels()
+    private val viewModel: MasternodeKeysViewModel by activityViewModels()
     private lateinit var masternodeKeyChainAdapter: MasternodeKeyChainAdapter
     private val masternodeKeyType by lazy { requireArguments()["type"] as MasternodeKeyType }
 
@@ -78,8 +78,12 @@ class MasternodeKeyChainFragment : Fragment(R.layout.fragment_masternode_key_cha
         masternodeKeyChainAdapter.notifyDataSetChanged()
 
         binding.addMasternodeKey.setOnClickListener {
-            val key = viewModel.addKey(masternodeKeyType)
-            masternodeKeyChainAdapter.addKey(key)
+            val position = viewModel.addKey(masternodeKeyType)
+            masternodeKeyChainAdapter.addKey(position)
+            (binding.keyTypeList.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(
+                position,
+                0
+            )
         }
     }
 

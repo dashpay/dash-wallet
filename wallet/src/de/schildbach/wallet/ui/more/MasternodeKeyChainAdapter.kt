@@ -57,8 +57,8 @@ class MasternodeKeyChainAdapter(
         return keyChainInfo.masternodeKeyChain.getKey(position).hashCode().toLong()
     }
 
-    fun addKey(keyInfo: MasternodeKeyInfo) {
-        keyChainInfo.masternodeKeyInfoList.add(keyInfo)
-        notifyItemInserted(itemCount + 1)
+    fun addKey(position: Int) {
+        // keyChainInfo.masternodeKeyInfoList.add(keyInfo)
+        notifyItemInserted(position)
     }
 }

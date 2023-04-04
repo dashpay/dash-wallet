@@ -39,15 +39,9 @@ enum class MasternodeKeyType(val type: Int) {
 data class MasternodeKeyTypeData(val type: MasternodeKeyType, var totalKeys: Int, var usedKeys: Int)
 
 class MasternodeKeyTypeAdapter(
-    private val clickListener: (MasternodeKeyType) -> Unit
+    private val keyChainMap: MutableMap<MasternodeKeyType, MasternodeKeyTypeData>,
+    private val clickListener: (MasternodeKeyType) -> Unit,
 ) : RecyclerView.Adapter<MasternodeKeyTypeViewHolder>() {
-
-    private val keyChainMap = hashMapOf(
-        MasternodeKeyType.OWNER to MasternodeKeyTypeData(MasternodeKeyType.OWNER, 0, 0),
-        MasternodeKeyType.VOTING to MasternodeKeyTypeData(MasternodeKeyType.VOTING, 0, 0),
-        MasternodeKeyType.OPERATOR to MasternodeKeyTypeData(MasternodeKeyType.OPERATOR, 0, 0),
-        MasternodeKeyType.PLATFORM to MasternodeKeyTypeData(MasternodeKeyType.PLATFORM, 0, 0),
-    )
 
     fun updateKeyChainData(data: MasternodeKeyTypeData) {
         keyChainMap[data.type] = data

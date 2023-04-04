@@ -31,7 +31,7 @@
     <TextView
         android:id="@+id/keypair_index"
         style="@style/Subtitle1.Bold"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
         android:ellipsize="end"
