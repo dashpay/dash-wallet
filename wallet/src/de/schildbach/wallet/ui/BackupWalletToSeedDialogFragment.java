@@ -60,6 +60,7 @@ import de.schildbach.wallet.security.SecurityFunctions;
 import de.schildbach.wallet.security.PinRetryController;
 import de.schildbach.wallet.payments.DecryptSeedTask;
 import de.schildbach.wallet.payments.DeriveKeyTask;
+import de.schildbach.wallet.ui.verify.VerifySeedActivity;
 import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet_test.R;
@@ -237,7 +238,7 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
         List<String> mnemonicCode = seed.getMnemonicCode();
         String[] seedArr = new String[mnemonicCode.size()];
         seedArr = mnemonicCode.toArray(seedArr);
-        Intent intent = VerifySeedActivity.Companion.createIntent(activity, seedArr, true);
+        Intent intent = VerifySeedActivity.Companion.createIntent(activity, seedArr, false);
         startActivity(intent);
     }
 

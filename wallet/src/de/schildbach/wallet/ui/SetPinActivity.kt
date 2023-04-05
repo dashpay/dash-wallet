@@ -35,6 +35,7 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.main.WalletActivity
+import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch

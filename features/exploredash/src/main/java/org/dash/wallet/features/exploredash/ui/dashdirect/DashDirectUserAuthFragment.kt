@@ -173,7 +173,7 @@ class DashDirectUserAuthFragment : Fragment(R.layout.fragment_dash_direct_user_a
     }
 
     private fun hideLoading() {
-        binding.continueButton.setText(R.string.continue_text)
+        binding.continueButton.setText(R.string.button_continue)
         binding.continueButtonLoading.isGone = true
         binding.continueButton.isClickable = true
     }
