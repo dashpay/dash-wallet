@@ -71,6 +71,7 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.CoinSelection;
 import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.Protos;
@@ -108,6 +109,7 @@ import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -327,6 +329,18 @@ public class WalletApplication extends MultiDexApplication
         this.wallet = newWallet;
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
             wallet.addKeyChain(Constants.BIP44_PATH);
+        }
+        if (!authenticationGroupExtension.hasKeyChains()) {
+            authenticationGroupExtension.addKeyChains(
+                    wallet.getParams(),
+                    wallet.getKeyChainSeed(),
+                    EnumSet.of(
+                            AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
+                            AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
+                            AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
+                            AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR
+                    )
+            );
         }
     }
 
@@ -941,6 +955,7 @@ public class WalletApplication extends MultiDexApplication
         transactionMetadataProvider.clear();
         // wallet must be null for the OnboardingActivity flow
         wallet = null;
+        clearExtensions();
     }
 
     private void notifyWalletWipe() {
@@ -1103,6 +1118,10 @@ public class WalletApplication extends MultiDexApplication
                 amount,
                 crowdNodeConfig
         );
+    }
+
+    public void clearExtensions() {
+        authenticationGroupExtension = new AuthenticationGroupExtension(Constants.NETWORK_PARAMETERS);
     }
 
     public WalletExtension[] getWalletExtensions() {

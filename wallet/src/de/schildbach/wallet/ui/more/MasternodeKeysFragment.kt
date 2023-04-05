@@ -85,9 +85,6 @@ class MasternodeKeysFragment : Fragment(R.layout.fragment_masternode_key_types) 
     }
 
     private fun loadKeyTypes() {
-        //viewModel.getKeyChainGroup().forEach {
-        //    masternodeKeyTypeAdapter.updateKeyChainData(it)
-        //}
         masternodeKeyTypeAdapter.notifyDataSetChanged()
     }
 

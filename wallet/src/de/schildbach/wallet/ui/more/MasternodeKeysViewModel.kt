@@ -53,12 +53,11 @@ class MasternodeKeysViewModel @Inject constructor(
         AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
     )
 
-    val keyChainMap: HashMap<MasternodeKeyType, MasternodeKeyTypeData>
+    val keyChainMap = hashMapOf<MasternodeKeyType, MasternodeKeyTypeData>()
 
     private val masternodeKeyChainInfoMap = hashMapOf<MasternodeKeyType, MasternodeKeyChainInfo>()
 
     init {
-        keyChainMap = hashMapOf()
         if (authenticationGroup.hasKeyChains()) {
             initKeyChainInfo()
         }

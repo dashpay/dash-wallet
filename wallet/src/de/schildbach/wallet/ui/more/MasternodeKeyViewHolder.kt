@@ -38,17 +38,22 @@ class MasternodeKeyViewHolder(val binding: MasternodeKeyRowBinding) : RecyclerVi
                 masternodeKeyInfo.masternodeKey.pubKeyHash[0].toInt()
             }
             keypairIndex.text = itemView.context.getString(R.string.masternode_key_pair_index, index)
-            keypairUsage.setText(
-                when (usage?.status) {
-                    AuthenticationKeyStatus.CURRENT -> R.string.masternode_key_used
-                    AuthenticationKeyStatus.REVOKED -> R.string.masternode_key_revoked
-                    AuthenticationKeyStatus.PREVIOUS -> R.string.masternode_key_not_used
+            keypairUsage.text = when (usage?.status) {
+                    AuthenticationKeyStatus.CURRENT -> {
+                        val ipAddress = if (usage.address != null) {
+                            usage.address?.addr.toString()
+                        } else {
+                            itemView.context.getString(R.string.masternode_key_ip_address_unknown)
+                        }
+                        itemView.context.getString(R.string.masternode_key_used, ipAddress)
+                    }
+                    AuthenticationKeyStatus.REVOKED -> itemView.context.getString(R.string.masternode_key_revoked)
+                    AuthenticationKeyStatus.PREVIOUS,
                     AuthenticationKeyStatus.UNKNOWN,
                     AuthenticationKeyStatus.NEVER,
                     null,
-                    -> R.string.masternode_key_not_used
-                },
-            )
+                    -> itemView.context.getString(R.string.masternode_key_not_used)
+                }
             // set all of the key serializations
             address.text = Address.fromKey(Constants.NETWORK_PARAMETERS, masternodeKeyInfo.masternodeKey).toBase58()
             keyId.text = Utils.HEX.encode(masternodeKeyInfo.masternodeKey.pubKeyHash)

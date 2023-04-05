@@ -159,7 +159,8 @@ public class WalletUtils {
     }
 
     public static Wallet restoreWalletFromSeed(final List<String> words,
-                                                   final NetworkParameters expectedNetworkParameters) throws IOException {
+                                                   final NetworkParameters expectedNetworkParameters,
+                                               WalletExtension[] extensions) throws IOException {
         try {
             DeterministicSeed seed =  new DeterministicSeed(words, null,"", Constants.EARLIEST_HD_SEED_CREATION_TIME);
             KeyChainGroup group = KeyChainGroup.builder(Constants.NETWORK_PARAMETERS)
@@ -171,6 +172,9 @@ public class WalletUtils {
                     .build();
 
             final Wallet wallet = new Wallet(Constants.NETWORK_PARAMETERS, group);
+            for (WalletExtension extension : extensions) {
+                wallet.addExtension(extension);
+            }
 
             if (!wallet.getParams().equals(expectedNetworkParameters))
                 throw new IOException("bad wallet backup network parameters: " + wallet.getParams().getId());
