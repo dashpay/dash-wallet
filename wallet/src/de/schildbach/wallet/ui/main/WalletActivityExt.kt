@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.main
 
+import android.util.Log
 import android.view.MenuItem
 import androidx.core.view.isVisible
 import androidx.navigation.fragment.NavHostFragment
@@ -28,7 +29,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 
 object WalletActivityExt {
     fun WalletActivity.setupBottomNavigation(viewModel: MainViewModel) {
-        val navController = (supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment).navController
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val navController = navHostFragment.navController
         val navView: BottomNavigationView = findViewById(R.id.bottom_navigation)
         setupWithNavController(navView, navController)
         navView.itemIconTintList = null
@@ -42,6 +44,10 @@ object WalletActivityExt {
         navView.setOnItemReselectedListener { item: MenuItem ->
             if (item.itemId == R.id.paymentsFragment) {
                 navController.navigateUp()
+            } else if (item.itemId == R.id.walletFragment) {
+                navHostFragment.childFragmentManager.fragments.firstOrNull { it is WalletFragment }?.let {
+                    (it as WalletFragment).scrollToTop()
+                }
             }
         }
         navController.addOnDestinationChangedListener { _, _, arguments ->

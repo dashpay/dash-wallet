@@ -64,6 +64,7 @@ import javax.inject.Inject
 class WalletFragment : Fragment(R.layout.home_content) {
     companion object {
         private val log = LoggerFactory.getLogger(WalletFragment::class.java)
+        private const val TRANSACTIONS_FRAGMENT_TAG = "wallet_transactions_fragment"
     }
 
     private val viewModel: MainViewModel by activityViewModels()
@@ -96,10 +97,12 @@ class WalletFragment : Fragment(R.layout.home_content) {
         behaviour!!.setDragCallback(object : DragCallback() {
             override fun canDrag(appBarLayout: AppBarLayout): Boolean {
                 val walletTransactionsFragment = childFragmentManager
-                    .findFragmentByTag("wallet_transactions_fragment") as WalletTransactionsFragment
+                    .findFragmentByTag(TRANSACTIONS_FRAGMENT_TAG) as WalletTransactionsFragment
                 return !walletTransactionsFragment.isHistoryEmpty
             }
         })
+
+        binding.homeToolbar.setOnClickListener { scrollToTop() }
 
         viewModel.transactions.observe(viewLifecycleOwner) { refreshShortcutBar() }
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
@@ -121,6 +124,17 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 configuration.setHasDisplayedTaxCategoryExplainer()
             }
         }
+    }
+
+    fun scrollToTop() {
+        if (!isAdded) {
+            return
+        }
+
+        binding.appBar.setExpanded(true)
+        val walletTransactionsFragment = childFragmentManager
+            .findFragmentByTag(TRANSACTIONS_FRAGMENT_TAG) as? WalletTransactionsFragment
+        walletTransactionsFragment?.scrollToTop()
     }
 
     override fun onResume() {
