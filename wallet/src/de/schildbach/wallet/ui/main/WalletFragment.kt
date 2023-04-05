@@ -43,6 +43,7 @@ import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser
+import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HomeContentBinding
@@ -237,7 +238,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun startVerifySeedActivity(pin: String) {
-        val intent: Intent = VerifySeedActivity.createIntent(requireContext(), pin)
+        val intent: Intent = VerifySeedActivity.createIntent(requireContext(), pin, false)
         startActivity(intent)
     }
 

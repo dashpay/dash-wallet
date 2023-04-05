@@ -146,7 +146,6 @@
     <string name="buy_gift_card_text">Buy gift cards with your Dash</string>
     <string name="buy_gift_card_desc_text">Buy gift cards with your Dash for the exact amount of your purchase.</string>
     <string name="learn_more_text">Learn More</string>
-    <string name="continue_text">Continue</string>
     <string name="buy_card_header_text">How to Use a Gift Card</string>
     <string name="buy_card_desc_text">Not all of the stores accept DASH directly, but you can buy a gift card with your Dash.</string>
     <string name="find_merchant_text">Find a merchant.</string>
