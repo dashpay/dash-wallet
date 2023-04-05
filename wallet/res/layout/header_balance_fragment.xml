@@ -4,7 +4,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    tools:background="@color/blue_background_color"
+    tools:context="de.schildbach.wallet.ui.main.HeaderBalanceFragment">
 
     <TextView
         android:id="@+id/syncing_indicator"
@@ -15,65 +17,82 @@
         android:alpha="0.5"
         android:gravity="center"
         android:textAlignment="gravity"
-        android:visibility="gone"
+        android:visibility="invisible"
         app:layout_constraintTop_toTopOf="parent"
         tools:visibility="visible" />
 
     <ImageView
         android:id="@+id/dash_icon"
-        android:layout_width="18dp"
-        android:layout_height="18dp"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
         android:layout_marginEnd="4dp"
-        app:srcCompat="@drawable/ic_dash_d_white"
-        app:layout_constraintTop_toBottomOf="@id/syncing_indicator"
+        android:layout_marginTop="4dp"
+        android:src="@drawable/ic_dash_d_white"
+        app:layout_constraintTop_toTopOf="@id/wallet_balance_dash"
+        app:layout_constraintBottom_toBottomOf="@id/wallet_balance_dash"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/wallet_balance_dash"
+        app:layout_constraintHorizontal_chainStyle="packed"
         tools:ignore="ContentDescription" />
 
     <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/wallet_balance_dash"
-        style="@style/Headline5.Regular.White"
+        style="@style/Headline4.Medium.White"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="-2dp"
         android:ellipsize="end"
-        app:layout_constraintTop_toBottomOf="@id/dash_icon"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/syncing_indicator"
+        app:layout_constraintStart_toEndOf="@id/dash_icon"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:text="0"/>
 
     <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/wallet_balance_local"
-        style="@style/Headline5.Regular.White"
+        style="@style/Body2.White"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="-2dp"
         app:layout_constraintTop_toBottomOf="@id/wallet_balance_dash"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <TextView
-        android:id="@+id/hide_show_balance_hint"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/home_balance_hide_hint"
-        android:alpha="0.5"
-        android:gravity="center"
-        android:textAlignment="gravity"
-        app:layout_constraintTop_toBottomOf="@id/wallet_balance_local" />
+    <FrameLayout
+        android:id="@+id/hide_balance_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="18dp"
+        android:layout_marginTop="5dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/wallet_balance_local">
+
+        <TextView
+            android:id="@+id/hide_balance_hint_text"
+            style="@style/Overline.White"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/home_balance_hide_hint"
+            android:visibility="gone"
+            android:alpha="0.5"
+            tools:visibility="visible" />
+    </FrameLayout>
 
     <androidx.constraintlayout.widget.Group
         android:id="@+id/balance_group"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:constraint_referenced_ids="dash_icon, wallet_balance_dash, hide_show_balance_hint" />
+        app:constraint_referenced_ids="dash_icon, wallet_balance_dash, wallet_balance_local, hide_balance_hint" />
 
     <ImageView
         android:id="@+id/show_balance_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
-        android:background="@drawable/transparent_button_background"
-        android:padding="8dp"
-        app:srcCompat="@drawable/ic_show_balance"
-        app:layout_constraintTop_toBottomOf="@id/dash_icon"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:background="@drawable/rounded_ripple_background"
+        android:theme="@style/RevealBalanceBackground"
+        android:padding="9dp"
+        android:src="@drawable/ic_show_balance"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

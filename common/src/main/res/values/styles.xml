@@ -19,6 +19,8 @@
         <item name="alertDialogTheme">@style/AlertDialogTheme</item>
         <item name="android:colorControlActivated">@color/colorPrimary</item>
         <item name="android:autofilledHighlight" tools:targetApi="o">@android:color/transparent</item>
+<!--        <item name="android:windowTranslucentStatus">true</item>-->
+<!--        <item name="android:statusBarColor">@android:color/transparent</item>-->
     </style>
 
     <style name="TextViewStyle" parent="android:Widget.TextView">
@@ -363,6 +365,14 @@
     </style>
 
     <style name="Headline4.White">
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="Headline4.Medium">
+        <item name="fontFamily">@font/inter_medium</item>
+    </style>
+
+    <style name="Headline4.Medium.White">
         <item name="android:textColor">@color/white</item>
     </style>
 

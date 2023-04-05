@@ -51,7 +51,7 @@ class SecurityActivity : LockScreenActivity() {
         binding.appBar.toolbar.setNavigationOnClickListener { finish() }
 
         viewModel.hideBalance.observe(this) {
-            binding.hideBalanceSwitch.isChecked = it
+            binding.hideBalanceSwitch.isChecked = it ?: false
         }
 
         viewModel.fingerprintIsAvailable.observe(this) {

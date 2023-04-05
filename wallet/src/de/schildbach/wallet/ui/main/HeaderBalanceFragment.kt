@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
+import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -46,54 +47,42 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         binding.walletBalanceLocal.setStrikeThru(!Constants.IS_PROD_BUILD)
         requireView().setOnClickListener { viewModel.triggerHideBalance() }
 
-        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateView() }
-        viewModel.exchangeRate.observe(viewLifecycleOwner) { updateView() }
-        viewModel.balance.observe(viewLifecycleOwner) { updateView() }
-        viewModel.hideBalance.observe(viewLifecycleOwner) { updateView() }
+        viewModel.exchangeRate.observe(viewLifecycleOwner) { updateBalance() }
+        viewModel.balance.observe(viewLifecycleOwner) { updateBalance() }
+
+        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { isSynced ->
+            if (isSynced) {
+                binding.syncingIndicator.isInvisible = true
+                binding.syncingIndicator.animation?.cancel()
+            } else {
+                binding.syncingIndicator.isInvisible = false
+                startSyncingIndicatorAnimation()
+            }
+        }
+
+        viewModel.hideBalance.observe(viewLifecycleOwner) { hideBalance ->
+            binding.balanceGroup.isInvisible = hideBalance
+            binding.showBalanceButton.isInvisible = !hideBalance
+        }
+
+        viewModel.showTapToHideHint.observe(viewLifecycleOwner) { showHint ->
+            binding.hideBalanceHintText.isVisible = showHint ?: true
+        }
     }
 
-    private fun updateView() {
-        if (!isAdded) {
-            return
-        }
-
-        if (viewModel.hideBalance.value == true) {
-            binding.balanceGroup.visibility = View.INVISIBLE
-            binding.showBalanceButton.visibility = View.VISIBLE
-            return
-        }
-
-        binding.balanceGroup.visibility = View.VISIBLE
-        binding.hideShowBalanceHint.visibility = View.INVISIBLE
-        binding.showBalanceButton.visibility = View.GONE
-
-        if (viewModel.isBlockchainSynced.value != true) {
-            binding.syncingIndicator.isVisible = true
-            startSyncingIndicatorAnimation()
-        } else {
-            binding.syncingIndicator.isVisible = false
-
-            if (binding.syncingIndicator.animation != null) {
-                binding.syncingIndicator.animation.cancel()
-            }
-        }
-
+    private fun updateBalance() {
         val balance = viewModel.balance.value ?: Coin.ZERO
         binding.walletBalanceDash.setAmount(balance)
+        viewModel.exchangeRate.value?.let { exchangeRate ->
+            val rate = org.bitcoinj.utils.ExchangeRate(
+                Coin.COIN,
+                exchangeRate.fiat
+            )
 
-        if (balance.isPositive) {
-            viewModel.exchangeRate.value?.let { exchangeRate ->
-                val rate = org.bitcoinj.utils.ExchangeRate(
-                    Coin.COIN,
-                    exchangeRate.fiat
-                )
-
-                val localValue = rate.coinToFiat(balance)
-                binding.walletBalanceLocal.visibility = View.VISIBLE
-                val currencySymbol = GenericUtils.currencySymbol(exchangeRate.currencyCode)
-                binding.walletBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0, currencySymbol))
-                binding.walletBalanceLocal.setAmount(localValue)
-            }
+            val localValue = rate.coinToFiat(balance)
+            val currencySymbol = GenericUtils.currencySymbol(exchangeRate.currencyCode)
+            binding.walletBalanceLocal.setFormat(viewModel.fiatFormat.code(0, currencySymbol))
+            binding.walletBalanceLocal.setAmount(localValue)
         }
     }
 
