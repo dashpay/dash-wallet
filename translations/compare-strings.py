@@ -24,14 +24,16 @@ from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 
 
-androidFiles = {
+androidFiles = [
                 "../wallet/res/values/strings.xml",
                 "../wallet/res/values/strings-extra.xml",
                 "../common/src/main/res/values/strings.xml",
                 "../integrations/uphold/src/main/res/values/strings-uphold.xml",
                 "../integrations/crowdnode/src/main/res/values/strings-crowdnode.xml",
+                "../integrations/coinbase/src/main/res/values/strings.xml",
                 "../features/exploredash/src/main/res/values/strings-explore-dash.xml"
-                }
+                ]
+androidFileDesc = ["wallet", "wallet", "common", "uphold", "crowdnode", "coinbase", "explore-dash"]
 
 iOSFiles = {"iOS/app-localizable-strings.strings", "iOS/dashsync-localizable-strings.strings"}
 
@@ -46,13 +48,18 @@ def loadAndroidFiles():
         The key is the string
         The value is the android string id
     """
-    for fileName in androidFiles:
+    for i in range(len(androidFiles)):
+        fileName = androidFiles[i]
+        module = androidFileDesc[i]
         doc = xml.dom.minidom.parse(fileName)
         resourceNode = doc.getElementsByTagName("resources")[0]
         for string in resourceNode.childNodes:
             try:
                 if string.nodeName == "string":
-                    androidStrings[string.firstChild.data] = string.getAttribute("name")
+                    stringData = {}
+                    stringData["name"] = string.getAttribute("name")
+                    stringData["module"] = module
+                    androidStrings[string.firstChild.data] = stringData #string.getAttribute("name")
             except AttributeError:
                 pass
 
@@ -177,19 +184,19 @@ def main():
         if i.find('\\') != -1:
             iOSStringsWithEscapeSequences[i] = "iOS"
         if i in androidStrings:
-            found[i] = androidStrings[i]
+            found[i] = androidStrings[i]["name"]
         else:
             notFound[i] = "iOS"
             listNotFound.append(i)
 
     for a in androidStrings:
         if a.find('\\') != -1:
-             androidStringsWithEscapeSequences[a] = "android - " + androidStrings[a]
+             androidStringsWithEscapeSequences[a] = "android - " + getAndroidStringLocation(a)
 
     for a in androidStrings:
         for badWord in badWords:
             if a.find(badWord) != -1:
-                androidStringsWithBadWords[a] = "android - " + androidStrings[a] + " word: " + badWord
+                androidStringsWithBadWords[a] = "android - " + getAndroidStringLocation(a) + " word: " + badWord
 
     for f in found:
         if f in androidStrings:
@@ -213,7 +220,7 @@ def main():
         if a.find("%") != -1:
             withWildcardsAndroid += 1
             androidStringsWithWildcards.append(a)
-            stringsWithWildcards[a] = "android - " + androidStrings[a]
+            stringsWithWildcards[a] = "android - " + getAndroidStringLocation(a)
             stringsWithWildcardsList.append(a)
 
     for i in iOSStringsUpper:
@@ -295,7 +302,7 @@ def main():
 
     # add the remaining non matching android strings to the not found lists
     for a in androidStrings:
-        notFound[a] = "android -- " + androidStrings[a]
+        notFound[a] = "android -- " + getAndroidStringLocation(a)
         listNotFound.append(a)
 
     # print report
@@ -456,7 +463,7 @@ def printPreformatedComparisonList(found, outputFile):
             print("iOS:     '", f, "'", sep="", file=outputFile)
             print("</pre>", file=outputFile)
             print("<pre class=android>", file=outputFile)
-            print("android: '", found[f], "'", sep="", file=outputFile)
+            print("android: '", found[f], "' ", getAndroidStringLocation(found[f]), sep="", file=outputFile)
             print("</pre>", file=outputFile)
             print("</div>", file=outputFile)
     else:
@@ -470,6 +477,8 @@ def printParagraph(text, outputFile):
 def printHorizontalLine(outputFile):
     print("<hr />", file=outputFile)
 
+def getAndroidStringLocation(a):
+    return "[{}/{}]".format(androidStrings[a]["module"], androidStrings[a]["name"])
 
 # perform the comparisons
 main()
