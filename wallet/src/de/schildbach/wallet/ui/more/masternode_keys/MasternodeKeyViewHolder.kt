@@ -39,21 +39,21 @@ class MasternodeKeyViewHolder(val binding: MasternodeKeyRowBinding) : RecyclerVi
             }
             keypairIndex.text = itemView.context.getString(R.string.masternode_key_pair_index, index)
             keypairUsage.text = when (usage?.status) {
-                    AuthenticationKeyStatus.CURRENT -> {
-                        val ipAddress = if (usage.address != null) {
-                            usage.address?.addr.toString()
-                        } else {
-                            itemView.context.getString(R.string.masternode_key_ip_address_unknown)
-                        }
-                        itemView.context.getString(R.string.masternode_key_used, ipAddress)
+                AuthenticationKeyStatus.CURRENT -> {
+                    val ipAddress = if (usage.address != null) {
+                        usage.address?.addr.toString()
+                    } else {
+                        itemView.context.getString(R.string.masternode_key_ip_address_unknown)
                     }
-                    AuthenticationKeyStatus.REVOKED -> itemView.context.getString(R.string.masternode_key_revoked)
-                    AuthenticationKeyStatus.PREVIOUS,
-                    AuthenticationKeyStatus.UNKNOWN,
-                    AuthenticationKeyStatus.NEVER,
-                    null,
-                    -> itemView.context.getString(R.string.masternode_key_not_used)
+                    itemView.context.getString(R.string.masternode_key_used, ipAddress)
                 }
+                AuthenticationKeyStatus.REVOKED -> itemView.context.getString(R.string.masternode_key_revoked)
+                AuthenticationKeyStatus.PREVIOUS,
+                AuthenticationKeyStatus.UNKNOWN,
+                AuthenticationKeyStatus.NEVER,
+                null,
+                -> itemView.context.getString(R.string.masternode_key_not_used)
+            }
             // set all of the key serializations
             address.text = Address.fromKey(Constants.NETWORK_PARAMETERS, masternodeKeyInfo.masternodeKey).toBase58()
             keyId.text = Utils.HEX.encode(masternodeKeyInfo.masternodeKey.pubKeyHash)

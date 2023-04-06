@@ -22,7 +22,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.MasternodeKeyTypeRowBinding
 
 class MasternodeKeyTypeViewHolder(val binding: MasternodeKeyTypeRowBinding) : RecyclerView.ViewHolder(binding.root) {
-    fun bind(data: MasternodeKeyTypeData, isTop: Boolean, isBottom: Boolean) {
+    fun bind(data: MasternodeKeyTypeInfo, isTop: Boolean, isBottom: Boolean) {
         when (data.type) {
             MasternodeKeyType.OWNER -> {
                 binding.keyTypeName.setText(R.string.masternode_key_type_owner)

@@ -72,17 +72,17 @@ class MasternodeKeyChainFragment : Fragment(R.layout.fragment_masternode_key_cha
             { handleCopyAddress(it) },
             { key, position -> handleDecryptKey(key, position) },
         )
-        binding.keyTypeList.adapter = masternodeKeyChainAdapter
-        binding.keyTypeList.layoutManager = LinearLayoutManager(activity)
-        binding.keyTypeList.setHasFixedSize(true)
+        binding.keyList.adapter = masternodeKeyChainAdapter
+        binding.keyList.layoutManager = LinearLayoutManager(activity)
+        binding.keyList.setHasFixedSize(true)
         masternodeKeyChainAdapter.notifyDataSetChanged()
 
         binding.addMasternodeKey.setOnClickListener {
             val position = viewModel.addKey(masternodeKeyType)
             masternodeKeyChainAdapter.addKey(position)
-            (binding.keyTypeList.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(
+            (binding.keyList.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(
                 position,
-                0
+                0,
             )
         }
     }
@@ -98,7 +98,7 @@ class MasternodeKeyChainFragment : Fragment(R.layout.fragment_masternode_key_cha
         lifecycleScope.launch {
             val mninfo = viewModel.getDecryptedKey(key)
             masternodeKeyChainAdapter.keyChainInfo.masternodeKeyInfoList[position] = mninfo
-            if (binding.keyTypeList.isComputingLayout) {
+            if (binding.keyList.isComputingLayout) {
                 delay(500)
                 handleDecryptKey(key, position)
             } else {

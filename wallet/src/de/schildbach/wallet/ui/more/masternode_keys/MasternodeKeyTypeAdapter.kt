@@ -22,24 +22,8 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet_test.databinding.MasternodeKeyTypeRowBinding
 
-enum class MasternodeKeyType(val type: Int) {
-    OWNER(0),
-    VOTING(1),
-    OPERATOR(2),
-    PLATFORM(3),
-    ;
-
-    companion object {
-        fun fromCode(code: Int): MasternodeKeyType {
-            return values().find { code == it.type }!!
-        }
-    }
-}
-
-data class MasternodeKeyTypeData(val type: MasternodeKeyType, var totalKeys: Int, var usedKeys: Int)
-
 class MasternodeKeyTypeAdapter(
-    private val keyChainMap: MutableMap<MasternodeKeyType, MasternodeKeyTypeData>,
+    private val keyChainMap: MutableMap<MasternodeKeyType, MasternodeKeyTypeInfo>,
     private val clickListener: (MasternodeKeyType) -> Unit,
 ) : RecyclerView.Adapter<MasternodeKeyTypeViewHolder>() {
 

@@ -58,7 +58,6 @@ class MasternodeKeyChainAdapter(
     }
 
     fun addKey(position: Int) {
-        // keyChainInfo.masternodeKeyInfoList.add(keyInfo)
         notifyItemInserted(position)
     }
 }

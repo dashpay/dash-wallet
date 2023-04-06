@@ -55,7 +55,7 @@
         tools:text="Owner Keys" />
     
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/key_type_list"
+        android:id="@+id/key_list"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         app:layout_constraintStart_toStartOf="parent"

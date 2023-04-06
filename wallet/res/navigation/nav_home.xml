@@ -154,7 +154,7 @@
             <argument
                 android:name="type"
                 android:defaultValue="OWNER"
-                app:argType="de.schildbach.wallet.ui.more.MasternodeKeyType" />
+                app:argType="de.schildbach.wallet.ui.more.masternode_keys.MasternodeKeyType" />
         </action>
 
     </fragment>

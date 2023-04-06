@@ -51,7 +51,7 @@ class MasternodeKeysViewModel @Inject constructor(
         AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
     )
 
-    val keyChainMap = hashMapOf<MasternodeKeyType, MasternodeKeyTypeData>()
+    val keyChainMap = hashMapOf<MasternodeKeyType, MasternodeKeyTypeInfo>()
 
     private val masternodeKeyChainInfoMap = hashMapOf<MasternodeKeyType, MasternodeKeyChainInfo>()
 
@@ -118,7 +118,7 @@ class MasternodeKeysViewModel @Inject constructor(
         return key.decrypt(walletData.wallet!!.keyCrypter, encryptionKey)
     }
 
-    fun getKeyChainData(type: MasternodeKeyType): MasternodeKeyTypeData {
+    fun getKeyChainData(type: MasternodeKeyType): MasternodeKeyTypeInfo {
         val keyChain = getKeyChain(type)
         val keyChainType = getAuthenticationKeyChainType(type)
         val usedKeys = authenticationGroup.keyUsage.values.count { usage ->
@@ -130,10 +130,10 @@ class MasternodeKeysViewModel @Inject constructor(
                 false
             }
         }
-        return MasternodeKeyTypeData(type, max(1, keyChain.issuedKeyCount), usedKeys)
+        return MasternodeKeyTypeInfo(type, max(1, keyChain.issuedKeyCount), usedKeys)
     }
 
-    fun getKeyChainGroup(): List<MasternodeKeyTypeData> {
+    fun getKeyChainGroup(): List<MasternodeKeyTypeInfo> {
         return MasternodeKeyType.values().map { getKeyChainData(it) }
     }
 
