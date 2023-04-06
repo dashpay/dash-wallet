@@ -327,6 +327,7 @@ public class WalletApplication extends MultiDexApplication
 
     public void setWallet(Wallet newWallet) {
         this.wallet = newWallet;
+        // TODO: move to a wallet creation class
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
             wallet.addKeyChain(Constants.BIP44_PATH);
         }

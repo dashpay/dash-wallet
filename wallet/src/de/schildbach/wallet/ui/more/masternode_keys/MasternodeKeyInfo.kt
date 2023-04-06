@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui.more
+package de.schildbach.wallet.ui.more.masternode_keys
 
-import org.bitcoinj.wallet.AuthenticationKeyChain
+import org.bitcoinj.crypto.IKey
 
-data class MasternodeKeyChainInfo(
-    val masternodeKeyChain: AuthenticationKeyChain,
-    val masternodeKeyInfoList: MutableList<MasternodeKeyInfo>
+data class MasternodeKeyInfo(
+    val masternodeKey: IKey,
+    val privateKeyHex: String? = null,
+    val privateKeyWif: String? = null,
+    val privatePublicKeyBase64: String? = null,
 )

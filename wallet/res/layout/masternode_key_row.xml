@@ -26,7 +26,7 @@
     android:paddingTop="@dimen/transaction_row_vertical_padding"
     android:paddingBottom="@dimen/transaction_row_vertical_padding"
     android:tag="masternode_key_type"
-    tools:context="de.schildbach.wallet.ui.more.MasternodeKeyTypeAdapter">
+    tools:context="de.schildbach.wallet.ui.more.masternode_keys.MasternodeKeyTypeAdapter">
 
     <TextView
         android:id="@+id/keypair_index"

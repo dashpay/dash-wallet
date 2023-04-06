@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui.more
+package de.schildbach.wallet.ui.more.masternode_keys
 
 import android.os.Bundle
 import android.view.View

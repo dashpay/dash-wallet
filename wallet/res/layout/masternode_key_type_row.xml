@@ -26,7 +26,7 @@
     android:foreground="?attr/selectableItemBackground"
     android:layout_marginHorizontal="15dp"
     android:tag="masternode_key_type"
-    tools:context="de.schildbach.wallet.ui.more.MasternodeKeyTypeAdapter">
+    tools:context="de.schildbach.wallet.ui.more.masternode_keys.MasternodeKeyTypeAdapter">
 
     <TextView
         android:id="@+id/key_type_name"

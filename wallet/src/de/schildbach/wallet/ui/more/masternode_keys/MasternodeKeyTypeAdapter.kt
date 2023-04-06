@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.more
+package de.schildbach.wallet.ui.more.masternode_keys
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -42,11 +42,6 @@ class MasternodeKeyTypeAdapter(
     private val keyChainMap: MutableMap<MasternodeKeyType, MasternodeKeyTypeData>,
     private val clickListener: (MasternodeKeyType) -> Unit,
 ) : RecyclerView.Adapter<MasternodeKeyTypeViewHolder>() {
-
-    fun updateKeyChainData(data: MasternodeKeyTypeData) {
-        keyChainMap[data.type] = data
-        notifyItemChanged(data.type.type)
-    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MasternodeKeyTypeViewHolder {
         val inflater = LayoutInflater.from(parent.context)
