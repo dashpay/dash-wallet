@@ -366,6 +366,14 @@
         <item name="android:textColor">@color/white</item>
     </style>
 
+    <style name="Headline4.Medium">
+        <item name="fontFamily">@font/inter_medium</item>
+    </style>
+
+    <style name="Headline4.Medium.White">
+        <item name="android:textColor">@color/white</item>
+    </style>
+
     <style name="Headline5" parent="TextAppearance.MaterialComponents.Headline5">
         <item name="fontFamily">@font/inter_bold</item>
         <item name="android:textColor">@color/content_primary</item>

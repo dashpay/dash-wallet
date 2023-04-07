@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:context="de.schildbach.wallet.ui.main.WalletFragment">
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:id="@+id/home_content"
@@ -18,7 +20,8 @@
         <com.google.android.material.appbar.AppBarLayout
             android:id="@+id/app_bar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:background="@color/blue_background_color">
 
             <com.google.android.material.appbar.CollapsingToolbarLayout
                 android:layout_width="match_parent"
@@ -29,6 +32,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/home_toolbar_height"
                     android:orientation="vertical">
 
                     <androidx.fragment.app.FragmentContainerView
@@ -36,6 +40,7 @@
                         android:name="de.schildbach.wallet.ui.main.HeaderBalanceFragment"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginBottom="60dp"
                         android:layout_gravity="center_horizontal"
                         tools:layout="@layout/header_balance_fragment" />
 
@@ -60,31 +65,27 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="14dp" />
-
                     </LinearLayout>
-
                 </LinearLayout>
 
                 <androidx.appcompat.widget.Toolbar
+                    android:id="@+id/home_toolbar"
                     android:layout_width="match_parent"
-                    android:layout_height="?attr/actionBarSize"
-                    android:background="@color/colorPrimary"
+                    android:layout_height="@dimen/home_toolbar_height"
+                    android:background="@color/blue_background_color"
+                    android:paddingTop="10dp"
+                    android:clickable="true"
+                    android:focusable="true"
                     app:contentInsetStart="0dp"
                     app:layout_collapseMode="pin">
 
                     <ImageView
                         android:id="@+id/dash_logo"
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:padding="16dp"
-                        app:srcCompat="@drawable/ic_dash_logo_white" />
-
+                        android:layout_height="25dp"
+                        android:src="@drawable/ic_dash_logo_white" />
                 </androidx.appcompat.widget.Toolbar>
-
             </com.google.android.material.appbar.CollapsingToolbarLayout>
-
         </com.google.android.material.appbar.AppBarLayout>
 
         <de.schildbach.wallet.ui.widget.ShortcutsPane
@@ -106,7 +107,5 @@
             android:tag="wallet_transactions_fragment"
             app:layout_behavior="@string/appbar_scrolling_view_behavior"
             tools:layout="@layout/wallet_transactions_fragment" />
-
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

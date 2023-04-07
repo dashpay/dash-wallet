@@ -50,7 +50,6 @@ public class Configuration {
     private final SharedPreferences prefs;
     private final Resources res;
 
-    public static final String PREFS_KEY_HIDE_BALANCE = "hide_balance";
     public static final String PREFS_KEY_SEND_COINS_AUTOCLOSE = "send_coins_autoclose";
     public static final String PREFS_KEY_CONNECTIVITY_NOTIFICATION = "connectivity_notification";
     public static final String PREFS_KEY_EXCHANGE_CURRENCY = "exchange_currency";
@@ -60,7 +59,6 @@ public class Configuration {
     public static final String PREFS_KEY_BLOCK_EXPLORER = "block_explorer";
     public static final String PREFS_KEY_REMIND_BALANCE = "remind_balance";
     public static final String PREFS_KEY_REMIND_BALANCE_TIME = "remind_balance_time";
-    public static final String PREFS_KEY_DISCLAIMER = "disclaimer";
     private static final String PREFS_KEY_LABS_QR_PAYMENT_REQUEST = "labs_qr_payment_request";
     private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
     public static final String PREFS_KEY_AUTO_LOGOUT_ENABLED = "auto_logout_enabled";
@@ -168,14 +166,6 @@ public class Configuration {
             return new MonetaryFormat().shift(3).minDecimals(2).optionalDecimals(2, 1);
         else
             return new MonetaryFormat().shift(6).minDecimals(0).optionalDecimals(2);
-    }
-
-    public boolean getHideBalance() {
-        return prefs.getBoolean(PREFS_KEY_HIDE_BALANCE, false);
-    }
-
-    public void setHideBalance(final boolean hideBalance) {
-        prefs.edit().putBoolean(PREFS_KEY_HIDE_BALANCE, hideBalance).apply();
     }
 
     public boolean getSendCoinsAutoclose() {
@@ -297,14 +287,6 @@ public class Configuration {
 
     public void resetBackupSeedReminderTimer() {
         prefs.edit().putLong(PREFS_KEY_LAST_BACKUP_SEED_TIME, -1).apply();
-    }
-
-    public boolean getDisclaimerEnabled() {
-        return prefs.getBoolean(PREFS_KEY_DISCLAIMER, true);
-    }
-
-    public void setDisclaimerEnabled(boolean enabled) {
-        prefs.edit().putBoolean(PREFS_KEY_DISCLAIMER, enabled).apply();
     }
 
     @Nullable

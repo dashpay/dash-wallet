@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <declare-styleable name="CurrencyTextView">
-        <attr name="prefixColor" format="color" />
-    </declare-styleable>
-
     <attr name="action_icon" format="integer" />
     <attr name="action_background" format="integer" />
     <attr name="action_text_color" format="reference" />
@@ -37,4 +33,5 @@
     </declare-styleable>
 
     <attr format="color" name="disabledBackgroundColor"/>
+    <attr format="dimension" name="roundButtonRadius"/> <!-- Workaround for the ripple on newer API levels -->
 </resources>

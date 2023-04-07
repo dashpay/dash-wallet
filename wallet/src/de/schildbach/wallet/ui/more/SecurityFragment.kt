@@ -55,7 +55,7 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
         binding.appBar.toolbar.setNavigationOnClickListener { goBack() }
 
         viewModel.hideBalance.observe(viewLifecycleOwner) {
-            binding.hideBalanceSwitch.isChecked = it
+            binding.hideBalanceSwitch.isChecked =  it ?: false
         }
 
         viewModel.fingerprintIsAvailable.observe(viewLifecycleOwner) {
