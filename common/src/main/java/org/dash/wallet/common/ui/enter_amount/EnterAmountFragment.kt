@@ -111,10 +111,6 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         viewModel.canContinue.observe(viewLifecycleOwner) {
             binding.continueBtn.isEnabled = it
         }
-
-        viewModel.canContinue.observe(viewLifecycleOwner) {
-            binding.continueBtn.isEnabled = it
-        }
     }
 
     fun setViewDetails(continueText: String, keyboardHeader: View? = null) {
@@ -143,9 +139,11 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     fun setAmount(amount: Coin) {
         if (binding.amountView.dashToFiat) {
             binding.amountView.input = amount.toPlainString()
-        } else viewModel.selectedExchangeRate.value?.let {
-            val rate = ExchangeRate(it.fiat)
-            binding.amountView.input = binding.amountView.fiatFormat.format(rate.coinToFiat(amount)).toString()
+        } else {
+            viewModel.selectedExchangeRate.value?.let {
+                val rate = ExchangeRate(it.fiat)
+                binding.amountView.input = binding.amountView.fiatFormat.format(rate.coinToFiat(amount)).toString()
+            }
         }
     }
 
