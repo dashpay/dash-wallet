@@ -80,8 +80,12 @@ data class TransactionRowView(
             val isInternal = TransactionUtils.isEntirelySelf(tx, bag)
             val isSent = value.signum() < 0
             val removeFee = isSent && tx.fee != null && !tx.fee.isZero
+//            val hasErrors = tx.confidence.hasErrors() // TODO
+            val hasErrors = true
 
-            val icon = if (isInternal) {
+            val icon = if (hasErrors) {
+                R.drawable.ic_transaction_error
+            } else if (isInternal) {
                 R.drawable.ic_internal
             } else if (isSent) {
                 R.drawable.ic_transaction_sent
@@ -89,7 +93,9 @@ data class TransactionRowView(
                 R.drawable.ic_transaction_received
             }
 
-            val iconBackground = if (isInternal) {
+            val iconBackground = if (hasErrors) {
+                R.style.TxErrorBackground
+            } else if (isInternal) {
                 R.style.TxSentBackground
             } else if (isSent) {
                 R.style.TxSentBackground
@@ -97,9 +103,13 @@ data class TransactionRowView(
                 R.style.TxReceivedBackground
             }
 
-            val status = if (tx.confidence.hasErrors()) {
+            val title = if (hasErrors) {
                 resourceMapper.getErrorName(tx)
-            } else if (!isSent) {
+            } else {
+                resourceMapper.getTransactionTypeName(tx, bag)
+            }
+
+            val status = if (!hasErrors && !isSent) {
                 resourceMapper.getReceivedStatusString(tx, context)
             } else {
                 -1
@@ -111,12 +121,12 @@ data class TransactionRowView(
                 tx.exchangeRate,
                 icon,
                 iconBackground,
-                resourceMapper.getTransactionTypeName(tx, bag),
+                title,
                 status,
                 1,
                 tx.updateTime.time,
                 resourceMapper.dateTimeFormat,
-                tx.confidence.hasErrors(),
+                hasErrors,
                 null
             )
         }

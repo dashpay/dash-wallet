@@ -1170,13 +1170,19 @@
 
     <style name="TxSentBackground">
         <item name="backgroundColor">@color/tx_sent_background</item>
-        <item name="strokeColor">@color/tx_sent_background</item>
+        <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">19dp</item>
     </style>
 
     <style name="TxReceivedBackground">
         <item name="backgroundColor">@color/tx_received_background</item>
-        <item name="strokeColor">@color/tx_received_background</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">19dp</item>
+    </style>
+
+    <style name="TxErrorBackground">
+        <item name="backgroundColor">@color/tx_error_background</item>
+        <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">19dp</item>
     </style>
 
