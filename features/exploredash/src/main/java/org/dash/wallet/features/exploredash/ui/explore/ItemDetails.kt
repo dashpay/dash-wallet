@@ -23,6 +23,7 @@ import android.content.Intent
 import android.net.Uri
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.View.OnClickListener
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -203,18 +204,18 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
                     if (isDash) R.drawable.ic_dash_inverted else R.drawable.ic_gift_card_inverted,
                     null
                 )
-            payBtn.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
+            payBtnIcon.setImageDrawable(drawable)
 
             if (isDash) {
                 payBtn.isVisible = true
-                payBtn.text = context.getText(R.string.explore_pay_with_dash)
+                payBtnTxt.text = context.getText(R.string.explore_pay_with_dash)
                 payBtn.background = resources.getRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Blue)
                 payBtn.setOnClickListener { onSendDashClicked?.invoke(true) }
             } else {
                 // DashDirect allows payments via API, other sources require a deeplink
                 payBtn.isVisible = merchant.source?.lowercase() == ServiceName.DashDirect ||
                     !merchant.deeplink.isNullOrBlank()
-                payBtn.text = context.getText(R.string.explore_buy_gift_card)
+                payBtnTxt.text = context.getText(R.string.explore_buy_gift_card)
                 payBtn.background = resources.getRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Orange)
                 payBtn.setOnClickListener { onBuyGiftCardButtonClicked?.invoke() }
             }
