@@ -82,7 +82,7 @@ data class TransactionRowView(
             val removeFee = isSent && tx.fee != null && !tx.fee.isZero
 
             val icon = if (isInternal) {
-                R.drawable.ic_shuffle
+                R.drawable.ic_internal
             } else if (isSent) {
                 R.drawable.ic_transaction_sent
             } else {

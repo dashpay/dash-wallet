@@ -28,7 +28,6 @@ import androidx.core.view.isVisible
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
@@ -214,7 +213,7 @@ class TransactionResultViewBinder(
         } else {
             if (tx.getValue(wallet).signum() < 0) {
                 checkIcon.setImageResource(if (TransactionUtils.isEntirelySelf(tx, wallet)) {
-                    R.drawable.ic_shuffle
+                    R.drawable.ic_internal
                 } else {
                     R.drawable.ic_transaction_sent
                 })
