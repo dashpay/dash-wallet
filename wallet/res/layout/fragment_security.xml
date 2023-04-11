@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/background_primary"
     android:orientation="vertical"
-    tools:context="de.schildbach.wallet.ui.more.SecurityActivity">
+    tools:context="de.schildbach.wallet.ui.more.SecurityFragment">
 
     <include
         android:id="@+id/app_bar"
@@ -26,8 +26,8 @@
             android:paddingTop="10dp">
 
             <androidx.constraintlayout.widget.ConstraintLayout
-                style="@style/MenuRow.Internal"
-                android:onClick="viewRecoveryPhrase">
+                android:id="@+id/view_recovery_phrase"
+                style="@style/MenuRow.Internal">
 
                 <TextView
                     style="@style/MenuRowTitle.Internal"
@@ -49,8 +49,7 @@
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/change_pin"
-                style="@style/MenuRow.Internal"
-                android:onClick="changePin">
+                style="@style/MenuRow.Internal">
 
                 <TextView
                     style="@style/MenuRowTitle.Internal"
@@ -120,8 +119,7 @@
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/advanced_security"
-                style="@style/MenuRow.Internal"
-                android:onClick="openAdvancedSecurity">
+                style="@style/MenuRow.Internal">
 
                 <TextView
                     style="@style/MenuRowTitle.Internal"
@@ -144,8 +142,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/backup_wallet"
                 style="@style/MenuRow.Internal"
-                android:visibility="gone"
-                android:onClick="backupWallet">
+                android:visibility="gone">
 
                 <ImageView
                     android:id="@+id/backup_arrow"
@@ -169,8 +166,7 @@
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/reset_wallet"
-                style="@style/MenuRow.Internal"
-                android:onClick="resetWallet">
+                style="@style/MenuRow.Internal">
 
                 <TextView
                     style="@style/MenuRowTitle.Internal"

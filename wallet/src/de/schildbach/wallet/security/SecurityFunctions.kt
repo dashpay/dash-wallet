@@ -22,16 +22,19 @@ import android.content.Context
 import android.os.Build
 import androidx.fragment.app.FragmentActivity
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.ui.CheckPinDialog
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
+import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
@@ -40,7 +43,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class SecurityFunctions @Inject constructor(
-    private val walletApplication: WalletApplication,
+    private val walletData: WalletDataProvider,
     private val context: Context,
     private val biometricHelper: BiometricHelper,
     private val pinRetryController: PinRetryController
@@ -130,12 +133,20 @@ class SecurityFunctions @Inject constructor(
         }
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
+    @Suppress("UnnecessaryVariable")
+    suspend fun decryptSeed(password: String): DeterministicSeed = withContext(Dispatchers.Default) {
+        val wallet = walletData.wallet!!
+        val encryptionKey = deriveKey(wallet, password)
+        val deterministicSeed = wallet.keyChainSeed.decrypt(wallet.keyCrypter, null, encryptionKey) // Takes time
+
+        return@withContext deterministicSeed
+    }
+
     override suspend fun signMessage(address: Address, message: String): String {
         val securityGuard = SecurityGuard()
         val password = securityGuard.retrievePassword()
-        val keyParameter = deriveKey(walletApplication.wallet!!, password)
-        val key = walletApplication.wallet?.findKeyFromAddress(address)
+        val keyParameter = deriveKey(walletData.wallet!!, password)
+        val key = walletData.wallet?.findKeyFromAddress(address)
         return key?.signMessage(message, keyParameter) ?: ""
     }
 
