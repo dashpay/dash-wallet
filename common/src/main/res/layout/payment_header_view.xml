@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:layout_marginHorizontal="20dp">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:id="@+id/address_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -19,8 +19,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:text="Buy" />
+            app:layout_constraintTop_toBottomOf="@id/address_container"
+            tools:text="@string/to" />
 
         <TextView
             android:id="@+id/payment_address_view_proposition"
@@ -28,7 +28,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            app:layout_constraintBaseline_toBaselineOf="@+id/payment_address_view_title"
             app:layout_constraintBottom_toBottomOf="@+id/payment_address_view_title"
             app:layout_constraintStart_toEndOf="@+id/payment_address_view_title"
             app:layout_constraintTop_toTopOf="@+id/payment_address_view_title"
@@ -41,10 +40,8 @@
             android:layout_marginStart="6dp"
             android:visibility="gone"
             android:layout_gravity="bottom"
-            app:layout_constraintBottom_toBottomOf="@+id/payment_address_view_subtitle"
-            app:layout_constraintStart_toEndOf="@+id/payment_address_view_proposition"
-            app:layout_constraintTop_toTopOf="@+id/payment_address_view_subtitle"
-            tools:src="@drawable/currency_code_aed"
+            android:layout_marginBottom="6dp"
+            tools:src="@drawable/ic_dash_saturated"
             tools:visibility="visible" />
 
         <TextView
@@ -55,12 +52,11 @@
             android:layout_marginStart="6dp"
             android:ellipsize="middle"
             android:maxLines="1"
-            app:layout_constraintBaseline_toBaselineOf="@+id/payment_address_view_title"
             app:layout_constraintBottom_toBottomOf="@+id/payment_address_view_title"
             app:layout_constraintStart_toEndOf="@+id/payment_address_view_icon"
             app:layout_constraintTop_toTopOf="@+id/payment_address_view_title"
             tools:text="Xti5jqb9tf3sS...RJnQCpmkeSU2T" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/payment_address_view_balance_title"
