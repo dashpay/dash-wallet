@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.transactions
 
-import android.util.Log
 import org.bitcoinj.core.RejectMessage
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
@@ -29,6 +28,7 @@ enum class TxError {
     Nonstandard,
     Dust,
     InsufficientFee,
+    Duplicate,
     Invalid,
     Malformed,
     Obsolete,
@@ -55,7 +55,7 @@ enum class TxError {
                             RejectMessage.RejectCode.NONSTANDARD -> Nonstandard
                             RejectMessage.RejectCode.DUST -> Dust
                             RejectMessage.RejectCode.INSUFFICIENTFEE -> InsufficientFee
-                            RejectMessage.RejectCode.DUPLICATE -> DoubleSpend // TODO ???
+                            RejectMessage.RejectCode.DUPLICATE -> Duplicate
                             RejectMessage.RejectCode.INVALID -> Invalid
                             RejectMessage.RejectCode.MALFORMED -> Malformed
                             RejectMessage.RejectCode.OBSOLETE -> Obsolete

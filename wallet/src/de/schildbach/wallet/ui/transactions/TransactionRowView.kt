@@ -84,7 +84,7 @@ data class TransactionRowView(
             val hasErrors = true
 
             val icon = if (hasErrors) {
-                R.drawable.ic_transaction_error
+                R.drawable.ic_transaction_failed
             } else if (isInternal) {
                 R.drawable.ic_internal
             } else if (isSent) {

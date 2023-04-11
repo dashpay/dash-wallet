@@ -245,6 +245,9 @@
     <string name="transaction_details_moved_from">Moved from</string>
     <string name="transaction_details_moved_internally_to">Internally moved to</string>
     <string name="transaction_failed_details">Transaction failed</string>
+    <string name="transaction_failed_resolve">This could be resolved by</string>
+    <string name="transaction_failed_rescan">rescanning the blockchain</string>
+    <string name="transaction_failed_in_conflict">This is possible if the wallet is installed on two devices.</string>
 
     <string name="authenticate_fingerprint_title">Authenticate</string>
     <string name="authenticate_fingerprint_message">Confirm fingerprint to continue</string>

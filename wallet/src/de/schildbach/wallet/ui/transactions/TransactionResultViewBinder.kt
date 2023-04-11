@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.transactions
 
+import android.annotation.SuppressLint
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -38,6 +39,7 @@ import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
 import org.dash.wallet.common.ui.CurrencyTextView
+import org.dash.wallet.common.util.makeLinks
 
 /**
  * @author Samuel Barbosa
@@ -74,7 +76,7 @@ class TransactionResultViewBinder(
     private val errorContainer by lazy { containerView.findViewById<View>(R.id.error_container) }
     private val errorDescription by lazy { containerView.findViewById<TextView>(R.id.error_description) }
     private val taxCategory by lazy { containerView.findViewById<TextView>(R.id.tax_category) }
-
+    private val taxCategoryCard by lazy { containerView.findViewById<View>(R.id.open_tax_category_card) }
     private val reportIssueContainer by lazy { containerView.findViewById<View>(R.id.report_issue_card) }
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
     private val explorerContainer by lazy { containerView.findViewById<View>(R.id.open_explorer_card) }
@@ -86,6 +88,7 @@ class TransactionResultViewBinder(
         TaxCategory.TransferIn to R.string.tax_category_transfer_in,
         TaxCategory.TransferOut to R.string.tax_category_transfer_out
     )
+    private var onRescanTriggered: (() -> Unit)? = null
 
     fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
         val value = tx.getValue(wallet)
@@ -93,7 +96,6 @@ class TransactionResultViewBinder(
 
         val primaryStatus = resourceMapper.getTransactionTypeName(tx, wallet)
         val secondaryStatus = resourceMapper.getReceivedStatusString(tx, wallet.context)
-        val errorStatus = resourceMapper.getErrorName(tx)
         var primaryStatusStr = if (tx.type != Transaction.Type.TRANSACTION_NORMAL || tx.isCoinBase) {
             ctx.getString(primaryStatus)
         } else {
@@ -101,11 +103,6 @@ class TransactionResultViewBinder(
         }
         var secondaryStatusStr = if (secondaryStatus != -1) {
             ctx.getString(secondaryStatus)
-        } else {
-            ""
-        }
-        val errorStatusStr = if (errorStatus != -1) {
-            ctx.getString(errorStatus)
         } else {
             ""
         }
@@ -166,6 +163,7 @@ class TransactionResultViewBinder(
         }
 
         dashAmount.setFormat(dashFormat)
+
         //For displaying purposes only
         if (value.isNegative) {
             dashAmount.setAmount(value.negate())
@@ -189,27 +187,53 @@ class TransactionResultViewBinder(
             fiatValue.isVisible = false
         }
 
-        setTransactionDirection(tx, wallet, errorStatusStr)
+        setTransactionDirection(tx, wallet)
     }
 
-    private fun setTransactionDirection(
-        tx: Transaction,
-        wallet: Wallet,
-        errorStatusStr: String
-    ) {
-        if (errorStatusStr.isNotEmpty()){
+    @SuppressLint("SetTextI18n")
+    private fun setTransactionDirection(tx: Transaction, wallet: Wallet) {
+//        val hasErrors = tx.confidence.hasErrors()
+        val hasErrors = true
+        if (hasErrors) {
+            val errorStatus = TxError.fromTransaction(tx)
+            val showReportIssue = errorStatus == TxError.DoubleSpend || errorStatus == TxError.Duplicate ||
+                errorStatus == TxError.Unknown || errorStatus == TxError.InConflict
+            val shouldSuggestRescan = errorStatus == TxError.DoubleSpend || errorStatus == TxError.Duplicate ||
+                errorStatus == TxError.Unknown
+
             errorContainer.isVisible = true
-            reportIssueContainer.isVisible = true
+            reportIssueContainer.isVisible = showReportIssue
             outputsContainer.isVisible = false
             inputsContainer.isVisible = false
             feeRow.isVisible = false
             dateContainer.isVisible = false
             explorerContainer.isVisible = false
+            taxCategoryCard.isVisible = false
+            dashAmount.setStrikeThru(true)
+            fiatValue.setStrikeThru(true)
             checkIcon.setImageResource(R.drawable.ic_transaction_failed)
-            transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.content_warning))
             transactionTitle.text = ctx.getText(R.string.transaction_failed_details)
-            errorDescription.text = errorStatusStr
-            transactionAmountSignal.text = "-"
+
+            var rescanText = ""
+            val additionalInfo = if (shouldSuggestRescan) {
+                rescanText = ctx.getString(R.string.transaction_failed_rescan)
+                "・${ctx.getString(R.string.transaction_failed_resolve)} $rescanText"
+            } else if (errorStatus == TxError.InConflict) {
+                "・${ctx.getString(R.string.transaction_failed_in_conflict)}"
+            } else {
+                ""
+            }
+            errorDescription.text = ctx.getString(resourceMapper.getErrorName(errorStatus)) + additionalInfo
+
+            if (shouldSuggestRescan) {
+                errorDescription.makeLinks(
+                    Pair(
+                        rescanText,
+                        View.OnClickListener { onRescanTriggered?.invoke() }
+                    ),
+                    linkColor = R.color.dash_blue
+                )
+            }
         } else {
             if (tx.getValue(wallet).signum() < 0) {
                 checkIcon.setImageResource(if (TransactionUtils.isEntirelySelf(tx, wallet)) {
@@ -230,9 +254,8 @@ class TransactionResultViewBinder(
                 transactionAmountSignal.text = "+"
             }
             checkIcon.isVisible = true
+            feeRow.isVisible = isFeeAvailable(tx.fee)
         }
-
-        feeRow.visibility = if (isFeeAvailable(tx.fee)) View.VISIBLE else View.GONE
     }
 
     fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
@@ -242,6 +265,10 @@ class TransactionResultViewBinder(
             taxCategoryNames[transactionMetadata.defaultTaxCategory]
         }
         taxCategory.text = containerView.resources.getString(strResource!!)
+    }
+
+    fun setOnRescanTriggered(listener: () -> Unit) {
+        onRescanTriggered = listener
     }
 
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {

@@ -44,11 +44,10 @@
             android:layout_width="wrap_content"
             android:layout_height="0dp"
             android:layout_marginEnd="4dp"
-            android:layout_marginRight="4dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@id/transaction_amount_signal"
             app:layout_constraintTop_toTopOf="parent"
-            tools:text="-3.14" />
+            tools:text="3.14" />
 
         <ImageView
             android:id="@+id/dash_amount_symbol"
@@ -103,7 +102,7 @@
             android:id="@+id/error_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingVertical="12dp"
+            android:paddingVertical="6dp"
             android:visibility="gone"
             tools:visibility="visible">
 
@@ -112,11 +111,7 @@
                 style="@style/Caption.Medium.Tertiary"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="4dp"
-                android:ellipsize="end"
-                android:lines="1"
                 android:text="@string/reason"
-                android:textSize="13sp"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
@@ -126,7 +121,6 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:textSize="13sp"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/error_label"
                 tools:text="Nonstandard" />

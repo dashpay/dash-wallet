@@ -106,8 +106,8 @@ public class TxResourceMapper {
                 return R.string.transaction_row_status_error_dust;
             case InsufficientFee:
                 return R.string.transaction_row_status_error_insufficient_fee;
-//            case DUPLICATE:
-//                return R.string.transaction_row_status_error_duplicate; TODO: ???
+            case Duplicate:
+                return R.string.transaction_row_status_error_duplicate;
             case Invalid:
                 return R.string.transaction_row_status_error_invalid;
             case Malformed:
