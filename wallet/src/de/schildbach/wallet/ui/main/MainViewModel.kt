@@ -263,7 +263,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun updateSyncStatus(state: BlockchainState) {
-        if (_isBlockchainSyncFailed.value != state.isSynced()) {
+        if (_isBlockchainSynced.value != state.isSynced()) {
             _isBlockchainSynced.postValue(state.isSynced())
 
             if (state.isSynced()) {
