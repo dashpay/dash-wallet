@@ -80,8 +80,7 @@ data class TransactionRowView(
             val isInternal = TransactionUtils.isEntirelySelf(tx, bag)
             val isSent = value.signum() < 0
             val removeFee = isSent && tx.fee != null && !tx.fee.isZero
-//            val hasErrors = tx.confidence.hasErrors() // TODO
-            val hasErrors = true
+            val hasErrors = tx.confidence.hasErrors()
 
             val icon = if (hasErrors) {
                 R.drawable.ic_transaction_failed

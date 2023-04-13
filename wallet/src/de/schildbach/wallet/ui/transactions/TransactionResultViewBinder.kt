@@ -192,9 +192,7 @@ class TransactionResultViewBinder(
 
     @SuppressLint("SetTextI18n")
     private fun setTransactionDirection(tx: Transaction, wallet: Wallet) {
-//        val hasErrors = tx.confidence.hasErrors()
-        val hasErrors = true
-        if (hasErrors) {
+        if (tx.confidence.hasErrors()) {
             val errorStatus = TxError.fromTransaction(tx)
             val showReportIssue = errorStatus == TxError.DoubleSpend || errorStatus == TxError.Duplicate ||
                 errorStatus == TxError.Unknown || errorStatus == TxError.InConflict
