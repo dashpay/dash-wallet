@@ -26,6 +26,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.widget.doAfterTextChanged
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.*
@@ -39,6 +40,7 @@ import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityNotificationsBinding
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -246,13 +248,15 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
                 Toast.makeText(this, "payment $tx", Toast.LENGTH_LONG).show()
             }
             is NotificationItemUserAlert -> {
-                dashPayViewModel.inviteHistory.observeOnce(this) {
+                lifecycleScope.launch {
+                    val inviteHistory = dashPayViewModel.getInviteHistory()
                     userAlertItem = null
                     dashPayViewModel.dismissUserAlert(R.string.invitation_notification_text)
-                    if (it == null || it.isEmpty()) {
-                        InviteFriendActivity.startOrError(this)
+
+                    if (inviteHistory.isEmpty()) {
+                        InviteFriendActivity.startOrError(this@NotificationsActivity)
                     } else {
-                        startActivity(InvitesHistoryActivity.createIntent(this))
+                        startActivity(InvitesHistoryActivity.createIntent(this@NotificationsActivity))
                     }
                 }
             }

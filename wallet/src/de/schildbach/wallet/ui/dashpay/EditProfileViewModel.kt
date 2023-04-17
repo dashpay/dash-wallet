@@ -33,7 +33,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainIdentityDataDao
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.DashPayProfileDao
 import de.schildbach.wallet.data.ImgurUploadResponse
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.SingleLiveEvent
@@ -67,10 +69,11 @@ import kotlin.coroutines.suspendCoroutine
 
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
-    application: WalletApplication,
+    private val walletApplication: WalletApplication,
     private val analytics: AnalyticsService,
-    appDatabase: AppDatabase
-) : BaseProfileViewModel(application, appDatabase) {
+    blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    dashPayProfileDao: DashPayProfileDao
+) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
     enum class ProfilePictureStorageService {
         GOOGLE_DRIVE, IMGUR
@@ -90,7 +93,7 @@ class EditProfileViewModel @Inject constructor(
 
     val profilePictureFile by lazy {
         try {
-            val storageDir: File = application.getExternalFilesDir(Environment.DIRECTORY_PICTURES)!!
+            val storageDir: File = walletApplication.getExternalFilesDir(Environment.DIRECTORY_PICTURES)!!
             File(storageDir, Constants.Files.PROFILE_PICTURE_FILENAME)
         } catch (ex: IOException) {
             log.error(ex.message, ex)
@@ -120,7 +123,7 @@ class EditProfileViewModel @Inject constructor(
         false
     }
 
-    val updateProfileRequestState = UpdateProfileStatusLiveData(application)
+    val updateProfileRequestState = UpdateProfileStatusLiveData(walletApplication)
 
     var lastAttemptedProfile: DashPayProfile? = null
 
@@ -129,7 +132,7 @@ class EditProfileViewModel @Inject constructor(
 
         logProfileInfoEvents(displayName, publicMessage, avatarUrl)
 
-        val dashPayProfile = dashPayProfileData.value!!
+        val dashPayProfile = dashPayProfile.value!!
         val avatarFingerprintBytes = avatarFingerprint?.run { ProfilePictureHelper.toByteArray(this) }
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
                 displayName, publicMessage, avatarUrl, avatarHash?.bytes, avatarFingerprintBytes,
@@ -381,21 +384,21 @@ class EditProfileViewModel @Inject constructor(
     }
 
     private fun logProfileInfoEvents(displayName: String, publicMessage: String, avatarUrl: String) {
-        if (displayName != dashPayProfile!!.displayName) {
+        if (displayName != dashPayProfile.value!!.displayName) {
             analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_NAME, bundleOf())
             analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_NAME_LENGTH, bundleOf(
                 "length" to displayName.length
             ))
         }
 
-        if (publicMessage != dashPayProfile!!.publicMessage) {
+        if (publicMessage != dashPayProfile.value!!.publicMessage) {
             analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_ABOUT_ME, bundleOf())
             analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_ABOUT_ME_LENGTH, bundleOf(
                 "length" to publicMessage.length
             ))
         }
 
-        if (avatarUrl != dashPayProfile!!.avatarUrl) {
+        if (avatarUrl != dashPayProfile.value!!.avatarUrl) {
             when (pictureSource) {
                 "gravatar" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_GRAVATAR, bundleOf())
                 "public_url" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_PUBLIC_URL, bundleOf())

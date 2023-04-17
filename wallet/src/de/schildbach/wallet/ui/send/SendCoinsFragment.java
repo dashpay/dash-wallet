@@ -299,8 +299,7 @@ public class SendCoinsFragment extends Fragment {
         viewModel.setUserData(userData);
         if (userData.getRequestReceived()) {
             final DashPayProfile dashPayProfile = userData.getDashPayProfile();
-            AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
-                    .loadDistinctToOthers(dashPayProfile.getUserId())
+            dashPayViewModel.contactRequestsTo(dashPayProfile.getUserId())
                     .observe(getViewLifecycleOwner(), new Observer<List<DashPayContactRequest>>() {
                         @Override
                         public void onChanged(List<DashPayContactRequest> dashPayContactRequests) {

@@ -161,7 +161,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
         if (blockchainIdentity != null) {
             userId = blockchainIdentity.getContactForTransaction(tx)
             if (userId != null) {
-                AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(userId).observe(this) {
+                viewModel.profileById(userId).observe(this) {
                     if (it != null) {
                         profile = it
                         finishInitialization(tx, profile)

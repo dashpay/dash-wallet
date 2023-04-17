@@ -219,7 +219,7 @@ class EditProfileActivity : BaseMenuActivity() {
     private fun pictureFromUrl() {
         if (editProfileViewModel.createTmpPictureFile()) {
             val initialUrl = externalUrlSharedViewModel.externalUrl?.toString()
-                    ?: editProfileViewModel.dashPayProfile?.avatarUrl
+                    ?: editProfileViewModel.dashPayProfile.value?.avatarUrl
             ExternalUrlProfilePictureDialog.newInstance(initialUrl).show(supportFragmentManager, "")
         } else {
             Toast.makeText(this, "Unable to create temporary file", Toast.LENGTH_LONG).show()
@@ -228,7 +228,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private fun initViewModel() {
         // first ensure that we have a registered username
-        editProfileViewModel.dashPayProfileData.observe(this) { dashPayProfile ->
+        editProfileViewModel.dashPayProfile.observe(this) { dashPayProfile ->
             if (dashPayProfile != null) {
                 showProfileInfo(dashPayProfile)
             } else {
@@ -243,7 +243,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 editProfileViewModel.saveExternalBitmap(it)
                 setEditingState(true)
             } else {
-                val username = editProfileViewModel.dashPayProfile!!.username
+                val username = editProfileViewModel.dashPayProfile.value!!.username
                 ProfilePictureDisplay.displayDefault(dashpayUserAvatar, username)
             }
             profilePictureChanged = true
@@ -347,7 +347,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 editProfileViewModel.profilePictureUploadLiveData.value!!.data
             }
         } else {
-            editProfileViewModel.dashPayProfile!!.avatarUrl
+            editProfileViewModel.dashPayProfile.value!!.avatarUrl
         }
 
         editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl ?: "")
@@ -469,10 +469,10 @@ class EditProfileActivity : BaseMenuActivity() {
                 } else if (resultCode == Activity.RESULT_CANCELED) {
                     // if crop was canceled, then return the externalUrl to its original state
                     if (externalUrlSharedViewModel.externalUrl != null)
-                        externalUrlSharedViewModel.externalUrl = if (editProfileViewModel.dashPayProfile!!.avatarUrl == "") {
+                        externalUrlSharedViewModel.externalUrl = if (editProfileViewModel.dashPayProfile.value!!.avatarUrl == "") {
                             null
                         } else {
-                            Uri.parse(editProfileViewModel.dashPayProfile!!.avatarUrl)
+                            Uri.parse(editProfileViewModel.dashPayProfile.value!!.avatarUrl)
                         }
                 }
             }

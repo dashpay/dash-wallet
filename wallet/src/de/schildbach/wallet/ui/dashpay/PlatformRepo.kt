@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui.dashpay
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
-import androidx.lifecycle.LiveData
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
@@ -107,15 +106,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val userAlertDao = AppDatabase.getAppDatabase().userAlertDao()
     private val transactionMetadataDocumentDao = AppDatabase.getAppDatabase().transactionMetadataDocumentDao()
     private val transactionMetadataChangeCacheDao = AppDatabase.getAppDatabase().transactionMetadataCacheDao()
-
-    // Async
-    private val blockchainIdentityDataDaoAsync =
-        AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync()
-    private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
-    private val dashPayContactRequestDaoAsync =
-        AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
-    private val invitationsDaoAsync = AppDatabase.getAppDatabase().invitationsDaoAsync()
-    private val userAlertDaoAsync = AppDatabase.getAppDatabase().userAlertDaoAsync()
 
     private lateinit var blockchainIdentity: BlockchainIdentity
 
@@ -979,7 +969,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         transactionMetadataChangeCacheDao.clear()
         transactionMetadataDocumentDao.clear()
         if (includeInvitations) {
-            invitationsDaoAsync.clear()
+            invitationsDao.clear()
         }
     }
 
@@ -1019,7 +1009,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun observeProfileByUserId(userId: String): Flow<DashPayProfile?> {
-        return dashPayProfileDaoAsync.observeByUserId(userId).distinctUntilChanged()
+        return dashPayProfileDao.observeByUserId(userId).distinctUntilChanged()
     }
 
     suspend fun loadProfileByUserId(userId: String): DashPayProfile? {

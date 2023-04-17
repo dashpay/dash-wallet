@@ -61,17 +61,22 @@ object DatabaseModule {
     }
 
     @Provides
-    fun provideDashPayProfileDaoAsync(appDatabase: AppDatabase): DashPayProfileDaoAsync {
-        return appDatabase.dashPayProfileDaoAsync()
+    fun provideDashPayProfileDao(appDatabase: AppDatabase): DashPayProfileDao {
+        return appDatabase.dashPayProfileDao()
     }
 
     @Provides
-    fun provideUserAlertDaoAsync(appDatabase: AppDatabase): UserAlertDaoAsync {
-        return appDatabase.userAlertDaoAsync()
+    fun provideUserAlertDaoAsync(appDatabase: AppDatabase): UserAlertDao {
+        return appDatabase.userAlertDao()
     }
 
     @Provides
-    fun provideInvitationsDaoAsync(appDatabase: AppDatabase): InvitationsDaoAsync {
-        return appDatabase.invitationsDaoAsync()
+    fun provideInvitationsDaoAsync(appDatabase: AppDatabase): InvitationsDao {
+        return appDatabase.invitationsDao()
+    }
+
+    @Provides
+    fun provideDashPayContactRequestDao(appDatabase: AppDatabase): DashPayContactRequestDao {
+        return appDatabase.dashPayContactRequestDao()
     }
 }

@@ -18,6 +18,7 @@ package de.schildbach.wallet.data
 
 import androidx.room.*
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.ExchangeRate
 
 /**
  * @author Eric Britten
@@ -81,8 +82,6 @@ interface TransactionMetadataDocumentDao {
         """)
     suspend fun getTransactionTaxCategory(txId: Sha256Hash): String?
 
-    data class ExchangeRate(val currencyCode: String?, val rate: Double?)
-
     @Query("""
         SELECT rate, currencyCode 
         FROM transaction_metadata_platform 
@@ -100,7 +99,6 @@ interface TransactionMetadataDocumentDao {
     @Query("SELECT COUNT(*) FROM transaction_metadata_platform")
     fun countAllRequests(): Int
 
-
     @Query("DELETE FROM transaction_metadata_platform")
-    fun clear()
+    suspend fun clear()
 }

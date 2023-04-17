@@ -25,15 +25,8 @@ import androidx.core.content.ContextCompat
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityData
-import de.schildbach.wallet.data.DashPayContactRequest
-import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.TransactionMetadataCacheItem
-import de.schildbach.wallet.data.TransactionMetadataChangeCacheDao
-import de.schildbach.wallet.data.TransactionMetadataDocument
-import de.schildbach.wallet.data.TransactionMetadataDocumentDao
+import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.BlockchainService
@@ -101,7 +94,11 @@ class PlatformSynchronizationService @Inject constructor(
     val walletApplication: WalletApplication,
     val transactionMetadataProvider: TransactionMetadataProvider,
     val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
-    val transactionMetadataDocumentDao: TransactionMetadataDocumentDao
+    val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
+    val blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    val dashPayProfileDao: DashPayProfileDao,
+    val dashPayContactRequestDao: DashPayContactRequestDao,
+    val invitationsDao: InvitationsDao
 ) : PlatformSyncService {
 
     companion object {
@@ -118,20 +115,13 @@ class PlatformSynchronizationService @Inject constructor(
     private var preDownloadBlocksFuture: SettableFuture<Boolean>? = null
 
     private var mainHandler: Handler = Handler(platformRepo.walletApplication.mainLooper)
-
-    private val blockchainIdentityDataDao = AppDatabase.getAppDatabase().blockchainIdentityDataDao()
-    private val dashPayProfileDao = AppDatabase.getAppDatabase().dashPayProfileDao()
-    private val dashPayContactRequestDao = AppDatabase.getAppDatabase().dashPayContactRequestDao()
-    private val invitationsDao = AppDatabase.getAppDatabase().invitationsDao()
     private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
     private val onPreBlockContactListeners = arrayListOf<OnPreBlockProgressListener>()
     private var lastPreBlockStage: PreBlockStage = PreBlockStage.None
 
-
     private val syncScope = CoroutineScope(
         Executors.newFixedThreadPool(5).asCoroutineDispatcher()
     )
-
 
     override fun initGlobal() {
         platformSyncJob = syncScope.launch {
