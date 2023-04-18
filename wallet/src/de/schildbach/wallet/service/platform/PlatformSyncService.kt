@@ -131,7 +131,6 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     private fun initSync() {
-
         platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY.seconds)
             .onEach { updateContactRequests() }
             .launchIn(syncScope)
@@ -141,7 +140,7 @@ class PlatformSynchronizationService @Inject constructor(
         if (platformRepo.hasIdentity) {
             Preconditions.checkState(platformSyncJob.isActive)
             log.info("Shutting down the platform sync job")
-            platformSyncJob.cancel("shutdown the platform sync")
+            syncScope.coroutineContext.cancelChildren(CancellationException("shutdown the platform sync"))
         }
     }
 
@@ -291,6 +290,8 @@ class PlatformSynchronizationService @Inject constructor(
             updateSyncStatus(PreBlockStage.Complete)
 
             log.info("updating contacts and profiles took $watch")
+        } catch (_: CancellationException) {
+            // ignore
         } catch (e: Exception) {
             log.error(platformRepo.formatExceptionMessage("error updating contacts", e))
         } finally {
@@ -778,8 +779,10 @@ class PlatformSynchronizationService @Inject constructor(
             // clear out cache table after successful publishing on platform
             transactionMetadataChangeCacheDao.clear()
             log.info("published ${itemsToPublish.values.size} tx metadata changes to platform")
+        } catch (_: CancellationException) {
+            // ignore
         } catch (e: Exception) {
-            log.info("publishing exception caught", e)
+            log.error("publishing exception caught", e)
         }
     }
 
@@ -793,7 +796,6 @@ class PlatformSynchronizationService @Inject constructor(
         }
         return future
     }
-
 
     private fun finishPreBlockDownload() {
         log.info("PreDownloadBlocks: complete")
