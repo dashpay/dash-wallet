@@ -45,7 +45,11 @@ class FrequentContactsLiveData(walletApplication: WalletApplication, val platfor
             val contactRequests = platformRepo.searchContacts("", UsernameSortOrderBy.DATE_ADDED)
             when (contactRequests.status) {
                 Status.SUCCESS -> {
-                    val blockchainIdentity = platformRepo.getBlockchainIdentity() ?: return@launch
+                    if (!platformRepo.hasIdentity) {
+                        return@launch
+                    }
+
+                    val blockchainIdentity = platformRepo.blockchainIdentity
                     val threeMonthsAgo = Date().time - TIMESPAN
 
                     val results = getTopContacts(contactRequests.data!!, listOf(), blockchainIdentity, threeMonthsAgo, true)

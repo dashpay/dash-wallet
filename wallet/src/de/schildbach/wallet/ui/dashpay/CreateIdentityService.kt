@@ -650,8 +650,8 @@ class CreateIdentityService : LifecycleService() {
         val existingBlockchainIdentityData = blockchainIdentityDataDao.load()
         if (existingBlockchainIdentityData != null) {
             log.info("Attempting restore of existing identity and username; save credit funding txid")
-            val blockchainIdentity = platformRepo.getBlockchainIdentity()
-            blockchainIdentity!!.creditFundingTransaction = creditFundingTransaction
+            val blockchainIdentity = platformRepo.blockchainIdentity
+            blockchainIdentity.creditFundingTransaction = creditFundingTransaction
             existingBlockchainIdentityData.creditFundingTxId = creditFundingTransaction!!.txId
             platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
             return

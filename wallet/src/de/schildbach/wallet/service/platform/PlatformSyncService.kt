@@ -124,20 +124,21 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override fun resume() {
-        if (!platformSyncJob.isActive && platformRepo.getBlockchainIdentity() != null) {
+        if (!platformSyncJob.isActive && platformRepo.hasIdentity) {
             log.info("Resuming the platform sync job")
             initSync()
         }
     }
 
     private fun initSync() {
+
         platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY.seconds)
             .onEach { updateContactRequests() }
             .launchIn(syncScope)
     }
 
     override fun shutdown() {
-        if (platformRepo.getBlockchainIdentity() != null) {
+        if (platformRepo.hasIdentity) {
             Preconditions.checkState(platformSyncJob.isActive)
             log.info("Shutting down the platform sync job")
             platformSyncJob.cancel("shutdown the platform sync")
@@ -345,7 +346,7 @@ class PlatformSynchronizationService @Inject constructor(
                     myEncryptionKey =
                         platformRepo.walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
                 }
-                platformRepo.getBlockchainIdentity()!!.addPaymentKeyChainFromContact(
+                platformRepo.blockchainIdentity.addPaymentKeyChainFromContact(
                     contactIdentity!!,
                     contactRequest,
                     myEncryptionKey!!
@@ -393,7 +394,7 @@ class PlatformSynchronizationService @Inject constructor(
                     myEncryptionKey =
                         platformRepo.walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
                 }
-                platformRepo.getBlockchainIdentity()!!.addContactPaymentKeyChain(
+                platformRepo.blockchainIdentity.addContactPaymentKeyChain(
                     contactIdentity!!,
                     contactRequest.document,
                     myEncryptionKey!!
@@ -616,7 +617,7 @@ class PlatformSynchronizationService @Inject constructor(
 
         log.info("fetching TxMetadataDocuments from {}", lastTxMetadataRequestTime)
 
-        val items = platformRepo.getBlockchainIdentity()!!
+        val items = platformRepo.blockchainIdentity
             .getTxMetaData(lastTxMetadataRequestTime, myEncryptionKey)
 
         if (items.isNotEmpty()) {
@@ -740,7 +741,7 @@ class PlatformSynchronizationService @Inject constructor(
             TxMetadataItem(it.txId.bytes, it.sentTimestamp, it.memo, it.rate?.toDouble(), it.currencyCode, it.taxCategory?.name?.lowercase(), it.service)
         }
         val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
-        platformRepo.getBlockchainIdentity()!!.publishTxMetaData(metadataList, walletEncryptionKey)
+        platformRepo.blockchainIdentity.publishTxMetaData(metadataList, walletEncryptionKey)
     }
 
     suspend fun publishChangeCache() {

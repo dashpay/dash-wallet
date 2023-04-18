@@ -332,10 +332,9 @@ class MainViewModel @Inject constructor(
 
     private suspend fun refreshTransactions(filter: TransactionFilter, memos: Map<Sha256Hash, String>) {
         walletData.wallet?.let { wallet ->
-            val userIdentity = platformRepo.getBlockchainIdentity()
             val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
 
-            if (userIdentity != null) {
+            if (platformRepo.hasIdentity) {
                 val contacts = platformRepo.searchContacts("",
                     UsernameSortOrderBy.LAST_ACTIVITY, false)
                 contacts.data?.forEach { result ->
@@ -356,8 +355,8 @@ class MainViewModel @Inject constructor(
                  if (it.transactions.size == 1) {
                      memo = memos.getOrDefault(tx.txId, "")
 
-                     if (!isInternal) {
-                         val contactId = userIdentity?.getContactForTransaction(tx)
+                     if (!isInternal && platformRepo.hasIdentity) {
+                         val contactId = platformRepo.blockchainIdentity.getContactForTransaction(tx)
 
                          if (contactId != null) {
                              contact = contactsByIdentity[contactId]

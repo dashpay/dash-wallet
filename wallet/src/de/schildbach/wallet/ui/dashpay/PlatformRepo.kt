@@ -20,7 +20,6 @@ import android.os.HandlerThread
 import android.os.Process
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
-import com.google.common.util.concurrent.SettableFuture
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -66,7 +65,6 @@ import org.dashj.platform.sdk.platform.multicall.MulticallQuery
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeoutException
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -86,18 +84,17 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     var onIdentityResolved: ((Identity?) -> Unit)? = {}
-
-    private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
-    private val onPreBlockContactListeners = arrayListOf<OnPreBlockProgressListener>()
     private val onSeriousErrorListeneners = arrayListOf<SeriousErrorListener>()
-
-    private val updatingContacts = AtomicBoolean(false)
-    private val preDownloadBlocks = AtomicBoolean(false)
-    private var preDownloadBlocksFuture: SettableFuture<Boolean>? = null
 
     val platform = Platform(Constants.NETWORK_PARAMETERS)
     val profiles = Profiles(platform)
     val contactRequests = ContactRequests(platform)
+
+    lateinit var blockchainIdentity: BlockchainIdentity
+        private set
+
+    val hasIdentity: Boolean
+        get() = this::blockchainIdentity.isInitialized
 
     private val blockchainIdentityDataDao = AppDatabase.getAppDatabase().blockchainIdentityDataDao()
     private val dashPayProfileDao = AppDatabase.getAppDatabase().dashPayProfileDao()
@@ -107,15 +104,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val transactionMetadataDocumentDao = AppDatabase.getAppDatabase().transactionMetadataDocumentDao()
     private val transactionMetadataChangeCacheDao = AppDatabase.getAppDatabase().transactionMetadataCacheDao()
 
-    private lateinit var blockchainIdentity: BlockchainIdentity
-
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
     private val backgroundHandler: Handler
-
-    private var mainHandler: Handler = Handler(walletApplication.mainLooper)
-    private lateinit var platformSyncJob: Job
-
-    private var lastPreBlockStage: PreBlockStage = PreBlockStage.None
 
     private val analytics: AnalyticsService by lazy {
         walletApplication.analyticsService
@@ -174,14 +164,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             dashPayProfileDao.loadAll().forEach {
                 platform.stateRepository.addValidIdentity(it.userIdentifier)
             }
-        }
-    }
-
-    fun getBlockchainIdentity(): BlockchainIdentity? {
-        return if (this::blockchainIdentity.isInitialized) {
-            this.blockchainIdentity
-        } else {
-            null
         }
     }
 
@@ -947,8 +929,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun loadContactRequestsAndReturn(profile: DashPayProfile?): UsernameSearchResult? {
         return profile?.run {
             log.info("successfully obtained local user data for $profile")
-            val receivedContactRequest = dashPayContactRequestDao.loadToOthers(userId)?.firstOrNull()
-            val sentContactRequest = dashPayContactRequestDao.loadFromOthers(userId)?.firstOrNull()
+            val receivedContactRequest = dashPayContactRequestDao.loadToOthers(userId).firstOrNull()
+            val sentContactRequest = dashPayContactRequestDao.loadFromOthers(userId).firstOrNull()
             UsernameSearchResult(this.username, this, sentContactRequest, receivedContactRequest)
         }
     }
@@ -1223,7 +1205,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val profiles = dashPayProfileDao.loadAll()
         val profilesById = profiles.associateBy({ it.userId }, { it })
         report.append("Contact Requests (Sent) -----------------\n")
-        dashPayContactRequestDao.loadToOthers(blockchainIdentity.uniqueIdString)?.forEach {
+        dashPayContactRequestDao.loadToOthers(blockchainIdentity.uniqueIdString).forEach {
             val fromProfile = profilesById[it.userId]
             report.append(it.userId)
             if (fromProfile != null) {
@@ -1237,7 +1219,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             report.append("\n")
         }
         report.append("Contact Requests (Received) -----------------\n")
-        dashPayContactRequestDao.loadFromOthers(blockchainIdentity.uniqueIdString)?.forEach {
+        dashPayContactRequestDao.loadFromOthers(blockchainIdentity.uniqueIdString).forEach {
             val fromProfile = profilesById[it.userId]
             report.append(it.userId)
             if (fromProfile != null) {

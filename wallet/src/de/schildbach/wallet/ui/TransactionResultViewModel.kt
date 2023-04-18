@@ -20,6 +20,7 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.DashPayProfileDao
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Sha256Hash
@@ -38,7 +39,8 @@ class TransactionResultViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider,
     private val walletData: WalletDataProvider,
     configuration: Configuration,
-    private val dashPayProfileDao: DashPayProfileDao
+    private val dashPayProfileDao: DashPayProfileDao,
+    private val platformRepo: PlatformRepo
 ) : ViewModel() {
 
     val dashFormat: MonetaryFormat = configuration.format.noCode()
@@ -53,11 +55,16 @@ class TransactionResultViewModel @Inject constructor(
     val transactionMetadata
         get() = _transactionMetadata.asLiveData()
 
+    private val _contact = MutableLiveData<DashPayProfile?>()
+    val contact: LiveData<DashPayProfile?>
+        get() = _contact
+
     fun init(txId: Sha256Hash?) {
         txId?.let {
             this.transaction = walletData.wallet!!.getTransaction(txId)
             this.transaction?.let {
                 monitorTransactionMetadata(it.txId)
+                findContact(it)
             }
         }
     }
@@ -95,6 +102,22 @@ class TransactionResultViewModel @Inject constructor(
         }
     }
 
-    fun profileById(userId: String): LiveData<DashPayProfile?> =
-        dashPayProfileDao.observeByUserId(userId).distinctUntilChanged().asLiveData()
+    private fun findContact(tx: Transaction) {
+        if (!platformRepo.hasIdentity) {
+            _contact.postValue(null)
+            return
+        }
+
+        val userId = platformRepo.blockchainIdentity.getContactForTransaction(tx)
+
+        if (userId == null) {
+            _contact.postValue(null)
+            return
+        }
+
+        dashPayProfileDao.observeByUserId(userId)
+            .distinctUntilChanged()
+            .onEach(_contact::postValue)
+            .launchIn(viewModelScope)
+    }
 }

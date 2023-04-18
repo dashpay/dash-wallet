@@ -158,7 +158,7 @@ open class InvitationFragmentViewModel @Inject constructor(
             emit("")
         }
 
-        val invite = platformRepo.getBlockchainIdentity()!!.getInvitationString(cftx, encryptionKey)
+        val invite = platformRepo.blockchainIdentity.getInvitationString(cftx, encryptionKey)
         emit(invite)
     }
 }
