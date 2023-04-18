@@ -24,34 +24,39 @@
     tools:background="@color/background_primary"
     tools:context="org.dash.wallet.features.exploredash.ui.dashdirect.dialogs.PurchaseGiftCardConfirmDialog">
 
-    <FrameLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/search_title"
             style="@style/Subtitle2"
+           app:layout_constraintTop_toTopOf="@+id/collapse_button"
+            app:layout_constraintBottom_toBottomOf="@+id/collapse_button"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_gravity="center"
             android:text="@string/purchase_confirm_transaction" />
 
         <ImageButton
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             android:id="@+id/collapse_button"
             style="@style/DialogCloseButton"
             android:layout_gravity="end" />
-    </FrameLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/purchase_card_value"
         style="@style/Headline3.Medium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
         android:gravity="center"
+        android:layout_marginTop="7dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/header"
@@ -99,7 +104,7 @@
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/from_dash_wallet"
-                style="@style/Caption.Medium"
+                style="@style/Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/dash_wallet_name"
@@ -131,7 +136,7 @@
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/merchant_name"
-                style="@style/Caption.Medium"
+                style="@style/Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -154,7 +159,7 @@
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/gift_card_total_value"
-                style="@style/Caption.Medium"
+                style="@style/Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -177,7 +182,7 @@
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/gift_card_discount_value"
-                style="@style/Caption.Medium"
+                style="@style/Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -200,7 +205,7 @@
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/gift_card_you_pay_value"
-                style="@style/Caption.Medium"
+                style="@style/Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -224,7 +229,7 @@
     <com.google.android.material.progressindicator.CircularProgressIndicator
         android:id="@+id/confirm_button_loading"
         android:layout_width="wrap_content"
-        style="@style/Widget.Material3.CircularProgressIndicator.Small"
+        style="@style/Widget.Material3.CircularProgressIndicator.ExtraSmall"
         app:trackThickness="3dp"
         android:layout_height="wrap_content"
         android:indeterminate="true"

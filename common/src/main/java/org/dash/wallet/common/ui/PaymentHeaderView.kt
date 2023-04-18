@@ -23,6 +23,7 @@ import android.view.LayoutInflater
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import coil.load
+import coil.transform.CircleCropTransformation
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.PaymentHeaderViewBinding
 
@@ -61,6 +62,7 @@ class PaymentHeaderView @JvmOverloads constructor(
                 crossfade(200)
                 placeholder(R.drawable.ic_image_placeholder)
                 error(R.drawable.ic_image_placeholder)
+                transformations(CircleCropTransformation())
             }
             binding.paymentAddressViewIcon.isVisible = true
         }

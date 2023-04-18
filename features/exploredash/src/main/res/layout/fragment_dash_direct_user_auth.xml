@@ -146,7 +146,7 @@
 
         <com.google.android.material.progressindicator.CircularProgressIndicator
             android:id="@+id/continue_button_loading"
-            style="@style/Widget.Material3.CircularProgressIndicator.Small"
+            style="@style/Widget.Material3.CircularProgressIndicator.ExtraSmall"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:indeterminate="true"
