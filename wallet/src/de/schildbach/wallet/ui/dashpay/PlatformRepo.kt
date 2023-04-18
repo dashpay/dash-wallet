@@ -165,8 +165,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val identityId = blockchainIdentity.uniqueIdString
             platform.stateRepository.addValidIdentity(Identifier.from(identityId))
 
-            //load all id's of users who have sent us a contact request
-            dashPayContactRequestDao.loadFromOthers(identityId)?.forEach {
+            // load all id's of users who have sent us a contact request
+            dashPayContactRequestDao.loadFromOthers(identityId).forEach {
                 platform.stateRepository.addValidIdentity(it.userIdentifier)
             }
 

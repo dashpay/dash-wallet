@@ -19,7 +19,6 @@ package de.schildbach.wallet.service.platform
 
 import android.app.ActivityManager
 import android.content.Intent
-import android.os.Handler
 import android.text.format.DateUtils
 import androidx.core.content.ContextCompat
 import com.google.common.base.Preconditions
@@ -36,15 +35,9 @@ import de.schildbach.wallet.ui.dashpay.OnContactsUpdated
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
@@ -55,6 +48,7 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.TickerFlow
 import org.dashj.platform.contracts.wallet.TxMetadataItem
 import org.dashj.platform.dashpay.ContactRequest
 import org.dashj.platform.dpp.identifier.Identifier
@@ -65,9 +59,10 @@ import java.util.HashSet
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
 
 interface PlatformSyncService {
-    fun initGlobal()
+    fun init()
     fun resume()
     fun shutdown()
 
@@ -104,7 +99,7 @@ class PlatformSynchronizationService @Inject constructor(
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
 
-        const val UPDATE_TIMER_DELAY = 15000L // 15 seconds
+        const val UPDATE_TIMER_DELAY = 15 // 15 seconds
     }
 
     val platform = platformRepo.platform
@@ -114,7 +109,6 @@ class PlatformSynchronizationService @Inject constructor(
     private val preDownloadBlocks = AtomicBoolean(false)
     private var preDownloadBlocksFuture: SettableFuture<Boolean>? = null
 
-    private var mainHandler: Handler = Handler(platformRepo.walletApplication.mainLooper)
     private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
     private val onPreBlockContactListeners = arrayListOf<OnPreBlockProgressListener>()
     private var lastPreBlockStage: PreBlockStage = PreBlockStage.None
@@ -123,34 +117,23 @@ class PlatformSynchronizationService @Inject constructor(
         Executors.newFixedThreadPool(5).asCoroutineDispatcher()
     )
 
-    override fun initGlobal() {
-        platformSyncJob = syncScope.launch {
-            init()
-        }
-    }
-
-    suspend fun init() {
-        platformRepo.init()
-
-        platformSyncJob = syncScope.launch {
-            log.info("Starting the platform sync job")
-            while (isActive) {
-                updateContactRequests()
-                delay(UPDATE_TIMER_DELAY)
-            }
-        }
+    override fun init() {
+        syncScope.launch { platformRepo.init() }
+        log.info("Starting the platform sync job")
+        initSync()
     }
 
     override fun resume() {
         if (!platformSyncJob.isActive && platformRepo.getBlockchainIdentity() != null) {
-            platformSyncJob = syncScope.launch {
-                log.info("Resuming the platform sync job")
-                while (isActive) {
-                    updateContactRequests()
-                    delay(UPDATE_TIMER_DELAY)
-                }
-            }
+            log.info("Resuming the platform sync job")
+            initSync()
         }
+    }
+
+    private fun initSync() {
+        platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY.seconds)
+            .onEach { updateContactRequests() }
+            .launchIn(syncScope)
     }
 
     override fun shutdown() {
@@ -161,7 +144,7 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
-    var counterForReport = 0;
+    var counterForReport = 0
 
     /**
      * updateContactRequests will fetch new Contact Requests from the network
@@ -171,7 +154,6 @@ class PlatformSynchronizationService @Inject constructor(
      * when the app starts, it has not yet been initialized
      */
     override suspend fun updateContactRequests() {
-
         // only allow this method to execute once at a time
         if (updatingContacts.get()) {
             log.info("updateContactRequests is already running")
@@ -206,10 +188,14 @@ class PlatformSynchronizationService @Inject constructor(
                 // if the last contact request was received in the past 10 minutes, then query for
                 // contact requests that are 10 minutes before it.  If the last contact request was
                 // more than 10 minutes ago, then query all contact requests that came after it.
-                if (lastTimeStamp < System.currentTimeMillis() - DateUtils.MINUTE_IN_MILLIS * 10)
+                if (lastTimeStamp < System.currentTimeMillis() - DateUtils.MINUTE_IN_MILLIS * 10) {
                     lastTimeStamp
-                else lastTimeStamp - DateUtils.MINUTE_IN_MILLIS * 10
-            } else 0L
+                } else {
+                    lastTimeStamp - DateUtils.MINUTE_IN_MILLIS * 10
+                }
+            } else {
+                0L
+            }
 
             updatingContacts.set(true)
             updateSyncStatus(PreBlockStage.Starting)
@@ -226,7 +212,6 @@ class PlatformSynchronizationService @Inject constructor(
                 retrieveAll = true
             )
             toContactDocuments.forEach {
-
                 val contactRequest = ContactRequest(it)
                 log.info("found accepted/sent request: ${contactRequest.toUserId}")
                 val dashPayContactRequest = DashPayContactRequest.fromDocument(contactRequest)
@@ -269,10 +254,8 @@ class PlatformSynchronizationService @Inject constructor(
                     dashPayContactRequestDao.insert(dashPayContactRequest)
 
                     // add the sending to contact keychain if it doesn't exist
-                    addedContact =
-                        addedContact || checkAndAddReceivedRequest(userId, contactRequest)
+                    addedContact = addedContact || checkAndAddReceivedRequest(userId, contactRequest)
                     log.info("contactRequest: added received request from ${contactRequest.ownerId}")
-
                 }
             }
             updateSyncStatus(PreBlockStage.GetSentRequests)
@@ -282,7 +265,7 @@ class PlatformSynchronizationService @Inject constructor(
                 postUpdateBloomFilters()
             }
 
-            //obtain profiles from new contacts
+            // obtain profiles from new contacts
             if (userIdList.isNotEmpty()) {
                 updateContactProfiles(userIdList.toList(), 0L)
             }
@@ -451,11 +434,11 @@ class PlatformSynchronizationService @Inject constructor(
         val userIdSet = hashSetOf<String>()
 
         val toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
-        toContactDocuments!!.forEach {
+        toContactDocuments.forEach {
             userIdSet.add(it.toUserId)
         }
         val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userId)
-        fromContactDocuments!!.forEach {
+        fromContactDocuments.forEach {
             userIdSet.add(it.userId)
         }
 
@@ -488,7 +471,7 @@ class PlatformSynchronizationService @Inject constructor(
                 val profileDocuments = platformRepo.profiles.getList(
                     identifierList,
                     lastContactRequestTime
-                ) //only handles 100 userIds
+                ) // only handles 100 userIds TODO
                 val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
                 val nameDocuments = platform.names.getList(identifierList)
@@ -504,9 +487,11 @@ class PlatformSynchronizationService @Inject constructor(
 
                         val profileDocument = profileById[id]
 
-                        val profile = if (profileDocument != null)
+                        val profile = if (profileDocument != null) {
                             DashPayProfile.fromDocument(profileDocument, username)
-                        else DashPayProfile(identityId.toString(), username)
+                        } else {
+                            DashPayProfile(identityId.toString(), username)
+                        }
 
                         dashPayProfileDao.insert(profile!!)
                         if (checkingIntegrity) {
@@ -559,7 +544,7 @@ class PlatformSynchronizationService @Inject constructor(
             val toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
             val toContactMap = HashMap<String, DashPayContactRequest>()
             var addedContactRequests = false
-            toContactDocuments!!.forEach {
+            toContactDocuments.forEach {
                 userIdList.add(it.toUserId)
                 toContactMap[it.toUserId] = it
 
@@ -573,7 +558,7 @@ class PlatformSynchronizationService @Inject constructor(
             // Get all contact requests where toUserId == userId, the users who have added me
             val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userId)
             val fromContactMap = HashMap<String, DashPayContactRequest>()
-            fromContactDocuments!!.forEach {
+            fromContactDocuments.forEach {
                 userIdList.add(it.userId)
                 fromContactMap[it.userId] = it
 
@@ -608,7 +593,7 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override fun postUpdateBloomFilters() {
-        mainHandler.post {
+        MainScope().launch {
             updateBloomFilters()
         }
     }
@@ -820,12 +805,13 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     private fun isRunningInForeground(): Boolean {
-        val appProcessInfo = ActivityManager.RunningAppProcessInfo();
-        ActivityManager.getMyMemoryState(appProcessInfo);
-        return (appProcessInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND || appProcessInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE)
+        val appProcessInfo = ActivityManager.RunningAppProcessInfo()
+        ActivityManager.getMyMemoryState(appProcessInfo)
+        return appProcessInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND ||
+            appProcessInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE
     }
 
-    fun updateBloomFilters() {
+    private fun updateBloomFilters() {
         // if we are not running in the foreground, don't try to start to update the bloom filters
         // This should be OK, since the blockchain shouldn't be syncing.
 
@@ -835,7 +821,9 @@ class PlatformSynchronizationService @Inject constructor(
             if (isRunningInForeground()) {
                 log.info("attempting to update bloom filters when the app is in the foreground")
                 val intent = Intent(
-                    BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
+                    BlockchainService.ACTION_RESET_BLOOMFILTERS,
+                    null,
+                    walletApplication,
                     BlockchainServiceImpl::class.java
                 )
                 walletApplication.startService(intent)
@@ -849,13 +837,13 @@ class PlatformSynchronizationService @Inject constructor(
      * Called before DashJ starts synchronizing the blockchain
      */
     override fun preBlockDownload(future: SettableFuture<Boolean>) {
-        GlobalScope.launch(Dispatchers.IO) {
+        syncScope.launch(Dispatchers.IO) {
             preDownloadBlocks.set(true)
             lastPreBlockStage = PreBlockStage.None
             preDownloadBlocksFuture = future
             log.info("PreDownloadBlocks: starting")
 
-            //first check to see if there is a blockchain identity
+            // first check to see if there is a blockchain identity
             if (blockchainIdentityDataDao.load() == null) {
                 log.info("PreDownloadBlocks: checking for existing associated identity")
 
@@ -863,7 +851,7 @@ class PlatformSynchronizationService @Inject constructor(
                 platformRepo.onIdentityResolved?.invoke(identity)
 
                 if (identity != null) {
-                    log.info("PreDownloadBlocks: initiate recovery of existing identity ${identity.id.toString()}")
+                    log.info("PreDownloadBlocks: initiate recovery of existing identity ${identity.id}")
                     ContextCompat.startForegroundService(
                         walletApplication,
                         CreateIdentityService.createIntentForRestore(

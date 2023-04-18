@@ -72,7 +72,7 @@ class PlatformDocumentBroadcastService @Inject constructor(
         log.info("potential contact identity: $potentialContactIdentity")
         val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
 
-        //Create Contact Request
+        // Create Contact Request
         val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
         val cr = contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
         timer.logTiming()
