@@ -16,8 +16,10 @@
 
 package de.schildbach.wallet.ui
 
+import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.WalletApplication
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Sha256Hash
@@ -29,13 +31,17 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 @HiltViewModel
 class TransactionResultViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider,
     private val walletData: WalletDataProvider,
-    configuration: Configuration
+    private val configuration: Configuration,
+    private val analytics: AnalyticsService,
+    private val walletApplication: WalletApplication
 ) : ViewModel() {
 
     val dashFormat: MonetaryFormat = configuration.format.noCode()
@@ -90,5 +96,15 @@ class TransactionResultViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun rescanBlockchain() {
+        analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, bundleOf())
+        walletApplication.resetBlockchain()
+        configuration.updateLastBlockchainResetTime()
+    }
+
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, bundleOf())
     }
 }
