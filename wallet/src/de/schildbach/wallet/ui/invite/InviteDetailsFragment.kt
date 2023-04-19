@@ -23,10 +23,9 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
-import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.Invitation
-import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.util.WalletUtils
@@ -37,6 +36,7 @@ import kotlinx.android.synthetic.main.fragment_invite_details.copy_invitation_li
 import kotlinx.android.synthetic.main.fragment_invite_details.preview_button
 import kotlinx.android.synthetic.main.fragment_invite_details.send_button
 import kotlinx.android.synthetic.main.fragment_invite_details.tag_edit
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
@@ -103,16 +103,18 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             }
         }
         profile_button.setOnClickListener {
-            viewModel.invitedUserProfile.observeOnce(requireActivity(), Observer {
-                if(it != null) {
-                    startActivity(DashPayUserActivity.createIntent(requireContext(), it))
+            lifecycleScope.launch {
+                val profile = viewModel.getInvitedUserProfile()
+
+                if (profile != null) {
+                    startActivity(DashPayUserActivity.createIntent(requireContext(), profile))
                 } else {
                     /*not sure why this is happening*/
                     val errorDialog = FancyAlertDialog.newProgress(R.string.invitation_creating_error_message_not_synced,
-                            R.string.invitation_verifying_progress_title)
+                        R.string.invitation_verifying_progress_title)
                     errorDialog.show(childFragmentManager, null)
                 }
-            })
+            }
         }
 
         pending_view.isVisible = false

@@ -23,6 +23,7 @@ import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +51,8 @@ open class DashPayViewModel @Inject constructor(
     private val invitations: InvitationsDao,
     val platformSyncService: PlatformSyncService,
     private val platformBroadcastService: PlatformBroadcastService,
-    private val dashPayContactRequestDao: DashPayContactRequestDao
+    private val dashPayContactRequestDao: DashPayContactRequestDao,
+    private val dashPayConfig: DashPayConfig
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
     companion object {
@@ -293,6 +295,12 @@ open class DashPayViewModel @Inject constructor(
 
     fun contactRequestsTo(userId: String): LiveData<List<DashPayContactRequest>> =
         dashPayContactRequestDao.observeToOthers(userId).distinctUntilChanged().asLiveData()
+
+    suspend fun getLastNotificationTime(): Long =
+        dashPayConfig.get(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME) ?: 0
+
+    suspend fun setLastNotificationTime(time: Long) =
+        dashPayConfig.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, time)
 
     private inner class UserSearch(val text: String, val limit: Int = 100,
                                    val excludeIds: ArrayList<String> = arrayListOf())

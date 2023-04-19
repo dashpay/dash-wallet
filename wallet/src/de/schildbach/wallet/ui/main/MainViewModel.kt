@@ -36,6 +36,7 @@ import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.ui.dashpay.*
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.*
@@ -82,7 +83,8 @@ class MainViewModel @Inject constructor(
     val biometricHelper: BiometricHelper,
     private val invitationsDao: InvitationsDao,
     userAlertDao: UserAlertDao,
-    dashPayProfileDao: DashPayProfileDao
+    dashPayProfileDao: DashPayProfileDao,
+    private val dashPayConfig: DashPayConfig
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     companion object {
         private const val THROTTLE_DURATION = 500L
@@ -189,7 +191,7 @@ class MainViewModel @Inject constructor(
     var processingSeriousError = false
 
     val notificationCountData =
-        NotificationCountLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
+        NotificationCountLiveData(walletApplication, platformRepo, platformSyncService, dashPayConfig, viewModelScope)
     val notificationCount: Int
         get() = notificationCountData.value ?: 0
 
@@ -244,10 +246,6 @@ class MainViewModel @Inject constructor(
                 Configuration.PREFS_KEY_EXCHANGE_CURRENCY -> {
                     currencyCode.value = config.exchangeCurrencyCode
                 }
-                Configuration.PREFS_LAST_SEEN_NOTIFICATION_TIME -> {
-                    startContactRequestTimer()
-                    forceUpdateNotificationCount()
-                }
             }
         }
         config.registerOnSharedPreferenceChangeListener(listener)
@@ -255,15 +253,21 @@ class MainViewModel @Inject constructor(
         // DashPay
         startContactRequestTimer()
 
-        // don't query alerts if notifications are disabled
-        if (config.areNotificationsDisabled()) {
-            val lastSeenNotification = config.lastSeenNotificationTime
-            userAlertDao.observe(lastSeenNotification)
-                .filterNotNull()
-                .distinctUntilChanged()
-                .onEach { forceUpdateNotificationCount() }
-                .launchIn(viewModelScope)
-        }
+        dashPayConfig.observe(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME)
+            .filterNotNull()
+            .distinctUntilChanged()
+            .onEach { lastSeenNotification ->
+                startContactRequestTimer()
+                forceUpdateNotificationCount()
+
+                if (lastSeenNotification != DashPayConfig.DISABLE_NOTIFICATIONS) {
+                    userAlertDao.observe(lastSeenNotification)
+                        .filterNotNull()
+                        .distinctUntilChanged()
+                        .onEach { forceUpdateNotificationCount() }
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     fun logEvent(event: String) {

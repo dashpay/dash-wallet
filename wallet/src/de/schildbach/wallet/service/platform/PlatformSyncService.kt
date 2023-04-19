@@ -35,6 +35,7 @@ import de.schildbach.wallet.ui.dashpay.OnContactsUpdated
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -43,7 +44,6 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.EvolutionContact
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -85,7 +85,7 @@ interface PlatformSyncService {
 class PlatformSynchronizationService @Inject constructor(
     val platformRepo: PlatformRepo,
     val analytics: AnalyticsService,
-    val configuration: Configuration,
+    val config: DashPayConfig,
     val walletApplication: WalletApplication,
     val transactionMetadataProvider: TransactionMetadataProvider,
     val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
@@ -797,11 +797,11 @@ class PlatformSynchronizationService @Inject constructor(
         return future
     }
 
-    private fun finishPreBlockDownload() {
+    private suspend fun finishPreBlockDownload() {
         log.info("PreDownloadBlocks: complete")
-        if (configuration.areNotificationsDisabled()) {
+        if (config.areNotificationsDisabled()) {
             // this will enable notifications, since platform information has been synced
-            configuration.lastSeenNotificationTime = System.currentTimeMillis()
+            config.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, System.currentTimeMillis())
         }
         preDownloadBlocksFuture?.set(true)
         preDownloadBlocks.set(false)

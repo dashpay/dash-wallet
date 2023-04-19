@@ -128,7 +128,7 @@ open class InvitationFragmentViewModel @Inject constructor(
 
     fun updateInvitedUserProfile() {
         viewModelScope.launch(Dispatchers.IO) {
-            val data = AppDatabase.getAppDatabase().dashPayProfileDao().loadByUserId(identityIdLiveData.value!!)
+            val data = dashPayProfileDao.loadByUserId(identityIdLiveData.value!!)
             if (data == null) {
                 platformRepo.updateDashPayProfile(identityIdLiveData.value!!)
             }
@@ -161,4 +161,7 @@ open class InvitationFragmentViewModel @Inject constructor(
         val invite = platformRepo.blockchainIdentity.getInvitationString(cftx, encryptionKey)
         emit(invite)
     }
+
+    suspend fun getInvitedUserProfile(): DashPayProfile? =
+        dashPayProfileDao.loadByUserId(identityIdLiveData.value!!)
 }
