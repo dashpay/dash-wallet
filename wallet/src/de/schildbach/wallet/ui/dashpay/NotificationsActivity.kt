@@ -308,5 +308,4 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
         userAlertItem = null
         dashPayViewModel.dismissUserAlert(alertId)
     }
-
 }

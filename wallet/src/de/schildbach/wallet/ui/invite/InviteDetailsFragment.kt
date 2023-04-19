@@ -40,6 +40,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.KeyboardUtil
 
 @AndroidEntryPoint
@@ -110,9 +111,12 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                     startActivity(DashPayUserActivity.createIntent(requireContext(), profile))
                 } else {
                     /*not sure why this is happening*/
-                    val errorDialog = FancyAlertDialog.newProgress(R.string.invitation_creating_error_message_not_synced,
-                        R.string.invitation_verifying_progress_title)
-                    errorDialog.show(childFragmentManager, null)
+                    AdaptiveDialog.create(
+                        R.drawable.ic_warning,
+                        getString(R.string.invitation_creating_error_message_not_synced),
+                        getString(R.string.invitation_verifying_progress_title),
+                        getString(R.string.button_ok)
+                    ).show(requireActivity())
                 }
             }
         }
