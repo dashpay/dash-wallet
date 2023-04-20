@@ -440,7 +440,6 @@ class PlatformSynchronizationService @Inject constructor(
      * Updates invitation status
      */
     private suspend fun updateInvitations() {
-        log.info("updateInvitations")
         val invitations = invitationsDao.loadAll()
         for (invitation in invitations) {
             if (invitation.acceptedAt == 0L) {
@@ -458,7 +457,6 @@ class PlatformSynchronizationService @Inject constructor(
      * Fetches updated profiles associated with contacts of userId after lastContactRequestTime
      */
     private suspend fun updateContactProfiles(userId: String, lastContactRequestTime: Long) {
-        log.info("updateContactProfiles($userId, $lastContactRequestTime)")
         val watch = Stopwatch.createStarted()
         val userIdSet = hashSetOf<String>()
 
@@ -631,7 +629,6 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     private suspend fun updateTransactionMetadata() {
-        log.info("updateTransactionMetadata")
         val watch = Stopwatch.createStarted()
         val myEncryptionKey = platformRepo.getWalletEncryptionKey()
 
