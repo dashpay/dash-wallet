@@ -113,9 +113,6 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         binding.invite.visibility = View.GONE
         binding.invite.setOnClickListener {
-            // TODO: check
-            // use observeOnce to avoid the history screen being recreated
-            // after returning to the More Screen after an invite is created
             lifecycleScope.launch {
                 val inviteHistory = mainActivityViewModel.getInviteHistory()
 

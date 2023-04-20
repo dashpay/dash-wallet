@@ -168,7 +168,6 @@ class SearchUserActivity : LockScreenActivity(), ContactViewHolder.OnItemClickLi
 
     private fun startInviteFlow() {
         lifecycleScope.launch {
-            // TODO: check
             val inviteHistory = dashPayViewModel.getInviteHistory()
 
             if (inviteHistory.isEmpty()) {
