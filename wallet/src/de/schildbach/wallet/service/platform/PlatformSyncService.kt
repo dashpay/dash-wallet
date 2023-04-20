@@ -104,8 +104,8 @@ class PlatformSynchronizationService @Inject constructor(
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
         private val random = Random(System.currentTimeMillis())
 
-        const val UPDATE_TIMER_DELAY = 15 // 15 seconds
-        const val PUSH_PERIOD = 3 // 3 hours
+        val UPDATE_TIMER_DELAY = 15.seconds
+        val PUSH_PERIOD = 3.hours
     }
 
     val platform = platformRepo.platform
@@ -137,7 +137,7 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     private fun initSync() {
-        platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY.seconds)
+        platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY)
             .onEach { updateContactRequests() }
             .launchIn(syncScope)
 
@@ -145,7 +145,7 @@ class PlatformSynchronizationService @Inject constructor(
             val lastPush = config.get(DashPayConfig.LAST_METADATA_PUSH) ?: 0
             val now = System.currentTimeMillis()
 
-            if (lastPush < now - PUSH_PERIOD.hours.inWholeMilliseconds) {
+            if (lastPush < now - PUSH_PERIOD.inWholeMilliseconds) {
                 val everythingBeforeTimestamp = random.nextLong(
                     now - 6.hours.inWholeMilliseconds,
                     now - 3.hours.inWholeMilliseconds
@@ -500,7 +500,7 @@ class PlatformSynchronizationService @Inject constructor(
                 val profileDocuments = platformRepo.profiles.getList(
                     identifierList,
                     lastContactRequestTime
-                ) // only handles 100 userIds TODO
+                )
                 val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
                 val nameDocuments = platform.names.getList(identifierList)
