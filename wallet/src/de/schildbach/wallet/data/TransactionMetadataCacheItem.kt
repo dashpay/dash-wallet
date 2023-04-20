@@ -8,7 +8,7 @@ import org.dash.wallet.common.data.TransactionMetadata
 
 @Entity(tableName = "transaction_metadata_cache")
 data class TransactionMetadataCacheItem(
-    var cacheTimestamp: Long,  // time added to the table
+    var cacheTimestamp: Long, // time added to the table
     var txId: Sha256Hash,
     var sentTimestamp: Long? = null,
     var taxCategory: TaxCategory? = null,
@@ -32,6 +32,7 @@ data class TransactionMetadataCacheItem(
     )
 
     fun isNotEmpty(): Boolean {
-        return sentTimestamp != null || taxCategory != null || !memo.isNullOrEmpty() || currencyCode != null || rate != null || service != null
+        return sentTimestamp != null || taxCategory != null || !memo.isNullOrEmpty() ||
+            currencyCode != null || rate != null || service != null
     }
 }

@@ -170,7 +170,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
                         bundleOf(),
                         NavOptions.Builder()
                             .setEnterAnim(R.anim.slide_in_bottom)
-                            .setPopUpTo(R.id.walletFragment, true)
                             .build()
                     )
                 }

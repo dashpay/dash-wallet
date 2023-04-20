@@ -119,8 +119,6 @@ import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import dagger.hilt.android.HiltAndroidApp;
 import org.dash.wallet.common.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
-import de.schildbach.wallet.data.TransactionMetadataChangeCacheDao;
-import de.schildbach.wallet.data.TransactionMetadataDocumentDao;
 import de.schildbach.wallet.security.SecurityGuard;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
@@ -190,13 +188,8 @@ public class WalletApplication extends MultiDexApplication
     BlockchainStateDao blockchainStateDao;
     @Inject
     CrowdNodeConfig crowdNodeConfig;
-
     @Inject
     TransactionMetadataProvider transactionMetadataProvider;
-    @Inject
-    TransactionMetadataChangeCacheDao transactionMetadataChangeCacheDao;
-    @Inject
-    TransactionMetadataDocumentDao transactionMetadataDocumentDao;
     @Inject
     PlatformRepo platformRepo;
     @Inject

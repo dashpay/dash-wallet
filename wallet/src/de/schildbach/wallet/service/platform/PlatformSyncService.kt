@@ -59,6 +59,8 @@ import java.util.HashSet
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
+import kotlin.random.Random
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
 
 interface PlatformSyncService {
@@ -98,8 +100,10 @@ class PlatformSynchronizationService @Inject constructor(
 
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
+        private val random = Random(System.currentTimeMillis())
 
         const val UPDATE_TIMER_DELAY = 15 // 15 seconds
+        const val PUSH_PERIOD = 3 // 3 hours
     }
 
     val platform = platformRepo.platform
@@ -134,6 +138,21 @@ class PlatformSynchronizationService @Inject constructor(
         platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY.seconds)
             .onEach { updateContactRequests() }
             .launchIn(syncScope)
+
+        syncScope.launch {
+            val lastPush = config.get(DashPayConfig.LAST_METADATA_PUSH) ?: 0
+            val now = System.currentTimeMillis()
+
+            if (lastPush < now - PUSH_PERIOD.hours.inWholeMilliseconds) {
+                val everythingBeforeTimestamp = random.nextLong(
+                    now - 6.hours.inWholeMilliseconds,
+                    now - 3.hours.inWholeMilliseconds
+                ) // Choose cutoff time between 3 and 6 hours ago
+                publishChangeCache(everythingBeforeTimestamp)
+            } else {
+                log.info("last platform push was less than 3 hours ago, skipping")
+            }
+        }
     }
 
     override fun shutdown() {
@@ -291,7 +310,7 @@ class PlatformSynchronizationService @Inject constructor(
 
             log.info("updating contacts and profiles took $watch")
         } catch (_: CancellationException) {
-            // ignore
+            log.info("updating contacts canceled")
         } catch (e: Exception) {
             log.error(platformRepo.formatExceptionMessage("error updating contacts", e))
         } finally {
@@ -553,7 +572,8 @@ class PlatformSynchronizationService @Inject constructor(
                 // check to see if wallet has this contact request's keys
                 val added = checkAndAddSentRequest(userId, it.toContactRequest(platform))
                 if (added) {
-                    log.warn("check database integrity: added sent $it to wallet since it was missing.  Transactions may also be missing")
+                    log.warn("check database integrity: added sent $it to wallet since it was missing.  " +
+                            "Transactions may also be missing")
                     addedContactRequests = true
                 }
             }
@@ -601,9 +621,7 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     private fun updateTransactionMetadata() {
-
         val watch = Stopwatch.createStarted()
-
         val myEncryptionKey = platformRepo.getWalletEncryptionKey()
 
         val lastTxMetadataRequestTime = if (transactionMetadataDocumentDao.countAllRequests() > 0) {
@@ -611,10 +629,14 @@ class PlatformSynchronizationService @Inject constructor(
             // if the last txmetadata document was received in the past 10 minutes, then query for
             // documents that are 10 minutes before it.  If the tx metadata documented was
             // more than 10 minutes ago, then query all metadata documents that came after it.
-            if (lastTimeStamp < System.currentTimeMillis() - DateUtils.MINUTE_IN_MILLIS * 10)
+            if (lastTimeStamp < System.currentTimeMillis() - DateUtils.MINUTE_IN_MILLIS * 10) {
                 lastTimeStamp
-            else lastTimeStamp - DateUtils.MINUTE_IN_MILLIS * 10
-        } else 0L
+            } else {
+                lastTimeStamp - DateUtils.MINUTE_IN_MILLIS * 10
+            }
+        } else {
+            0L
+        }
 
         log.info("fetching TxMetadataDocuments from {}", lastTxMetadataRequestTime)
 
@@ -733,21 +755,34 @@ class PlatformSynchronizationService @Inject constructor(
 
             log.info("fetching ${items.size} tx metadata items in $watch")
         }
-
-        publishTxMetadataChanges()
     }
 
     private fun publishTransactionMetadata(txMetadataItems: List<TransactionMetadataCacheItem>) {
         val metadataList = txMetadataItems.map {
-            TxMetadataItem(it.txId.bytes, it.sentTimestamp, it.memo, it.rate?.toDouble(), it.currencyCode, it.taxCategory?.name?.lowercase(), it.service)
+            TxMetadataItem(
+                it.txId.bytes,
+                it.sentTimestamp,
+                it.memo,
+                it.rate?.toDouble(),
+                it.currencyCode,
+                it.taxCategory?.name?.lowercase(),
+                it.service
+            )
         }
         val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
         platformRepo.blockchainIdentity.publishTxMetaData(metadataList, walletEncryptionKey)
     }
 
-    suspend fun publishChangeCache() {
+    private suspend fun publishChangeCache(before: Long) {
+        log.info("publishing updates to tx metadata items before $before")
         val itemsToPublish = hashMapOf<Sha256Hash, TransactionMetadataCacheItem>()
-        val changedItems = transactionMetadataChangeCacheDao.load()
+        val changedItems = transactionMetadataChangeCacheDao.findAllBefore(before)
+
+        if (changedItems.isEmpty()) {
+            log.info("no tx metadata changes before this time")
+            return
+        }
+
         log.info("preparing to publish ${changedItems.size} tx metadata changes to platform")
 
         for (changedItem in changedItems) {
@@ -774,27 +809,21 @@ class PlatformSynchronizationService @Inject constructor(
 
         try {
             log.info("publishing ${itemsToPublish.values.size} tx metadata changes to platform")
+
             // publish non-empty items
             publishTransactionMetadata(itemsToPublish.values.filter { it.isNotEmpty() })
-            // clear out cache table after successful publishing on platform
-            transactionMetadataChangeCacheDao.clear()
             log.info("published ${itemsToPublish.values.size} tx metadata changes to platform")
+
+            // clear out published items from the cache table
+            transactionMetadataChangeCacheDao.removeByIds(itemsToPublish.values.map { it.id })
+            config.set(DashPayConfig.LAST_METADATA_PUSH, System.currentTimeMillis())
         } catch (_: CancellationException) {
-            // ignore
+            log.info("publishing updates canceled")
         } catch (e: Exception) {
             log.error("publishing exception caught", e)
         }
-    }
 
-    private fun publishTxMetadataChanges(): SettableFuture<Boolean> {
-        val future = SettableFuture.create<Boolean>()
-        syncScope.launch(Dispatchers.IO) {
-            log.info("publishing updates to tx metadata items")
-            publishChangeCache()
-            log.info("publishing updates to tx metadata items complete")
-            future.set(true)
-        }
-        return future
+        log.info("publishing updates to tx metadata items complete")
     }
 
     private suspend fun finishPreBlockDownload() {
@@ -893,7 +922,7 @@ class PlatformSynchronizationService @Inject constructor(
 
     override suspend fun clearDatabases() {
         // push all changes to platform before clearing the database tables
-        publishChangeCache()
+        publishChangeCache(System.currentTimeMillis()) // Before now - push everything
         transactionMetadataChangeCacheDao.clear()
         transactionMetadataDocumentDao.clear()
     }

@@ -948,8 +948,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         dashPayProfileDao.clear()
         dashPayContactRequestDao.clear()
         userAlertDao.clear()
-        transactionMetadataChangeCacheDao.clear()
-        transactionMetadataDocumentDao.clear()
         if (includeInvitations) {
             invitationsDao.clear()
         }
