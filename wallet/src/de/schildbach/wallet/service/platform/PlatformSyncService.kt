@@ -39,15 +39,17 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.EvolutionContact
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.data.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.util.TickerFlow
 import org.dashj.platform.contracts.wallet.TxMetadataItem
 import org.dashj.platform.dashpay.ContactRequest
@@ -288,16 +290,19 @@ class PlatformSynchronizationService @Inject constructor(
             if (userIdList.isNotEmpty()) {
                 updateContactProfiles(userIdList.toList(), 0L)
             }
+
             updateSyncStatus(PreBlockStage.GetNewProfiles)
 
-            // fetch updated invitations
-            updateInvitations()
-
-            // fetch updated transaction metadata
-            updateTransactionMetadata()
-
-            // fetch updated profiles from the network
-            updateContactProfiles(userId, lastContactRequestTime)
+            coroutineScope {
+                awaitAll(
+                    // fetch updated invitations
+                    async { updateInvitations() },
+                    // fetch updated transaction metadata
+                    async { updateTransactionMetadata() },
+                    // fetch updated profiles from the network
+                    async { updateContactProfiles(userId, lastContactRequestTime) }
+                )
+            }
 
             updateSyncStatus(PreBlockStage.GetUpdatedProfiles)
 
@@ -328,6 +333,7 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override fun updateSyncStatus(stage: PreBlockStage) {
+        log.info("updateSyncStatus: ${stage.name}")
         if (stage == PreBlockStage.Starting && lastPreBlockStage != PreBlockStage.None) {
             log.debug("skipping ${stage.name} because an identity was restored")
             return
@@ -434,6 +440,7 @@ class PlatformSynchronizationService @Inject constructor(
      * Updates invitation status
      */
     private suspend fun updateInvitations() {
+        log.info("updateInvitations")
         val invitations = invitationsDao.loadAll()
         for (invitation in invitations) {
             if (invitation.acceptedAt == 0L) {
@@ -451,6 +458,7 @@ class PlatformSynchronizationService @Inject constructor(
      * Fetches updated profiles associated with contacts of userId after lastContactRequestTime
      */
     private suspend fun updateContactProfiles(userId: String, lastContactRequestTime: Long) {
+        log.info("updateContactProfiles($userId, $lastContactRequestTime)")
         val watch = Stopwatch.createStarted()
         val userIdSet = hashSetOf<String>()
 
@@ -572,8 +580,10 @@ class PlatformSynchronizationService @Inject constructor(
                 // check to see if wallet has this contact request's keys
                 val added = checkAndAddSentRequest(userId, it.toContactRequest(platform))
                 if (added) {
-                    log.warn("check database integrity: added sent $it to wallet since it was missing.  " +
-                            "Transactions may also be missing")
+                    log.warn(
+                        "check database integrity: added sent $it to wallet since it was missing.  " +
+                            "Transactions may also be missing"
+                    )
                     addedContactRequests = true
                 }
             }
@@ -620,7 +630,8 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
-    private fun updateTransactionMetadata() {
+    private suspend fun updateTransactionMetadata() {
+        log.info("updateTransactionMetadata")
         val watch = Stopwatch.createStarted()
         val myEncryptionKey = platformRepo.getWalletEncryptionKey()
 
@@ -643,118 +654,144 @@ class PlatformSynchronizationService @Inject constructor(
         val items = platformRepo.blockchainIdentity
             .getTxMetaData(lastTxMetadataRequestTime, myEncryptionKey)
 
-        if (items.isNotEmpty()) {
-            //val lastItem = items.keys.last()
-            //lastItem.createdAt?.let {
-            //    configuration.txMetadataUpdateTime = it
-            //}
-            log.info("processing TxMetadataDocuments: {}", items.toString())
+        if (items.isEmpty()) {
+            return
+        }
 
-            syncScope.launch {
-                items.forEach { (doc, list) ->
-                    if (transactionMetadataDocumentDao.count(doc.id) == 0) {
-                        val timestamp = doc.createdAt!!
-                        log.info("processing TxMetadata: ${doc.id} with ${list.size} items")
-                        list.forEach { metadata ->
-                            if (metadata.isNotEmpty()) {
+        // val lastItem = items.keys.last()
+        // lastItem.createdAt?.let {
+        //    configuration.txMetadataUpdateTime = it
+        // }
+        log.info("processing TxMetadataDocuments: {}", items.toString())
 
-                                val cachedItems = transactionMetadataChangeCacheDao.findAfter(
-                                    Sha256Hash.wrap(metadata.txId),
-                                    timestamp
-                                )
-                                log.info("processing TxMetadata: found ${cachedItems.size} related items in this document")
+        items.forEach { (doc, list) ->
+            if (transactionMetadataDocumentDao.count(doc.id) == 0) {
+                val timestamp = doc.createdAt!!
+                log.info("processing TxMetadata: ${doc.id} with ${list.size} items")
+                list.forEach { metadata ->
+                    if (metadata.isNotEmpty()) {
+                        val cachedItems = transactionMetadataChangeCacheDao.findAfter(
+                            Sha256Hash.wrap(metadata.txId),
+                            timestamp
+                        )
+                        log.info(
+                            "processing TxMetadata: found ${cachedItems.size} related items in this document"
+                        )
 
-                                // what if the updates from platform are older
+                        // what if the updates from platform are older
 
-                                // if not change the main table
+                        // if not change the main table
 
-                                // we need to find a new way -- how can we know that we should change something?
-                                // should we save to the DB table?
-                                val txIdAsHash = Sha256Hash.wrap(metadata.txId)
-                                val metadataDocumentRecord = TransactionMetadataDocument(doc.id, doc.createdAt!!, txIdAsHash)
-                                metadata.timestamp?.let { timestamp ->
-                                    metadataDocumentRecord.sentTimestamp = timestamp
-                                    log.info("processing TxMetadata: sent time stamp")
-                                    if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.sentTimestamp != null && it.sentTimestamp != timestamp } == null) {
-                                        log.info("processing TxMetadata: service change: changing service")
-                                        transactionMetadataProvider.setTransactionSentTime(
-                                            txIdAsHash,
-                                            timestamp,
-                                            true
+                        // we need to find a new way -- how can we know that we should change something?
+                        // should we save to the DB table?
+                        val txIdAsHash = Sha256Hash.wrap(metadata.txId)
+                        val metadataDocumentRecord = TransactionMetadataDocument(
+                            doc.id,
+                            doc.createdAt!!,
+                            txIdAsHash
+                        )
+                        val updatedMetadata = TransactionMetadata(txIdAsHash, 0, Coin.ZERO, TransactionCategory.Invalid)
+
+                        metadata.timestamp?.let { timestamp ->
+                            metadataDocumentRecord.sentTimestamp = timestamp
+                            log.info("processing TxMetadata: sent time stamp")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.sentTimestamp != null && it.sentTimestamp != timestamp
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: service change: changing timestamp")
+                                updatedMetadata.timestamp = timestamp
+                            }
+                        }
+                        metadata.service?.let { service ->
+                            metadataDocumentRecord.service = service
+                            log.info("processing TxMetadata: service change")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.service != null && it.service != service
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: service change: changing service")
+                                updatedMetadata.service = service
+                            }
+                        }
+                        metadata.memo?.let { memo ->
+                            metadataDocumentRecord.memo = memo
+                            log.info(
+                                "processing TxMetadata: memo change: {}",
+                                cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.memo != null && it.memo != memo
+                                }
+                            )
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.memo != null && it.memo != memo
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: memo change: changing memo")
+                                updatedMetadata.memo = memo
+                            }
+                        }
+                        metadata.taxCategory?.let { taxCategoryAsString ->
+                            TaxCategory.fromValue(taxCategoryAsString)?.let { taxCategory ->
+                                metadataDocumentRecord.taxCategory = taxCategory
+                                log.info("processing TxMetadata: tax category change")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                            it.taxCategory != null && it.taxCategory?.name != taxCategoryAsString
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: tax category change: changing category")
+                                    updatedMetadata.taxCategory = taxCategory
+                                }
+                            }
+                        }
+                        if (metadata.exchangeRate != null && metadata.currencyCode != null) {
+                            metadataDocumentRecord.rate = metadata.exchangeRate
+                            metadataDocumentRecord.currencyCode = metadata.currencyCode
+
+                            val prevItem = cachedItems.find {
+                                it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                    it.currencyCode != null && it.rate != null &&
+                                    (
+                                        it.currencyCode != metadata.currencyCode ||
+                                            it.rate != metadata.exchangeRate.toString()
                                         )
-                                    }
-                                }
-
-
-                                metadata.service?.let { service ->
-                                    metadataDocumentRecord.service = service
-                                    log.info("processing TxMetadata: service change")
-                                    if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.service != null && it.service != service} == null) {
-                                        log.info("processing TxMetadata: service change: changing service")
-                                        transactionMetadataProvider.setTransactionService(
-                                            txIdAsHash,
-                                            service,
-                                            true
-                                        )
-                                    }
-                                }
-                                metadata.memo?.let { memo ->
-                                    metadataDocumentRecord.memo = memo
-                                    log.info("processing TxMetadata: memo change: {}", cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.memo != null && it.memo != memo})
-                                    if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.memo != null && it.memo != memo} == null) {
-                                        log.info("processing TxMetadata: memo change: changing memo")
-                                        transactionMetadataProvider.setTransactionMemo(txIdAsHash, memo, true)
-                                    }
-                                }
-                                metadata.taxCategory?.let { taxCategoryAsString ->
-                                    TaxCategory.fromValue(taxCategoryAsString)?.let { taxCategory ->
-                                        metadataDocumentRecord.taxCategory = taxCategory
-                                        log.info("processing TxMetadata: tax category change")
-                                        if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.taxCategory != null && it.taxCategory?.name != taxCategoryAsString} == null) {
-                                            log.info("processing TxMetadata: tax category change: changing category")
-                                            transactionMetadataProvider.setTransactionTaxCategory(
-                                                txIdAsHash,
-                                                taxCategory,
-                                                true
+                            }
+                            log.info("processing TxMetadata: exchange rate change change: $prevItem")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.currencyCode != null && it.rate != null &&
+                                        (
+                                            it.currencyCode != metadata.currencyCode ||
+                                                it.rate != metadata.exchangeRate.toString()
                                             )
-                                        }
-                                    }
-                                }
-                                if (metadata.exchangeRate != null && metadata.currencyCode != null) {
-                                    metadataDocumentRecord.rate = metadata.exchangeRate
-                                    metadataDocumentRecord.currencyCode = metadata.currencyCode
-
-                                    val prevItem = cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.currencyCode != null && it.rate != null &&
-                                            (it.currencyCode != metadata.currencyCode || it.rate != metadata.exchangeRate.toString())}
-                                    log.info("processing TxMetadata: exchange rate change change: $prevItem")
-                                    if (cachedItems.find { it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! && it.currencyCode != null && it.rate != null &&
-                                                (it.currencyCode != metadata.currencyCode || it.rate != metadata.exchangeRate.toString())} == null) {
-                                        log.info("processing TxMetadata: exchange rate change change: setting rate")
-                                        transactionMetadataProvider.setTransactionExchangeRate(
-                                            txIdAsHash, ExchangeRate(
-                                                metadata.currencyCode!!,
-                                                metadata.exchangeRate.toString()
-                                            ),
-                                            true
-                                        )
-                                    }
-                                }
-                                log.info("adding TxMetadataItem: {}", metadata)
-                                transactionMetadataDocumentDao.insert(metadataDocumentRecord)
-                            } else {
-                                log.info("not adding TxMetadataItem: {} since it is empty", metadata)
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: exchange rate change change: setting rate")
+                                updatedMetadata.currencyCode = metadata.currencyCode
+                                updatedMetadata.rate = metadata.exchangeRate.toString()
                             }
                         }
 
-                        //configuration.txMetadataUpdateTime = doc.createdAt!!
+                        log.info("syncing metadata with platform updates: $updatedMetadata")
+                        transactionMetadataProvider.syncPlatformMetadata(txIdAsHash, updatedMetadata)
+                        log.info("adding TxMetadataItem: {}", metadata)
+                        transactionMetadataDocumentDao.insert(metadataDocumentRecord)
                     } else {
-                        log.info("TxMetadataDocument:  this item already exists ${doc.id}")
+                        log.info("not adding TxMetadataItem: {} since it is empty", metadata)
                     }
                 }
-            }
 
-            log.info("fetching ${items.size} tx metadata items in $watch")
+                // configuration.txMetadataUpdateTime = doc.createdAt!!
+            } else {
+                log.info("TxMetadataDocument:  this item already exists ${doc.id}")
+            }
         }
+
+        log.info("fetching ${items.size} tx metadata items in $watch")
     }
 
     private fun publishTransactionMetadata(txMetadataItems: List<TransactionMetadataCacheItem>) {

@@ -59,7 +59,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         Executors.newFixedThreadPool(5).asCoroutineDispatcher()
     )
 
-    private suspend fun insertTransactionMetadata(txId: Sha256Hash, isSyncingPlatform: Boolean) {
+    private suspend fun insertTransactionMetadata(txId: Sha256Hash, isSyncingPlatform: Boolean): TransactionMetadata? {
         val walletTx = walletData.wallet!!.getTransaction(txId)
         Context.propagate(walletData.wallet!!.context)
         walletTx?.run {
@@ -121,17 +121,26 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 transactionMetadataChangeCacheDao.insert(TransactionMetadataCacheItem(metadata))
             }
             log.info("txmetadata: inserting $metadata")
+
+            return metadata
         }
+
+        return null
     }
 
-    private suspend fun updateAndInsertIfNotExist(txId: Sha256Hash, isSyncingPlatform: Boolean, update: suspend () -> Unit) {
-        if (transactionMetadataDao.exists(txId)) {
+    private suspend fun updateAndInsertIfNotExist(
+        txId: Sha256Hash,
+        isSyncingPlatform: Boolean,
+        update: suspend (TransactionMetadata) -> Unit
+    ) {
+        val existing = transactionMetadataDao.load(txId)
+
+        if (existing != null) {
             log.info("txmetadata for $txId exists, only do update")
-            update()
+            update(existing)
         } else {
             log.info("txmetadata for $txId does not exist, perform insert, then update")
-            insertTransactionMetadata(txId, isSyncingPlatform)
-            update()
+            insertTransactionMetadata(txId, isSyncingPlatform)?.let { update(it) }
         }
     }
 
@@ -162,6 +171,26 @@ class WalletTransactionMetadataProvider @Inject constructor(
             if (!isSyncingPlatform) {
                 transactionMetadataChangeCacheDao.insertSentTime(txId, timestamp)
             }
+        }
+    }
+
+    override suspend fun syncPlatformMetadata(txId: Sha256Hash, metadata: TransactionMetadata) {
+        updateAndInsertIfNotExist(txId, true) { existing ->
+            val updated = existing.copy(
+                // txId and value are kept the same
+                txId = existing.txId,
+                value = existing.value,
+                // update the rest from platform if not empty, otherwise keep existing
+                type = metadata.type.takeIf { it != TransactionCategory.Invalid } ?: existing.type,
+                taxCategory = metadata.taxCategory ?: existing.taxCategory,
+                currencyCode = metadata.currencyCode ?: existing.currencyCode,
+                rate = metadata.rate ?: existing.rate,
+                memo = metadata.memo.ifEmpty { existing.memo },
+                service = metadata.service ?: existing.service,
+                timestamp = metadata.timestamp.takeIf { it != 0L } ?: existing.timestamp
+            )
+
+            transactionMetadataDao.update(updated)
         }
     }
 
