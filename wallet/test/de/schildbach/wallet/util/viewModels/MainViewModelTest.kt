@@ -31,6 +31,7 @@ import androidx.lifecycle.SavedStateHandle
 import org.dash.wallet.common.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.transactions.TxDirection
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
@@ -112,6 +113,10 @@ class MainViewModelTest {
         every { observeAllMemos() } returns MutableStateFlow(mapOf())
     }
 
+    private val mockDashPayConfig = mockk<DashPayConfig> {
+        every { observe<Long>(any()) } returns MutableStateFlow(0L)
+    }
+
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
 
@@ -156,7 +161,8 @@ class MainViewModelTest {
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
             exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
+            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk(),
+            mockk(), mockk(), mockk(), mockDashPayConfig
         ))
 
         val clipboardInput = viewModel.getClipboardInput()
@@ -176,7 +182,8 @@ class MainViewModelTest {
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
             exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
+            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk(),
+            mockk(), mockk(), mockk(), mockDashPayConfig
         ))
 
         every { clipboardManagerMock.primaryClip?.getItemAt(0)?.uri?.toString() } returns mockUri
@@ -209,7 +216,8 @@ class MainViewModelTest {
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
             exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
+            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk(),
+            mockk(), mockk(), mockk(), mockDashPayConfig
         ))
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
             assertEquals(false, viewModel.isBlockchainSynced.value)
@@ -225,7 +233,8 @@ class MainViewModelTest {
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
             exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
+            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk(),
+            mockk(), mockk(), mockk(), mockDashPayConfig
         ))
 
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
