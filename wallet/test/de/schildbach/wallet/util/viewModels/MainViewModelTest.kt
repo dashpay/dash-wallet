@@ -28,8 +28,11 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.Constants
 import androidx.lifecycle.SavedStateHandle
+import de.schildbach.wallet.data.BlockchainIdentityDataDao
 import org.dash.wallet.common.data.BlockchainState
 import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.data.DashPayProfileDao
+import de.schildbach.wallet.data.InvitationsDao
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.main.MainViewModel
@@ -81,7 +84,6 @@ class MainViewModelTest {
         every { format } returns MonetaryFormat()
         every { hideBalance } returns false
         every { registerOnSharedPreferenceChangeListener(any()) } just runs
-        every { areNotificationsDisabled() } returns false
     }
     private val blockChainStateMock = mockk<BlockchainStateDao>()
     private val exchangeRatesMock = mockk<ExchangeRatesProvider>()
@@ -89,16 +91,15 @@ class MainViewModelTest {
     private val walletApp = mockk<WalletApplication> {
         every { applicationContext } returns mockk()
     }
-    private val appDatabaseMock = mockk<AppDatabase> {
-        every { blockchainIdentityDataDaoAsync() } returns mockk {
-            every { loadBase() } returns MutableLiveData(null)
-        }
-        every { dashPayProfileDaoAsync() } returns mockk {
-            every { loadByUserIdDistinct(any()) } returns MutableLiveData(null)
-        }
-        every { invitationsDaoAsync() } returns mockk {
-            every { loadAll() } returns MutableLiveData(listOf())
-        }
+    private val blockchainIdentityDaoMock = mockk<BlockchainIdentityDataDao> {
+        coEvery { loadBase() } returns null
+        every { observeBase() } returns MutableStateFlow(null)
+    }
+    private val dashPayProfileDaoMock = mockk<DashPayProfileDao> {
+        every { observeByUserId(any()) } returns MutableStateFlow(null)
+    }
+    private val invitationsDaoMock = mockk<InvitationsDao> {
+        coEvery { loadAll() } returns listOf()
     }
     private val workManagerMock = mockk<WorkManager> {
         every { getWorkInfosByTagLiveData(any()) } returns MutableLiveData(listOf())
@@ -115,6 +116,7 @@ class MainViewModelTest {
 
     private val mockDashPayConfig = mockk<DashPayConfig> {
         every { observe<Long>(any()) } returns MutableStateFlow(0L)
+        coEvery { areNotificationsDisabled() } returns false
     }
 
     @get:Rule
@@ -160,9 +162,9 @@ class MainViewModelTest {
 
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk(),
-            mockk(), mockk(), mockk(), mockDashPayConfig
+            exchangeRatesMock, walletDataMock, walletApp, mockk(),
+            mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
+            mockk(), invitationsDaoMock, mockk(), dashPayProfileDaoMock, mockDashPayConfig
         ))
 
         val clipboardInput = viewModel.getClipboardInput()
@@ -181,9 +183,9 @@ class MainViewModelTest {
 
         val viewModel = spyk(MainViewModel(
             mockk(), clipboardManagerMock, configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk(),
-            mockk(), mockk(), mockk(), mockDashPayConfig
+            exchangeRatesMock, walletDataMock, walletApp, mockk(),
+            mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
+            mockk(), invitationsDaoMock, mockk(), dashPayProfileDaoMock, mockDashPayConfig
         ))
 
         every { clipboardManagerMock.primaryClip?.getItemAt(0)?.uri?.toString() } returns mockUri
@@ -213,12 +215,14 @@ class MainViewModelTest {
     @Test
     fun observeBlockchainState_replaying_notSynced() {
         every { blockChainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
+
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk(),
-            mockk(), mockk(), mockk(), mockDashPayConfig
+            exchangeRatesMock, walletDataMock, walletApp, mockk(),
+            mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
+            mockk(), invitationsDaoMock, mockk(), dashPayProfileDaoMock, mockDashPayConfig
         ))
+
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
             assertEquals(false, viewModel.isBlockchainSynced.value)
             assertEquals(false, viewModel.isBlockchainSyncFailed.value)
@@ -230,11 +234,12 @@ class MainViewModelTest {
     fun observeBlockchainState_progress100percent_synced() {
         val state = BlockchainState().apply { replaying = false; percentageSync = 100 }
         every { blockChainStateMock.observeState() } returns MutableStateFlow(state)
+
         val viewModel = spyk(MainViewModel(
             mockk(), mockk(), configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk(),
-            mockk(), mockk(), mockk(), mockDashPayConfig
+            exchangeRatesMock, walletDataMock, walletApp, mockk(),
+            mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
+            mockk(), invitationsDaoMock, mockk(), dashPayProfileDaoMock, mockDashPayConfig
         ))
 
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {

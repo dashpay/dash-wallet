@@ -66,12 +66,12 @@ object DatabaseModule {
     }
 
     @Provides
-    fun provideUserAlertDaoAsync(appDatabase: AppDatabase): UserAlertDao {
+    fun provideUserAlertDao(appDatabase: AppDatabase): UserAlertDao {
         return appDatabase.userAlertDao()
     }
 
     @Provides
-    fun provideInvitationsDaoAsync(appDatabase: AppDatabase): InvitationsDao {
+    fun provideInvitationsDao(appDatabase: AppDatabase): InvitationsDao {
         return appDatabase.invitationsDao()
     }
 
