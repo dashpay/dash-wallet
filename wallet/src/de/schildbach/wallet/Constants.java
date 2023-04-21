@@ -30,7 +30,7 @@ import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.WhiteRussianDevNetParams;
+import org.bitcoinj.params.TwoIslandsDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
@@ -93,7 +93,7 @@ public final class Constants {
             case "devnet": {
                 // Devnet
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
-                NETWORK_PARAMETERS = WhiteRussianDevNetParams.get();
+                NETWORK_PARAMETERS = TwoIslandsDevNetParams.get();
                 // TODO: remove this next line when Platform Supports Core 0.18
                 DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
                 IS_PROD_BUILD = false;
