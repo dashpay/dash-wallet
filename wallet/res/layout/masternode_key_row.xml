@@ -190,10 +190,48 @@
                 android:src="@drawable/ic_copy" />
         </RelativeLayout>
 
+        <RelativeLayout
+            android:id="@+id/public_key_legacy_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="15dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/public_key_container">
+
+            <TextView
+                android:id="@+id/public_key_legacy_header"
+                style="@style/Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@id/copy_public_key_legacy"
+                android:text="@string/masternode_key_public_legacy" />
+
+            <TextView
+                android:id="@+id/public_key_legacy"
+                style="@style/Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/public_key_legacy_header"
+                android:layout_toStartOf="@id/copy_public_key_legacy"
+                tools:text="03eeda68f0eb482935c7ecbebf7b6497756e471b7a0fad5014bbe6ab593cb6127" />
+
+            <ImageView
+                android:id="@+id/copy_public_key_legacy"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerInParent="true"
+                android:layout_marginStart="17dp"
+                android:layout_marginEnd="7dp"
+                android:src="@drawable/ic_copy" />
+        </RelativeLayout>
+
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            app:layout_constraintTop_toBottomOf="@id/public_key_container"
+            app:layout_constraintTop_toBottomOf="@id/public_key_legacy_container"
             android:background="@color/background_primary"
             />
 
@@ -205,7 +243,7 @@
             android:padding="15dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/public_key_container">
+            app:layout_constraintTop_toBottomOf="@+id/public_key_legacy_container">
 
             <TextView
                 android:id="@+id/private_key_hex_header"
