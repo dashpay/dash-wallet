@@ -281,13 +281,21 @@
     <string name="tools_show_xpub">Genişletilmiş Genel Anahtar</string>
 
     <string name="about_help_us_improve">Deneyiminizi geliştirmemize yardımcı olun</string>
+    <string name="about_review_and_rate">Uygulamamızı değerlendirip puanlayın</string>
     <string name="about_contact_support">Destekle İletişime Geçin</string>
     <string name="about_fork_disclaimer">Bu uygulama açık kaynak kodlu bir Bitcoin çatallanmasıdır</string>
-    <string name="about_copyright">Telif Hakkı © 2022 Dash Core</string>
+    <string name="about_copyright">Telif Hakkı © 2023 Dash Core</string>
     <string name="about_license">GNU Genel Kamu Lisansı v3.0</string>
     <string name="about_version_name">Dash Cüzdanı %s</string>
+    <string name="about_last_explore_device_sync">Son Explore cihaz senkronizasyonu</string>
+    <string name="about_last_explore_server_update">Son Explore sunucu güncellemesi</string>
+    <string name="about_firebase_installation_id">Firebase kurulum kimliği</string>
+    <string name="about_fcm_token">Firebase bulut mesajlaşma jetonu</string>
     <string name="about_last_explore_dash_update_error">getirilemiyor</string>
     <string name="about_last_explore_dash_sync_never">asla</string>
+    <string name="about_explore_failed_sync">%s üzerinde senkronize edilemedi</string>
+    <string name="about_explore_preloaded_on">%s üzerinde önceden yüklenmiş</string>
+
     <string name="block">Blok</string>
     <string name="time">Zaman</string>
     <string name="hash">Karma</string>

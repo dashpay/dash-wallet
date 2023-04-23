@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractBindServiceActivity extends AbstractWalletActivity {
+public abstract class AbstractBindServiceActivity extends LockScreenActivity {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractBindServiceActivity.class);
 
@@ -89,6 +89,7 @@ public abstract class AbstractBindServiceActivity extends AbstractWalletActivity
         doUnbindService();
     }
 
+    @Nullable
     public BlockchainService getBlockchainService() {
         return blockchainService;
     }

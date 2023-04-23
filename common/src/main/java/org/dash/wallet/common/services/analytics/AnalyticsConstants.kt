@@ -21,8 +21,13 @@ package org.dash.wallet.common.services.analytics
 object AnalyticsConstants {
     const val CALLING_ACTIVITY = "calling_activity"
 
-    object Parameters {
-        const val VALUE = "value"
+    enum class Parameter(val paramName: String) {
+        // When adding a parameter, make sure to create a custom definition for it in Firebase Analytics.
+        // Better yet, use one of the parameters already added here.
+        VALUE("value"),
+        TIME("time"),
+        ARG1("arg1"),
+        ARG2("arg2")
     }
 
     object Uphold {
@@ -79,19 +84,25 @@ object AnalyticsConstants {
         const val ENTER_AMOUNT_FIAT = "enter_amount_fiat_amount"
         const val ENTER_AMOUNT_SEND = "enter_amount_send"
         const val ENTER_AMOUNT_RECEIVE = "enter_amount_receive"
+        const val ENTER_AMOUNT_SHOW_BALANCE = "enter_amount_show_balance"
+        const val ENTER_AMOUNT_HIDE_BALANCE = "enter_amount_hide_balance"
     }
 
     object Home {
+        const val NAV_HOME = "bottom_nav_home"
+        const val NAV_MORE = "bottom_nav_more"
         const val SHORTCUT_SECURE_WALLET = "shortcut_secure_wallet"
         const val SHORTCUT_SCAN_TO_PAY = "shortcut_scan_to_pay"
         const val SHORTCUT_SEND_TO_ADDRESS = "shortcut_send_to_address"
         const val SHORTCUT_RECEIVE = "shortcut_receive"
         const val SHORTCUT_BUY_AND_SELL = "shortcut_buy_and_sell_dash"
+        const val SHORTCUT_EXPLORE = "shortcut_explore"
         const val HIDE_BALANCE = "home_hide_balance"
         const val SHOW_BALANCE = "home_show_balance"
         const val TRANSACTION_DETAILS = "home_transaction_details"
         const val TRANSACTION_FILTER = "home_transaction_filter"
-        const val SEND_RECEIVE_BUTTON = "home_send_receive_button"
+        const val SEND_RECEIVE_BUTTON = "bottom_nav_payments"
+        const val NO_ADDRESS_COPIED = "shortcut_send_no_address_copied"
     }
 
     object Invites {
@@ -228,6 +239,20 @@ object AnalyticsConstants {
         const val MERCHANT_DETAILS_SCROLL_UP = "explore_merchant_details_scroll_up"
     }
 
+    object DashDirect {
+        const val CREATE_ACCOUNT = "dashdirect_btn_create"
+        const val LOGIN = "dashdirect_btn_login"
+        const val SUCCESSFUL_LOGIN = "dashdirect_success_login"
+        const val UNSUCCESSFUL_LOGIN = "dashdirect_not_success_login"
+        const val SUCCESSFUL_PURCHASE = "dashdirect_success_purchase"
+        const val PURCHASE_AMOUNT = "dashdirect_purchase_amount"
+        const val DISCOUNT_AMOUNT = "dashdirect_discount_amount"
+        const val MERCHANT_NAME = "dashdirect_merchant_name"
+        const val HOW_TO_USE = "dashdirect_btn_how_to_use"
+        const val FILTER_GIFT_CARD = "home_transaction_filter_gift_card"
+        const val DETAILS_GIFT_CARD = "home_transaction_details_gift_card"
+    }
+
     object CrowdNode {
         const val STAKING_ENTRY = "explore__staking"
 
@@ -275,7 +300,9 @@ object AnalyticsConstants {
         const val BUY_PAYMENT_METHOD = "coinbase_buy_p_method"
         const val BUY_ENTER_FIAT = "coinbase_buy_enter_amount_fiat"
         const val BUY_ENTER_DASH = "coinbase_buy_enter_amount_dash"
-        const val BUY_CHANGE_FIAT_CURRENCY = "coinbase_buy_b_change_fiat_currency" // Currency selector isn't shown in Coinbase.
+
+        // Currency selector isn't shown in Coinbase.
+        const val BUY_CHANGE_FIAT_CURRENCY = "coinbase_buy_b_change_fiat_currency"
         const val BUY_CONTINUE = "coinbase_buy_b_continue"
         const val BUY_AUTH_LIMIT = "coinbase_buy_b_auth_limit"
 

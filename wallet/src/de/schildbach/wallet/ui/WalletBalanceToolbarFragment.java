@@ -28,9 +28,6 @@ import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
@@ -41,7 +38,7 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.utils.Fiat;
-import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.entity.ExchangeRate;
 import org.dash.wallet.common.ui.CurrencyTextView;
 
 import javax.annotation.Nullable;
@@ -165,15 +162,12 @@ public final class WalletBalanceToolbarFragment extends Fragment {
 		loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
 
 		exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
-				new Observer<ExchangeRate>() {
-			@Override
-			public void onChanged(ExchangeRate rate) {
-				if (rate != null) {
-					exchangeRate = rate;
-					updateView();
-				}
-			}
-		});
+				rate -> {
+					if (rate != null) {
+						exchangeRate = rate;
+						updateView();
+					}
+				});
 
 		updateView();
 	}
@@ -219,7 +213,7 @@ public final class WalletBalanceToolbarFragment extends Fragment {
 						final Fiat localValue = rate.coinToFiat(balance);
 						viewBalanceLocal.setVisibility(View.VISIBLE);
 						viewBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0,
-								org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO + exchangeRate.getCurrencyCode()));
+								org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO + exchangeRate.getCurrencyCode()));
 						viewBalanceLocal.setAmount(localValue);
 					}
 					else

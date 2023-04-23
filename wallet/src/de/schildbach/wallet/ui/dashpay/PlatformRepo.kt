@@ -18,19 +18,26 @@ package de.schildbach.wallet.ui.dashpay
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
-import androidx.lifecycle.LiveData
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
-import de.schildbach.wallet.AppDatabase
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors.fromApplication
+import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
+import de.schildbach.wallet.database.AppDatabase
+import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.DashPayContactRequest
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.payments.DeriveKeyTask
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.util.canAffordIdentityCreation
 import io.grpc.StatusRuntimeException
@@ -38,7 +45,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.bitcoinj.core.*
-import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.DeterministicSeed
@@ -68,11 +74,16 @@ import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 class PlatformRepo private constructor(val walletApplication: WalletApplication) {
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    internal interface PlatformRepoEntryPoint {
+        fun provideAppDatabase(): AppDatabase
+    }
 
     companion object {
         private val log = LoggerFactory.getLogger(PlatformRepo::class.java)
@@ -100,22 +111,24 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     val profiles = Profiles(platform)
     val contactRequests = ContactRequests(platform)
 
-    private val blockchainIdentityDataDao = AppDatabase.getAppDatabase().blockchainIdentityDataDao()
-    private val dashPayProfileDao = AppDatabase.getAppDatabase().dashPayProfileDao()
-    private val dashPayContactRequestDao = AppDatabase.getAppDatabase().dashPayContactRequestDao()
-    private val invitationsDao = AppDatabase.getAppDatabase().invitationsDao()
-    private val userAlertDao = AppDatabase.getAppDatabase().userAlertDao()
-    private val transactionMetadataDocumentDao = AppDatabase.getAppDatabase().transactionMetadataDocumentDao()
-    private val transactionMetadataChangeCacheDao = AppDatabase.getAppDatabase().transactionMetadataCacheDao()
+    private val entryPoint = fromApplication(walletApplication, PlatformRepoEntryPoint::class.java)
+    private val appDatabase = entryPoint.provideAppDatabase()
+    private val blockchainIdentityDataDao = appDatabase.blockchainIdentityDataDao()
+    private val dashPayProfileDao = appDatabase.dashPayProfileDao()
+    private val dashPayContactRequestDao = appDatabase.dashPayContactRequestDao()
+    private val invitationsDao = appDatabase.invitationsDao()
+    private val userAlertDao = appDatabase.userAlertDao()
+    private val transactionMetadataDocumentDao = appDatabase.transactionMetadataDocumentDao()
+    private val transactionMetadataChangeCacheDao = appDatabase.transactionMetadataCacheDao()
 
     // Async
     private val blockchainIdentityDataDaoAsync =
-        AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync()
-    private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
+        appDatabase.blockchainIdentityDataDaoAsync()
+    private val dashPayProfileDaoAsync = appDatabase.dashPayProfileDaoAsync()
     private val dashPayContactRequestDaoAsync =
-        AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
-    private val invitationsDaoAsync = AppDatabase.getAppDatabase().invitationsDaoAsync()
-    private val userAlertDaoAsync = AppDatabase.getAppDatabase().userAlertDaoAsync()
+        appDatabase.dashPayContactRequestDaoAsync()
+    private val invitationsDaoAsync = appDatabase.invitationsDaoAsync()
+    private val userAlertDaoAsync = appDatabase.userAlertDaoAsync()
 
     private lateinit var blockchainIdentity: BlockchainIdentity
 
@@ -497,24 +510,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         return this::blockchainIdentity.isInitialized
     }
 
-    /**
-     *  Wraps callbacks of DeriveKeyTask as Coroutine
-     */
-    private suspend fun deriveEncryptionKey(handler: Handler, wallet: Wallet, password: String): KeyParameter {
-        return suspendCoroutine { continuation ->
-            object : DeriveKeyTask(handler, walletApplication.scryptIterationsTarget()) {
-
-                override fun onSuccess(encryptionKey: KeyParameter, wasChanged: Boolean) {
-                    continuation.resume(encryptionKey)
-                }
-
-                override fun onFailure(ex: KeyCrypterException?) {
-                    continuation.resumeWithException(ex as Throwable)
-                }
-
-            }.deriveKey(wallet, password)
-        }
-    }
 /*
     @Throws(Exception::class)
     suspend fun sendContactRequest(toUserId: String): DashPayContactRequest {

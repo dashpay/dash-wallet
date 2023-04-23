@@ -15,18 +15,16 @@
         android:layout_height="wrap_content"
         android:paddingStart="10dp"
         android:paddingEnd="6dp"
-        android:textColor="@color/primary_status"
         tools:text="Receiving" />
 
     <TextView
         android:id="@+id/transaction_row_secondary_status"
-        style="@style/Overline.Medium"
+        style="@style/Overline.Medium.Tertiary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignBottom="@id/transaction_row_primary_status"
         android:layout_toEndOf="@id/transaction_row_primary_status"
         android:layout_toRightOf="@id/transaction_row_primary_status"
-        android:textColor="@color/secondary_status"
         tools:text="Processing" />
 
     <TextView
@@ -75,7 +73,8 @@
             android:layout_marginTop="1dp"
             android:layout_marginEnd="4dp"
             android:layout_marginRight="4dp"
-            app:srcCompat="@drawable/ic_dash_symbol_gray" />
+            android:src="@drawable/ic_dash"
+            app:tint="@color/content_secondary"/>
 
         <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/transaction_row_value"

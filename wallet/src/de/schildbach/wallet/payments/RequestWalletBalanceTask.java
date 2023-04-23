@@ -377,7 +377,7 @@ public final class RequestWalletBalanceTask {
 				.header("User-Agent", Constants.USER_AGENT)
 				.build();
 
-		final Call call = Constants.HTTP_CLIENT.newCall(request);
+		final Call call = org.dash.wallet.common.util.Constants.INSTANCE.getHTTP_CLIENT().newCall(request);
 
 		try
 		{

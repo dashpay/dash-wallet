@@ -283,13 +283,21 @@
     <string name="tools_show_xpub">拡張公開鍵</string>
 
     <string name="about_help_us_improve">品質を向上させるためにご協力ください</string>
+    <string name="about_review_and_rate">アプリのレビューを書いて評価する</string>
     <string name="about_contact_support">サポートへ連絡する</string>
     <string name="about_fork_disclaimer">これはビットコインウォレットからフォークしたオープンソースのアプリです</string>
-    <string name="about_copyright">Copyright © 2022 Dash Core</string>
+    <string name="about_copyright">Copyright © 2023 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dashウォレット %s</string>
+    <string name="about_last_explore_device_sync">前回のExploreのデバイスの同期</string>
+    <string name="about_last_explore_server_update">前回のExploreのサーバーのアップデート</string>
+    <string name="about_firebase_installation_id">FirebaseのインストールID</string>
+    <string name="about_fcm_token">Firebaseのクラウドメッセージングトークン</string>
     <string name="about_last_explore_dash_update_error">取り出しできません</string>
     <string name="about_last_explore_dash_sync_never">全く</string>
+    <string name="about_explore_failed_sync">%sで同期に失敗しました</string>
+    <string name="about_explore_preloaded_on">%sでプリロードされました</string>
+
     <string name="block">ブロック</string>
     <string name="time">時間</string>
     <string name="hash">ハッシュ</string>

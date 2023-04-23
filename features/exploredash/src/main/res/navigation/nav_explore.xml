@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_explore"
+    app:startDestination="@id/searchFragment">
+
+    <fragment
+        android:id="@+id/searchFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.explore.SearchFragment"
+        android:label="fragment_search"
+        tools:layout="@layout/fragment_search">
+
+        <argument
+            android:name="type"
+            android:defaultValue="Merchants"
+            app:argType="org.dash.wallet.features.exploredash.ui.explore.ExploreTopic" />
+
+        <action
+            android:id="@+id/explore_to_info"
+            app:destination="@id/infoDialog" />
+
+        <action
+            android:id="@+id/search_to_filters"
+            app:destination="@id/filtersDialog" />
+
+        <action
+            android:id="@+id/search_to_purchaseGiftCardFragment"
+            app:destination="@id/purchaseGiftCardFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/search_to_dashDirectUserAuthFragment"
+            app:destination="@id/dashDirectUserAuthFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/dashDirectUserAuthFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment"
+        android:label="fragment_dashDirectUserAuthFragment"
+        tools:layout="@layout/fragment_dash_direct_user_auth">
+
+        <action
+            android:id="@+id/auth_to_dashDirectUserAuthFragment"
+            app:destination="@id/dashDirectUserAuthFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/auth_to_purchaseGiftCardFragment"
+            app:popUpTo="@id/searchFragment"
+            app:destination="@id/purchaseGiftCardFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <argument
+            android:name="dashDirectUserAuthType"
+            app:argType="org.dash.wallet.features.exploredash.ui.dashdirect.DashDirectUserAuthFragment$DashDirectUserAuthType" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/purchaseGiftCardFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.dashdirect.PurchaseGiftCardFragment"
+        android:label="fragment_purchase_gift_card"
+        tools:layout="@layout/fragment_purchase_gift_card"/>
+
+    <dialog
+        android:id="@+id/infoDialog"
+        android:name="org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog"
+        android:label="explore_dash_info"
+        tools:layout="@layout/explore_dash_main_info"/>
+
+    <dialog
+        android:id="@+id/filtersDialog"
+        android:name="org.dash.wallet.features.exploredash.ui.explore.dialogs.FiltersDialog"
+        android:label="explore_filters"
+        tools:layout="@layout/dialog_filters" />
+</navigation>

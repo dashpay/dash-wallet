@@ -34,7 +34,9 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.isCurrencyFirst
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.EnterAmountToTransferFragmentBinding
@@ -59,7 +61,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
         viewModel.isMaxAmountSelected = false
         binding.currencyOptions.apply {
             pickedOptionIndex = 0
-            provideOptions(listOf(CoinbaseConstants.DASH_CURRENCY, viewModel.localCurrencyCode))
+            provideOptions(listOf(Constants.DASH_CURRENCY, viewModel.localCurrencyCode))
         }
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         formatTransferredAmount(CoinbaseConstants.VALUE_ZERO)
@@ -109,7 +111,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             if (binding.currencyOptions.pickedOptionIndex == 0){
                 spanAmount(this, viewModel.formattedValue.length, text.length)
             } else {
-                if (GenericUtils.isCurrencyFirst(viewModel.fiatAmount) && text.length - viewModel.fiatBalance.length > 0) {
+                if (viewModel.fiatAmount?.isCurrencyFirst() == true && text.length - viewModel.fiatBalance.length > 0) {
                     spanAmount(this, 0, text.length - viewModel.fiatBalance.length)
                 } else {
                     spanAmount(this, viewModel.inputValue.length, text.length)
@@ -130,7 +132,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
                 to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
             )
             setSpan(
-                context?.resources?.getColor(R.color.content_primary)
+                context?.resources?.getColor(R.color.content_primary, null)
                     ?.let { ForegroundColorSpan(it) },
                 from,
                 to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE

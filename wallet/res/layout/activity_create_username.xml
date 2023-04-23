@@ -145,7 +145,7 @@
                     android:layout_gravity="center"
                     android:textAlignment="gravity"
                     android:indeterminate="true"
-                    android:indeterminateTint="@color/dark_text"
+                    android:indeterminateTint="@color/content_primary"
                     android:visibility="invisible"
                     tools:visibility="visible" />
 

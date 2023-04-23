@@ -149,7 +149,10 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
             setBackgroundDrawable(
                 InsetDrawable(
                     ResourcesCompat.getDrawable(resources, R.drawable.white_background_rounded, null),
-                    dialogInset, 0, dialogInset, 0
+                    dialogInset,
+                    0,
+                    dialogInset,
+                    0
                 )
             )
             requestFeature(Window.FEATURE_NO_TITLE)
@@ -218,7 +221,7 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
 
             try {
                 show(activity, onSuccess)
-            } catch(ex: Exception) {
+            } catch (ex: Exception) {
                 if (coroutine.isActive) {
                     coroutine.resumeWithException(ex)
                 }

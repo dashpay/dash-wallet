@@ -278,13 +278,21 @@
     <string name="tools_show_xpub">확장된 공개 키</string>
 
     <string name="about_help_us_improve">우리가 당신의 경험을 향상할 수 있도록 도와주세요</string>
+    <string name="about_review_and_rate">어플 리뷰 및 평점</string>
     <string name="about_contact_support">고객 지원부에 문의하기</string>
     <string name="about_fork_disclaimer">이 어플은 비트코인 지갑에서 포크한 오픈 소스 어플입니다.</string>
-    <string name="about_copyright">Copyright © 2022 대시 코어</string>
+    <string name="about_copyright">Copyright © 2023 대시 코어</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">대시 지갑 %s</string>
+    <string name="about_last_explore_device_sync">마지막 익스플로어 기기 동기화</string>
+    <string name="about_last_explore_server_update">마지막 익스플로어 서버 업데이트</string>
+    <string name="about_firebase_installation_id">파이어베이스 설치 ID</string>
+    <string name="about_fcm_token">파이어베이스 클라우드 메시징 토큰</string>
     <string name="about_last_explore_dash_update_error">불러올 수 없음</string>
     <string name="about_last_explore_dash_sync_never">하지 않음</string>
+    <string name="about_explore_failed_sync">%s 에 동기화하는 데 실패하였습니다</string>
+    <string name="about_explore_preloaded_on">%s 에 프리로딩 되었습니다</string>
+
     <string name="block">블록</string>
     <string name="time">시간</string>
     <string name="hash">해시</string>

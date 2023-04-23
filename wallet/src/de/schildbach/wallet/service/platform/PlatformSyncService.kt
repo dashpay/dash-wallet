@@ -25,15 +25,18 @@ import androidx.core.content.ContextCompat
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityData
-import de.schildbach.wallet.data.DashPayContactRequest
-import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.TransactionMetadataCacheItem
-import de.schildbach.wallet.data.TransactionMetadataChangeCacheDao
-import de.schildbach.wallet.data.TransactionMetadataDocument
-import de.schildbach.wallet.data.TransactionMetadataDocumentDao
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.DashPayContactRequestDao
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.DashPayContactRequest
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
+import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
+import de.schildbach.wallet.database.entity.TransactionMetadataDocument
+import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.BlockchainService
@@ -58,7 +61,7 @@ import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.EvolutionContact
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -101,7 +104,11 @@ class PlatformSynchronizationService @Inject constructor(
     val walletApplication: WalletApplication,
     val transactionMetadataProvider: TransactionMetadataProvider,
     val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
-    val transactionMetadataDocumentDao: TransactionMetadataDocumentDao
+    val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
+    private val blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    private val dashPayProfileDao: DashPayProfileDao,
+    private val dashPayContactRequestDao: DashPayContactRequestDao,
+    private val invitationsDao: InvitationsDao
 ) : PlatformSyncService {
 
     companion object {
@@ -119,10 +126,6 @@ class PlatformSynchronizationService @Inject constructor(
 
     private var mainHandler: Handler = Handler(platformRepo.walletApplication.mainLooper)
 
-    private val blockchainIdentityDataDao = AppDatabase.getAppDatabase().blockchainIdentityDataDao()
-    private val dashPayProfileDao = AppDatabase.getAppDatabase().dashPayProfileDao()
-    private val dashPayContactRequestDao = AppDatabase.getAppDatabase().dashPayContactRequestDao()
-    private val invitationsDao = AppDatabase.getAppDatabase().invitationsDao()
     private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
     private val onPreBlockContactListeners = arrayListOf<OnPreBlockProgressListener>()
     private var lastPreBlockStage: PreBlockStage = PreBlockStage.None

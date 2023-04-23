@@ -76,6 +76,7 @@
     <string name="explore_payment_method">Payment Method</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Gift card</string>
+    <string name="explore_filter_gift_cards">Gift cards</string>
     <string name="explore_radius">Radius</string>
     <string name="explore_location">Location</string>
     <string name="explore_current_location">Current Location</string>
@@ -146,7 +147,6 @@
     <string name="buy_gift_card_text">Buy gift cards with your Dash</string>
     <string name="buy_gift_card_desc_text">Buy gift cards with your Dash for the exact amount of your purchase.</string>
     <string name="learn_more_text">Learn More</string>
-    <string name="continue_text">Continue</string>
     <string name="buy_card_header_text">How to Use a Gift Card</string>
     <string name="buy_card_desc_text">Not all of the stores accept DASH directly, but you can buy a gift card with your Dash.</string>
     <string name="find_merchant_text">Find a merchant.</string>
@@ -161,10 +161,66 @@
     <string name="explore_get_test_dash">Get Test Dash</string>
 
     <!-- Sync Status -->
-    <string name="sync_in_progress_not_complete">Sync in progress... Results may not be complete.</string>
-    <string name="sync_in_progress_error">Sync in progress... There was an error.</string>
-    <string name="sync_in_progress_canceled">Sync canceled... Another attempt will be made later.</string>
+    <string name="sync_in_progress_not_complete">Sync in progress… Results may not be complete.</string>
+    <string name="sync_in_progress_error">Sync in progress… There was an error.</string>
+    <string name="sync_in_progress_canceled">Sync canceled… Another attempt will be made later.</string>
 
     <string name="sync_in_progress_file_not_found">Build Error: Database not found!</string>
-    <string name="sync_in_progress_network_error">Sync interrupted... Network is offline or unreachable</string>
+    <string name="sync_in_progress_network_error">Sync interrupted… Network is offline or unreachable</string>
+
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">at</string>
+    <string name="purchase_gift_card_min">Min: %s</string>
+    <string name="purchase_gift_card_max">Max: %s</string>
+    <string name="purchase_gift_card_discount_hint">You are buying a %s gift card for %s (%s discount)</string>
+    <string name="button_next">Next</string>
+    <string name="purchase_gift_card_from">From</string>
+    <string name="purchase_gift_card_to">To</string>
+    <string name="purchase_confirm_transaction">Confirm Transaction</string>
+    <string name="purchase_gift_card_total_label">Gift card total</string>
+    <string name="purchase_gift_card_discount">Discount</string>
+    <string name="purchase_gift_card_you_pay">You pay</string>
+    <string name="purchase_gift_card_confirm">Confirm</string>
+    <string name="purchase_gift_card_details">Gift card details</string>
+    <string name="purchase_original_purchase">Original purchase</string>
+    <string name="purchase_check_current_balance">Check current balance</string>
+    <string name="purchase_card_number">Card Number</string>
+    <string name="purchase_card_pin">Card PIN</string>
+    <string name="purchase_view_transaction">View Transaction Details</string>
+    <string name="purchase_see_how_to_use_gift_card">See how to use a gift card</string>
+    <string name="purchase_how_to_use_gift_card">How to use a gift card</string>
+    <string name="purchase_self_checkout">Self-checkout</string>
+    <string name="purchase_Request_assistance">Request assistance from an employee to redeem a digital gift card.</string>
+    <string name="purchase_in_store">In store</string>
+    <string name="purchase_tell_the_cashier">Tell the cashier that you are paying with a digital gift card. Cashier: type the total amount on the Bankcard field, then type the gift card number in the Account field and press Enter.</string>
+    <string name="purchase_in_the_payment_section">In the payment section, enter your digital gift card number into the gift card field.</string>
+    <string name="purchase_powered_by">Powered by</string>
+    <string name="insufficient_money_title">Not enough coins</string>
+    <string name="insufficient_money_msg">The amount of coins in the wallet is too small for sweeping.</string>
+    <string name="send_coins_error_msg">Problem sending coins!</string>
+    <string name="gift_card_barcode_failed">Failed to load the barcode</string>
+    <string name="gift_card_tx_title">Gift card · %s</string>
+
+    <!-- dash direct login-->
+    <string name="create_dash_direct_account">Create DashDirect account</string>
+    <string name="log_in_to_dashdirect_account">Log in to DashDirect account</string>
+    <string name="log_in_to_dashdirect_account_desc">Your email is only used to send a one-time password.</string>
+    <string name="enter_verification_code">Enter verification code</string>
+    <string name="check_your_email_and_verification_code">Check your email and enter the verification code</string>
+    <string name="buy_a_gift_card_with_your_dash_direct_account">Buy a gift card with your DashDirect account</string>
+    <string name="create_an_account_at_dash_direct_or_log_in_to_the_existing_one">Create an account at DashDirect or log in to the existing one</string>
+    <string name="create_new_account">Create New Account</string>
+    <string name="login">Login</string>
+    <string name="password">Password</string>
+    <string name="logged_in_as">Logged in as %s</string>
+    <string name="log_out"> Log out</string>
+    <string name="invaild_code">You entered the wrong code. Please check your email and try again.</string>
+    <string name="something_wrong_title">Something went wrong!</string>
+    <string name="retry">Retry</string>
+    <string name="gift_card_purchase_failed">Gift card purchase failed</string>
+    <string name="try_again">Try Again</string>
+    <string name="cancel">Cancel</string>
+    <string name="gift_card_error">For some reason we were not able to buy a gift card. Please, try again.</string>
+
+    <string name="dash_direct_url" translatable="false">dashdirect.org</string>
 </resources>

@@ -17,11 +17,8 @@
 package de.schildbach.wallet.ui.payments
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.view.isVisible
-import androidx.fragment.app.DialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogReceiveDetailsBinding
@@ -33,17 +30,18 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class ReceiveDetailsDialog : OffsetDialogFragment() {
+class ReceiveDetailsDialog : OffsetDialogFragment(R.layout.dialog_receive_details) {
     companion object {
         private const val ARG_DASH_AMOUNT = "arg_dash_amount"
         private const val ARG_FIAT_AMOUNT = "arg_fiat_amount"
         private const val ARG_ADDRESS = "arg_address"
 
         @JvmStatic
-        fun createDialog(address: Address, dashAmount: Coin, fiatAmount: Fiat?): DialogFragment {
+        fun createDialog(address: Address, dashAmount: Coin, fiatAmount: Fiat?): OffsetDialogFragment {
             val dialog = ReceiveDetailsDialog()
             val bundle = Bundle()
             bundle.putSerializable(ARG_ADDRESS, address)
@@ -57,10 +55,6 @@ class ReceiveDetailsDialog : OffsetDialogFragment() {
     override val backgroundStyle = R.style.PrimaryBackground
     private val binding by viewBinding(DialogReceiveDetailsBinding::bind)
     @Inject lateinit var configuration: Configuration
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_receive_details, container, false)
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -76,7 +70,7 @@ class ReceiveDetailsDialog : OffsetDialogFragment() {
                 .minDecimals(0).noCode().format(dashAmount)
 
             if (fiatAmount != null) {
-                binding.amount.fiatValue.text = GenericUtils.fiatToString(fiatAmount)
+                binding.amount.fiatValue.text = fiatAmount.toFormattedString()
             } else {
                 binding.amount.fiatValue.isVisible = false
             }

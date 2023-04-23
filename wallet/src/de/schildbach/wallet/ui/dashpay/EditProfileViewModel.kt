@@ -30,13 +30,12 @@ import com.google.api.services.drive.Drive
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.ImgurUploadResponse
+import de.schildbach.wallet.database.AppDatabase
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.ui.SingleLiveEvent
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
@@ -48,6 +47,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -156,7 +156,7 @@ class EditProfileViewModel @Inject constructor(
     fun saveAsProfilePictureTmp(picturePath: String) {
         viewModelScope.launch {
             copyFile(File(picturePath), tmpPictureFile)
-            onTmpPictureReadyForEditEvent.call(tmpPictureFile)
+            onTmpPictureReadyForEditEvent.postValue(tmpPictureFile)
         }
     }
 
@@ -377,30 +377,30 @@ class EditProfileViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+        analytics.logEvent(event, mapOf())
     }
 
     private fun logProfileInfoEvents(displayName: String, publicMessage: String, avatarUrl: String) {
         if (displayName != dashPayProfile!!.displayName) {
-            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_NAME, bundleOf())
-            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_NAME_LENGTH, bundleOf(
-                "length" to displayName.length
+            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_NAME, mapOf())
+            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_NAME_LENGTH, mapOf(
+                AnalyticsConstants.Parameter.VALUE to displayName.length
             ))
         }
 
         if (publicMessage != dashPayProfile!!.publicMessage) {
-            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_ABOUT_ME, bundleOf())
-            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_ABOUT_ME_LENGTH, bundleOf(
-                "length" to publicMessage.length
+            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_ABOUT_ME, mapOf())
+            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_ABOUT_ME_LENGTH, mapOf(
+                AnalyticsConstants.Parameter.VALUE to publicMessage.length
             ))
         }
 
         if (avatarUrl != dashPayProfile!!.avatarUrl) {
             when (pictureSource) {
-                "gravatar" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_GRAVATAR, bundleOf())
-                "public_url" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_PUBLIC_URL, bundleOf())
-                "camera" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_CAMERA, bundleOf())
-                "gallery" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_GALLERY, bundleOf())
+                "gravatar" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_GRAVATAR, mapOf())
+                "public_url" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_PUBLIC_URL, mapOf())
+                "camera" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_CAMERA, mapOf())
+                "gallery" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_GALLERY, mapOf())
                 else -> { }
             }
         }

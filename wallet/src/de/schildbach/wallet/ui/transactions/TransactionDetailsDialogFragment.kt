@@ -2,15 +2,13 @@ package de.schildbach.wallet.ui.transactions
 
 import android.content.DialogInterface
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
+import de.schildbach.wallet.database.entity.DashPayProfile
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.database.dao.DashPayProfileDaoAsync
+import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -22,22 +20,35 @@ import de.schildbach.wallet_test.databinding.TransactionDetailsDialogBinding
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 /**
  * @author Samuel Barbosa
  */
 @AndroidEntryPoint
-class TransactionDetailsDialogFragment : OffsetDialogFragment() {
+class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transaction_details_dialog) {
+
     private val log = LoggerFactory.getLogger(javaClass.simpleName)
-    private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }
+    private val txId by lazy {
+        if (arguments?.get(TX_ID) is Sha256Hash) {
+            arguments?.get(TX_ID) as Sha256Hash
+        } else {
+            Sha256Hash.wrap(arguments?.get(TX_ID) as String)
+        }
+    }
     private val binding by viewBinding(TransactionDetailsDialogBinding::bind)
     private lateinit var contentBinding: TransactionResultContentBinding
     private lateinit var transactionResultViewBinder: TransactionResultViewBinder
     private val viewModel: TransactionResultViewModel by viewModels()
+
+    @Inject lateinit var configuration: Configuration
+    @Inject lateinit var packageInfoProvider: PackageInfoProvider
+    @Inject lateinit var dashPayProfileDaoAsync: DashPayProfileDaoAsync
 
     override val backgroundStyle = R.style.PrimaryBackground
     override val forceExpand = true
@@ -47,17 +58,14 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         const val TX_ID = "tx_id"
 
         @JvmStatic
-        fun newInstance(txId: Sha256Hash): TransactionDetailsDialogFragment {
+        fun newInstance(txId: Sha256Hash? = null): TransactionDetailsDialogFragment {
             val fragment = TransactionDetailsDialogFragment()
-            val args = Bundle()
-            args.putSerializable(TX_ID, txId)
-            fragment.arguments = args
+
+            if (txId != null) {
+                fragment.arguments = bundleOf(TX_ID to txId)
+            }
             return fragment
         }
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.transaction_details_dialog, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -79,16 +87,22 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
             if (blockchainIdentity == null || userId == null) {
                 finishInitialization(tx, null)
             }
-
-            viewModel.transactionMetadata.observe(this) { metadata ->
-                if(metadata != null && tx.txId == metadata.txId) {
-                    transactionResultViewBinder.setTransactionMetadata(metadata)
-                }
-            }
         } else {
-            log.error("Transaction not found. TxId:", txId)
+            log.error("Transaction not found. TxId: {}", txId)
             dismiss()
             return
+        }
+
+        viewModel.transactionMetadata.observe(this) { metadata ->
+            transactionResultViewBinder.setTransactionMetadata(metadata)
+        }
+
+        viewModel.transactionIcon.observe(this) {
+            transactionResultViewBinder.setTransactionIcon(it)
+        }
+
+        viewModel.merchantName.observe(this) {
+            transactionResultViewBinder.setCustomTitle(getString(R.string.gift_card_tx_title, it))
         }
     }
 
@@ -120,7 +134,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
         if (blockchainIdentity != null) {
             userId = blockchainIdentity.getContactForTransaction(tx)
             if (userId != null) {
-                AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(userId).observe(this) {
+                dashPayProfileDaoAsync.loadByUserIdDistinct(userId).observe(this) {
                     if (it != null) {
                         profile = it
                         finishInitialization(tx, profile)
@@ -135,9 +149,10 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment() {
     private fun showReportIssue() {
         ReportIssueDialogBuilder.createReportIssueDialog(
             requireActivity(),
-            WalletApplication.getInstance()
-        )
-            .buildAlertDialog().show()
+            packageInfoProvider,
+            configuration,
+            viewModel.walletData.wallet
+        ).buildAlertDialog().show()
     }
 
     private fun viewOnBlockExplorer() {

@@ -16,26 +16,22 @@
 
 package de.schildbach.wallet.ui.invite
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.SingleLiveEvent
+import de.schildbach.wallet.database.dao.InvitationsDaoAsync
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel
 class InvitesHistoryViewModel @Inject constructor(
-    application: Application
-) : AndroidViewModel(application) {
+    invitationsDaoAsync: InvitationsDaoAsync
+) : ViewModel() {
     companion object {
         val log = LoggerFactory.getLogger(InvitesHistoryViewModel::class.java)
     }
 
-    private val walletApplication = application as WalletApplication
-
-    val invitationHistory = AppDatabase.getAppDatabase().invitationsDaoAsync().loadAll()
+    val invitationHistory = invitationsDaoAsync.loadAll()
 
     enum class Filter {
         ALL,

@@ -18,7 +18,7 @@ package de.schildbach.wallet.ui.invite
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.invite_history_row.view.*

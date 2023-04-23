@@ -17,18 +17,24 @@
 
 package de.schildbach.wallet.security
 
+import android.app.ActivityManager
+import android.content.Context
+import android.os.Build
 import androidx.fragment.app.FragmentActivity
-import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.ui.CheckPinDialog
-import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
+import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
@@ -37,28 +43,46 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class SecurityFunctions @Inject constructor(
-    private val walletApplication: WalletApplication,
+    private val walletData: WalletDataProvider,
+    private val context: Context,
     private val biometricHelper: BiometricHelper,
     private val pinRetryController: PinRetryController
 ): AuthenticationManager {
     private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
+
+    /**
+     * Low memory devices (currently 1GB or less) and 32 bit devices will require
+     * fewer scrypt hashes on the PIN+salt (handled by dashj)
+     *
+     * @return The number of scrypt interations
+     */
+    val scryptIterationsTarget: Int by lazy {
+        val is64bitABI = Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()
+        val isLowRamDevice = (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).isLowRamDevice
+
+        if (isLowRamDevice || !is64bitABI) {
+            Constants.SCRYPT_ITERATIONS_TARGET_LOWRAM
+        } else {
+            Constants.SCRYPT_ITERATIONS_TARGET
+        }
+    }
 
     override fun authenticate(
         activity: FragmentActivity,
         pinOnly: Boolean,
         callback: (String?) -> Unit
     ) {
-         if (pinRetryController.isLocked) {
-             val message = pinRetryController.getWalletTemporaryLockedMessage(activity.resources)
-             AdaptiveDialog.create(
-                 R.drawable.ic_warning,
-                 activity.getString(R.string.wallet_lock_wallet_disabled),
-                 message,
-                 activity.getString(android.R.string.ok)
-             ).show(activity)
-             callback.invoke(null)
-             return
-         }
+        if (pinRetryController.isLocked) {
+            val message = pinRetryController.getWalletTemporaryLockedMessage(activity.resources)
+            AdaptiveDialog.create(
+                R.drawable.ic_warning,
+                activity.getString(R.string.wallet_lock_wallet_disabled),
+                message,
+                activity.getString(android.R.string.ok)
+            ).show(activity)
+            callback.invoke(null)
+            return
+        }
 
         if (!pinOnly && biometricHelper.isEnabled) {
             log.info("authenticate with biometric")
@@ -109,21 +133,25 @@ class SecurityFunctions @Inject constructor(
         }
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
+    @Suppress("UnnecessaryVariable")
+    suspend fun decryptSeed(password: String): DeterministicSeed = withContext(Dispatchers.Default) {
+        val wallet = walletData.wallet!!
+        val encryptionKey = deriveKey(wallet, password)
+        val deterministicSeed = wallet.keyChainSeed.decrypt(wallet.keyCrypter, null, encryptionKey) // Takes time
+
+        return@withContext deterministicSeed
+    }
+
     override suspend fun signMessage(address: Address, message: String): String {
         val securityGuard = SecurityGuard()
         val password = securityGuard.retrievePassword()
-        val keyParameter = deriveKey(walletApplication.wallet!!, password, walletApplication.scryptIterationsTarget())
-        val key = walletApplication.wallet?.findKeyFromAddress(address)
+        val keyParameter = deriveKey(walletData.wallet!!, password)
+        val key = walletData.wallet?.findKeyFromAddress(address)
         return key?.signMessage(message, keyParameter) ?: ""
     }
 
     @Throws(KeyCrypterException::class)
-    fun deriveKey(
-        wallet: Wallet,
-        password: String,
-        scryptIterationsTarget: Int
-    ): KeyParameter {
+    fun deriveKey(wallet: Wallet, password: String): KeyParameter {
         require(wallet.isEncrypted)
         val keyCrypter = wallet.keyCrypter!!
 
@@ -135,8 +163,11 @@ class SecurityFunctions @Inject constructor(
             val scryptIterations = keyCrypter.scryptParameters.n
 
             if (scryptIterations != scryptIterationsTarget.toLong()) {
-                log.info("upgrading scrypt iterations from {} to {}; re-encrypting wallet",
-                    scryptIterations, scryptIterationsTarget)
+                log.info(
+                    "upgrading scrypt iterations from {} to {}; re-encrypting wallet",
+                    scryptIterations,
+                    scryptIterationsTarget
+                )
                 val newKeyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
                 val newKey: KeyParameter = newKeyCrypter.deriveKey(password)
 

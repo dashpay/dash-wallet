@@ -20,7 +20,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.EncryptWalletLiveData
 import de.schildbach.wallet.security.BiometricHelper
-import de.schildbach.wallet.ui.preference.PinRetryController
+import de.schildbach.wallet.security.SecurityFunctions
+import de.schildbach.wallet.security.PinRetryController
+import de.schildbach.wallet.ui.util.SingleLiveEvent
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -29,12 +31,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SetPinViewModel @Inject constructor(
-    val walletApplication: WalletApplication,
+    private val walletApplication: WalletApplication,
     walletData: WalletDataProvider,
     configuration: Configuration,
     pinRetryController: PinRetryController,
     biometricHelper: BiometricHelper,
-    analytics: AnalyticsService
+    analytics: AnalyticsService,
+    private val securityFunctions: SecurityFunctions
 ): CheckPinViewModel(walletData, configuration, pinRetryController, biometricHelper, analytics) {
 
     private val log = LoggerFactory.getLogger(SetPinViewModel::class.java)
@@ -68,7 +71,7 @@ class SetPinViewModel @Inject constructor(
 
     private fun encryptWallet(initialize: Boolean) {
         if (!walletData.wallet!!.isEncrypted) {
-            encryptWalletLiveData.encrypt(walletApplication.scryptIterationsTarget(), initialize)
+            encryptWalletLiveData.encrypt(securityFunctions.scryptIterationsTarget, initialize)
         } else {
             log.warn("Trying to encrypt already encrypted wallet")
         }
@@ -100,5 +103,12 @@ class SetPinViewModel @Inject constructor(
         val newPassword = getPinAsString()
         encryptWalletLiveData.changePassword(oldPinCache!!, newPassword)
         configuration.updateLastEncryptKeysTime()
+    }
+
+    fun startAutoLogout() {
+        walletApplication.autoLogout.apply {
+            maybeStartAutoLogoutTimer()
+            keepLockedUntilPinEntered = false
+        }
     }
 }

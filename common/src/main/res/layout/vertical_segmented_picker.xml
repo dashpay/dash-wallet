@@ -19,23 +19,16 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    tools:context="org.dash.wallet.common.ui.vertical_segmented_picker.VerticalSegmentedPicker"
-    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
+    tools:context="org.dash.wallet.common.ui.segmented_picker.VerticalSegmentedPicker"
+    tools:parentTag="android.widget.FrameLayout">
 
-    <androidx.cardview.widget.CardView
-        style="@style/CardViewRaised.Radius7"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/options"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@null">
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/options"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@null"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            tools:itemCount="3"
-            tools:listitem="@layout/vertical_segmented_picker_option_view"
-            tools:orientation="vertical" />
-    </androidx.cardview.widget.CardView>
+        android:overScrollMode="never"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        tools:itemCount="3"
+        tools:listitem="@layout/vertical_segmented_picker_option_view"
+        tools:orientation="vertical" />
 </merge>

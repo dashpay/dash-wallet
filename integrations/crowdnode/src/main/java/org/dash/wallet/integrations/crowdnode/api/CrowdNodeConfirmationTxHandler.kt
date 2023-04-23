@@ -23,7 +23,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.services.NotificationService
@@ -69,7 +68,7 @@ class CrowdNodeAPIConfirmationHandler(
         log.info("Handling confirmation tx: ${tx.txId}")
 
         handlerScope.launch {
-            val statusOrdinal = crowdNodeConfig.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) ?: OnlineAccountStatus.None.ordinal
+            val statusOrdinal = crowdNodeConfig.get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) ?: OnlineAccountStatus.None.ordinal
 
             if (statusOrdinal == OnlineAccountStatus.Done.ordinal) {
                 log.info("API address already confirmed")
@@ -91,7 +90,7 @@ class CrowdNodeAPIConfirmationHandler(
 
     private suspend fun handleWrongAddressError() {
         log.error("From address detected, but it's not the primary address")
-        crowdNodeConfig.setPreference(CrowdNodeConfig.BACKGROUND_ERROR, CrowdNodeException.CONFIRMATION_ERROR)
+        crowdNodeConfig.set(CrowdNodeConfig.BACKGROUND_ERROR, CrowdNodeException.CONFIRMATION_ERROR)
         notificationService.showNotification(
             "crowdnode_bad_confirmation",
             resources.getString(R.string.crowdnode_bad_confirmation),

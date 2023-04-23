@@ -21,6 +21,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.SingleLiveEvent
 import java.math.BigInteger
 
 class ExternalUrlProfilePictureViewModel : ViewModel() {
@@ -31,7 +32,7 @@ class ExternalUrlProfilePictureViewModel : ViewModel() {
     var avatarHash: Sha256Hash? = null
     var avatarFingerprint: BigInteger? = null
 
-    val validUrlChosenEvent = SingleLiveEventExt<Bitmap?>()
+    val validUrlChosenEvent = SingleLiveEvent<Bitmap?>()
 
     fun confirm() {
         validUrlChosenEvent.value = bitmapCache

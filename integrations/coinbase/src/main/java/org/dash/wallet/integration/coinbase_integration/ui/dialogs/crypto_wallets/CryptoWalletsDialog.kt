@@ -18,9 +18,7 @@ package org.dash.wallet.integration.coinbase_integration.ui.dialogs.crypto_walle
 
 import android.content.Context
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.core.content.ContextCompat
@@ -31,13 +29,12 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.R
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.databinding.DialogOptionPickerBinding
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -50,11 +47,10 @@ import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccoun
 import org.dash.wallet.integration.coinbase_integration.model.getCoinBaseExchangeRateConversion
 
 @AndroidEntryPoint
-@ExperimentalCoroutinesApi
 class CryptoWalletsDialog(
     private val selectedCurrencyCode: String = "USD",
     private val clickListener: (Int, DialogFragment) -> Unit
-) : OffsetDialogFragment() {
+) : OffsetDialogFragment(R.layout.dialog_option_picker) {
     override val forceExpand: Boolean = true
     private val binding by viewBinding(DialogOptionPickerBinding::bind)
     private val viewModel: CryptoWalletsDialogViewModel by viewModels()
@@ -62,21 +58,13 @@ class CryptoWalletsDialog(
     private var didFocusOnSelected = false
     private var adapter: RadioGroupAdapter? = null
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.dialog_option_picker, container, false)
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.progressRing.isVisible = true
         binding.searchTitle.text = getString(R.string.select_a_coin)
 
-        this.adapter = RadioGroupAdapter(0, true) { item, _ ->
+        this.adapter = RadioGroupAdapter(0) { item, _ ->
             val index = itemList.indexOfFirst { it.title == item.title }
             clickListener.invoke(index, this)
         }
@@ -132,32 +120,31 @@ class CryptoWalletsDialog(
 
     private fun refreshItems(rate: ExchangeRate?, dataList: List<CoinBaseUserAccountDataUIModel>) {
         itemList = dataList.map {
-            val icon = getFlagFromCurrencyCode(it.coinBaseUserAccountData.currency?.code ?: "")
-            val iconUrl =
-                if (icon == R.drawable.ic_default_flag && it.coinBaseUserAccountData.currency?.code.isNullOrEmpty()
-                        .not()
-                ) {
-                    "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/${it.coinBaseUserAccountData.currency?.code?.lowercase()}.png"
-                } else {
-                    null
-                }
+            val accountData = it.coinBaseUserAccountData
+            val icon = getFlagFromCurrencyCode(accountData.currency?.code ?: "")
+            val iconUrl = if (icon == null && !accountData.currency?.code.isNullOrEmpty()) {
+                "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/" +
+                    "${accountData.currency?.code?.lowercase()}.png"
+            } else {
+                null
+            }
 
             val cryptoCurrencyBalance =
-                if (it.coinBaseUserAccountData.balance?.amount.isNullOrEmpty() || it.coinBaseUserAccountData.balance?.amount?.toDouble() == 0.0) {
+                if (accountData.balance?.amount.isNullOrEmpty() || accountData.balance?.amount?.toDouble() == 0.0) {
                     MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
                         .noCode().minDecimals(2).optionalDecimals().format(Coin.ZERO).toString()
                 } else {
-                    it.coinBaseUserAccountData.balance?.amount
+                    accountData.balance?.amount
                 }
 
             IconifiedViewItem(
-                it.coinBaseUserAccountData.currency?.code ?: "",
-                it.coinBaseUserAccountData.currency?.name ?: "",
+                accountData.currency?.code ?: "",
+                accountData.currency?.name ?: "",
                 icon,
+                iconUrl,
                 IconSelectMode.None,
                 setLocalFaitAmount(rate, it)?.first,
-                subtitleAdditionalInfo = cryptoCurrencyBalance,
-                iconUrl = iconUrl
+                subtitleAdditionalInfo = cryptoCurrencyBalance
             )
         }
 
@@ -216,11 +203,12 @@ class CryptoWalletsDialog(
         }
     }
 
-    private fun getFlagFromCurrencyCode(currencyCode: String): Int {
+    private fun getFlagFromCurrencyCode(currencyCode: String): Int? {
         val resourceId = resources.getIdentifier(
             "currency_code_" + currencyCode.lowercase(),
-            "drawable", requireContext().packageName
+            "drawable",
+            requireContext().packageName
         )
-        return if (resourceId == 0) R.drawable.ic_default_flag else resourceId
+        return if (resourceId == 0) null else resourceId
     }
 }

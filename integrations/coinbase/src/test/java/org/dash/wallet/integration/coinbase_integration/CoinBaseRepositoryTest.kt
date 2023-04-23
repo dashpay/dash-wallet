@@ -25,10 +25,11 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderParams
 import org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderUIModel
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
+import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.`is`
 import org.junit.Before
@@ -38,6 +39,7 @@ class CoinBaseRepositoryTest {
     @MockK lateinit var coinBaseServicesApi: CoinBaseServicesApi
     @MockK lateinit var coinBaseAuthApi: CoinBaseAuthApi
     @MockK lateinit var configuration: Configuration
+    @MockK lateinit var config: CoinbaseConfig
     @MockK lateinit var placeBuyOrderMapper: PlaceBuyOrderMapper
     @MockK lateinit var swapTradeMapper: SwapTradeMapper
     @MockK lateinit var commitBuyOrderMapper: CommitBuyOrderMapper
@@ -52,6 +54,7 @@ class CoinBaseRepositoryTest {
             coinBaseServicesApi,
             coinBaseAuthApi,
             configuration,
+            config,
             placeBuyOrderMapper,
             swapTradeMapper,
             commitBuyOrderMapper,

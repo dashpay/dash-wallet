@@ -28,7 +28,8 @@ enum class PaymentMethodType:Parcelable {
     BankAccount,
     WireTransfer,
     PayPal,
-    GooglePay
+    GooglePay,
+    ApplePay
 }
 
 @Parcelize
@@ -38,4 +39,5 @@ data class PaymentMethod(
     val account: String?,
     val accountType: String?,
     val paymentMethodType: PaymentMethodType,
+    val isValid: Boolean
 ):Parcelable

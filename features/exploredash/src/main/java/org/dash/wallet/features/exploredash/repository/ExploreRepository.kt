@@ -18,44 +18,42 @@
 package org.dash.wallet.features.exploredash.repository
 
 import android.content.Context
-import android.content.SharedPreferences
+import androidx.annotation.VisibleForTesting
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import net.lingala.zip4j.ZipFile
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
+import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.slf4j.LoggerFactory
 import java.io.*
 import java.lang.System.currentTimeMillis
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.math.max
 
 interface ExploreRepository {
-    val localDatabaseTimestamp: Long
-    var lastSyncAttemptTimestamp: Long
-    var preloadedOnTimestamp: Long
-    var failedSyncAttempts: Int
-
     suspend fun getRemoteTimestamp(): Long
     fun getDatabaseInputStream(file: File): InputStream?
     fun getTimestamp(file: File): Long
     fun getUpdateFile(): File
     suspend fun download()
     fun markDbForDeletion(dbFile: File)
-    fun preloadFromAssetsInto(dbUpdateFile: File)
+    suspend fun preloadFromAssetsInto(dbUpdateFile: File, checkTestDB: Boolean): Boolean
     fun finalizeUpdate()
 }
 
 @Suppress("BlockingMethodInNonBlockingContext")
 class GCExploreDatabase @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val preferences: SharedPreferences,
+    private val exploreConfig: ExploreConfig,
     private val auth: FirebaseAuth,
     private val storage: FirebaseStorage
 ) : ExploreRepository {
@@ -63,67 +61,41 @@ class GCExploreDatabase @Inject constructor(
     companion object {
         const val DATA_FILE_NAME = "explore.db"
         const val DATA_TMP_FILE_NAME = "explore.tmp"
-        private const val DB_ASSET_FILE_NAME = "explore/$DATA_FILE_NAME"
-        private const val PREFS_LOCAL_DB_TIMESTAMP_KEY = "local_db_timestamp"
-        private const val LAST_SYNC_TIMESTAMP_KEY = "last_sync_timestamp"
-        private const val PRELOADED_ON_TIMESTAMP_KEY = "preloaded_on"
-        private const val FAILED_SYNC_ATTEMPTS_KEY = "failed_sync_attempts"
 
         private val log = LoggerFactory.getLogger(GCExploreDatabase::class.java)
+
+        private fun getPreloadedDbFileName(isTestDB: Boolean): String {
+            return if (isTestDB) {
+                "explore/explore-testnet.db"
+            } else {
+                "explore/explore.db"
+            }
+        }
     }
 
     private var remoteDataRef: StorageReference? = null
-
     private var updateTimestampCache = -1L
 
-    override var localDatabaseTimestamp: Long
-        get() = preferences.getLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, 0)
-        private set(value) {
-            preferences.edit().apply {
-                putLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, value)
-            }.apply()
-        }
-
-    override var lastSyncAttemptTimestamp: Long
-        get() = preferences.getLong(LAST_SYNC_TIMESTAMP_KEY, 0)
-        set(value) {
-            preferences.edit().apply {
-                putLong(LAST_SYNC_TIMESTAMP_KEY, value)
-            }.apply()
-        }
-
-    override var preloadedOnTimestamp: Long
-        get() = preferences.getLong(PRELOADED_ON_TIMESTAMP_KEY, 0)
-        set(value) {
-            preferences.edit().apply {
-                putLong(PRELOADED_ON_TIMESTAMP_KEY, value)
-            }.apply()
-        }
-
-    override var failedSyncAttempts: Int
-        get() = preferences.getInt(FAILED_SYNC_ATTEMPTS_KEY, 0)
-        set(value) {
-            preferences.edit().apply {
-                putInt(FAILED_SYNC_ATTEMPTS_KEY, value)
-            }.apply()
-        }
+    @VisibleForTesting
+    val configScope = CoroutineScope(Dispatchers.IO)
 
     override suspend fun getRemoteTimestamp(): Long {
-        val remoteDataInfo = try {
-            ensureAuthenticated()
-            remoteDataRef = storage.reference.child(Constants.EXPLORE_GC_FILE_PATH)
-            remoteDataRef!!.metadata.await()
-        } catch (ex: Exception) {
-            log.warn("error getting remote data timestamp", ex)
-            null
-        }
+        val remoteDataInfo =
+            try {
+                ensureAuthenticated()
+                remoteDataRef = storage.reference.child(Constants.EXPLORE_GC_FILE_PATH)
+                remoteDataRef!!.metadata.await()
+            } catch (ex: Exception) {
+                log.warn("error getting remote data timestamp", ex)
+                null
+            }
         val dataTimestamp = remoteDataInfo?.getCustomMetadata("Data-Timestamp")?.toLong()
         return dataTimestamp ?: -1L
     }
 
     override suspend fun download() {
         ensureAuthenticated()
-        lastSyncAttemptTimestamp = currentTimeMillis()
+        exploreConfig.set(ExploreConfig.LAST_SYNC_TIMESTAMP, currentTimeMillis())
 
         val cacheDir = context.cacheDir
 
@@ -151,26 +123,29 @@ class GCExploreDatabase @Inject constructor(
 
     private suspend fun signingAnonymously(): FirebaseUser {
         return suspendCancellableCoroutine { coroutine ->
-            auth.signInAnonymously().addOnSuccessListener { result ->
-                if (coroutine.isActive) {
-                    val user = result.user
-                    if (user != null) {
-                        coroutine.resume(user)
-                    } else {
-                        coroutine.resumeWithException(
-                            FirebaseAuthException("-1", "User is null after anon sign in")
-                        )
+            auth
+                .signInAnonymously()
+                .addOnSuccessListener { result ->
+                    if (coroutine.isActive) {
+                        val user = result.user
+                        if (user != null) {
+                            coroutine.resume(user)
+                        } else {
+                            coroutine.resumeWithException(
+                                FirebaseAuthException("-1", "User is null after anon sign in")
+                            )
+                        }
                     }
                 }
-            }.addOnFailureListener {
-                if (coroutine.isActive) {
-                    coroutine.resumeWithException(it)
+                .addOnFailureListener {
+                    if (coroutine.isActive) {
+                        coroutine.resumeWithException(it)
+                    }
                 }
-            }
         }
     }
 
-    private fun extractComment(zipFile: ZipFile) : Array<String> {
+    private fun extractComment(zipFile: ZipFile): Array<String> {
         return zipFile.comment.split("#".toRegex()).toTypedArray()
     }
 
@@ -216,22 +191,35 @@ class GCExploreDatabase @Inject constructor(
         }
     }
 
-    @Throws(IOException::class)
-    override fun preloadFromAssetsInto(dbUpdateFile: File) {
-        log.info("preloading explore db from assets ${dbUpdateFile.absolutePath}")
+    override suspend fun preloadFromAssetsInto(dbUpdateFile: File, checkTestDB: Boolean): Boolean {
+        log.info("preloading explore db from assets ${dbUpdateFile.absolutePath}, test database: $checkTestDB")
+        val preloadedDbFileName = getPreloadedDbFileName(checkTestDB)
+
         try {
-            context.assets.open(DB_ASSET_FILE_NAME).use { inputStream ->
-                FileOutputStream(dbUpdateFile).use { outputStream ->
-                    inputStream.copyTo(outputStream)
+            withContext(Dispatchers.IO) {
+                context.assets.open(preloadedDbFileName).use { inputStream ->
+                    FileOutputStream(dbUpdateFile).use { outputStream -> inputStream.copyTo(outputStream) }
                 }
             }
+            exploreConfig.set(ExploreConfig.PRELOADED_TEST_DB, checkTestDB)
+            return true
         } catch (ex: FileNotFoundException) {
-            log.warn("missing {}, explore db will be empty", DB_ASSET_FILE_NAME)
+            return if (checkTestDB) {
+                preloadFromAssetsInto(dbUpdateFile, false)
+            } else {
+                log.error("missing preloaded database {}", preloadedDbFileName)
+                false
+            }
         }
     }
 
     override fun finalizeUpdate() {
         log.info("finalizing update: $updateTimestampCache")
-        localDatabaseTimestamp = updateTimestampCache
+        configScope.launch {
+            val prefs = exploreConfig.exploreDatabasePrefs.first()
+            exploreConfig.saveExploreDatabasePrefs(
+                prefs.copy(localDbTimestamp = max(prefs.localDbTimestamp, updateTimestampCache))
+            )
+        }
     }
 }

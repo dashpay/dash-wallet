@@ -92,8 +92,8 @@
         android:layout_marginTop="38dp"
         android:src="@drawable/ic_gift_card"
         android:scaleType="centerCrop"
-        app:tint="@color/gift_card_orange"
-        tools:tint="@color/gift_card_orange"
+        app:tint="@color/orange"
+        tools:tint="@color/orange"
         />
 
     <TextView
@@ -150,7 +150,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         android:layout_marginBottom="48dp"
         android:layout_marginHorizontal="16dp"
-        android:text="@string/continue_text"
+        android:text="@string/button_continue"
         />
 
     <androidx.constraintlayout.widget.Guideline

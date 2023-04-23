@@ -32,12 +32,13 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentPortalBinding
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
@@ -169,7 +170,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         if (balance != null && fiatRate != null) {
             val rate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiatRate)
             val fiatValue = rate.coinToFiat(balance)
-            binding.walletBalanceLocal.text = GenericUtils.fiatToString(fiatValue)
+            binding.walletBalanceLocal.text = fiatValue.toFormattedString()
         }
     }
 

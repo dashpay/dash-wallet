@@ -22,21 +22,22 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseIdForFaitDataUIState
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.PaymentMethodsUiState
+import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
 
-@ExperimentalCoroutinesApi
 @HiltViewModel
 class CoinbaseActivityViewModel @Inject constructor(
-    val userPreference: Configuration,
+    private val config: CoinbaseConfig,
+    private val userPreference: Configuration,
     private val coinBaseRepository: CoinBaseRepositoryInt
 ) : ViewModel() {
 
@@ -50,6 +51,7 @@ class CoinbaseActivityViewModel @Inject constructor(
 
     fun getBaseIdForFaitModel() = viewModelScope.launch(Dispatchers.Main) {
         _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(true)
+
         when (val response = userPreference.exchangeCurrencyCode?.let {
             coinBaseRepository.getBaseIdForUSDModel(it)
         }) {
@@ -61,6 +63,7 @@ class CoinbaseActivityViewModel @Inject constructor(
             }
 
             is ResponseResource.Failure -> {
+                runBlocking { config.setPreference(CoinbaseConfig.UPDATE_BASE_IDS, true) }
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(false)
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.Error(true)
             }
@@ -78,32 +81,31 @@ class CoinbaseActivityViewModel @Inject constructor(
                 if (response.value.isEmpty()) {
                     _paymentMethodsUiState.value = PaymentMethodsUiState.Error(true)
                 } else {
-
-                        val result = response.value.filter { it.isBuyingAllowed == true }
-                            .map {
-                                val type = paymentMethodTypeFromCoinbaseType(it.type ?: "")
-                                val nameAccountPair = splitNameAndAccount(it.name, type)
-                                PaymentMethod(
-                                    it.id ?: "",
-                                    nameAccountPair.first,
-                                    nameAccountPair.second,
-                                    "", // set "Checking" to get "****1234 • Checking" in subtitle
-                                    paymentMethodType = type
-                                )
-                            }
+                    val result = response.value
+                        .map {
+                            val type = paymentMethodTypeFromCoinbaseType(it.type ?: "")
+                            val nameAccountPair = splitNameAndAccount(it.name, type)
+                            PaymentMethod(
+                                it.id ?: "",
+                                nameAccountPair.first,
+                                nameAccountPair.second,
+                                "", // set "Checking" to get "****1234 • Checking" in subtitle
+                                paymentMethodType = type,
+                                isValid = it.isBuyingAllowed ?: false
+                            )
+                        }
                     _paymentMethodsUiState.value = PaymentMethodsUiState.Success(result)
                 }
             }
             is ResponseResource.Failure -> {
                 _paymentMethodsUiState.value = PaymentMethodsUiState.Error(true)
-
             }
         }
     }
 
     private fun splitNameAndAccount(nameAccount: String?, type: PaymentMethodType): Pair<String, String> {
         nameAccount?.let {
-            val match = when(type) {
+            val match = when (type) {
                 PaymentMethodType.BankAccount, PaymentMethodType.Card, PaymentMethodType.PayPal -> {
                     "(\\d+)?\\s?[a-z]?\\*+".toRegex().find(nameAccount)
                 }
@@ -131,6 +133,7 @@ class CoinbaseActivityViewModel @Inject constructor(
             "ideal_bank_account", "eft_bank_account", "interac" -> PaymentMethodType.BankAccount
             "bank_wire" -> PaymentMethodType.WireTransfer
             "paypal_account" -> PaymentMethodType.PayPal
+            "apple_pay" -> PaymentMethodType.ApplePay
             else -> PaymentMethodType.Unknown
         }
     }

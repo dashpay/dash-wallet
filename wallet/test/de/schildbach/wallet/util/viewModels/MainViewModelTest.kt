@@ -28,15 +28,13 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.Constants
 import androidx.lifecycle.SavedStateHandle
-import org.dash.wallet.common.data.BlockchainState
-import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.transactions.TxDirection
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
@@ -47,10 +45,12 @@ import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
@@ -59,9 +59,9 @@ import org.junit.rules.TestRule
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 
-@ExperimentalCoroutinesApi
+@OptIn(ExperimentalCoroutinesApi::class)
 class MainCoroutineRule(
-    private val testDispatcher: TestDispatcher = UnconfinedTestDispatcher(),
+    private val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
 ) : TestWatcher() {
     override fun starting(description: Description) {
         Dispatchers.setMain(testDispatcher)
@@ -72,8 +72,6 @@ class MainCoroutineRule(
     }
 }
 
-@FlowPreview
-@ExperimentalCoroutinesApi
 class MainViewModelTest {
     private val configMock = mockk<Configuration> {
         every { exchangeCurrencyCode } returns "USD"
@@ -104,12 +102,20 @@ class MainViewModelTest {
     }
     private val savedStateMock = mockk<SavedStateHandle>()
 
+    private val analyticsService = mockk<AnalyticsService> {
+        every { logError(any(), any()) } returns Unit
+    }
+
+    private val walletDataMock = mockk<WalletDataProvider> {
+        every { wallet } returns null
+    }
+
     private val blockchainStateMock = mockk<BlockchainStateProvider> {
         every { getMasternodeAPY() } returns 5.9
     }
 
     private val transactionMetadataMock = mockk<TransactionMetadataProvider> {
-        every { observeAllMemos() } returns MutableStateFlow(mapOf())
+        every { observePresentableMetadata() } returns MutableStateFlow(mapOf())
     }
 
     @get:Rule
@@ -120,18 +126,31 @@ class MainViewModelTest {
 
     @Before
     fun setup() {
-        every { blockChainStateMock.observeState() } returns flow { BlockchainState() }
+        every { configMock.exchangeCurrencyCode } returns "USD"
+        every { configMock.format } returns MonetaryFormat()
+        every { configMock.hideBalance } returns false
+        every { configMock.registerOnSharedPreferenceChangeListener(any()) } just runs
+
+        every { blockchainStateMock.observeState() } returns flow { BlockchainState() }
         every { exchangeRatesMock.observeExchangeRate(any()) } returns flow { ExchangeRate("USD", "100") }
         every { walletDataMock.observeBalance() } returns flow { Coin.COIN }
-        every { walletDataMock.observeMostRecentTransaction()} returns flow {
-            Transaction(TestNet3Params.get(),
-                Constants.HEX.decode("01000000013511fbb91663e90da67107e1510521440a9bf73878e45549ac169c7cd30c826e010000006a473044022048edae0ab0abcb736ca1a8702c2e99673d7958f4661a4858f437b03a359c0375022023f4a45b8817d9fcdad073cfb43320eae7e064a7873564e4cbc8853da548321a01210359c815be43ce68de8188f02b1b3ecb589fb8facdc2d694104a13bb2a2055f5ceffffffff0240420f00000000001976a9148017fd8d70d8d4b8ddb289bb73bcc0522bc06e0888acb9456900000000001976a914c9e6676121e9f38c7136188301a95d800ceade6588ac00000000"),
-                0)
+        every { walletDataMock.observeMostRecentTransaction() } returns flow {
+            Transaction(
+                TestNet3Params.get(),
+                Constants.HEX.decode(
+                    "01000000013511fbb91663e90da67107e1510521440a9bf73878e45549ac169c7cd30c826e010000006a473044022048edae0ab0abcb736ca1a8702c2e99673d7958f4661a4858f437b03a359c0375022023f4a45b8817d9fcdad073cfb43320eae7e064a7873564e4cbc8853da548321a01210359c815be43ce68de8188f02b1b3ecb589fb8facdc2d694104a13bb2a2055f5ceffffffff0240420f00000000001976a9148017fd8d70d8d4b8ddb289bb73bcc0522bc06e0888acb9456900000000001976a914c9e6676121e9f38c7136188301a95d800ceade6588ac00000000"
+                ),
+                0
+            )
         }
-        every { walletDataMock.observeMostRecentTransaction()} returns flow {
-            Transaction(TestNet3Params.get(),
-                Constants.HEX.decode("01000000013511fbb91663e90da67107e1510521440a9bf73878e45549ac169c7cd30c826e010000006a473044022048edae0ab0abcb736ca1a8702c2e99673d7958f4661a4858f437b03a359c0375022023f4a45b8817d9fcdad073cfb43320eae7e064a7873564e4cbc8853da548321a01210359c815be43ce68de8188f02b1b3ecb589fb8facdc2d694104a13bb2a2055f5ceffffffff0240420f00000000001976a9148017fd8d70d8d4b8ddb289bb73bcc0522bc06e0888acb9456900000000001976a914c9e6676121e9f38c7136188301a95d800ceade6588ac00000000"),
-                0)
+        every { walletDataMock.observeMostRecentTransaction() } returns flow {
+            Transaction(
+                TestNet3Params.get(),
+                Constants.HEX.decode(
+                    "01000000013511fbb91663e90da67107e1510521440a9bf73878e45549ac169c7cd30c826e010000006a473044022048edae0ab0abcb736ca1a8702c2e99673d7958f4661a4858f437b03a359c0375022023f4a45b8817d9fcdad073cfb43320eae7e064a7873564e4cbc8853da548321a01210359c815be43ce68de8188f02b1b3ecb589fb8facdc2d694104a13bb2a2055f5ceffffffff0240420f00000000001976a9148017fd8d70d8d4b8ddb289bb73bcc0522bc06e0888acb9456900000000001976a914c9e6676121e9f38c7136188301a95d800ceade6588ac00000000"
+                ),
+                0
+            )
         }
 
         mockkStatic(WalletApplication::class)
@@ -153,11 +172,13 @@ class MainViewModelTest {
         val clipboardManagerMock = mockk<ClipboardManager>()
         every { clipboardManagerMock.hasPrimaryClip() } returns false
 
-        val viewModel = spyk(MainViewModel(
-            mockk(), clipboardManagerMock, configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
-        ))
+        val viewModel = spyk(
+            MainViewModel(
+                mockk(), clipboardManagerMock, configMock, blockChainStateMock,
+                exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
+                mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
+            )
+        )
 
         val clipboardInput = viewModel.getClipboardInput()
         assertEquals("", clipboardInput)
@@ -173,11 +194,13 @@ class MainViewModelTest {
         every { clipboardManagerMock.hasPrimaryClip() } returns true
         every { clipboardManagerMock.primaryClip?.description } returns clipDescription
 
-        val viewModel = spyk(MainViewModel(
-            mockk(), clipboardManagerMock, configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
-        ))
+        val viewModel = spyk(
+            MainViewModel(
+                mockk(), clipboardManagerMock, configMock, blockChainStateMock,
+                exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
+                mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
+            )
+        )
 
         every { clipboardManagerMock.primaryClip?.getItemAt(0)?.uri?.toString() } returns mockUri
         every { clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST) } returns true
@@ -205,12 +228,15 @@ class MainViewModelTest {
 
     @Test
     fun observeBlockchainState_replaying_notSynced() {
-        every { blockChainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
-        val viewModel = spyk(MainViewModel(
-            mockk(), mockk(), configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
-        ))
+        every { blockchainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
+        val viewModel = spyk(
+            MainViewModel(
+                mockk(), mockk(), configMock, blockChainStateMock,
+                exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
+                mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
+            )
+        )
+
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
             assertEquals(false, viewModel.isBlockchainSynced.value)
             assertEquals(false, viewModel.isBlockchainSyncFailed.value)
@@ -221,12 +247,14 @@ class MainViewModelTest {
     @Ignore("Unreliable test. Needs investigating")
     fun observeBlockchainState_progress100percent_synced() {
         val state = BlockchainState().apply { replaying = false; percentageSync = 100 }
-        every { blockChainStateMock.observeState() } returns MutableStateFlow(state)
-        val viewModel = spyk(MainViewModel(
-            mockk(), mockk(), configMock, blockChainStateMock,
-            exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-            mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
-        ))
+        every { blockchainStateMock.observeState() } returns MutableStateFlow(state)
+        val viewModel = spyk(
+            MainViewModel(
+                mockk(), mockk(), configMock, blockChainStateMock,
+                exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
+                mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
+            )
+        )
 
         runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
             assertEquals(true, viewModel.isBlockchainSynced.value)

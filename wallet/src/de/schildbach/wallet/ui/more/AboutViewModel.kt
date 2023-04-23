@@ -17,34 +17,30 @@
 
 package de.schildbach.wallet.ui.more
 
-import androidx.core.os.bundleOf
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
-import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
+import org.dash.wallet.features.exploredash.utils.ExploreConfig
+import org.dash.wallet.features.exploredash.utils.ExploreDatabasePrefs
 import javax.inject.Inject
 
 @HiltViewModel
-@ExperimentalCoroutinesApi
 class AboutViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val exploreRepository: ExploreRepository,
-    private val dataSyncStatus: DataSyncStatusService,
+    exploreConfig: ExploreConfig,
+    dataSyncStatus: DataSyncStatusService,
     val walletApplication: WalletApplication,
     private val systemActionsService: SystemActionsService
 ): ViewModel() {
@@ -57,15 +53,6 @@ class AboutViewModel @Inject constructor(
     val exploreIsSyncing: LiveData<Boolean>
         get() = _exploreIsSyncing
 
-    val exploreLastSyncAttempt: Long
-        get() = exploreRepository.lastSyncAttemptTimestamp
-
-    val exploreIsSyncFailed: Boolean
-        get() = exploreRepository.failedSyncAttempts > 0
-
-    val explorePreloadedTimestamp: Long
-        get() = exploreRepository.preloadedOnTimestamp
-
     private val _firebaseInstallationId = MutableLiveData<String>()
     val firebaseInstallationId: LiveData<String>
         get() = _firebaseInstallationId
@@ -73,6 +60,9 @@ class AboutViewModel @Inject constructor(
     private val _firebaseCloudMessagingToken = MutableLiveData<String>()
     val firebaseCloudMessagingToken: LiveData<String>
         get() = _firebaseCloudMessagingToken
+
+    var databasePrefs: ExploreDatabasePrefs = ExploreDatabasePrefs()
+        private set
 
     init {
         loadFirebaseIds()
@@ -84,10 +74,15 @@ class AboutViewModel @Inject constructor(
         dataSyncStatus.getSyncProgressFlow()
             .onEach { _exploreIsSyncing.value = it.status == Status.LOADING }
             .launchIn(viewModelScope)
+
+        exploreConfig.exploreDatabasePrefs
+            .distinctUntilChanged()
+            .onEach { databasePrefs = it }
+            .launchIn(viewModelScope)
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+        analytics.logEvent(event, mapOf())
     }
 
     private fun loadFirebaseIds() {

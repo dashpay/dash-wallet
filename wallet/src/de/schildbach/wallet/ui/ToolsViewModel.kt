@@ -24,8 +24,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.transactions.TransactionExporter
 import kotlinx.coroutines.launch

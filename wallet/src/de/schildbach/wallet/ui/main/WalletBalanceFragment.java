@@ -18,20 +18,22 @@
 package de.schildbach.wallet.ui.main;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.entity.ExchangeRate;
 import org.dash.wallet.common.ui.CurrencyTextView;
 
 import org.dash.wallet.common.Configuration;
 
 import dagger.hilt.android.AndroidEntryPoint;
-import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import org.dash.wallet.common.data.BlockchainState;
+import org.dash.wallet.common.data.entity.BlockchainState;
+
+import de.schildbach.wallet.database.dao.BlockchainStateDao;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.ui.rates.ExchangeRatesActivity;
 import de.schildbach.wallet.ui.WalletBalanceLoader;
@@ -53,7 +55,7 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
+import static org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO;
 
 /**
  * @author Andreas Schildbach
@@ -66,6 +68,8 @@ public final class WalletBalanceFragment extends Fragment {
     private Wallet wallet;
     private LoaderManager loaderManager;
     private ExchangeRatesViewModel exchangeRatesViewModel;
+    @Inject
+    BlockchainStateDao blockchainStateDao;
 
     private View viewBalance;
     private CurrencyTextView viewBalanceBtc;
@@ -74,7 +78,6 @@ public final class WalletBalanceFragment extends Fragment {
     private TextView viewProgress;
 
     private boolean showLocalBalance;
-    private boolean installedFromGooglePlay;
 
     @Nullable
     private Coin balance = null;
@@ -102,8 +105,6 @@ public final class WalletBalanceFragment extends Fragment {
         this.loaderManager = getLoaderManager();
 
         showLocalBalance = getResources().getBoolean(R.bool.show_local_balance);
-        installedFromGooglePlay = "com.android.vending"
-                .equals(application.getPackageManager().getInstallerPackageName(application.getPackageName()));
     }
 
     @Override
@@ -147,7 +148,7 @@ public final class WalletBalanceFragment extends Fragment {
         viewProgress = (TextView) view.findViewById(R.id.wallet_balance_progress);
         exchangeRatesViewModel = ViewModelProviders.of(this).get(ExchangeRatesViewModel.class);
 
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(),
+        blockchainStateDao.load().observe(getViewLifecycleOwner(),
                 new Observer<BlockchainState>() {
                     @Override
                     public void onChanged(BlockchainState blockchainState) {

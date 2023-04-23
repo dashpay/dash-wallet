@@ -19,7 +19,7 @@ package de.schildbach.wallet.ui.dashpay.utils
 
 import android.view.View
 import android.widget.ImageView
-import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.database.entity.DashPayProfile
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 
 fun ProfilePictureDisplay.Companion.display(avatarView: ImageView, dashPayProfile: DashPayProfile?, hideIfProfileNull: Boolean = false) {

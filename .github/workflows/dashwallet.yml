@@ -39,7 +39,7 @@ jobs:
         ruby-version: '3.0.3'
         
     - name: Generate cache key
-      run: bash ./checksum.sh checksum.txt
+      run: bash .deploy/checksum.sh checksum.txt
       
     - name: Gem caching
       uses: actions/cache@v2
@@ -68,18 +68,27 @@ jobs:
 
     - name: Decrypt secrets
       run: |
-        gpg -d --passphrase "${{ secrets.GOOGLE_SERVICES_KEY }}" --batch .deploy/google-services.json.gpg > wallet/google-services.json
-        gpg -d --passphrase "${{ secrets.SERVICE_PROPERTIES_KEY }}" --batch .deploy/service.properties.gpg > service.properties
-        gpg -d --passphrase "${{ secrets.APP_DISTRIBUTION_KEY }}" --batch .deploy/app-distribution-key.json.gpg > .deploy/app-distribution-key.json
         gpg -d --passphrase "${{ secrets.KEYSTORE_KEY }}" --batch .deploy/keystore.jks.gpg > .deploy/keystore.jks
-        gpg -d --passphrase "${{ secrets.LOCAL_PROPERTIES_KEY }}" --batch .deploy/local.properties.gpg > local.properties
-        gpg -d --passphrase "${{ secrets.GC_STORAGE_SERVICE_ACCOUNT_KEY }}" --batch .deploy/gc-storage-service-account.json.gpg > .deploy/gc-storage-service-account.json
+
+    - name: Extract Secrets
+      run: |
+        echo "$GOOGLE_SERVICES_JSON" > wallet/google-services.json
+        echo "$SERVICE_PROPERTIES" > service.properties
+        echo "$LOCAL_PROPERTIES" > local.properties
+        echo "$APP_DISTRIBUTION_KEY_JSON" > .deploy/app-distribution-key.json
+        echo "$GC_STORAGE_SERVICE_ACCOUNT_KEY_JSON" > .deploy/gc-storage-service-account.json
+      env:
+        GOOGLE_SERVICES_JSON : ${{secrets.GOOGLE_SERVICES_JSON}}
+        SERVICE_PROPERTIES: ${{secrets.SERVICE_PROPERTIES}}
+        LOCAL_PROPERTIES: ${{secrets.LOCAL_PROPERTIES}}
+        APP_DISTRIBUTION_KEY_JSON: ${{secrets.APP_DISTRIBUTION_KEY_JSON}}
+        GC_STORAGE_SERVICE_ACCOUNT_KEY_JSON: ${{secrets.GC_STORAGE_SERVICE_ACCOUNT_KEY_JSON}}
 
     - name: Copy explore.db from GC Storage
       run: |
         gem install google-cloud-storage
         rm  -rf wallet/assets/explore/*
-        ruby -r ./exploredata.rb
+        ruby .deploy/exploredata.rb "${{ github.event.inputs.flavor }}"
 
     - name: Test
       run: bundle exec fastlane test flavor:"" type:"debug"

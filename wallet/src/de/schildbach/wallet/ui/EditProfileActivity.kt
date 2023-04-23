@@ -50,7 +50,7 @@ import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIO
 import com.google.api.services.drive.Drive
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
@@ -434,7 +434,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 turnOnAutoLogout()
                 if (resultCode == RESULT_OK) {
                     // picture saved in editProfileViewModel.profilePictureTmpFile
-                    editProfileViewModel.onTmpPictureReadyForEditEvent.call(editProfileViewModel.tmpPictureFile)
+                    editProfileViewModel.onTmpPictureReadyForEditEvent.postValue(editProfileViewModel.tmpPictureFile)
                 }
             }
             REQUEST_CODE_URI -> {

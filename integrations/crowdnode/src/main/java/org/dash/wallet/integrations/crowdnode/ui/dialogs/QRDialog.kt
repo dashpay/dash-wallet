@@ -17,36 +17,22 @@
 
 package org.dash.wallet.integrations.crowdnode.ui.dialogs
 
-import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
-import org.bitcoinj.params.MainNetParams
-import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.uri.BitcoinURI
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Qr
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.DialogQrBinding
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 class QRDialog(
     private val address: Address,
     private val amount: Coin
-): OffsetDialogFragment() {
+) : OffsetDialogFragment(R.layout.dialog_qr) {
     private val binding by viewBinding(DialogQrBinding::bind)
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.dialog_qr, container, false)
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -57,8 +43,7 @@ class QRDialog(
         )
 
         val paymentRequestUri = BitcoinURI.convertToBitcoinURI(address, amount, "", "")
-        val qrCodeBitmap = BitmapDrawable(resources, Qr.bitmap(paymentRequestUri))
-        qrCodeBitmap.isFilterBitmap = false
+        val qrCodeBitmap = Qr.themeAwareDrawable(paymentRequestUri, resources)
         binding.qrPreview.setImageDrawable(qrCodeBitmap)
     }
 }

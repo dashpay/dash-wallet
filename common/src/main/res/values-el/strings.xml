@@ -16,6 +16,12 @@
     <string name="error">Σφάλμα</string>
     <string name="select_a_coin">Επιλέξτε ένα νόμισμα</string>
     <string name="request_coins_share_dialog_title">Αίτημα διαμοιρασμού των Dash</string>
+    <string name="buy_with_fiat">Αγορά Dash με χρήματα</string>
+    <string name="buy_and_convert">Αγοράστε και μετατρέψτε τα Dash σε άλλο κρυπτονόμισμα</string>
+    <string name="transfer_dash">Μεταφορά Dash</string>
+    <string name="login_error_title">Αδυναμία σύνδεσης στο λογαριασμό σας %s</string>
+    <string name="login_error_message">Προέκυψε σφάλμα κατά τη σύνδεση σας στο %s λογαριασμό</string>
+    <string name="balance">Υπόλοιπο:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Γκέρνσεϊ Λίρα</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">Καταλαβαίνω</string>
     <string name="button_okay">Εντάξει</string>
     <string name="button_share">Μοιραστείτε</string>
+    <string name="share_address">Διαμοιρασμός διεύθυνσης</string>
     <string name="verify">Επιβεβαίωση</string>
     <string name="receive_enter_amount_button">Καθορίστε το ποσό</string>
 

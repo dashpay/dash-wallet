@@ -47,7 +47,7 @@ class ResetWalletDialog : DialogFragment() {
                 message = getString(R.string.wallet_lock_reset_wallet_message)
                 negativeText = getString(R.string.wallet_lock_reset_wallet_title)
                 negativeAction = {
-                    analytics.logEvent(AnalyticsConstants.Security.RESET_WALLET, bundleOf())
+                    analytics.logEvent(AnalyticsConstants.Security.RESET_WALLET, mapOf())
                     (activity as? AbstractBindServiceActivity)?.unbindServiceServiceConnection()
                     // 1. wipe the wallet
                     // 2. start OnboardingActivity

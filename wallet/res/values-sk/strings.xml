@@ -88,7 +88,7 @@
     <string name="send_coins_options_fee_category_economic">Ekonomický</string>
     <string name="send_coins_options_fee_category_priority">Prioritný</string>
     <string name="send_coins_options_empty">Vyprázdniť peňaženku</string>
-    <string name="sweep_wallet_activity_title">Importovať Privátny Kľúč</string>
+    <string name="sweep_wallet_activity_title">Importovať privátny kľúč</string>
     <string name="sweep_wallet_fragment_intro">Chystáte sa načítať papierovú peňaženku alebo kupón. Táto akcia presunie všetky mince z papiera do vašej peňaženky na tomto zariadení. Potom čo bude transakcia potvrdená už papier nepotrebujete a nemal by byť z bezpečnostných dôvodov ďalej používaný.</string>
     <string name="sweep_wallet_fragment_hint">Papierové peňaženky sa najčastejšie používajú ako "cold storage" - offline uloženie mincí. Niektoré bankomati radšej tlačia na lístok, než aby poslali mince priamo do vašeho zariadenia. Ľudia tiež niekdy používajú pred-nabité papierové peňaženky pre poslanie mincí (nedoporučuje sa).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Začnite načítaním privátneho kľúča z papierovej peňaženky. Použite tlačítko kamery.</string>
@@ -278,7 +278,7 @@
     <string name="preferences_show_disclaimer_title">Ukázať vyhlásenie</string>
     <string name="preferences_show_disclaimer_summary">Naozaj ste si prečítali bezpečnostné pokyny? Zálohovali ste už peňaženku na bezpečné miesto?</string>
     <string name="preferences_report_issue_title">Nahlásiť problém</string>
-    <string name="preferences_initiate_reset_title">Znova prehľadať blockchain</string>
+    <string name="preferences_initiate_reset_title">Znova prehľadať reťazec blokov</string>
     <string name="preferences_initiate_reset_summary">Znova naskenovať reťazec blokov, transakcie a zostatok v peňaženke. Opätovné načítanie bude chvíľu trvať, preto používajte iba v prípade nutnosti.</string>
     <string name="preferences_initiate_reset_dialog_message">Chcete znova naskenovať reťazec blokov?\n\nTýmto dočasne skryjete svoju bilanciu a zmažete transakcie. Oboje bude obnovené počas synchronizácie reťazca blokov. Uistite sa, že máte spoľahlivé internetové pripojenie</string>
     <string name="preferences_initiate_reset_dialog_positive">Pre-skenovať</string>
@@ -387,6 +387,5 @@
     <string name="select_a_service">Vyberte službu</string>
     <string name="activity_buy_and_sell_dash_filter">Filter platieb</string>
     <string name="clear_filter">Zrušiť filter</string>
-    <string name="select_currency">Vyberte menu</string>
     <string name="reason">Dôvod</string>
 </resources>

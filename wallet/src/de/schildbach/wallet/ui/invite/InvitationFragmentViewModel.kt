@@ -19,14 +19,16 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Environment
 import android.view.View
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.database.AppDatabase
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.dao.DashPayProfileDaoAsync
+import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
@@ -50,7 +52,10 @@ open class InvitationFragmentViewModel @Inject constructor(
     application: WalletApplication,
     private val analytics: AnalyticsService,
     appDatabase: AppDatabase,
-    private val platformRepo: PlatformRepo
+    private val platformRepo: PlatformRepo,
+    private val invitationDao: InvitationsDao,
+    private val dashPayProfileDaoAsync: DashPayProfileDaoAsync,
+    private val dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(application, appDatabase) {
     private val log = LoggerFactory.getLogger(InvitationFragmentViewModel::class.java)
 
@@ -72,8 +77,6 @@ open class InvitationFragmentViewModel @Inject constructor(
                 .enqueue()
         return inviteId
     }
-
-    val invitationDao = AppDatabase.getAppDatabase().invitationsDao()
 
     val invitationPreviewImageFile by lazy {
         try {
@@ -113,17 +116,17 @@ open class InvitationFragmentViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+        analytics.logEvent(event, mapOf())
     }
 
     val identityIdLiveData = MutableLiveData<String>()
 
     val invitedUserProfile: LiveData<DashPayProfile?>
-        get() = AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(identityIdLiveData.value!!)
+        get() = dashPayProfileDaoAsync.loadByUserIdDistinct(identityIdLiveData.value!!)
 
     fun updateInvitedUserProfile() {
         viewModelScope.launch(Dispatchers.IO) {
-            val data = AppDatabase.getAppDatabase().dashPayProfileDao().loadByUserId(identityIdLiveData.value!!)
+            val data = dashPayProfileDao.loadByUserId(identityIdLiveData.value!!)
             if (data == null) {
                 platformRepo.updateDashPayProfile(identityIdLiveData.value!!)
             }

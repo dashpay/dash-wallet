@@ -278,13 +278,21 @@
     <string name="tools_show_xpub">擴展的公鑰</string>
 
     <string name="about_help_us_improve">幫助我們改善您的體驗</string>
+    <string name="about_review_and_rate">對應用程式進行評價和評分</string>
     <string name="about_contact_support">聯繫支援服務</string>
     <string name="about_fork_disclaimer">這是一個從比特幣錢包分叉的開源應用程序</string>
-    <string name="about_copyright">版權所有 © 2022 Dash Core</string>
+    <string name="about_copyright">版權所有 © 2023 Dash Core</string>
     <string name="about_license">GNU通用公共許可證 v3.0</string>
     <string name="about_version_name">達世幣錢包 %s</string>
+    <string name="about_last_explore_device_sync">上一次探索設備同步</string>
+    <string name="about_last_explore_server_update">上一次探索服務器更新</string>
+    <string name="about_firebase_installation_id">Firebase 安裝 ID</string>
+    <string name="about_fcm_token">Firebase 雲消息代幣</string>
     <string name="about_last_explore_dash_update_error">無法獲取</string>
     <string name="about_last_explore_dash_sync_never">從不</string>
+    <string name="about_explore_failed_sync">同步失敗 %s</string>
+    <string name="about_explore_preloaded_on">預裝於 %s</string>
+
     <string name="block">區塊</string>
     <string name="time">時間</string>
     <string name="hash">哈希值</string>

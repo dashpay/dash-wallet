@@ -20,7 +20,6 @@ package org.dash.wallet.integrations.crowdnode.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -32,7 +31,7 @@ import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -211,7 +210,7 @@ class CrowdNodeViewModel @Inject constructor(
     fun clearError() {
         if (crowdNodeApi.apiError.value is MessageStatusException) {
             viewModelScope.launch {
-                config.setPreference(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID, -1)
+                config.set(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID, -1)
             }
         }
 
@@ -240,34 +239,34 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     suspend fun getIsInfoShown(): Boolean {
-        return config.getPreference(CrowdNodeConfig.INFO_SHOWN) ?: false
+        return config.get(CrowdNodeConfig.INFO_SHOWN) ?: false
     }
 
     fun setInfoShown(isShown: Boolean) {
         viewModelScope.launch {
-            config.setPreference(CrowdNodeConfig.INFO_SHOWN, isShown)
+            config.set(CrowdNodeConfig.INFO_SHOWN, isShown)
         }
     }
 
     suspend fun getShouldShowConfirmationDialog(): Boolean {
         return crowdNodeApi.onlineAccountStatus.value == OnlineAccountStatus.Confirming &&
-               !(config.getPreference(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN) ?: false)
+               !(config.get(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN) ?: false)
     }
 
     fun setConfirmationDialogShown(isShown: Boolean) {
         viewModelScope.launch {
-            config.setPreference(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN, isShown)
+            config.set(CrowdNodeConfig.CONFIRMATION_DIALOG_SHOWN, isShown)
         }
     }
 
     suspend fun getShouldShowOnlineInfo(): Boolean {
         return signUpStatus != SignUpStatus.LinkedOnline &&
-                !(config.getPreference(CrowdNodeConfig.ONLINE_INFO_SHOWN) ?: false)
+                !(config.get(CrowdNodeConfig.ONLINE_INFO_SHOWN) ?: false)
     }
 
     fun setOnlineInfoShown(isShown: Boolean) {
         viewModelScope.launch {
-            config.setPreference(CrowdNodeConfig.ONLINE_INFO_SHOWN, isShown)
+            config.set(CrowdNodeConfig.ONLINE_INFO_SHOWN, isShown)
         }
     }
 
@@ -343,13 +342,13 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     suspend fun shouldShowWithdrawalLimitsInfo(): Boolean {
-        val isShown = config.getPreference(CrowdNodeConfig.WITHDRAWAL_LIMITS_SHOWN) ?: false
+        val isShown = config.get(CrowdNodeConfig.WITHDRAWAL_LIMITS_SHOWN) ?: false
         return !crowdNodeApi.hasAnyDeposits() && !isShown
     }
 
     fun triggerWithdrawalLimitsShown() {
         viewModelScope.launch {
-            config.setPreference(CrowdNodeConfig.WITHDRAWAL_LIMITS_SHOWN, true)
+            config.set(CrowdNodeConfig.WITHDRAWAL_LIMITS_SHOWN, true)
         }
     }
 
@@ -365,13 +364,13 @@ class CrowdNodeViewModel @Inject constructor(
         val accountAddress = accountAddress.value ?: return
         val amount = CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT
 
-        analytics.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING_SHARE_BUTTON, bundleOf())
+        analytics.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING_SHARE_BUTTON, mapOf())
         val paymentRequestUri = BitcoinURI.convertToBitcoinURI(accountAddress, amount, "", "")
         systemActions.shareText(paymentRequestUri)
     }
 
     fun logEvent(eventName: String) {
-        analytics.logEvent(eventName, bundleOf())
+        analytics.logEvent(eventName, mapOf())
     }
 
     private fun getOrCreateAccountAddress(): Address {

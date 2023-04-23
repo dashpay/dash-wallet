@@ -19,12 +19,10 @@ package de.schildbach.wallet.ui.send
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.TextUtils
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.fragment.app.FragmentActivity
-import androidx.preference.PreferenceManager
 import androidx.fragment.app.activityViewModels
+import androidx.preference.PreferenceManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet_test.R
@@ -39,7 +37,7 @@ import kotlin.coroutines.resumeWithException
 @AndroidEntryPoint
 class ConfirmTransactionDialog(
     private val onTransactionConfirmed: ((Boolean) -> Unit)? = null
-) : OffsetDialogFragment() {
+) : OffsetDialogFragment(R.layout.dialog_confirm_transaction) {
 
     companion object {
         private val TAG = ConfirmTransactionDialog::class.java.simpleName
@@ -103,7 +101,7 @@ class ConfirmTransactionDialog(
 
         private fun show(confirmTransactionDialog: ConfirmTransactionDialog,
                          bundle: Bundle,
-                         activity: FragmentActivity){
+                         activity: FragmentActivity) {
             confirmTransactionDialog.arguments = bundle
             confirmTransactionDialog.show(activity.supportFragmentManager, TAG)
         }
@@ -135,7 +133,7 @@ class ConfirmTransactionDialog(
     }
 
     private val prefs: SharedPreferences by lazy {
-        PreferenceManager.getDefaultSharedPreferences(activity)
+        PreferenceManager.getDefaultSharedPreferences(requireContext())
     }
 
     private val username by lazy {
@@ -145,10 +143,7 @@ class ConfirmTransactionDialog(
     private val pendingContactRequest by lazy {
         requireArguments().getBoolean(ARG_PAYEE_PENDING_CONTACT_REQUEST, false)
     }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_confirm_transaction, container, false)
-    }
+    
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -200,7 +195,7 @@ class ConfirmTransactionDialog(
         binding.confirmPayment.setOnClickListener {
             autoAcceptLastValue = binding.confirmAutoAccept.isChecked
             sharedViewModel.autoAcceptContactRequest = pendingContactRequest && binding.confirmAutoAccept.isChecked
-            sharedViewModel.clickConfirmButtonEvent.call()
+            sharedViewModel.clickConfirmButtonEvent.call() // TODO: check if needed
             onTransactionConfirmed?.invoke(true)
             dismiss()
         }

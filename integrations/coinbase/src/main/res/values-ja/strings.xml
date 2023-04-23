@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >直近の残高</string>
+    <string name="coinbase_link_title">Coinbaseアカウントをリンクする</string>
+    <string name="coinbase_link">Coinbaseアカウントをリンク</string>
+    <string name="coinbase_transfer_details">DashウォレットとCoinbaseアカウント間</string>
     <string name="coinbase_dash_wallet_error_title">お客様のCoinbaseアカウントに、Dashウォレットは見つかりませんでした。</string>
     <string name="coinbase_dash_wallet_error_message">CoinbaseでDashウォレットを作成し、手続きを進めてください。</string>
     <string name="create_dash_account">Dashアカウントの作成</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">Coinbaseのアカウントを切断する</string>
     <string name="receive_directly_into_dash_wallet">Dashウォレットへ直接入金します。</string>
     <string name="buy_dash">Dashを購入する</string>
-    <string name="balance">残高:</string>
     <string name="balance_on_coinbase">Coinbaseの残高</string>
     <string name="sending_to">に送信</string>
     <string name="dash_wallet_device">この端末のDashウォレット</string>
@@ -36,13 +38,16 @@
     <string name="coinbase_fee">Coinbaseの手数料</string>
     <string name="total">合計</string>
     <string name="order_preview">注文プレビュー</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">この端末のDashウォレットに%sDashを入金します。取引の完了まで最長2～3分かかることがあります。</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">この端末のDashウォレットで%sDashを受け取ります。送金完了まで2-3分ほどかかることがあります。 </string>
     <string name="amount_in_dash">金額(Dash)</string>
     <string name="cancel">キャンセル</string>
     <string name="confirm_sec">確認 (%s秒)</string>
     <string name="confirm">確認する</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">支払い方法は見つかりませんでした。</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Coinbaseのアカウントを更新して手続きを進めてください。</string>
+    <string name="coinbase_no_payment_methods_error_title">支払い方法は見つかりませんでした。</string>
+    <string name="coinbase_no_payment_methods_error_message">Coinbaseアカウントをアップデートしてお進みください。</string>
+    <string name="coinbase_unusable_payment_method_error_title">この支払い方法はご利用できません。</string>
+    <string name="coinbase_unusable_payment_method_error_message">お客様のCoinbaseアカウントで、この支払い方法での購入を承認してください。</string>
+    <string name="coinbase_open_account">Coinbaseアカウントを開設する</string>
     <string name="add_payment_method">支払い方法の追加</string>
     <string name="error">エラー</string>
     <string name="cancel_transaction">取引をキャンセルしますか。</string>
@@ -55,7 +60,7 @@
     <string name="conversion_failed">変換に失敗しました</string>
     <string name="transfer_failed_msg">Dashはお客様のCoinbaseアカウントに正常に入金されました。しかし、この端末でDashウォレットに送金する際に問題が発生しました。</string>
     <string name="purchase_failed_msg">問題が発生しました</string>
-    <string name="it_could_take_up_to_2_3_minutes">この端末のDashウォレットにDashが送金されるまで、最大で2～3分かかることがあります。</string>
+    <string name="it_could_take_up_to_2_3_minutes">この端末のDashウォレットにDashが送金されるのに、2-3分かかることがあります。</string>
     <string name="it_could_take_up_to_5_minutes">この端末では、Coinbaseのアカウント内の%sからDashウォレット内のDashに変換するのに最大5分かかることがあります。</string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">この端末では、Dashウォレット内のDashからCoinbaseのアカウント内の%sに変換するのに最大で5分かかることがあります。</string>
     <string name="contact_coinbase_support">Coinbaseサポートに問い合わせる</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">そのコードは無効になっています。もう一度お試しください。</string>
     <string name="verify_code">検証する</string>
     <string name="you_dont_have_enough_balance">残高が不足しています</string>
-    <string name="transfer_dash">Dashを送金する</string>
     <string name="transfer_amount">送金する</string>
     <string name="dash_wallet_limit_description">金額が残高を超えています</string>
     <string name="address_creation_failed">お客様のアカウントでアドレスを作成できなかったため、取引を完了できませんでした。後ほど再度お試しください。</string>

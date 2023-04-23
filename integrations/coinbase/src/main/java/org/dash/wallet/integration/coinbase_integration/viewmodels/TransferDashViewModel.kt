@@ -1,7 +1,6 @@
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
 import androidx.annotation.StringRes
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -17,24 +16,20 @@ import org.bitcoinj.wallet.Wallet.DustySendRequested
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.R
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.NetworkStateInt
-import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.common.services.LeftoverBalanceException
-import org.dash.wallet.common.services.SendPaymentService
-import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.ConnectivityViewModel
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseToDashExchangeRateUIModel
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseTransactionParams
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams
 import org.dash.wallet.integration.coinbase_integration.model.TransactionType
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.*
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapValueErrorType
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
@@ -51,10 +46,10 @@ class TransferDashViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val sendPaymentService: SendPaymentService,
     var exchangeRates: ExchangeRatesProvider,
-    var networkState: NetworkStateInt,
+    networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService,
     private val transactionMetadataProvider: TransactionMetadataProvider
-) : ConnectivityViewModel(networkState) {
+) : ViewModel() {
 
     private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
     val observeLoadingState: LiveData<Boolean>
@@ -89,6 +84,8 @@ class TransferDashViewModel @Inject constructor(
     private val _sendDashToCoinbaseError = MutableLiveData<NetworkFeeExceptionState>()
     val sendDashToCoinbaseError: LiveData<NetworkFeeExceptionState>
         get() = _sendDashToCoinbaseError
+
+    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
     var minAllowedSwapDashCoin: Coin = Coin.ZERO
     var minFaitAmount:Fiat = Fiat.valueOf(config.exchangeCurrencyCode, 0)
@@ -295,7 +292,7 @@ class TransferDashViewModel @Inject constructor(
     fun reviewTransfer(dashValue: String) {
         val sendTransactionToWalletParams = SendTransactionToWalletParams(
             dashValue,
-            CoinbaseConstants.DASH_CURRENCY,
+            Constants.DASH_CURRENCY,
             UUID.randomUUID().toString(),
             walletDataProvider.freshReceiveAddress().toBase58(),
             CoinbaseConstants.TRANSACTION_TYPE_SEND
@@ -309,29 +306,29 @@ class TransferDashViewModel @Inject constructor(
     }
 
     fun logTransfer(isFiatSelected: Boolean) {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_CONTINUE, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_CONTINUE, mapOf())
         analyticsService.logEvent(if (isFiatSelected) {
             AnalyticsConstants.Coinbase.TRANSFER_ENTER_FIAT
         } else {
             AnalyticsConstants.Coinbase.TRANSFER_ENTER_DASH
-        }, bundleOf())
+        }, mapOf())
     }
 
     fun logEvent(eventName: String) {
-        analyticsService.logEvent(eventName, bundleOf())
+        analyticsService.logEvent(eventName, mapOf())
     }
 
     fun logRetry() {
-        analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_RETRY, bundleOf())
+        analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_RETRY, mapOf())
     }
 
     fun logClose(type: CoinBaseResultDialog.Type) {
         when (type) {
             CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_SUCCESS_CLOSE, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_SUCCESS_CLOSE, mapOf())
             }
             CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR -> {
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_CLOSE, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_CLOSE, mapOf())
             }
             else -> {}
         }

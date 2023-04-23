@@ -9,13 +9,16 @@ import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.Observer
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.BlockchainIdentityData
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDaoAsync
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet_test.R
 
 
-class CreateIdentityNotification(val service: LifecycleService) {
+class CreateIdentityNotification(
+    val service: LifecycleService,
+    private val blockchainIdentityDataDaoAsync: BlockchainIdentityDataDaoAsync
+) {
 
     private val notificationManager by lazy { service.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager }
 
@@ -93,8 +96,7 @@ class CreateIdentityNotification(val service: LifecycleService) {
         }
     }
 
-    private fun startObservingIdentityCreationState() = AppDatabase.getAppDatabase()
-            .blockchainIdentityDataDaoAsync().loadBase().observe(service, Observer {
+    private fun startObservingIdentityCreationState() = blockchainIdentityDataDaoAsync.loadBase().observe(service, Observer {
                 notificationManager.cancel(Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR)
                 when (it?.creationState) {
                     BlockchainIdentityData.CreationState.NONE,

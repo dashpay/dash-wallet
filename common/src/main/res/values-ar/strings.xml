@@ -16,6 +16,12 @@
     <string name="error">خطأ</string>
     <string name="select_a_coin">اختر عملة </string>
     <string name="request_coins_share_dialog_title">طلب مشاركة لـداش ...</string>
+    <string name="buy_with_fiat">شراء داش عن طريق فيات</string>
+    <string name="buy_and_convert">قم بشراء وتحويل داش بعملات مشفرة أخرى</string>
+    <string name="transfer_dash">تحويل داش</string>
+    <string name="login_error_title">غير قادر على تسجيل الدخول إلى حسابك %s</string>
+    <string name="login_error_message">حدث خطأ أثناء تسجيل الدخول إلى حسابك %s.</string>
+    <string name="balance">الرصيد:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">جيرنزي جنيه</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">أفهم</string>
     <string name="button_okay">اوك</string>
     <string name="button_share">مشاركة</string>
+    <string name="share_address">شارك العنوان</string>
     <string name="verify">تحقق</string>
     <string name="receive_enter_amount_button">حدد المبلغ</string>
 

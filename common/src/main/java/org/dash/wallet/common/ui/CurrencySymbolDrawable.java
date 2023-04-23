@@ -23,7 +23,7 @@ import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 
-import org.dash.wallet.common.Constants;
+import org.dash.wallet.common.util.Constants;
 
 /**
  * @author Andreas Schildbach

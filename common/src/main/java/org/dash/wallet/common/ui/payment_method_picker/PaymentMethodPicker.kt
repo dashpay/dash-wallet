@@ -82,6 +82,7 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
                     name,
                     listOf(method.account, method.accountType).filterNot { it.isNullOrEmpty() }.joinToString(" • "),
                     paymentMethodIcon,
+                    null,
                     if (paymentMethodIcon != null) IconSelectMode.Encircle else IconSelectMode.Tint,
                     null,
                     cardIcon
@@ -129,11 +130,12 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
 
     @DrawableRes
     private fun getPaymentMethodIcon(paymentMethodType: PaymentMethodType): Int? {
-        return when(paymentMethodType) {
+        return when (paymentMethodType) {
             PaymentMethodType.Card -> R.drawable.ic_card
             PaymentMethodType.BankAccount -> R.drawable.ic_bank
             PaymentMethodType.PayPal -> R.drawable.ic_paypal
             PaymentMethodType.Fiat -> R.drawable.ic_cash_account
+            PaymentMethodType.ApplePay -> R.drawable.ic_apple_pay
             else -> null
         }
     }

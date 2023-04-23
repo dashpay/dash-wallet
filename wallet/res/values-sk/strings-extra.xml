@@ -79,8 +79,8 @@
     <string name="payments_title">Platby</string>
     <string name="payments_tab_pay_label">Poslať</string>
     <string name="payments_tab_receive_label">Prijať</string>
-    <string name="payments_pay_by_qr_title">Poslať od</string>
-    <string name="payments_pay_by_qr_sub_title">Skenuje sa QR kód</string>
+    <string name="payments_pay_by_qr_title">Poslať</string>
+    <string name="payments_pay_by_qr_sub_title">Naskenovaním QR kódu</string>
     <string name="payments_pay_to_clipboard_title">Poslať na skopírovanú adresu</string>
     <string name="payments_pay_to_clipboard_sub_title">Nebola skopírovaná žiadna adresa</string>
 
@@ -275,10 +275,10 @@
     <string name="menu_tools_title">Nástroje</string>
     <string name="menu_tools_subtitle">Importovať privátny kľúč…</string>
     <string name="menu_local_currency">Miestna mena</string>
-    <string name="menu_rescan_blockchain">Znova prehľadať blockchain</string>
-    <string name="menu_contact_support_title">Kontaktovať Podporu</string>
+    <string name="menu_rescan_blockchain">Znova prehľadať reťazec blokov</string>
+    <string name="menu_contact_support_title">Kontaktovať podporu</string>
     <string name="menu_contact_support_subtitle">Nahlásiť problém</string>
-    <string name="menu_explore_title">Preskúmať</string>
+    <string name="menu_explore_title">Objaviť</string>
     <string name="menu_explore_subtitle">Nakupujte s DASH u viac ako 155 000 obchodníkov</string>
 
     <string name="tools_address_book">Adresár</string>
@@ -287,13 +287,21 @@
     <string name="tools_show_xpub">Rozšírený verejný kľúč</string>
 
     <string name="about_help_us_improve">Pomôžte nám vylepšiť váš zážitok</string>
-    <string name="about_contact_support">Kontaktovať Podporu</string>
+    <string name="about_review_and_rate">Pridať recenziu alebo ohodnotiť applikáciu</string>
+    <string name="about_contact_support">Kontaktovať podporu</string>
     <string name="about_fork_disclaimer">Toto je aplikácia s otvoreným zdrojovým kódom vytvorená z bitcoin peňaženky</string>
-    <string name="about_copyright">Autorské práva © 2022 Dash Core</string>
+    <string name="about_copyright">Autorské práva © 2023 Dash Core</string>
     <string name="about_license">Všeobecná verejná licencia GNU v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_device_sync">Posledná synchronizácia preskúmania zariadenia</string>
+    <string name="about_last_explore_server_update">Posledná synchronizácia preskúmania servera</string>
+    <string name="about_firebase_installation_id">ID inštalácie Firebase</string>
+    <string name="about_fcm_token">Token cloudových správ Firebase</string>
     <string name="about_last_explore_dash_update_error">nedá sa načítať</string>
     <string name="about_last_explore_dash_sync_never">nikdy</string>
+    <string name="about_explore_failed_sync">Synchronizácia pre %s zlyhala</string>
+    <string name="about_explore_preloaded_on">Predinštalované pre %s</string>
+
     <string name="block">Blok</string>
     <string name="time">Čas</string>
     <string name="hash">Hash</string>
@@ -338,7 +346,7 @@
     <string name="welcome_screen_subtitle_3">Majte úplnú kontrolu a prispôsobte si vašu peňaženku podľa svojich potrieb</string>
 
     <string name="sync_status_wait">Počkajte na dokončenie synchronizácie</string>
-    <string name="sync_status_syncing_sub_title">s Dash blockchainom</string>
+    <string name="sync_status_syncing_sub_title">s reťazcom blokov Dash</string>
     <string name="sync_status_unable_to_connect">Nedá sa pripojiť</string>
     <string name="sync_status_check_connection">Skontrolujte pripojenie</string>
     <string name="sync_status_sync_title">Synchronizovať</string>

@@ -18,19 +18,19 @@
 package org.dash.wallet.features.exploredash
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.content.res.Resources
 import android.database.sqlite.SQLiteException
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import junit.framework.TestCase.*
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
 import net.lingala.zip4j.ZipFile
 import org.dash.wallet.features.exploredash.repository.GCExploreDatabase
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.dash.wallet.features.exploredash.utils.ExploreConfig
+import org.junit.*
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.kotlin.*
@@ -38,42 +38,30 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.lang.IllegalArgumentException
 import java.lang.RuntimeException
-import kotlin.time.ExperimentalTime
 
-@ExperimentalTime
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class ExploreDatabaseTest {
-    @get:Rule
-    var instantTaskExecutorRule = InstantTaskExecutorRule()
+    @get:Rule var instantTaskExecutorRule = InstantTaskExecutorRule()
 
     private var timestamp = -1L
-    private val editor = mock<SharedPreferences.Editor>()
-    private val mockPreferences = mock<SharedPreferences> {
-        on { getLong(any(), any()) } doReturn timestamp
-        on { edit() } doReturn editor
-    }
+    private val mockPreferences = mock<ExploreConfig>()
     private val appContext = ApplicationProvider.getApplicationContext<Context>()
     private val repo = GCExploreDatabase(appContext, mockPreferences, mock(), mock())
 
     @Before
     fun setup() {
-        editor.stub {
-            on { putLong(any(), anyLong()) } doAnswer { i ->
-                timestamp = i.arguments[1] as Long
-                editor
-            }
+        timestamp = -1L
+        mockPreferences.stub {
+            onBlocking { get<Long>(any()) }.doReturn(timestamp)
+            onBlocking { set(any(), anyLong()) } doAnswer { i -> timestamp = i.arguments[1] as Long }
         }
     }
 
     @Test
-    fun noPreloadedDb_throwAndDoesNotUpdateLocalTimestamp() = runBlocking {
-        timestamp = -1L
-
-        val dbBuilder = Room.databaseBuilder(
-            appContext,
-            ExploreDatabase::class.java,
-            "explore.db"
-        ).allowMainThreadQueries()
+    fun noPreloadedDb_throwAndDoesNotUpdateLocalTimestamp() = runTest {
+        val dbBuilder =
+            Room.databaseBuilder(appContext, ExploreDatabase::class.java, "explore.db").allowMainThreadQueries()
 
         val updateFile = File("/not/existing/file.db")
         var database: ExploreDatabase? = null
@@ -90,18 +78,12 @@ class ExploreDatabaseTest {
     }
 
     @Test
-    fun emptyPreloadedDb_throwDoesNotUpdateLocalTimestamp() = runBlocking {
-        timestamp = -1L
-
-        val dbBuilder = Room.databaseBuilder(
-            appContext,
-            ExploreDatabase::class.java,
-            "explore.db"
-        ).allowMainThreadQueries()
+    fun emptyPreloadedDb_throwDoesNotUpdateLocalTimestamp() = runTest {
+        val dbBuilder =
+            Room.databaseBuilder(appContext, ExploreDatabase::class.java, "explore.db").allowMainThreadQueries()
 
         val resource = javaClass.classLoader?.getResource("empty_explore.db")
-        val updateFile =
-            File(resource?.file ?: throw Resources.NotFoundException("explore.db not found"))
+        val updateFile = File(resource?.file ?: throw Resources.NotFoundException("explore.db not found"))
 
         var database: ExploreDatabase? = null
 
@@ -117,14 +99,9 @@ class ExploreDatabaseTest {
     }
 
     @Test
-    fun badPreloadedDb_throwsAndDoesNotUpdateLocalTimestamp() = runBlocking {
-        timestamp = -1L
-
-        val dbBuilder = Room.databaseBuilder(
-            appContext,
-            ExploreDatabase::class.java,
-            "explore.db"
-        ).allowMainThreadQueries()
+    fun badPreloadedDb_throwsAndDoesNotUpdateLocalTimestamp() = runTest {
+        val dbBuilder =
+            Room.databaseBuilder(appContext, ExploreDatabase::class.java, "explore.db").allowMainThreadQueries()
 
         val updateFile = File.createTempFile("temp", "file")
         var database: ExploreDatabase? = null
@@ -141,27 +118,24 @@ class ExploreDatabaseTest {
     }
 
     @Test
-    fun goodPreloadedDb_updatesLocalTimestamp() = runBlocking {
-        timestamp = -1L
+    fun goodPreloadedDb_updatesLocalTimestamp() = runTest {
+        repo.configScope.launch {
+            val dbBuilder =
+                Room.databaseBuilder(appContext, ExploreDatabase::class.java, "explore.db").allowMainThreadQueries()
 
-        val dbBuilder = Room.databaseBuilder(
-            appContext,
-            ExploreDatabase::class.java,
-            "explore.db"
-        ).allowMainThreadQueries()
+            val resource = javaClass.classLoader?.getResource("explore.db")
+            val updateFile = File(resource?.file ?: throw Resources.NotFoundException("explore.db not found"))
+            val zipFile = ZipFile(updateFile)
+            val comment = zipFile.comment.split("#".toRegex()).toTypedArray()
+            val databaseTimestamp = comment[0].toLong()
+            zipFile.close()
 
-        val resource = javaClass.classLoader?.getResource("explore.db")
-        val updateFile =
-            File(resource?.file ?: throw Resources.NotFoundException("explore.db not found"))
-        val zipFile = ZipFile(updateFile)
-        val comment = zipFile.comment.split("#".toRegex()).toTypedArray()
-        val databaseTimestamp = comment[0].toLong()
-        zipFile.close()
+            val database = ExploreDatabase.preloadAndOpen(dbBuilder, repo, updateFile)
 
-        val database = ExploreDatabase.preloadAndOpen(dbBuilder, repo, updateFile)
-
-        assertTrue("This case should update the timestamp", timestamp > 0)
-        assertEquals("Wrong timestamp set;", databaseTimestamp, timestamp)
-        database.close()
+            println(timestamp)
+            assertTrue("This case should update the timestamp", timestamp > 0)
+            assertEquals("Wrong timestamp set;", databaseTimestamp, timestamp)
+            database.close()
+        }
     }
 }

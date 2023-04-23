@@ -20,8 +20,9 @@ import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import java.math.RoundingMode
 
 @Parcelize
@@ -117,7 +118,7 @@ fun CoinBaseUserAccountDataUIModel.getCoinBaseExchangeRateConversion(
     val fiatAmount = Fiat.parseFiat(currencyRate.fiat.currencyCode, bd.toString())
     val dashAmount = currencyRate.fiatToCoin(fiatAmount)
 
-    return Pair(GenericUtils.fiatToString(fiatAmount), dashAmount)
+    return Pair(fiatAmount.toFormattedString(), dashAmount)
 }
 
 @Parcelize

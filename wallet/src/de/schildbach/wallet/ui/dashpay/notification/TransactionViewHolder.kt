@@ -35,8 +35,9 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.ui.CurrencyTextView
 import org.dash.wallet.common.util.GenericUtils
 import java.util.*
@@ -50,8 +51,8 @@ class TransactionViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
 
     private val colorBackground: Int by lazy { ContextCompat.getColor(itemView.context, R.color.bg_bright) }
     private val colorBackgroundSelected: Int by lazy { ContextCompat.getColor(itemView.context, R.color.bg_panel) }
-    private val colorPrimaryStatus: Int by lazy { ContextCompat.getColor(itemView.context, R.color.primary_status) }
-    private val colorSecondaryStatus: Int by lazy { ContextCompat.getColor(itemView.context, R.color.secondary_status) }
+    private val colorPrimaryStatus: Int by lazy { ContextCompat.getColor(itemView.context, R.color.content_primary) }
+    private val colorSecondaryStatus: Int by lazy { ContextCompat.getColor(itemView.context, R.color.orange) }
     private val colorInsignificant: Int by lazy { ContextCompat.getColor(itemView.context, R.color.fg_insignificant) }
     private val colorValuePositve: Int by lazy { ContextCompat.getColor(itemView.context, R.color.colorPrimary) }
     private val colorValueNegative: Int by lazy { ContextCompat.getColor(itemView.context, android.R.color.black) }
@@ -80,7 +81,7 @@ class TransactionViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
 
     private fun bind(tx: Transaction, transactionCache: HashMap<Sha256Hash, TransactionCacheEntry>, wallet: Wallet) {
         if (itemView is CardView) {
-            itemView.setCardBackgroundColor(if (itemView.isActivated()) colorBackgroundSelected else colorBackground)
+            (itemView as CardView).setCardBackgroundColor(if (itemView.isActivated()) colorBackgroundSelected else colorBackground)
         }
 
         val confidence = tx.confidence
@@ -89,7 +90,7 @@ class TransactionViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
         if (!transactionCache.containsKey(tx.txId)) {
             val value = tx.getValue(wallet)
             val sent = value.signum() < 0
-            val self = TransactionUtils.isEntirelySelf(tx, wallet)
+            val self = tx.isEntirelySelf(wallet)
             val showFee = sent && fee != null && !fee.isZero
             val address: Address?
             address = if (sent) {

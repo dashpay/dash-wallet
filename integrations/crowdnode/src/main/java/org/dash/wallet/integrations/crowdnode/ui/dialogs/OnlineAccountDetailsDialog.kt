@@ -18,9 +18,7 @@
 package org.dash.wallet.integrations.crowdnode.ui.dialogs
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -29,18 +27,10 @@ import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentOnlineAccountDetailsBinding
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 
-class OnlineAccountDetailsDialog: OffsetDialogFragment() {
+class OnlineAccountDetailsDialog : OffsetDialogFragment(R.layout.fragment_online_account_details) {
     private val binding by viewBinding(FragmentOnlineAccountDetailsBinding::bind)
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
     override val forceExpand: Boolean = true
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_online_account_details, container, false)
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

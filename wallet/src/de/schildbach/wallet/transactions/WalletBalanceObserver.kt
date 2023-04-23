@@ -25,17 +25,24 @@ import kotlinx.coroutines.flow.callbackFlow
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Threading
+import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.Wallet.BalanceType
 
 class WalletBalanceObserver(
     private val wallet: Wallet,
-    private val balanceType: BalanceType = BalanceType.ESTIMATED
+    private val balanceType: BalanceType = BalanceType.ESTIMATED,
+    private val coinSelector: CoinSelector? = null
 ) {
     fun observe(): Flow<Coin> = callbackFlow {
         fun emitBalance() {
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
-            trySend(wallet.getBalance(balanceType))
+
+            trySend(if (coinSelector != null) {
+                wallet.getBalance(coinSelector)
+            } else {
+                wallet.getBalance(balanceType)
+            })
         }
 
         val walletChangeListener = object : ThrottlingWalletChangeListener() {

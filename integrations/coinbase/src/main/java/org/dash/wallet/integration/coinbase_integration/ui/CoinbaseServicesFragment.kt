@@ -35,6 +35,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.PaymentMethodsUiState
@@ -48,7 +49,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     private val binding by viewBinding(FragmentCoinbaseServicesBinding::bind)
     private val viewModel by viewModels<CoinbaseServicesViewModel>()
     private var loadingDialog: AdaptiveDialog? = null
-    private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
+    private var currentExchangeRate: org.dash.wallet.common.data.entity.ExchangeRate? = null
     private val sharedViewModel: CoinbaseActivityViewModel by activityViewModels()
 
     @Inject lateinit var analyticsService: AnalyticsService
@@ -73,10 +74,14 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                 // New value received
                 when (uiState) {
                     is PaymentMethodsUiState.Success -> {
-                        val paymentMethodsArray = uiState.paymentMethodsList.toTypedArray()
+                        val paymentMethodsArray = uiState.paymentMethodsList.filter { it.isValid }.toTypedArray()
 
                         if (paymentMethodsArray.isEmpty()) {
-                            showNoPaymentMethodsError()
+                            if (uiState.paymentMethodsList.isEmpty()) {
+                                showNoPaymentMethodsError()
+                            } else {
+                                showBuyingNotAllowedError()
+                            }
                         } else {
                             viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_DASH)
                             safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(paymentMethodsArray))
@@ -108,7 +113,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             safeNavigate(CoinbaseServicesFragmentDirections.servicesToTransferDash())
         }
 
-        binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
+        binding.walletBalanceDash.setFormat(viewModel.balanceFormat)
         binding.walletBalanceDash.setApplyMarkup(false)
         binding.walletBalanceDash.setAmount(Coin.ZERO)
 
@@ -156,7 +161,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
         viewModel.userAccountError.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.coinbase_dash_wallet_error_title),
                 getString(R.string.coinbase_dash_wallet_error_message),
                 getString(R.string.close),
@@ -180,9 +185,8 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
     private fun setLocalFaitAmount(balance: String) {
         val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
-        val localValue =
-            exchangeRate.coinToFiat(Coin.parseCoin(balance))
-        binding.walletBalanceLocal.text = GenericUtils.fiatToString(localValue)
+        val localValue = exchangeRate.coinToFiat(Coin.parseCoin(balance))
+        binding.walletBalanceLocal.text = localValue.toFormattedString()
     }
 
     private fun showProgress(messageResId: Int) {
@@ -204,12 +208,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         super.onStop()
     }
 
-    override fun onResume() {
-        super.onResume()
-        viewModel.monitorNetworkStateChange()
-    }
-
-    private fun setNetworkState(hasInternet: Boolean){
+    private fun setNetworkState(hasInternet: Boolean) {
         binding.lastKnownBalance.isVisible = !hasInternet
         binding.networkStatusStub.isVisible = !hasInternet
         binding.coinbaseServicesGroup.isVisible = hasInternet
@@ -221,14 +220,28 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
     private fun showNoPaymentMethodsError() {
         AdaptiveDialog.create(
-            R.drawable.ic_info_red,
-            getString(R.string.coinbase_dash_wallet_no_payment_methods_error_title),
-            getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
+            R.drawable.ic_error,
+            getString(R.string.coinbase_no_payment_methods_error_title),
+            getString(R.string.coinbase_no_payment_methods_error_message),
             getString(R.string.close),
             getString(R.string.add_payment_method),
         ).show(requireActivity()) { addMethod ->
             if (addMethod == true) {
                 viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ADD_PAYMENT_METHOD)
+                openCoinbaseWebsite()
+            }
+        }
+    }
+
+    private fun showBuyingNotAllowedError() {
+        AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.coinbase_unusable_payment_method_error_title),
+            getString(R.string.coinbase_unusable_payment_method_error_message),
+            getString(R.string.close),
+            getString(R.string.coinbase_open_account),
+        ).show(requireActivity()) { addMethod ->
+            if (addMethod == true) {
                 openCoinbaseWebsite()
             }
         }

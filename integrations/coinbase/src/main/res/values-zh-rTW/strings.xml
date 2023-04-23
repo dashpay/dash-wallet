@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >最後已知結餘</string>
+    <string name="coinbase_link_title">鏈接您的 Coinbase 帳戶</string>
+    <string name="coinbase_link">鏈接 Coinbase 帳戶</string>
+    <string name="coinbase_transfer_details">在達世幣錢包和您的 Coinbase 帳戶之間</string>
     <string name="coinbase_dash_wallet_error_title">我們沒有在您的 Coinbase 帳戶上找到達世幣錢包。</string>
     <string name="coinbase_dash_wallet_error_message">請在 Coinbase 上創建一個達世幣錢包以繼續。</string>
     <string name="create_dash_account">創建達世幣賬戶</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">斷開 Coinbase 帳戶的連接</string>
     <string name="receive_directly_into_dash_wallet">直接從達世幣錢包收款。</string>
     <string name="buy_dash">購買達世幣</string>
-    <string name="balance">結餘:</string>
     <string name="balance_on_coinbase">Coinbase 上的結餘</string>
     <string name="sending_to">發送到</string>
     <string name="dash_wallet_device">此設備上的達世幣錢包</string>
@@ -36,13 +38,16 @@
     <string name="coinbase_fee">Coinbase 費用</string>
     <string name="total">總共</string>
     <string name="order_preview">訂單預覽</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">你將會在此設備上的錢包中收到 %s 達世幣。 請注意，完成轉帳最多可能需要 2-3 分鐘。</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">您將在此設備上的達世錢包中收到 %s Dash。請注意，完成轉帳最多可能需要 2-3 分鐘。</string>
     <string name="amount_in_dash">達世幣金額</string>
     <string name="cancel">取消</string>
     <string name="confirm_sec">確認 (%ss)</string>
     <string name="confirm">確認:</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">我們沒有找到任何付款方式。</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">請更新您的 Coinbase 帳戶以繼續。</string>
+    <string name="coinbase_no_payment_methods_error_title">我們沒有找到任何付款方式。</string>
+    <string name="coinbase_no_payment_methods_error_message">請更新您的 Coinbase 帳戶以繼續。</string>
+    <string name="coinbase_unusable_payment_method_error_title">無法使用此付款方式。</string>
+    <string name="coinbase_unusable_payment_method_error_message">請允許在您的 Coinbase 帳戶中使用此付款方式購買。</string>
+    <string name="coinbase_open_account">開設 Coinbase 帳戶</string>
     <string name="add_payment_method">添加付款方式</string>
     <string name="error">錯誤</string>
     <string name="cancel_transaction">取消交易?</string>
@@ -55,7 +60,7 @@
     <string name="conversion_failed">兌換失敗</string>
     <string name="transfer_failed_msg">達世幣已成功存入您的 Coinbase 帳戶。但是把達世幣轉賬到此設備上的達世幣錢包時出現問題。</string>
     <string name="purchase_failed_msg">出了些問題</string>
-    <string name="it_could_take_up_to_2_3_minutes">最多可能需要 2-3 分鐘才能把達世幣轉賬到此設備上的達世幣錢包。</string>
+    <string name="it_could_take_up_to_2_3_minutes">最多可能需要 2-3 分鐘才能將 Dash 轉帳到您在此設備上的達世幣錢包。</string>
     <string name="it_could_take_up_to_5_minutes">從Coinbase 帳戶中的 %s  轉換為這設備上達世幣錢包中的達世幣最多可能需要 5 分鐘。</string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">“最多可能需要 5 分鐘才能將達世幣從這設備上的達世幣錢包轉換為您在 Coinbase 帳戶中的 %s 。</string>
     <string name="contact_coinbase_support">聯繫 Coinbase 支援服務</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">該代碼無效。請再試一次</string>
     <string name="verify_code">檢查</string>
     <string name="you_dont_have_enough_balance">你沒有足夠的餘額</string>
-    <string name="transfer_dash">轉賬達世幣</string>
     <string name="transfer_amount">轉帳</string>
     <string name="dash_wallet_limit_description">金額高於您的餘額</string>
     <string name="address_creation_failed">我們無法為您的帳戶創建位址以完成您的交易。請稍後再試。</string>

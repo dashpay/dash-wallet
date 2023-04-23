@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">코인베이스</string>
     <string name="last_known_balance" >마지막 확인된 잔고</string>
+    <string name="coinbase_link_title">당신의 코인베이스 계정을 연결하세요</string>
+    <string name="coinbase_link">코인베이스 계정 연결하기</string>
+    <string name="coinbase_transfer_details">대시 지갑과 코인베이스 계정간</string>
     <string name="coinbase_dash_wallet_error_title">당신의 코인베이스 계정에 대시 지갑을 찾지 못했습니다.</string>
     <string name="coinbase_dash_wallet_error_message">계속하시려면 코인베이스에 대시 지갑을 생성해주세요.</string>
     <string name="create_dash_account">대시 계정 생성하기</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">코인베이스 계정 연결 해제</string>
     <string name="receive_directly_into_dash_wallet">대시 지갑으로 직접 받기</string>
     <string name="buy_dash">대시 매수</string>
-    <string name="balance">잔고:</string>
     <string name="balance_on_coinbase">코인베이스 잔고</string>
     <string name="sending_to">다음에 전송합니다</string>
     <string name="dash_wallet_device">이 기기의 대시 지갑</string>
@@ -36,13 +38,16 @@
     <string name="coinbase_fee">코인베이스 수수료</string>
     <string name="total">총합</string>
     <string name="order_preview">주문 미리보기</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">이 기기의 대시 지갑에 %s 대시를 받게 됩니다. 전송을 완료하는 데에는 2-3분가량 소요될 수 있음에 주의해주십시오.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">이 기기의 대시 지갑에 %s대시를 받게 됩니다. 송금이 완료되는 데에는 최대 2-3분이 소요될 수 있습니다.</string>
     <string name="amount_in_dash">대시 금액</string>
     <string name="cancel">취소</string>
     <string name="confirm_sec">확인 (%ss)</string>
     <string name="confirm">승인</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">지불 방법을 찾지 못했습니다.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">계속하시려면 코인베이스 계정을 업데이트 해주십시오.</string>
+    <string name="coinbase_no_payment_methods_error_title">지불 방법을 찾지 못했습니다.</string>
+    <string name="coinbase_no_payment_methods_error_message">계속 하시려면 코인베이스 계정을 업데이트 해주세요.</string>
+    <string name="coinbase_unusable_payment_method_error_title">이 지불 방식은 사용할 수 없습니다.</string>
+    <string name="coinbase_unusable_payment_method_error_message">귀하의 코인베이스 계정에서 이 지불 방식으로 구매할 수 있도록 허용해주십시오.</string>
+    <string name="coinbase_open_account">코인베이스 계정 열기</string>
     <string name="add_payment_method">지불 방법 추가하기</string>
     <string name="error">오류</string>
     <string name="cancel_transaction">거래를 취소하시겠습니까?</string>
@@ -55,7 +60,7 @@
     <string name="conversion_failed">환전에 실패하였습니다</string>
     <string name="transfer_failed_msg">당신의 코인베이스 계정에 대시가 성공적으로 입금되었으나, 이 기기의 대시 지갑에 전송하는 과정에서 문제가 발생하였습니다.</string>
     <string name="purchase_failed_msg">오류가 발생하였습니다</string>
-    <string name="it_could_take_up_to_2_3_minutes">이 기기의 대시 지갑에 대시가 전송되는 데에는 2-3분 가량 소요될 수 있습니다.</string>
+    <string name="it_could_take_up_to_2_3_minutes">이 기기 내 대시 지갑으로 해당 대시를 송금하는 데에는 최대 2-3분이 소요될 수 있습니다.</string>
     <string name="it_could_take_up_to_5_minutes">코인베이스 계정의 %s를 대시로 환전하여 이 기기의 대시 지갑으로 받는 데에는 최대 5분이 소요될 수 있습니다..</string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">이 기기의 대시 지갑 내 대시를 귀하의  %s로 환전하여 코인베이스 계정으로 받는 데에는 최대 5분이 소요될 수 있습니다.</string>
     <string name="contact_coinbase_support">코인베이스 지원센터에 문의하기</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">유효하지 않은 코드입니다. 다시 시도해주십시오.</string>
     <string name="verify_code">인증하기</string>
     <string name="you_dont_have_enough_balance">잔액이 충분하지 않습니다</string>
-    <string name="transfer_dash">대시 송금하기</string>
     <string name="transfer_amount">송금하기</string>
     <string name="dash_wallet_limit_description">금액이 잔액보다 큽니다</string>
     <string name="address_creation_failed">귀하의 거래를 완료하기 위해 필요한 계정 생성에 실패하였습니다. 다시 시도해주십시오.</string>

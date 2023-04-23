@@ -16,15 +16,16 @@
 
 package de.schildbach.wallet.ui.invite
 
-import androidx.core.os.bundleOf
 import androidx.lifecycle.MediatorLiveData
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityData
-import org.dash.wallet.common.data.BlockchainState
+import de.schildbach.wallet.database.AppDatabase
+import de.schildbach.wallet.database.dao.BlockchainStateDao
+import de.schildbach.wallet.database.dao.InvitationsDaoAsync
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.CanAffordIdentityCreationLiveData
+import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
@@ -32,10 +33,12 @@ import javax.inject.Inject
 class CreateInviteViewModel @Inject constructor(
     application: WalletApplication,
     private val analytics: AnalyticsService,
-    appDatabase: AppDatabase
+    appDatabase: AppDatabase,
+    blockchainStateDao: BlockchainStateDao,
+    invitationsDaoAsync: InvitationsDaoAsync
 ) : BaseProfileViewModel(application, appDatabase) {
 
-    val blockchainStateData = AppDatabase.getAppDatabase().blockchainStateDao().load()
+    val blockchainStateData = blockchainStateDao.load()
     val blockchainState: BlockchainState?
         get() = blockchainStateData.value
 
@@ -65,7 +68,7 @@ class CreateInviteViewModel @Inject constructor(
         return isSynced && !noIdentityCreatedOrInProgress && canAffordIdentityCreation
     }
 
-    val invitationsLiveData = AppDatabase.getAppDatabase().invitationsDaoAsync().loadAll()
+    val invitationsLiveData = invitationsDaoAsync.loadAll()
 
     val invitationCount: Int
         get() = invitationsLiveData.value?.size ?: 0
@@ -80,7 +83,7 @@ class CreateInviteViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+        analytics.logEvent(event, mapOf())
     }
 
     private fun combineLatestInviteActionData(): Boolean {
