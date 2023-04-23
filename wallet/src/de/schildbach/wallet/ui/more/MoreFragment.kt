@@ -70,8 +70,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     private val mainActivityViewModel: MainViewModel by activityViewModels()
     private val editProfileViewModel: EditProfileViewModel by viewModels()
     private val createInviteViewModel: CreateInviteViewModel by viewModels()
-    
-    // TODO: move 
+
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var walletData: WalletDataProvider

@@ -44,9 +44,8 @@ class AppDatabaseMigrations {
                 }
             }
 
-        // TODO
-        // This will handle the migration from Dash Wallet (db v11) to DashPay (db v17)
-        val migration11To17 = object : Migration(11, 17) {
+        // This will handle the migration from Dash Wallet (db v12) to DashPay (db v17)
+        val migration12To17 = object : Migration(12, 17) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("CREATE TABLE `invitation_table` (`userId` TEXT NOT NULL, `txid` BLOB NOT NULL, `createdAt` INTEGER NOT NULL, `memo` TEXT NOT NULL, `sentAt` INTEGER NOT NULL, `acceptedAt` INTEGER NOT NULL, `shortDynamicLink` TEXT, `dynamicLink` TEXT, PRIMARY KEY(`userId`))")
                 database.execSQL("CREATE TABLE `user_alerts` (`stringResId` INTEGER NOT NULL, `iconResId` INTEGER NOT NULL, `dismissed` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`stringResId`))")
@@ -65,7 +64,6 @@ class AppDatabaseMigrations {
                 database.execSQL("CREATE TABLE `address_metadata` (`address` TEXT NOT NULL, `isInput` INTEGER NOT NULL, `taxCategory` TEXT NOT NULL, `service` TEXT NOT NULL, PRIMARY KEY(`address`, `isInput`))")
             }
         }
-
 
         val migration17To18 = object : Migration(17, 18) {
             override fun migrate(database: SupportSQLiteDatabase) {

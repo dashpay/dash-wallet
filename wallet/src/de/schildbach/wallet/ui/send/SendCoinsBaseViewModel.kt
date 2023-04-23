@@ -50,22 +50,6 @@ open class SendCoinsBaseViewModel @Inject constructor(
         }
     }
 
-    // TODO: check if needed
-    // fun createSendRequest(wallet: Wallet, mayEditAmount: Boolean, paymentIntent: PaymentIntent, signInputs: Boolean, forceEnsureMinRequiredFee: Boolean): SendRequest {
-
-    //     val sendRequest = paymentIntent.toSendRequest()
-    //     sendRequest.coinSelector = ZeroConfCoinSelector.get()
-    //     sendRequest.useInstantSend = false
-    //     sendRequest.feePerKb = Constants.ECONOMIC_FEE
-    //     sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
-    //     sendRequest.signInputs = signInputs
-
-    //     val walletBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED)
-    //     sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
-
-    //     return sendRequest
-    // }
-
     protected fun checkDust(req: SendRequest): Boolean {
         if (req.tx != null) {
             for (output in req.tx.outputs) {

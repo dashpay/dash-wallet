@@ -69,13 +69,13 @@ class BlockchainStateRoomConverters {
     }
 
     @TypeConverter
-    fun fromHash(hash: Sha256Hash?): ByteArray? {
-        return hash?.reversedBytes
+    fun fromSha256Hash(hash: Sha256Hash?): ByteArray? {
+        return hash?.bytes
     }
 
     @TypeConverter
-    fun byteArrayToHash(bytes: ByteArray?): Sha256Hash? {
-        return bytes?.let { Sha256Hash.wrapReversed(it) }
+    fun toSha256Hash(bytes: ByteArray?): Sha256Hash? {
+        return bytes?.let { Sha256Hash.wrap(it) }
     }
 
     @TypeConverter

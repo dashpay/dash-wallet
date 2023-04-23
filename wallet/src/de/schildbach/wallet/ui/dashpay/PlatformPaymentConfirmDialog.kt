@@ -22,6 +22,7 @@ import androidx.core.text.HtmlCompat
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet_test.R
@@ -31,6 +32,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.util.GenericUtils
 
+@AndroidEntryPoint
 class PlatformPaymentConfirmDialog : OffsetDialogFragment(R.layout.dialog_platform_payment_confirm) {
 
     companion object {

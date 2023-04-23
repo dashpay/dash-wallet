@@ -39,7 +39,6 @@ import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.payments.PaymentsFragment
-import de.schildbach.wallet.ui.payments.PaymentsPayFragment
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity

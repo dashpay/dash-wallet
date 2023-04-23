@@ -40,7 +40,7 @@ object DatabaseModule {
         return Room.databaseBuilder(context, AppDatabase::class.java, "dash-wallet-database")
             .addMigrations(
                 AppDatabaseMigrations.migration11To12,
-                AppDatabaseMigrations.migration11To17, // TODO
+                AppDatabaseMigrations.migration12To17,
                 AppDatabaseMigrations.migration16To17,
                 AppDatabaseMigrations.migration17To18
             )
@@ -52,11 +52,6 @@ object DatabaseModule {
     @Provides
     fun provideBlockchainStateDao(appDatabase: AppDatabase): BlockchainStateDao {
         return appDatabase.blockchainStateDao()
-    }
-
-    @Provides
-    fun provideBlockchainIdentityDao(appDatabase: AppDatabase): BlockchainIdentityDataDao {
-        return appDatabase.blockchainIdentityDataDao()
     }
 
     @Provides
@@ -75,8 +70,40 @@ object DatabaseModule {
     }
 
     @Provides
+    fun provideIconBitmaps(appDatabase: AppDatabase): IconBitmapDao {
+        return appDatabase.iconBitmapDao()
+    }
+
+    @Provides
+    fun provideGiftCardDao(appDatabase: AppDatabase): GiftCardDao {
+        return appDatabase.giftCardDao()
+    }
+
+    // DashPay
+
+    @Provides
+    fun provideBlockchainIdentityDao(appDatabase: AppDatabase): BlockchainIdentityDataDao {
+        return appDatabase.blockchainIdentityDataDao()
+    }
+
+    @Provides
+    fun provideBlockchainIdentityDataDaoAsync(appDatabase: AppDatabase): BlockchainIdentityDataDaoAsync {
+        return appDatabase.blockchainIdentityDataDaoAsync()
+    }
+
+    @Provides
+    fun provideDashPayProfileDao(appDatabase: AppDatabase): DashPayProfileDao {
+        return appDatabase.dashPayProfileDao()
+    }
+
+    @Provides
     fun provideDashPayProfileDaoAsync(appDatabase: AppDatabase): DashPayProfileDaoAsync {
         return appDatabase.dashPayProfileDaoAsync()
+    }
+
+    @Provides
+    fun provideUserAlertDao(appDatabase: AppDatabase): UserAlertDao {
+        return appDatabase.userAlertDao()
     }
 
     @Provides
@@ -85,16 +112,27 @@ object DatabaseModule {
     }
 
     @Provides
+    fun provideInvitationsDao(appDatabase: AppDatabase): InvitationsDao {
+        return appDatabase.invitationsDao()
+    }
+
+    @Provides
     fun provideInvitationsDaoAsync(appDatabase: AppDatabase): InvitationsDaoAsync {
         return appDatabase.invitationsDaoAsync()
     }
 
-    fun provideIconBitmaps(appDatabase: AppDatabase): IconBitmapDao {
-        return appDatabase.iconBitmapDao()
+    @Provides
+    fun provideTransactionMetadataChangeCache(appDatabase: AppDatabase): TransactionMetadataChangeCacheDao {
+        return appDatabase.transactionMetadataCacheDao()
     }
 
     @Provides
-    fun provideGiftCardDao(appDatabase: AppDatabase): GiftCardDao {
-        return appDatabase.giftCardDao()
+    fun provideTransactionMetadataDocumentDao(appDatabase: AppDatabase): TransactionMetadataDocumentDao {
+        return appDatabase.transactionMetadataDocumentDao()
+    }
+
+    @Provides
+    fun provideDashPayContactRequestDao(appDatabase: AppDatabase): DashPayContactRequestDao {
+        return appDatabase.dashPayContactRequestDao()
     }
 }

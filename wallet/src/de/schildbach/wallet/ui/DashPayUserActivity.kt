@@ -35,6 +35,7 @@ import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
 import de.schildbach.wallet.ui.dashpay.notification.UserAlertViewHolder
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet_test.R
@@ -238,7 +239,7 @@ class DashPayUserActivity : LockScreenActivity(),
 
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 if (fireAction) {
-//                    SendCoinsInternalActivity.start(this@DashPayUserActivity, paymentIntent, true) TODO
+                    SendCoinsActivity.start(this@DashPayUserActivity, null, paymentIntent, true)
                 }
             }
 

@@ -46,6 +46,7 @@ import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.main.MainViewModel
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentContactsRootBinding
@@ -400,7 +401,7 @@ class ContactsFragment : Fragment(),
 
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 if (fireAction) {
-//                    SendCoinsInternalActivity.start(context, paymentIntent, true) TODO
+                    SendCoinsActivity.start(requireContext(), null, paymentIntent, true)
                 } else {
 
                 }
