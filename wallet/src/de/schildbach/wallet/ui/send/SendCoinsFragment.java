@@ -251,13 +251,13 @@ public class SendCoinsFragment extends Fragment {
                 throw new IllegalArgumentException();
             }
 
-            BlockchainIdentity blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity();
-            boolean isDashUserOrNotMe = blockchainIdentity != null;
+            PlatformRepo platformRepo = PlatformRepo.getInstance();
+            boolean isDashUserOrNotMe = platformRepo.getHasIdentity();
             // make sure that this payment intent is not to me
             if (paymentIntent.isIdentityPaymentRequest() && paymentIntent.payeeUsername != null &&
-                    blockchainIdentity != null &&
-                    blockchainIdentity.getCurrentUsername() != null &&
-                    paymentIntent.payeeUsername.equals(blockchainIdentity.getCurrentUsername())) {
+                    platformRepo.getHasIdentity() &&
+                    platformRepo.getBlockchainIdentity().getCurrentUsername() != null &&
+                    paymentIntent.payeeUsername.equals(platformRepo.getBlockchainIdentity().getCurrentUsername())) {
                 isDashUserOrNotMe = false;
             }
 
