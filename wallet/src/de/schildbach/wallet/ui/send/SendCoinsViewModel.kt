@@ -18,23 +18,24 @@ package de.schildbach.wallet.ui.send
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.liveData
-import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import kotlinx.coroutines.Dispatchers
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.dao.BlockchainStateDao
+import de.schildbach.wallet.database.dao.DashPayContactRequestDao
+import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
@@ -48,6 +49,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
+class SendException(message: String) : Exception(message)
+
 @HiltViewModel
 class SendCoinsViewModel @Inject constructor(
     walletDataProvider: WalletDataProvider,
@@ -56,7 +59,9 @@ class SendCoinsViewModel @Inject constructor(
     val biometricHelper: BiometricHelper,
     private val analytics: AnalyticsService,
     private val configuration: Configuration,
-    private val sendCoinsTaskRunner: SendCoinsTaskRunner
+    private val sendCoinsTaskRunner: SendCoinsTaskRunner,
+    private val platformRepo: PlatformRepo,
+    private val dashPayContactRequestDao: DashPayContactRequestDao
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
@@ -66,8 +71,6 @@ class SendCoinsViewModel @Inject constructor(
         INPUT, // asks for confirmation
         SENDING, SENT, FAILED // sending states
     }
-
-    private val platformRepo = PlatformRepo.getInstance()
 
     private val _state = MutableLiveData(State.INPUT)
     val state: LiveData<State>
@@ -92,8 +95,6 @@ class SendCoinsViewModel @Inject constructor(
     val dryRunSuccessful: LiveData<Boolean>
         get() = _dryRunSuccessful
 
-    var userData: UsernameSearchResult? = null
-
     private val _isBlockchainReplaying = MutableLiveData<Boolean>()
     val isBlockchainReplaying: LiveData<Boolean>
         get() = _isBlockchainReplaying
@@ -104,6 +105,10 @@ class SendCoinsViewModel @Inject constructor(
     var isDashToFiatPreferred: Boolean
         get() = configuration.isDashToFiatDirection
         set(value) { configuration.isDashToFiatDirection = value }
+
+    private val _contactData = MutableLiveData<UsernameSearchResult>()
+    val contactData: LiveData<UsernameSearchResult>
+        get() = _contactData
 
     init {
         blockchainStateDao.observeState()
@@ -121,17 +126,19 @@ class SendCoinsViewModel @Inject constructor(
         walletApplication.startBlockchainService(false)
     }
 
-    override fun initPaymentIntent(paymentIntent: PaymentIntent) {
-        super.initPaymentIntent(paymentIntent)
-
+    override suspend fun initPaymentIntent(paymentIntent: PaymentIntent) {
         if (paymentIntent.hasPaymentRequestUrl()) {
             throw IllegalArgumentException(
                 PaymentProtocolFragment::class.java.simpleName +
-                    "class should be used to handle Payment requests (BIP70 and BIP270)"
+                        "class should be used to handle Payment requests (BIP70 and BIP270)"
             )
         }
 
         log.info("got {}", paymentIntent)
+        val finalIntent = checkIdentity(paymentIntent)
+
+        log.info("proceeding with {}", finalIntent)
+        super.initPaymentIntent(finalIntent)
         _state.value = State.INPUT
         executeDryrun(currentAmount)
     }
@@ -140,22 +147,25 @@ class SendCoinsViewModel @Inject constructor(
         return state.value === State.INPUT && isPayeePlausible() && isAmountPlausible()
     }
 
-    fun loadUserDataByUsername(username: String) = liveData(Dispatchers.IO) {
+    private suspend fun loadUserDataByUsername(username: String): UsernameSearchResult? {
         platformRepo.getLocalUserDataByUsername(username)?.run {
-            emit(Resource.success(this))
-        } ?: try {
-            val userData = platformRepo.searchUsernames(username, true).firstOrNull()
-            emit(Resource.success(userData))
+            return this
+        }
+
+        return try {
+            platformRepo.searchUsernames(username, true).firstOrNull()
         } catch (ex: Exception) {
             analytics.logError(ex, "Failed to load user")
-            emit(Resource.error(ex, null))
+            null
         }
     }
 
-    fun loadUserDataByUserId(userId: String) = liveData(Dispatchers.IO) {
+    suspend fun loadUserDataByUserId(userId: String): UsernameSearchResult? {
         platformRepo.getLocalUserDataByUserId(userId)?.run {
-            emit(Resource.success(this))
-        } ?: emit(Resource.error(Exception(), null))
+            return this
+        }
+
+        return null
     }
 
     suspend fun signAndSendPayment(
@@ -224,8 +234,13 @@ class SendCoinsViewModel @Inject constructor(
         analytics.logEvent(eventName, mapOf())
     }
 
+    fun shouldConfirm(): Boolean {
+        return basePaymentIntent.amount != null && basePaymentIntent.amount.isGreaterThan(Coin.ZERO) &&
+            _isBlockchainReplaying.value != true
+    }
+
     private fun isPayeePlausible(): Boolean {
-        return basePaymentIntent.hasOutputs()
+        return isInitialized && basePaymentIntent.hasOutputs()
     }
 
     private fun executeDryrun(amount: Coin) {
@@ -269,10 +284,89 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     private fun isAmountPlausible(): Boolean {
+        if (!isInitialized) {
+            return false
+        }
+
         return if (basePaymentIntent.mayEditAmount()) {
             currentAmount.isGreaterThan(Coin.ZERO)
         } else {
             basePaymentIntent.hasAmount()
         }
+    }
+
+    private suspend fun checkIdentity(paymentIntent: PaymentIntent): PaymentIntent {
+        val blockchainIdentity = platformRepo.getBlockchainIdentity()
+        var isDashUserOrNotMe = blockchainIdentity != null
+
+        // make sure that this payment intent is not to me
+        if (paymentIntent.isIdentityPaymentRequest &&
+            paymentIntent.payeeUsername != null &&
+            blockchainIdentity != null &&
+            blockchainIdentity.currentUsername != null &&
+            paymentIntent.payeeUsername == blockchainIdentity.currentUsername
+        ) {
+            isDashUserOrNotMe = false
+        }
+
+        if (isDashUserOrNotMe && paymentIntent.isIdentityPaymentRequest) {
+            if (paymentIntent.payeeUsername != null) {
+                val searchResult = loadUserDataByUsername(paymentIntent.payeeUsername)
+
+                if (searchResult != null) {
+                    return handleDashIdentity(searchResult, paymentIntent)
+                } else {
+                    log.error("error loading identity for username {}", paymentIntent.payeeUsername)
+                    throw SendException("error loading identity for username ${paymentIntent.payeeUsername}")
+                }
+            } else if (paymentIntent.payeeUserId != null) {
+                val searchResult = loadUserDataByUserId(paymentIntent.payeeUserId)
+
+                if (searchResult != null) {
+                    return handleDashIdentity(searchResult, paymentIntent)
+                } else {
+                    log.error("error loading identity for userId {}", paymentIntent.payeeUserId)
+                    throw SendException("error loading identity for userId ${paymentIntent.payeeUserId}")
+                }
+            } else {
+                throw IllegalStateException("not identity payment request")
+            }
+        } else {
+            return paymentIntent
+        }
+    }
+
+    private suspend fun handleDashIdentity(
+        userData: UsernameSearchResult,
+        paymentIntent: PaymentIntent
+    ): PaymentIntent {
+        _contactData.postValue(userData)
+
+        if (!userData.requestReceived) {
+            return paymentIntent
+        }
+
+        val dashPayProfile = userData.dashPayProfile
+        val dashPayContactRequests = dashPayContactRequestDao.loadToOthers(dashPayProfile.userId)
+        val map = HashMap<Long, DashPayContactRequest>(dashPayContactRequests.size)
+
+        // This is currently using the first version, but it should use the version specified
+        // in the ContactInfo.accountRef related to this contact.  Ideally the user should
+        // approve of a change to the "accountReference" that is used.
+        var firstTimestamp = System.currentTimeMillis()
+        for (contactRequest in dashPayContactRequests) {
+            map[contactRequest.timestamp] = contactRequest
+            firstTimestamp = contactRequest.timestamp.coerceAtMost(firstTimestamp)
+        }
+        val mostRecentContactRequest = map[firstTimestamp]
+        val address = platformRepo.getNextContactAddress(
+            dashPayProfile.userId,
+            mostRecentContactRequest!!.accountReference
+        )
+        return PaymentIntent.fromAddressWithIdentity(
+            Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
+            dashPayProfile.userId,
+            paymentIntent.amount
+        )
     }
 }

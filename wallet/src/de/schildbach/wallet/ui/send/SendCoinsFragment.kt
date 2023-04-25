@@ -23,13 +23,16 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.integration.android.BitcoinIntegration
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.SendCoinsFragmentBinding
@@ -64,6 +67,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     private val binding by viewBinding(SendCoinsFragmentBinding::bind)
     private val viewModel by activityViewModels<SendCoinsViewModel>()
     private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
+    private val dashPayViewModel by activityViewModels<DashPayViewModel>()
     private val args by navArgs<SendCoinsFragmentArgs>()
 
     @Inject lateinit var authManager: AuthenticationManager
@@ -78,7 +82,17 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
 
         if (savedInstanceState == null) {
-            viewModel.initPaymentIntent(args.paymentIntent)
+            lifecycleScope.launch {
+                try {
+                    viewModel.initPaymentIntent(args.paymentIntent)
+
+                    if (viewModel.shouldConfirm()) {
+                        authenticateOrConfirm()
+                    }
+                } catch (ex: SendException) {
+                    Toast.makeText(requireContext(), R.string.error_loading_identity, Toast.LENGTH_LONG).show()
+                }
+            }
 
             val intentAmount = args.paymentIntent.amount
             var dashToFiat = viewModel.isDashToFiatPreferred
@@ -125,10 +139,22 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             }
         }
         viewModel.state.observe(viewLifecycleOwner) { updateView() }
-        viewModel.address.observe(viewLifecycleOwner) { binding.paymentHeader.setSubtitle(it) }
+        viewModel.address.observe(viewLifecycleOwner) {
+            if (viewModel.contactData.value?.dashPayProfile == null) {
+                binding.paymentHeader.setSubtitle(it)
+            }
+        }
         viewModel.maxOutputAmount.observe(viewLifecycleOwner) { balance ->
             enterAmountViewModel.setMaxAmount(balance)
             updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
+        }
+
+        viewModel.contactData.observe(viewLifecycleOwner) { contactData ->
+            contactData?.dashPayProfile?.let { profile ->
+                binding.paymentHeader.setSubtitle(profile.displayName.ifEmpty { profile.username })
+                binding.paymentHeader.setPaymentAddressViewIcon(profile.avatarUrl, R.drawable.ic_avatar)
+            }
+            updateView()
         }
 
         enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.currentAmount = it }
@@ -190,7 +216,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         updateView()
     }
 
-    private suspend fun handleGo(checkBalance: Boolean) {
+    private suspend fun handleGo(checkBalance: Boolean, autoAcceptContactRequest: Boolean) {
         if (viewModel.dryrunSendRequest == null) {
             log.error("illegal state dryrunSendRequest == null")
             return
@@ -210,12 +236,12 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 }
 
                 val tx = viewModel.signAndSendPayment(editedAmount, exchangeRate, checkBalance)
-                onSignAndSendPaymentSuccess(tx)
+                onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
             } catch (ex: LeftoverBalanceException) {
                 val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
 
                 if (shouldContinue == true) {
-                    handleGo(false)
+                    handleGo(false, autoAcceptContactRequest)
                 }
             } catch (ex: InsufficientMoneyException) {
                 showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
@@ -263,22 +289,41 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
         val fee = txFee?.toPlainString() ?: ""
 
-        val confirmed = ConfirmTransactionDialog.showDialogAsync(
+        var dashPayProfile: DashPayProfile? = null
+
+        if (viewModel.contactData.value?.requestReceived == true) {
+            dashPayProfile = viewModel.contactData.value?.dashPayProfile
+        }
+
+        val isPendingContactRequest = viewModel.contactData.value?.isPendingRequest == true
+        val username = dashPayProfile?.username
+        val displayName = (dashPayProfile?.displayName ?: "").ifEmpty { username }
+        val avatarUrl = dashPayProfile?.avatarUrl
+
+        val dialog = ConfirmTransactionDialog()
+        val confirmed = dialog.show(
             requireActivity(),
             address,
             amountStr,
             amountFiat,
             fiatSymbol,
             fee,
-            total ?: ""
+            total ?: "",
+            null,
+            null,
+            null,
+            username,
+            displayName,
+            avatarUrl,
+            isPendingContactRequest
         )
 
-        if (confirmed) {
-            handleGo(true)
+        if (confirmed == true) {
+            handleGo(true, dialog.autoAcceptContactRequest)
         }
     }
 
-    private fun onSignAndSendPaymentSuccess(transaction: Transaction) {
+    private fun onSignAndSendPaymentSuccess(transaction: Transaction, autoAcceptContactRequest: Boolean) {
         viewModel.logSentEvent(enterAmountViewModel.dashToFiatDirection.value ?: true)
         val callingActivity = requireActivity().callingActivity
 
@@ -292,21 +337,28 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             requireActivity().setResult(Activity.RESULT_OK, resultIntent)
         }
 
-        showTransactionResult(transaction)
+        showTransactionResult(transaction, autoAcceptContactRequest)
         playSentSound()
         requireActivity().finish()
     }
 
-    private fun showTransactionResult(transaction: Transaction) {
+    private fun showTransactionResult(transaction: Transaction, autoAcceptContactRequest: Boolean) {
         if (!isAdded) {
             return
+        }
+
+        val contactData = viewModel.contactData.value
+
+        if (autoAcceptContactRequest && contactData != null) {
+            dashPayViewModel.sendContactRequest(contactData.dashPayProfile.userId)
         }
 
         val transactionResultIntent = TransactionResultActivity.createIntent(
             requireActivity(),
             requireActivity().intent.action,
             transaction,
-            false
+            false,
+            contactData
         )
         startActivity(transactionResultIntent)
     }

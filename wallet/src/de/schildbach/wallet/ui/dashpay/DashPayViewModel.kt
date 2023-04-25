@@ -194,10 +194,6 @@ open class DashPayViewModel @Inject constructor(
         }
     }
 
-    fun getNextContactAddress(userId: String, accountReference: Int): Address {
-        return platformRepo.getNextContactAddress(userId, accountReference)
-    }
-
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
 
     fun allUsersLiveData() = dashPayProfile.loadByUserId()

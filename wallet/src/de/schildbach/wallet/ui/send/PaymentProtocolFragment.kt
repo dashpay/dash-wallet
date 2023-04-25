@@ -81,7 +81,9 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         initObservers()
 
         if (savedInstanceState == null) {
-            viewModel.initPaymentIntent(args.paymentIntent)
+            lifecycleScope.launch {
+                viewModel.initPaymentIntent(args.paymentIntent)
+            }
         }
     }
 

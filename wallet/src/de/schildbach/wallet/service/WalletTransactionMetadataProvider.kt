@@ -227,7 +227,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
 
     override suspend fun markGiftCardTransaction(txId: Sha256Hash, iconUrl: String?) {
         var transactionMetadata: TransactionMetadata
-        updateAndInsertIfNotExist(txId, false) { // TODO: check in the gift card sync story
+        updateAndInsertIfNotExist(txId, false) {
             transactionMetadata = it.copy(
                 service = ServiceName.DashDirect,
                 taxCategory = TaxCategory.Expense

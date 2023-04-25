@@ -157,7 +157,6 @@ class TransactionResultViewBinder(
         val inflater = LayoutInflater.from(containerView.context)
 
         if (profile != null && !transaction.isEntirelySelf(wallet)) {
-            // ProfilePictureDisplay.display(checkIcon, profile) // TODO: check if needed here
             outputsContainer.isVisible = true
 
             val userNameView = inflater.inflate(R.layout.transaction_result_address_row,
@@ -168,7 +167,7 @@ class TransactionResultViewBinder(
                 val displayNameView = inflater.inflate(R.layout.transaction_result_address_row,
                     outputsAddressesContainer, false) as TextView
                 displayNameView.text = profile.displayName
-                userNameView.setTextColor(R.color.content_secondary)
+                userNameView.setTextColor(ctx.getColor(R.color.content_secondary))
 
                 if (isSent) {
                     outputsAddressesContainer.addView(displayNameView)
@@ -287,23 +286,9 @@ class TransactionResultViewBinder(
     }
 
     private fun updateIcon() {
-// if (dashPayProfile != null) { TODO
-//                 secondaryIcon.isVisible = true
-//                 secondaryIcon.setImageResource(R.drawable.ic_transaction_failed)
-//             } else {
-//                 checkIcon.setImageResource(R.drawable.ic_transaction_failed)
-//             }
-//             if (!fromConfidence) {
-//                 // If it's a confidence update, not need to set the send/receive icons again.
-//                 // Some hosts are replacing those with custom animated ones.
-//                 if (dashPayProfile != null) {
-//                     secondaryIcon.isVisible = true
-//                     secondaryIcon.setImageResource(imageResource)
-//                 } else {
-//                     checkIcon.setImageResource(imageResource)
-//                 }
-//             }
-
+        if (!::transaction.isInitialized) {
+            return
+        }
 
         val iconRes = if (isError) {
             R.drawable.ic_transaction_failed
@@ -317,7 +302,21 @@ class TransactionResultViewBinder(
             R.drawable.ic_transaction_sent
         }
 
-        if (iconBitmap == null) {
+        if (dashPayProfile != null) {
+            checkIcon.load(dashPayProfile!!.avatarUrl) {
+                transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
+                placeholder(R.drawable.ic_avatar)
+                error(R.drawable.ic_avatar)
+            }
+            secondaryIcon.isVisible = true
+            secondaryIcon.setImageResource(iconRes)
+        } else if (iconBitmap != null) {
+            checkIcon.load(iconBitmap) {
+                transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
+            }
+            secondaryIcon.isVisible = true
+            secondaryIcon.setImageResource(iconRes)
+        } else {
             checkIcon.setImageResource(iconRes)
             secondaryIcon.isVisible = false
 
@@ -328,12 +327,6 @@ class TransactionResultViewBinder(
                     (checkIcon.drawable as Animatable).start()
                 }, 300)
             }
-        } else {
-            checkIcon.load(iconBitmap) {
-                transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
-            }
-            secondaryIcon.isVisible = true
-            secondaryIcon.setImageResource(iconRes)
         }
     }
 

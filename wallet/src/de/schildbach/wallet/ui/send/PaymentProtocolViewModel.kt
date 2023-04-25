@@ -103,7 +103,7 @@ class PaymentProtocolViewModel @Inject constructor(
         Looper.myLooper()?.let { callbackHandler = Handler(it) }
     }
 
-    override fun initPaymentIntent(paymentIntent: PaymentIntent) {
+    override suspend fun initPaymentIntent(paymentIntent: PaymentIntent) {
         super.initPaymentIntent(paymentIntent)
 
         if (!paymentIntent.hasPaymentRequestUrl()) {
