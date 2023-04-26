@@ -77,7 +77,6 @@ import java.util.*
 import javax.inject.Inject
 
 
-// TODO: check WalletActivity commits
 @AndroidEntryPoint
 class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPermissionsResultCallback,
     UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,

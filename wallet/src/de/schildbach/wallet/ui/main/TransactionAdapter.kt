@@ -183,10 +183,13 @@ class TransactionAdapter(
             val contact = txView.contact
 
             if (contact != null) {
-                val userName = contact.displayName.ifEmpty { contact.username }
                 binding.primaryIcon.background = null
                 binding.primaryIcon.setPadding(0, 0, 0, 0)
-                ProfilePictureDisplay.display(binding.primaryIcon, contact.avatarUrl, contact.avatarHash, userName)
+                binding.primaryIcon.load(contact.avatarUrl) {
+                    transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
+                    placeholder(R.drawable.ic_avatar)
+                    error(R.drawable.ic_avatar)
+                }
                 binding.primaryIcon.setOnClickListener {
                     clickListener.invoke(txView, true)
                 }
