@@ -23,12 +23,12 @@ import android.os.Looper
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.MutableLiveData
 import androidx.work.WorkManager
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.Constants
 import androidx.lifecycle.SavedStateHandle
-import de.schildbach.wallet.Constants
+import dagger.hilt.android.EntryPointAccessors
+import de.schildbach.wallet.database.AppDatabase
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
@@ -80,11 +80,10 @@ class MainViewModelTest {
         every { registerOnSharedPreferenceChangeListener(any()) } just runs
         every { areNotificationsDisabled() } returns false
     }
-    private val blockChainStateMock = mockk<BlockchainStateDao>()
     private val exchangeRatesMock = mockk<ExchangeRatesProvider>()
-    private val walletDataMock = mockk<WalletDataProvider>()
     private val walletApp = mockk<WalletApplication> {
         every { applicationContext } returns mockk()
+        every { mainLooper } returns Looper.getMainLooper()
     }
     private val appDatabaseMock = mockk<AppDatabase> {
         every { blockchainIdentityDataDaoAsync() } returns mockk {
@@ -96,15 +95,20 @@ class MainViewModelTest {
         every { invitationsDaoAsync() } returns mockk {
             every { loadAll() } returns MutableLiveData(listOf())
         }
+        every { blockchainIdentityDataDao() } returns mockk()
+        every { dashPayProfileDao() } returns mockk()
+        every { dashPayContactRequestDao() } returns mockk()
+        every { invitationsDao() } returns mockk()
+        every { userAlertDao() } returns mockk()
+        every { transactionMetadataDocumentDao() } returns mockk()
+        every { transactionMetadataCacheDao() } returns mockk()
+        every { dashPayContactRequestDaoAsync() } returns mockk()
+        every { userAlertDaoAsync() } returns mockk()
     }
     private val workManagerMock = mockk<WorkManager> {
         every { getWorkInfosByTagLiveData(any()) } returns MutableLiveData(listOf())
     }
     private val savedStateMock = mockk<SavedStateHandle>()
-
-    private val analyticsService = mockk<AnalyticsService> {
-        every { logError(any(), any()) } returns Unit
-    }
 
     private val walletDataMock = mockk<WalletDataProvider> {
         every { wallet } returns null
@@ -154,17 +158,25 @@ class MainViewModelTest {
         }
 
         mockkStatic(WalletApplication::class)
-        every { WalletApplication.getInstance() } returns mockk {
-            every { mainLooper } returns Looper.getMainLooper()
+        every { WalletApplication.getInstance() } returns walletApp
+
+        val mockPlatformRepoEntryPoint = mockk<PlatformRepo.PlatformRepoEntryPoint> {
+            every { provideAppDatabase() } returns appDatabaseMock
         }
+        mockkStatic(EntryPointAccessors::class)
+        every {
+            EntryPointAccessors.fromApplication(walletApp, PlatformRepo.PlatformRepoEntryPoint::class.java)
+        } returns mockPlatformRepoEntryPoint
 
         mockkObject(PlatformRepo.Companion)
-        every { PlatformRepo.Companion.getInstance() } returns mockk()
+        every { PlatformRepo.Companion.getInstance() } returns mockk {
+            every { walletApplication } returns walletApp
+        }
 
         mockkStatic(WorkManager::class)
         every { WorkManager.getInstance(any()) } returns workManagerMock
-        every { savedStateMock.get<TxDirection>(eq("tx_direction")) } returns TxDirection.ALL
-        every { savedStateMock.set<TxDirection>(any(), any()) } just runs
+        every { savedStateMock.get<TxFilterType>(eq("tx_direction")) } returns TxFilterType.ALL
+        every { savedStateMock.set<TxFilterType>(any(), any()) } just runs
     }
 
     @Test
@@ -174,7 +186,7 @@ class MainViewModelTest {
 
         val viewModel = spyk(
             MainViewModel(
-                mockk(), clipboardManagerMock, configMock, blockChainStateMock,
+                mockk(), clipboardManagerMock, configMock,
                 exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
                 mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
             )
@@ -196,7 +208,7 @@ class MainViewModelTest {
 
         val viewModel = spyk(
             MainViewModel(
-                mockk(), clipboardManagerMock, configMock, blockChainStateMock,
+                mockk(), clipboardManagerMock, configMock,
                 exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
                 mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
             )
@@ -231,7 +243,7 @@ class MainViewModelTest {
         every { blockchainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
         val viewModel = spyk(
             MainViewModel(
-                mockk(), mockk(), configMock, blockChainStateMock,
+                mockk(), mockk(), configMock,
                 exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
                 mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
             )
@@ -250,7 +262,7 @@ class MainViewModelTest {
         every { blockchainStateMock.observeState() } returns MutableStateFlow(state)
         val viewModel = spyk(
             MainViewModel(
-                mockk(), mockk(), configMock, blockChainStateMock,
+                mockk(), mockk(), configMock,
                 exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
                 mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
             )
