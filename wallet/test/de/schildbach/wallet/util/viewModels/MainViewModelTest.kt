@@ -28,12 +28,11 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.Constants
 import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.EntryPointAccessors
-import org.dash.wallet.common.data.BlockchainState
+import de.schildbach.wallet.database.AppDatabase
 import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
-import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
-import de.schildbach.wallet.transactions.TxDirection
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
@@ -55,7 +54,6 @@ import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
@@ -195,8 +193,9 @@ class MainViewModelTest {
         val viewModel = spyk(
             MainViewModel(
                 mockk(), clipboardManagerMock, configMock,
-                exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-                mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
+                exchangeRatesMock, walletDataMock, walletApp, mockk(),
+                mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
+                mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
             )
         )
 
@@ -217,8 +216,9 @@ class MainViewModelTest {
         val viewModel = spyk(
             MainViewModel(
                 mockk(), clipboardManagerMock, configMock,
-                exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-                mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
+                exchangeRatesMock, walletDataMock, walletApp, mockk(),
+                mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
+                mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
             )
         )
 
@@ -252,8 +252,9 @@ class MainViewModelTest {
         val viewModel = spyk(
             MainViewModel(
                 mockk(), mockk(), configMock,
-                exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-                mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
+                exchangeRatesMock, walletDataMock, walletApp, mockk(),
+                mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
+                mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
             )
         )
 
@@ -271,8 +272,9 @@ class MainViewModelTest {
         val viewModel = spyk(
             MainViewModel(
                 mockk(), mockk(), configMock,
-                exchangeRatesMock, walletDataMock, walletApp, appDatabaseMock, mockk(),
-                mockk(), mockk(), savedStateMock, transactionMetadataMock, blockchainStateMock, mockk()
+                exchangeRatesMock, walletDataMock, walletApp, mockk(),
+                mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
+                mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
             )
         )
 
