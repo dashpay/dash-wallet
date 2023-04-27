@@ -97,7 +97,7 @@ class SendInviteWorker @AssistedInject constructor(
         }
 
         return try {
-            val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
+            val blockchainIdentity = platformRepo.blockchainIdentity
             val cftx = platformRepo.createInviteFundingTransactionAsync(blockchainIdentity, encryptionKey)
             val dashPayProfile = platformRepo.getLocalUserProfile()
             val dynamicLink = createDynamicLink(dashPayProfile!!, cftx, encryptionKey)

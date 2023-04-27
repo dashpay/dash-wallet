@@ -14,6 +14,9 @@ buildscript {
         jetpackVersion = '1.6.0'
         appCompatVersion = '1.4.2'
 
+        // Architecture
+        datastoreVersion = "1.0.0"
+
         // Utils
         slf4jVersion = '1.7.32'
         desugaringLibraryVersion = '1.1.5'

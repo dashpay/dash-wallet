@@ -24,7 +24,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
@@ -37,6 +36,7 @@ import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.ui.dashpay.*
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.*
@@ -73,16 +73,19 @@ class MainViewModel @Inject constructor(
     blockchainStateDao: BlockchainStateDao,
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
-    walletApplication: WalletApplication,
-    appDatabase: AppDatabase,
+    private val walletApplication: WalletApplication,
     val platformRepo: PlatformRepo,
     val platformSyncService: PlatformSyncService,
-    private val blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    blockchainIdentityDataDao: BlockchainIdentityDataDao,
     private val savedStateHandle: SavedStateHandle,
     private val metadataProvider: TransactionMetadataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
-    val biometricHelper: BiometricHelper
-) : BaseProfileViewModel(walletApplication, appDatabase) {
+    val biometricHelper: BiometricHelper,
+    private val invitationsDao: InvitationsDao,
+    userAlertDao: UserAlertDao,
+    dashPayProfileDao: DashPayProfileDao,
+    private val dashPayConfig: DashPayConfig
+) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     companion object {
         private const val THROTTLE_DURATION = 500L
         private const val DIRECTION_KEY = "tx_direction"
@@ -150,19 +153,18 @@ class MainViewModel @Inject constructor(
    // DashPay
 
    private val isPlatformAvailableData = liveData(Dispatchers.IO) {
-       val status = if (Constants.SUPPORTS_PLATFORM) {
-           platformRepo.isPlatformAvailable()
-       } else {
-           Resource.success(false)
-       }
-       if (status.status == Status.SUCCESS && status.data != null) {
-           emit(status.data)
-       } else {
-           emit(false)
-       }
-   }
+        val status = if (Constants.SUPPORTS_PLATFORM) {
+            platformRepo.isPlatformAvailable()
+        } else {
+            Resource.success(false)
+        }
+        if (status.status == Status.SUCCESS && status.data != null) {
+            emit(status.data)
+        } else {
+            emit(false)
+        }
+    }
 
-    val inviteHistory = appDatabase.invitationsDaoAsync().loadAll()
     val canAffordIdentityCreationLiveData = CanAffordIdentityCreationLiveData(walletApplication)
 
     val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
@@ -172,7 +174,7 @@ class MainViewModel @Inject constructor(
         addSource(_isBlockchainSynced) {
             value = combineLatestData()
         }
-        addSource(blockchainIdentityData) {
+        addSource(blockchainIdentity) {
             value = combineLatestData()
         }
         addSource(canAffordIdentityCreationLiveData) {
@@ -189,7 +191,7 @@ class MainViewModel @Inject constructor(
     var processingSeriousError = false
 
     val notificationCountData =
-        NotificationCountLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
+        NotificationCountLiveData(walletApplication, platformRepo, platformSyncService, dashPayConfig, viewModelScope)
     val notificationCount: Int
         get() = notificationCountData.value ?: 0
 
@@ -244,28 +246,28 @@ class MainViewModel @Inject constructor(
                 Configuration.PREFS_KEY_EXCHANGE_CURRENCY -> {
                     currencyCode.value = config.exchangeCurrencyCode
                 }
-                Configuration.PREFS_LAST_SEEN_NOTIFICATION_TIME -> {
-                    startContactRequestTimer()
-                    forceUpdateNotificationCount()
-                }
             }
         }
         config.registerOnSharedPreferenceChangeListener(listener)
 
-
         // DashPay
         startContactRequestTimer()
 
-        // don't query alerts if notifications are disabled
-        if (config.areNotificationsDisabled()) {
-            val lastSeenNotification = config.lastSeenNotificationTime
-            appDatabase.userAlertDaoAsync()
-                .load(lastSeenNotification).observeForever { userAlert: UserAlert? ->
-                    if (userAlert != null) {
-                        forceUpdateNotificationCount()
-                    }
+        dashPayConfig.observe(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME)
+            .filterNotNull()
+            .distinctUntilChanged()
+            .onEach { lastSeenNotification ->
+                startContactRequestTimer()
+                forceUpdateNotificationCount()
+
+                if (lastSeenNotification != DashPayConfig.DISABLE_NOTIFICATIONS) {
+                    userAlertDao.observe(lastSeenNotification)
+                        .filterNotNull()
+                        .distinctUntilChanged()
+                        .onEach { forceUpdateNotificationCount() }
                 }
-        }
+            }
+            .launchIn(viewModelScope)
     }
 
     fun logEvent(event: String) {
@@ -332,71 +334,11 @@ class MainViewModel @Inject constructor(
         config.unregisterOnSharedPreferenceChangeListener(listener)
     }
 
-    // DashPay
-
-    fun reportContactRequestTime() {
-        contactRequestTimer?.logTiming()
-        contactRequestTimer = null
-    }
-
-    private fun forceUpdateNotificationCount() {
-        notificationCountData.onContactsUpdated()
-        viewModelScope.launch(Dispatchers.IO) {
-            platformSyncService.updateContactRequests()
-        }
-    }
-
-    suspend fun dismissUsernameCreatedCardIfDone(): Boolean {
-        val data = blockchainIdentityDataDao.loadBase()
-
-        if (data?.creationState == BlockchainIdentityData.CreationState.DONE) {
-            platformRepo.doneAndDismiss()
-            return true
-        }
-
-        return false
-    }
-
-    fun dismissUsernameCreatedCard() {
-        viewModelScope.launch {
-            platformRepo.doneAndDismiss()
-        }
-    }
-
-    fun joinDashPay() {
-        showCreateUsernameEvent.call()
-    }
-
-    fun startBlockchainService() {
-        walletApplication.startBlockchainService(true)
-    }
-
-    suspend fun getProfile(profileId: String): DashPayProfile? {
-        return platformRepo.loadProfileByUserId(profileId)
-    }
-
-    private fun combineLatestData(): Boolean {
-        val isPlatformAvailable = isPlatformAvailableData.value ?: false
-        val isSynced = _isBlockchainSynced.value ?: false
-        val noIdentityCreatedOrInProgress = (blockchainIdentityData.value == null) || blockchainIdentityData.value!!.creationState == BlockchainIdentityData.CreationState.NONE
-        val canAffordIdentityCreation = canAffordIdentityCreationLiveData.value ?: false
-        return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress && canAffordIdentityCreation
-    }
-
-    private fun startContactRequestTimer() {
-        contactRequestTimer = AnalyticsTimer(
-            analytics,
-            log,
-            AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_RECEIVE
-        )
-    }
-
     private suspend fun refreshTransactions(filter: TransactionFilter, memos: Map<Sha256Hash, String>) {
         walletData.wallet?.let { wallet ->
-            val userIdentity = platformRepo.getBlockchainIdentity()
             val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
 
-            if (userIdentity != null) {
+            if (platformRepo.hasIdentity) {
                 val contacts = platformRepo.searchContacts("",
                     UsernameSortOrderBy.LAST_ACTIVITY, false)
                 contacts.data?.forEach { result ->
@@ -417,8 +359,8 @@ class MainViewModel @Inject constructor(
                  if (it.transactions.size == 1) {
                      memo = memos.getOrDefault(tx.txId, "")
 
-                     if (!isInternal) {
-                         val contactId = userIdentity?.getContactForTransaction(tx)
+                     if (!isInternal && platformRepo.hasIdentity) {
+                         val contactId = platformRepo.blockchainIdentity.getContactForTransaction(tx)
 
                          if (contactId != null) {
                              contact = contactsByIdentity[contactId]
@@ -465,5 +407,66 @@ class MainViewModel @Inject constructor(
             percentage = 0
         }
         _blockchainSyncPercentage.postValue(percentage)
+    }
+
+    // DashPay
+
+    fun reportContactRequestTime() {
+        contactRequestTimer?.logTiming()
+        contactRequestTimer = null
+    }
+
+    private fun forceUpdateNotificationCount() {
+        notificationCountData.onContactsUpdated()
+        viewModelScope.launch(Dispatchers.IO) {
+            platformSyncService.updateContactRequests()
+        }
+    }
+
+    suspend fun dismissUsernameCreatedCardIfDone(): Boolean {
+        val data = blockchainIdentityDataDao.loadBase()
+
+        if (data?.creationState == BlockchainIdentityData.CreationState.DONE) {
+            platformRepo.doneAndDismiss()
+            return true
+        }
+
+        return false
+    }
+
+    fun dismissUsernameCreatedCard() {
+        viewModelScope.launch {
+            platformRepo.doneAndDismiss()
+        }
+    }
+
+    fun joinDashPay() {
+        showCreateUsernameEvent.call()
+    }
+
+    fun startBlockchainService() {
+        walletApplication.startBlockchainService(true)
+    }
+
+    suspend fun getProfile(profileId: String): DashPayProfile? {
+        return platformRepo.loadProfileByUserId(profileId)
+    }
+
+    suspend fun getInviteHistory() = invitationsDao.loadAll()
+
+    private fun combineLatestData(): Boolean {
+        val isPlatformAvailable = isPlatformAvailableData.value ?: false
+        val isSynced = _isBlockchainSynced.value ?: false
+        val noIdentityCreatedOrInProgress = (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
+        val canAffordIdentityCreation = canAffordIdentityCreationLiveData.value ?: false
+        return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress && canAffordIdentityCreation
+    }
+
+    private fun startContactRequestTimer() {
+        contactRequestTimer = AnalyticsTimer(
+            analytics,
+            log,
+            AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_RECEIVE
+        )
     }
 }

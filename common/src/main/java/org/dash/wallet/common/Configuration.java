@@ -81,7 +81,6 @@ public class Configuration {
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
     public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
     public static final String PREFS_PIN_LENGTH = "pin_length";
-    public static final String PREFS_LAST_SEEN_NOTIFICATION_TIME = "last_seen_notification_time";
     private static final String PREFS_IMGUR_DELETE_HASH = "imgur_delete_hash";
     private static final String PREFS_UPLOAD_POLICY = "upload_policy_accepted_";
     private static final String PREFS_DEV_MODE = "developer_mode";
@@ -112,8 +111,6 @@ public class Configuration {
     public static final String PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER = "show_notifications_explainer";
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER = "show_tax_catagory_explainer";
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME = "show_tax_catagory_install_time";
-
-    private static final long DISABLE_NOTIFICATIONS = -1;
 
     // Explore Dash
     public static final String PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY = "has_info_screen_been_shown";
@@ -441,22 +438,6 @@ public class Configuration {
 
     public void setPinLength(int pinLength) {
         prefs.edit().putInt(PREFS_PIN_LENGTH, pinLength).apply();
-    }
-
-    public long getLastSeenNotificationTime() {
-        return prefs.getLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, 0);
-    }
-
-    public boolean areNotificationsDisabled() {
-        return getLastSeenNotificationTime() == DISABLE_NOTIFICATIONS;
-    }
-
-    public void disableNotifications() {
-        setLastSeenNotificationTime(DISABLE_NOTIFICATIONS);
-    }
-
-    public void setLastSeenNotificationTime(long lastSeenNotificationTime) {
-        prefs.edit().putLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, lastSeenNotificationTime).apply();
     }
 
     public String getImgurDeleteHash() {

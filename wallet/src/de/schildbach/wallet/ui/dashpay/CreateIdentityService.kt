@@ -15,6 +15,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainIdentityData.CreationState
+import de.schildbach.wallet.data.BlockchainIdentityDataDao
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.payments.DecryptSeedTask
@@ -151,7 +152,7 @@ class CreateIdentityService : LifecycleService() {
         pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName)
     }
 
-    private val createIdentityNotification by lazy { CreateIdentityNotification(this) }
+    private val createIdentityNotification by lazy { CreateIdentityNotification(this, blockchainIdentityDataDao) }
 
     private val serviceJob = Job()
     private var serviceScope = CoroutineScope(serviceJob + Dispatchers.Main)
@@ -161,6 +162,9 @@ class CreateIdentityService : LifecycleService() {
 
     @Inject
     lateinit var analytics: AnalyticsService
+
+    @Inject
+    lateinit var blockchainIdentityDataDao: BlockchainIdentityDataDao
 
     private var workInProgress = false
 
@@ -643,11 +647,11 @@ class CreateIdentityService : LifecycleService() {
 
         val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { it.creditBurnIdentityIdentifier.bytes!!.contentEquals(identity) }
 
-        val existingBlockchainIdentityData = AppDatabase.getAppDatabase().blockchainIdentityDataDao().load()
+        val existingBlockchainIdentityData = blockchainIdentityDataDao.load()
         if (existingBlockchainIdentityData != null) {
             log.info("Attempting restore of existing identity and username; save credit funding txid")
-            val blockchainIdentity = platformRepo.getBlockchainIdentity()
-            blockchainIdentity!!.creditFundingTransaction = creditFundingTransaction
+            val blockchainIdentity = platformRepo.blockchainIdentity
+            blockchainIdentity.creditFundingTransaction = creditFundingTransaction
             existingBlockchainIdentityData.creditFundingTxId = creditFundingTransaction!!.txId
             platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
             return

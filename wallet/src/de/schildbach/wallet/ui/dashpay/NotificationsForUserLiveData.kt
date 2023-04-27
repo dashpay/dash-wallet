@@ -66,7 +66,7 @@ class NotificationsForUserLiveData(walletApplication: WalletApplication,
                 }
             }
 
-            val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
+            val blockchainIdentity = platformRepo.blockchainIdentity
             val txs = blockchainIdentity.getContactTransactions(Identifier.from(userId), accountReference)
 
             txs.forEach {

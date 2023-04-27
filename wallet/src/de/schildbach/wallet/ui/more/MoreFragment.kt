@@ -1,17 +1,18 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2019 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package de.schildbach.wallet.ui.more
@@ -25,6 +26,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
@@ -32,7 +34,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.display
@@ -42,6 +43,7 @@ import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
@@ -111,10 +113,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         binding.invite.visibility = View.GONE
         binding.invite.setOnClickListener {
-            // use observeOnce to avoid the history screen being recreated
-            // after returning to the More Screen after an invite is created
-            mainActivityViewModel.inviteHistory.observeOnce(requireActivity()) {
-                if (it == null || it.isEmpty()) {
+            lifecycleScope.launch {
+                val inviteHistory = mainActivityViewModel.getInviteHistory()
+
+                if (inviteHistory.isEmpty()) {
                     InviteFriendActivity.startOrError(requireActivity())
                 } else {
                     val intent = InvitesHistoryActivity.createIntent(requireContext()).apply {
@@ -158,7 +160,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
     private fun initViewModel() {
         // observe our profile
-        editProfileViewModel.dashPayProfileData.observe(viewLifecycleOwner) { dashPayProfile ->
+        editProfileViewModel.dashPayProfile.observe(viewLifecycleOwner) { dashPayProfile ->
             if (dashPayProfile != null) {
                 showProfileSection(dashPayProfile)
             }

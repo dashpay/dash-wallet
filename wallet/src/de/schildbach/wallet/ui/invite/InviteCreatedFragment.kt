@@ -29,7 +29,6 @@ import kotlinx.android.synthetic.main.fragment_invite_created.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.util.KeyboardUtil
 
-
 class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_created) {
 
     companion object {
@@ -93,7 +92,7 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
             tag_edit.setText(it.memo)
         }
 
-        viewModel.dashPayProfileData.observe(viewLifecycleOwner) {
+        viewModel.dashPayProfile.observe(viewLifecycleOwner) {
             profile_picture_envelope.avatarProfile = it
             setupInvitationPreviewTemplate(it!!)
         }

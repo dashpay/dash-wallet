@@ -26,14 +26,12 @@ import android.view.View
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.main.MainActivity
 
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.AbstractWalletActivity
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
@@ -128,49 +126,21 @@ class TransactionResultActivity : AbstractWalletActivity() {
                 configuration.format.noCode(),
                 container
             )
-
-            val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
-            val userId = initializeIdentity(tx, blockchainIdentity)
-
-            if (blockchainIdentity == null || userId == null) {
-                finishInitialization(tx, null)
-            }
-
-            viewModel.transactionMetadata.observe(this) {
-                if(it != null) {
-                    transactionResultViewBinder.setTransactionMetadata(it)
-                }
-            }
-
-            viewModel.transactionMetadata.observe(this) {
-                if(it != null) {
-                    transactionResultViewBinder.setTransactionMetadata(it)
-                }
-            }
         } else {
-            log.error("Transaction not found. TxId:", txId)
+            log.error("Transaction not found. TxId: {}", txId)
             finish()
             return
         }
-    }
 
-    private fun initializeIdentity(tx: Transaction, blockchainIdentity: BlockchainIdentity?): String? {
-        var profile: DashPayProfile?
-        var userId: String? = null
-
-        if (blockchainIdentity != null) {
-            userId = blockchainIdentity.getContactForTransaction(tx)
-            if (userId != null) {
-                AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(userId).observe(this) {
-                    if (it != null) {
-                        profile = it
-                        finishInitialization(tx, profile)
-                    }
-                }
+        viewModel.transactionMetadata.observe(this) {
+            if(it != null) {
+                transactionResultViewBinder.setTransactionMetadata(it)
             }
         }
 
-        return userId
+        viewModel.contact.observe(this) { profile ->
+            finishInitialization(tx, profile)
+        }
     }
 
     private fun finishInitialization(tx: Transaction, dashPayProfile: DashPayProfile?) {
