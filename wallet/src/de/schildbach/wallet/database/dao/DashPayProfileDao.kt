@@ -22,6 +22,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import de.schildbach.wallet.database.entity.DashPayProfile
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface DashPayProfileDao {
@@ -30,6 +31,9 @@ interface DashPayProfileDao {
 
     @Query("SELECT * FROM dashpay_profile WHERE userId = :userId")
     suspend fun loadByUserId(userId: String): DashPayProfile?
+
+    @Query("SELECT * FROM dashpay_profile where userId = :userId")
+    fun observeByUserId(userId: String): Flow<DashPayProfile?>
 
     @Query("SELECT * FROM dashpay_profile WHERE username = :username")
     suspend fun loadByUsername(username: String): DashPayProfile?

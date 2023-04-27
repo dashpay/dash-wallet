@@ -28,8 +28,13 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.Constants
 import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.EntryPointAccessors
-import de.schildbach.wallet.database.AppDatabase
-import de.schildbach.wallet.transactions.TxFilterType
+import org.dash.wallet.common.data.BlockchainState
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.BlockchainStateDao
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.transactions.TxDirection
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
@@ -78,32 +83,30 @@ class MainViewModelTest {
         every { format } returns MonetaryFormat()
         every { hideBalance } returns false
         every { registerOnSharedPreferenceChangeListener(any()) } just runs
-        every { areNotificationsDisabled() } returns false
     }
     private val exchangeRatesMock = mockk<ExchangeRatesProvider>()
     private val walletApp = mockk<WalletApplication> {
         every { applicationContext } returns mockk()
         every { mainLooper } returns Looper.getMainLooper()
     }
+    private val blockchainIdentityDaoMock = mockk<BlockchainIdentityDataDao> {
+        coEvery { loadBase() } returns null
+        every { observeBase() } returns MutableStateFlow(null)
+    }
+    private val dashPayProfileDaoMock = mockk<DashPayProfileDao> {
+        every { observeByUserId(any()) } returns MutableStateFlow(null)
+    }
+    private val invitationsDaoMock = mockk<InvitationsDao> {
+        coEvery { loadAll() } returns listOf()
+    }
     private val appDatabaseMock = mockk<AppDatabase> {
-        every { blockchainIdentityDataDaoAsync() } returns mockk {
-            every { loadBase() } returns MutableLiveData(null)
-        }
-        every { dashPayProfileDaoAsync() } returns mockk {
-            every { loadByUserIdDistinct(any()) } returns MutableLiveData(null)
-        }
-        every { invitationsDaoAsync() } returns mockk {
-            every { loadAll() } returns MutableLiveData(listOf())
-        }
-        every { blockchainIdentityDataDao() } returns mockk()
-        every { dashPayProfileDao() } returns mockk()
+        every { blockchainIdentityDataDao() } returns blockchainIdentityDaoMock
+        every { dashPayProfileDao() } returns dashPayProfileDaoMock
         every { dashPayContactRequestDao() } returns mockk()
-        every { invitationsDao() } returns mockk()
+        every { invitationsDao() } returns invitationsDaoMock
         every { userAlertDao() } returns mockk()
         every { transactionMetadataDocumentDao() } returns mockk()
         every { transactionMetadataCacheDao() } returns mockk()
-        every { dashPayContactRequestDaoAsync() } returns mockk()
-        every { userAlertDaoAsync() } returns mockk()
     }
     private val workManagerMock = mockk<WorkManager> {
         every { getWorkInfosByTagLiveData(any()) } returns MutableLiveData(listOf())
@@ -120,6 +123,11 @@ class MainViewModelTest {
 
     private val transactionMetadataMock = mockk<TransactionMetadataProvider> {
         every { observePresentableMetadata() } returns MutableStateFlow(mapOf())
+    }
+
+    private val mockDashPayConfig = mockk<DashPayConfig> {
+        every { observe<Long>(any()) } returns MutableStateFlow(0L)
+        coEvery { areNotificationsDisabled() } returns false
     }
 
     @get:Rule

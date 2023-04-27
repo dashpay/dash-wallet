@@ -142,7 +142,11 @@ class WalletTransactionMetadataProvider @Inject constructor(
         return null
     }
 
-    private suspend fun updateAndInsertIfNotExist(txId: Sha256Hash, isSyncingPlatform: Boolean, update: suspend (TransactionMetadata) -> Unit) {
+    private suspend fun updateAndInsertIfNotExist(
+        txId: Sha256Hash,
+        isSyncingPlatform: Boolean,
+        update: suspend (TransactionMetadata) -> Unit
+    ) {
         val existing = transactionMetadataDao.load(txId)
 
         if (existing != null) {
@@ -181,6 +185,26 @@ class WalletTransactionMetadataProvider @Inject constructor(
             if (!isSyncingPlatform) {
                 transactionMetadataChangeCacheDao.insertSentTime(txId, timestamp)
             }
+        }
+    }
+
+    override suspend fun syncPlatformMetadata(txId: Sha256Hash, metadata: TransactionMetadata) {
+        updateAndInsertIfNotExist(txId, true) { existing ->
+            val updated = existing.copy(
+                // txId and value are kept the same
+                txId = existing.txId,
+                value = existing.value,
+                // update the rest from platform if not empty, otherwise keep existing
+                type = metadata.type.takeIf { it != TransactionCategory.Invalid } ?: existing.type,
+                taxCategory = metadata.taxCategory ?: existing.taxCategory,
+                currencyCode = metadata.currencyCode ?: existing.currencyCode,
+                rate = metadata.rate ?: existing.rate,
+                memo = metadata.memo.ifEmpty { existing.memo },
+                service = metadata.service ?: existing.service,
+                timestamp = metadata.timestamp.takeIf { it != 0L } ?: existing.timestamp
+            )
+
+            transactionMetadataDao.update(updated)
         }
     }
 

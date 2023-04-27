@@ -22,21 +22,16 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import de.schildbach.wallet.database.dao.AddressMetadataDao
 import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDaoAsync
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
-import de.schildbach.wallet.database.dao.DashPayContactRequestDaoAsync
 import de.schildbach.wallet.database.dao.DashPayProfileDao
-import de.schildbach.wallet.database.dao.DashPayProfileDaoAsync
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
 import de.schildbach.wallet.database.dao.IconBitmapDao
 import de.schildbach.wallet.database.dao.InvitationsDao
-import de.schildbach.wallet.database.dao.InvitationsDaoAsync
 import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.database.dao.UserAlertDao
-import de.schildbach.wallet.database.dao.UserAlertDaoAsync
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -80,16 +75,11 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun addressMetadataDao(): AddressMetadataDao
     abstract fun iconBitmapDao(): IconBitmapDao
     abstract fun giftCardDao(): GiftCardDao
-    abstract fun blockchainIdentityDataDaoAsync(): BlockchainIdentityDataDaoAsync
     abstract fun blockchainIdentityDataDao(): BlockchainIdentityDataDao
-    abstract fun dashPayProfileDaoAsync(): DashPayProfileDaoAsync
     abstract fun dashPayProfileDao(): DashPayProfileDao
-    abstract fun dashPayContactRequestDaoAsync(): DashPayContactRequestDaoAsync
     abstract fun dashPayContactRequestDao(): DashPayContactRequestDao
     abstract fun invitationsDao(): InvitationsDao
-    abstract fun invitationsDaoAsync(): InvitationsDaoAsync
     abstract fun transactionMetadataCacheDao(): TransactionMetadataChangeCacheDao
     abstract fun transactionMetadataDocumentDao(): TransactionMetadataDocumentDao
     abstract fun userAlertDao(): UserAlertDao
-    abstract fun userAlertDaoAsync(): UserAlertDaoAsync
 }

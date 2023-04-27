@@ -29,6 +29,7 @@ import android.text.TextWatcher
 import android.text.style.StyleSpan
 import android.view.View
 import android.view.animation.AnimationUtils
+import androidx.activity.viewModels
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -39,7 +40,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.data.InvitationLinkData
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDaoAsync
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -67,9 +68,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
     }
 
-    val dashPayViewModel by lazy {
-        ViewModelProvider(this).get(DashPayViewModel::class.java)
-    }
+    private val dashPayViewModel by viewModels<DashPayViewModel>()
 
     //    val viewModel by lazy {
 //        ViewModelProvider(this).get(InviteFriendViewModel::class.java)
@@ -77,7 +76,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     @Inject
     lateinit var walletApplication: WalletApplication
     @Inject
-    lateinit var blockchainIdentityDataDaoAsync: BlockchainIdentityDataDaoAsync
+    lateinit var blockchainIdentityDataDao: BlockchainIdentityDataDao
 
     private var reuseTransaction: Boolean = false
     private var useInvite: Boolean = false
@@ -256,14 +255,14 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             startService(CreateIdentityService.createIntentForNewUsername(this, username))
             finish()
         } else {
-            blockchainIdentityDataDaoAsync.loadBase().observe(this, Observer {
-                if (it?.creationStateErrorMessage != null && !reuseTransaction) {
+            dashPayViewModel.blockchainIdentity.observe(this) {
+                if (it?.creationStateErrorMessage != null) {
                     finish()
                 } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
                     completeUsername = it.username ?: ""
                     showCompleteState()
                 }
-            })
+            }
             showProcessingState()
             startService(CreateIdentityService.createIntent(this, username))
         }
@@ -283,14 +282,14 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 finish()
                 return
             } else {
-                blockchainIdentityDataDaoAsync.loadBase().observe(this, Observer {
+                dashPayViewModel.blockchainIdentity.observe(this) {
                     if (it?.creationStateErrorMessage != null && !reuseTransaction) {
                         finish()
                     } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
                         completeUsername = it.username ?: ""
                         showCompleteState()
                     }
-                })
+                }
                 showProcessingState()
                 invite?.let {
                     startService(CreateIdentityService.createIntentFromInvite(this, username, it))

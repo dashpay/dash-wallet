@@ -42,7 +42,6 @@ import androidx.lifecycle.lifecycleScope
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.PaymentIntent
@@ -178,7 +177,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             // inside the parent Activity will avoid recreation of relatively complex
             // isAbleToCreateIdentityData LiveData
         }
-        viewModel.blockchainIdentityData.observe(this) {
+        viewModel.blockchainIdentity.observe(this) {
             if (it != null) {
                 if (retryCreationIfInProgress && it.creationInProgress) {
                     retryCreationIfInProgress = false

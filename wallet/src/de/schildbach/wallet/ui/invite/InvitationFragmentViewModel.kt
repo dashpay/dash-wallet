@@ -1,17 +1,18 @@
 /*
- * Copyright 2020 Dash Core Group
+ * Copyright 2020 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package de.schildbach.wallet.ui.invite
 
@@ -23,9 +24,8 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.database.AppDatabase
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
-import de.schildbach.wallet.database.dao.DashPayProfileDaoAsync
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
@@ -35,6 +35,7 @@ import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
@@ -49,14 +50,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 open class InvitationFragmentViewModel @Inject constructor(
-    application: WalletApplication,
+    private val walletApplication: WalletApplication,
     private val analytics: AnalyticsService,
-    appDatabase: AppDatabase,
     private val platformRepo: PlatformRepo,
     private val invitationDao: InvitationsDao,
-    private val dashPayProfileDaoAsync: DashPayProfileDaoAsync,
-    private val dashPayProfileDao: DashPayProfileDao
-) : BaseProfileViewModel(application, appDatabase) {
+    blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    dashPayProfileDao: DashPayProfileDao
+) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     private val log = LoggerFactory.getLogger(InvitationFragmentViewModel::class.java)
 
     private val pubkeyHash = walletApplication.wallet!!.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
@@ -80,7 +80,7 @@ open class InvitationFragmentViewModel @Inject constructor(
 
     val invitationPreviewImageFile by lazy {
         try {
-            val storageDir: File = application.getExternalFilesDir(Environment.DIRECTORY_PICTURES)!!
+            val storageDir: File = walletApplication.getExternalFilesDir(Environment.DIRECTORY_PICTURES)!!
             File(storageDir, Constants.Files.INVITATION_PREVIEW_IMAGE_FILENAME)
         } catch (ex: IOException) {
             log.error(ex.message, ex)
@@ -122,7 +122,7 @@ open class InvitationFragmentViewModel @Inject constructor(
     val identityIdLiveData = MutableLiveData<String>()
 
     val invitedUserProfile: LiveData<DashPayProfile?>
-        get() = dashPayProfileDaoAsync.loadByUserIdDistinct(identityIdLiveData.value!!)
+        get() = dashPayProfileDao.observeByUserId(identityIdLiveData.value!!).distinctUntilChanged().asLiveData()
 
     fun updateInvitedUserProfile() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -156,7 +156,10 @@ open class InvitationFragmentViewModel @Inject constructor(
             emit("")
         }
 
-        val invite = platformRepo.getBlockchainIdentity()!!.getInvitationString(cftx, encryptionKey)
+        val invite = platformRepo.blockchainIdentity.getInvitationString(cftx, encryptionKey)
         emit(invite)
     }
+
+    suspend fun getInvitedUserProfile(): DashPayProfile? =
+        dashPayProfileDao.loadByUserId(identityIdLiveData.value!!)
 }

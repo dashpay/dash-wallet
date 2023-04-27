@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2023. Dash Core Group.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package de.schildbach.wallet.ui.transactions
 
 import android.content.DialogInterface
@@ -7,11 +22,10 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.database.dao.DashPayProfileDaoAsync
+import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import org.dash.wallet.common.UserInteractionAwareCallback
 import de.schildbach.wallet.util.WalletUtils
@@ -23,7 +37,6 @@ import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
-import org.dashj.platform.dashpay.BlockchainIdentity
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -48,7 +61,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
-    @Inject lateinit var dashPayProfileDaoAsync: DashPayProfileDaoAsync
+    @Inject lateinit var dashPayProfileDao: DashPayProfileDao
 
     override val backgroundStyle = R.style.PrimaryBackground
     override val forceExpand = true
@@ -80,21 +93,10 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
                 viewModel.dashFormat,
                 binding.transactionResultContainer
             )
-
-            val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
-            val userId = initializeIdentity(tx, blockchainIdentity)
-
-            if (blockchainIdentity == null || userId == null) {
-                finishInitialization(tx, null)
-            }
         } else {
             log.error("Transaction not found. TxId: {}", txId)
             dismiss()
             return
-        }
-
-        viewModel.transactionMetadata.observe(this) { metadata ->
-            transactionResultViewBinder.setTransactionMetadata(metadata)
         }
 
         viewModel.transactionIcon.observe(this) {
@@ -103,6 +105,16 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
         viewModel.merchantName.observe(this) {
             transactionResultViewBinder.setCustomTitle(getString(R.string.gift_card_tx_title, it))
+        }
+
+        viewModel.transactionMetadata.observe(this) { metadata ->
+            if(metadata != null && tx.txId == metadata.txId) {
+                transactionResultViewBinder.setTransactionMetadata(metadata)
+            }
+        }
+
+        viewModel.contact.observe(this) { profile ->
+            finishInitialization(tx, profile)
         }
     }
 
@@ -125,25 +137,6 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
             }
         }
         dialog?.window!!.callback = UserInteractionAwareCallback(dialog?.window!!.callback, requireActivity())
-    }
-
-    private fun initializeIdentity(tx: Transaction, blockchainIdentity: BlockchainIdentity?): String? {
-        var profile: DashPayProfile?
-        var userId: String? = null
-
-        if (blockchainIdentity != null) {
-            userId = blockchainIdentity.getContactForTransaction(tx)
-            if (userId != null) {
-                dashPayProfileDaoAsync.loadByUserIdDistinct(userId).observe(this) {
-                    if (it != null) {
-                        profile = it
-                        finishInitialization(tx, profile)
-                    }
-                }
-            }
-        }
-
-        return userId
     }
 
     private fun showReportIssue() {

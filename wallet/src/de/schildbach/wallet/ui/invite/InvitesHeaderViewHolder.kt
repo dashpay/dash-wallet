@@ -19,9 +19,9 @@ package de.schildbach.wallet.ui.invite
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import de.schildbach.wallet.database.entity.Invitation
+import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.invite_history_header_row.view.*
-import org.dash.wallet.common.data.SingleLiveEvent
 
 open class InvitesHeaderViewHolder(inflater: LayoutInflater,
                                    val onFilterListener: OnFilterListener,

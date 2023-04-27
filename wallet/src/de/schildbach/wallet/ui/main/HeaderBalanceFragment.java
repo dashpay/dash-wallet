@@ -117,7 +117,7 @@ public final class HeaderBalanceFragment extends Fragment {
         viewModel.getExchangeRate().observe(getViewLifecycleOwner(), rate -> updateView());
         viewModel.getBalance().observe(getViewLifecycleOwner(), balance -> updateView());
         viewModel.getHideBalance().observe(getViewLifecycleOwner(), toHide -> updateView());
-        viewModel.getDashPayProfileData().observe(getViewLifecycleOwner(), dashPayProfile -> {
+        viewModel.getDashPayProfile().observe(getViewLifecycleOwner(), dashPayProfile -> {
             updateView();
             setNotificationCount();
         });
@@ -133,7 +133,7 @@ public final class HeaderBalanceFragment extends Fragment {
     }
 
     private void updateView() {
-        DashPayProfile dashPayProfile = viewModel.getDashPayProfile();
+        DashPayProfile dashPayProfile = viewModel.getDashPayProfile().getValue();
         ProfilePictureDisplayKt.display(ProfilePictureDisplay.Companion, dashpayUserAvatar, dashPayProfile, true);
 
         View balances = view.findViewById(R.id.balances_layout);

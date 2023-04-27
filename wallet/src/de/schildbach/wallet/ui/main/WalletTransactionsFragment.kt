@@ -171,7 +171,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         }
 
-        viewModel.blockchainIdentityData.observe(viewLifecycleOwner) { identity ->
+        viewModel.blockchainIdentity.observe(viewLifecycleOwner) { identity ->
             if (identity != null) {
                 (requireActivity() as? LockScreenActivity)?.imitateUserInteraction()
                 header.blockchainIdentityData = identity
@@ -226,7 +226,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private fun retryIdentityCreation(header: HistoryHeaderAdapter) {
-        viewModel.blockchainIdentityData.value?.let { blockchainIdentityData ->
+        viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             // check to see if an invite was used
             if (!blockchainIdentityData.usingInvite) {
                 requireActivity().startService(
@@ -254,7 +254,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private fun openIdentityCreation() {
-        viewModel.blockchainIdentityData.value?.let { blockchainIdentityData ->
+        viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             if (blockchainIdentityData.creationStateErrorMessage != null) {
                 if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING) {
                     startActivity(CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), blockchainIdentityData))

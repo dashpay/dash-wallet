@@ -77,12 +77,9 @@ import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
-import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.features.exploredash.network.service.DashDirectClientConstants;
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants;
 
-import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao;
-import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao;
 import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
@@ -104,7 +101,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -192,10 +188,6 @@ public class WalletApplication extends MultiDexApplication
     CrowdNodeConfig crowdNodeConfig;
     @Inject
     TransactionMetadataProvider transactionMetadataProvider;
-    @Inject
-    TransactionMetadataChangeCacheDao transactionMetadataChangeCacheDao;
-    @Inject
-    TransactionMetadataDocumentDao transactionMetadataDocumentDao;
     @Inject
     PlatformRepo platformRepo;
     @Inject
@@ -417,7 +409,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void initPlatform() {
-        platformSyncService.initGlobal();
+        platformSyncService.init();
         //PlatformRepo.getInstance().initGlobal();
     }
     

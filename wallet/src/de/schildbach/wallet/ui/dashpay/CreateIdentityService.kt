@@ -15,7 +15,6 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.BlockchainIdentityData.CreationState
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
-import de.schildbach.wallet.database.dao.BlockchainIdentityDataDaoAsync
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.payments.DecryptSeedTask
@@ -157,7 +156,7 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private val createIdentityNotification by lazy {
-        CreateIdentityNotification(this, blockchainIdentityDataDaoAsync)
+        CreateIdentityNotification(this, blockchainIdentityDataDao)
     }
 
     private val serviceJob = Job()
@@ -168,8 +167,6 @@ class CreateIdentityService : LifecycleService() {
 
     @Inject
     lateinit var analytics: AnalyticsService
-    @Inject
-    lateinit var blockchainIdentityDataDaoAsync: BlockchainIdentityDataDaoAsync
 
     private var workInProgress = false
 
@@ -655,8 +652,8 @@ class CreateIdentityService : LifecycleService() {
         val existingBlockchainIdentityData = blockchainIdentityDataDao.load()
         if (existingBlockchainIdentityData != null) {
             log.info("Attempting restore of existing identity and username; save credit funding txid")
-            val blockchainIdentity = platformRepo.getBlockchainIdentity()
-            blockchainIdentity!!.creditFundingTransaction = creditFundingTransaction
+            val blockchainIdentity = platformRepo.blockchainIdentity
+            blockchainIdentity.creditFundingTransaction = creditFundingTransaction
             existingBlockchainIdentityData.creditFundingTxId = creditFundingTransaction!!.txId
             platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
             return

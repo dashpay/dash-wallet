@@ -18,16 +18,19 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet.util.MnemonicCodeExt
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.MnemonicException
 import org.dash.wallet.common.Configuration
@@ -39,10 +42,13 @@ import javax.inject.Inject
 class RestoreWalletFromSeedViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val configuration: Configuration,
-    private val securityFunctions: SecurityFunctions
+    private val securityFunctions: SecurityFunctions,
+    private val dashPayConfig: DashPayConfig
 ) : ViewModel() {
 
     private val log = LoggerFactory.getLogger(RestoreWalletFromSeedViewModel::class.java)
+
+    internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
     private val securityGuard = SecurityGuard()
 
@@ -78,7 +84,7 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
             log.info("successfully restored wallet from seed")
             configuration.disarmBackupSeedReminder()
             configuration.isRestoringBackup = true
-            configuration.disableNotifications()
+            viewModelScope.launch { dashPayConfig.disableNotifications() }
             walletApplication.resetBlockchainState()
             startActivityAction.call(SetPinActivity.createIntent(walletApplication, R.string.set_pin_restore_wallet, onboarding = true))
         }

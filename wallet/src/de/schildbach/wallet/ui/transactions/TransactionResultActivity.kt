@@ -27,11 +27,10 @@ import androidx.core.os.bundleOf
 import de.schildbach.wallet.ui.main.MainActivity
 
 import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.database.dao.DashPayProfileDaoAsync
+import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
@@ -43,7 +42,6 @@ import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.dashj.platform.dashpay.BlockchainIdentity
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -109,7 +107,7 @@ class TransactionResultActivity : LockScreenActivity() {
 
     private val viewModel: TransactionResultViewModel by viewModels()
     @Inject
-    lateinit var dashPayProfileDaoAsync: DashPayProfileDaoAsync
+    lateinit var dashPayProfileDao: DashPayProfileDao
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -130,13 +128,6 @@ class TransactionResultActivity : LockScreenActivity() {
                 configuration.format.noCode(),
                 container
             )
-
-            val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
-            val userId = initializeIdentity(tx, blockchainIdentity)
-
-            if (blockchainIdentity == null || userId == null) {
-                finishInitialization(tx, null)
-            }
         } else {
             log.error("Transaction not found. TxId: {}", txId)
             finish()
@@ -144,27 +135,14 @@ class TransactionResultActivity : LockScreenActivity() {
         }
 
         viewModel.transactionMetadata.observe(this) {
-            transactionResultViewBinder.setTransactionMetadata(it)
-        }
-    }
-
-    private fun initializeIdentity(tx: Transaction, blockchainIdentity: BlockchainIdentity?): String? {
-        var profile: DashPayProfile?
-        var userId: String? = null
-
-        if (blockchainIdentity != null) {
-            userId = blockchainIdentity.getContactForTransaction(tx)
-            if (userId != null) {
-                dashPayProfileDaoAsync.loadByUserIdDistinct(userId).observe(this) {
-                    if (it != null) {
-                        profile = it
-                        finishInitialization(tx, profile)
-                    }
-                }
+            if(it != null) {
+                transactionResultViewBinder.setTransactionMetadata(it)
             }
         }
 
-        return userId
+        viewModel.contact.observe(this) { profile ->
+            finishInitialization(tx, profile)
+        }
     }
 
     private fun finishInitialization(tx: Transaction, dashPayProfile: DashPayProfile?) {

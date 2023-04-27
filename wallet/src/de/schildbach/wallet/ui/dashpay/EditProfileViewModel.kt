@@ -22,7 +22,6 @@ import android.os.Environment
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
-import androidx.core.os.bundleOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
@@ -33,7 +32,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.ImgurUploadResponse
-import de.schildbach.wallet.database.AppDatabase
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
@@ -67,10 +67,11 @@ import kotlin.coroutines.suspendCoroutine
 
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
-    application: WalletApplication,
+    private val walletApplication: WalletApplication,
     private val analytics: AnalyticsService,
-    appDatabase: AppDatabase
-) : BaseProfileViewModel(application, appDatabase) {
+    blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    dashPayProfileDao: DashPayProfileDao
+) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
     enum class ProfilePictureStorageService {
         GOOGLE_DRIVE, IMGUR
@@ -89,7 +90,7 @@ class EditProfileViewModel @Inject constructor(
 
     val profilePictureFile by lazy {
         try {
-            val storageDir: File = application.getExternalFilesDir(Environment.DIRECTORY_PICTURES)!!
+            val storageDir: File = walletApplication.getExternalFilesDir(Environment.DIRECTORY_PICTURES)!!
             File(storageDir, Constants.Files.PROFILE_PICTURE_FILENAME)
         } catch (ex: IOException) {
             log.error(ex.message, ex)
@@ -119,7 +120,7 @@ class EditProfileViewModel @Inject constructor(
         false
     }
 
-    val updateProfileRequestState = UpdateProfileStatusLiveData(application)
+    val updateProfileRequestState = UpdateProfileStatusLiveData(walletApplication)
 
     var lastAttemptedProfile: DashPayProfile? = null
 
@@ -128,7 +129,7 @@ class EditProfileViewModel @Inject constructor(
 
         logProfileInfoEvents(displayName, publicMessage, avatarUrl)
 
-        val dashPayProfile = dashPayProfileData.value!!
+        val dashPayProfile = dashPayProfile.value!!
         val avatarFingerprintBytes = avatarFingerprint?.run { ProfilePictureHelper.toByteArray(this) }
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
                 displayName, publicMessage, avatarUrl, avatarHash?.bytes, avatarFingerprintBytes,
@@ -380,21 +381,21 @@ class EditProfileViewModel @Inject constructor(
     }
 
     private fun logProfileInfoEvents(displayName: String, publicMessage: String, avatarUrl: String) {
-        if (displayName != dashPayProfile!!.displayName) {
+        if (displayName != dashPayProfile.value!!.displayName) {
             analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_NAME, mapOf())
             analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_NAME_LENGTH, mapOf(
                 AnalyticsConstants.Parameter.VALUE to displayName.length
             ))
         }
 
-        if (publicMessage != dashPayProfile!!.publicMessage) {
+        if (publicMessage != dashPayProfile.value!!.publicMessage) {
             analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_ABOUT_ME, mapOf())
             analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_ABOUT_ME_LENGTH, mapOf(
                 AnalyticsConstants.Parameter.VALUE to publicMessage.length
             ))
         }
 
-        if (avatarUrl != dashPayProfile!!.avatarUrl) {
+        if (avatarUrl != dashPayProfile.value!!.avatarUrl) {
             when (pictureSource) {
                 "gravatar" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_GRAVATAR, mapOf())
                 "public_url" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_PUBLIC_URL, mapOf())

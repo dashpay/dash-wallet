@@ -20,6 +20,7 @@ package de.schildbach.wallet.database.dao
 import androidx.room.*
 import de.schildbach.wallet.database.entity.TransactionMetadataDocument
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.entity.ExchangeRate
 
 /**
  * @author Eric Britten
@@ -38,62 +39,51 @@ interface TransactionMetadataDocumentDao {
     @Query("""
         SELECT sentTimestamp 
         FROM transaction_metadata_platform 
-        WHERE timestamp = (
-            SELECT MAX(timestamp) 
-            FROM transaction_metadata_platform 
-            WHERE txId = :txId
-                AND sentTimestamp is NOT NULL
-        )
-        """)
+        WHERE txId = :txId 
+            AND sentTimestamp is NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
     suspend fun getSentTimestamp(txId: Sha256Hash): Long?
 
     @Query("""
         SELECT memo 
         FROM transaction_metadata_platform 
-        WHERE timestamp = (
-            SELECT MAX(timestamp) 
-            FROM transaction_metadata_platform 
-            WHERE txId = :txId
-                AND memo is NOT NULL
-        )
-        """)
+        WHERE txId = :txId 
+            AND memo is NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
     suspend fun getTransactionMemo(txId: Sha256Hash): String?
 
     @Query("""
         SELECT service 
         FROM transaction_metadata_platform 
-        WHERE timestamp = (
-            SELECT MAX(timestamp) 
-            FROM transaction_metadata_platform 
-            WHERE txId = :txId
-                AND service is NOT NULL
-        )
-        """)
+        WHERE txId = :txId 
+            AND service is NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
     suspend fun getTransactionService(txId: Sha256Hash): String?
 
     @Query("""
         SELECT taxCategory 
         FROM transaction_metadata_platform 
-        WHERE timestamp = (
-            SELECT MAX(timestamp) 
-            FROM transaction_metadata_platform 
-            WHERE txId = :txId
-                AND taxCategory is NOT NULL
-        )
-        """)
+        WHERE txId = :txId 
+            AND taxCategory is NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
     suspend fun getTransactionTaxCategory(txId: Sha256Hash): String?
 
-    data class ExchangeRate(val currencyCode: String?, val rate: Double?)
-
     @Query("""
-        SELECT rate, currencyCode 
+        SELECT rate, currencyCode
         FROM transaction_metadata_platform 
-        WHERE timestamp = (
-            SELECT MAX(timestamp) 
-            FROM transaction_metadata_platform 
-            WHERE txId = :txId AND rate IS NOT NULL AND currencyCode IS NOT NULL
-        )
-        """)
+        WHERE txId = :txId 
+            AND rate IS NOT NULL AND currencyCode IS NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
     suspend fun getTransactionExchangeRate(txId: Sha256Hash): ExchangeRate?
 
     @Query("SELECT MAX(timestamp) FROM transaction_metadata_platform")
@@ -102,7 +92,6 @@ interface TransactionMetadataDocumentDao {
     @Query("SELECT COUNT(*) FROM transaction_metadata_platform")
     fun countAllRequests(): Int
 
-
     @Query("DELETE FROM transaction_metadata_platform")
-    fun clear()
+    suspend fun clear()
 }

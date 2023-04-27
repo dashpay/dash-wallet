@@ -21,6 +21,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import de.schildbach.wallet.database.entity.Invitation
+import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
 
 @Dao
@@ -36,6 +37,9 @@ interface InvitationsDao {
 
     @Query("SELECT * FROM invitation_table")
     suspend fun loadAll(): List<Invitation>
+
+    @Query("SELECT * FROM invitation_table")
+    fun observe(): Flow<List<Invitation>>
 
     @Query("DELETE FROM invitation_table")
     suspend fun clear()

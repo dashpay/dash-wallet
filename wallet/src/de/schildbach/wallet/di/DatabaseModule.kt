@@ -85,20 +85,9 @@ object DatabaseModule {
     fun provideBlockchainIdentityDao(appDatabase: AppDatabase): BlockchainIdentityDataDao {
         return appDatabase.blockchainIdentityDataDao()
     }
-
-    @Provides
-    fun provideBlockchainIdentityDataDaoAsync(appDatabase: AppDatabase): BlockchainIdentityDataDaoAsync {
-        return appDatabase.blockchainIdentityDataDaoAsync()
-    }
-
     @Provides
     fun provideDashPayProfileDao(appDatabase: AppDatabase): DashPayProfileDao {
         return appDatabase.dashPayProfileDao()
-    }
-
-    @Provides
-    fun provideDashPayProfileDaoAsync(appDatabase: AppDatabase): DashPayProfileDaoAsync {
-        return appDatabase.dashPayProfileDaoAsync()
     }
 
     @Provides
@@ -107,18 +96,8 @@ object DatabaseModule {
     }
 
     @Provides
-    fun provideUserAlertDaoAsync(appDatabase: AppDatabase): UserAlertDaoAsync {
-        return appDatabase.userAlertDaoAsync()
-    }
-
-    @Provides
     fun provideInvitationsDao(appDatabase: AppDatabase): InvitationsDao {
         return appDatabase.invitationsDao()
-    }
-
-    @Provides
-    fun provideInvitationsDaoAsync(appDatabase: AppDatabase): InvitationsDaoAsync {
-        return appDatabase.invitationsDaoAsync()
     }
 
     @Provides

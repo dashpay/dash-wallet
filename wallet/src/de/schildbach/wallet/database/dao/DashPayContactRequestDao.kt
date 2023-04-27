@@ -30,7 +30,7 @@ interface DashPayContactRequestDao {
     suspend fun insert(dashPayContactRequest: DashPayContactRequest)
 
     @Query("SELECT * FROM dashpay_contact_request")
-    suspend fun loadAll(): List<DashPayContactRequest>?
+    suspend fun loadAll(): List<DashPayContactRequest>
 
     @Query("SELECT * FROM dashpay_contact_request WHERE userId = :userId")
     suspend fun loadToOthers(userId: String): List<DashPayContactRequest>

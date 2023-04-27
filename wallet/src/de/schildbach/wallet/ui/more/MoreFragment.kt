@@ -26,13 +26,13 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
@@ -43,6 +43,7 @@ import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -120,10 +121,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         binding.invite.visibility = View.GONE
         binding.invite.setOnClickListener {
-            // use observeOnce to avoid the history screen being recreated
-            // after returning to the More Screen after an invite is created
-            mainActivityViewModel.inviteHistory.observeOnce(requireActivity()) {
-                if (it == null || it.isEmpty()) {
+            lifecycleScope.launch {
+                val inviteHistory = mainActivityViewModel.getInviteHistory()
+
+                if (inviteHistory.isEmpty()) {
                     InviteFriendActivity.startOrError(requireActivity())
                 } else {
                     val intent = InvitesHistoryActivity.createIntent(requireContext()).apply {
@@ -167,7 +168,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
     private fun initViewModel() {
         // observe our profile
-        editProfileViewModel.dashPayProfileData.observe(viewLifecycleOwner) { dashPayProfile ->
+        editProfileViewModel.dashPayProfile.observe(viewLifecycleOwner) { dashPayProfile ->
             if (dashPayProfile != null) {
                 showProfileSection(dashPayProfile)
             }

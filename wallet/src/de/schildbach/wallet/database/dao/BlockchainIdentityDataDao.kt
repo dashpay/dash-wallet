@@ -23,6 +23,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BlockchainIdentityDataDao {
@@ -39,7 +40,9 @@ interface BlockchainIdentityDataDao {
     @Query("SELECT id, creationState, creationStateErrorMessage, username, userId, restoring, creditFundingTxId, usingInvite, invite FROM blockchain_identity LIMIT 1")
     suspend fun loadBase(): BlockchainIdentityBaseData?
 
+    @Query("SELECT id, creationState, creationStateErrorMessage, username, userId, restoring, creditFundingTxId, usingInvite, invite FROM blockchain_identity LIMIT 1")
+    fun observeBase(): Flow<BlockchainIdentityBaseData?>
+
     @Query("DELETE FROM blockchain_identity")
     suspend fun clear()
-
 }

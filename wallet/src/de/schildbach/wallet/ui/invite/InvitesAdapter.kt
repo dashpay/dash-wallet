@@ -20,7 +20,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import org.dash.wallet.common.data.SingleLiveEvent
+import de.schildbach.wallet.ui.util.SingleLiveEvent
 import java.util.ArrayList
 
 class InvitesAdapter(private val itemClickListener: OnItemClickListener,

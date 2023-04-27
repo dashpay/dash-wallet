@@ -76,7 +76,7 @@ class UpdateProfileWorker @AssistedInject constructor(
         if (!inputData.keyValueMap.containsKey(KEY_CREATED_AT))
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DOCUMENT.name))
         val createdAt = inputData.getLong(KEY_CREATED_AT, 0L)
-        val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
+        val blockchainIdentity = platformRepo.blockchainIdentity
 
         val encryptionKey: KeyParameter
         try {
