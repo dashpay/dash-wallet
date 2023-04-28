@@ -75,7 +75,7 @@ class MainViewModel @Inject constructor(
     private val listener: SharedPreferences.OnSharedPreferenceChangeListener
     private val currencyCode = MutableStateFlow(config.exchangeCurrencyCode)
 
-    val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0).optionalDecimals(0, 8)
+    val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
 
     private val _transactions = MutableLiveData<List<TransactionRowView>>()
