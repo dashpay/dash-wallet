@@ -379,7 +379,6 @@ android {
             buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
 
             def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
-
             if (dashDirectClientId == null) {
                 dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
             }
@@ -389,25 +388,39 @@ android {
             applicationId = "org.dash.dashpay.testnet"
             def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
             def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
-            def liquidClientId = props.getProperty("LIQUID_PUBLIC_API_KEY_SANDBOX")
             if (imgurClientId == null) {
                 imgurClientId = "\"UPHOLD_CLIENT_ID\""
             }
             if (imgurClientSecret == null) {
                 imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
             }
-            if (liquidClientId == null) {
-                liquidClientId = "\"LIQUID_PUBLIC_API_KEY\""
-            }
             buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
-            buildConfigField("String", "LIQUID_PUBLIC_API_KEY", liquidClientId)
+
+            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
+            if (dashDirectClientId == null) {
+                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
+            }
+            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
         }
         schnapps {
             applicationId = "org.dash.dashpay.schnapps"
-            buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
-            buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
-            buildConfigField("String", "LIQUID_PUBLIC_API_KEY", "\"LIQUID_PUBLIC_API_KEY\"")
+            def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
+            def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
+            if (imgurClientId == null) {
+                imgurClientId = "\"UPHOLD_CLIENT_ID\""
+            }
+            if (imgurClientSecret == null) {
+                imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
+            }
+            buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
+            buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
+
+            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
+            if (dashDirectClientId == null) {
+                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
+            }
+            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
         }
     }
     packagingOptions {
