@@ -86,7 +86,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
             if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
                 viewModel.giftCardMerchant = merchant
                 binding.paymentHeaderView.setSubtitle(merchant.name.orEmpty())
-                binding.paymentHeaderView.setPaymentAddressViewIcon(merchant.logoLocation, R.drawable.ic_image_placeholder)
+                binding.paymentHeaderView.setPaymentAddressViewIcon(
+                    merchant.logoLocation,
+                    R.drawable.ic_image_placeholder
+                )
 
                 lifecycleScope.launch {
                     viewModel.updateMerchantDetails(merchant)

@@ -37,6 +37,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class ExploreTestNetFragment : Fragment(R.layout.fragment_explore_testnet) {
     private val binding by viewBinding(FragmentExploreTestnetBinding::bind)
+
     @Inject
     lateinit var walletDataProvider: WalletDataProvider
 
