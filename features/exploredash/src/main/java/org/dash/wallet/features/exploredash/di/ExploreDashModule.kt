@@ -27,27 +27,17 @@ import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.explore.MerchantAtmDataSource
-import org.dash.wallet.features.exploredash.network.RemoteDataSource
-import org.dash.wallet.features.exploredash.network.service.DashDirectAuthApi
-import org.dash.wallet.features.exploredash.network.service.DashDirectServicesApi
 import org.dash.wallet.features.exploredash.repository.*
 import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
-import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class ExploreDashModule {
     companion object {
-        @Provides
-        fun provideContext(@ApplicationContext context: Context): Context {
-            return context
-        }
-
         @Provides
         fun provideFusedLocationProviderClient(context: Context): FusedLocationProviderClient {
             return LocationServices.getFusedLocationProviderClient(context)
@@ -56,21 +46,6 @@ abstract class ExploreDashModule {
         @Provides fun provideFirebaseAuth() = Firebase.auth
 
         @Provides fun provideFirebaseStorage() = Firebase.storage
-
-        @Provides
-        fun provideRemoteDataSource(config: DashDirectConfig): RemoteDataSource {
-            return RemoteDataSource(config)
-        }
-
-        @Provides
-        fun provideAuthApi(remoteDataSource: RemoteDataSource): DashDirectAuthApi {
-            return remoteDataSource.buildApi(DashDirectAuthApi::class.java)
-        }
-
-        @Provides
-        fun provideDashDirectApi(remoteDataSource: RemoteDataSource): DashDirectServicesApi {
-            return remoteDataSource.buildApi(DashDirectServicesApi::class.java)
-        }
     }
 
     @Binds
@@ -84,7 +59,4 @@ abstract class ExploreDashModule {
 
     @Binds
     abstract fun bindDataSyncService(exploreDatabase: ExploreDataSyncStatus): DataSyncStatusService
-
-    @Binds
-    abstract fun provideDashDirectRepository(dashDirectRepository: DashDirectRepository): DashDirectRepositoryInt
 }

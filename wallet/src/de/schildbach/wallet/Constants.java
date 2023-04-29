@@ -126,6 +126,7 @@ public final class Constants {
             }
         }
         org.dash.wallet.common.util.Constants.INSTANCE.setMAX_MONEY(NETWORK_PARAMETERS.getMaxMoney());
+        org.dash.wallet.common.util.Constants.INSTANCE.setBUILD_FLAVOR(BuildConfig.FLAVOR);
     }
 
     /** Bitcoinj global context. */
