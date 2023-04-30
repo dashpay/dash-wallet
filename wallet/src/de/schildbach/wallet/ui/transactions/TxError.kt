@@ -20,7 +20,6 @@ package de.schildbach.wallet.ui.transactions
 import org.bitcoinj.core.RejectMessage
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
-import kotlin.math.abs
 
 enum class TxError {
     DoubleSpend,
@@ -36,9 +35,6 @@ enum class TxError {
 
     companion object {
         fun fromTransaction(tx: Transaction): TxError {
-            val hashCode = tx.txId.hashCode()
-            return TxError.values()[abs(hashCode % TxError.values().size)]
-
             val confidence = tx.confidence
 
             if (confidence != null) {
