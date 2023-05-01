@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">كوين بيس</string>
     <string name="last_known_balance" >آخر رصيد معروف</string>
+    <string name="coinbase_link_title">اربط حسابك على Coinbase</string>
+    <string name="coinbase_link">ربط حساب Coinbase</string>
+    <string name="coinbase_transfer_details">بين محفظة داش وحساب Coinbase الخاص بك</string>
     <string name="coinbase_dash_wallet_error_title">لم نعثر على Dash Wallet في حساب كوين بيس الخاص بك.</string>
     <string name="coinbase_dash_wallet_error_message">يرجى إنشاء محفظة داش على كوين بيس للمتابعة.</string>
     <string name="create_dash_account">قم بإنشاء حساب داش</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">افصل حساب كوين بيس</string>
     <string name="receive_directly_into_dash_wallet">تلقي مباشرة في محفظة داش.</string>
     <string name="buy_dash">شراء داش</string>
-    <string name="balance">الرصيد:</string>
     <string name="balance_on_coinbase">الرصيد على كوين بيس</string>
     <string name="sending_to">إرسال إلى</string>
     <string name="dash_wallet_device">محفظة داش على هذا الجهاز</string>
@@ -41,8 +43,11 @@
     <string name="cancel">إلغاء</string>
     <string name="confirm_sec">تأكيد (%s)</string>
     <string name="confirm">تأكيد</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">لم نجد أي طرق دفع.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">يرجى تحديث حساب كوين بيس الخاص بك للمتابعة.</string>
+    <string name="coinbase_no_payment_methods_error_title">لم نجد أي طرق دفع.</string>
+    <string name="coinbase_no_payment_methods_error_message">يرجى تحديث حساب كوين بيس الخاص بك للمتابعة.</string>
+    <string name="coinbase_unusable_payment_method_error_title">لا يمكن استخدام طريقة الدفع هذه.</string>
+    <string name="coinbase_unusable_payment_method_error_message">يُرجى السماح بالشراء من طريقة الدفع هذه في حساب Coinbase الخاص بك.</string>
+    <string name="coinbase_open_account">افتح حساب Coinbase</string>
     <string name="add_payment_method">إضافة طريقة دفع</string>
     <string name="error">خطأ</string>
     <string name="cancel_transaction">إلغاء الصفقة؟</string>
@@ -55,7 +60,7 @@
     <string name="conversion_failed">فشل تحويل</string>
     <string name="transfer_failed_msg">تم إيداع الداش بنجاح في حساب كوين بيس الخاص بك. ولكن كانت هناك مشكلة في نقلها إلى محفظة داش على هذا الجهاز.</string>
     <string name="purchase_failed_msg">هناك خطأ ما</string>
-    <string name="it_could_take_up_to_2_3_minutes">قد يستغرق الأمر ما يصل إلى 2-3 دقائق حتى يتم نقل داش إلى مجفظة داش على هذا الجهاز.</string>
+    <string name="it_could_take_up_to_2_3_minutes">قد يستغرق الأمر ما يصل إلى 2-3 دقائق حتى يتم نقل داش إلى محفظة داش على هذا الجهاز.</string>
     <string name="it_could_take_up_to_5_minutes">قد يستغرق تحويل %s من حساب كوين بيس إلى داش في محفظة داش على هذا الجهاز ما يصل إلى 5 دقائق ..</string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">\"قد يستغرق تحويل داش من محفظة داش على هذا الجهاز إلى %s حساب كوين بيس الخاص بك ما يصل إلى 5 دقائق.</string>
     <string name="contact_coinbase_support">اتصل بدعم كوين بيس</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">كان هذا الرمز غير صالح. حاول مرة اخرى</string>
     <string name="verify_code">تحقق</string>
     <string name="you_dont_have_enough_balance">ليس لديك رصيد كافي</string>
-    <string name="transfer_dash">تحويل داش</string>
     <string name="transfer_amount">نقل</string>
     <string name="dash_wallet_limit_description">المبلغ أعلى من رصيدك</string>
     <string name="address_creation_failed">لم نتمكن من إنشاء عنوان لحسابك لإكمال معاملتك. من فضلك حاول لاحقا.</string>

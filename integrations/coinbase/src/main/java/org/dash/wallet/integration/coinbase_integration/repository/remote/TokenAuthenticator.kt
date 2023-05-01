@@ -23,15 +23,17 @@ import okhttp3.Response
 import okhttp3.Route
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.model.TokenResponse
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
-import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
+import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.safeApiCall
 import org.dash.wallet.integration.coinbase_integration.service.CloseCoinbasePortalBroadcaster
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseTokenRefreshApi
+import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
 
 class TokenAuthenticator @Inject constructor(
     private val tokenApi: CoinBaseTokenRefreshApi,
     private val userPreferences: Configuration,
+    private val config: CoinbaseConfig,
     private val closeCoinbasePortalBroadcaster: CloseCoinbasePortalBroadcaster
 ) : Authenticator {
 
@@ -50,7 +52,7 @@ class TokenAuthenticator @Inject constructor(
                 else -> {
                     userPreferences.setLastCoinBaseAccessToken(null)
                     userPreferences.setLastCoinBaseRefreshToken(null)
-                    userPreferences.lastCoinbaseBalance = null
+                    config.clearAll()
                     closeCoinbasePortalBroadcaster.dispatchCall()
                     null
                 }

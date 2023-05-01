@@ -57,8 +57,8 @@
     <string name="crowdnode_deposit_from_wallet">DashWallet ➝ CrowdNode</string>
     <string name="from_wallet">z Dash peňaženky</string>
     <string name="from_crowdnode">z CrowdNode</string>
-    <string name="withdraw">Vybrať</string>
-    <string name="withdrawal_requested">Žiadosť o výber</string>
+    <string name="withdraw">Výber</string>
+    <string name="withdrawal_requested">Žiadosť o výber podaná</string>
     <string name="withdrawal_requested_message">Doručenie prostriedkov môže chvíľu trvať.</string>
     <string name="crowdnode_withdraw_to_wallet">CrowdNode ➝ DashWallet</string>
     <string name="online_account">Online účet</string>
@@ -88,8 +88,8 @@
     <string name="crowdnode_staking_info">Získajte odmeny z vkladov v Dash Masternodes už za 0,5 Dash.</string>
     <string name="instant_rewards">Získajte odmeny okamžite</string>
     <string name="daily_rewards_info">Denne získajte svoj podiel na odmenách.</string>
-    <string name="crowdnode_sending_to">Odosielanie na účet CrowdNode</string>
-    <string name="wallet_sending_to">Odosiela sa do Dash peňaženky na tomto zariadení</string>
+    <string name="crowdnode_sending_to">Odošle sa na účet CrowdNode</string>
+    <string name="wallet_sending_to">Odošle sa do Dash peňaženky na tomto zariadení</string>
     <string name="available_balance">Zostatok: %s</string>
     <string name="crowdnode_minimum_deposit">Vložte aspoň %s, aby ste mohli začať zarábať</string>
     <string name="crowdnode_minimum_deposit_difference">Vložte %s, aby ste mohli začať zarábať</string>

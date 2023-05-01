@@ -21,8 +21,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
@@ -34,10 +34,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class InviteHandlerViewModel @Inject constructor(
-    application: WalletApplication,
-    appDatabase: AppDatabase,
+    blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    dashPayProfileDao: DashPayProfileDao,
     private val platformRepo: PlatformRepo
-) : BaseProfileViewModel(application, appDatabase) {
+) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
     private val log = LoggerFactory.getLogger(InviteHandlerViewModel::class.java)
 

@@ -281,13 +281,21 @@
     <string name="tools_show_xpub">Εκτεταμένο Δημόσιο Κλειδί</string>
 
     <string name="about_help_us_improve">Βοηθήστε μας να βελτιώσουμε την εμπειρία σας</string>
+    <string name="about_review_and_rate">Κρίνετε και βαθμολογήστε την εφαρμογή</string>
     <string name="about_contact_support">Επικοινωνήστε με την υποστήριξη</string>
     <string name="about_fork_disclaimer">Πρόκειται για μια εφαρμογή ανοιχτού κώδικα που διαχωρίστηκε από το Bitcoin πορτοφόλι</string>
-    <string name="about_copyright">Copyright © 2022 Dash Core</string>
+    <string name="about_copyright">Copyright © 2023 Dash Core</string>
     <string name="about_license">Γενική Άδεια Δημόσιας Χρήσης GNU v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_device_sync">Τελευταίος συγχρονισμός συσκευής εξερεύνησης</string>
+    <string name="about_last_explore_server_update">Τελευταία ενημέρωση διακομιστή εξερεύνησης</string>
+    <string name="about_firebase_installation_id">ID εγκατάστασης Firebase</string>
+    <string name="about_fcm_token">Firebase cloud messaging token</string>
     <string name="about_last_explore_dash_update_error">δεν μπορεί να λάβει</string>
     <string name="about_last_explore_dash_sync_never">ποτέ</string>
+    <string name="about_explore_failed_sync">Απέτυχε ο συγχρονισμός στο %s</string>
+    <string name="about_explore_preloaded_on">Προ-φόρτωση στο %s</string>
+
     <string name="block">Μπλόκ</string>
     <string name="time">Ώρα</string>
     <string name="hash">Hash</string>

@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >最后已知余额</string>
+    <string name="coinbase_link_title">关联您的Coinbase账户</string>
+    <string name="coinbase_link">关联Coinbase账户</string>
+    <string name="coinbase_transfer_details">在Dash钱包和您的Coinbase账户之间</string>
     <string name="coinbase_dash_wallet_error_title">我们没有在您的 Coinbase账户上找到 Dash钱包.</string>
     <string name="coinbase_dash_wallet_error_message">请在 Coinbase上创建一个Dash 钱包以继续.</string>
     <string name="create_dash_account">创建 Dash账户</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">取消 Coinbase账户的关联</string>
     <string name="receive_directly_into_dash_wallet">直接从 Dash钱包收款.</string>
     <string name="buy_dash">购买Dash</string>
-    <string name="balance">余额:</string>
     <string name="balance_on_coinbase">Coinbase的余额</string>
     <string name="sending_to">正在发送至</string>
     <string name="dash_wallet_device">此设备的 Dash钱包</string>
@@ -36,13 +38,16 @@
     <string name="coinbase_fee">Coinbase 费用</string>
     <string name="total">总计</string>
     <string name="order_preview">订单预览</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">您将会在此设备的钱包中收到%sDash. 请注意, 完成转账最多可能需要2-3分钟.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">您将会在此设备的钱包中收到%sDash. 请注意, 完成转账最多可能需要2–3分钟.</string>
     <string name="amount_in_dash">Dash 金额</string>
     <string name="cancel">取消</string>
     <string name="confirm_sec">确认 (%ss)</string>
     <string name="confirm">确认</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">我们没有找到任何付款方式.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">请更新您的 Coinbase账户以继续.</string>
+    <string name="coinbase_no_payment_methods_error_title">我们没有找到任何付款方式.</string>
+    <string name="coinbase_no_payment_methods_error_message">请更新您的 Coinbase 账户以继续.</string>
+    <string name="coinbase_unusable_payment_method_error_title">此种支付方式无法被使用.</string>
+    <string name="coinbase_unusable_payment_method_error_message">请允许在您的Coinbase账户中使用此种支付方式购买.</string>
+    <string name="coinbase_open_account">打开Coinbase账户</string>
     <string name="add_payment_method">添加付款方式</string>
     <string name="error">错误</string>
     <string name="cancel_transaction">取消交易?</string>
@@ -55,7 +60,7 @@
     <string name="conversion_failed">兑换失败</string>
     <string name="transfer_failed_msg">Dash已成功存入您的 Coinbase账户. 但是把 Dash转账到此设备上的 Dash钱包时出错.</string>
     <string name="purchase_failed_msg">出错了</string>
-    <string name="it_could_take_up_to_2_3_minutes">最多可能需要2-3分钟才能把 Dash转账到此设备的 Dash钱包.</string>
+    <string name="it_could_take_up_to_2_3_minutes">最多可能需要2–3分钟才能把 Dash转账到此设备的 Dash钱包.</string>
     <string name="it_could_take_up_to_5_minutes">从 Coinbase账户中的%s转换为此设备 Dash钱包中的 Dash最多可能需要5分钟...</string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">“最多可能需要 5 分钟才能将 Dash从此设备上的 Dash钱包转换为您在 Coinbase账户中的 %s.</string>
     <string name="contact_coinbase_support">联系 Coinbase客服</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">该验证码无效. 请再试一次</string>
     <string name="verify_code">验证</string>
     <string name="you_dont_have_enough_balance">您没有足够的余额</string>
-    <string name="transfer_dash">转账 Dash</string>
     <string name="transfer_amount">转账</string>
     <string name="dash_wallet_limit_description">金额高于您的余额</string>
     <string name="address_creation_failed">我们无法为您的账户创建地址以完成您的交易. 请稍后再试.</string>

@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="uphold_link_title">Uphold hesabınızı bağlayın</string>
+    <string name="uphold_transfer_details">Uphold\'dan Dash Cüzdanınıza</string>
     <string name="uphold_buy_dash_activity_title">Uphold ile Dash Al/Sat</string>
     <string name="uphold_buy_dash_with_uphold">Uphold hesabı ile Dash al</string>
     <string name="uphold_buy_dash_button">Dash Al</string>

@@ -71,7 +71,7 @@ jobs:
         ruby-version: '3.0.3'
         
     - name: Generate cache key
-      run: bash ./checksum.sh checksum.txt
+      run: bash .deploy/checksum.sh checksum.txt
       
     - name: Gem caching
       uses: actions/cache@v2
@@ -120,10 +120,10 @@ jobs:
       run: |
         gem install google-cloud-storage
         rm  -rf wallet/assets/explore/*
-        ruby ./exploredata.rb "${{ github.event.inputs.flavor }}"
+        ruby .deploy/exploredata.rb "${{ github.event.inputs.flavor }}"
 
     - name: Test
       run: bundle exec fastlane test flavor:"${{ github.event.inputs.flavor }}" type:"${{ github.event.inputs.type }}" version_code:"${{ env.build_number }}" store_pass:"${{ secrets.SIGNING_STORE_PASS }}"
-      
+
     - name: Build and Firebase Distribution
       run: bundle exec fastlane build_distribute flavor:"${{ github.event.inputs.flavor }}" type:"${{ github.event.inputs.type }}" version_code:"${{ env.build_number }}" store_pass:"${{ secrets.SIGNING_STORE_PASS }}" comment:"${{ github.event.inputs.taskID }}" app_id:"${{ env.firebase_app_id }}" test_group:"qa"

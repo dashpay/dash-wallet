@@ -1,0 +1,454 @@
+/*
+ * Copyright 2022 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.ui.send
+
+import android.app.Activity
+import android.content.Intent
+import android.media.RingtoneManager
+import android.net.Uri
+import android.os.Bundle
+import android.view.View
+import android.widget.Toast
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.navArgs
+import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.integration.android.BitcoinIntegration
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel
+import de.schildbach.wallet.ui.transactions.TransactionResultActivity
+import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.SendCoinsFragmentBinding
+import kotlinx.coroutines.launch
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.InsufficientMoneyException
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.crypto.KeyCrypterException
+import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
+import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
+import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
+import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
+import org.slf4j.LoggerFactory
+import javax.inject.Inject
+
+@AndroidEntryPoint
+class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
+    companion object {
+        private val log = LoggerFactory.getLogger(SendCoinsFragment::class.java)
+        private const val SEND_COINS_SOUND = "send_coins_broadcast_1"
+    }
+
+    private val binding by viewBinding(SendCoinsFragmentBinding::bind)
+    private val viewModel by activityViewModels<SendCoinsViewModel>()
+    private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
+    private val dashPayViewModel by activityViewModels<DashPayViewModel>()
+    private val args by navArgs<SendCoinsFragmentArgs>()
+
+    @Inject lateinit var authManager: AuthenticationManager
+    private var userAuthorizedDuring = false
+    private var enterAmountFragment: EnterAmountFragment? = null
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        binding.titleBar.setNavigationOnClickListener {
+            requireActivity().finish()
+        }
+
+        if (savedInstanceState == null) {
+            lifecycleScope.launch {
+                try {
+                    viewModel.initPaymentIntent(args.paymentIntent)
+
+                    if (viewModel.shouldConfirm()) {
+                        authenticateOrConfirm()
+                    }
+                } catch (ex: SendException) {
+                    Toast.makeText(requireContext(), R.string.error_loading_identity, Toast.LENGTH_LONG).show()
+                }
+            }
+
+            val intentAmount = args.paymentIntent.amount
+            var dashToFiat = viewModel.isDashToFiatPreferred
+            // If an amount is specified (in Dash), then set the active currency to Dash
+            // If amount is 0 Dash or not specified, then don't change the active currency
+            if (intentAmount != null && !intentAmount.isZero) {
+                dashToFiat = true
+            }
+
+            val fragment = EnterAmountFragment.newInstance(
+                initialAmount = args.paymentIntent.amount,
+                dashToFiat = dashToFiat
+            )
+            childFragmentManager.beginTransaction()
+                .setReorderingAllowed(true)
+                .add(R.id.enter_amount_fragment_placeholder, fragment)
+                .commitNow()
+            enterAmountFragment = fragment
+        }
+
+        binding.paymentHeader.setTitle(getString(R.string.send_coins_fragment_button_send))
+        binding.paymentHeader.setProposition(getString(R.string.to))
+        binding.paymentHeader.setOnShowHideBalanceClicked { shown ->
+            viewModel.logEvent(
+                if (shown) {
+                    AnalyticsConstants.SendReceive.ENTER_AMOUNT_SHOW_BALANCE
+                } else {
+                    AnalyticsConstants.SendReceive.ENTER_AMOUNT_HIDE_BALANCE
+                }
+            )
+
+            viewModel.maxOutputAmount.value?.let { balance ->
+                updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
+            }
+        }
+
+        viewModel.isBlockchainReplaying.observe(viewLifecycleOwner) { updateView() }
+        viewModel.dryRunSuccessful.observe(viewLifecycleOwner) { isSuccess ->
+            if (!isSuccess && viewModel.shouldAdjustAmount()) {
+                val newAmount = viewModel.getAdjustedAmount()
+                enterAmountFragment?.setAmount(newAmount)
+            } else {
+                updateView()
+            }
+        }
+        viewModel.state.observe(viewLifecycleOwner) { updateView() }
+        viewModel.address.observe(viewLifecycleOwner) {
+            if (viewModel.contactData.value?.dashPayProfile == null) {
+                binding.paymentHeader.setSubtitle(it)
+            }
+        }
+        viewModel.maxOutputAmount.observe(viewLifecycleOwner) { balance ->
+            enterAmountViewModel.setMaxAmount(balance)
+            updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
+        }
+
+        viewModel.contactData.observe(viewLifecycleOwner) { contactData ->
+            contactData?.dashPayProfile?.let { profile ->
+                binding.paymentHeader.setSubtitle(profile.displayName.ifEmpty { profile.username })
+                binding.paymentHeader.setPaymentAddressViewIcon(profile.avatarUrl, R.drawable.ic_avatar)
+            }
+            updateView()
+        }
+
+        enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.currentAmount = it }
+        enterAmountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) { viewModel.isDashToFiatPreferred = it }
+        enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
+            lifecycleScope.launch { authenticateOrConfirm() }
+        }
+    }
+
+    private fun updateView() {
+        val isReplaying = viewModel.isBlockchainReplaying.value
+        val dryRunException = viewModel.dryRunException
+        val state = viewModel.state.value ?: SendCoinsViewModel.State.INPUT
+        var errorMessage = ""
+
+        if (isReplaying == true) {
+            errorMessage = getString(R.string.send_coins_fragment_hint_replaying)
+        } else if (dryRunException != null) {
+            errorMessage = when (dryRunException) {
+                is Wallet.DustySendRequested -> getString(R.string.send_coins_error_dusty_send)
+                is InsufficientMoneyException -> getString(R.string.send_coins_error_insufficient_money)
+                is Wallet.CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
+                else -> dryRunException.toString()
+            }
+        }
+
+        enterAmountFragment?.setError(errorMessage)
+        enterAmountViewModel.blockContinue = errorMessage.isNotEmpty() ||
+            !viewModel.everythingPlausible() ||
+            viewModel.isBlockchainReplaying.value ?: false
+
+        enterAmountFragment?.setViewDetails(
+            getString(
+                when (state) {
+                    SendCoinsViewModel.State.INPUT -> R.string.send_coins_fragment_button_send
+                    SendCoinsViewModel.State.SENDING -> R.string.send_coins_sending_msg
+                    SendCoinsViewModel.State.SENT -> R.string.send_coins_sent_msg
+                    SendCoinsViewModel.State.FAILED -> R.string.send_coins_failed_msg
+                }
+            )
+        )
+    }
+
+    private suspend fun authenticateOrConfirm() {
+        if (!viewModel.everythingPlausible()) {
+            return
+        }
+
+        if (!userAuthorizedDuring || viewModel.isSpendingConfirmationEnabled) {
+            val allowBiometric = viewModel.allowBiometric()
+            authManager.authenticate(requireActivity(), !allowBiometric) ?: return
+            userAuthorizedDuring = true
+        }
+
+        if (viewModel.everythingPlausible() && viewModel.dryrunSendRequest != null) {
+            showPaymentConfirmation()
+        }
+
+        updateView()
+    }
+
+    private suspend fun handleGo(checkBalance: Boolean, autoAcceptContactRequest: Boolean) {
+        if (viewModel.dryrunSendRequest == null) {
+            log.error("illegal state dryrunSendRequest == null")
+            return
+        }
+
+        val editedAmount = enterAmountViewModel.amount.value
+        val rate = enterAmountViewModel.selectedExchangeRate.value
+
+        if (rate != null && editedAmount != null) {
+            val exchangeRate = ExchangeRate(Coin.COIN, rate.fiat)
+
+            try {
+                viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND)
+
+                if (enterAmountFragment?.maxSelected == true) {
+                    viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
+                }
+
+                val tx = viewModel.signAndSendPayment(editedAmount, exchangeRate, checkBalance)
+                onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
+            } catch (ex: LeftoverBalanceException) {
+                val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
+
+                if (shouldContinue == true) {
+                    handleGo(false, autoAcceptContactRequest)
+                }
+            } catch (ex: InsufficientMoneyException) {
+                showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
+            } catch (ex: KeyCrypterException) {
+                showFailureDialog(ex)
+            } catch (ex: Wallet.CouldNotAdjustDownwards) {
+                showEmptyWalletFailedDialog()
+            } catch (ex: Exception) {
+                showFailureDialog(ex)
+            }
+
+            viewModel.resetState()
+        }
+    }
+
+    private suspend fun showPaymentConfirmation() {
+        val dryRunRequest = viewModel.dryrunSendRequest ?: return
+        val address = viewModel.basePaymentIntent.address?.toBase58() ?: return
+
+        val txFee = dryRunRequest.tx.fee
+        val amount: Coin?
+        val total: String?
+
+        if (dryRunRequest.emptyWallet) {
+            amount = enterAmountViewModel.amount.value?.minus(txFee)
+            total = enterAmountViewModel.amount.value?.toPlainString()
+        } else {
+            amount = enterAmountViewModel.amount.value
+            total = amount?.add(txFee ?: Coin.ZERO)?.toPlainString()
+        }
+
+        val rate = enterAmountViewModel.selectedExchangeRate.value
+
+        // prevent crash if the exchange rate is null
+        val exchangeRate = if (rate != null) ExchangeRate(Coin.COIN, rate.fiat) else null
+        val fiatAmount = exchangeRate?.coinToFiat(amount)
+        val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
+
+        // if the exchange rate is not available, then show "Not Available"
+        val amountFiat = if (fiatAmount != null) {
+            Constants.LOCAL_FORMAT.format(fiatAmount).toString()
+        } else {
+            getString(R.string.transaction_row_rate_not_available)
+        }
+        val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
+        val fee = txFee?.toPlainString() ?: ""
+
+        var dashPayProfile: DashPayProfile? = null
+
+        if (viewModel.contactData.value?.requestReceived == true) {
+            dashPayProfile = viewModel.contactData.value?.dashPayProfile
+        }
+
+        val isPendingContactRequest = viewModel.contactData.value?.isPendingRequest == true
+        val username = dashPayProfile?.username
+        val displayName = (dashPayProfile?.displayName ?: "").ifEmpty { username }
+        val avatarUrl = dashPayProfile?.avatarUrl
+
+        val dialog = ConfirmTransactionDialog()
+        val confirmed = dialog.show(
+            requireActivity(),
+            address,
+            amountStr,
+            amountFiat,
+            fiatSymbol,
+            fee,
+            total ?: "",
+            null,
+            null,
+            null,
+            username,
+            displayName,
+            avatarUrl,
+            isPendingContactRequest
+        )
+
+        if (confirmed == true) {
+            handleGo(true, dialog.autoAcceptContactRequest)
+        }
+    }
+
+    private fun onSignAndSendPaymentSuccess(transaction: Transaction, autoAcceptContactRequest: Boolean) {
+        viewModel.logSentEvent(enterAmountViewModel.dashToFiatDirection.value ?: true)
+        val callingActivity = requireActivity().callingActivity
+
+        if (callingActivity != null) {
+            log.info("returning result to calling activity: {}", callingActivity.flattenToString())
+            val resultIntent = Intent()
+            BitcoinIntegration.transactionHashToResult(
+                resultIntent,
+                transaction.txId.toString()
+            )
+            requireActivity().setResult(Activity.RESULT_OK, resultIntent)
+        }
+
+        showTransactionResult(transaction, autoAcceptContactRequest)
+        playSentSound()
+        requireActivity().finish()
+    }
+
+    private fun showTransactionResult(transaction: Transaction, autoAcceptContactRequest: Boolean) {
+        if (!isAdded) {
+            return
+        }
+
+        val contactData = viewModel.contactData.value
+
+        if (autoAcceptContactRequest && contactData != null) {
+            dashPayViewModel.sendContactRequest(contactData.dashPayProfile.userId)
+        }
+
+        val transactionResultIntent = TransactionResultActivity.createIntent(
+            requireActivity(),
+            requireActivity().intent.action,
+            transaction,
+            false,
+            contactData
+        )
+        startActivity(transactionResultIntent)
+    }
+
+    private fun playSentSound() {
+        // play sound effect
+        val soundResId = resources.getIdentifier(
+            SEND_COINS_SOUND,
+            "raw",
+            requireActivity().packageName
+        )
+
+        if (soundResId > 0) {
+            RingtoneManager.getRingtone(
+                requireActivity(),
+                Uri.parse("android.resource://" + requireActivity().packageName + "/" + soundResId)
+            )
+                .play()
+        }
+    }
+
+    private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.entity.ExchangeRate?) {
+        val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, it.fiat) }
+        var balanceText = viewModel.dashFormat.format(balance).toString()
+        exchangeRate?.let { balanceText += " ~ ${exchangeRate.coinToFiat(balance).toFormattedString()}" }
+        binding.paymentHeader.setBalanceValue(balanceText)
+    }
+
+    private suspend fun showInsufficientMoneyDialog(missing: Coin) {
+        val msg = StringBuilder(
+            getString(
+                R.string.send_coins_fragment_insufficient_money_msg1,
+                viewModel.dashFormat.format(missing)
+            )
+        )
+
+        val pending = viewModel.getPendingBalance()
+
+        if (pending.signum() > 0) {
+            msg.append("\n\n")
+                .append(getString(R.string.send_coins_fragment_pending, viewModel.dashFormat.format(pending)))
+        }
+
+        val mayEditAmount = viewModel.basePaymentIntent.mayEditAmount()
+
+        if (mayEditAmount) {
+            msg.append("\n\n")
+                .append(getString(R.string.send_coins_fragment_insufficient_money_msg2))
+        }
+
+        var positiveAction = ""
+        val negativeAction: String
+
+        if (mayEditAmount) {
+            positiveAction = getString(R.string.send_coins_options_empty)
+            negativeAction = getString(R.string.button_cancel)
+        } else {
+            negativeAction = getString(R.string.button_dismiss)
+        }
+
+        val useMax = AdaptiveDialog.create(
+            R.drawable.ic_warning_filled,
+            getString(R.string.send_coins_fragment_insufficient_money_title),
+            msg.toString(),
+            negativeAction,
+            positiveAction
+        ).showAsync(requireActivity())
+
+        if (mayEditAmount && useMax == true) {
+            enterAmountFragment?.applyMaxAmount()
+        }
+    }
+
+    private suspend fun showEmptyWalletFailedDialog() {
+        AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.send_coins_fragment_empty_wallet_failed_title),
+            getString(R.string.send_coins_fragment_hint_empty_wallet_failed),
+            getString(R.string.button_dismiss),
+            null
+        ).showAsync(requireActivity())
+    }
+
+    private suspend fun showFailureDialog(exception: Exception) {
+        AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.send_coins_error_msg),
+            exception.toString(),
+            getString(R.string.button_dismiss),
+            null
+        ).showAsync(requireActivity())
+    }
+}

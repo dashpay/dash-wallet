@@ -19,10 +19,9 @@ package de.schildbach.wallet.ui.invite
 import android.content.Context
 import android.util.AttributeSet
 import android.widget.ImageView
-import androidx.annotation.IntegerRes
 import androidx.annotation.LayoutRes
 import androidx.constraintlayout.widget.ConstraintLayout
-import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.utils.display
 import kotlinx.android.synthetic.main.invite_preview_envelope_view.view.*
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay

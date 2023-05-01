@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >Ostatnio znane saldo</string>
+    <string name="coinbase_link_title">Połącz z twoim kontem Coinbase</string>
+    <string name="coinbase_link">Połącz Konto Coinbase</string>
+    <string name="coinbase_transfer_details">Pomiędzy twoim Portfelem Dash a twoim kontem na Coinbase</string>
     <string name="coinbase_dash_wallet_error_title">Nie znaleźliśmy Porfela Dash na twoim koncie Coinbase</string>
     <string name="coinbase_dash_wallet_error_message">Aby kontynuować, stwórz portfel Dash na Coinbase.</string>
     <string name="create_dash_account">Stwórz Konto Dash</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">Rozłącz Konto Coinbase</string>
     <string name="receive_directly_into_dash_wallet">Otrzymaj bezpośrednio do portfela Dash</string>
     <string name="buy_dash">Kup Dash</string>
-    <string name="balance">Saldo:</string>
     <string name="balance_on_coinbase">Saldo na Coinbase</string>
     <string name="sending_to">Wysyłanie do</string>
     <string name="dash_wallet_device">Portfel Dash na tym urządzeniu</string>
@@ -36,13 +38,16 @@
     <string name="coinbase_fee">Opłata Coinbase</string>
     <string name="total">Całkowite</string>
     <string name="order_preview">Podgląd Zamówienia</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Otrzymasz %s do portfela Dash na tym urządzeniu. Trasfer może zająć 2-3 minuty. </string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Otrzymasz %s Dash do twojego portfel na tym urządzeniu. Pamiętaj że proces dokonania transkacji może potrwać 2 - 3 minuty.</string>
     <string name="amount_in_dash">Kwota w Dash</string>
     <string name="cancel">Anuluj</string>
     <string name="confirm_sec">Potwierdź (%ss)</string>
     <string name="confirm">Potwierdź</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Nie znaleźliśmy żadnej metody płatności.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Zaktualizuj swoje konto Coinbase aby móc kontynuować.</string>
+    <string name="coinbase_no_payment_methods_error_title">Nie znaleźliśmy żadnej metody płatności.</string>
+    <string name="coinbase_no_payment_methods_error_message">Zaktualizuj swoje konto Coinbase aby móc kontynuować.</string>
+    <string name="coinbase_unusable_payment_method_error_title">Ta metoda płatności nie może być użyta.</string>
+    <string name="coinbase_unusable_payment_method_error_message">Zezwól na dokonywanie zakupów na koncie Coinbase za pomocą tej metody płatności.</string>
+    <string name="coinbase_open_account">Otwórz Konto Coinbase</string>
     <string name="add_payment_method">Dodaj Metodę Płatności</string>
     <string name="error">Błąd</string>
     <string name="cancel_transaction">Anuluj transakcję?</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">Ten kod był nieprawidłowy. Proszę spróbuj ponownie</string>
     <string name="verify_code">Zweryfikuj</string>
     <string name="you_dont_have_enough_balance">Nie masz wystarczająco środków</string>
-    <string name="transfer_dash">Przetransferuj Dash</string>
     <string name="transfer_amount">Przelej</string>
     <string name="dash_wallet_limit_description">Kwota ta jest większa niż twoje saldo</string>
     <string name="address_creation_failed">Nie mogliśmy utworzyć adresu dla Twojego konta, aby sfinalizować transakcję. Proszę spróbuj później.</string>

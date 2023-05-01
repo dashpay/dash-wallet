@@ -17,15 +17,23 @@
 
 package de.schildbach.wallet.util;
 
-import static org.dash.wallet.common.Constants.CHAR_THIN_SPACE;
-
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.content.Intent;
-import android.net.Uri;
-import android.text.Editable;
-import android.text.SpannableStringBuilder;
-import android.text.format.DateUtils;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Writer;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
+import java.util.TimeZone;
 
 import com.google.common.base.Charsets;
 
@@ -72,6 +80,16 @@ import javax.annotation.Nullable;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet_test.R;
+
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.text.Editable;
+import android.text.SpannableStringBuilder;
+import android.text.format.DateUtils;
+
+import static org.dash.wallet.common.util.Constants.CHAR_THIN_SPACE;
 
 /**
  * @author Andreas Schildbach

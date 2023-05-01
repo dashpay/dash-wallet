@@ -1,49 +1,56 @@
 /*
- * Copyright 2020 Dash Core Group
+ * Copyright 2023 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package de.schildbach.wallet.ui.dashpay
 
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.switchMap
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityBaseData
+import androidx.lifecycle.*
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
+import de.schildbach.wallet.database.entity.DashPayProfile
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.*
 
+@OptIn(ExperimentalCoroutinesApi::class)
 open class BaseProfileViewModel(
-    val walletApplication: WalletApplication,
-    val appDatabase: AppDatabase
+    val blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    val dashPayProfileDao: DashPayProfileDao
 ) : ViewModel() {
 
-    // blockchainIdentityData is observed instead of using PlatformRepo.getBlockchainIdentity()
-    // since neither PlatformRepo nor blockchainIdentity is initialized when there is no username
-    val blockchainIdentityData = appDatabase
-            .blockchainIdentityDataDaoAsync().loadBase()
-    val blockchainIdentity: BlockchainIdentityBaseData?
-        get() = blockchainIdentityData.value
+    private val _blockchainIdentity = MutableLiveData<BlockchainIdentityBaseData?>()
+    val blockchainIdentity: LiveData<BlockchainIdentityBaseData?>
+        get() = _blockchainIdentity
+
+    private val _dashPayProfile = MutableLiveData<DashPayProfile?>()
+    val dashPayProfile: LiveData<DashPayProfile?>
+        get() = _dashPayProfile
 
     val hasIdentity: Boolean
-        get() = blockchainIdentity?.creationComplete ?: false
+        get() = _blockchainIdentity.value?.creationComplete ?: false
 
-    val dashPayProfileData = blockchainIdentityData.switchMap {
-        if (it?.userId != null) {
-            appDatabase.dashPayProfileDaoAsync().loadByUserIdDistinct(it.userId)
-        } else {
-            MutableLiveData()   //empty
-        }
+    init {
+        // blockchainIdentityData is observed instead of using PlatformRepo.getBlockchainIdentity()
+        // since neither PlatformRepo nor blockchainIdentity is initialized when there is no username
+        blockchainIdentityDataDao.observeBase()
+            .distinctUntilChanged()
+            .onEach(_blockchainIdentity::postValue)
+            .filter { it?.userId != null }
+            .flatMapLatest { dashPayProfileDao.observeByUserId(it?.userId!!) }
+            .distinctUntilChanged()
+            .onEach(_dashPayProfile::postValue)
+            .launchIn(viewModelScope)
     }
-    val dashPayProfile
-        get() = dashPayProfileData.value
 }

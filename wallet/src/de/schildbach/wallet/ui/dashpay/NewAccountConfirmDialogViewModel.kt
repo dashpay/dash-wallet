@@ -16,18 +16,30 @@
 
 package de.schildbach.wallet.ui.dashpay
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.rates.ExchangeRatesRepository
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.services.ExchangeRatesProvider
+import javax.inject.Inject
 
-class NewAccountConfirmDialogViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class NewAccountConfirmDialogViewModel @Inject constructor(
+    private val walletApplication: WalletApplication,
+    private val exchangeRatesProvider: ExchangeRatesProvider
+) : ViewModel() {
 
-    val walletApplication = application as WalletApplication
-    val exchangeRateData: LiveData<ExchangeRate>
+    private val _exchangeRateData = MutableLiveData<ExchangeRate?>()
+    val exchangeRateData: LiveData<ExchangeRate?>
+        get() = _exchangeRateData
 
     val exchangeRate: org.bitcoinj.utils.ExchangeRate?
         get() = exchangeRateData.value?.run {
@@ -36,6 +48,10 @@ class NewAccountConfirmDialogViewModel(application: Application) : AndroidViewMo
 
     init {
         val currencyCode = walletApplication.configuration.exchangeCurrencyCode
-        exchangeRateData = ExchangeRatesRepository.instance.getRate(currencyCode)
+        exchangeRatesProvider.observeExchangeRate(currencyCode!!)
+            .filterNotNull()
+            .distinctUntilChanged()
+            .onEach(_exchangeRateData::postValue)
+            .launchIn(viewModelScope)
     }
 }

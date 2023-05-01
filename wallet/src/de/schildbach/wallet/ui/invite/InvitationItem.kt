@@ -16,7 +16,7 @@
 
 package de.schildbach.wallet.ui.invite
 
-import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.util.PlatformUtils
 import org.bitcoinj.core.Sha256Hash
 

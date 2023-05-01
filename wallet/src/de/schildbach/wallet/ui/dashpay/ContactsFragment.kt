@@ -21,7 +21,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
-import android.util.Log
 import android.view.*
 import android.widget.TextView
 import androidx.core.text.HtmlCompat
@@ -37,24 +36,23 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
-import org.dash.wallet.common.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.main.MainViewModel
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
+import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentContactsRootBinding
-import kotlinx.android.synthetic.main.activity_payments.view.*
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
@@ -163,8 +161,10 @@ class ContactsFragment : Fragment(),
             // Developer Mode Feature
             // Hide the invite UI
             emptyStatePane.inviteHintLayout.inviteFriendHint.setOnClickListener {
-                dashPayViewModel.inviteHistory.observeOnce(requireActivity()) {
-                    if (it == null || it.isEmpty()) {
+                lifecycleScope.launch {
+                    val inviteHistory = dashPayViewModel.getInviteHistory()
+
+                    if (inviteHistory.isEmpty()) {
                         InviteFriendActivity.startOrError(requireActivity())
                     } else {
                         dashPayViewModel.logEvent(AnalyticsConstants.Invites.INVITE_CONTACTS)
@@ -401,7 +401,7 @@ class ContactsFragment : Fragment(),
 
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 if (fireAction) {
-                    SendCoinsInternalActivity.start(context, paymentIntent, true)
+                    SendCoinsActivity.start(requireContext(), null, paymentIntent, true)
                 } else {
 
                 }
@@ -410,7 +410,7 @@ class ContactsFragment : Fragment(),
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
                     val dialog = AdaptiveDialog.create(
-                        R.drawable.ic_info_red,
+                        R.drawable.ic_error,
                         getString(errorDialogTitleResId),
                         if (messageArgs.isNotEmpty()) {
                             getString(messageResId, messageArgs)

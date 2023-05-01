@@ -59,7 +59,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.entity.ExchangeRate;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.FancyAlertDialog;
@@ -74,7 +74,9 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.DynamicFeeLoader;
@@ -84,7 +86,8 @@ import de.schildbach.wallet.payments.DecodePrivateKeyTask;
 import de.schildbach.wallet.data.FeeCategory;
 import de.schildbach.wallet.payments.RequestWalletBalanceTask;
 import de.schildbach.wallet.payments.SendCoinsOfflineTask;
-import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.service.PackageInfoProvider;
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity;
 import de.schildbach.wallet.ui.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet.ui.scan.ScanActivity;
@@ -98,6 +101,7 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public class SweepWalletFragment extends Fragment {
     private SweepWalletActivity activity;
     private WalletApplication application;
@@ -139,11 +143,14 @@ public class SweepWalletFragment extends Fragment {
 
     private static final Logger log = LoggerFactory.getLogger(SweepWalletFragment.class);
 
+    @Inject
+    PackageInfoProvider packageInfoProvider;
+
     private final LoaderManager.LoaderCallbacks<Map<FeeCategory, Coin>> dynamicFeesLoaderCallbacks = new LoaderManager.LoaderCallbacks<Map<FeeCategory, Coin>>() {
         @NonNull
         @Override
         public Loader<Map<FeeCategory, Coin>> onCreateLoader(final int id, final Bundle args) {
-            return new DynamicFeeLoader(activity);
+            return new DynamicFeeLoader(activity, packageInfoProvider);
         }
 
         @Override

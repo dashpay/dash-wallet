@@ -19,8 +19,11 @@ package org.dash.wallet.common.ui.dialogs
 
 import android.graphics.Rect
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.annotation.LayoutRes
 import androidx.annotation.StyleRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.res.ResourcesCompat
@@ -32,20 +35,23 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
-
-open class OffsetDialogFragment : BottomSheetDialogFragment() {
+open class OffsetDialogFragment(@LayoutRes private val layout: Int) : BottomSheetDialogFragment() {
     protected open val forceExpand: Boolean = false
     @StyleRes protected open val backgroundStyle: Int = R.style.SecondaryBackground
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         setStyle(STYLE_NORMAL, R.style.OffsetDialog)
+        return inflater.inflate(layout, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         dialog?.setOnShowListener { dialog ->
+            if (!this@OffsetDialogFragment.isAdded) {
+                return@setOnShowListener
+            }
+
             val d = dialog as BottomSheetDialog
             val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
             bottomSheet?.let {

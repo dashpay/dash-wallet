@@ -26,7 +26,6 @@
     <string name="disconnect_coinbase_account">ВІдключити обліковий запис Coinbase</string>
     <string name="receive_directly_into_dash_wallet">Отримуйте безпосередньо в Dash Wallet.</string>
     <string name="buy_dash">Купити Dash</string>
-    <string name="balance">Баланс:</string>
     <string name="balance_on_coinbase">Баланс на Coinbase</string>
     <string name="sending_to">Відправка</string>
     <string name="dash_wallet_device">Dash Wallet на цьому пристрої</string>
@@ -36,13 +35,11 @@
     <string name="coinbase_fee">Комісія Coinbase</string>
     <string name="total">Всього</string>
     <string name="order_preview">Попередній перегляд замовлення</string>
-    <string name="you_will_receive_dash_on_your_dash_wallet">Ви отримаєте %s Dash на свій Dash гаманець на цьому пристрої. Зверніть увагу, що передача може тривати 2-3 хвилини.</string>
     <string name="amount_in_dash">Сума в Dash</string>
     <string name="cancel">Відміна</string>
     <string name="confirm_sec">Підтвердження (%s сек.)</string>
     <string name="confirm">Підтвердити</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Ми не знайшли способів оплати.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Щоб продовжити, оновіть свій обліковий запис Coinbase.</string>
+    <string name="coinbase_no_payment_methods_error_title">Ми не знайшли способів оплати.</string>
     <string name="add_payment_method">Додати спосіб оплати</string>
     <string name="error">Помилка</string>
     <string name="cancel_transaction">Відмінити транзакцію?</string>
@@ -55,7 +52,6 @@
     <string name="conversion_failed">Конвертація не вдалась</string>
     <string name="transfer_failed_msg">Dash успішно внесено на ваш обліковий запис Coinbase. Але виникла проблема під час перенесення його в Dash Wallet на цьому пристрої.</string>
     <string name="purchase_failed_msg">Щось пішло не так</string>
-    <string name="it_could_take_up_to_2_3_minutes">Перенесення Dash у ваш Dash Wallet на цьому пристрої може зайняти 2-3 хвилини.</string>
     <string name="it_could_take_up_to_5_minutes">Перетворення %s з облікового запису Coinbase на Dash у вашому Dash Wallet на цьому пристрої може зайняти до 5 хвилин.</string>
     <string name="it_could_take_up_to_5_minutes_to_coinbase">«Конвертація Dash з Dash Wallet на цьому пристрої в %s у вашому обліковому записі Coinbase може зайняти до 5 хвилин.</string>
     <string name="contact_coinbase_support">Звернутися до служби підтримки Coinbase</string>
@@ -103,7 +99,6 @@
     <string name="invalid_code">Цей код був недійсним. Будь ласка спробуйте ще раз</string>
     <string name="verify_code">Підтвердити</string>
     <string name="you_dont_have_enough_balance">Ваш баланс недостатній</string>
-    <string name="transfer_dash">Переказати Dash</string>
     <string name="transfer_amount">Переказати</string>
     <string name="dash_wallet_limit_description">Сума перевищує ваш баланс</string>
     <string name="address_creation_failed">Нам не вдалося створити адресу для вашого облікового запису, щоб завершити транзакцію. Спробуйте пізніше.</string>

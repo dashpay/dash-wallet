@@ -43,8 +43,7 @@ data class SegmentedOption(
 
 class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(context, attrs) {
     private val binding = SegmentedPickerBinding.inflate(LayoutInflater.from(context), this)
-    private lateinit var options: List<SegmentedOption>
-    private var adapter: PickerOptionsAdapter? = null
+    private lateinit var adapter: PickerOptionsAdapter
     private var optionPickedListener: ((SegmentedOption, Int) -> Unit)? = null
     private val dividerDrawable = ContextCompat.getDrawable(
         context, R.drawable.segmented_picker_divider)!!
@@ -59,7 +58,7 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
         private set
 
     val pickedOption: SegmentedOption
-        get() = options[pickedOptionIndex]
+        get() = adapter.currentList[pickedOptionIndex]
 
     init {
         background = resources.getRoundedBackground(R.style.SegmentedPickerBackground)
@@ -67,7 +66,7 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
 
         doOnLayout {
             binding.thumb.layoutParams = LayoutParams(
-                (trackWidth / options.size) + 4 * dividerDrawable.intrinsicWidth,
+                (trackWidth / adapter.itemCount) + 4 * dividerDrawable.intrinsicWidth,
                 binding.thumb.measuredHeight,
                 Gravity.CENTER_VERTICAL
             )
@@ -76,7 +75,6 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
     }
 
     fun provideOptions(options: List<SegmentedOption>) {
-        this.options = options
         this.adapter = PickerOptionsAdapter(options) { option, index ->
             moveThumb(index)
 
@@ -100,15 +98,15 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
     }
 
     private fun moveThumb(index: Int, animate: Boolean = true) {
-        adapter?.selectedIndex = index
+        adapter.selectedIndex = index
         val optionsParams = binding.options.layoutParams as LayoutParams
         // Allows animating a thumb that's bigger than option size
-        val optionWidth = trackWidth / options.size
+        val optionWidth = trackWidth / adapter.itemCount
         val thumbWidth = binding.thumb.layoutParams.width
         val minX = optionsParams.leftMargin.toFloat()
         val maxX = trackWidth - thumbWidth + minX
         val position = if (resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL) {
-            options.size - index - 1
+            adapter.itemCount - index - 1
         } else {
             index
         }
@@ -132,8 +130,8 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
         // Draw vertical separators
         val width = trackWidth
 
-        for (i in 1 until options.size) {
-            val leftBound = width / options.size * i
+        for (i in 1 until adapter.itemCount) {
+            val leftBound = width / adapter.itemCount * i
             val rightBound = leftBound + dividerDrawable.intrinsicWidth
 
             dividerDrawable.setBounds(

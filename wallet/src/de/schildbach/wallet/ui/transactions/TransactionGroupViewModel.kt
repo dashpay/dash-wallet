@@ -34,6 +34,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
@@ -68,7 +69,7 @@ class TransactionGroupViewModel @Inject constructor(
     fun init(transactionWrapper: TransactionWrapper) {
         _exchangeRate.value = transactionWrapper.transactions.last().exchangeRate
 
-        metadataProvider.observeAllMemos()
+        metadataProvider.observePresentableMetadata()
             .flatMapLatest { memos ->
                 refreshTransactions(transactionWrapper, memos)
                 walletData.observeTransactions(true)
@@ -82,7 +83,10 @@ class TransactionGroupViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    private fun refreshTransactions(transactionWrapper: TransactionWrapper, memos: Map<Sha256Hash, String>) {
+    private fun refreshTransactions(
+        transactionWrapper: TransactionWrapper,
+        metadata: Map<Sha256Hash, PresentableTxMetadata>
+    ) {
         val resourceMapper = if (transactionWrapper is FullCrowdNodeSignUpTxSet) {
             CrowdNodeTxResourceMapper()
         } else {
@@ -90,10 +94,9 @@ class TransactionGroupViewModel @Inject constructor(
         }
 
         _transactions.value = transactionWrapper.transactions.map {
-            val memo = memos.getOrDefault(it.txId, "")
+            val txMetadata = metadata.getOrDefault(it.txId, null)
             TransactionRowView.fromTransaction(
-                it, memo, walletData.wallet!!,
-                walletData.wallet!!.context, null, resourceMapper
+                it, walletData.wallet!!, walletData.wallet!!.context, txMetadata, null, resourceMapper
             )
         }
         _dashValue.value = transactionWrapper.getValue(walletData.transactionBag)

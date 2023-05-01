@@ -21,11 +21,11 @@ import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.uri.BitcoinURI;
+import org.dash.wallet.common.util.Qr;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.Constants;
-import org.dash.wallet.common.util.Qr;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
@@ -90,7 +90,7 @@ public class WalletAddressDialogFragment extends DialogFragment {
         dialog.setCanceledOnTouchOutside(true);
 
         final String uri = BitcoinURI.convertToBitcoinURI(address, null, addressLabel, null);
-        final BitmapDrawable bitmap = new BitmapDrawable(getResources(), Qr.bitmap(uri));
+        final BitmapDrawable bitmap = new BitmapDrawable(getResources(), Qr.INSTANCE.qrBitmap(uri));
         bitmap.setFilterBitmap(false);
         final ImageView imageView = (ImageView) dialog.findViewById(R.id.wallet_address_dialog_image);
         imageView.setImageDrawable(bitmap);

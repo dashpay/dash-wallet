@@ -7,18 +7,19 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.PowerManager
 import android.os.Process
-import androidx.core.os.bundleOf
 import androidx.lifecycle.LifecycleService
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityData
-import de.schildbach.wallet.data.BlockchainIdentityData.CreationState
-import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.BlockchainIdentityData.CreationState
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.payments.DecryptSeedTask
 import de.schildbach.wallet.payments.DeriveKeyTask
+import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
@@ -137,6 +138,9 @@ class CreateIdentityService : LifecycleService() {
     private val walletApplication by lazy { application as WalletApplication }
     private val platformRepo by lazy { PlatformRepo.getInstance() }
     @Inject lateinit var platformSyncService: PlatformSyncService
+    @Inject lateinit var userAlertDao: UserAlertDao
+    @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityDataDao
+    @Inject lateinit var securityFunctions: SecurityFunctions
     private lateinit var securityGuard: SecurityGuard
 
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
@@ -151,7 +155,9 @@ class CreateIdentityService : LifecycleService() {
         pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName)
     }
 
-    private val createIdentityNotification by lazy { CreateIdentityNotification(this) }
+    private val createIdentityNotification by lazy {
+        CreateIdentityNotification(this, blockchainIdentityDataDao)
+    }
 
     private val serviceJob = Job()
     private var serviceScope = CoroutineScope(serviceJob + Dispatchers.Main)
@@ -592,7 +598,7 @@ class CreateIdentityService : LifecycleService() {
             // Step 5: Verify that the username was registered
             //
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-            analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME, bundleOf())
+            analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME, mapOf())
         }
 
         // Step 6: A profile will not be created, since the user has not yet specified
@@ -618,7 +624,7 @@ class CreateIdentityService : LifecycleService() {
             // managed by NotificationsLiveData
             val userAlert = UserAlert(R.string.invitation_notification_text,
                     R.drawable.ic_invitation)
-            AppDatabase.getAppDatabase().userAlertDao().insert(userAlert)
+            userAlertDao.insert(userAlert)
 
         }
     }
@@ -643,11 +649,11 @@ class CreateIdentityService : LifecycleService() {
 
         val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { it.creditBurnIdentityIdentifier.bytes!!.contentEquals(identity) }
 
-        val existingBlockchainIdentityData = AppDatabase.getAppDatabase().blockchainIdentityDataDao().load()
+        val existingBlockchainIdentityData = blockchainIdentityDataDao.load()
         if (existingBlockchainIdentityData != null) {
             log.info("Attempting restore of existing identity and username; save credit funding txid")
-            val blockchainIdentity = platformRepo.getBlockchainIdentity()
-            blockchainIdentity!!.creditFundingTransaction = creditFundingTransaction
+            val blockchainIdentity = platformRepo.blockchainIdentity
+            blockchainIdentity.creditFundingTransaction = creditFundingTransaction
             existingBlockchainIdentityData.creditFundingTxId = creditFundingTransaction!!.txId
             platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
             return
@@ -736,7 +742,7 @@ class CreateIdentityService : LifecycleService() {
      */
     private suspend fun deriveKey(handler: Handler, wallet: Wallet, password: String): KeyParameter {
         return suspendCoroutine { continuation ->
-            object : DeriveKeyTask(handler, walletApplication.scryptIterationsTarget()) {
+            object : DeriveKeyTask(handler, securityFunctions.scryptIterationsTarget) {
 
                 override fun onSuccess(encryptionKey: KeyParameter, wasChanged: Boolean) {
                     continuation.resume(encryptionKey)

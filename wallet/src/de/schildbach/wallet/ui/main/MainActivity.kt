@@ -28,7 +28,6 @@ import android.nfc.NdefMessage
 import android.nfc.NfcAdapter
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
 import android.os.LocaleList
 import android.provider.Settings
 import android.telephony.TelephonyManager
@@ -38,23 +37,17 @@ import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.FragmentTransaction
 import androidx.lifecycle.lifecycleScope
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletBalanceWidgetProvider
-import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.InputParser.BinaryInputParser
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet.ui.backup.RestoreFromFileHelper
 import de.schildbach.wallet.ui.dashpay.*
@@ -62,7 +55,7 @@ import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
 import de.schildbach.wallet.ui.main.WalletActivityExt.setupBottomNavigation
-import de.schildbach.wallet.ui.payments.PaymentsPayFragment
+import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.Nfc
@@ -77,18 +70,20 @@ import org.dash.wallet.common.data.CurrencyInfo
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.*
 import javax.inject.Inject
 
 
-// TODO: check WalletActivity commits
 @AndroidEntryPoint
 class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPermissionsResultCallback,
     UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
     EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
 
     companion object {
+        private val log = LoggerFactory.getLogger(MainActivity::class.java)
+
         const val REQUEST_CODE_SCAN = 0
         const val REQUEST_CODE_BACKUP_WALLET = 1
         const val REQUEST_CODE_RESTORE_WALLET = 2
@@ -127,10 +122,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimary)
-        }
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimary)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         this.setupBottomNavigation(viewModel)
@@ -161,7 +154,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun handleCreateFromInvite() {
-        if (!config.hasBeenUsed() && config.onboardingInviteProcessing) {
+//        if (!config.hasBeenUsed() && config.onboardingInviteProcessing) { // TODO
+        if (config.onboardingInviteProcessing) {
             if (config.isRestoringBackup) {
                 binding.restoringWalletCover.isVisible = true
             } else {
@@ -183,7 +177,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             // inside the parent Activity will avoid recreation of relatively complex
             // isAbleToCreateIdentityData LiveData
         }
-        viewModel.blockchainIdentityData.observe(this) {
+        viewModel.blockchainIdentity.observe(this) {
             if (it != null) {
                 if (retryCreationIfInProgress && it.creationInProgress) {
                     retryCreationIfInProgress = false
@@ -446,7 +440,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             val ndefMessage = intent
                 .getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)!![0] as NdefMessage
             val input = Nfc.extractMimePayload(Constants.MIMETYPE_TRANSACTION, ndefMessage)
-            object : BinaryInputParser(inputType, input) {
+            object : InputParser.BinaryInputParser(inputType, input) {
                 override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                     cannotClassify(inputType)
                 }
@@ -463,7 +457,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun checkAlerts() {
-        val packageInfo = walletApplication.packageInfo()
+        val packageInfo = packageInfoProvider.packageInfo
         val versionNameSplit = packageInfo.versionName.indexOf('-')
         val url = (Constants.VERSION_URL
             .toString() + if (versionNameSplit >= 0) packageInfo.versionName.substring(versionNameSplit) else "").toHttpUrlOrNull()
@@ -487,7 +481,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 @Throws(IOException::class)
                 override fun collectApplicationInfo(): CharSequence {
                     val applicationInfo = StringBuilder()
-                    CrashReporter.appendApplicationInfo(applicationInfo, walletApplication)
+                    CrashReporter.appendApplicationInfo(
+                        applicationInfo,
+                        packageInfoProvider,
+                        configuration,
+                        walletData.wallet
+                    )
                     return applicationInfo
                 }
 
@@ -539,7 +538,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                     if (reportIssue) {
                         alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
                             this@MainActivity,
-                            WalletApplication.getInstance()
+                            packageInfoProvider,
+                            configuration,
+                            walletData.wallet
                         ).buildAlertDialog()
                         alertDialog.show()
                     } else {
@@ -632,7 +633,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private fun showBackupWalletDialogIfNeeded() {
         if (showBackupWalletDialog) {
-            BackupWalletDialogFragment.show(supportFragmentManager)
+            BackupWalletDialogFragment.show(this)
             showBackupWalletDialog = false
         }
     }

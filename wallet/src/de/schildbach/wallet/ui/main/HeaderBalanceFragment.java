@@ -33,14 +33,14 @@ import androidx.lifecycle.ViewModelProvider;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
-import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.entity.ExchangeRate;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay;
 import org.dash.wallet.common.util.GenericUtils;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.data.DashPayProfile;
+import de.schildbach.wallet.database.entity.DashPayProfile;
 import de.schildbach.wallet.ui.dashpay.NotificationsActivity;
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplayKt;
 import de.schildbach.wallet_test.R;
@@ -117,7 +117,7 @@ public final class HeaderBalanceFragment extends Fragment {
         viewModel.getExchangeRate().observe(getViewLifecycleOwner(), rate -> updateView());
         viewModel.getBalance().observe(getViewLifecycleOwner(), balance -> updateView());
         viewModel.getHideBalance().observe(getViewLifecycleOwner(), toHide -> updateView());
-        viewModel.getDashPayProfileData().observe(getViewLifecycleOwner(), dashPayProfile -> {
+        viewModel.getDashPayProfile().observe(getViewLifecycleOwner(), dashPayProfile -> {
             updateView();
             setNotificationCount();
         });
@@ -133,7 +133,7 @@ public final class HeaderBalanceFragment extends Fragment {
     }
 
     private void updateView() {
-        DashPayProfile dashPayProfile = viewModel.getDashPayProfile();
+        DashPayProfile dashPayProfile = viewModel.getDashPayProfile().getValue();
         ProfilePictureDisplayKt.display(ProfilePictureDisplay.Companion, dashpayUserAvatar, dashPayProfile, true);
 
         View balances = view.findViewById(R.id.balances_layout);
@@ -186,7 +186,7 @@ public final class HeaderBalanceFragment extends Fragment {
                     );
                     final Fiat localValue = rate.coinToFiat(balance);
                     viewBalanceLocal.setVisibility(View.VISIBLE);
-                    String currencySymbol = GenericUtils.currencySymbol(exchangeRate.getCurrencyCode());
+                    String currencySymbol = GenericUtils.INSTANCE.currencySymbol(exchangeRate.getCurrencyCode());
                     viewBalanceLocal.setFormat(Constants.LOCAL_FORMAT.code(0, currencySymbol));
                     viewBalanceLocal.setAmount(localValue);
                 } else {

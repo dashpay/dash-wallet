@@ -39,6 +39,7 @@ import com.squareup.okhttp.internal.http.HttpDate;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.util.Io;
 
 import android.content.Context;
@@ -62,13 +63,13 @@ public class DynamicFeeLoader extends AsyncTaskLoader<Map<FeeCategory, Coin>> {
 
     private static final Logger log = LoggerFactory.getLogger(DynamicFeeLoader.class);
 
-    public DynamicFeeLoader(final Context context) {
+    public DynamicFeeLoader(final Context context, final PackageInfoProvider packageInfoProvider) {
         super(context);
-        final PackageInfo packageInfo = WalletApplication.packageInfoFromContext(context);
+        final PackageInfo packageInfo = packageInfoProvider.getPackageInfo();
         final int versionNameSplit = packageInfo.versionName.indexOf('-');
         this.dynamicFeesUrl = HttpUrl.parse(Constants.DYNAMIC_FEES_URL
                 + (versionNameSplit >= 0 ? packageInfo.versionName.substring(versionNameSplit) : ""));
-        this.userAgent = WalletApplication.httpUserAgent(packageInfo.versionName);
+        this.userAgent = packageInfoProvider.httpUserAgent(packageInfo.versionName);
         this.assets = context.getAssets();
     }
 
@@ -160,7 +161,7 @@ public class DynamicFeeLoader extends AsyncTaskLoader<Map<FeeCategory, Coin>> {
         if (targetFile.exists())
             requestBuilder.header("If-Modified-Since", HttpDate.format(new Date(targetFile.lastModified())));
 
-        final OkHttpClient httpClient = Constants.HTTP_CLIENT.newBuilder()
+        final OkHttpClient httpClient = org.dash.wallet.common.util.Constants.INSTANCE.getHTTP_CLIENT().newBuilder()
                 .connectTimeout(5, TimeUnit.SECONDS)
                 .writeTimeout(5, TimeUnit.SECONDS)
                 .readTimeout(5, TimeUnit.SECONDS)

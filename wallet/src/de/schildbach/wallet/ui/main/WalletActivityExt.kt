@@ -28,13 +28,17 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 
 object WalletActivityExt {
     fun MainActivity.setupBottomNavigation(viewModel: MainViewModel) {
-        val navController = (supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment).navController
+        val navHost = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val navController = navHost.navController
         val navView: BottomNavigationView = findViewById(R.id.bottom_navigation)
         setupWithNavController(navView, navController)
         navView.itemIconTintList = null
         navView.setOnItemSelectedListener { item: MenuItem ->
-            if (item.itemId == R.id.paymentsFragment) {
-                viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
+            when (item.itemId) {
+                R.id.walletFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_HOME)
+                R.id.paymentsFragment -> viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
+                R.id.moreFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_MORE)
+                else -> { }
             }
             onNavDestinationSelected(item, navController)
             true

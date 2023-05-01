@@ -63,14 +63,11 @@
             tools:text="Alabama" />
 
         <ImageView
-            android:layout_width="14dp"
-            android:layout_height="14dp"
-            android:rotation="180"
-            android:src="@drawable/ic_arrow_back"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_light_gray_arrow_right"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:tint="@color/steel_gray_150"
-            tools:tint="@color/steel_gray_150" />
+            app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </FrameLayout>

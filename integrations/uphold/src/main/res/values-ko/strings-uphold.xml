@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">업홀드</string>
+    <string name="uphold_link_title">업홀드 계정 연결 연결하기</string>
+    <string name="uphold_transfer_details">업홀드에서 당신의 대시 지갑으로</string>
     <string name="uphold_buy_dash_activity_title">업홀드로 대시 매수/매도</string>
     <string name="uphold_buy_dash_with_uphold">업홀드 계정으로 대시 구입</string>
     <string name="uphold_buy_dash_button">대시 구입</string>

@@ -36,15 +36,15 @@ import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.InputParser.StringInputParser
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.payments.PaymentsFragment
-import de.schildbach.wallet.ui.payments.PaymentsPayFragment
 import de.schildbach.wallet.ui.scan.ScanActivity
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
+import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HomeContentBinding
@@ -156,8 +156,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     findNavController().navigate(
                         R.id.paymentsFragment,
                         bundleOf(
-                            PaymentsFragment.ARG_ACTIVE_TAB to
-                                    PaymentsFragment.ACTIVE_TAB_RECEIVE
+                            PaymentsFragment.ARG_ACTIVE_TAB to PaymentsFragment.ACTIVE_TAB_RECEIVE
                         )
                     )
                 }
@@ -165,12 +164,12 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     SweepWalletActivity.start(requireContext(), true)
                 }
                 binding.shortcutsPane.explore -> {
+                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_EXPLORE)
                     findNavController().navigate(
                         R.id.exploreFragment,
                         bundleOf(),
                         NavOptions.Builder()
                             .setEnterAnim(R.anim.slide_in_bottom)
-                            .setPopUpTo(R.id.walletFragment, true)
                             .build()
                     )
                 }
@@ -233,7 +232,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun startVerifySeedActivity(pin: String) {
-        val intent: Intent = VerifySeedActivity.createIntent(requireContext(), pin)
+        val intent: Intent = VerifySeedActivity.createIntent(requireContext(), pin, false)
         startActivity(intent)
     }
 
@@ -257,12 +256,14 @@ class WalletFragment : Fragment(R.layout.home_content) {
             )
         } else {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.shortcut_pay_to_address),
                 getString(R.string.scan_to_pay_error_dialog_message_no_data),
                 getString(R.string.button_close),
                 null
-            ).show(requireActivity())
+            ).show(requireActivity()) {
+                viewModel.logEvent(AnalyticsConstants.Home.NO_ADDRESS_COPIED)
+            }
         }
     }
 
@@ -278,11 +279,11 @@ class WalletFragment : Fragment(R.layout.home_content) {
                         getString(R.string.confirm)
                     ).show(requireActivity()) { confirmed ->
                         if (confirmed != null && confirmed) {
-                            SendCoinsInternalActivity.start(requireContext(), paymentIntent, true)
+                            SendCoinsActivity.start(requireContext(), paymentIntent)
                         }
                     }
                 } else {
-                    SendCoinsInternalActivity.start(requireActivity(), paymentIntent, true)
+                    SendCoinsActivity.start(requireActivity(), paymentIntent)
                 }
             }
 
@@ -297,7 +298,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
             override fun error(x: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 val dialog = AdaptiveDialog.create(
-                    R.drawable.ic_info_red,
+                    R.drawable.ic_error,
                     getString(errorDialogTitleResId),
                     if (messageArgs.isNotEmpty()) {
                         getString(messageResId, *messageArgs)
@@ -308,7 +309,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     null
                 )
                 dialog.isMessageSelectable = true
-                dialog.show(requireActivity())
+                dialog.show(requireActivity()) {
+                    viewModel.logEvent(AnalyticsConstants.Home.NO_ADDRESS_COPIED)
+                }
             }
 
             override fun cannotClassify(input: String) {

@@ -16,7 +16,6 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -26,31 +25,29 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.Event
-import org.dash.wallet.common.livedata.NetworkStateInt
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.*
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import java.lang.NumberFormatException
 import javax.inject.Inject
 
-@ExperimentalCoroutinesApi
 @HiltViewModel
-class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepository: CoinBaseRepositoryInt,
-                                                   private val userPreference: Configuration,
-                                                   var exchangeRates: ExchangeRatesProvider,
-                                                   var networkState: NetworkStateInt,
-                                                   private val analyticsService: AnalyticsService
-) : ConnectivityViewModel(networkState) {
+class CoinbaseBuyDashViewModel @Inject constructor(
+    private val coinBaseRepository: CoinBaseRepositoryInt,
+    private val userPreference: Configuration,
+    var exchangeRates: ExchangeRatesProvider,
+    networkState: NetworkStateInt,
+    private val analyticsService: AnalyticsService
+) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
@@ -59,12 +56,13 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
     val activePaymentMethods: LiveData<List<PaymentMethod>>
         get() = _activePaymentMethods
 
-    private val _placeBuyOrder: MutableLiveData<Event<PlaceBuyOrderUIModel>> = MutableLiveData()
-    val placeBuyOrder: LiveData<Event<PlaceBuyOrderUIModel>>
-        get() = _placeBuyOrder
+    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
+    val placeBuyOrder = SingleLiveEvent<PlaceBuyOrderUIModel>()
     val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
-     var exchangeRate: ExchangeRate?= null
+
+    var exchangeRate: ExchangeRate? = null
+        private set
 
     init {
         getWithdrawalLimit()
@@ -80,18 +78,18 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
             if (paymentMethodIndex < it.size) {
                 val paymentMethod = it[paymentMethodIndex]
 
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_CONTINUE, bundleOf())
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_PAYMENT_METHOD, bundleOf(
-                    AnalyticsConstants.Parameters.VALUE to paymentMethod.paymentMethodType.name
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_CONTINUE, mapOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_PAYMENT_METHOD, mapOf(
+                    AnalyticsConstants.Parameter.VALUE to paymentMethod.paymentMethodType.name
                 ))
                 analyticsService.logEvent(
                     if (dashToFiat) AnalyticsConstants.Coinbase.BUY_ENTER_DASH
                     else AnalyticsConstants.Coinbase.BUY_ENTER_FIAT,
-                    bundleOf()
+                    mapOf()
                 )
 
                 viewModelScope.launch {
-                    placeBuyOrder(PlaceBuyOrderParams(dashAmount.toString(), CoinbaseConstants.DASH_CURRENCY, paymentMethod.paymentMethodId))
+                    placeBuyOrder(PlaceBuyOrderParams(dashAmount.toString(), Constants.DASH_CURRENCY, paymentMethod.paymentMethodId))
                 }
             }
         }
@@ -106,13 +104,13 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
                     placeBuyOrderFailedCallback.call()
                 } else {
                     _showLoading.value = false
-                    _placeBuyOrder.value = Event(result.value)
+                    placeBuyOrder.value = result.value
                 }
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
 
-                val error = result.errorBody?.string()
+                val error = result.errorBody
                 if (error.isNullOrEmpty()) {
                     placeBuyOrderFailedCallback.call()
                 } else {
@@ -148,7 +146,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
     }
 
     fun logEvent(eventName: String) {
-        analyticsService.logEvent(eventName, bundleOf())
+        analyticsService.logEvent(eventName, mapOf())
     }
 
     private val withdrawalLimitInDash: Double

@@ -22,9 +22,6 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.data.TransactionMetadataChangeCacheDao
-import de.schildbach.wallet.data.TransactionMetadataDocumentDao
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformDocumentBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
@@ -40,16 +37,6 @@ abstract class DashPayModule {
         @Provides
         @Singleton
         fun providePlatformRepo(): PlatformRepo = PlatformRepo.getInstance()
-
-        @Provides
-        fun provideTransactionMetadata(appDatabase: AppDatabase): TransactionMetadataChangeCacheDao {
-            return appDatabase.transactionMetadataCacheDao()
-        }
-
-        @Provides
-        fun provideTransactionMetadataDocumentDao(appDatabase: AppDatabase): TransactionMetadataDocumentDao {
-            return appDatabase.transactionMetadataDocumentDao()
-        }
     }
 
     @Singleton // only want one of PlatformSyncService created

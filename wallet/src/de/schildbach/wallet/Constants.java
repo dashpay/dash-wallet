@@ -55,8 +55,6 @@ public final class Constants {
     /** Network this wallet is on (e.g. testnet or mainnet). */
     public static final NetworkParameters NETWORK_PARAMETERS;
 
-    public static final Coin ECONOMIC_FEE = Coin.valueOf(1000);
-
     private static String FILENAME_NETWORK_SUFFIX;
     private static String FEE_NETWORK_SUFFIX;
 
@@ -85,9 +83,8 @@ public final class Constants {
                 WALLET_NAME_CURRENCY_CODE = "dash";
                 SUPPORTS_PLATFORM = false;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-                org.dash.wallet.common.Constants.FAUCET_URL = "";
-                org.dash.wallet.common.Constants.EXPLORE_GC_FILE_PATH = "explore/explore.db";
-                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                org.dash.wallet.common.util.Constants.FAUCET_URL = "";
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore.db");
                 break;
             }
             case "staging":
@@ -95,8 +92,6 @@ public final class Constants {
                 DNS_SEED = new String[]{"testnet-seed.dashdot.io"};
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = TestNet3Params.get();
-                // TODO: remove this next line when Platform Supports Core 0.18
-                NETWORK_PARAMETERS.setSupportsV18(true);
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-testnet";
                 FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
@@ -104,8 +99,8 @@ public final class Constants {
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
-                org.dash.wallet.common.Constants.FAUCET_URL = "http://faucet.testnet.networks.dash.org/";
-                org.dash.wallet.common.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-testnet.db";
+                org.dash.wallet.common.util.Constants.FAUCET_URL = "http://faucet.testnet.networks.dash.org/";
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-testnet.db");
                 break;
             }
             case "schnapps": {
@@ -114,8 +109,6 @@ public final class Constants {
                 NETWORK_PARAMETERS = BinTangDevNetParams.get();
                 String devNetName = ((DevNetParams)NETWORK_PARAMETERS).getDevNetName();
                 devNetName = devNetName.substring(devNetName.indexOf("-") + 1);
-                // TODO: remove this next line when Platform Supports Core 0.18
-                NETWORK_PARAMETERS.setSupportsV18(true);
                 DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-" + devNetName;
@@ -124,16 +117,15 @@ public final class Constants {
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
-                org.dash.wallet.common.Constants.FAUCET_URL = String.format("http://faucet.%s.networks.dash.org/", devNetName);
-                org.dash.wallet.common.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-testnet.db";
-                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                org.dash.wallet.common.util.Constants.FAUCET_URL = String.format("http://faucet.%s.networks.dash.org/", devNetName);
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-testnet.db");
                 break;
             }
             default: {
                 throw new IllegalStateException("Unsupported flavor " + BuildConfig.FLAVOR);
             }
         }
-        org.dash.wallet.common.Constants.MAX_MONEY = NETWORK_PARAMETERS.getMaxMoney();
+        org.dash.wallet.common.util.Constants.INSTANCE.setMAX_MONEY(NETWORK_PARAMETERS.getMaxMoney());
     }
 
     /** Bitcoinj global context. */
@@ -285,28 +277,12 @@ public final class Constants {
     public static final int ELECTRUM_SERVER_DEFAULT_PORT_TLS = NETWORK_PARAMETERS.getId()
             .equals(NetworkParameters.ID_MAINNET) ? 50002 : 51002;
 
-    /** Shared HTTP client, can reuse connections */
-    public static final OkHttpClient HTTP_CLIENT = new OkHttpClient.Builder()
-            .followRedirects(false)
-            .followSslRedirects(true)
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .addInterceptor(new HttpLoggingInterceptor(
-                    new HttpLoggingInterceptor.Logger() {
-                        @Override
-                        public void log(final String message) {
-                            log.debug(message);
-                        }
-                    }).setLevel(HttpLoggingInterceptor.Level.BASIC))
-            .build();
-
-    private static final Logger log = LoggerFactory.getLogger(Constants.class);
-
     //Dash Specific
     public static long EARLIEST_HD_SEED_CREATION_TIME = 1427610960L;
 
     public static String WALLET_URI_SCHEME = "dashwallet";
+    public static String ANYPAY_SCHEME = "pay";
+    public static String DASH_SCHEME = "dash";
 
     public static boolean ENABLE_ZERO_FEES = false; //Enable Zero Fee's on TestNet only.
 

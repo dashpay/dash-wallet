@@ -22,7 +22,6 @@ import android.view.View
 import androidx.activity.addCallback
 import androidx.annotation.ColorRes
 import androidx.annotation.StyleRes
-import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -32,7 +31,7 @@ import coil.size.Scale
 import coil.transform.CircleCropTransformation
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.getRoundedBackground
@@ -151,7 +150,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         viewModel.commitSwapTradeSuccessState.observe(viewLifecycleOwner) { params ->
-            val walletName = if (swapTradeUIModel.inputCurrency == CoinbaseConstants.DASH_CURRENCY) {
+            val walletName = if (swapTradeUIModel.inputCurrency == Constants.DASH_CURRENCY) {
                 swapTradeUIModel.inputCurrencyName
             } else {
                 swapTradeUIModel.outputCurrencyName
@@ -167,7 +166,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
         viewModel.getUserAccountAddressFailedCallback.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.error),
                 getString(R.string.error),
                 getString(R.string.close)
@@ -176,7 +175,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
         viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.insufficient_money_title),
                 getString(R.string.insufficient_money_msg),
                 getString(R.string.close)
@@ -185,7 +184,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
         viewModel.onFailure.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.send_coins_error_msg),
                 getString(R.string.insufficient_money_msg),
                 getString(R.string.close)
@@ -212,7 +211,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         binding.contentOrderReview.inputAccountSubtitle.text = this.inputCurrency
         binding.contentOrderReview.convertOutputSubtitle.text = this.outputCurrency
 
-        if (this.inputCurrency == CoinbaseConstants.DASH_CURRENCY) {
+        if (this.inputCurrency == Constants.DASH_CURRENCY) {
             binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_dash_wallet_on_this_device)
             binding.contentOrderReview.outputAccountHintLabel.setText(R.string.to_your_coinbase_account)
         } else {
@@ -284,7 +283,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
         transactionStateDialog = CoinBaseResultDialog.newInstance(
             type, responseMessage,
-            dashToCoinbase = swapTradeUIModel.inputCurrency == CoinbaseConstants.DASH_CURRENCY
+            dashToCoinbase = swapTradeUIModel.inputCurrency == Constants.DASH_CURRENCY
         ).apply {
             this.onCoinBaseResultDialogButtonsClickListener = object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
@@ -326,7 +325,6 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         } else {
             setRetryStatus()
         }
-        viewModel.monitorNetworkStateChange()
     }
 
     override fun onPause() {

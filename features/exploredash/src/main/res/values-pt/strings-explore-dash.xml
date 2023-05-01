@@ -64,7 +64,7 @@
     <string name="explore_back_to_nearest">Voltar para o local mais próximo</string>
     <string name="explore_select_location">Selecionar local</string>
     <string name="explore_pay_with_dash">Pagar com Dash</string>
-    <string name="explore_buy_gift_card">Comprar um Cartão Presente</string>
+    <string name="explore_buy_gift_card">Comprar um Vale-presente</string>
     <string name="explore_buy_dash">Comprar Dash</string>
     <string name="explore_sell_dash">Vender Dash</string>
     <string name="explore_show_all">Mostrar todos os locais</string>
@@ -77,7 +77,7 @@
     <string name="explore_apply_filter">Aplicar</string>
     <string name="explore_payment_method">Método de Pagamento</string>
     <string name="explore_payment_dash">Dash</string>
-    <string name="explore_payment_gift_card">Cartão Presente</string>
+    <string name="explore_payment_gift_card">Vale-presente</string>
     <string name="explore_radius">Raio</string>
     <string name="explore_location">Localização</string>
     <string name="explore_current_location">Localização atual</string>

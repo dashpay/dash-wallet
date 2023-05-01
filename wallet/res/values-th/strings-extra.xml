@@ -278,13 +278,21 @@
     <string name="tools_show_xpub">ขยาย Public key</string>
 
     <string name="about_help_us_improve">ช่วยเราเพื่อพัฒนาประการณ์ของคุณ</string>
+    <string name="about_review_and_rate">ตรวจสอบและให้คะแนนแอพ</string>
     <string name="about_contact_support">ติดต่อฝ่ายสนับสนุน</string>
     <string name="about_fork_disclaimer">นี่คือซอฟต์แวร์โอเพนซอร์ซแอพพลิเคชั่นที่แยกสาขาออกมาจากกระเป๋าสตางค์บิทคอยน์</string>
-    <string name="about_copyright">Copyright © 2022 Dash Core</string>
+    <string name="about_copyright">Copyright © 2023 Dash Core</string>
     <string name="about_license">สัญญาอนุญาตให้ใช้ซอฟต์แวร์ หรือไลเซนส์ แบบหนึ่ง ซึ่งสงวนลิขสิทธิ์ของซอฟต์แวร์นั้น แต่อนุญาตให้บุคคลใดๆทำซ้ำ เผยแพร่ และ/หรือดัดแปลงซอฟต์แวร์นั้นได้อย่างถูกต้องตามกฎหมาย และโดยเสรี เวอร์ชั่น3.0</string>
     <string name="about_version_name">กระเป๋าสตางค์ Dash%s</string>
+    <string name="about_last_explore_device_sync">การสำรวจการซิงค์อุปกรณ์ล่าสุด</string>
+    <string name="about_last_explore_server_update">การอัปเดตเซิร์ฟเวอร์ครั้งล่าสุด</string>
+    <string name="about_firebase_installation_id">รหัสการติดตั้ง Firebase</string>
+    <string name="about_fcm_token">โทเค็นการส่งข้อความ Firebase cloud</string>
     <string name="about_last_explore_dash_update_error">ไม่สามารถดึงข้อมูลได้</string>
     <string name="about_last_explore_dash_sync_never">ไม่เคย</string>
+    <string name="about_explore_failed_sync">ไม่สามารถซิงค์ได้ %s</string>
+    <string name="about_explore_preloaded_on">โหลดล่วงหน้า %s</string>
+
     <string name="block">บล็อก</string>
     <string name="time">เวลา</string>
     <string name="hash">การแบ่งย่อยข้อมูลและการผสมข้อมูลย่อยทั้งหมดเข้าด้วยกัน</string>

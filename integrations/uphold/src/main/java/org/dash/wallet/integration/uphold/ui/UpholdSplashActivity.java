@@ -40,6 +40,9 @@ import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
@@ -83,7 +86,7 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
         findViewById(R.id.uphold_link_account).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                analytics.logEvent(AnalyticsConstants.Uphold.LINK_ACCOUNT, Bundle.EMPTY);
+                analytics.logEvent(AnalyticsConstants.Uphold.LINK_ACCOUNT, new HashMap<>());
                 openLoginUrl();
             }
         });

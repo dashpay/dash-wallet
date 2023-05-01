@@ -34,21 +34,22 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.text.HtmlCompat
 import androidx.core.widget.doAfterTextChanged
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.transition.ChangeBounds
 import androidx.transition.Transition
 import androidx.transition.TransitionManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
-import org.dash.wallet.common.data.BlockchainState
+import org.dash.wallet.common.data.entity.BlockchainState
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySearchDashpayProfileRootBinding
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class SearchUserActivity : LockScreenActivity(), ContactViewHolder.OnItemClickListener,
@@ -166,11 +167,13 @@ class SearchUserActivity : LockScreenActivity(), ContactViewHolder.OnItemClickLi
     }
 
     private fun startInviteFlow() {
-        dashPayViewModel.inviteHistory.observeOnce(this) {
-            if (it == null || it.isEmpty()) {
-                InviteFriendActivity.startOrError(this)
+        lifecycleScope.launch {
+            val inviteHistory = dashPayViewModel.getInviteHistory()
+
+            if (inviteHistory.isEmpty()) {
+                InviteFriendActivity.startOrError(this@SearchUserActivity)
             } else {
-                startActivity(InvitesHistoryActivity.createIntent(this))
+                startActivity(InvitesHistoryActivity.createIntent(this@SearchUserActivity))
             }
         }
     }

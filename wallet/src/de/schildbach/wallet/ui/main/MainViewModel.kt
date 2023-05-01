@@ -21,23 +21,27 @@ import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
-import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
-import org.dash.wallet.common.data.BlockchainState
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.platform.PlatformSyncService
-import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.ui.dashpay.*
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -48,8 +52,11 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.PresentableTxMetadata
+import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -57,8 +64,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.slf4j.LoggerFactory
-import org.dash.wallet.common.transactions.TransactionUtils
-import org.dash.wallet.common.transactions.filters.TransactionFilter
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import java.util.HashMap
@@ -70,19 +77,21 @@ class MainViewModel @Inject constructor(
     val analytics: AnalyticsService,
     private val clipboardManager: ClipboardManager,
     private val config: Configuration,
-    blockchainStateDao: BlockchainStateDao,
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
-    walletApplication: WalletApplication,
-    appDatabase: AppDatabase,
+    private val walletApplication: WalletApplication,
     val platformRepo: PlatformRepo,
     val platformSyncService: PlatformSyncService,
-    private val blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    blockchainIdentityDataDao: BlockchainIdentityDataDao,
     private val savedStateHandle: SavedStateHandle,
     private val metadataProvider: TransactionMetadataProvider,
     private val blockchainStateProvider: BlockchainStateProvider,
-    val biometricHelper: BiometricHelper
-) : BaseProfileViewModel(walletApplication, appDatabase) {
+    val biometricHelper: BiometricHelper,
+    private val invitationsDao: InvitationsDao,
+    userAlertDao: UserAlertDao,
+    dashPayProfileDao: DashPayProfileDao,
+    private val dashPayConfig: DashPayConfig
+) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     companion object {
         private const val THROTTLE_DURATION = 500L
         private const val DIRECTION_KEY = "tx_direction"
@@ -103,8 +112,8 @@ class MainViewModel @Inject constructor(
     val transactions: LiveData<List<TransactionRowView>>
         get() = _transactions
 
-    private val _transactionsDirection = MutableStateFlow(TxDirection.ALL)
-    var transactionsDirection: TxDirection
+    private val _transactionsDirection = MutableStateFlow(TxFilterType.ALL)
+    var transactionsDirection: TxFilterType
         get() = _transactionsDirection.value
         set(value) {
             _transactionsDirection.value = value
@@ -150,19 +159,18 @@ class MainViewModel @Inject constructor(
    // DashPay
 
    private val isPlatformAvailableData = liveData(Dispatchers.IO) {
-       val status = if (Constants.SUPPORTS_PLATFORM) {
-           platformRepo.isPlatformAvailable()
-       } else {
-           Resource.success(false)
-       }
-       if (status.status == Status.SUCCESS && status.data != null) {
-           emit(status.data)
-       } else {
-           emit(false)
-       }
-   }
+        val status = if (Constants.SUPPORTS_PLATFORM) {
+            platformRepo.isPlatformAvailable()
+        } else {
+            Resource.success(false)
+        }
+        if (status.status == Status.SUCCESS && status.data != null) {
+            emit(status.data)
+        } else {
+            emit(false)
+        }
+    }
 
-    val inviteHistory = appDatabase.invitationsDaoAsync().loadAll()
     val canAffordIdentityCreationLiveData = CanAffordIdentityCreationLiveData(walletApplication)
 
     val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
@@ -172,7 +180,7 @@ class MainViewModel @Inject constructor(
         addSource(_isBlockchainSynced) {
             value = combineLatestData()
         }
-        addSource(blockchainIdentityData) {
+        addSource(blockchainIdentity) {
             value = combineLatestData()
         }
         addSource(canAffordIdentityCreationLiveData) {
@@ -189,7 +197,7 @@ class MainViewModel @Inject constructor(
     var processingSeriousError = false
 
     val notificationCountData =
-        NotificationCountLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
+        NotificationCountLiveData(walletApplication, platformRepo, platformSyncService, dashPayConfig, viewModelScope)
     val notificationCount: Int
         get() = notificationCountData.value ?: 0
 
@@ -199,23 +207,23 @@ class MainViewModel @Inject constructor(
 
     init {
         _hideBalance.value = config.hideBalance
-        transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxDirection.ALL
+        transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxFilterType.ALL
 
         _transactionsDirection
             .flatMapLatest { direction ->
-                metadataProvider.observeAllMemos()
-                    .flatMapLatest { memos ->
+                metadataProvider.observePresentableMetadata()
+                    .flatMapLatest { metadata ->
                         val filter = TxDirectionFilter(direction, walletData.wallet!!)
-                        refreshTransactions(filter, memos)
+                        refreshTransactions(filter, metadata)
                         walletData.observeWalletChanged()
                             .debounce(THROTTLE_DURATION)
-                            .onEach { refreshTransactions(filter, memos) }
+                            .onEach { refreshTransactions(filter, metadata) }
                     }
             }
             .catch { analytics.logError(it, "is wallet null: ${walletData.wallet == null}") }
             .launchIn(viewModelWorkerScope)
 
-        blockchainStateDao.observeState()
+        blockchainStateProvider.observeState()
             .filterNotNull()
             .onEach { state ->
                 updateSyncStatus(state)
@@ -244,32 +252,32 @@ class MainViewModel @Inject constructor(
                 Configuration.PREFS_KEY_EXCHANGE_CURRENCY -> {
                     currencyCode.value = config.exchangeCurrencyCode
                 }
-                Configuration.PREFS_LAST_SEEN_NOTIFICATION_TIME -> {
-                    startContactRequestTimer()
-                    forceUpdateNotificationCount()
-                }
             }
         }
         config.registerOnSharedPreferenceChangeListener(listener)
 
-
         // DashPay
         startContactRequestTimer()
 
-        // don't query alerts if notifications are disabled
-        if (config.areNotificationsDisabled()) {
-            val lastSeenNotification = config.lastSeenNotificationTime
-            appDatabase.userAlertDaoAsync()
-                .load(lastSeenNotification).observeForever { userAlert: UserAlert? ->
-                    if (userAlert != null) {
-                        forceUpdateNotificationCount()
-                    }
+        dashPayConfig.observe(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME)
+            .filterNotNull()
+            .distinctUntilChanged()
+            .onEach { lastSeenNotification ->
+                startContactRequestTimer()
+                forceUpdateNotificationCount()
+
+                if (lastSeenNotification != DashPayConfig.DISABLE_NOTIFICATIONS) {
+                    userAlertDao.observe(lastSeenNotification)
+                        .filterNotNull()
+                        .distinctUntilChanged()
+                        .onEach { forceUpdateNotificationCount() }
                 }
-        }
+            }
+            .launchIn(viewModelScope)
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+        analytics.logEvent(event, mapOf())
     }
 
     fun logError(ex: Exception, details: String) {
@@ -285,8 +293,8 @@ class MainViewModel @Inject constructor(
 
             if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
                 input = clip.getItemAt(0).uri?.toString()
-            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)
-                || clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
+            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
+                clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
             ) {
                 input = clip.getItemAt(0).text?.toString()
             }
@@ -306,15 +314,23 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun logDirectionChangedEvent(direction: TxDirection) {
+    fun logDirectionChangedEvent(direction: TxFilterType) {
         val directionParameter = when (direction) {
-            TxDirection.ALL -> "all_transactions"
-            TxDirection.SENT -> "sent_transactions"
-            TxDirection.RECEIVED -> "received_transactions"
+            TxFilterType.ALL -> "all_transactions"
+            TxFilterType.SENT -> "sent_transactions"
+            TxFilterType.RECEIVED -> "received_transactions"
+            TxFilterType.GIFT_CARD -> "gift_cards"
         }
-        analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
-            "filter_value" to directionParameter
-        ))
+        analytics.logEvent(
+            AnalyticsConstants.Home.TRANSACTION_FILTER,
+            mapOf(
+                AnalyticsConstants.Parameter.VALUE to directionParameter
+            )
+        )
+
+        if (direction == TxFilterType.GIFT_CARD) {
+            analytics.logEvent(AnalyticsConstants.DashDirect.FILTER_GIFT_CARD, mapOf())
+        }
     }
 
     fun processDirectTransaction(tx: Transaction) {
@@ -331,6 +347,92 @@ class MainViewModel @Inject constructor(
         super.onCleared()
         config.unregisterOnSharedPreferenceChangeListener(listener)
     }
+
+    private suspend fun refreshTransactions(filter: TxDirectionFilter, metadata: Map<Sha256Hash, PresentableTxMetadata>) {
+        walletData.wallet?.let { wallet ->
+            val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
+
+            if (platformRepo.hasIdentity) {
+                val contacts = platformRepo.searchContacts("",
+                    UsernameSortOrderBy.LAST_ACTIVITY, false)
+                contacts.data?.forEach { result ->
+                    contactsByIdentity[result.dashPayProfile.userId] = result.dashPayProfile
+                }
+            }
+
+            val transactionViews = walletData.wrapAllTransactions(
+                FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
+            ).filter { it.passesFilter(filter, metadata) }
+             .sortedWith(TransactionWrapperComparator())
+             .map {
+                 var contact: DashPayProfile? = null
+                 val tx = it.transactions.first()
+                 val isInternal = tx.isEntirelySelf(wallet)
+
+                 if (it.transactions.size == 1) {
+                     if (!isInternal && platformRepo.hasIdentity) {
+                         val contactId = platformRepo.blockchainIdentity.getContactForTransaction(tx)
+
+                         if (contactId != null) {
+                             contact = contactsByIdentity[contactId]
+                         }
+                     }
+                 }
+
+                 TransactionRowView.fromTransactionWrapper(
+                     it,
+                     walletData.transactionBag,
+                     Constants.CONTEXT,
+                     contact,
+                     metadata[it.transactions.first().txId]
+                 )
+             }
+            
+            _transactions.postValue(transactionViews)
+        }
+    }
+
+    private fun updateSyncStatus(state: BlockchainState) {
+        if (_isBlockchainSyncFailed.value != state.isSynced()) {
+            _isBlockchainSynced.postValue(state.isSynced())
+
+            if (state.isSynced()) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    _stakingAPY.postValue(0.85 * blockchainStateProvider.getMasternodeAPY())
+                }
+            }
+
+            if (state.replaying) {
+                _transactions.postValue(listOf())
+            }
+        }
+
+        _isBlockchainSyncFailed.postValue(state.syncFailed())
+        _isNetworkUnavailable.postValue(state.impediments.contains(BlockchainState.Impediment.NETWORK))
+    }
+
+    private fun updatePercentage(state: BlockchainState) {
+        var percentage = state.percentageSync
+
+        if (state.replaying && state.percentageSync == 100) {
+            // This is to prevent showing 100% when using the Rescan blockchain function.
+            // The first few broadcasted blockchainStates are with percentage sync at 100%
+            percentage = 0
+        }
+        _blockchainSyncPercentage.postValue(percentage)
+    }
+
+    private fun TransactionWrapper.passesFilter(
+        filter: TxDirectionFilter,
+        metadata: Map<Sha256Hash, PresentableTxMetadata>
+    ): Boolean {
+        return (filter.direction == TxFilterType.GIFT_CARD && isGiftCard(metadata)) ||
+            transactions.any { tx -> filter.matches(tx) }
+    }
+    private fun TransactionWrapper.isGiftCard(metadata: Map<Sha256Hash, PresentableTxMetadata>): Boolean {
+        return metadata[transactions.first().txId]?.service == ServiceName.DashDirect
+    }
+
 
     // DashPay
 
@@ -375,10 +477,12 @@ class MainViewModel @Inject constructor(
         return platformRepo.loadProfileByUserId(profileId)
     }
 
+    suspend fun getInviteHistory() = invitationsDao.loadAll()
+
     private fun combineLatestData(): Boolean {
         val isPlatformAvailable = isPlatformAvailableData.value ?: false
         val isSynced = _isBlockchainSynced.value ?: false
-        val noIdentityCreatedOrInProgress = (blockchainIdentityData.value == null) || blockchainIdentityData.value!!.creationState == BlockchainIdentityData.CreationState.NONE
+        val noIdentityCreatedOrInProgress = (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
         val canAffordIdentityCreation = canAffordIdentityCreationLiveData.value ?: false
         return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress && canAffordIdentityCreation
     }
@@ -389,81 +493,5 @@ class MainViewModel @Inject constructor(
             log,
             AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_RECEIVE
         )
-    }
-
-    private suspend fun refreshTransactions(filter: TransactionFilter, memos: Map<Sha256Hash, String>) {
-        walletData.wallet?.let { wallet ->
-            val userIdentity = platformRepo.getBlockchainIdentity()
-            val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
-
-            if (userIdentity != null) {
-                val contacts = platformRepo.searchContacts("",
-                    UsernameSortOrderBy.LAST_ACTIVITY, false)
-                contacts.data?.forEach { result ->
-                    contactsByIdentity[result.dashPayProfile.userId] = result.dashPayProfile
-                }
-            }
-
-            val transactionViews = walletData.wrapAllTransactions(
-                FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
-            ).filter { it.transactions.any { tx -> filter.matches(tx) } }
-             .sortedWith(TransactionWrapperComparator())
-             .map {
-                 var contact: DashPayProfile? = null
-                 var memo = ""
-                 val tx = it.transactions.first()
-                 val isInternal = TransactionUtils.isEntirelySelf(tx, wallet)
-
-                 if (it.transactions.size == 1) {
-                     memo = memos.getOrDefault(tx.txId, "")
-
-                     if (!isInternal) {
-                         val contactId = userIdentity?.getContactForTransaction(tx)
-
-                         if (contactId != null) {
-                             contact = contactsByIdentity[contactId]
-                         }
-                     }
-                 }
-
-                 TransactionRowView.fromTransactionWrapper(
-                     it, memo,
-                     walletData.transactionBag,
-                     Constants.CONTEXT,
-                     contact
-                 )
-             }
-            _transactions.postValue(transactionViews)
-        }
-    }
-
-    private fun updateSyncStatus(state: BlockchainState) {
-        if (_isBlockchainSyncFailed.value != state.isSynced()) {
-            _isBlockchainSynced.postValue(state.isSynced())
-
-            if (state.isSynced()) {
-                viewModelScope.launch(Dispatchers.IO) {
-                    _stakingAPY.postValue(0.85 * blockchainStateProvider.getMasternodeAPY())
-                }
-            }
-
-            if (state.replaying) {
-                _transactions.postValue(listOf())
-            }
-        }
-
-        _isBlockchainSyncFailed.postValue(state.syncFailed())
-        _isNetworkUnavailable.postValue(state.impediments.contains(BlockchainState.Impediment.NETWORK))
-    }
-
-    private fun updatePercentage(state: BlockchainState) {
-        var percentage = state.percentageSync
-
-        if (state.replaying && state.percentageSync == 100) {
-            //This is to prevent showing 100% when using the Rescan blockchain function.
-            //The first few broadcasted blockchainStates are with percentage sync at 100%
-            percentage = 0
-        }
-        _blockchainSyncPercentage.postValue(percentage)
     }
 }

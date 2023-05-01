@@ -7,6 +7,7 @@
     tools:context="de.schildbach.wallet.ui.payments.PaymentsReceiveFragment">
 
     <LinearLayout
+        android:id="@+id/content"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
@@ -30,7 +31,7 @@
 
         <LinearLayout
             android:id="@+id/import_private_key_btn"
-            style="@style/Button.Primary.Large.White"
+            style="@style/Button.Primary.Large.Inverted"
             android:clickable="true"
             android:focusable="true"
             android:layout_width="match_parent"

@@ -58,15 +58,15 @@ class ToolsActivity : BaseMenuActivity() {
 
         setTitle(R.string.tools_title)
         address_book.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.ADDRESS_BOOK, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Settings.ADDRESS_BOOK, mapOf())
             startActivity(Intent(this, AddressBookActivity::class.java))
         }
         import_keys.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, mapOf())
             startActivity(Intent(this, SweepWalletActivity::class.java))
         }
         network_monitor.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.NETWORK_MONITORING, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Settings.NETWORK_MONITORING, mapOf())
             startActivity(Intent(this, NetworkMonitorActivity::class.java))
         }
 
@@ -109,13 +109,10 @@ class ToolsActivity : BaseMenuActivity() {
 
     private fun showExtendedPublicKeyDialog(xpubWithCreationDate: String, xpub: String) {
         val view = LayoutInflater.from(this).inflate(R.layout.extended_public_key_dialog, null)
-        val bitmap = BitmapDrawable(
-            resources, Qr.bitmap(xpubWithCreationDate)
-        )
-        bitmap.isFilterBitmap = false
+        val drawable = Qr.themeAwareDrawable(xpubWithCreationDate, resources);
         val imageView = view.findViewById<ImageView>(R.id.extended_public_key_dialog_image)
         val xpubView = view.findViewById<TextView>(R.id.extended_public_key_dialog_xpub)
-        imageView.setImageDrawable(bitmap)
+        imageView.setImageDrawable(drawable)
         xpubView.text = xpub
 
         xpubView.setOnClickListener {

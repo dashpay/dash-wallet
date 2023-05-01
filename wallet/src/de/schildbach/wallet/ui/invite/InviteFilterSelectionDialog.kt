@@ -17,9 +17,7 @@
 package de.schildbach.wallet.ui.invite
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelStoreOwner
@@ -27,10 +25,12 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogInviteFilterBinding
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
+import org.dash.wallet.common.ui.viewBinding
 
 @AndroidEntryPoint
-class InviteFilterSelectionDialog(private val owner: ViewModelStoreOwner) :
-    OffsetDialogFragment() {
+class InviteFilterSelectionDialog(
+    private val owner: ViewModelStoreOwner
+) : OffsetDialogFragment(R.layout.dialog_invite_filter) {
 
     companion object {
 
@@ -40,19 +40,8 @@ class InviteFilterSelectionDialog(private val owner: ViewModelStoreOwner) :
         }
     }
 
-    private var _binding: DialogInviteFilterBinding? = null
-    private val binding get() = _binding!!
-
+    private val binding by viewBinding(DialogInviteFilterBinding::bind)
     private val sharedViewModel: InvitesHistoryFilterViewModel by viewModels({ owner })
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        _binding = DialogInviteFilterBinding.inflate(inflater)
-        return binding.root
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -75,10 +64,5 @@ class InviteFilterSelectionDialog(private val owner: ViewModelStoreOwner) :
             sharedViewModel.setFilter(InvitesHistoryViewModel.Filter.CLAIMED)
             dismiss()
         }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 }

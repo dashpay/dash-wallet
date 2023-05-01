@@ -16,22 +16,30 @@
 
 package org.dash.wallet.common.services
 
+import android.graphics.Bitmap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.TaxCategory
-import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.data.entity.TransactionMetadata
+import java.io.ByteArrayOutputStream
 
 interface TransactionMetadataProvider {
     suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata)
     suspend fun importTransactionMetadata(txId: Sha256Hash)
+
     suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory, isSyncingPlatform: Boolean = false)
     suspend fun setTransactionType(txId: Sha256Hash, type: Int, isSyncingPlatform: Boolean = false)
     suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate, isSyncingPlatform: Boolean = false)
     suspend fun setTransactionMemo(txId: Sha256Hash, memo: String, isSyncingPlatform: Boolean = false)
     suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncingPlatform: Boolean = false)
     suspend fun setTransactionSentTime(txId: Sha256Hash, timestamp: Long, isSyncingPlatform: Boolean = false)
+
+    suspend fun syncPlatformMetadata(txId: Sha256Hash, metadata: TransactionMetadata)
 
     /**
      * Checks for missing data in the metadata cache vs the Transaction and ensures that both
@@ -45,9 +53,15 @@ interface TransactionMetadataProvider {
     suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata?
     fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?>
 
+    /**
+     * Mark a transaction as DashDirect gift card expense with an icon
+     */
+    suspend fun markGiftCardTransaction(txId: Sha256Hash, iconUrl: String?)
+
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 
-    fun observeAllMemos(): Flow<Map<Sha256Hash, String>>
+    fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>>
+    suspend fun getIcon(iconId: Sha256Hash): Bitmap?
 
     // Address methods
     /**

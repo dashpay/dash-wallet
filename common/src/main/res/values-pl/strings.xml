@@ -16,6 +16,12 @@
     <string name="error">Błąd</string>
     <string name="select_a_coin">Wybierz monetę</string>
     <string name="request_coins_share_dialog_title">Udostępnij prośbę o Dashy…</string>
+    <string name="buy_with_fiat">Kup Dash za normalne pieniądze</string>
+    <string name="buy_and_convert">Kup i przekonwertuj inną walutę krypto na Dash</string>
+    <string name="transfer_dash">Przetransferuj Dash</string>
+    <string name="login_error_title">Niemożliwe jest zalogowanie się do twojego %s konta</string>
+    <string name="login_error_message">Wystąpił błąd podczas próby zalogowania się do twojego %s konta.</string>
+    <string name="balance">Saldo:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Funt Guernsey</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">Rozumiem</string>
     <string name="button_okay">OK</string>
     <string name="button_share">Udostępnij</string>
+    <string name="share_address">Udostępnij Adress</string>
     <string name="verify">Zweryfikuj</string>
     <string name="receive_enter_amount_button">Określ Kwotę</string>
 

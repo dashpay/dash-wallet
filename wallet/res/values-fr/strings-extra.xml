@@ -284,13 +284,21 @@
     <string name="tools_show_xpub">Clé privée étendue</string>
 
     <string name="about_help_us_improve">Aidez-nous à améliorer votre expérience</string>
+    <string name="about_review_and_rate">Commentez et notez l\'application</string>
     <string name="about_contact_support">Contacter le service d\'aide</string>
     <string name="about_fork_disclaimer">Ceci est une application open source forkée de Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2022 Dash Core</string>
+    <string name="about_copyright">Copyright © 2023 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_device_sync">Dernière synchro Explore de l\'appareil</string>
+    <string name="about_last_explore_server_update">Dernière mise à jour Explore du serveur</string>
+    <string name="about_firebase_installation_id">ID d\'installation Firebase</string>
+    <string name="about_fcm_token">Jeton de messagerie cloud Firebase</string>
     <string name="about_last_explore_dash_update_error">impossible d\'atteindre</string>
     <string name="about_last_explore_dash_sync_never">jamais</string>
+    <string name="about_explore_failed_sync">Échec de synchronisation %s</string>
+    <string name="about_explore_preloaded_on">Préchargé sur %s</string>
+
     <string name="block">Bloc</string>
     <string name="time">Heure</string>
     <string name="hash">Hash</string>

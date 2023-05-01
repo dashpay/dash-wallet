@@ -28,14 +28,15 @@ import com.google.zxing.*
 import com.google.zxing.common.HybridBinarizer
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.ui.InputParser.StringInputParser
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.util.Qr
 import org.slf4j.LoggerFactory
 
 /**
@@ -43,7 +44,7 @@ import org.slf4j.LoggerFactory
  * It search for the QR codes inside the image, decode them and try to parse
  * the decoded URI
  */
-class ImportSharedImageActivity : AppCompatActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
+class ImportSharedImageActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,7 +87,7 @@ class ImportSharedImageActivity : AppCompatActivity(), FancyAlertDialog.FancyAle
                     .load(imageUri).into(object : CustomTarget<Bitmap>() {
 
                         override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                            val qrCode = scanQRImage(resource)
+                            val qrCode = Qr.scanQRImage(resource)
                             if (qrCode != null) {
                                 handleQRCode(qrCode)
                             } else {
@@ -114,42 +115,18 @@ class ImportSharedImageActivity : AppCompatActivity(), FancyAlertDialog.FancyAle
     }
 
     private fun showErrorDialog(title: Int, msg: Int, image: Int) {
-        val errorDialog = FancyAlertDialog.newInstance(title, msg, image, R.string.button_ok, 0)
-        errorDialog.show(supportFragmentManager, "error_dialog")
-    }
-
-    /**
-     * Scan QR code directly from bitmap
-     * https://stackoverflow.com/a/32135865/795721
-     */
-    fun scanQRImage(bitmap: Bitmap): String? {
-        val intArray = IntArray(bitmap.width * bitmap.height)
-        bitmap.getPixels(intArray, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-        val source: LuminanceSource = RGBLuminanceSource(bitmap.width, bitmap.height, intArray)
-        val reader: Reader = MultiFormatReader()
-        return try {
-            val result = reader.decode(BinaryBitmap(HybridBinarizer(source)))
-            log.info("successfully decoded QR code from bitmap")
-            result.text
-        } catch (e: ReaderException) {
-            try {
-                // Invert and check for a code
-                val invertedSource = source.invert()
-                val invertedBitmap = BinaryBitmap(HybridBinarizer(invertedSource))
-                val invertedResult = reader.decode(invertedBitmap)
-                log.info("successfully decoded inverted QR code from bitmap")
-                invertedResult.text
-            } catch (ex: ReaderException) {
-                log.warn("error decoding barcode", e)
-                null
-            }
-        }
+        AdaptiveDialog.create(
+            image,
+            getString(title),
+            getString(msg),
+            getString(R.string.button_ok)
+        ).show(this)
     }
 
     private fun handleQRCode(input: String) {
         object : StringInputParser(input, true) {
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
-                SendCoinsInternalActivity.start(this@ImportSharedImageActivity, intent.action, paymentIntent, false, true)
+                SendCoinsActivity.start(this@ImportSharedImageActivity, intent.action, paymentIntent, true)
                 finish()
             }
 
@@ -174,13 +151,5 @@ class ImportSharedImageActivity : AppCompatActivity(), FancyAlertDialog.FancyAle
 
     companion object {
         private val log = LoggerFactory.getLogger(ImportSharedImageActivity::class.java)
-    }
-
-    override fun onPositiveButtonClick() {
-        finish()
-    }
-
-    override fun onNegativeButtonClick() {
-        finish()
     }
 }

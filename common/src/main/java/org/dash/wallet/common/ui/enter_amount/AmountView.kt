@@ -17,10 +17,15 @@
 
 package org.dash.wallet.common.ui.enter_amount
 
+import android.content.ClipboardManager
 import android.content.Context
+import android.content.Context.CLIPBOARD_SERVICE
 import android.util.AttributeSet
 import android.util.Log
+import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
+import android.view.View
+import android.widget.PopupMenu
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
@@ -30,20 +35,22 @@ import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.AmountViewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.toFormattedString
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.*
 
 class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs) {
     private val binding = AmountViewBinding.inflate(LayoutInflater.from(context), this)
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    val dashFormat: MonetaryFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
-    private val fiatFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    val fiatFormat: MonetaryFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(2).optionalDecimals()
 
     private var onCurrencyToggleClicked: (() -> Unit)? = null
-    private var onConvertDirectionChanged: ((Boolean) -> Unit)? = null
+    private var onDashToFiatChanged: ((Boolean) -> Unit)? = null
     private var onAmountChanged: ((Coin) -> Unit)? = null
 
     private var currencySymbol = "$"
@@ -57,7 +64,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             updateAmount()
         }
 
-    var fiatAmount: Fiat = Fiat.valueOf("USD", 0)
+    var fiatAmount: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
         private set
 
     var dashAmount: Coin = Coin.ZERO
@@ -79,18 +86,18 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             if (field != value) {
                 field = value
                 updateDashSymbols()
-                onConvertDirectionChanged?.invoke(value)
+                onDashToFiatChanged?.invoke(value)
 
                 if (value) {
                     input = dashFormat.minDecimals(0)
-                        .optionalDecimals(0,6).format(dashAmount).toString()
+                        .optionalDecimals(0, 6).format(dashAmount).toString()
                 } else {
                     binding.resultAmount.text = dashFormat.format(dashAmount)
 
                     exchangeRate?.let {
                         fiatAmount = it.coinToFiat(dashAmount)
                         _input = fiatFormat.minDecimals(0)
-                            .optionalDecimals(0,2).format(fiatAmount).toString()
+                            .optionalDecimals(0, 2).format(fiatAmount).toString()
                         binding.inputAmount.text = formatInputWithCurrency()
                     }
                 }
@@ -104,18 +111,30 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             binding.resultCurrencyToggle.isVisible = dashToFiat && value
         }
 
+    var showResultContainer: Boolean = true
+        set(value) {
+            field = value
+            binding.resultContainer.isVisible = !dashToFiat && value
+        }
+
     init {
         val padding = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
         updatePadding(left = padding, right = padding)
         updateCurrency()
-        binding.convertDirectionBtn.setOnClickListener {
-            dashToFiat = !dashToFiat
+
+        binding.inputContainer.setOnClickListener {
+            if (showCurrencySelector && !dashToFiat) {
+                onCurrencyToggleClicked?.invoke()
+            }
         }
-        binding.inputCurrencyToggle.setOnClickListener {
-            onCurrencyToggleClicked?.invoke()
+        binding.inputContainer.setOnLongClickListener {
+            handlePasteAmount(it)
+            true
         }
-        binding.resultCurrencyToggle.setOnClickListener {
-            onCurrencyToggleClicked?.invoke()
+        binding.resultContainer.setOnClickListener {
+            if (showCurrencySelector && dashToFiat) {
+                onCurrencyToggleClicked?.invoke()
+            }
         }
     }
 
@@ -123,8 +142,8 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         onCurrencyToggleClicked = listener
     }
 
-    fun setOnConvertDirectionChanged(listener: (Boolean) -> Unit) {
-        onConvertDirectionChanged = listener
+    fun setOnDashToFiatChanged(listener: (Boolean) -> Unit) {
+        onDashToFiatChanged = listener
     }
 
     fun setOnAmountChanged(listener: (Coin) -> Unit) {
@@ -146,18 +165,12 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         val rate = exchangeRate
 
         if (rate != null) {
-            val cleanedValue = GenericUtils.formatFiatWithoutComma(input)
-
-            if (dashToFiat) {
-                dashAmount = Coin.parseCoin(cleanedValue)
-                fiatAmount = rate.coinToFiat(dashAmount)
-            } else {
-                fiatAmount = Fiat.parseFiat(rate.fiat.currencyCode, cleanedValue)
-                dashAmount = rate.fiatToCoin(fiatAmount)
-            }
+            val pair = parseAmounts(input, rate)
+            dashAmount = pair.first
+            fiatAmount = pair.second
 
             binding.resultAmount.text = if (dashToFiat) {
-                GenericUtils.fiatToString(fiatAmount)
+                fiatAmount.toFormattedString()
             } else {
                 dashFormat.format(dashAmount)
             }
@@ -165,6 +178,26 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             binding.resultAmount.text = "0"
             Log.e(AmountView::class.java.name, "Exchange rate is not initialized")
         }
+    }
+
+    private fun parseAmounts(input: String, rate: ExchangeRate): Pair<Coin, Fiat> {
+        val cleanedValue = GenericUtils.formatFiatWithoutComma(input)
+        val dashAmount: Coin
+        val fiatAmount: Fiat
+
+        if (dashToFiat) {
+            dashAmount = Coin.parseCoin(cleanedValue)
+            fiatAmount = rate.coinToFiat(dashAmount)
+        } else {
+            fiatAmount = Fiat.parseFiat(rate.fiat.currencyCode, cleanedValue)
+            dashAmount = rate.fiatToCoin(fiatAmount)
+        }
+
+        if (dashAmount.isGreaterThan(Constants.MAX_MONEY)) {
+            throw IllegalArgumentException()
+        }
+
+        return Pair(dashAmount, fiatAmount)
     }
 
     private fun updateDashSymbols() {
@@ -191,6 +224,34 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             dashToFiat -> input
             isCurrencySymbolFirst -> "$currencySymbol $input"
             else -> "$input $currencySymbol"
+        }
+    }
+
+    private fun handlePasteAmount(view: View) {
+        val clipboard = view.context.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        val clipboardText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+
+        if (isValidInput(clipboardText)) {
+            val wrapper = ContextThemeWrapper(view.context, R.style.My_PopupOverlay)
+            val popupMenu = PopupMenu(wrapper, view)
+            popupMenu.inflate(R.menu.paste_menu)
+            popupMenu.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    R.id.paste_menu_item -> input = clipboardText
+                }
+                true
+            }
+            popupMenu.show()
+        }
+    }
+
+    private fun isValidInput(input: String): Boolean {
+        return try {
+            // Only show the Paste popup if the value in the clipboard is valid
+            parseAmounts(input, exchangeRate!!)
+            true
+        } catch (ex: Exception) {
+            false
         }
     }
 }

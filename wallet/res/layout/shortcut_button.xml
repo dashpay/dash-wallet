@@ -12,11 +12,11 @@
 
     <ImageView
         android:id="@+id/action_icon"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_width="35dp"
+        android:layout_height="35dp"
         android:layout_gravity="center_horizontal"
-        android:layout_weight="1"
-        app:srcCompat="@drawable/ic_shortcut_scan_to_pay"
+        android:scaleType="fitCenter"
+        app:srcCompat="@drawable/ic_shortcut_receive"
         tools:ignore="ContentDescription" />
 
     <TextView
@@ -26,13 +26,13 @@
         android:layout_height="wrap_content"
         android:breakStrategy="simple"
         android:ellipsize="end"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="11dp"
         android:gravity="center|top"
         android:textAlignment="gravity"
         android:lineSpacingMultiplier="0.9"
         android:maxLines="2"
-        android:minLines="2"
+        android:minLines="1"
         tools:ignore="SmallSp"
-        tools:text="Secure\nWallet Now" />
+        tools:text="Send" />
 
 </merge>

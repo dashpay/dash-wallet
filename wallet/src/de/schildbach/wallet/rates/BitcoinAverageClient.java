@@ -2,7 +2,7 @@ package de.schildbach.wallet.rates;
 
 import com.squareup.moshi.Moshi;
 
-import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.entity.ExchangeRate;
 
 import java.io.IOException;
 import java.util.List;

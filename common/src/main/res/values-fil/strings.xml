@@ -16,6 +16,12 @@
     <string name="error">Mali</string>
     <string name="select_a_coin">Pumili ng barya</string>
     <string name="request_coins_share_dialog_title">Ipamahagi ang hiling na Dash...</string>
+    <string name="buy_with_fiat">Bumili ng Dash gamit ang fiat</string>
+    <string name="buy_and_convert">Bumili at i-convert ang Dash gamit ang isa pang crypto</string>
+    <string name="transfer_dash">Ilipat ang Dash</string>
+    <string name="login_error_title">Hindi makapag-log in sa iyong %s account</string>
+    <string name="login_error_message">May naganap na error habang nagla-log in sa iyong%s account.</string>
+    <string name="balance">Balanse:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">Naiintindihan ko</string>
     <string name="button_okay">Okay</string>
     <string name="button_share">Ibahagi</string>
+    <string name="share_address">Ibahagi ang Address</string>
     <string name="verify">Kumpirmahin</string>
     <string name="receive_enter_amount_button">Tukuyin ang halaga</string>
 

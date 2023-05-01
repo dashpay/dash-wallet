@@ -8,7 +8,7 @@
         android:shortcutShortLabel="@string/lock_action_scan_to_pay">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetClass="de.schildbach.wallet.ui.SendCoinsQrActivity"
+            android:targetClass="de.schildbach.wallet.ui.send.SendCoinsQrActivity"
             android:targetPackage="hashengineering.darkcoin.wallet_test">
 
             <extra
@@ -23,7 +23,7 @@
         android:shortcutShortLabel="@string/lock_action_quick_receive">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetClass="de.schildbach.wallet.ui.QuickReceiveActivity"
+            android:targetClass="de.schildbach.wallet.ui.payments.QuickReceiveActivity"
             android:targetPackage="hashengineering.darkcoin.wallet_test">
 
             <extra

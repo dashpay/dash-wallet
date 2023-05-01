@@ -37,7 +37,6 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.os.CancellationSignal;
 import androidx.fragment.app.FragmentManager;
 
 import org.bitcoinj.wallet.DeterministicSeed;
@@ -57,10 +56,11 @@ import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.security.BiometricHelper;
 import de.schildbach.wallet.security.BiometricLockoutException;
-import de.schildbach.wallet.security.FingerprintStorage;
-import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.security.SecurityFunctions;
+import de.schildbach.wallet.security.PinRetryController;
 import de.schildbach.wallet.payments.DecryptSeedTask;
 import de.schildbach.wallet.payments.DeriveKeyTask;
+import de.schildbach.wallet.ui.verify.VerifySeedActivity;
 import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet_test.R;
@@ -78,7 +78,7 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
 
     private FingerprintView fingerprintView;
     @Inject public BiometricHelper biometricHelper;
-
+    @Inject SecurityFunctions securityFunctions;
 
     public static void show(final FragmentManager fm) {
         final BackupWalletToSeedDialogFragment newFragment = new BackupWalletToSeedDialogFragment();
@@ -238,7 +238,7 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
         List<String> mnemonicCode = seed.getMnemonicCode();
         String[] seedArr = new String[mnemonicCode.size()];
         seedArr = mnemonicCode.toArray(seedArr);
-        Intent intent = VerifySeedActivity.Companion.createIntent(activity, seedArr, true);
+        Intent intent = VerifySeedActivity.Companion.createIntent(activity, seedArr, false);
         startActivity(intent);
     }
 
@@ -267,7 +267,7 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
 
             final String pin = privateKeyPasswordView.getText().toString().trim();
 
-            new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
+            new DeriveKeyTask(backgroundHandler, securityFunctions.getScryptIterationsTarget()) {
                 @Override
                 protected void onSuccess(final KeyParameter encryptionKey, final boolean wasChanged) {
                     privateKeyBadPasswordView.setVisibility(View.GONE);

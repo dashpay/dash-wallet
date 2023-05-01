@@ -8,6 +8,7 @@
 <!--    <color name="content_warning">@color/system_red</color>-->
 <!--    <color name="content_loading_track">#14171A</color>-->
 <!--    <color name="tertiary_text_highlight">@color/ultra_dark_gray</color>-->
+<!--    <color name="input_background">@color/extra_dark_gray</color>-->
 
 <!--    &lt;!&ndash; Strokes &ndash;&gt;-->
 <!--    <color name="divider_color">@color/extra_dark_gray</color>-->
@@ -18,6 +19,10 @@
 <!--    <color name="background_tertiary">@color/dash_black</color>-->
 <!--    <color name="button_ripple_color">#30ffffff</color>-->
 <!--    <color name="tx_category_example_background">@color/extra_dark_gray</color>-->
+<!--    <color name="tx_sent_background">#20262E</color>-->
+<!--    <color name="tx_received_background">#232826</color>-->
+<!--    <color name="tx_orange_background">#302D2D</color>-->
+<!--    <color name="disabled_button_bg">#3C3C3C</color>-->
 
 <!--    &lt;!&ndash; Palette &ndash;&gt;-->
 <!--    <color name="dash_blue">#0094F0</color>-->
@@ -29,7 +34,7 @@
 <!--    <color name="dash_black">#191C1F</color>-->
 <!--    <color name="system_red">#E96453</color>-->
 <!--    <color name="system_green">#3FC07D</color>-->
-<!--    <color name="tangerine">#FA9B75</color>-->
+<!--    <color name="orange">#FA9B75</color>-->
 
 <!--    <color name="extra_dark_gray_0.1">#1A45494D</color>-->
 </resources>

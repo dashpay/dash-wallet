@@ -283,13 +283,21 @@
     <string name="tools_show_xpub">کلید عمومی جامع</string>
 
     <string name="about_help_us_improve">به ما برای بهبود تجربه‌تان کمک کنید</string>
+    <string name="about_review_and_rate">امتیاز‌دهی و نوشتن نقدونظر برای این اپلیکیشن</string>
     <string name="about_contact_support">تماس با پشتیبانی</string>
     <string name="about_fork_disclaimer">این یک اپلیکیشن متن‌ باز است که از بیت کوین والت انشعاب گرفته است</string>
-    <string name="about_copyright">Copyright © 2022 Dash Core</string>
+    <string name="about_copyright">Copyright © 2023 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">دش والت %s</string>
+    <string name="about_last_explore_device_sync">آخرین کاوش همگام‌سازی دستگاه </string>
+    <string name="about_last_explore_server_update">آخرین کاوش به‌روزرسانی سرور</string>
+    <string name="about_firebase_installation_id">شناسه نصب فایربیس</string>
+    <string name="about_fcm_token">توکن پیام‌دهی ابری فایربیس</string>
     <string name="about_last_explore_dash_update_error">امکان دریافت وجود ندارد</string>
     <string name="about_last_explore_dash_sync_never">هرگز</string>
+    <string name="about_explore_failed_sync">عدم موفقیت برای همگام‌سازی روی %s</string>
+    <string name="about_explore_preloaded_on">پیش‌بارگذاری‌شده روی %s</string>
+
     <string name="block">بلاک</string>
     <string name="time">زمان</string>
     <string name="hash">هش</string>

@@ -46,6 +46,7 @@ import org.dash.wallet.integration.uphold.data.UpholdConstants;
 import org.dash.wallet.integration.uphold.data.UpholdException;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 
 import javax.inject.Inject;
 
@@ -92,12 +93,12 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
 
         findViewById(R.id.uphold_transfer_to_this_wallet_button).setOnClickListener(v -> {
             if (balance != null && receivingAddress != null) {
-                analytics.logEvent(AnalyticsConstants.Uphold.TRANSFER_DASH, Bundle.EMPTY);
+                analytics.logEvent(AnalyticsConstants.Uphold.TRANSFER_DASH, new HashMap<>());
                 openWithdrawals();
             }
         });
         findViewById(R.id.uphold_buy_dash_btn).setOnClickListener(v -> {
-            analytics.logEvent(AnalyticsConstants.Uphold.BUY_DASH, Bundle.EMPTY);
+            analytics.logEvent(AnalyticsConstants.Uphold.BUY_DASH, new HashMap<>());
             openBuyDashUrl();
         });
 
@@ -217,7 +218,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
 
     private void openTransferActivity() {
         Intent intent = new Intent();
-        intent.setClassName(this, "de.schildbach.wallet.ui.UpholdTransferActivity");
+        intent.setClassName(this, "de.schildbach.wallet.ui.send.UpholdTransferActivity");
         intent.putExtra("extra_title", getString(R.string.uphold_account));
         intent.putExtra("extra_message", getString(R.string.uphold_withdrawal_instructions));
         intent.putExtra("extra_max_amount", balance.toString());
@@ -232,7 +233,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         alertDialogBuilder.setPositiveText(getString(R.string.uphold_go_to_website));
         alertDialogBuilder.setPositiveAction(
                 () -> {
-                    analytics.logEvent(AnalyticsConstants.Uphold.DISCONNECT, Bundle.EMPTY);
+                    analytics.logEvent(AnalyticsConstants.Uphold.DISCONNECT, new HashMap<>());
                     revokeUpholdAccessToken();
                     return Unit.INSTANCE;
                 }

@@ -30,18 +30,17 @@
     <string name="dialog_confirm_total">Total</string>
     <string name="dialog_confirm_accept_contact_request">Accept contact request</string>
 
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Secure Wallet Now</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_action_join_dashpay">Join DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Scan to Send</string>
+    <string name="shortcut_secure_now">Backup</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Send to Address</string>
+    <string name="shortcut_scan_to_pay">Scan</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_address">Send</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">Send to Contact</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Buy / Sell Dash</string>
+    <string name="shortcut_buy_sell">Buy &amp; Sell</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Receive</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -219,17 +218,12 @@
     <string name="verify_continue">Continue</string>
     <string name="verify_backup_wallet">Backup Wallet</string>
     <string name="verify_show_recovery_phrase">Show Recovery Phrase</string>
-    <string name="verify_secure_now">Secure Wallet Now</string>
-    <string name="verify_it_is_important">It\'s important</string>
-    <string name="verify_it_is_important_subtitle">We are about to show you the secret key to your wallet.</string>
-    <string name="verify_info_text_1">This recovery phrase is your access to the funds in this wallet.</string>
-    <string name="verify_info_text_2">We do NOT store this recovery phrase.</string>
-    <string name="verify_info_text_3">You will need this recovery phrase to access your funds if this device is lost, damaged or if Dash Wallet ever is accidentally uninstalled from this device.</string>
-    <string name="verify_skip">Skip</string>
-    <string name="verify_secure_now_btn">Secure now</string>
-    <string name="verify_secure_now_message">If you lose this device, you will lose your funds. Get your recovery phrase so that you can restore your wallet on another device.</string>
-    <string name="verify_seed_title">Please write it down</string>
-    <string name="verify_seed_write_down_confirmation">I wrote it down</string>
+    <string name="verify_info_title">Backup your recovery phrase</string>
+    <string name="verify_info_subtitle">You will need this recovery phrase to access your funds if this device is lost, damaged or if Dash Wallet is uninstalled from this device.</string>
+    <string name="verify_info_title_1">Dash Core Group does NOT store this recovery phrase</string>
+    <string name="verify_info_subtitle_1">Anyone that has your recovery phrase can access your funds.</string>
+    <string name="verify_info_title_2">You will NOT be able to restore the wallet without a recovery phrase</string>
+    <string name="verify_info_subtitle_2">Write it in a safe place and don’t show it to anyone.</string>
     <string name="verify_seed_buttons_tip">Please tap on the words from your recovery phrase in the right order</string>
     <string name="verify_seed_success_title">Verified Successfully</string>
     <string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
@@ -301,7 +295,7 @@
     <string name="about_review_and_rate">Review and rate the app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">This is an open source app forked from Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2022 Dash Core</string>
+    <string name="about_copyright">Copyright © 2023 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_github_link" translatable="false">https://github.com/dashevo/dash-wallet</string>
     <string name="about_version_name">Dash Wallet %s</string>
@@ -377,8 +371,6 @@
     <string name="payment_request_unable_to_send">Unable to Send</string>
     <string name="payment_request_please_try_again">Please try again</string>
     <string name="payment_request_try_again">Try Again</string>
-    <string name="payment_request_problem_title">Payment was not acknowledged</string>
-    <string name="payment_request_problem_message">Your payment could not be processed by the server, please inquire with the merchant</string>
     <string name="payment_request_expired_title">Payment Request Expired</string>
     <string name="payment_request_close">Close</string>
     <string name="payment_request_skip">Skip</string>
@@ -535,6 +527,7 @@
     <string name="contact_history_disclaimer">Add % as your contact to &lt;b>Pay Directly to Username&lt;/b> and &lt;b>Retain Mutual Transaction History&lt;/b></string>
     <string name="contact_history_disclaimer_pending">Once % accepts your request you can &lt;b>Pay Directly to Username&lt;/b></string>
     <string name="stranger_activity_disclaimer_text">Payments made directly to addresses won’t be retained in activity.</string>
+    <string name="error_loading_identity">Error loading identity</string>
 
     <string name="edit_profile">Edit Profile</string>
     <string name="display_name">Display Name</string>

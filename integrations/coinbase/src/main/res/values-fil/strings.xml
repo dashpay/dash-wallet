@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >Huling alam na balanse</string>
+    <string name="coinbase_link_title">I-link ang iyong Coinbase account</string>
+    <string name="coinbase_link">I-link ang Coinbase account</string>
+    <string name="coinbase_transfer_details">Sa pagitan ng Dash Wallet at ng iyong Coinbase account</string>
     <string name="coinbase_dash_wallet_error_title">Wala kaming nakitang Dash Wallet sa iyong Coinbase account.</string>
     <string name="coinbase_dash_wallet_error_message">Mangyaring lumikha ng Dash Wallet sa Coinbase upang magpatuloy.</string>
     <string name="create_dash_account">Lumikha ng Dash Account</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">Idiskonekta ang Coinbase Account</string>
     <string name="receive_directly_into_dash_wallet">Direktang tumanggap sa Dash Wallet.</string>
     <string name="buy_dash">Bumili ng Dash</string>
-    <string name="balance">Balanse:</string>
     <string name="balance_on_coinbase">Balanse sa Coinbase</string>
     <string name="sending_to">Nagpapadala kay</string>
     <string name="dash_wallet_device">Dash Wallet sa device na ito</string>
@@ -41,8 +43,11 @@
     <string name="cancel">Kanselahin</string>
     <string name="confirm_sec">Kumpirmahin ang (%ss)</string>
     <string name="confirm">Kumpirmahin</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Wala kaming nakitang anumang paraan ng pagbabayad.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Mangyaring i-update ang iyong Coinbase account upang magpatuloy.</string>
+    <string name="coinbase_no_payment_methods_error_title">Wala kaming nakitang anumang paraan ng pagbabayad.</string>
+    <string name="coinbase_no_payment_methods_error_message">Mangyaring i-update ang iyong Coinbase account upang magpatuloy.</string>
+    <string name="coinbase_unusable_payment_method_error_title">Hindi magagamit ang paraan ng pagbabayad na ito.</string>
+    <string name="coinbase_unusable_payment_method_error_message">Mangyaring payagan ang pagbili mula sa paraan ng pagbabayad na ito sa iyong Coinbase account.</string>
+    <string name="coinbase_open_account">Buksan ang Coinbase account</string>
     <string name="add_payment_method">Magdagdag ng Paraan ng Pagbabayad</string>
     <string name="error">Mali</string>
     <string name="cancel_transaction">Kanselahin ang transaksyon?</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">Di-wasto ang code na iyon. Pakisubukang muli</string>
     <string name="verify_code">Kumpirmahin</string>
     <string name="you_dont_have_enough_balance">Wala kang sapat na balanse</string>
-    <string name="transfer_dash">Ilipat ang Dash</string>
     <string name="transfer_amount">Ipadala</string>
     <string name="dash_wallet_limit_description">Ang halaga ay mas mataas kaysa sa iyong balanse</string>
     <string name="address_creation_failed">Hindi kami makagawa ng address para sa iyong account upang makumpleto ang iyong transaksyon. Pakisubukan mamaya.</string>

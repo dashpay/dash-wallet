@@ -8,14 +8,19 @@ import android.os.Build
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
-import androidx.lifecycle.Observer
-import de.schildbach.wallet.AppDatabase
+import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.BlockchainIdentityData
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 
-class CreateIdentityNotification(val service: LifecycleService) {
+class CreateIdentityNotification(
+    val service: LifecycleService,
+    private val blockchainIdentityDataDao: BlockchainIdentityDataDao
+) {
 
     private val notificationManager by lazy { service.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager }
 
@@ -93,36 +98,36 @@ class CreateIdentityNotification(val service: LifecycleService) {
         }
     }
 
-    private fun startObservingIdentityCreationState() = AppDatabase.getAppDatabase()
-            .blockchainIdentityDataDaoAsync().loadBase().observe(service, Observer {
-                notificationManager.cancel(Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR)
-                when (it?.creationState) {
-                    BlockchainIdentityData.CreationState.NONE,
-                    BlockchainIdentityData.CreationState.UPGRADING_WALLET,
-                    BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_CREATING,
-                    BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_SENDING,
-                    BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_SENT,
-                    BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_CONFIRMED -> {
-                        displayStep1()
-                    }
-                    BlockchainIdentityData.CreationState.IDENTITY_REGISTERING,
-                    BlockchainIdentityData.CreationState.IDENTITY_REGISTERED -> {
-                        displayStep2(it.restoring)
-                    }
-                    BlockchainIdentityData.CreationState.PREORDER_REGISTERING,
-                    BlockchainIdentityData.CreationState.PREORDER_REGISTERED,
-                    BlockchainIdentityData.CreationState.USERNAME_REGISTERING,
-                    BlockchainIdentityData.CreationState.USERNAME_REGISTERED,
-                    BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATING,
-                    BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATED -> {
-                        displayStep3(it.restoring)
-                    }
-                    BlockchainIdentityData.CreationState.DONE -> {
-                        displayDone()
-                    }
-                    else -> {
-                        // ignore
-                    }
+    private fun startObservingIdentityCreationState() = blockchainIdentityDataDao.observeBase()
+        .onEach {
+            notificationManager.cancel(Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR)
+            when (it?.creationState) {
+                BlockchainIdentityData.CreationState.NONE,
+                BlockchainIdentityData.CreationState.UPGRADING_WALLET,
+                BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_CREATING,
+                BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_SENDING,
+                BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_SENT,
+                BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_CONFIRMED -> {
+                    displayStep1()
                 }
-            })
+                BlockchainIdentityData.CreationState.IDENTITY_REGISTERING,
+                BlockchainIdentityData.CreationState.IDENTITY_REGISTERED -> {
+                    displayStep2(it.restoring)
+                }
+                BlockchainIdentityData.CreationState.PREORDER_REGISTERING,
+                BlockchainIdentityData.CreationState.PREORDER_REGISTERED,
+                BlockchainIdentityData.CreationState.USERNAME_REGISTERING,
+                BlockchainIdentityData.CreationState.USERNAME_REGISTERED,
+                BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATING,
+                BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATED -> {
+                    displayStep3(it.restoring)
+                }
+                BlockchainIdentityData.CreationState.DONE -> {
+                    displayDone()
+                }
+                else -> {
+                    // ignore
+                }
+            }
+        }.launchIn(service.lifecycleScope)
 }

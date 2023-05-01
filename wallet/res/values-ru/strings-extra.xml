@@ -287,13 +287,21 @@
     <string name="tools_show_xpub">Расширенный  публичный ключ</string>
 
     <string name="about_help_us_improve">Помогите нам стать лучше</string>
+    <string name="about_review_and_rate">Напишите отзыв и оцените приложение</string>
     <string name="about_contact_support">Связаться с поддержкой</string>
     <string name="about_fork_disclaimer">Это приложение с открытым кодом, основанное на Bitcoin Wallet</string>
-    <string name="about_copyright">Все права защищены © 2022 Dash Core</string>
+    <string name="about_copyright">Все права защищены © 2023 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_device_sync">Синхронизация с последним устройством с Explore</string>
+    <string name="about_last_explore_server_update">Последнее обновление сервера Explore</string>
+    <string name="about_firebase_installation_id">Идентификатор установки Firebase</string>
+    <string name="about_fcm_token">Токен Firebase Cloud Messaging</string>
     <string name="about_last_explore_dash_update_error">Невозможно получить</string>
     <string name="about_last_explore_dash_sync_never">никогда</string>
+    <string name="about_explore_failed_sync">Не удалось синхронизироваться c %s</string>
+    <string name="about_explore_preloaded_on">Предварительно загружен на %s</string>
+
     <string name="block">Блок</string>
     <string name="time">Время</string>
     <string name="hash">Хэш</string>

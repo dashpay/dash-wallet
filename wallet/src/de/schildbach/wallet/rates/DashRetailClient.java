@@ -5,7 +5,7 @@ import androidx.annotation.Nullable;
 import com.squareup.moshi.Moshi;
 
 import org.dash.wallet.common.data.BigDecimalAdapter;
-import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.entity.ExchangeRate;
 
 import java.util.ArrayList;
 import java.util.List;

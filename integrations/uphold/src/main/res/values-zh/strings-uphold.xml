@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="uphold_link_title">关联您的Uphold账户</string>
+    <string name="uphold_transfer_details">从Uphold到您的Dash钱包</string>
     <string name="uphold_buy_dash_activity_title">通过Uphold 买/卖Dash</string>
     <string name="uphold_buy_dash_with_uphold">通过Uphold账户购买Dash</string>
     <string name="uphold_buy_dash_button">购买Dash</string>

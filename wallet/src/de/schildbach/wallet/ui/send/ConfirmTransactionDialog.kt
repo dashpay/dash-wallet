@@ -19,14 +19,11 @@ package de.schildbach.wallet.ui.send
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.TextUtils
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
 import androidx.preference.PreferenceManager
-import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogConfirmTransactionBinding
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -38,8 +35,8 @@ import kotlin.coroutines.resumeWithException
 
 @AndroidEntryPoint
 class ConfirmTransactionDialog(
-    private val onTransactionConfirmed: ((Boolean) -> Unit)? = null
-) : OffsetDialogFragment() {
+    private var onTransactionConfirmed: ((Boolean) -> Unit)? = null
+) : OffsetDialogFragment(R.layout.dialog_confirm_transaction) {
 
     companion object {
         private val TAG = ConfirmTransactionDialog::class.java.simpleName
@@ -103,7 +100,7 @@ class ConfirmTransactionDialog(
 
         private fun show(confirmTransactionDialog: ConfirmTransactionDialog,
                          bundle: Bundle,
-                         activity: FragmentActivity){
+                         activity: FragmentActivity) {
             confirmTransactionDialog.arguments = bundle
             confirmTransactionDialog.show(activity.supportFragmentManager, TAG)
         }
@@ -128,14 +125,13 @@ class ConfirmTransactionDialog(
     }
 
     private val binding by viewBinding(DialogConfirmTransactionBinding::bind)
-    private val sharedViewModel by activityViewModels<SharedViewModel>()
 
     private val autoAcceptPrefsKey by lazy {
         "auto_accept:$username"
     }
 
     private val prefs: SharedPreferences by lazy {
-        PreferenceManager.getDefaultSharedPreferences(activity)
+        PreferenceManager.getDefaultSharedPreferences(requireContext())
     }
 
     private val username by lazy {
@@ -146,9 +142,8 @@ class ConfirmTransactionDialog(
         requireArguments().getBoolean(ARG_PAYEE_PENDING_CONTACT_REQUEST, false)
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_confirm_transaction, container, false)
-    }
+    var autoAcceptContactRequest: Boolean = false
+        private set
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -199,10 +194,51 @@ class ConfirmTransactionDialog(
         }
         binding.confirmPayment.setOnClickListener {
             autoAcceptLastValue = binding.confirmAutoAccept.isChecked
-            sharedViewModel.autoAcceptContactRequest = pendingContactRequest && binding.confirmAutoAccept.isChecked
-            sharedViewModel.clickConfirmButtonEvent.call()
+            autoAcceptContactRequest = pendingContactRequest && binding.confirmAutoAccept.isChecked
             onTransactionConfirmed?.invoke(true)
             dismiss()
+        }
+    }
+
+    suspend fun show(
+        activity: FragmentActivity,
+        address: String,
+        amount: String,
+        amountFiat: String,
+        fiatSymbol: String,
+        fee: String,
+        total: String,
+        payeeName: String? = null,
+        payeeVerifiedBy: String? = null,
+        buttonText: String? = null,
+        username: String? = null,
+        displayName: String? = null,
+        avatarUrl: String? = null,
+        pendingContactRequest: Boolean = false
+    ): Boolean? {
+        if (!activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            return null
+        }
+
+        return suspendCancellableCoroutine { coroutine ->
+            this.onTransactionConfirmed = { result ->
+                if (coroutine.isActive) {
+                    coroutine.resume(result)
+                }
+            }
+
+            try {
+                val bundle = setBundle(
+                    address, amount, amountFiat, fiatSymbol, fee, total,
+                    payeeName, payeeVerifiedBy, buttonText,
+                    username, displayName, avatarUrl, pendingContactRequest
+                )
+                show(this, bundle, activity)
+            } catch (ex: Exception) {
+                if (coroutine.isActive) {
+                    coroutine.resumeWithException(ex)
+                }
+            }
         }
     }
 
@@ -220,10 +256,5 @@ class ConfirmTransactionDialog(
         if (username != null && !pendingContactRequest && prefs.contains(autoAcceptPrefsKey)) {
             prefs.edit().remove(autoAcceptPrefsKey).apply()
         }
-    }
-
-    class SharedViewModel : SingleActionSharedViewModel() {
-
-        var autoAcceptContactRequest: Boolean = false
     }
 }

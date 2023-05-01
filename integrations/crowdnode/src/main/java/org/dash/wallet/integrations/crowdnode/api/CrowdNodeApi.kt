@@ -30,7 +30,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
@@ -59,7 +59,6 @@ import kotlin.math.pow
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.ExperimentalTime
 
 interface CrowdNodeApi {
     val signUpStatus: StateFlow<SignUpStatus>
@@ -87,9 +86,6 @@ interface CrowdNodeApi {
     suspend fun reset()
 }
 
-@FlowPreview
-@ExperimentalTime
-@ExperimentalCoroutinesApi
 class CrowdNodeApiAggregator @Inject constructor(
     private val webApi: CrowdNodeWebApi,
     private val blockchainApi: CrowdNodeBlockchainApi,
@@ -152,12 +148,12 @@ class CrowdNodeApiAggregator @Inject constructor(
             }
             .launchIn(statusScope)
 
-        config.observePreference(CrowdNodeConfig.BACKGROUND_ERROR)
+        config.observe(CrowdNodeConfig.BACKGROUND_ERROR)
             .filterNot { it.isNullOrEmpty() }
             .onEach {
                 if (apiError.value == null) {
                     apiError.value = CrowdNodeException(it ?: "")
-                    config.setPreference(CrowdNodeConfig.BACKGROUND_ERROR, "")
+                    config.set(CrowdNodeConfig.BACKGROUND_ERROR, "")
                 }
             }
             .launchIn(configScope)
@@ -179,7 +175,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 return
             }
 
-            val onlineStatusOrdinal = config.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
+            val onlineStatusOrdinal = config.get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
                 ?: OnlineAccountStatus.None.ordinal
             var onlineStatus = OnlineAccountStatus.values()[onlineStatusOrdinal]
             val onlineAccountAddress = getOnlineAccountAddress(onlineStatus)
@@ -246,7 +242,7 @@ class CrowdNodeApiAggregator @Inject constructor(
 
             apiError.value = ex
             signUpStatus.value = SignUpStatus.Error
-            config.setPreference(CrowdNodeConfig.BACKGROUND_ERROR, ex.message ?: "")
+            config.set(CrowdNodeConfig.BACKGROUND_ERROR, ex.message ?: "")
             notifyIfNeeded(appContext.getString(R.string.crowdnode_signup_error), "crowdnode_error")
         }
     }
@@ -329,15 +325,15 @@ class CrowdNodeApiAggregator @Inject constructor(
     override suspend fun getWithdrawalLimit(period: WithdrawalLimitPeriod): Coin {
         return Coin.valueOf(when(period) {
             WithdrawalLimitPeriod.PerTransaction -> {
-                config.getPreference(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_TX) ?:
+                config.get(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_TX) ?:
                     CrowdNodeConstants.WithdrawalLimits.DEFAULT_LIMIT_PER_TX.value
             }
             WithdrawalLimitPeriod.PerHour -> {
-                config.getPreference(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_HOUR) ?:
+                config.get(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_HOUR) ?:
                     CrowdNodeConstants.WithdrawalLimits.DEFAULT_LIMIT_PER_HOUR.value
             }
             WithdrawalLimitPeriod.PerDay -> {
-                config.getPreference(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_DAY) ?:
+                config.get(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_DAY) ?:
                     CrowdNodeConstants.WithdrawalLimits.DEFAULT_LIMIT_PER_DAY.value
             }
         })
@@ -357,7 +353,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         }
 
         responseScope.launch {
-            val lastBalance = config.getPreference(CrowdNodeConfig.LAST_BALANCE) ?: 0L
+            val lastBalance = config.get(CrowdNodeConfig.LAST_BALANCE) ?: 0L
             var currentBalance = Resource.loading(Coin.valueOf(lastBalance))
             balance.value = currentBalance
 
@@ -369,7 +365,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 currentBalance = webApi.resolveBalance(accountAddress)
 
                 if (currentBalance.status == Status.SUCCESS && currentBalance.data != null) {
-                    config.setPreference(CrowdNodeConfig.LAST_BALANCE, currentBalance.data!!.value)
+                    config.set(CrowdNodeConfig.LAST_BALANCE, currentBalance.data!!.value)
                 }
 
                 if (lastBalance != currentBalance.data?.value) {
@@ -493,7 +489,7 @@ class CrowdNodeApiAggregator @Inject constructor(
 
         if (result.isSuccessful && result.body()!!.messageStatus.lowercase() == MESSAGE_RECEIVED_STATUS) {
             log.info("Signed email sent successfully")
-            config.setPreference(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID, result.body()!!.id)
+            config.set(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID, result.body()!!.id)
             return true
         }
 
@@ -516,16 +512,15 @@ class CrowdNodeApiAggregator @Inject constructor(
         primaryAddress = null
         linkingApiAddress = null
         apiError.value = null
-        config.clearAll()
     }
 
     private fun isError(): Boolean {
-        val savedError = runBlocking { config.getPreference(CrowdNodeConfig.BACKGROUND_ERROR) ?: "" }
+        val savedError = runBlocking { config.get(CrowdNodeConfig.BACKGROUND_ERROR) ?: "" }
 
         if (savedError.isNotEmpty()) {
             signUpStatus.value = SignUpStatus.Error
             apiError.value = CrowdNodeException(savedError)
-            configScope.launch { config.setPreference(CrowdNodeConfig.BACKGROUND_ERROR, "") }
+            configScope.launch { config.set(CrowdNodeConfig.BACKGROUND_ERROR, "") }
             log.info("found an error: $savedError")
             return true
         }
@@ -605,7 +600,7 @@ class CrowdNodeApiAggregator @Inject constructor(
             if (apiAddress != null) {
                 globalConfig.crowdNodeAccountAddress = apiAddress.toBase58()
                 signUpStatus.value = SignUpStatus.LinkedOnline
-                config.setPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, OnlineAccountStatus.Linking.ordinal)
+                config.set(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, OnlineAccountStatus.Linking.ordinal)
                 return apiAddress
             }
         }
@@ -678,7 +673,7 @@ class CrowdNodeApiAggregator @Inject constructor(
     }
 
     private fun restoreCreatedOnlineAccount(address: Address) {
-        val statusOrdinal = runBlocking { config.getPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
+        val statusOrdinal = runBlocking { config.get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
                 ?: OnlineAccountStatus.None.ordinal }
 
         when (val status = OnlineAccountStatus.values()[statusOrdinal]) {
@@ -695,7 +690,7 @@ class CrowdNodeApiAggregator @Inject constructor(
 
         if (isDefaultEmail) {
             // Check the message status in case there is an error
-            val messageId = config.getPreference(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID) ?: -1
+            val messageId = config.get(CrowdNodeConfig.SIGNED_EMAIL_MESSAGE_ID) ?: -1
 
             if (messageId != -1) {
                 val message = checkMessageStatus(messageId, address)
@@ -771,7 +766,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         onlineAccountStatus.value = status
 
         if (save) {
-            configScope.launch { config.setPreference(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, status.ordinal) }
+            configScope.launch { config.set(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS, status.ordinal) }
         }
     }
 
@@ -847,13 +842,13 @@ class CrowdNodeApiAggregator @Inject constructor(
             val limits = webApi.getWithdrawalLimits(accountAddress)
 
             limits[WithdrawalLimitPeriod.PerTransaction]?.let {
-                config.setPreference(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_TX, it.value)
+                config.set(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_TX, it.value)
             }
             limits[WithdrawalLimitPeriod.PerHour]?.let {
-                config.setPreference(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_HOUR, it.value)
+                config.set(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_HOUR, it.value)
             }
             limits[WithdrawalLimitPeriod.PerDay]?.let {
-                config.setPreference(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_DAY, it.value)
+                config.set(CrowdNodeConfig.WITHDRAWAL_LIMIT_PER_DAY, it.value)
             }
         }
     }

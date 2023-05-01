@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsAdapter
@@ -34,14 +35,15 @@ import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
 import de.schildbach.wallet.ui.dashpay.notification.UserAlertViewHolder
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
+import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityDashpayUserBinding
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.dash.wallet.common.data.BlockchainState
+import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -237,14 +239,14 @@ class DashPayUserActivity : LockScreenActivity(),
 
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 if (fireAction) {
-                    SendCoinsInternalActivity.start(this@DashPayUserActivity, paymentIntent, true)
+                    SendCoinsActivity.start(this@DashPayUserActivity, null, paymentIntent, true)
                 }
             }
 
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
                     val dialog = AdaptiveDialog.create(
-                        R.drawable.ic_info_red,
+                        R.drawable.ic_error,
                         getString(errorDialogTitleResId),
                         if (messageArgs.isNotEmpty()) {
                             getString(messageResId, messageArgs)

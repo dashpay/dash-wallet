@@ -19,7 +19,7 @@ package de.schildbach.wallet.ui.invite
 import android.content.Context
 import android.os.Bundle
 import android.view.View
-import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.invite_send_contact_request_view.*

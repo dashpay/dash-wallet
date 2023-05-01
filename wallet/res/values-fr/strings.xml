@@ -387,6 +387,5 @@
     <string name="select_a_service">Choisissez un service</string>
     <string name="activity_buy_and_sell_dash_filter">Filtre</string>
     <string name="clear_filter">Effacer le filtre</string>
-    <string name="select_currency">Choisir la monnaie</string>
     <string name="reason">Raison</string>
 </resources>

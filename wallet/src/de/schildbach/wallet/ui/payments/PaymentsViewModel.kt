@@ -26,8 +26,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PaymentsViewModel @Inject constructor(platformRepo: PlatformRepo): ViewModel() {
-    val dashPayProfile = if (platformRepo.getBlockchainIdentity()?.currentUsername != null) {
-        platformRepo.observeProfileByUserId(platformRepo.getBlockchainIdentity()!!.uniqueIdString)
+    val dashPayProfile = if (platformRepo.hasIdentity && platformRepo.blockchainIdentity.currentUsername != null) {
+        platformRepo.observeProfileByUserId(platformRepo.blockchainIdentity.uniqueIdString)
     } else {
         flowOf()
     }.asLiveData()
