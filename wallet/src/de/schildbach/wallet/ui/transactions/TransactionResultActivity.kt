@@ -37,6 +37,8 @@ import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
 
 /**
@@ -114,6 +116,7 @@ class TransactionResultActivity : LockScreenActivity() {
                     transactionResultViewBinder.setTransactionMetadata(it)
                 }
             }
+            transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
         } else {
             log.error("Transaction not found. TxId:", txId)
             finish()
@@ -153,6 +156,24 @@ class TransactionResultActivity : LockScreenActivity() {
             }
             else -> {
                 startActivity(WalletActivity.createIntent(this))
+            }
+        }
+    }
+
+    private fun rescanBlockchain() {
+        AdaptiveDialog.create(
+            null,
+            getString(R.string.preferences_initiate_reset_title),
+            getString(R.string.preferences_initiate_reset_dialog_message),
+            getString(R.string.button_cancel),
+            getString(R.string.preferences_initiate_reset_dialog_positive)
+        ).show(this) {
+            if (it == true) {
+                log.info("manually initiated blockchain reset")
+                viewModel.rescanBlockchain()
+                finish()
+            } else {
+                viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS)
             }
         }
     }

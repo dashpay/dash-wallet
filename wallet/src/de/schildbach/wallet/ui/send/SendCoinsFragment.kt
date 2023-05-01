@@ -191,8 +191,8 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val editedAmount = enterAmountViewModel.amount.value
         val rate = enterAmountViewModel.selectedExchangeRate.value
 
-        if (rate != null && editedAmount != null) {
-            val exchangeRate = ExchangeRate(Coin.COIN, rate.fiat)
+        if (editedAmount != null) {
+            val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it) }
 
             try {
                 viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND)

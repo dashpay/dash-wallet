@@ -26,6 +26,7 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -128,7 +129,7 @@ class StakingActivity : LockScreenActivity() {
                 val intent = VerifySeedActivity.createIntent(
                     this@StakingActivity,
                     pin,
-                    goHomeOnClose = false
+                    startMainActivityOnClose = false
                 )
                 startActivity(intent)
             }
