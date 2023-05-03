@@ -14,7 +14,8 @@ class TransactionMetadataDocument(
     var currencyCode: String? = null,
     var rate: Double? = null,
     var memo: String? = null,
-    var service: String? = null
+    var service: String? = null,
+    var customIconId: Sha256Hash? = null
 ) {
 
 }

@@ -90,6 +90,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             val platformService = transactionMetadataDocumentDao.getTransactionService(txId)
             val platformTaxCategory = transactionMetadataDocumentDao.getTransactionTaxCategory(txId)
             val platformExchangeRate = transactionMetadataDocumentDao.getTransactionExchangeRate(txId)
+            val platformCustomIconId = transactionMetadataDocumentDao.getTransactionCustomIconId(txId)
 
             var rate: String? = null
             var code: String? = null
@@ -127,7 +128,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 currencyCode = code,
                 rate = rate,
                 memo = myMemo,
-                service = platformService
+                service = platformService,
+                customIconId = platformCustomIconId
             )
             transactionMetadataDao.insert(metadata)
             // only add to the change cache if some metadata exists
@@ -257,6 +259,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 taxCategory = TaxCategory.Expense
             )
             transactionMetadataDao.update(transactionMetadata)
+            transactionMetadataChangeCacheDao.insertService(txId, ServiceName.DashDirect)
         }
 
         if (!iconUrl.isNullOrEmpty()) {
@@ -522,6 +525,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
 
                             iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, icon.height, icon.width))
                             transactionMetadataDao.updateIconId(txId, imageHash)
+                            transactionMetadataChangeCacheDao.insertCustomIconId(txId, imageHash)
                         } catch (ex: Exception) {
                             log.error("Failed to resize and save the icon for url: $iconUrl", ex)
                         }

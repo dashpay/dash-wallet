@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 18,
-    "identityHash": "90c430fa997a2eb305932bb72d5167f4",
+    "identityHash": "747b7248b61bc380a6d0fcf7f987b5dd",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -713,7 +713,7 @@
       },
       {
         "tableName": "transaction_metadata_cache",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`cacheTimestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` TEXT, `memo` TEXT, `service` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`cacheTimestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` TEXT, `memo` TEXT, `service` TEXT, `customIconId` BLOB, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)",
         "fields": [
           {
             "fieldPath": "cacheTimestamp",
@@ -764,6 +764,12 @@
             "notNull": false
           },
           {
+            "fieldPath": "customIconId",
+            "columnName": "customIconId",
+            "affinity": "BLOB",
+            "notNull": false
+          },
+          {
             "fieldPath": "id",
             "columnName": "id",
             "affinity": "INTEGER",
@@ -781,7 +787,7 @@
       },
       {
         "tableName": "transaction_metadata_platform",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` REAL, `memo` TEXT, `service` TEXT, PRIMARY KEY(`id`, `txId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` REAL, `memo` TEXT, `service` TEXT, `customIconId` BLOB, PRIMARY KEY(`id`, `txId`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -836,6 +842,12 @@
             "columnName": "service",
             "affinity": "TEXT",
             "notNull": false
+          },
+          {
+            "fieldPath": "customIconId",
+            "columnName": "customIconId",
+            "affinity": "BLOB",
+            "notNull": false
           }
         ],
         "primaryKey": {
@@ -852,7 +864,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '90c430fa997a2eb305932bb72d5167f4')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '747b7248b61bc380a6d0fcf7f987b5dd')"
     ]
   }
 }

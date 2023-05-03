@@ -29,13 +29,13 @@ import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
+import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
-import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.entity.TransactionMetadataDocument
-import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.BlockchainService
@@ -46,6 +46,7 @@ import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -73,6 +74,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 interface PlatformSyncService {
@@ -115,7 +117,7 @@ class PlatformSynchronizationService @Inject constructor(
         private val random = Random(System.currentTimeMillis())
 
         val UPDATE_TIMER_DELAY = 15.seconds
-        val PUSH_PERIOD = 3.hours
+        val PUSH_PERIOD = if (BuildConfig.DEBUG) 5.minutes else 3.hours
     }
 
     val platform = platformRepo.platform
@@ -782,6 +784,19 @@ class PlatformSynchronizationService @Inject constructor(
                                 updatedMetadata.rate = metadata.exchangeRate.toString()
                             }
                         }
+                        metadata.customIconId?.let { customIconId ->
+                            val hash = Sha256Hash.wrap(customIconId)
+                            metadataDocumentRecord.customIconId = hash
+                            log.info("processing TxMetadata: custom icon change")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.customIconId != null && it.customIconId != hash
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: custom icon change: changing icon")
+                                updatedMetadata.customIconId = hash
+                            }
+                        }
 
                         log.info("syncing metadata with platform updates: $updatedMetadata")
                         transactionMetadataProvider.syncPlatformMetadata(txIdAsHash, updatedMetadata)
@@ -810,7 +825,8 @@ class PlatformSynchronizationService @Inject constructor(
                 it.rate?.toDouble(),
                 it.currencyCode,
                 it.taxCategory?.name?.lowercase(),
-                it.service
+                it.service,
+                it.customIconId?.bytes
             )
         }
         val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
@@ -845,6 +861,9 @@ class PlatformSynchronizationService @Inject constructor(
                 }
                 changedItem.service?.let { service ->
                     item.service = service
+                }
+                changedItem.customIconId?.let { customIconId ->
+                    item.customIconId = customIconId
                 }
             } else {
                 itemsToPublish[changedItem.txId] = changedItem

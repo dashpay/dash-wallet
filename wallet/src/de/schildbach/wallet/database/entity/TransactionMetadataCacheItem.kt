@@ -32,7 +32,8 @@ data class TransactionMetadataCacheItem(
     var currencyCode: String? = null,
     var rate: String? = null,
     var memo: String? = null,
-    var service: String? = null
+    var service: String? = null,
+    var customIconId: Sha256Hash? = null
 ) {
     @PrimaryKey(autoGenerate = true)
     var id: Long = 0
@@ -45,11 +46,12 @@ data class TransactionMetadataCacheItem(
         transactionMetadata.currencyCode,
         transactionMetadata.rate,
         transactionMetadata.memo.ifEmpty { null },
-        transactionMetadata.service
+        transactionMetadata.service,
+        transactionMetadata.customIconId
     )
 
     fun isNotEmpty(): Boolean {
         return sentTimestamp != null || taxCategory != null || !memo.isNullOrEmpty() ||
-            currencyCode != null || rate != null || service != null
+            currencyCode != null || rate != null || service != null || customIconId != null
     }
 }

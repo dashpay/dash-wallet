@@ -68,7 +68,7 @@ interface TransactionMetadataChangeCacheDao {
     suspend fun insertMemo(txId: Sha256Hash, memo: String, cacheTimestamp: Long = System.currentTimeMillis())
 
     @Query(
-        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, memo) 
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, service) 
            VALUES(:txId, :cacheTimestamp, :service)"""
     )
     suspend fun insertService(txId: Sha256Hash, service: String, cacheTimestamp: Long = System.currentTimeMillis())
@@ -81,6 +81,16 @@ interface TransactionMetadataChangeCacheDao {
         txId: Sha256Hash,
         currencyCode: String,
         rate: String,
+        cacheTimestamp: Long = System.currentTimeMillis()
+    )
+
+    @Query(
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, customIconId) 
+           VALUES (:txId, :cacheTimestamp, :customIconId)"""
+    )
+    suspend fun insertCustomIconId(
+        txId: Sha256Hash,
+        customIconId: Sha256Hash,
         cacheTimestamp: Long = System.currentTimeMillis()
     )
 

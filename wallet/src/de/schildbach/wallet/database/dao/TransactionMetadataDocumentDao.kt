@@ -86,6 +86,16 @@ interface TransactionMetadataDocumentDao {
     """)
     suspend fun getTransactionExchangeRate(txId: Sha256Hash): ExchangeRate?
 
+    @Query("""
+        SELECT customIconId 
+        FROM transaction_metadata_platform 
+        WHERE txId = :txId 
+            AND customIconId is NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
+    suspend fun getTransactionCustomIconId(txId: Sha256Hash): Sha256Hash?
+
     @Query("SELECT MAX(timestamp) FROM transaction_metadata_platform")
     fun getLastTimestamp() : Long
 

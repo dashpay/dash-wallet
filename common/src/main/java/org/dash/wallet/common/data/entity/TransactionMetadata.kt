@@ -47,6 +47,7 @@ data class TransactionMetadata(
     val defaultTaxCategory = TaxCategory.getDefault(value.isPositive, isTransfer)
 
     fun isNotEmpty(): Boolean {
-        return timestamp != 0L || taxCategory != null || memo.isNotEmpty() || currencyCode != null || rate != null || service != null
+        return timestamp != 0L || taxCategory != null || memo.isNotEmpty() || currencyCode != null ||
+            rate != null || service != null || customIconId != null
     }
 }

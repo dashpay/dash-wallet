@@ -166,7 +166,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private suspend fun initializeStateRepository() {
         // load our id
 
-        if (this::blockchainIdentity.isInitialized && blockchainIdentity.registered) {
+        if (this::blockchainIdentity.isInitialized && blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED) {
             val identityId = blockchainIdentity.uniqueIdString
             platform.stateRepository.addValidIdentity(Identifier.from(identityId))
 
@@ -1014,7 +1014,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet!!.context)
-        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter)
+        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, false)
         val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
                 System.currentTimeMillis())
         // update database
