@@ -35,6 +35,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
+import org.dash.wallet.common.util.safeNavigate
 
 enum class CreateUsernameActions {
     CREATE_NEW,
@@ -85,11 +86,12 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
         binding.closeBtn.setOnClickListener { requireActivity().finish() }
         binding.username.addTextChangedListener(this)
         binding.registerBtn.setOnClickListener {
-            if (reuseTransaction) {
-                triggerIdentityCreation(true)
-            } else {
-                showConfirmationDialog()
-            }
+            safeNavigate(CreateUsernameFragmentDirections.createUsernameToUsernamePrivacy())
+//            if (reuseTransaction) {
+//                triggerIdentityCreation(true)
+//            } else {
+//                showConfirmationDialog()
+//            }
         }
         binding.processingIdentityDismissBtn.setOnClickListener { requireActivity().finish() }
 
