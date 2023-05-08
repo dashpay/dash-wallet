@@ -15,6 +15,7 @@ import de.schildbach.wallet.data.BlockchainIdentityData.CreationState
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
@@ -332,7 +333,7 @@ class CreateIdentityService : LifecycleService() {
 
             coinJoinService.prepareAndStartMixing()
 
-            coinJoinService.waitForMixing();
+            coinJoinService.waitForMixing()
         }
 
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CREATING) {
@@ -342,7 +343,7 @@ class CreateIdentityService : LifecycleService() {
             //
             // check to see if the funding transaction exists
             if (blockchainIdentity.creditFundingTransaction == null) {
-                platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey)
+                platformRepo.createCreditFundingTransactionAsync(blockchainIdentity, encryptionKey, coinJoinService.getMode()  != CoinJoinMode.BASIC)
             }
         }
 

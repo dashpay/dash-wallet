@@ -603,10 +603,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     // Step 2 is to create the credit funding transaction
     //
-    suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
+    suspend fun createCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, useCoinJoin: Boolean) {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet!!.context)
-            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, true)
+            val cftx = blockchainIdentity.createCreditFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, useCoinJoin)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
         }
     }
