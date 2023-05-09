@@ -67,7 +67,7 @@
             app:layout_constraintTop_toBottomOf="@+id/logo"
             android:gravity="center_horizontal"
             android:paddingHorizontal="20dp"
-            android:text="@string/select_your_username_privacy_preferences"
+            android:text="@string/select_privacy_preferences"
             android:textAlignment="gravity" />
 
         <TextView
@@ -81,7 +81,7 @@
             app:layout_constraintTop_toBottomOf="@+id/headline"
             android:layout_marginTop="5dp"
             android:gravity="center_horizontal"
-            android:text="@string/please_note_that_you_will_not_be_able_to_change_this_later"
+            android:text="@string/please_note_cant_change_this_later"
             android:textAlignment="gravity" />
 
 
@@ -118,7 +118,7 @@
                 android:layout_marginEnd="20dp"
                 android:layout_weight="1"
                 android:gravity="center_vertical"
-                android:text="@string/advanced_users_can_determine_your_transaction_history"
+                android:text="@string/basic_level_card_decs"
                 app:layout_constraintEnd_toStartOf="@+id/bacic_icon"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/basic_title" />
@@ -191,7 +191,7 @@
                 android:layout_marginEnd="20dp"
                 android:layout_weight="1"
                 android:gravity="center_vertical"
-                android:text="@string/advanced_users_who_have_a_very_high_level_of_technical_expertise_can_determine_your_transaction_history"
+                android:text="@string/intermediate_level_card_decs"
                 app:layout_constraintEnd_toStartOf="@+id/intermediate_icon"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/intermediate_title" />
@@ -263,7 +263,7 @@
                 android:layout_marginEnd="20dp"
                 android:layout_weight="1"
                 android:gravity="center_vertical"
-                android:text="@string/it_would_be_very_difficult_for_advanced_users_with_any_level_of_technical_expertise_to_determine_your_transaction_history"
+                android:text="@string/advanced_level_card_decs"
                 app:layout_constraintEnd_toStartOf="@+id/advanced_icon"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/advanced_title" />

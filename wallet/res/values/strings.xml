@@ -390,19 +390,19 @@
     <string name="clear_filter">Clear Filter</string>
     <string name="select_currency">Select Currency</string>
     <string name="reason">Reason</string>
-    <string name="select_your_username_privacy_preferences">Select your username privacy preferences</string>
-    <string name="please_note_that_you_will_not_be_able_to_change_this_later">Please note that you will not be able to change this later</string>
+    <string name="select_privacy_preferences">Select your username privacy preferences</string>
+    <string name="please_note_cant_change_this_later">Please note that you will not be able to change this later</string>
     <string name="Basic">Basic</string>
     <string name="Intermediate">Intermediate</string>
-    <string name="advanced_users_can_determine_your_transaction_history">Advanced users can determine your transaction history</string>
+    <string name="basic_level_card_decs">Advanced users can determine your transaction history</string>
     <string name="minutes_to_create_a_username">1-2 minutes to create a username</string>
-    <string name="advanced_users_who_have_a_very_high_level_of_technical_expertise_can_determine_your_transaction_history">Advanced users who have a very high level of technical expertise can determine your transaction history</string>
+    <string name="intermediate_level_card_decs">Advanced users who have a very high level of technical expertise can determine your transaction history</string>
     <string name="_1_2_hours">1-2 hours</string>
     <string name="several_hours">Several hours</string>
-    <string name="it_would_be_very_difficult_for_advanced_users_with_any_level_of_technical_expertise_to_determine_your_transaction_history">It would be very difficult for advanced users with any level of technical expertise to determine your transaction history</string>
+    <string name="advanced_level_card_decs">It would be very difficult for advanced users with any level of technical expertise to determine your transaction history</string>
     <string name="advanced">Advanced</string>
-    <string name="Intermediate_privacy_level_requires_a_reliable_internet_connection">Intermediate privacy level requires a reliable internet connection</string>
-    <string name="Advanced_privacy_level_requires_a_reliable_internet_connection">Advanced privacy level requires a reliable internet connection</string>
-    <string name="It_is_recommended_to_be_on_a_wifi_network_to_avoid_losing_any_funds">It is recommended to be on a Wi-Fi network to avoid losing any funds</string>
+    <string name="Intermediate_level_WIFI_Warning">Intermediate privacy level requires a reliable internet connection</string>
+    <string name="Advanced_level_WIFI_Warning">Advanced privacy level requires a reliable internet connection</string>
+    <string name="privcay_level_WIFI_warning_desc">It is recommended to be on a Wi-Fi network to avoid losing any funds</string>
     <string name="continue_anyway">Continue Anyway</string>
 </resources>

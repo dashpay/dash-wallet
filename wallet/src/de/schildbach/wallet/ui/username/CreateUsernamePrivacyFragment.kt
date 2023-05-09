@@ -78,12 +78,12 @@ class CreateUsernamePrivacyFragment : Fragment(R.layout.fragment_user_name_priva
             org.dash.wallet.integration.coinbase_integration.R.drawable.ic_warning,
             getString(
                 if (mode == CoinJoinMode.INTERMEDIATE) {
-                    R.string.Intermediate_privacy_level_requires_a_reliable_internet_connection
+                    R.string.Intermediate_level_WIFI_Warning
                 } else {
                     R.string.Advanced_privacy_level_requires_a_reliable_internet_connection
                 },
             ),
-            getString(R.string.It_is_recommended_to_be_on_a_wifi_network_to_avoid_losing_any_funds),
+            getString(R.string.privcay_level_WIFI_warning_desc),
             getString(org.dash.wallet.integration.coinbase_integration.R.string.cancel),
             getString(R.string.continue_anyway),
         ).show(requireActivity()) {
