@@ -402,6 +402,7 @@
     <string name="it_would_be_very_difficult_for_advanced_users_with_any_level_of_technical_expertise_to_determine_your_transaction_history">It would be very difficult for advanced users with any level of technical expertise to determine your transaction history</string>
     <string name="advanced">Advanced</string>
     <string name="Intermediate_privacy_level_requires_a_reliable_internet_connection">Intermediate privacy level requires a reliable internet connection</string>
+    <string name="Advanced_privacy_level_requires_a_reliable_internet_connection">Advanced privacy level requires a reliable internet connection</string>
     <string name="It_is_recommended_to_be_on_a_wifi_network_to_avoid_losing_any_funds">It is recommended to be on a Wi-Fi network to avoid losing any funds</string>
     <string name="continue_anyway">Continue Anyway</string>
 </resources>

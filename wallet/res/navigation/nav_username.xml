@@ -25,6 +25,11 @@
         android:id="@+id/createUsernamePrivacyFragment"
         android:name="de.schildbach.wallet.ui.username.CreateUsernamePrivacyFragment"
         tools:layout="@layout/fragment_user_name_privacy">
-
+        <action
+            android:id="@+id/username_privacy_to_createUsernameFragment"
+            app:popUpTo="@+id/createUsernameFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 </navigation>

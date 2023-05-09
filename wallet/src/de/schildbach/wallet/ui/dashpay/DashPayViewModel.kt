@@ -15,12 +15,15 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import android.os.Bundle
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
@@ -30,6 +33,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
@@ -41,12 +45,14 @@ open class DashPayViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val analytics: AnalyticsService,
     private val platformRepo: PlatformRepo,
+    private val coinJoinService: CoinJoinService,
     private val blockchainState: BlockchainStateDao,
     private val dashPayProfile: DashPayProfileDaoAsync,
     private val userAlert: UserAlertDaoAsync,
     private val invitations: InvitationsDaoAsync,
     val platformSyncService: PlatformSyncService,
-    private val platformBroadcastService: PlatformBroadcastService
+    var networkState: NetworkStateInt,
+    private val platformBroadcastService: PlatformBroadcastService,
 ) : ViewModel() {
 
     companion object {
@@ -83,11 +89,17 @@ open class DashPayViewModel @Inject constructor(
         timerUsernameSearch?.logTiming(
             mapOf(
                 "resultCount" to resultSize,
-                "searchCount" to searchTextSize
-            )
+                "searchCount" to searchTextSize,
+            ),
         )
     }
 
+    fun isWifiConnected(): Boolean {
+        return networkState.isWifiConnected()
+    }
+    fun setCoinJoinMode(mode: CoinJoinMode) {
+        coinJoinService.setMode(mode)
+    }
     val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
         getUsernameJob.cancel()
         getUsernameJob = Job()
@@ -127,7 +139,7 @@ open class DashPayViewModel @Inject constructor(
             try {
                 val timerIsLock = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_SEARCH_QUERY)
                 var result = platformRepo.searchUsernames(search.text, false, search.limit)
-                result = result.filter {  !search.excludeIds.contains(it.dashPayProfile.userId) }
+                result = result.filter { !search.excludeIds.contains(it.dashPayProfile.userId) }
                 if (result.isNotEmpty()) {
                     val limit = result.size.coerceAtMost(search.limit)
                     result = result.subList(0, limit)
@@ -137,8 +149,8 @@ open class DashPayViewModel @Inject constructor(
                     timerIsLock.logTiming(
                         mapOf(
                             "resultCount" to result.size,
-                            "searchCount" to search.text.length
-                        )
+                            "searchCount" to search.text.length,
+                        ),
                     )
                 }
             } catch (ex: Exception) {
@@ -205,8 +217,8 @@ open class DashPayViewModel @Inject constructor(
         }
         recentlyModifiedContactsLiveData.postValue(recentlyModifiedContacts!!)
         SendContactRequestOperation(walletApplication)
-                .create(toUserId)
-                .enqueue()
+            .create(toUserId)
+            .enqueue()
     }
 
     val getContactRequestLiveData = Transformations.switchMap(contactRequestLiveData) {
@@ -262,8 +274,8 @@ open class DashPayViewModel @Inject constructor(
         frequentContactsLiveData.getFrequentContacts()
     }
 
-    fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+    fun logEvent(event: String, params: Bundle = bundleOf()) {
+        analytics.logEvent(event, params)
     }
 
     protected fun formatExceptionMessage(description: String, e: Exception): String {
@@ -290,8 +302,11 @@ open class DashPayViewModel @Inject constructor(
         }
     }
 
-    private inner class UserSearch(val text: String, val limit: Int = 100,
-                                   val excludeIds: ArrayList<String> = arrayListOf())
+    private inner class UserSearch(
+        val text: String,
+        val limit: Int = 100,
+        val excludeIds: ArrayList<String> = arrayListOf(),
+    )
 
     val inviteHistory = invitations.loadAll()
 }

@@ -14,7 +14,7 @@ import android.view.animation.AnimationUtils
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
@@ -22,6 +22,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.SetPinActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -33,6 +34,7 @@ import kotlinx.android.parcel.Parcelize
 import kotlinx.android.synthetic.main.users_orbit.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.safeNavigate
@@ -63,6 +65,7 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
     private val binding by viewBinding(FragmentCreateUsernameBinding::bind)
 
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
+    val confirmTransactionSharedViewModel: PlatformPaymentConfirmDialog.SharedViewModel by activityViewModels()
     private lateinit var walletApplication: WalletApplication
 
     private var reuseTransaction: Boolean = false
@@ -87,11 +90,18 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
         binding.username.addTextChangedListener(this)
         binding.registerBtn.setOnClickListener {
             safeNavigate(CreateUsernameFragmentDirections.createUsernameToUsernamePrivacy())
-//            if (reuseTransaction) {
-//                triggerIdentityCreation(true)
-//            } else {
-//                showConfirmationDialog()
-//            }
+        }
+
+        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<CoinJoinMode?>("mode")?.observe(
+            viewLifecycleOwner) { result ->
+            // Do something with the result.
+            result?.let {
+                if (reuseTransaction) {
+                    triggerIdentityCreation(true)
+                } else {
+                    showConfirmationDialog()
+                }
+            }
         }
         binding.processingIdentityDismissBtn.setOnClickListener { requireActivity().finish() }
 
@@ -123,10 +133,8 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
     }
 
     private fun initViewModel() {
-        val confirmTransactionSharedViewModel = ViewModelProvider(this).get(
-            PlatformPaymentConfirmDialog.SharedViewModel::class.java,
-        )
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(viewLifecycleOwner) {
+            dashPayViewModel.logEvent(AnalyticsConstants.CoinJoinPrivacy.USERNAME_PRIVACY_CONFIRMATION_BTN_CONFIRM)
             if (createUsernameArgs?.actions == CreateUsernameActions.FROM_INVITE) {
                 triggerIdentityCreationFromInvite(reuseTransaction)
             } else {

@@ -5,14 +5,17 @@ import android.view.View
 import android.widget.ImageView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUserNamePrivacyBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 
@@ -21,7 +24,7 @@ import org.dash.wallet.common.ui.viewBinding
 class CreateUsernamePrivacyFragment : Fragment(R.layout.fragment_user_name_privacy) {
     private val binding by viewBinding(FragmentUserNamePrivacyBinding::bind)
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
-
+    private var selectedCoinJoinMode = CoinJoinMode.BASIC
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -30,42 +33,85 @@ class CreateUsernamePrivacyFragment : Fragment(R.layout.fragment_user_name_priva
             setPrivacyItemSelected(binding.basicCl, binding.bacicIcon)
             setPrivacyItemUnSelected(binding.intermediateCl, binding.intermediateIcon)
             setPrivacyItemUnSelected(binding.advancedCl, binding.advancedIcon)
+            selectedCoinJoinMode = CoinJoinMode.BASIC
         }
 
         binding.intermediateCl.setOnClickListener {
-            showIntermediateWaringDialog()
+            if (!dashPayViewModel.isWifiConnected()) {
+                showConnectionWaringDialog(CoinJoinMode.INTERMEDIATE)
+            } else {
+                setIntermediateMode(CoinJoinMode.INTERMEDIATE)
+            }
         }
 
         binding.advancedCl.setOnClickListener {
-            setPrivacyItemUnSelected(binding.basicCl, binding.bacicIcon)
-            setPrivacyItemUnSelected(binding.intermediateCl, binding.intermediateIcon)
-            setPrivacyItemSelected(binding.advancedCl, binding.advancedIcon)
+            if (!dashPayViewModel.isWifiConnected()) {
+                showConnectionWaringDialog(CoinJoinMode.ADVANCED)
+            } else {
+                setAdvancedMode(CoinJoinMode.ADVANCED)
+            }
         }
-        binding.continueBtn.setOnClickListener{
-            //dashPayViewModel.logEvent()
-        }
+        binding.continueBtn.setOnClickListener {
+            dashPayViewModel.logEvent(
+                AnalyticsConstants.CoinJoinPrivacy.USERNAME_PRIVACY_BTN_CONTINUE,
+                bundleOf(
+                    AnalyticsConstants.Parameters.VALUE to selectedCoinJoinMode.name,
+                ),
+            )
 
-        binding.toolbar.setNavigationOnClickListener {
+            dashPayViewModel.setCoinJoinMode(selectedCoinJoinMode)
+            findNavController().previousBackStackEntry?.savedStateHandle?.set(
+                "mode",
+                selectedCoinJoinMode,
+            )
             findNavController().popBackStack()
         }
 
+        binding.toolbar.setNavigationOnClickListener {
+            findNavController().previousBackStackEntry?.savedStateHandle?.set("mode", null)
+            findNavController().popBackStack()
+        }
     }
 
-
-    private fun showIntermediateWaringDialog() {
-       AdaptiveDialog.create(
+    private fun showConnectionWaringDialog(mode: CoinJoinMode) {
+        AdaptiveDialog.create(
             org.dash.wallet.integration.coinbase_integration.R.drawable.ic_warning,
-           getString(R.string.Intermediate_privacy_level_requires_a_reliable_internet_connection),
+            getString(
+                if (mode == CoinJoinMode.INTERMEDIATE) {
+                    R.string.Intermediate_privacy_level_requires_a_reliable_internet_connection
+                } else {
+                    R.string.Advanced_privacy_level_requires_a_reliable_internet_connection
+                },
+            ),
             getString(R.string.It_is_recommended_to_be_on_a_wifi_network_to_avoid_losing_any_funds),
             getString(org.dash.wallet.integration.coinbase_integration.R.string.cancel),
-            getString(R.string.continue_anyway)
-        ).show(requireActivity()){
-            if(it == true){
-                setPrivacyItemUnSelected(binding.basicCl, binding.bacicIcon)
-                setPrivacyItemSelected(binding.intermediateCl, binding.intermediateIcon)
-                setPrivacyItemUnSelected(binding.advancedCl, binding.advancedIcon)
+            getString(R.string.continue_anyway),
+        ).show(requireActivity()) {
+            if (it == true) {
+                dashPayViewModel.logEvent(AnalyticsConstants.CoinJoinPrivacy.USERNAME_PRIVACY_WIFI_BTN_CONTINUE)
+                if (mode == CoinJoinMode.INTERMEDIATE) {
+                    setIntermediateMode(mode)
+                } else if (mode == CoinJoinMode.ADVANCED) {
+                    setAdvancedMode(mode)
+                }
+            } else {
+                dashPayViewModel.logEvent(AnalyticsConstants.CoinJoinPrivacy.USERNAME_PRIVACY_WIFI_BTN_CANCEL)
             }
-       }
+        }
+    }
+
+    private fun setIntermediateMode(mode: CoinJoinMode) {
+        setPrivacyItemUnSelected(binding.basicCl, binding.bacicIcon)
+        setPrivacyItemSelected(binding.intermediateCl, binding.intermediateIcon)
+        setPrivacyItemUnSelected(binding.advancedCl, binding.advancedIcon)
+        selectedCoinJoinMode = mode
+    }
+
+    private fun setAdvancedMode(mode: CoinJoinMode) {
+        setPrivacyItemUnSelected(binding.basicCl, binding.bacicIcon)
+        setPrivacyItemUnSelected(binding.intermediateCl, binding.intermediateIcon)
+        setPrivacyItemSelected(binding.advancedCl, binding.advancedIcon)
+        selectedCoinJoinMode = mode
     }
 
     private fun setPrivacyItemSelected(cl: ConstraintLayout, icon: ImageView) {
@@ -73,6 +119,7 @@ class CreateUsernamePrivacyFragment : Fragment(R.layout.fragment_user_name_priva
         val tintColor = ResourcesCompat.getColor(resources, R.color.dash_blue, null)
         icon.setColorFilter(tintColor)
     }
+
     private fun setPrivacyItemUnSelected(cl: ConstraintLayout, icon: ImageView) {
         cl.isSelected = false
         val tintColor = ResourcesCompat.getColor(resources, R.color.light_gray, null)

@@ -21,11 +21,13 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.BlockchainIdentityBaseData
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
+import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
 import de.schildbach.wallet.ui.username.CreateUsernameActions
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import de.schildbach.wallet.ui.username.CreateUsernameFragment
@@ -38,6 +40,7 @@ class CreateUsernameActivity : InteractionAwareActivity() {
 
     private val dashPayViewModel: DashPayViewModel by viewModels()
 
+    val confirmTransactionSharedViewModel: PlatformPaymentConfirmDialog.SharedViewModel by viewModels()
     companion object {
         private val log = LoggerFactory.getLogger(CreateUsernameActivity::class.java)
 
