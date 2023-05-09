@@ -8,13 +8,6 @@ source_lang = en
 type        = TXT
 lang_map    = zh_TW: zh-TW, sl_SI: sl
 
-[o:dash:p:dash-mobile-wallets:r:market-promo-text]
-file_filter = market/market-promo-text-<lang>.txt
-source_file = market/market-promo-text.txt
-source_lang = en
-type        = TXT
-lang_map    = sl_SI: sl, zh_TW: zh-TW
-
 [o:dash:p:dash-mobile-wallets:r:strings]
 file_filter = wallet/res/values-<lang>/strings.xml
 source_file = wallet/res/values/strings.xml
