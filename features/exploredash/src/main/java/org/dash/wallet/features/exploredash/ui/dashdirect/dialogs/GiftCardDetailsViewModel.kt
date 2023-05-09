@@ -150,7 +150,11 @@ class GiftCardDetailsViewModel @Inject constructor(
                 paymentStatus?.data?.errors?.any { !it.isNullOrEmpty() } == true
             ) {
                 cancelTicker()
-                val message = paymentStatus.errorMessage ?: paymentStatus.data?.errors?.firstOrNull() ?: ""
+                val message = if (!paymentStatus.errorMessage.isNullOrEmpty()) {
+                    paymentStatus.errorMessage
+                } else {
+                    paymentStatus.data?.errors?.firstOrNull() ?: ""
+                }
                 log.error("DashDirect returned error: $message")
                 error.postValue(DashDirectException(message))
             }
