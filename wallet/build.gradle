@@ -48,7 +48,7 @@ dependencies {
     implementation "androidx.biometric:biometric:1.1.0"
 
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation "org.dashj.android:dashj-bls-android:1.2.5-SNAPSHOT"
+    implementation "org.dashj.android:dashj-bls-android:1.0.0"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
     implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
