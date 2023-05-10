@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 12,
-    "identityHash": "d76bfd9c62a028ee25c3bda07fb5f9e1",
+    "identityHash": "c52d24189ed5615565c3152bdf6ed748",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -207,7 +207,7 @@
       },
       {
         "tableName": "icon_bitmaps",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `imageData` BLOB NOT NULL, `height` INTEGER NOT NULL, `width` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `imageData` BLOB NOT NULL, `originalUrl` TEXT NOT NULL, `height` INTEGER NOT NULL, `width` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -219,6 +219,12 @@
             "fieldPath": "imageData",
             "columnName": "imageData",
             "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "originalUrl",
+            "columnName": "originalUrl",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -349,7 +355,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd76bfd9c62a028ee25c3bda07fb5f9e1')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c52d24189ed5615565c3152bdf6ed748')"
     ]
   }
 }
