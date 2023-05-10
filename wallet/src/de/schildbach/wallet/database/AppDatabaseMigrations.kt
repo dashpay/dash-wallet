@@ -32,7 +32,8 @@ class AppDatabaseMigrations {
                     )
                     database.execSQL(
                         "CREATE TABLE IF NOT EXISTS icon_bitmaps (id BLOB NOT NULL PRIMARY KEY, " +
-                            "imageData BLOB NOT NULL, height INTEGER NOT NULL, width INTEGER NOT NULL)"
+                            "imageData BLOB NOT NULL, originalUrl TEXT NOT NULL, " +
+                            "height INTEGER NOT NULL, width INTEGER NOT NULL)"
                     )
                     database.execSQL(
                         "CREATE TABLE IF NOT EXISTS gift_cards (id TEXT NOT NULL PRIMARY KEY, " +

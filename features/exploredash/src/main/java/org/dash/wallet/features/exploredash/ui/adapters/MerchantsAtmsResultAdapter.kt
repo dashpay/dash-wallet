@@ -155,7 +155,7 @@ class AtmViewHolder(val binding: AtmRowBinding) : ExploreViewHolder(binding.root
             )
         }
 
-        binding.buyIcon.isVisible = atm?.type == AtmType.BOTH || atm?.type == AtmType.BUY
-        binding.sellIcon.isVisible = atm?.type == AtmType.BOTH || atm?.type == AtmType.SELL
+        binding.buyIcon.isVisible = atm?.type != AtmType.SELL
+        binding.sellIcon.isVisible = atm?.type != AtmType.BUY && !atm?.type.isNullOrEmpty()
     }
 }

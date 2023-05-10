@@ -109,7 +109,7 @@ open class LockScreenActivity : SecureActivity() {
         USE_DEFAULT // defaults to fingerprint if available and enabled
     }
 
-    private val keepUnlocked by lazy {
+    val keepUnlocked by lazy {
         intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
     }
 

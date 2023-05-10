@@ -250,7 +250,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             buyBtn.setOnClickListener { onReceiveDashClicked?.invoke() }
 
             buyBtn.isVisible = atm.type != AtmType.SELL
-            sellBtn.isVisible = atm.type != AtmType.BUY
+            sellBtn.isVisible = atm.type != AtmType.BUY && !atm.type.isNullOrEmpty()
 
             root.updateLayoutParams<ConstraintLayout.LayoutParams> {
                 matchConstraintPercentHeight = ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)

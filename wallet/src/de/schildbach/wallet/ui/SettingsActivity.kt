@@ -79,7 +79,6 @@ class SettingsActivity : BaseMenuActivity() {
     }
 
     private fun resetBlockchain() {
-        var isFinished = false
         AdaptiveDialog.create(
             null,
             getString(R.string.preferences_initiate_reset_title),
@@ -88,7 +87,6 @@ class SettingsActivity : BaseMenuActivity() {
             getString(R.string.preferences_initiate_reset_dialog_positive)
         ).show(this) {
             if (it == true) {
-                isFinished = true
                 log.info("manually initiated blockchain reset")
                 analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, mapOf())
 
@@ -96,9 +94,7 @@ class SettingsActivity : BaseMenuActivity() {
                 WalletApplication.getInstance().configuration.updateLastBlockchainResetTime()
                 startActivity(MainActivity.createIntent(this@SettingsActivity))
             } else {
-                if (!isFinished) {
-                    analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, mapOf())
-                }
+                analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, mapOf())
             }
         }
     }

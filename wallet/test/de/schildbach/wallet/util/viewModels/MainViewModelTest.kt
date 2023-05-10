@@ -34,6 +34,12 @@ import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import androidx.datastore.preferences.core.Preferences
+import androidx.lifecycle.SavedStateHandle
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletUIConfig
+import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.transactions.TxDirection
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
@@ -127,6 +133,10 @@ class MainViewModelTest {
         every { observe<Long>(any()) } returns MutableStateFlow(0L)
         coEvery { areNotificationsDisabled() } returns false
     }
+    
+    private val uiConfigMock = mockk<WalletUIConfig> {
+        every { observePreference(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
+    }
 
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
@@ -138,7 +148,6 @@ class MainViewModelTest {
     fun setup() {
         every { configMock.exchangeCurrencyCode } returns "USD"
         every { configMock.format } returns MonetaryFormat()
-        every { configMock.hideBalance } returns false
         every { configMock.registerOnSharedPreferenceChangeListener(any()) } just runs
 
         every { blockchainStateMock.observeState() } returns flow { BlockchainState() }
@@ -148,7 +157,7 @@ class MainViewModelTest {
             Transaction(
                 TestNet3Params.get(),
                 Constants.HEX.decode(
-                    "01000000013511fbb91663e90da67107e1510521440a9bf73878e45549ac169c7cd30c826e010000006a473044022048edae0ab0abcb736ca1a8702c2e99673d7958f4661a4858f437b03a359c0375022023f4a45b8817d9fcdad073cfb43320eae7e064a7873564e4cbc8853da548321a01210359c815be43ce68de8188f02b1b3ecb589fb8facdc2d694104a13bb2a2055f5ceffffffff0240420f00000000001976a9148017fd8d70d8d4b8ddb289bb73bcc0522bc06e0888acb9456900000000001976a914c9e6676121e9f38c7136188301a95d800ceade6588ac00000000"
+                    "01000000013511fbb91663e90da67107e1510521440a9bf73878e45549ac169c7cd30c826e010000006a473044022048edae0ab0abcb736ca1a8702c2e99673d7958f4661a4858f437b03a359c0375022023f4a45b8817d9fcdad073cfb43320eae7e064a7873564e4cbc8853da548321a01210359c815be43ce68de8188f02b1b3ecb589fb8facdc2d694104a13bb2a2055f5ceffffffff0240420f00000000001976a9148017fd8d70d8d4b8ddb289bb73bcc0522bc06e0888acb9456900000000001976a914c9e6676121e9f38c7136188301a95d800ceade6588ac00000000" // ktlint-disable max-line-length
                 ),
                 0
             )
@@ -157,7 +166,7 @@ class MainViewModelTest {
             Transaction(
                 TestNet3Params.get(),
                 Constants.HEX.decode(
-                    "01000000013511fbb91663e90da67107e1510521440a9bf73878e45549ac169c7cd30c826e010000006a473044022048edae0ab0abcb736ca1a8702c2e99673d7958f4661a4858f437b03a359c0375022023f4a45b8817d9fcdad073cfb43320eae7e064a7873564e4cbc8853da548321a01210359c815be43ce68de8188f02b1b3ecb589fb8facdc2d694104a13bb2a2055f5ceffffffff0240420f00000000001976a9148017fd8d70d8d4b8ddb289bb73bcc0522bc06e0888acb9456900000000001976a914c9e6676121e9f38c7136188301a95d800ceade6588ac00000000"
+                    "01000000013511fbb91663e90da67107e1510521440a9bf73878e45549ac169c7cd30c826e010000006a473044022048edae0ab0abcb736ca1a8702c2e99673d7958f4661a4858f437b03a359c0375022023f4a45b8817d9fcdad073cfb43320eae7e064a7873564e4cbc8853da548321a01210359c815be43ce68de8188f02b1b3ecb589fb8facdc2d694104a13bb2a2055f5ceffffffff0240420f00000000001976a9148017fd8d70d8d4b8ddb289bb73bcc0522bc06e0888acb9456900000000001976a914c9e6676121e9f38c7136188301a95d800ceade6588ac00000000" // ktlint-disable max-line-length
                 ),
                 0
             )
@@ -192,7 +201,7 @@ class MainViewModelTest {
 
         val viewModel = spyk(
             MainViewModel(
-                mockk(), clipboardManagerMock, configMock,
+                mockk(), clipboardManagerMock, configMock, uiConfigMock,
                 exchangeRatesMock, walletDataMock, walletApp, mockk(),
                 mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
                 mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
@@ -215,7 +224,7 @@ class MainViewModelTest {
 
         val viewModel = spyk(
             MainViewModel(
-                mockk(), clipboardManagerMock, configMock,
+                mockk(), clipboardManagerMock, configMock, uiConfigMock,
                 exchangeRatesMock, walletDataMock, walletApp, mockk(),
                 mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
                 mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
@@ -251,7 +260,7 @@ class MainViewModelTest {
         every { blockchainStateMock.observeState() } returns MutableStateFlow(BlockchainState(replaying = true))
         val viewModel = spyk(
             MainViewModel(
-                mockk(), mockk(), configMock,
+                mockk(), mockk(), configMock, uiConfigMock,
                 exchangeRatesMock, walletDataMock, walletApp, mockk(),
                 mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
                 mockk(), mockk(), mockk(), mockk(), mockDashPayConfig
@@ -271,7 +280,7 @@ class MainViewModelTest {
         every { blockchainStateMock.observeState() } returns MutableStateFlow(state)
         val viewModel = spyk(
             MainViewModel(
-                mockk(), mockk(), configMock,
+                mockk(), mockk(), configMock, uiConfigMock,
                 exchangeRatesMock, walletDataMock, walletApp, mockk(),
                 mockk(), blockchainIdentityDaoMock, savedStateMock, transactionMetadataMock, blockchainStateMock,
                 mockk(), mockk(), mockk(), mockk(), mockDashPayConfig

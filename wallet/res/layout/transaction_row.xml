@@ -169,7 +169,7 @@
             app:tint="@color/content_primary"
             tools:tint="@color/content_primary" />
 
-        <org.dash.wallet.common.ui.CurrencyTextView
+        <TextView
             android:id="@+id/value"
             style="@style/Caption.Medium"
             android:layout_width="wrap_content"

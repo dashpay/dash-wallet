@@ -35,17 +35,12 @@ import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.EnumSet;
-import java.util.concurrent.TimeUnit;
 
 import de.schildbach.wallet_test.BuildConfig;
 import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
 
 /**
  * @author Andreas Schildbach
@@ -82,9 +77,9 @@ public final class Constants {
                 FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "dash";
                 SUPPORTS_PLATFORM = false;
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-devnet.db");
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 org.dash.wallet.common.util.Constants.FAUCET_URL = "";
-                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore.db");
                 break;
             }
             case "staging":
@@ -103,7 +98,7 @@ public final class Constants {
                 org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-testnet.db");
                 break;
             }
-            case "schnapps": {
+            case "devnet": {
                 // Schnapps Devnet
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = BinTangDevNetParams.get();
