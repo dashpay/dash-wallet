@@ -36,13 +36,13 @@ import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.payments.PaymentsFragment
-import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
+import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -65,6 +65,7 @@ import javax.inject.Inject
 class WalletFragment : Fragment(R.layout.home_content) {
     companion object {
         private val log = LoggerFactory.getLogger(WalletFragment::class.java)
+        private const val TRANSACTIONS_FRAGMENT_TAG = "wallet_transactions_fragment"
     }
 
     private val viewModel: MainViewModel by activityViewModels()
@@ -97,10 +98,12 @@ class WalletFragment : Fragment(R.layout.home_content) {
         behaviour!!.setDragCallback(object : DragCallback() {
             override fun canDrag(appBarLayout: AppBarLayout): Boolean {
                 val walletTransactionsFragment = childFragmentManager
-                    .findFragmentByTag("wallet_transactions_fragment") as WalletTransactionsFragment
+                    .findFragmentByTag(TRANSACTIONS_FRAGMENT_TAG) as WalletTransactionsFragment
                 return !walletTransactionsFragment.isHistoryEmpty
             }
         })
+
+        binding.homeToolbar.setOnClickListener { scrollToTop() }
 
         viewModel.transactions.observe(viewLifecycleOwner) { refreshShortcutBar() }
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
@@ -108,8 +111,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
         viewModel.mostRecentTransaction.observe(viewLifecycleOwner) { mostRecentTransaction: Transaction ->
             log.info("most recent transaction: {}", mostRecentTransaction.txId)
 
-            if ((activity as? LockScreenActivity)?.lockScreenDisplayed != true && !configuration.hasDisplayedTaxCategoryExplainer
-                && WalletUtils.getTransactionDate(mostRecentTransaction).time >= configuration.taxCategoryInstallTime
+            if ((requireActivity() as? LockScreenActivity)?.lockScreenDisplayed != true &&
+                !configuration.hasDisplayedTaxCategoryExplainer &&
+                WalletUtils.getTransactionDate(mostRecentTransaction).time >= configuration.taxCategoryInstallTime
             ) {
                 val dialogFragment: TaxCategoryExplainerDialogFragment =
                     TaxCategoryExplainerDialogFragment.newInstance(mostRecentTransaction.txId)
@@ -121,6 +125,17 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 configuration.setHasDisplayedTaxCategoryExplainer()
             }
         }
+    }
+
+    fun scrollToTop() {
+        if (!isAdded) {
+            return
+        }
+
+        binding.appBar.setExpanded(true)
+        val walletTransactionsFragment = childFragmentManager
+            .findFragmentByTag(TRANSACTIONS_FRAGMENT_TAG) as? WalletTransactionsFragment
+        walletTransactionsFragment?.scrollToTop()
     }
 
     override fun onResume() {

@@ -50,7 +50,6 @@ public class Configuration {
     private final SharedPreferences prefs;
     private final Resources res;
 
-    public static final String PREFS_KEY_HIDE_BALANCE = "hide_balance";
     public static final String PREFS_KEY_CONNECTIVITY_NOTIFICATION = "connectivity_notification";
     public static final String PREFS_KEY_EXCHANGE_CURRENCY = "exchange_currency";
     public static final String PREFS_KEY_EXCHANGE_CURRENCY_DETECTED = "exchange_currency_detected";
@@ -59,7 +58,6 @@ public class Configuration {
     public static final String PREFS_KEY_BLOCK_EXPLORER = "block_explorer";
     public static final String PREFS_KEY_REMIND_BALANCE = "remind_balance";
     public static final String PREFS_KEY_REMIND_BALANCE_TIME = "remind_balance_time";
-    public static final String PREFS_KEY_DISCLAIMER = "disclaimer";
     private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
     public static final String PREFS_KEY_AUTO_LOGOUT_ENABLED = "auto_logout_enabled";
     public static final String PREFS_KEY_AUTO_LOGOUT_MINUTES = "auto_logout_minutes";
@@ -148,14 +146,6 @@ public class Configuration {
         final int decimalRepetitions = (PREFS_DEFAULT_BTC_PRECISION - minPrecision) / numberToRepeat;
         return new MonetaryFormat().shift(PREFS_DEFAULT_BTC_SHIFT).minDecimals(minPrecision).repeatOptionalDecimals(numberToRepeat,
                 decimalRepetitions);
-    }
-
-    public boolean getHideBalance() {
-        return prefs.getBoolean(PREFS_KEY_HIDE_BALANCE, false);
-    }
-
-    public void setHideBalance(final boolean hideBalance) {
-        prefs.edit().putBoolean(PREFS_KEY_HIDE_BALANCE, hideBalance).apply();
     }
 
     public boolean getConnectivityNotificationEnabled() {
@@ -269,14 +259,6 @@ public class Configuration {
 
     public void resetBackupSeedReminderTimer() {
         prefs.edit().putLong(PREFS_KEY_LAST_BACKUP_SEED_TIME, -1).apply();
-    }
-
-    public boolean getDisclaimerEnabled() {
-        return prefs.getBoolean(PREFS_KEY_DISCLAIMER, true);
-    }
-
-    public void setDisclaimerEnabled(boolean enabled) {
-        prefs.edit().putBoolean(PREFS_KEY_DISCLAIMER, enabled).apply();
     }
 
     @Nullable

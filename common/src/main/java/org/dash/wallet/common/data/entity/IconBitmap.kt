@@ -28,6 +28,7 @@ class IconBitmap(
     var id: Sha256Hash,
     @ColumnInfo(typeAffinity = ColumnInfo.BLOB)
     val imageData: ByteArray,
+    val originalUrl: String,
     val height: Int,
     val width: Int
 )

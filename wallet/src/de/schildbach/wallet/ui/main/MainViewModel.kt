@@ -24,6 +24,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.transactions.TxFilterType
@@ -56,6 +57,7 @@ class MainViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val clipboardManager: ClipboardManager,
     private val config: Configuration,
+    private val walletUIConfig: WalletUIConfig,
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
     private val savedStateHandle: SavedStateHandle,
@@ -75,7 +77,8 @@ class MainViewModel @Inject constructor(
     private val listener: SharedPreferences.OnSharedPreferenceChangeListener
     private val currencyCode = MutableStateFlow(config.exchangeCurrencyCode)
 
-    val balanceDashFormat: MonetaryFormat = config.format.noCode()
+    val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
+    val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
 
     private val _transactions = MutableLiveData<List<TransactionRowView>>()
     val transactions: LiveData<List<TransactionRowView>>
@@ -113,9 +116,14 @@ class MainViewModel @Inject constructor(
     val mostRecentTransaction: LiveData<Transaction>
         get() = _mostRecentTransaction
 
-    private val _hideBalance = MutableLiveData<Boolean>()
-    val hideBalance: LiveData<Boolean>
-        get() = _hideBalance
+    private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
+    val hideBalance = walletUIConfig.observePreference(WalletUIConfig.AUTO_HIDE_BALANCE)
+        .combine(_temporaryHideBalance) { autoHide, temporaryHide ->
+            temporaryHide ?: autoHide ?: false
+        }
+        .asLiveData()
+
+    val showTapToHideHint = walletUIConfig.observePreference(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT).asLiveData()
 
     val isPassphraseVerified: Boolean
         get() = !config.remindBackupSeed
@@ -125,7 +133,6 @@ class MainViewModel @Inject constructor(
         get() = _stakingAPY
 
     init {
-        _hideBalance.value = config.hideBalance
         transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxFilterType.ALL
 
         _transactionsDirection
@@ -202,14 +209,16 @@ class MainViewModel @Inject constructor(
     }
 
     fun triggerHideBalance() {
-        val pastValue = _hideBalance.value ?: config.hideBalance
-        _hideBalance.value = !pastValue
+        val isHiding = hideBalance.value ?: false
+        _temporaryHideBalance.value = !isHiding
 
-        if (_hideBalance.value == true) {
+        if (_temporaryHideBalance.value == true) {
             logEvent(AnalyticsConstants.Home.HIDE_BALANCE)
         } else {
             logEvent(AnalyticsConstants.Home.SHOW_BALANCE)
         }
+
+        viewModelScope.launch { walletUIConfig.setPreference(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT, false) }
     }
 
     fun logDirectionChangedEvent(direction: TxFilterType) {
@@ -265,7 +274,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun updateSyncStatus(state: BlockchainState) {
-        if (_isBlockchainSyncFailed.value != state.isSynced()) {
+        if (_isBlockchainSynced.value != state.isSynced()) {
             _isBlockchainSynced.postValue(state.isSynced())
 
             if (state.isSynced()) {
@@ -304,4 +313,3 @@ class MainViewModel @Inject constructor(
         return metadata[transactions.first().txId]?.service == ServiceName.DashDirect
     }
 }
-

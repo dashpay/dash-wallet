@@ -24,7 +24,6 @@ import androidx.annotation.StringRes;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
-import org.bitcoinj.core.RejectedTransactionException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.TransactionConfidence;
@@ -90,52 +89,35 @@ public class TxResourceMapper {
      */
     @StringRes
     public int getErrorName(@NonNull Transaction tx) {
-        TransactionConfidence confidence = tx.getConfidence();
-        int errorNameId = -1;
-        if(confidence != null) {
-            if(confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.DEAD) {
-                errorNameId = R.string.transaction_row_status_error_dead;
-            } else if(confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.IN_CONFLICT) {
-                errorNameId = R.string.transaction_row_status_error_conflicting;
-            } else if(confidence.getConfidenceType() != TransactionConfidence.ConfidenceType.BUILDING) {
-                //
-                // Handle errors from the Dash Network
-                //
-                RejectedTransactionException exception = confidence.getRejectedTransactionException();
-                if (exception != null) {
-                    switch (exception.getRejectMessage().getReasonCode()) {
-                        case NONSTANDARD:
-                            errorNameId = R.string.transaction_row_status_error_non_standard;
-                            break;
-                        case DUST:
-                            errorNameId = R.string.transaction_row_status_error_dust;
-                            break;
-                        case INSUFFICIENTFEE:
-                            errorNameId = R.string.transaction_row_status_error_insufficient_fee;
-                            break;
-                        case DUPLICATE:
-                            errorNameId = R.string.transaction_row_status_error_duplicate;
-                            break;
-                        case INVALID:
-                            errorNameId = R.string.transaction_row_status_error_invalid;
-                            break;
-                        case MALFORMED:
-                            errorNameId = R.string.transaction_row_status_error_malformed;
-                            break;
-                        case OBSOLETE:
-                            errorNameId = R.string.transaction_row_status_error_obsolete;
-                            break;
-                        case CHECKPOINT: //checkpoint rejections do not apply to transactions
-                        case OTHER:
-                        default:
-                            errorNameId = R.string.transaction_row_status_error_other;
-                            break;
-                    }
-                    return errorNameId;
-                }
-            }
+        TxError error = TxError.Companion.fromTransaction(tx);
+        return getErrorName(error);
+    }
+
+    @StringRes
+    public int getErrorName(@NonNull TxError error) {
+        switch (error) {
+            case DoubleSpend:
+                return R.string.transaction_row_status_error_dead;
+            case InConflict:
+                return R.string.transaction_row_status_error_conflicting;
+            case Nonstandard:
+                return R.string.transaction_row_status_error_non_standard;
+            case Dust:
+                return R.string.transaction_row_status_error_dust;
+            case InsufficientFee:
+                return R.string.transaction_row_status_error_insufficient_fee;
+            case Duplicate:
+                return R.string.transaction_row_status_error_duplicate;
+            case Invalid:
+                return R.string.transaction_row_status_error_invalid;
+            case Malformed:
+                return R.string.transaction_row_status_error_malformed;
+            case Obsolete:
+                return R.string.transaction_row_status_error_obsolete;
+            case Unknown:
+            default:
+                return R.string.transaction_row_status_error_other;
         }
-        return errorNameId;
     }
 
     /**

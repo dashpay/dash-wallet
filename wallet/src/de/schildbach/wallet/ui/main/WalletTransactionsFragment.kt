@@ -173,6 +173,10 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         }
     }
 
+    fun scrollToTop() {
+        binding.walletTransactionsList.scrollToPosition(0)
+    }
+
     private fun showTransactionList() {
         binding.walletTransactionsEmpty.isVisible = false
         binding.walletTransactionsList.isVisible = true
