@@ -48,7 +48,7 @@ dependencies {
     implementation "androidx.biometric:biometric:1.1.0"
 
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation "org.dashj.android:dashj-bls-android:0.18.1"
+    implementation "org.dashj.android:dashj-bls-android:1.0.0"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
     implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
@@ -263,6 +263,9 @@ android {
         _testNet3 {
             res.srcDirs = ["testNet3/res"]
         }
+        devnet {
+            res.srcDirs = ["schnapps/res"]
+        }
     }
     flavorDimensions "default"
     productFlavors {
@@ -332,7 +335,22 @@ android {
             }
             buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
         }
+        devnet {
+            applicationId = "org.dash.wallet.devnet"
+            buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
+            buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
+            buildConfigField("String", "COINBASE_CLIENT_ID", "\"\"")
+            buildConfigField("String", "COINBASE_CLIENT_SECRET", "\"\"")
+
+            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
+
+            if (dashDirectClientId == null) {
+                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
+            }
+            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
+        }
     }
+
     packagingOptions {
         jniLibs {
             excludes += ['lib/x86_64/freebsd/libscrypt.so', 'lib/x86_64/linux/libscrypt.so']

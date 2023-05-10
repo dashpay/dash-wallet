@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">Verifying PIN</string>
     <string name="set_pin_message">This PIN will be required to unlock your app every time when you use it.</string>
     <string name="set_pin_confirm_pin_incorrect">Incorrect PIN</string>
-
-    <string name="home_available_balance">Available balance</string>
-    <string name="home_balance_hidden">Balance hidden</string>
-    <string name="home_balance_show_hint">Tap to unhide balance</string>
+    
     <string name="home_balance_hide_hint">Tap to hide balance</string>
 
     <string name="dialog_confirm_confirm">Confirm</string>
@@ -248,6 +245,9 @@
     <string name="transaction_details_moved_from">Moved from</string>
     <string name="transaction_details_moved_internally_to">Internally moved to</string>
     <string name="transaction_failed_details">Transaction failed</string>
+    <string name="transaction_failed_resolve">This could be resolved by</string>
+    <string name="transaction_failed_rescan">rescanning the blockchain</string>
+    <string name="transaction_failed_in_conflict">This is possible if the wallet is installed on two devices.</string>
 
     <string name="authenticate_fingerprint_title">Authenticate</string>
     <string name="authenticate_fingerprint_message">Confirm fingerprint to continue</string>
@@ -367,7 +367,7 @@
     <string name="yesterday">Yesterday</string>
 
     <string name="syncing">Syncing</string>
-    <string name="syncing_balance">Syncing Balance</string>
+    <string name="syncing_balance">Syncing balance</string>
     <string name="transaction_count">%d transactions</string>
     <string name="all_transactions">All</string>
     <string name="received_transactions">Received</string>

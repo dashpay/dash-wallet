@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.transactions
 
 import android.graphics.Bitmap
 import android.graphics.drawable.Animatable
+import android.annotation.SuppressLint
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -45,6 +46,7 @@ import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.ui.CurrencyTextView
 import org.dash.wallet.common.util.currencySymbol
+import org.dash.wallet.common.util.makeLinks
 
 /**
  * @author Samuel Barbosa
@@ -82,7 +84,7 @@ class TransactionResultViewBinder(
     private val errorContainer by lazy { containerView.findViewById<View>(R.id.error_container) }
     private val errorDescription by lazy { containerView.findViewById<TextView>(R.id.error_description) }
     private val taxCategory by lazy { containerView.findViewById<TextView>(R.id.tax_category) }
-
+    private val taxCategoryCard by lazy { containerView.findViewById<View>(R.id.open_tax_category_card) }
     private val reportIssueContainer by lazy { containerView.findViewById<View>(R.id.report_issue_card) }
     private val dateContainer by lazy { containerView.findViewById<View>(R.id.date_container) }
     private val explorerContainer by lazy { containerView.findViewById<View>(R.id.open_explorer_card) }
@@ -94,6 +96,7 @@ class TransactionResultViewBinder(
         TaxCategory.TransferIn to R.string.tax_category_transfer_in,
         TaxCategory.TransferOut to R.string.tax_category_transfer_out
     )
+    private var onRescanTriggered: (() -> Unit)? = null
 
     private lateinit var transaction: Transaction
     private var isError = false
@@ -173,22 +176,15 @@ class TransactionResultViewBinder(
     }
 
     private fun updateStatus(fromConfidence: Boolean = false) {
-        val errorStatus = resourceMapper.getErrorName(transaction)
-        isError = errorStatus != -1
-        val errorStatusStr = if (isError) {
-            ctx.getString(errorStatus)
-        } else {
-            ""
-        }
-
-        setTransactionDirection(errorStatusStr)
-
         if (!fromConfidence || isError) {
             // If it's a confidence update, not need to set the send/receive icons again.
             // Some hosts are replacing those with custom animated ones.
             updateIcon()
         }
+
+        setTransactionDirection(transaction, wallet)
     }
+
 
     fun setTransactionMetadata(transactionMetadata: TransactionMetadata) {
         val strResource = if (transactionMetadata.taxCategory != null) {
@@ -229,7 +225,7 @@ class TransactionResultViewBinder(
         } else if (transaction.getValue(wallet).signum() >= 0) {
             R.drawable.ic_transaction_received
         } else if (transaction.isEntirelySelf(wallet)) {
-            R.drawable.ic_shuffle
+            R.drawable.ic_internal
         } else {
             R.drawable.ic_transaction_sent
         }
@@ -251,6 +247,72 @@ class TransactionResultViewBinder(
             }
             secondaryIcon.isVisible = true
             secondaryIcon.setImageResource(iconRes)
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun setTransactionDirection(tx: Transaction, wallet: Wallet) {
+        if (tx.confidence.hasErrors()) {
+            val errorStatus = TxError.fromTransaction(tx)
+            val showReportIssue = errorStatus == TxError.DoubleSpend || errorStatus == TxError.Duplicate ||
+                errorStatus == TxError.Unknown || errorStatus == TxError.InConflict
+            val shouldSuggestRescan = errorStatus == TxError.DoubleSpend || errorStatus == TxError.Duplicate ||
+                errorStatus == TxError.Unknown
+
+            errorContainer.isVisible = true
+            reportIssueContainer.isVisible = showReportIssue
+            outputsContainer.isVisible = false
+            inputsContainer.isVisible = false
+            feeRow.isVisible = false
+            dateContainer.isVisible = false
+            explorerContainer.isVisible = false
+            taxCategoryCard.isVisible = false
+            dashAmount.setStrikeThru(true)
+            fiatValue.setStrikeThru(true)
+            checkIcon.setImageResource(R.drawable.ic_transaction_failed)
+            transactionTitle.text = ctx.getText(R.string.transaction_failed_details)
+
+            var rescanText = ""
+            val additionalInfo = if (shouldSuggestRescan) {
+                rescanText = ctx.getString(R.string.transaction_failed_rescan)
+                "・${ctx.getString(R.string.transaction_failed_resolve)} $rescanText"
+            } else if (errorStatus == TxError.InConflict) {
+                "・${ctx.getString(R.string.transaction_failed_in_conflict)}"
+            } else {
+                ""
+            }
+            errorDescription.text = ctx.getString(resourceMapper.getErrorName(errorStatus)) + additionalInfo
+
+            if (shouldSuggestRescan) {
+                errorDescription.makeLinks(
+                    Pair(
+                        rescanText,
+                        View.OnClickListener { onRescanTriggered?.invoke() }
+                    ),
+                    linkColor = R.color.dash_blue
+                )
+            }
+        } else {
+            if (tx.getValue(wallet).signum() < 0) {
+                checkIcon.setImageResource(if (tx.isEntirelySelf(wallet)) {
+                    R.drawable.ic_internal
+                } else {
+                    R.drawable.ic_transaction_sent
+                })
+
+                transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
+                transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
+                transactionAmountSignal.text = "-"
+                transactionAmountSignal.isVisible = true
+            } else {
+                checkIcon.setImageResource(R.drawable.ic_transaction_received)
+                transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.system_green))
+                transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
+                transactionAmountSignal.isVisible = true
+                transactionAmountSignal.text = "+"
+            }
+            checkIcon.isVisible = true
+            feeRow.isVisible = isFeeAvailable(tx.fee)
         }
     }
 
@@ -284,6 +346,10 @@ class TransactionResultViewBinder(
         }
 
         feeRow.isVisible = isFeeAvailable(transaction.fee)
+    }
+
+    fun setOnRescanTriggered(listener: () -> Unit) {
+        onRescanTriggered = listener
     }
 
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {
