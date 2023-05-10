@@ -80,7 +80,7 @@ class CreateUsernamePrivacyFragment : Fragment(R.layout.fragment_user_name_priva
                 if (mode == CoinJoinMode.INTERMEDIATE) {
                     R.string.Intermediate_level_WIFI_Warning
                 } else {
-                    R.string.Advanced_privacy_level_requires_a_reliable_internet_connection
+                    R.string.Advanced_level_WIFI_Warning
                 },
             ),
             getString(R.string.privcay_level_WIFI_warning_desc),
