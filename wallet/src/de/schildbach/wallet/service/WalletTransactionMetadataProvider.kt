@@ -523,7 +523,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                             val imageData = getBitmapData(icon)
                             val imageHash = Sha256Hash.of(imageData)
 
-                            iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, icon.height, icon.width))
+                            iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, iconUrl, icon.height, icon.width))
                             transactionMetadataDao.updateIconId(txId, imageHash)
                             transactionMetadataChangeCacheDao.insertCustomIconId(txId, imageHash)
                         } catch (ex: Exception) {

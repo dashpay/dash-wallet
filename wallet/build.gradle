@@ -313,7 +313,7 @@ android {
         staging {
             res.srcDirs = ["staging/res"]
         }
-        schnapps {
+        devnet {
             res.srcDirs = ["schnapps/res"]
         }
     }
@@ -403,7 +403,7 @@ android {
             }
             buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
         }
-        schnapps {
+        devnet {
             applicationId = "org.dash.dashpay.schnapps"
             def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
             def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
@@ -423,6 +423,7 @@ android {
             buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
         }
     }
+
     packagingOptions {
         jniLibs {
             excludes += ['lib/x86_64/freebsd/libscrypt.so', 'lib/x86_64/linux/libscrypt.so']

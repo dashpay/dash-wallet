@@ -214,4 +214,12 @@
         <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">12dp</item>
     </style>
+
+    <style name="RevealBalanceBackground">
+        <item name="backgroundColor">@color/dash_black_0.08</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+        <item name="cornerRadius">22dp</item>
+        <item name="roundButtonRadius">22dp</item>
+    </style>
 </resources>

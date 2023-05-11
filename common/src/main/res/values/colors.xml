@@ -67,7 +67,8 @@
     <color name="button_ripple_color">#1f000000</color>
     <color name="button_ripple_light">#40B0B6BC</color>
 
-    <color name="disabled_button_bg">#F6F6F6</color>
+    <color name="blue_background_color">@color/dash_blue</color>
+    <color name="disabled_button_bg">#eeeeee</color>
     <color name="max_button_bg">#14008DE4</color>
     <color name="text_highlight_blue_bg">#14008DE4</color>
     <color name="warning_yellow">#fff9ed</color>
@@ -75,6 +76,7 @@
     <color name="tx_sent_background">#E7F4FB</color>
     <color name="tx_received_background">#EDF8F2</color>
     <color name="tx_orange_background">#FDF5F1</color>
+    <color name="tx_error_background">#1AE85C4A</color>
     <color name="tx_category_example_background">@color/extra_light_gray</color>
 
     <!-- Strokes -->
@@ -99,6 +101,7 @@
 
     <color name="dash_black_0.7">#B3191C1F</color>
     <color name="dash_black_0.05">#0D191C1F</color>
+    <color name="dash_black_0.08">#14191C1F</color>
     <color name="system_green_0.1">#1A3CB878</color>
     <color name="extra_dark_gray_0.1">#1A525C66</color>
     <color name="dash_blue_0.1">#1A008DE4</color>

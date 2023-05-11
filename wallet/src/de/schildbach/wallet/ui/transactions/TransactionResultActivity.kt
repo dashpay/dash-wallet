@@ -42,6 +42,8 @@ import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -175,6 +177,7 @@ class TransactionResultActivity : LockScreenActivity() {
         }
 
         transactionResultViewBinder.setTransactionIcon(R.drawable.check_animated)
+        transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
     }
 
     private fun viewOnTaxCategory() {
@@ -214,5 +217,23 @@ class TransactionResultActivity : LockScreenActivity() {
     override fun onDestroy() {
         super.onDestroy()
         viewModel.transaction?.confidence?.removeEventListener(transactionResultViewBinder)
+    }
+
+    private fun rescanBlockchain() {
+        AdaptiveDialog.create(
+            null,
+            getString(R.string.preferences_initiate_reset_title),
+            getString(R.string.preferences_initiate_reset_dialog_message),
+            getString(R.string.button_cancel),
+            getString(R.string.preferences_initiate_reset_dialog_positive)
+        ).show(this) {
+            if (it == true) {
+                log.info("manually initiated blockchain reset")
+                viewModel.rescanBlockchain()
+                finish()
+            } else {
+                viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS)
+            }
+        }
     }
 }

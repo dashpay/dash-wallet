@@ -77,7 +77,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
-import org.dash.wallet.features.exploredash.network.service.DashDirectClientConstants;
+import org.dash.wallet.features.exploredash.utils.DashDirectConstants;
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants;
 
 import de.schildbach.wallet.service.PackageInfoProvider;
@@ -129,7 +129,6 @@ import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
 import de.schildbach.wallet.security.PinRetryController;
-import de.schildbach.wallet.security.SecurityGuard;
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
@@ -419,7 +418,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void initDashDirect() {
-        DashDirectClientConstants.CLIENT_ID = BuildConfig.DASHDIRECT_CLIENT_ID;
+        DashDirectConstants.CLIENT_ID = BuildConfig.DASHDIRECT_CLIENT_ID;
     }
 
     @TargetApi(Build.VERSION_CODES.O)

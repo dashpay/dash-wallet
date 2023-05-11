@@ -663,10 +663,10 @@ class ExploreViewModel @Inject constructor(
 
     private fun getAtmTypes(filterMode: FilterMode): List<String> {
         return when (filterMode) {
-            FilterMode.Buy -> listOf(AtmType.BUY, AtmType.BOTH)
+            FilterMode.Buy -> listOf(AtmType.BUY, AtmType.BOTH, "")
             FilterMode.Sell -> listOf(AtmType.SELL, AtmType.BOTH)
             FilterMode.BuySell -> listOf(AtmType.BOTH)
-            else -> listOf(AtmType.BUY, AtmType.SELL, AtmType.BOTH)
+            else -> listOf(AtmType.BUY, AtmType.SELL, AtmType.BOTH, "")
         }
     }
 

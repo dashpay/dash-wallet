@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash.network.interceptor
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
-import org.dash.wallet.features.exploredash.network.service.DashDirectClientConstants
 import org.dash.wallet.features.exploredash.utils.DashDirectConfig
 import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import javax.inject.Inject
@@ -30,7 +29,7 @@ class HeadersInterceptor @Inject constructor(private val config: DashDirectConfi
         val original = chain.request()
         val requestBuilder = original.newBuilder()
         requestBuilder.header("Accept", "application/json")
-        requestBuilder.header(DashDirectConstants.CLIENT_ID, DashDirectClientConstants.CLIENT_ID)
+        requestBuilder.header(DashDirectConstants.CLIENT_ID_PARAM_NAME, DashDirectConstants.CLIENT_ID)
 
         val accessToken = runBlocking {
             config.getSecuredData(DashDirectConfig.PREFS_KEY_ACCESS_TOKEN)

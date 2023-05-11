@@ -355,6 +355,14 @@
         <item name="android:textColor">@color/white</item>
     </style>
 
+    <style name="Headline4.Medium">
+        <item name="fontFamily">@font/inter_medium</item>
+    </style>
+
+    <style name="Headline4.Medium.White">
+        <item name="android:textColor">@color/white</item>
+    </style>
+
     <style name="Headline5" parent="TextAppearance.MaterialComponents.Headline5">
         <item name="fontFamily">@font/inter_bold</item>
         <item name="android:textColor">@color/content_primary</item>
@@ -1168,17 +1176,23 @@
 
     <style name="TxSentBackground">
         <item name="backgroundColor">@color/tx_sent_background</item>
-        <item name="strokeColor">@color/tx_sent_background</item>
+        <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">19dp</item>
     </style>
 
     <style name="TxReceivedBackground">
         <item name="backgroundColor">@color/tx_received_background</item>
-        <item name="strokeColor">@color/tx_received_background</item>
+        <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">19dp</item>
     </style>
 
-    <style name="TxTangerineBackground">
+    <style name="TxErrorBackground">
+        <item name="backgroundColor">@color/tx_error_background</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">19dp</item>
+    </style>
+
+    <style name="TxOrangeBackground">
         <item name="backgroundColor">@color/tx_orange_background</item>
         <item name="strokeColor">@color/tx_orange_background</item>
         <item name="cornerRadius">19dp</item>

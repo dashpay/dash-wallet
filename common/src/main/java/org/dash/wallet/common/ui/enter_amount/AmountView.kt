@@ -163,11 +163,11 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     private fun updateAmount() {
         binding.inputAmount.text = formatInputWithCurrency()
         val rate = exchangeRate
+        val pair = parseAmounts(input, rate)
+        dashAmount = pair.first
 
-        if (rate != null) {
-            val pair = parseAmounts(input, rate)
-            dashAmount = pair.first
-            fiatAmount = pair.second
+        if (pair.second != null) {
+            fiatAmount = pair.second!!
 
             binding.resultAmount.text = if (dashToFiat) {
                 fiatAmount.toFormattedString()
@@ -180,15 +180,15 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         }
     }
 
-    private fun parseAmounts(input: String, rate: ExchangeRate): Pair<Coin, Fiat> {
+    private fun parseAmounts(input: String, rate: ExchangeRate?): Pair<Coin, Fiat?> {
         val cleanedValue = GenericUtils.formatFiatWithoutComma(input)
-        val dashAmount: Coin
-        val fiatAmount: Fiat
+        var dashAmount: Coin = Coin.ZERO
+        var fiatAmount: Fiat? = null
 
         if (dashToFiat) {
             dashAmount = Coin.parseCoin(cleanedValue)
-            fiatAmount = rate.coinToFiat(dashAmount)
-        } else {
+            fiatAmount = rate?.coinToFiat(dashAmount)
+        } else if (rate != null) {
             fiatAmount = Fiat.parseFiat(rate.fiat.currencyCode, cleanedValue)
             dashAmount = rate.fiatToCoin(fiatAmount)
         }
@@ -248,7 +248,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     private fun isValidInput(input: String): Boolean {
         return try {
             // Only show the Paste popup if the value in the clipboard is valid
-            parseAmounts(input, exchangeRate!!)
+            parseAmounts(input, exchangeRate)
             true
         } catch (ex: Exception) {
             false

@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.main
 
 import android.content.res.Resources
+import android.graphics.Paint
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -240,13 +241,7 @@ class TransactionAdapter(
                 binding.secondaryStatus.text = null
             } else {
                 binding.secondaryStatus.text = resources.getString(txView.statusRes)
-                binding.secondaryStatus.setTextColor(
-                    if (txView.hasErrors) {
-                        warningColor
-                    } else {
-                        colorSecondaryStatus
-                    }
-                )
+                binding.secondaryStatus.setTextColor(colorSecondaryStatus)
             }
         }
 
@@ -278,27 +273,23 @@ class TransactionAdapter(
             // signal is + or -, or not visible if the value is zero (internal or other special transactions)
             // D is the Dash Symbol
             // value has no sign.  It is zero for internal or other special transactions
-            binding.value.setFormat(dashFormat)
-
-            val valueColor = if (hasErrors) {
-                warningColor
-            } else {
-                contentColor
-            }
 
             binding.signal.isVisible = !value.isZero
-            binding.value.setTextColor(valueColor)
-            binding.signal.setTextColor(valueColor)
-            binding.dashAmountSymbol.setColorFilter(valueColor)
 
             if (value.isPositive) {
                 binding.signal.text = "+"
-                binding.value.setAmount(value)
+                binding.value.text = dashFormat.format(value)
             } else if (value.isNegative) {
                 binding.signal.text = "−"
-                binding.value.setAmount(value.negate())
+                binding.value.text = dashFormat.format(value.negate())
             } else {
-                binding.value.setAmount(Coin.ZERO)
+                binding.value.text = dashFormat.format(Coin.ZERO)
+            }
+
+            if (hasErrors) {
+                binding.value.paintFlags = binding.value.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+            } else {
+                binding.value.paintFlags = binding.value.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
             }
         }
 

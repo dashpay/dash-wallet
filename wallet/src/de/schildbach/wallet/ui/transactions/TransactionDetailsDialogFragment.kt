@@ -35,6 +35,8 @@ import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
@@ -116,6 +118,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
         viewModel.contact.observe(this) { profile ->
             finishInitialization(tx, profile)
         }
+        transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
     }
 
     private fun finishInitialization(tx: Transaction, dashPayProfile: DashPayProfile?) {
@@ -168,5 +171,23 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
     private fun imitateUserInteraction() {
         requireActivity().onUserInteraction()
+    }
+    
+    private fun rescanBlockchain() {
+        AdaptiveDialog.create(
+            null,
+            getString(R.string.preferences_initiate_reset_title),
+            getString(R.string.preferences_initiate_reset_dialog_message),
+            getString(R.string.button_cancel),
+            getString(R.string.preferences_initiate_reset_dialog_positive)
+        ).show(requireActivity()) {
+            if (it == true) {
+                log.info("manually initiated blockchain reset")
+                viewModel.rescanBlockchain()
+                dismiss()
+            } else {
+                viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS)
+            }
+        }
     }
 }
