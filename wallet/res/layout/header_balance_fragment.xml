@@ -19,7 +19,7 @@
             android:layout_width="72dp"
             android:layout_height="72dp"
             android:layout_gravity="center_horizontal"
-            android:layout_margin="14dp"
+            android:layout_margin="8dp"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -144,8 +144,8 @@
         android:padding="9dp"
         android:src="@drawable/ic_show_balance"
         android:theme="@style/RevealBalanceBackground"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toBottomOf="@id/hide_balance_hint"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="@id/syncing_indicator" />
 </androidx.constraintlayout.widget.ConstraintLayout>
