@@ -26,11 +26,13 @@ import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.AddressBookActivity
 import de.schildbach.wallet.ui.ExportTransactionHistoryDialogBuilder
 import de.schildbach.wallet.ui.NetworkMonitorActivity
@@ -40,6 +42,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentToolsBinding
 import kotlinx.android.synthetic.main.fragment_tools.*
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
@@ -52,6 +55,7 @@ import javax.inject.Inject
 @FlowPreview
 @AndroidEntryPoint
 class ToolsFragment : Fragment(R.layout.fragment_tools) {
+    @Inject lateinit var authManager: SecurityFunctions
 
     companion object {
         private val log = LoggerFactory.getLogger(ToolsFragment::class.java)
@@ -85,13 +89,18 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
             startActivity(Intent(requireContext(), NetworkMonitorActivity::class.java))
         }
         binding.masternodeKeys.setOnClickListener {
-            findNavController().navigate(
-                R.id.masternodeKeyTypeFragment,
-                bundleOf(),
-                NavOptions.Builder()
-                    .setEnterAnim(R.anim.slide_in_bottom)
-                    .build(),
-            )
+            lifecycleScope.launch {
+                val pin = authManager.authenticate(requireActivity(), true)
+                pin?.let {
+                    findNavController().navigate(
+                        R.id.masternodeKeyTypeFragment,
+                        bundleOf(),
+                        NavOptions.Builder()
+                            .setEnterAnim(R.anim.slide_in_bottom)
+                            .build()
+                    )
+                }
+            }
         }
 
         binding.showXpub.setOnClickListener {
@@ -110,7 +119,7 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
                     getString(R.string.report_transaction_history_not_synced_title),
                     getString(R.string.report_transaction_history_not_synced_message),
                     "",
-                    getString(R.string.button_close),
+                    getString(R.string.button_close)
                 )
                 dialog.show(requireActivity().supportFragmentManager, "requireSyncing")
             } else {
@@ -120,7 +129,7 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
                         ExportTransactionHistoryDialogBuilder.createExportTransactionDialog(
                             requireActivity(),
                             WalletApplication.getInstance(),
-                            it,
+                            it
                         ).buildAlertDialog()
                     alertDialog.show()
                 }
@@ -136,7 +145,7 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         val view = LayoutInflater.from(requireContext()).inflate(R.layout.extended_public_key_dialog, null)
         val bitmap = BitmapDrawable(
             resources,
-            Qr.bitmap(xpubWithCreationDate),
+            Qr.bitmap(xpubWithCreationDate)
         )
         bitmap.isFilterBitmap = false
         val imageView = view.findViewById<ImageView>(R.id.extended_public_key_dialog_image)
@@ -166,13 +175,13 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         intent.putExtra(Intent.EXTRA_TEXT, xpub)
         intent.putExtra(
             Intent.EXTRA_SUBJECT,
-            getString(R.string.extended_public_key_fragment_title),
+            getString(R.string.extended_public_key_fragment_title)
         )
         startActivity(
             Intent.createChooser(
                 intent,
-                getString(R.string.extended_public_key_fragment_share),
-            ),
+                getString(R.string.extended_public_key_fragment_share)
+            )
         )
         log.info("xpub shared via intent: {}", xpub)
     }
