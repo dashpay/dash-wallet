@@ -17,9 +17,6 @@
 package de.schildbach.wallet.ui
 
 import android.content.Intent
-import android.os.Handler
-import android.os.HandlerThread
-import android.os.Process
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
@@ -49,17 +46,12 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
     internal val startActivityAction = SingleLiveEvent<Intent>()
     private val securityGuard = SecurityGuard()
 
-    suspend fun recover(words: List<String>): String? = withContext(Dispatchers.Default) {
-        val wallet = walletApplication.wallet!!
-        val encryptionKey = securityFunctions.deriveKey(
-            walletApplication.wallet!!,
-            securityGuard.retrievePassword()
-        )
-
+    private suspend fun recover(words: List<String>): String? = withContext(Dispatchers.Default) {
         try {
-            val decryptedSeed =
-                wallet.keyChainSeed.decrypt(wallet.keyCrypter, null, encryptionKey) // takes time
+            val password = securityGuard.retrievePassword()
+            val decryptedSeed = securityFunctions.decryptSeed(password)
             val seed = decryptedSeed.mnemonicCode!!.toTypedArray()
+
             if (seed contentEquals words.toTypedArray()) {
                 return@withContext securityGuard.retrievePin()
             }

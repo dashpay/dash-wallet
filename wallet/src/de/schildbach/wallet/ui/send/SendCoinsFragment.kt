@@ -30,6 +30,7 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.integration.android.BitcoinIntegration
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.SendCoinsFragmentBinding
@@ -66,12 +67,19 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     private val args by navArgs<SendCoinsFragmentArgs>()
 
     @Inject lateinit var authManager: AuthenticationManager
-    private var userAuthorizedDuring = false
     private var enterAmountFragment: EnterAmountFragment? = null
     private var revealBalance = false
+    private var userAuthorizedDuring: Boolean = false
+        get() = field || enterAmountFragment?.didAuthorize == true
+        set(value) {
+            field = value
+            enterAmountFragment?.didAuthorize = value
+        }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        val requirePinForBalance = (requireActivity() as LockScreenActivity).keepUnlocked
 
         binding.titleBar.setNavigationOnClickListener {
             requireActivity().finish()
@@ -90,7 +98,8 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
             val fragment = EnterAmountFragment.newInstance(
                 initialAmount = args.paymentIntent.amount,
-                dashToFiat = dashToFiat
+                dashToFiat = dashToFiat,
+                requirePinForMaxButton = requirePinForBalance
             )
             childFragmentManager.beginTransaction()
                 .setReorderingAllowed(true)
@@ -100,15 +109,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
 
         binding.hideButton.setOnClickListener {
-            revealBalance = !revealBalance
-            viewModel.logEvent(if (revealBalance) {
-                AnalyticsConstants.SendReceive.ENTER_AMOUNT_SHOW_BALANCE
-            } else {
-                AnalyticsConstants.SendReceive.ENTER_AMOUNT_HIDE_BALANCE
-            })
-            viewModel.maxOutputAmount.value?.let { balance ->
-                updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
-            }
+            lifecycleScope.launch { revealOrHideBalance(requirePinForBalance) }
         }
 
         viewModel.isBlockchainReplaying.observe(viewLifecycleOwner) { updateView() }
@@ -191,8 +192,8 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val editedAmount = enterAmountViewModel.amount.value
         val rate = enterAmountViewModel.selectedExchangeRate.value
 
-        if (rate != null && editedAmount != null) {
-            val exchangeRate = ExchangeRate(Coin.COIN, rate.fiat)
+        if (editedAmount != null) {
+            val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it) }
 
             try {
                 viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND)
@@ -387,5 +388,24 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             getString(R.string.button_dismiss),
             null
         ).showAsync(requireActivity())
+    }
+
+    private suspend fun revealOrHideBalance(requirePin: Boolean) {
+        val isRevealing = !revealBalance
+
+        if (isRevealing && requirePin && !userAuthorizedDuring) {
+            authManager.authenticate(requireActivity(), false) ?: return
+            userAuthorizedDuring = true
+        }
+
+        revealBalance = isRevealing
+        viewModel.logEvent(if (revealBalance) {
+            AnalyticsConstants.SendReceive.ENTER_AMOUNT_SHOW_BALANCE
+        } else {
+            AnalyticsConstants.SendReceive.ENTER_AMOUNT_HIDE_BALANCE
+        })
+        viewModel.maxOutputAmount.value?.let { balance ->
+            updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
+        }
     }
 }

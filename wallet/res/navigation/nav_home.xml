@@ -108,6 +108,13 @@
             app:popExitAnim="@anim/slide_out_left" />
 
         <action
+            android:id="@+id/more_to_security"
+            app:destination="@id/securityFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
             android:id="@+id/more_to_tools"
             app:destination="@id/toolsFragment"
             app:enterAnim="@anim/slide_in_right"
@@ -195,6 +202,38 @@
             android:name="service"
             android:defaultValue="COINBASE"
             app:argType="de.schildbach.wallet.data.ServiceType" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/securityFragment"
+        android:name="de.schildbach.wallet.ui.more.SecurityFragment"
+        android:label="Security"
+        tools:layout="@layout/fragment_security">
+
+        <action
+            android:id="@+id/security_to_showSeed"
+            app:destination="@id/showSeedFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/showSeedFragment"
+        android:name="de.schildbach.wallet.ui.verify.ShowSeedFragment"
+        android:label="ShowSeed"
+        tools:layout="@layout/fragment_show_seed">
+
+        <argument
+            android:name="seed"
+            app:argType="string[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
+
+        <argument
+            android:name="standalone"
+            app:argType="boolean"
+            android:defaultValue="false" />
     </fragment>
 
     <include app:graph="@navigation/explore_dash" />

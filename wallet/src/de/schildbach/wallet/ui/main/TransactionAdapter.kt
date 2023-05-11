@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.main
 
 import android.content.res.Resources
+import android.graphics.Paint
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -50,12 +51,12 @@ class TransactionAdapter(
     private val clickListener: (HistoryRowView, Int) -> Unit
 ) : ListAdapter<HistoryRowView, HistoryViewHolder>(DiffCallback()) {
     private val contentColor = resources.getColor(R.color.content_primary, null)
-    private val warningColor = resources.getColor(R.color.content_warning, null)
     private val colorSecondaryStatus = resources.getColor(R.color.secondary_status, null)
 
     class DiffCallback : DiffUtil.ItemCallback<HistoryRowView>() {
         override fun areItemsTheSame(oldItem: HistoryRowView, newItem: HistoryRowView): Boolean {
-            val sameTransactions = (oldItem is TransactionRowView && newItem is TransactionRowView) && oldItem.txId == newItem.txId
+            val sameTransactions = (oldItem is TransactionRowView && newItem is TransactionRowView) &&
+                oldItem.txId == newItem.txId
             return sameTransactions || oldItem == newItem
         }
 
@@ -133,38 +134,38 @@ class TransactionAdapter(
                     ResourcesCompat.getDrawable(resources, R.drawable.selectable_rectangle_white, null)
                 }
             } else {
-                binding.root.updatePadding(top = resources.getDimensionPixelOffset(if (position == 0) {
-                    R.dimen.transaction_row_extended_padding
-                } else {
-                    R.dimen.transaction_row_vertical_padding
-                }))
+                binding.root.updatePadding(
+                    top = resources.getDimensionPixelOffset(
+                        if (position == 0) {
+                            R.dimen.transaction_row_extended_padding
+                        } else {
+                            R.dimen.transaction_row_vertical_padding
+                        }
+                    )
+                )
             }
 
-            binding.root.updatePadding(bottom = resources.getDimensionPixelOffset(if (isLastInGroup) {
-                R.dimen.transaction_row_extended_padding
-            } else {
-                R.dimen.transaction_row_vertical_padding
-            }))
+            binding.root.updatePadding(
+                bottom = resources.getDimensionPixelOffset(
+                    if (isLastInGroup) {
+                        R.dimen.transaction_row_extended_padding
+                    } else {
+                        R.dimen.transaction_row_vertical_padding
+                    }
+                )
+            )
 
             binding.icon.setImageResource(txView.icon)
             binding.icon.background = resources.getRoundedBackground(txView.iconBackground)
 
             binding.primaryStatus.text = resources.getString(txView.titleRes)
-            binding.primaryStatus.setTextColor(if (txView.hasErrors) {
-                warningColor
-            } else {
-                contentColor
-            })
+            binding.primaryStatus.setTextColor(contentColor)
 
             if (txView.statusRes < 0) {
                 binding.secondaryStatus.text = null
             } else {
                 binding.secondaryStatus.text = resources.getString(txView.statusRes)
-                binding.secondaryStatus.setTextColor(if (txView.hasErrors) {
-                    warningColor
-                } else {
-                    colorSecondaryStatus
-                })
+                binding.secondaryStatus.setTextColor(colorSecondaryStatus)
             }
 
             setValue(txView.value, txView.hasErrors)
@@ -185,7 +186,8 @@ class TransactionAdapter(
         private fun setTime(time: Long, dateTimeFormat: Int) {
             // Set the time. eg.  "<date> <time>"
             binding.time.text = DateUtils.formatDateTime(
-                itemView.context, time,
+                itemView.context,
+                time,
                 dateTimeFormat
             )
         }
@@ -195,27 +197,23 @@ class TransactionAdapter(
             // signal is + or -, or not visible if the value is zero (internal or other special transactions)
             // D is the Dash Symbol
             // value has no sign.  It is zero for internal or other special transactions
-            binding.value.setFormat(dashFormat)
-
-            val valueColor = if (hasErrors) {
-                warningColor
-            } else {
-                contentColor
-            }
 
             binding.signal.isVisible = !value.isZero
-            binding.value.setTextColor(valueColor)
-            binding.signal.setTextColor(valueColor)
-            binding.dashAmountSymbol.setColorFilter(valueColor)
 
             if (value.isPositive) {
                 binding.signal.text = "+"
-                binding.value.setAmount(value)
+                binding.value.text = dashFormat.format(value)
             } else if (value.isNegative) {
                 binding.signal.text = "−"
-                binding.value.setAmount(value.negate())
+                binding.value.text = dashFormat.format(value.negate())
             } else {
-                binding.value.setAmount(Coin.ZERO)
+                binding.value.text = dashFormat.format(Coin.ZERO)
+            }
+
+            if (hasErrors) {
+                binding.value.paintFlags = binding.value.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+            } else {
+                binding.value.paintFlags = binding.value.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
             }
         }
 
@@ -225,7 +223,9 @@ class TransactionAdapter(
                 if (exchangeRate != null) {
                     val exchangeCurrencyCode = GenericUtils.currencySymbol(exchangeRate.fiat.currencyCode)
                     binding.fiatView.setFiatAmount(
-                        value, exchangeRate, Constants.LOCAL_FORMAT,
+                        value,
+                        exchangeRate,
+                        Constants.LOCAL_FORMAT,
                         exchangeCurrencyCode
                     )
                     binding.fiatView.isVisible = true

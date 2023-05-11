@@ -25,17 +25,20 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Monetary
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.FragmentEnterAmountBinding
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import java.text.DecimalFormatSymbols
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
@@ -44,18 +47,21 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         private const val ARG_DASH_TO_FIAT = "dash_to_fiat"
         private const val ARG_MAX_BUTTON_VISIBLE = "max_visible"
         private const val ARG_SHOW_CURRENCY_SELECTOR_BUTTON = "show_currency_selector"
+        private const val ARG_REQUIRE_PIN_MAX_BUTTON = "require_pin_max_button"
 
         @JvmStatic
         fun newInstance(
             dashToFiat: Boolean = false,
             initialAmount: Monetary? = null,
             isMaxButtonVisible: Boolean = true,
-            showCurrencySelector: Boolean = true
+            showCurrencySelector: Boolean = true,
+            requirePinForMaxButton: Boolean = false
         ): EnterAmountFragment {
             val args = bundleOf(
                 ARG_DASH_TO_FIAT to dashToFiat,
                 ARG_MAX_BUTTON_VISIBLE to isMaxButtonVisible,
-                ARG_SHOW_CURRENCY_SELECTOR_BUTTON to showCurrencySelector
+                ARG_SHOW_CURRENCY_SELECTOR_BUTTON to showCurrencySelector,
+                ARG_REQUIRE_PIN_MAX_BUTTON to requirePinForMaxButton
             )
             initialAmount?.let { args.putSerializable(ARG_INITIAL_AMOUNT, it) }
 
@@ -67,9 +73,11 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
 
     private val binding by viewBinding(FragmentEnterAmountBinding::bind)
     private val viewModel: EnterAmountViewModel by activityViewModels()
+    @Inject lateinit var authManager: AuthenticationManager
     private val decimalSeparator = DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
     var maxSelected: Boolean = false
         private set
+    var didAuthorize: Boolean = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -111,10 +119,6 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         viewModel.canContinue.observe(viewLifecycleOwner) {
             binding.continueBtn.isEnabled = it
         }
-
-        viewModel.canContinue.observe(viewLifecycleOwner) {
-            binding.continueBtn.isEnabled = it
-        }
     }
 
     fun setViewDetails(continueText: String, keyboardHeader: View? = null) {
@@ -143,9 +147,11 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     fun setAmount(amount: Coin) {
         if (binding.amountView.dashToFiat) {
             binding.amountView.input = amount.toPlainString()
-        } else viewModel.selectedExchangeRate.value?.let {
-            val rate = ExchangeRate(it.fiat)
-            binding.amountView.input = binding.amountView.fiatFormat.format(rate.coinToFiat(amount)).toString()
+        } else {
+            viewModel.selectedExchangeRate.value?.let {
+                val rate = ExchangeRate(it.fiat)
+                binding.amountView.input = binding.amountView.fiatFormat.format(rate.coinToFiat(amount)).toString()
+            }
         }
     }
 
@@ -158,7 +164,7 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         }
 
         binding.maxButton.setOnClickListener {
-            onMaxAmountButtonClick()
+            lifecycleScope.launch { onMaxAmountButtonClick() }
         }
 
         binding.amountView.setOnCurrencyToggleClicked {
@@ -180,7 +186,12 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         }
     }
 
-    private fun onMaxAmountButtonClick() {
+    private suspend fun onMaxAmountButtonClick() {
+        if (!didAuthorize && requireArguments().getBoolean(ARG_REQUIRE_PIN_MAX_BUTTON)) {
+            authManager.authenticate(requireActivity(), false) ?: return
+            didAuthorize = true
+        }
+
         binding.amountView.dashToFiat = true
         binding.amountView.input = (viewModel.maxAmount.value ?: Coin.ZERO).toPlainString()
         maxSelected = true

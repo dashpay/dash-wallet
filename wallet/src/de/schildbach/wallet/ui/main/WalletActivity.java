@@ -99,7 +99,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private final Handler handler = new Handler();
     private boolean isRestoringBackup;
-    private boolean showBackupWalletDialog = false;
 
     private BaseAlertDialogBuilder baseAlertDialogBuilder;
     private MainViewModel viewModel;
@@ -148,14 +147,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         checkLowStorageAlert();
         checkWalletEncryptionDialog();
         detectUserCountry();
-        showBackupWalletDialogIfNeeded();
-    }
-
-    private void showBackupWalletDialogIfNeeded() {
-        if (showBackupWalletDialog) {
-            BackupWalletDialogFragment.show(getSupportFragmentManager());
-            showBackupWalletDialog = false;
-        }
     }
 
     @Override

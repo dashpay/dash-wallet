@@ -46,6 +46,7 @@ import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.payments.QuickReceiveActivity
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.send.SendCoinsQrActivity
+import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
@@ -105,7 +106,7 @@ open class LockScreenActivity : SecureActivity() {
         USE_DEFAULT // defaults to fingerprint if available and enabled
     }
 
-    private val keepUnlocked by lazy {
+    val keepUnlocked by lazy {
         intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
     }
 
@@ -321,7 +322,7 @@ open class LockScreenActivity : SecureActivity() {
         autoLogout.deviceWasLocked = false
         autoLogout.maybeStartAutoLogoutTimer()
         if (shouldShowBackupReminder) {
-            val intent = VerifySeedActivity.createIntent(this, pin)
+            val intent = VerifySeedActivity.createIntent(this, pin, false)
             configuration.resetBackupSeedReminderTimer()
             startActivity(intent)
             finish()

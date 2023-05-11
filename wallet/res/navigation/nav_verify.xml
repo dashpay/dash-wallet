@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_verify"
+    app:startDestination="@id/verifyInfoFragment">
+
+    <fragment
+        android:id="@+id/verifyInfoFragment"
+        android:name="de.schildbach.wallet.ui.verify.VerifySeedInfoFragment"
+        android:label="VerifySeedItIsImportantFragment"
+        tools:layout="@layout/fragment_verify_info">
+
+        <action
+            android:id="@+id/info_to_writeDown"
+            app:destination="@id/showSeedFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/showSeedFragment"
+        android:name="de.schildbach.wallet.ui.verify.ShowSeedFragment"
+        android:label="ShowSeedFragment"
+        tools:layout="@layout/fragment_show_seed">
+
+        <action
+            android:id="@+id/showSeed_to_confirm"
+            app:destination="@id/verifyConfirmFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <argument
+            android:name="seed"
+            app:argType="string[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
+
+        <argument
+            android:name="standalone"
+            app:argType="boolean"
+            android:defaultValue="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/verifyConfirmFragment"
+        android:name="de.schildbach.wallet.ui.verify.VerifySeedConfirmFragment"
+        android:label="VerifySeedWriteDownFragment"
+        tools:layout="@layout/fragment_verify_confirm">
+
+        <action
+            android:id="@+id/confirm_to_success"
+            app:destination="@id/verifySuccessFragment"
+            app:popUpTo="@id/nav_verify"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/verifySuccessFragment"
+        android:name="de.schildbach.wallet.ui.verify.VerifySeedSuccessFragment"
+        android:label="VerifySeedSuccessFragment"
+        tools:layout="@layout/fragment_verify_success"/>
+</navigation>

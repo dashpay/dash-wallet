@@ -41,6 +41,7 @@
         <item name="android:background">@drawable/rounded_background</item>
         <item name="android:theme">@style/VerifySeedTextViewBackground</item>
         <item name="android:gravity">center</item>
+        <item name="android:textAlignment">gravity</item>
         <item name="android:lineSpacingMultiplier">1.7</item>
         <item name="android:paddingTop">18dp</item>
         <item name="android:paddingBottom">24dp</item>
@@ -155,5 +156,13 @@
         <item name="backgroundColor">@color/dash_black_0.05</item>
         <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">12dp</item>
+    </style>
+
+    <style name="RevealBalanceBackground">
+        <item name="backgroundColor">@color/dash_black_0.08</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+        <item name="cornerRadius">22dp</item>
+        <item name="roundButtonRadius">22dp</item>
     </style>
 </resources>

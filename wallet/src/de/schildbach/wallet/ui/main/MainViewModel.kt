@@ -25,7 +25,7 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
-import org.dash.wallet.common.data.BlockchainState
+import de.schildbach.wallet.WalletUIConfig
 import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.transactions.TxDirection
@@ -38,13 +38,14 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.BlockchainState
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapperComparator
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
 
@@ -54,6 +55,7 @@ class MainViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val clipboardManager: ClipboardManager,
     private val config: Configuration,
+    private val walletUIConfig: WalletUIConfig,
     blockchainStateDao: BlockchainStateDao,
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
@@ -73,7 +75,8 @@ class MainViewModel @Inject constructor(
     private val listener: SharedPreferences.OnSharedPreferenceChangeListener
     private val currencyCode = MutableStateFlow(config.exchangeCurrencyCode)
 
-    val balanceDashFormat: MonetaryFormat = config.format.noCode()
+    val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
+    val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
 
     private val _transactions = MutableLiveData<List<TransactionRowView>>()
     val transactions: LiveData<List<TransactionRowView>>
@@ -111,9 +114,14 @@ class MainViewModel @Inject constructor(
     val mostRecentTransaction: LiveData<Transaction>
         get() = _mostRecentTransaction
 
-    private val _hideBalance = MutableLiveData<Boolean>()
-    val hideBalance: LiveData<Boolean>
-        get() = _hideBalance
+    private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
+    val hideBalance = walletUIConfig.observePreference(WalletUIConfig.AUTO_HIDE_BALANCE)
+        .combine(_temporaryHideBalance) { autoHide, temporaryHide ->
+            temporaryHide ?: autoHide ?: false
+        }
+        .asLiveData()
+
+    val showTapToHideHint = walletUIConfig.observePreference(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT).asLiveData()
 
     val isPassphraseVerified: Boolean
         get() = !config.remindBackupSeed
@@ -123,7 +131,6 @@ class MainViewModel @Inject constructor(
         get() = _stakingAPY
 
     init {
-        _hideBalance.value = config.hideBalance
         transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxDirection.ALL
 
         _transactionsDirection
@@ -186,8 +193,8 @@ class MainViewModel @Inject constructor(
 
             if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)) {
                 input = clip.getItemAt(0).uri?.toString()
-            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)
-                || clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
+            } else if (clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
+                clipDescription.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
             ) {
                 input = clip.getItemAt(0).text?.toString()
             }
@@ -197,14 +204,16 @@ class MainViewModel @Inject constructor(
     }
 
     fun triggerHideBalance() {
-        val pastValue = _hideBalance.value ?: config.hideBalance
-        _hideBalance.value = !pastValue
+        val isHiding = hideBalance.value ?: false
+        _temporaryHideBalance.value = !isHiding
 
-        if (_hideBalance.value == true) {
+        if (_temporaryHideBalance.value == true) {
             logEvent(AnalyticsConstants.Home.HIDE_BALANCE)
         } else {
             logEvent(AnalyticsConstants.Home.SHOW_BALANCE)
         }
+
+        viewModelScope.launch { walletUIConfig.setPreference(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT, false) }
     }
 
     fun logDirectionChangedEvent(direction: TxDirection) {
@@ -213,9 +222,12 @@ class MainViewModel @Inject constructor(
             TxDirection.SENT -> "sent_transactions"
             TxDirection.RECEIVED -> "received_transactions"
         }
-        analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
-            "filter_value" to directionParameter
-        ))
+        analytics.logEvent(
+            AnalyticsConstants.Home.TRANSACTION_FILTER,
+            bundleOf(
+                "filter_value" to directionParameter
+            )
+        )
     }
 
     fun processDirectTransaction(tx: Transaction) {
@@ -238,19 +250,20 @@ class MainViewModel @Inject constructor(
             val transactionViews = walletData.wrapAllTransactions(
                 FullCrowdNodeSignUpTxSet(walletData.networkParameters, wallet)
             ).filter { it.transactions.any { tx -> filter.matches(tx) } }
-             .sortedWith(TransactionWrapperComparator())
-             .map {
-                 TransactionRowView.fromTransactionWrapper(
-                     it, walletData.transactionBag,
-                     Constants.CONTEXT
-                 )
-             }
+                .sortedWith(TransactionWrapperComparator())
+                .map {
+                    TransactionRowView.fromTransactionWrapper(
+                        it,
+                        walletData.transactionBag,
+                        Constants.CONTEXT
+                    )
+                }
             _transactions.postValue(transactionViews)
         }
     }
 
     private fun updateSyncStatus(state: BlockchainState) {
-        if (_isBlockchainSyncFailed.value != state.isSynced()) {
+        if (_isBlockchainSynced.value != state.isSynced()) {
             _isBlockchainSynced.postValue(state.isSynced())
 
             if (state.isSynced()) {
@@ -271,8 +284,8 @@ class MainViewModel @Inject constructor(
         var percentage = state.percentageSync
 
         if (state.replaying && state.percentageSync == 100) {
-            //This is to prevent showing 100% when using the Rescan blockchain function.
-            //The first few broadcasted blockchainStates are with percentage sync at 100%
+            // This is to prevent showing 100% when using the Rescan blockchain function.
+            // The first few broadcasted blockchainStates are with percentage sync at 100%
             percentage = 0
         }
         _blockchainSyncPercentage.postValue(percentage)
