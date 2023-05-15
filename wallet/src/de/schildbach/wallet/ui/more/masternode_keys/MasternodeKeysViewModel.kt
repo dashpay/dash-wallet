@@ -36,6 +36,7 @@ import org.bitcoinj.core.Utils
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.crypto.IKey
+import org.bitcoinj.crypto.KeyType
 import org.bitcoinj.crypto.ed25519.Ed25519DeterministicKey
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.DerivationPathFactory
@@ -137,8 +138,9 @@ class MasternodeKeysViewModel @Inject constructor(
         if (keyChainInfo == null || refresh) {
             val keyChain = authenticationGroup.getKeyChain(getAuthenticationKeyChainType(type))
             val keyInfoList = arrayListOf<MasternodeKeyInfo>()
+            val maxKeyCount = getMaxKeyCount(type)
 
-            for (i in 0 until max(1, keyChain.issuedKeyCount)) {
+            for (i in 0 until max(1, maxKeyCount)) {
                 keyInfoList.add(
                     MasternodeKeyInfo(
                         keyChain.getKey(
@@ -154,6 +156,22 @@ class MasternodeKeysViewModel @Inject constructor(
         return keyChainInfo
     }
 
+    private fun getMaxKeyCount(type: MasternodeKeyType): Int {
+        return if (getKeyUsage().isNotEmpty()) {
+            val keyChainType = getAuthenticationKeyChainType(type)
+            getKeyUsage().values.maxOf {
+                if (it.key is IDeterministicKey && it.type == keyChainType) {
+                    val key = it.key as IDeterministicKey
+                    key.childNumber.num()
+                } else {
+                    0
+                }
+            }
+        } else {
+            0
+        }
+    }
+
     fun getKey(type: MasternodeKeyType, index: Int): IKey {
         val keyChain = getKeyChain(type)
         val key = keyChain.getKey(index, keyChain.hasHardenedKeysOnly())
@@ -166,7 +184,6 @@ class MasternodeKeysViewModel @Inject constructor(
     }
 
     fun getKeyChainData(type: MasternodeKeyType): MasternodeKeyTypeInfo {
-        val keyChain = getKeyChain(type)
         val keyChainType = getAuthenticationKeyChainType(type)
         val usedKeys = authenticationGroup.keyUsage.values.count { usage ->
             if (usage.type == keyChainType) {
@@ -177,7 +194,8 @@ class MasternodeKeysViewModel @Inject constructor(
                 false
             }
         }
-        return MasternodeKeyTypeInfo(type, max(1, keyChain.issuedKeyCount), usedKeys)
+        val maxKeyCount = getMaxKeyCount(type)
+        return MasternodeKeyTypeInfo(type, max(1, maxKeyCount), usedKeys)
     }
 
     fun addKeyChains(pin: String) {
@@ -222,45 +240,52 @@ class MasternodeKeysViewModel @Inject constructor(
     suspend fun addKey(masternodeKeyType: MasternodeKeyType): Int = withContext(Dispatchers.IO) {
         Context.propagate(walletData.wallet!!.context)
         val keyChainInfo = masternodeKeyChainInfoMap[masternodeKeyType]
-        if (keyChainInfo!!.masternodeKeyChain.hasHardenedKeysOnly()) {
-            val securityGuard = SecurityGuard()
-            val password = securityGuard.retrievePassword()
-            val encryptionKey = securityFunctions.deriveKey(walletData.wallet!!, password)
-            val keyCrypter = walletData.wallet!!.keyCrypter
-            val parent = keyChainInfo.masternodeKeyChain.watchingKey as Ed25519DeterministicKey
-            val decryptedParent = parent.decrypt(keyCrypter, encryptionKey)
-            log.info("decrytped parent key")
-
-            // decrypt the key chain
-            // this is not the best way because all keys are decrypted
-            // but dashj doesn't have a means of decrypting the parent key to derive a new child
-            // val decryptedKeyChain = keyChainInfo.masternodeKeyChain.toDecrypted(encryptionKey)
-            val freshKey = decryptedParent.deriveChildKey(
-                ChildNumber(
-                    keyChainInfo.masternodeKeyChain.issuedKeyCount,
-                    true
-                )
-            )
-            log.info("derived key")
-
-            // val freshKey = decryptedKeyChain.freshAuthenticationKey()
-            val encryptedKey = freshKey.encrypt(keyCrypter, encryptionKey, parent)
-            log.info("encrypted key")
-
-            keyChainInfo.masternodeKeyInfoList.add(MasternodeKeyInfo(encryptedKey))
-            // encrypt the key chain
-            // val encryptedKeyChain = decryptedKeyChain.toEncrypted(keyCrypter, encryptionKey)
-            // replaceKeyChain(encryptedKeyChain, freshKey, masternodeKeyType)
-            addNewKey(encryptedKey, masternodeKeyType)
-            log.info("add new key complete")
-        } else {
+        val maxKeyCount = max(1, keyChainInfo!!.masternodeKeyInfoList.size)
+        if (maxKeyCount < keyChainInfo.masternodeKeyChain.issuedKeyCount) {
             keyChainInfo.masternodeKeyInfoList.add(
                 MasternodeKeyInfo(
-                    authenticationGroup.freshKey(
-                        getAuthenticationKeyChainType(masternodeKeyType)
+                    keyChainInfo.masternodeKeyChain.getKey(
+                        maxKeyCount,
+                        keyChainInfo.masternodeKeyChain.keyFactory.keyType == KeyType.EdDSA
                     )
                 )
             )
+        } else {
+            if (keyChainInfo.masternodeKeyChain.hasHardenedKeysOnly()) {
+                val securityGuard = SecurityGuard()
+                val password = securityGuard.retrievePassword()
+                val encryptionKey = securityFunctions.deriveKey(walletData.wallet!!, password)
+                val keyCrypter = walletData.wallet!!.keyCrypter
+                val parent = keyChainInfo.masternodeKeyChain.watchingKey as Ed25519DeterministicKey
+                val decryptedParent = parent.decrypt(keyCrypter, encryptionKey)
+                log.info("decrypted parent key")
+
+                // decrypt the key chain
+                // this is not the best way because all keys are decrypted
+                // but dashj doesn't have a means of decrypting the parent key to derive a new child
+                val freshKey = decryptedParent.deriveChildKey(
+                    ChildNumber(
+                        keyChainInfo.masternodeKeyChain.issuedKeyCount,
+                        true
+                    )
+                )
+                log.info("derived key")
+
+                val encryptedKey = freshKey.encrypt(keyCrypter, encryptionKey, parent)
+                log.info("encrypted key")
+
+                keyChainInfo.masternodeKeyInfoList.add(MasternodeKeyInfo(encryptedKey))
+                addNewKey(encryptedKey, masternodeKeyType)
+                log.info("add new key complete")
+            } else {
+                keyChainInfo.masternodeKeyInfoList.add(
+                    MasternodeKeyInfo(
+                        authenticationGroup.freshKey(
+                            getAuthenticationKeyChainType(masternodeKeyType)
+                        )
+                    )
+                )
+            }
         }
         keyChainMap[masternodeKeyType]!!.totalKeys = keyChainInfo.masternodeKeyInfoList.size
         log.info("callback")
