@@ -52,6 +52,7 @@ import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.transactions.TransactionUtils;
 
@@ -117,11 +118,16 @@ public class WalletUtils {
     }
 
     public static Wallet restoreWalletFromProtobufOrBase58(final InputStream is,
-            final NetworkParameters expectedNetworkParameters) throws IOException {
+                                                           final NetworkParameters expectedNetworkParameters) throws IOException {
+        return restoreWalletFromProtobufOrBase58(is, expectedNetworkParameters, null);
+    }
+
+    public static Wallet restoreWalletFromProtobufOrBase58(final InputStream is,
+            final NetworkParameters expectedNetworkParameters, @Nullable final WalletExtension[] walletExtensions) throws IOException {
         is.mark((int) Constants.BACKUP_MAX_CHARS);
 
         try {
-            return restoreWalletFromProtobuf(is, expectedNetworkParameters);
+            return restoreWalletFromProtobuf(is, expectedNetworkParameters, walletExtensions);
         } catch (final IOException x) {
             try {
                 is.reset();
@@ -136,9 +142,10 @@ public class WalletUtils {
     }
 
     public static Wallet restoreWalletFromProtobuf(final InputStream is,
-            final NetworkParameters expectedNetworkParameters) throws IOException {
+                                                   final NetworkParameters expectedNetworkParameters,
+                                                   final WalletExtension[] walletExtensions) throws IOException {
         try {
-            final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, null);
+            final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, walletExtensions);
 
             if (!wallet.getParams().equals(expectedNetworkParameters))
                 throw new IOException("bad wallet backup network parameters: " + wallet.getParams().getId());
@@ -152,7 +159,8 @@ public class WalletUtils {
     }
 
     public static Wallet restoreWalletFromSeed(final List<String> words,
-                                                   final NetworkParameters expectedNetworkParameters) throws IOException {
+                                                   final NetworkParameters expectedNetworkParameters,
+                                               WalletExtension[] extensions) throws IOException {
         try {
             DeterministicSeed seed =  new DeterministicSeed(words, null,"", Constants.EARLIEST_HD_SEED_CREATION_TIME);
             KeyChainGroup group = KeyChainGroup.builder(Constants.NETWORK_PARAMETERS)
@@ -164,6 +172,9 @@ public class WalletUtils {
                     .build();
 
             final Wallet wallet = new Wallet(Constants.NETWORK_PARAMETERS, group);
+            for (WalletExtension extension : extensions) {
+                wallet.addExtension(extension);
+            }
 
             if (!wallet.getParams().equals(expectedNetworkParameters))
                 throw new IOException("bad wallet backup network parameters: " + wallet.getParams().getId());

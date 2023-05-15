@@ -14,68 +14,101 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.more
 
 import android.content.Intent
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.activity.viewModels
 import androidx.core.os.bundleOf
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
+import androidx.navigation.fragment.findNavController
+import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.security.SecurityFunctions
+import de.schildbach.wallet.ui.AddressBookActivity
+import de.schildbach.wallet.ui.ExportTransactionHistoryDialogBuilder
+import de.schildbach.wallet.ui.NetworkMonitorActivity
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
-import org.dash.wallet.common.util.Qr
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_tools.*
+import de.schildbach.wallet_test.databinding.FragmentToolsBinding
+import kotlinx.android.synthetic.main.fragment_tools.*
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Qr
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
+@FlowPreview
 @AndroidEntryPoint
-class ToolsActivity : BaseMenuActivity() {
+class ToolsFragment : Fragment(R.layout.fragment_tools) {
+    @Inject lateinit var authManager: SecurityFunctions
 
     companion object {
-        private val log = LoggerFactory.getLogger(ToolsActivity::class.java)
+        private val log = LoggerFactory.getLogger(ToolsFragment::class.java)
     }
+    private val binding by viewBinding(FragmentToolsBinding::bind)
 
     @Inject
     lateinit var analytics: AnalyticsService
     private val viewModel: ToolsViewModel by viewModels()
 
-    override fun getLayoutId(): Int {
-        return R.layout.activity_tools
-    }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        enterTransition = MaterialFadeThrough()
+        reenterTransition = MaterialFadeThrough()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        binding.appBar.toolbar.title = getString(R.string.tools_title)
+        binding.appBar.toolbar.setNavigationOnClickListener {
+            findNavController().popBackStack()
+        }
 
-        setTitle(R.string.tools_title)
-        address_book.setOnClickListener {
+        binding.addressBook.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Settings.ADDRESS_BOOK, bundleOf())
-            startActivity(Intent(this, AddressBookActivity::class.java))
+            startActivity(Intent(requireContext(), AddressBookActivity::class.java))
         }
-        import_keys.setOnClickListener {
+        binding.importKeys.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, bundleOf())
-            startActivity(Intent(this, SweepWalletActivity::class.java))
+            startActivity(Intent(requireContext(), SweepWalletActivity::class.java))
         }
-        network_monitor.setOnClickListener {
+        binding.networkMonitor.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Settings.NETWORK_MONITORING, bundleOf())
-            startActivity(Intent(this, NetworkMonitorActivity::class.java))
+            startActivity(Intent(requireContext(), NetworkMonitorActivity::class.java))
+        }
+        binding.masternodeKeys.setOnClickListener {
+            lifecycleScope.launch {
+                val pin = authManager.authenticate(requireActivity(), true)
+                pin?.let {
+                    findNavController().navigate(
+                        R.id.masternodeKeyTypeFragment,
+                        bundleOf(),
+                        NavOptions.Builder()
+                            .setEnterAnim(R.anim.slide_in_bottom)
+                            .build()
+                    )
+                }
+            }
         }
 
-        show_xpub.setOnClickListener {
+        binding.showXpub.setOnClickListener {
             handleExtendedPublicKey()
         }
 
         var isSyncing = false
-        viewModel.blockchainState.observe(this) {
+        viewModel.blockchainState.observe(viewLifecycleOwner) {
             isSyncing = it?.replaying == true
         }
 
@@ -86,14 +119,15 @@ class ToolsActivity : BaseMenuActivity() {
                     getString(R.string.report_transaction_history_not_synced_title),
                     getString(R.string.report_transaction_history_not_synced_message),
                     "",
-                    getString(R.string.button_close))
-                dialog.show(supportFragmentManager, "requireSyncing")
+                    getString(R.string.button_close)
+                )
+                dialog.show(requireActivity().supportFragmentManager, "requireSyncing")
             } else {
                 viewModel.getTransactionExporter()
-                viewModel.transactionExporter.observe(this) {
-                    alertDialog =
+                viewModel.transactionExporter.observe(viewLifecycleOwner) {
+                    val alertDialog =
                         ExportTransactionHistoryDialogBuilder.createExportTransactionDialog(
-                            this,
+                            requireActivity(),
                             WalletApplication.getInstance(),
                             it
                         ).buildAlertDialog()
@@ -108,9 +142,10 @@ class ToolsActivity : BaseMenuActivity() {
     }
 
     private fun showExtendedPublicKeyDialog(xpubWithCreationDate: String, xpub: String) {
-        val view = LayoutInflater.from(this).inflate(R.layout.extended_public_key_dialog, null)
+        val view = LayoutInflater.from(requireContext()).inflate(R.layout.extended_public_key_dialog, null)
         val bitmap = BitmapDrawable(
-            resources, Qr.bitmap(xpubWithCreationDate)
+            resources,
+            Qr.bitmap(xpubWithCreationDate)
         )
         bitmap.isFilterBitmap = false
         val imageView = view.findViewById<ImageView>(R.id.extended_public_key_dialog_image)
@@ -122,7 +157,7 @@ class ToolsActivity : BaseMenuActivity() {
             handleCopyAddress(xpub)
         }
 
-        val baseAlertDialogBuilder = BaseAlertDialogBuilder(this)
+        val baseAlertDialogBuilder = BaseAlertDialogBuilder(requireContext())
         baseAlertDialogBuilder.view = view
         baseAlertDialogBuilder.negativeText = getString(R.string.button_dismiss)
         baseAlertDialogBuilder.positiveText = getString(R.string.button_share)
@@ -130,7 +165,7 @@ class ToolsActivity : BaseMenuActivity() {
             createAndLaunchShareIntent(xpubWithCreationDate)
             Unit
         }
-        alertDialog = baseAlertDialogBuilder.buildAlertDialog()
+        val alertDialog = baseAlertDialogBuilder.buildAlertDialog()
         alertDialog.show()
     }
 
@@ -154,7 +189,7 @@ class ToolsActivity : BaseMenuActivity() {
     private fun handleCopyAddress(xpub: String) {
         viewModel.copyXpubToClipboard()
 
-        Toast(this).toast(R.string.copied)
+        Toast(requireContext()).toast(R.string.copied)
         log.info("xpub copied to clipboard: {}", xpub)
     }
 }
