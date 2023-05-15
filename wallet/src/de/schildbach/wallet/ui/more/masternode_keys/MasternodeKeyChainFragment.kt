@@ -64,13 +64,13 @@ class MasternodeKeyChainFragment : Fragment(R.layout.fragment_masternode_key_cha
                 MasternodeKeyType.OPERATOR -> R.string.masternode_key_type_operator
                 MasternodeKeyType.PLATFORM -> R.string.masternode_key_type_platform
                 else -> throw IllegalArgumentException("invalid masternode key type")
-            },
+            }
         )
         masternodeKeyChainAdapter = MasternodeKeyChainAdapter(
-            viewModel.getKeyChainInfo(masternodeKeyType),
+            viewModel.getKeyChainInfo(masternodeKeyType, false),
             viewModel.getKeyUsage(),
             { handleCopyAddress(it) },
-            { key, position -> handleDecryptKey(key, position) },
+            { key, position -> handleDecryptKey(key, position) }
         )
         binding.keyList.adapter = masternodeKeyChainAdapter
         binding.keyList.layoutManager = LinearLayoutManager(activity)
@@ -78,12 +78,19 @@ class MasternodeKeyChainFragment : Fragment(R.layout.fragment_masternode_key_cha
         masternodeKeyChainAdapter.notifyDataSetChanged()
 
         binding.addMasternodeKey.setOnClickListener {
-            val position = viewModel.addKey(masternodeKeyType)
-            masternodeKeyChainAdapter.addKey(position)
-            (binding.keyList.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(
-                position,
-                0,
-            )
+            lifecycleScope.launch {
+                val position = viewModel.addKey(masternodeKeyType)
+                masternodeKeyChainAdapter.addKey(position)
+                (binding.keyList.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(
+                    position,
+                    0
+                )
+            }
+        }
+        viewModel.newKeysFound.observe(viewLifecycleOwner) { isAdded ->
+            if (isAdded == true) {
+                masternodeKeyChainAdapter.notifyDataSetChanged()
+            }
         }
     }
 

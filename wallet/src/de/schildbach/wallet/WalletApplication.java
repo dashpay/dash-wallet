@@ -52,12 +52,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.hilt.work.HiltWorkerFactory;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
-import androidx.work.BackoffPolicy;
-import androidx.work.Data;
-import androidx.work.ExistingWorkPolicy;
-import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
-import androidx.work.WorkRequest;
 
 import com.google.common.base.Stopwatch;
 
@@ -69,10 +64,10 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
+import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.AuthenticationKeyChain;
-import org.bitcoinj.wallet.CoinSelection;
 import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
@@ -80,6 +75,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
+import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
@@ -91,6 +87,7 @@ import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.features.exploredash.di.ExploreDashModule;
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants;
+import de.schildbach.wallet.transactions.MasternodeObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
@@ -342,6 +339,11 @@ public class WalletApplication extends MultiDexApplication
                             AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR
                     )
             );
+
+            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
+            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
+            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
+            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
         }
     }
 
@@ -955,6 +957,7 @@ public class WalletApplication extends MultiDexApplication
         // clear data on wallet reset
         transactionMetadataProvider.clear();
         // wallet must be null for the OnboardingActivity flow
+        log.info("removing wallet from memory during wipe");
         wallet = null;
         clearExtensions();
     }
@@ -1047,6 +1050,16 @@ public class WalletApplication extends MultiDexApplication
 
     @NonNull
     @Override
+    public Flow<List<AuthenticationKeyUsage>> observeAuthenticationKeyUsage() {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+
+        return new MasternodeObserver(authenticationGroupExtension).observeAuthenticationKeyUsage();
+    }
+
+    @NonNull
+    @Override
     public Collection<Transaction> getTransactions(@NonNull TransactionFilter... filters) {
         Set<Transaction> transactions = wallet.getTransactions(true);
 
@@ -1122,6 +1135,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void clearExtensions() {
+        log.info("clearing extensions: authentication");
         authenticationGroupExtension = new AuthenticationGroupExtension(Constants.NETWORK_PARAMETERS);
     }
 

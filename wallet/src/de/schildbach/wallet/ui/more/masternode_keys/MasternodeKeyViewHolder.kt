@@ -24,7 +24,9 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.MasternodeKeyRowBinding
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Utils
+import org.bitcoinj.crypto.BLSPublicKey
 import org.bitcoinj.crypto.IDeterministicKey
+import org.bitcoinj.crypto.KeyType
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 
@@ -41,7 +43,7 @@ class MasternodeKeyViewHolder(val binding: MasternodeKeyRowBinding) : RecyclerVi
             keypairUsage.text = when (usage?.status) {
                 AuthenticationKeyStatus.CURRENT -> {
                     val ipAddress = if (usage.address != null) {
-                        usage.address?.addr.toString()
+                        usage.address?.addr.toString().removePrefix("/")
                     } else {
                         itemView.context.getString(R.string.masternode_key_ip_address_unknown)
                     }
@@ -70,6 +72,9 @@ class MasternodeKeyViewHolder(val binding: MasternodeKeyRowBinding) : RecyclerVi
             publicKeyContainer.setOnClickListener {
                 clickListener.invoke(publicKey.text.toString())
             }
+            publicKeyLegacyContainer.setOnClickListener {
+                clickListener.invoke(publicKeyLegacy.text.toString())
+            }
             privateKeyHexContainer.setOnClickListener {
                 clickListener.invoke(privateKeyHex.text.toString())
             }
@@ -78,6 +83,20 @@ class MasternodeKeyViewHolder(val binding: MasternodeKeyRowBinding) : RecyclerVi
             }
             privatePublicKeyBase64.setOnClickListener {
                 clickListener.invoke(privatePublicKeyBase64.text.toString())
+            }
+            // define visibility
+            val keyType = masternodeKeyInfo.masternodeKey.keyFactory.keyType
+            addressContainer.isVisible = keyType == KeyType.ECDSA
+            keyIdContainer.isVisible = keyType == KeyType.EdDSA
+            privateKeyHexContainer.isVisible = keyType != KeyType.EdDSA
+            privateKeyWifContainer.isVisible = keyType == KeyType.ECDSA
+            publicKeyContainer.isVisible = keyType == KeyType.BLS
+            publicKeyLegacyContainer.isVisible = keyType == KeyType.BLS
+            privatePublicKeyBase64Container.isVisible = keyType == KeyType.EdDSA
+            if (keyType == KeyType.BLS) {
+                val blsPublicKey = (masternodeKeyInfo.masternodeKey.pubKeyObject as BLSPublicKey)
+                publicKeyLegacy.text = blsPublicKey.toStringHex(true)
+                publicKey.text = blsPublicKey.toStringHex(false)
             }
         }
     }

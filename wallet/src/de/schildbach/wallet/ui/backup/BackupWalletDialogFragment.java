@@ -82,7 +82,6 @@ import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.payments.DeriveKeyTask;
 import de.schildbach.wallet.security.SecurityFunctions;
 import de.schildbach.wallet.security.SecurityGuard;
@@ -111,7 +110,6 @@ public class BackupWalletDialogFragment extends DialogFragment {
 
     @Inject SecurityFunctions securityFunctions;
     @Inject WalletDataProvider walletData;
-    @Inject WalletApplication walletApplication;
     @Inject Configuration config;
 
     private AlertDialog alertDialog;
@@ -318,7 +316,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
                     SecurityGuard securityGuard = new SecurityGuard();
                     if (wallet.isEncrypted()) {
                         String walletPassword = securityGuard.retrievePassword();
-                        final Wallet decryptedWallet = new WalletProtobufSerializer().readWallet(Constants.NETWORK_PARAMETERS, walletApplication.getWalletExtensions(), walletProto);
+                        final Wallet decryptedWallet = new WalletProtobufSerializer().readWallet(Constants.NETWORK_PARAMETERS, walletData.getWalletExtensions(), walletProto);
                         new DeriveKeyTask(backgroundHandler, securityFunctions.getScryptIterationsTarget()) {
                             @Override
                             protected void onSuccess(KeyParameter encryptionKey, boolean changed) {

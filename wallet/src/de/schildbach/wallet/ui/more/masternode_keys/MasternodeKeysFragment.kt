@@ -82,6 +82,11 @@ class MasternodeKeysFragment : Fragment(R.layout.fragment_masternode_key_types) 
                 }
             }.showNow(childFragmentManager, "check-pin")
         }
+        viewModel.newKeysFound.observe(viewLifecycleOwner) { isAdded ->
+            if (isAdded == true) {
+                loadKeyTypes()
+            }
+        }
     }
 
     private fun loadKeyTypes() {

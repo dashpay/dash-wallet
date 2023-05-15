@@ -73,7 +73,7 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
 
     fun restoreWalletFromSeed(words: List<String>) {
         if (isSeedValid(words)) {
-            val wallet = WalletUtils.restoreWalletFromSeed(normalize(words), Constants.NETWORK_PARAMETERS, walletApplication.walletExtensions)
+            val wallet = WalletUtils.restoreWalletFromSeed(normalize(words), Constants.NETWORK_PARAMETERS, walletApplication.getWalletExtensions())
             walletApplication.setWallet(wallet)
             log.info("successfully restored wallet from seed")
             configuration.disarmBackupSeedReminder()
