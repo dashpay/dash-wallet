@@ -74,7 +74,7 @@ jobs:
         gpg -d --passphrase "${{ secrets.KEYSTORE_KEY }}" --batch .deploy/keystore.jks.gpg > .deploy/keystore.jks
         gpg -d --passphrase "${{ secrets.LOCAL_PROPERTIES_KEY }}" --batch .deploy/local.properties.gpg > local.properties
         gpg -d --passphrase "${{ secrets.GC_STORAGE_SERVICE_ACCOUNT_KEY }}" --batch .deploy/gc-storage-service-account.json.gpg > .deploy/gc-storage-service-account.json
-
+   
     - name: Copy explore.db from GC Storage
       run: |
         gem install google-cloud-storage
