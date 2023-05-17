@@ -79,12 +79,14 @@ class MasternodeKeyChainFragment : Fragment(R.layout.fragment_masternode_key_cha
 
         binding.addMasternodeKey.setOnClickListener {
             lifecycleScope.launch {
+                binding.addMasternodeKey.isEnabled = false
                 val position = viewModel.addKey(masternodeKeyType)
                 masternodeKeyChainAdapter.addKey(position)
                 (binding.keyList.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(
                     position,
                     0
                 )
+                binding.addMasternodeKey.isEnabled = true
             }
         }
         viewModel.newKeysFound.observe(viewLifecycleOwner) { isAdded ->
