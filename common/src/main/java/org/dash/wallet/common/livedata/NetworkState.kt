@@ -29,9 +29,10 @@ import javax.inject.Inject
 
 interface NetworkStateInt {
     fun observeNetworkChangeState(): Flow<Boolean>
+    fun isWifiConnected(): Boolean
 }
 
-class NetworkState @Inject constructor (private val connectivityManager: ConnectivityManager): NetworkStateInt {
+class NetworkState @Inject constructor(private val connectivityManager: ConnectivityManager) : NetworkStateInt {
 
     private var networkRequestBuilder: NetworkRequest.Builder = NetworkRequest.Builder()
         .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
@@ -55,16 +56,20 @@ class NetworkState @Inject constructor (private val connectivityManager: Connect
 
         when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.N -> connectivityManager.registerDefaultNetworkCallback(
-                connectivityManagerCallback
+                connectivityManagerCallback,
             )
             else -> connectivityManager.registerNetworkCallback(
                 networkRequestBuilder.build(),
-                connectivityManagerCallback
+                connectivityManagerCallback,
             )
         }
         awaitClose {
             connectivityManager.unregisterNetworkCallback(connectivityManagerCallback)
         }
+    }
+
+    override fun isWifiConnected(): Boolean {
+        return connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)?.state == NetworkInfo.State.CONNECTED
     }
 }
 
@@ -72,7 +77,7 @@ class NetworkState @Inject constructor (private val connectivityManager: Connect
  * @author Kebab Krabby
  * https://stackoverflow.com/questions/36421930/connectivitymanager-connectivity-action-deprecated
  */
-@Deprecated ("Use the NetworkState service", ReplaceWith("NetworkState"))
+@Deprecated("Use the NetworkState service", ReplaceWith("NetworkState"))
 class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
 
     private var connectivityManager: ConnectivityManager =
@@ -85,7 +90,7 @@ class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
         updateConnection()
         when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.N -> connectivityManager.registerDefaultNetworkCallback(
-                getConnectivityManagerCallback()
+                getConnectivityManagerCallback(),
             )
             else -> {
                 val networkRequestBuilder: NetworkRequest.Builder = NetworkRequest.Builder()
@@ -93,7 +98,7 @@ class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
                     .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                 connectivityManager.registerNetworkCallback(
                     networkRequestBuilder.build(),
-                    getConnectivityManagerCallback()
+                    getConnectivityManagerCallback(),
                 )
             }
         }

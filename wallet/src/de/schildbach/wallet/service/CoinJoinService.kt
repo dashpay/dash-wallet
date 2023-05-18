@@ -56,12 +56,20 @@ import java.util.concurrent.Executors
 import javax.inject.Inject
 import javax.inject.Singleton
 
+enum class CoinJoinMode {
+    BASIC,
+    INTERMEDIATE,
+    ADVANCED,
+}
+
 interface CoinJoinService {
     fun needsToMix(amount: Coin): Boolean
+    fun getMode(): CoinJoinMode
+    fun setMode(mode: CoinJoinMode)
     fun configureMixing(
         amount: Coin,
         requestKeyParameter: RequestKeyParameter,
-        requestDecryptedKey: RequestDecryptedKey
+        requestDecryptedKey: RequestDecryptedKey,
     )
 
     suspend fun prepareAndStartMixing()
@@ -75,14 +83,14 @@ enum class MixingStatus {
     MIXING,
     PAUSED,
     FINISHED,
-    ERROR
+    ERROR,
 }
 
 @Singleton
 class CoinJoinMixingService @Inject constructor(
     val walletDataProvider: WalletDataProvider,
     val walletApplication: WalletApplication,
-    val blockchainStateProvider: BlockchainStateProvider
+    val blockchainStateProvider: BlockchainStateProvider,
 ) : CoinJoinService {
 
     companion object {
@@ -97,9 +105,10 @@ class CoinJoinMixingService @Inject constructor(
     private var sessionCompleteListeners: ArrayList<SessionCompleteListener> = arrayListOf()
 
     private var mixingStatus: MixingStatus = MixingStatus.NOT_STARTED
+    private var mode: CoinJoinMode = CoinJoinMode.BASIC
 
     private val coroutineScope = CoroutineScope(
-        Executors.newFixedThreadPool(2).asCoroutineDispatcher()
+        Executors.newFixedThreadPool(2).asCoroutineDispatcher(),
     )
 
     private var blockChain: AbstractBlockChain? = null
@@ -110,7 +119,7 @@ class CoinJoinMixingService @Inject constructor(
     // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
     private val mixingMutex = Mutex(locked = true)
     private var exception: Throwable? = null
-    override suspend fun waitForMixing() = mixingMutex.withLock{}
+    override suspend fun waitForMixing() = mixingMutex.withLock {}
     override suspend fun waitForMixingWithException() {
         waitForMixing()
         exception?.let {
@@ -142,7 +151,7 @@ class CoinJoinMixingService @Inject constructor(
 
         when {
             networkStatus == NetworkStatus.UNKNOWN -> return
-            mixingStatus == MixingStatus.MIXING && networkStatus == NetworkStatus.CONNECTED && isBlockChainSet-> {
+            mixingStatus == MixingStatus.MIXING && networkStatus == NetworkStatus.CONNECTED && isBlockChainSet -> {
                 // start mixing
                 prepareMixing()
                 startMixing()
@@ -156,7 +165,7 @@ class CoinJoinMixingService @Inject constructor(
                 // pause mixing
                 stopMixing()
             }
-            mixingStatus == MixingStatus.PAUSED && this.networkStatus == NetworkStatus.CONNECTING && networkStatus == NetworkStatus.CONNECTED && isBlockChainSet-> {
+            mixingStatus == MixingStatus.PAUSED && this.networkStatus == NetworkStatus.CONNECTING && networkStatus == NetworkStatus.CONNECTED && isBlockChainSet -> {
                 // resume mixing
                 prepareMixing()
                 startMixing()
@@ -177,21 +186,21 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun updateMixingStatus(mixingStatus: MixingStatus) {
-        updateState(mixingStatus, networkStatus, blockChain);
+        updateState(mixingStatus, networkStatus, blockChain)
     }
 
     private var mixingProgressTracker: MixingProgressTracker = object : MixingProgressTracker() {
         override fun onMixingComplete(wallet: WalletEx?, statusList: MutableList<PoolStatus>?) {
             super.onMixingComplete(wallet, statusList)
             log.info("Mixing Complete.  {}% mixed", progress)
-            //TODO: _progressFlow.emit(progress)
+            // TODO: _progressFlow.emit(progress)
         }
 
         override fun onSessionStarted(
             wallet: WalletEx?,
             sessionId: Int,
             denomination: Int,
-            message: PoolMessage?
+            message: PoolMessage?,
         ) {
             super.onSessionStarted(wallet, sessionId, denomination, message)
             log.info("Session {} started.  {}% mixed", sessionId, progress)
@@ -201,10 +210,10 @@ class CoinJoinMixingService @Inject constructor(
             wallet: WalletEx?,
             sessionId: Int,
             denomination: Int,
-            message: PoolMessage?
+            message: PoolMessage?,
         ) {
             super.onSessionComplete(wallet, sessionId, denomination, message)
-            //TODO: _progressFlow.emit(progress)
+            // TODO: _progressFlow.emit(progress)
             log.info("Session {} complete. {}% mixed -- {}", sessionId, progress, message)
         }
     }
@@ -223,15 +232,29 @@ class CoinJoinMixingService @Inject constructor(
             ?.isLessThan(amount) ?: false
     }
 
+    override fun getMode(): CoinJoinMode {
+        return mode
+    }
+
+    override fun setMode(mode: CoinJoinMode) {
+        this.mode = mode
+    }
+
     override fun configureMixing(
         amount: Coin,
         requestKeyParameter: RequestKeyParameter,
-        requestDecryptedKey: RequestDecryptedKey
+        requestDecryptedKey: RequestDecryptedKey,
     ) {
-        CoinJoinClientOptions.setRounds(1);
-        CoinJoinClientOptions.setSessions(4);
+        CoinJoinClientOptions.setSessions(4)
         CoinJoinClientOptions.setAmount(amount)
         CoinJoinClientOptions.setMultiSessionEnabled(false)
+
+        when (mode) {
+            CoinJoinMode.BASIC -> CoinJoinClientOptions.setAmount(Coin.ZERO)
+            CoinJoinMode.INTERMEDIATE -> CoinJoinClientOptions.setRounds(1)
+            CoinJoinMode.ADVANCED -> CoinJoinClientOptions.setRounds(2)
+        }
+
         // TODO: have CoinJoinClientOptions.toString instead do this
         log.info("mixing configuration:  { rounds: ${CoinJoinClientOptions.getRounds()}, sessions: ${CoinJoinClientOptions.getSessions()}, amount: ${amount.toFriendlyString()}}")
         coinJoinManager?.run {
@@ -245,7 +268,8 @@ class CoinJoinMixingService @Inject constructor(
         val wallet = walletDataProvider.wallet!! as WalletEx
         // the mixed balance must meet the getAmount() requirement and all denominated coins must be mixed
         if (wallet.coinJoinBalance.isGreaterThanOrEqualTo(CoinJoinClientOptions.getAmount()) &&
-                wallet.coinJoinBalance.equals(wallet.denominatedBalance)) {
+            wallet.coinJoinBalance.equals(wallet.denominatedBalance)
+        ) {
             setMixingComplete()
         } else {
             updateMixingStatus(MixingStatus.MIXING)
@@ -253,7 +277,7 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun prepareMixing() {
-        CoinJoinClientOptions.setEnabled(true);
+        CoinJoinClientOptions.setEnabled(true)
         val wallet = walletDataProvider.wallet!!
         addMixingCompleteListener(mixingProgressTracker)
         addSessionCompleteListener(mixingProgressTracker)
@@ -338,7 +362,7 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     fun addSessionCompleteListener(sessionCompleteListener: SessionCompleteListener) {
-        sessionCompleteListeners.add(sessionCompleteListener);
+        sessionCompleteListeners.add(sessionCompleteListener)
         coinJoinManager?.addSessionCompleteListener(Threading.SAME_THREAD, sessionCompleteListener)
     }
 
