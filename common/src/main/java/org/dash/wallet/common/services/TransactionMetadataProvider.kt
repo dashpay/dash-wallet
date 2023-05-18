@@ -17,16 +17,13 @@
 package org.dash.wallet.common.services
 
 import android.graphics.Bitmap
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
-import java.io.ByteArrayOutputStream
 
 interface TransactionMetadataProvider {
     suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata)
@@ -39,7 +36,7 @@ interface TransactionMetadataProvider {
     suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncingPlatform: Boolean = false)
     suspend fun setTransactionSentTime(txId: Sha256Hash, timestamp: Long, isSyncingPlatform: Boolean = false)
 
-    suspend fun syncPlatformMetadata(txId: Sha256Hash, metadata: TransactionMetadata)
+    suspend fun syncPlatformMetadata(txId: Sha256Hash, metadata: TransactionMetadata, iconUrl: String?)
 
     /**
      * Checks for missing data in the metadata cache vs the Transaction and ensures that both

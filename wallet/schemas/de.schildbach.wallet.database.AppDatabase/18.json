@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 18,
-    "identityHash": "d1a609c21fd529e344110ee924d01d8e",
+    "identityHash": "4c67f656cf1ec48b435a64c00b373f4c",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -719,7 +719,7 @@
       },
       {
         "tableName": "transaction_metadata_cache",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`cacheTimestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` TEXT, `memo` TEXT, `service` TEXT, `customIconId` BLOB, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`cacheTimestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` TEXT, `memo` TEXT, `service` TEXT, `customIconUrl` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)",
         "fields": [
           {
             "fieldPath": "cacheTimestamp",
@@ -770,9 +770,9 @@
             "notNull": false
           },
           {
-            "fieldPath": "customIconId",
-            "columnName": "customIconId",
-            "affinity": "BLOB",
+            "fieldPath": "customIconUrl",
+            "columnName": "customIconUrl",
+            "affinity": "TEXT",
             "notNull": false
           },
           {
@@ -793,7 +793,7 @@
       },
       {
         "tableName": "transaction_metadata_platform",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` REAL, `memo` TEXT, `service` TEXT, `customIconId` BLOB, PRIMARY KEY(`id`, `txId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` REAL, `memo` TEXT, `service` TEXT, `customIconUrl` TEXT, PRIMARY KEY(`id`, `txId`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -850,9 +850,9 @@
             "notNull": false
           },
           {
-            "fieldPath": "customIconId",
-            "columnName": "customIconId",
-            "affinity": "BLOB",
+            "fieldPath": "customIconUrl",
+            "columnName": "customIconUrl",
+            "affinity": "TEXT",
             "notNull": false
           }
         ],
@@ -870,7 +870,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd1a609c21fd529e344110ee924d01d8e')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4c67f656cf1ec48b435a64c00b373f4c')"
     ]
   }
 }

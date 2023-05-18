@@ -33,12 +33,12 @@ data class TransactionMetadataCacheItem(
     var rate: String? = null,
     var memo: String? = null,
     var service: String? = null,
-    var customIconId: Sha256Hash? = null
+    var customIconUrl: String? = null
 ) {
     @PrimaryKey(autoGenerate = true)
     var id: Long = 0
 
-    constructor(transactionMetadata: TransactionMetadata) : this(
+    constructor(transactionMetadata: TransactionMetadata, customIconUrl: String? = null) : this(
         System.currentTimeMillis(),
         transactionMetadata.txId,
         transactionMetadata.timestamp,
@@ -47,11 +47,11 @@ data class TransactionMetadataCacheItem(
         transactionMetadata.rate,
         transactionMetadata.memo.ifEmpty { null },
         transactionMetadata.service,
-        transactionMetadata.customIconId
+        customIconUrl
     )
 
     fun isNotEmpty(): Boolean {
         return sentTimestamp != null || taxCategory != null || !memo.isNullOrEmpty() ||
-            currencyCode != null || rate != null || service != null || customIconId != null
+            currencyCode != null || rate != null || service != null || customIconUrl != null
     }
 }

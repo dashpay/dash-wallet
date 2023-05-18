@@ -90,7 +90,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             val platformService = transactionMetadataDocumentDao.getTransactionService(txId)
             val platformTaxCategory = transactionMetadataDocumentDao.getTransactionTaxCategory(txId)
             val platformExchangeRate = transactionMetadataDocumentDao.getTransactionExchangeRate(txId)
-            val platformCustomIconId = transactionMetadataDocumentDao.getTransactionCustomIconId(txId)
+            val platformIconUrl = transactionMetadataDocumentDao.getTransactionIconUrl(txId)
 
             var rate: String? = null
             var code: String? = null
@@ -128,8 +128,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 currencyCode = code,
                 rate = rate,
                 memo = myMemo,
-                service = platformService,
-                customIconId = platformCustomIconId
+                service = platformService
             )
             transactionMetadataDao.insert(metadata)
             // only add to the change cache if some metadata exists
@@ -137,6 +136,14 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 transactionMetadataChangeCacheDao.insert(TransactionMetadataCacheItem(metadata))
             }
             log.info("txmetadata: inserting $metadata")
+
+            if (!platformIconUrl.isNullOrEmpty()) {
+                try {
+                    updateIcon(txId, platformIconUrl)
+                } catch (ex: Exception) {
+                    log.error("Failed to make an http call for icon: $platformIconUrl")
+                }
+            }
 
             return metadata
         }
@@ -190,7 +197,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun syncPlatformMetadata(txId: Sha256Hash, metadata: TransactionMetadata) {
+    override suspend fun syncPlatformMetadata(txId: Sha256Hash, metadata: TransactionMetadata, iconUrl: String?) {
         updateAndInsertIfNotExist(txId, true) { existing ->
             val updated = existing.copy(
                 // txId and value are kept the same
@@ -207,6 +214,14 @@ class WalletTransactionMetadataProvider @Inject constructor(
             )
 
             transactionMetadataDao.update(updated)
+
+            if (!iconUrl.isNullOrEmpty()) {
+                try {
+                    updateIcon(txId, iconUrl)
+                } catch (ex: Exception) {
+                    log.error("Failed to make an http call for icon: $iconUrl")
+                }
+            }
         }
     }
 
@@ -525,7 +540,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
 
                             iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, iconUrl, icon.height, icon.width))
                             transactionMetadataDao.updateIconId(txId, imageHash)
-                            transactionMetadataChangeCacheDao.insertCustomIconId(txId, imageHash)
+                            transactionMetadataChangeCacheDao.insertCustomIconUrl(txId, iconUrl)
                         } catch (ex: Exception) {
                             log.error("Failed to resize and save the icon for url: $iconUrl", ex)
                         }

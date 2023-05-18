@@ -85,12 +85,12 @@ interface TransactionMetadataChangeCacheDao {
     )
 
     @Query(
-        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, customIconId) 
-           VALUES (:txId, :cacheTimestamp, :customIconId)"""
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, customIconUrl) 
+           VALUES (:txId, :cacheTimestamp, :customIconUrl)"""
     )
-    suspend fun insertCustomIconId(
+    suspend fun insertCustomIconUrl(
         txId: Sha256Hash,
-        customIconId: Sha256Hash,
+        customIconUrl: String,
         cacheTimestamp: Long = System.currentTimeMillis()
     )
 

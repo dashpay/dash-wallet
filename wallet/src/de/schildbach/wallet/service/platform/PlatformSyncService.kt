@@ -117,7 +117,9 @@ class PlatformSynchronizationService @Inject constructor(
         private val random = Random(System.currentTimeMillis())
 
         val UPDATE_TIMER_DELAY = 15.seconds
-        val PUSH_PERIOD = if (BuildConfig.DEBUG) 5.minutes else 3.hours
+        val PUSH_PERIOD = if (BuildConfig.DEBUG) 3.minutes else 3.hours
+        val CUTOFF_MIN = if (BuildConfig.DEBUG) 3.minutes else 3.hours
+        val CUTOFF_MAX = if (BuildConfig.DEBUG) 6.minutes else 6.hours
     }
 
     val platform = platformRepo.platform
@@ -159,8 +161,8 @@ class PlatformSynchronizationService @Inject constructor(
 
             if (lastPush < now - PUSH_PERIOD.inWholeMilliseconds) {
                 val everythingBeforeTimestamp = random.nextLong(
-                    now - 6.hours.inWholeMilliseconds,
-                    now - 3.hours.inWholeMilliseconds
+                    now - CUTOFF_MAX.inWholeMilliseconds,
+                    now - CUTOFF_MIN.inWholeMilliseconds
                 ) // Choose cutoff time between 3 and 6 hours ago
                 publishChangeCache(everythingBeforeTimestamp)
             } else {
@@ -700,6 +702,7 @@ class PlatformSynchronizationService @Inject constructor(
                             txIdAsHash
                         )
                         val updatedMetadata = TransactionMetadata(txIdAsHash, 0, Coin.ZERO, TransactionCategory.Invalid)
+                        var iconUrl: String? = null
 
                         metadata.timestamp?.let { timestamp ->
                             metadataDocumentRecord.sentTimestamp = timestamp
@@ -784,22 +787,21 @@ class PlatformSynchronizationService @Inject constructor(
                                 updatedMetadata.rate = metadata.exchangeRate.toString()
                             }
                         }
-                        metadata.customIconId?.let { customIconId ->
-                            val hash = Sha256Hash.wrap(customIconId)
-                            metadataDocumentRecord.customIconId = hash
-                            log.info("processing TxMetadata: custom icon change")
+                        metadata.customIconUrl?.let { url ->
+                            metadataDocumentRecord.customIconUrl = url
+                            log.info("processing TxMetadata: custom icon url change")
                             if (cachedItems.find {
                                     it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
-                                        it.customIconId != null && it.customIconId != hash
+                                        it.customIconUrl != null && it.customIconUrl != url
                                 } == null
                             ) {
-                                log.info("processing TxMetadata: custom icon change: changing icon")
-                                updatedMetadata.customIconId = hash
+                                log.info("processing TxMetadata: custom icon url change: changing icon")
+                                iconUrl = url
                             }
                         }
 
                         log.info("syncing metadata with platform updates: $updatedMetadata")
-                        transactionMetadataProvider.syncPlatformMetadata(txIdAsHash, updatedMetadata)
+                        transactionMetadataProvider.syncPlatformMetadata(txIdAsHash, updatedMetadata, iconUrl)
                         log.info("adding TxMetadataItem: {}", metadata)
                         transactionMetadataDocumentDao.insert(metadataDocumentRecord)
                     } else {
@@ -826,7 +828,7 @@ class PlatformSynchronizationService @Inject constructor(
                 it.currencyCode,
                 it.taxCategory?.name?.lowercase(),
                 it.service,
-                it.customIconId?.bytes
+                it.customIconUrl
             )
         }
         val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
@@ -862,8 +864,8 @@ class PlatformSynchronizationService @Inject constructor(
                 changedItem.service?.let { service ->
                     item.service = service
                 }
-                changedItem.customIconId?.let { customIconId ->
-                    item.customIconId = customIconId
+                changedItem.customIconUrl?.let { customIconUrl ->
+                    item.customIconUrl = customIconUrl
                 }
             } else {
                 itemsToPublish[changedItem.txId] = changedItem
@@ -871,11 +873,11 @@ class PlatformSynchronizationService @Inject constructor(
         }
 
         try {
-            log.info("publishing ${itemsToPublish.values.size} tx metadata changes to platform")
+            log.info("publishing ${itemsToPublish.values.size} tx metadata items to platform")
 
             // publish non-empty items
             publishTransactionMetadata(itemsToPublish.values.filter { it.isNotEmpty() })
-            log.info("published ${itemsToPublish.values.size} tx metadata changes to platform")
+            log.info("published ${itemsToPublish.values.size} tx metadata items to platform")
 
             // clear out published items from the cache table
             transactionMetadataChangeCacheDao.removeByIds(itemsToPublish.values.map { it.id })

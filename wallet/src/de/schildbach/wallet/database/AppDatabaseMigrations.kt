@@ -68,8 +68,8 @@ class AppDatabaseMigrations {
 
         val migration17To18 = object : Migration(17, 18) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("CREATE TABLE IF NOT EXISTS `transaction_metadata_cache` (`cacheTimestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` TEXT, `memo` TEXT, `service` TEXT, `customIconId` BLOB, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)")
-                database.execSQL("CREATE TABLE IF NOT EXISTS `transaction_metadata_platform` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` REAL, `memo` TEXT, `service` TEXT, `customIconId` BLOB, PRIMARY KEY(`id`, `txId`))")
+                database.execSQL("CREATE TABLE IF NOT EXISTS `transaction_metadata_cache` (`cacheTimestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` TEXT, `memo` TEXT, `service` TEXT, `customIconUrl` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)")
+                database.execSQL("CREATE TABLE IF NOT EXISTS `transaction_metadata_platform` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` REAL, `memo` TEXT, `service` TEXT, `customIconUrl` TEXT, PRIMARY KEY(`id`, `txId`))")
             }
         }
     }
