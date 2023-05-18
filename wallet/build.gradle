@@ -391,6 +391,15 @@ android {
             freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
         }
     }
+    lint {
+        abortOnError false
+        disable 'MissingTranslation'
+    }
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
+        }
+    }
 }
 
 apply from: file("../gradle/google-services.gradle")

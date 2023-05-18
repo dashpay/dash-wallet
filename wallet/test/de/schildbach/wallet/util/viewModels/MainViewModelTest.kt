@@ -20,8 +20,6 @@ package de.schildbach.wallet.util.viewModels
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.lifecycle.SavedStateHandle
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.transactions.TxFilterType
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.SavedStateHandle

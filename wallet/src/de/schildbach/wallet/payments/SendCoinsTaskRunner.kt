@@ -34,6 +34,7 @@ import okio.IOException
 import org.bitcoin.protocols.payments.Protos
 import org.bitcoin.protocols.payments.Protos.Payment
 import org.bitcoinj.core.*
+import org.bitcoinj.crypto.IKey
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentRequestURL
@@ -303,7 +304,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 is InsufficientMoneyException -> ex.missing?.run {
                     log.info("send failed, {} missing", toFriendlyString())
                 } ?: log.info("send failed, insufficient coins")
-                is ECKey.KeyIsEncryptedException -> log.info("send failed, key is encrypted: {}", ex.message)
+                is IKey.KeyIsEncryptedException -> log.info("send failed, key is encrypted: {}", ex.message)
                 is KeyCrypterException -> log.info("send failed, key crypter exception: {}", ex.message)
                 is Wallet.CouldNotAdjustDownwards -> log.info("send failed, could not adjust downwards: {}", ex.message)
                 is Wallet.CompletionException -> log.info("send failed, cannot complete: {}", ex.message)
