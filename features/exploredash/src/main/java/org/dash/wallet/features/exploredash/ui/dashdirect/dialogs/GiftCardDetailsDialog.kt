@@ -150,6 +150,10 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let { transactionId ->
             viewModel.init(transactionId)
         }
+
+        binding.viewTransactionDetailsCard.setOnClickListener {
+            deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
+        }
     }
 
     private fun bindGiftCardDetails(binding: DialogGiftCardDetailsBinding, giftCard: GiftCard) {
@@ -170,10 +174,6 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
                 requireContext().startActivity(intent)
             }
-        }
-
-        binding.viewTransactionDetailsCard.setOnClickListener {
-            deepLinkNavigate(DeepLinkDestination.Transaction(giftCard.transactionId.toString()))
         }
     }
 

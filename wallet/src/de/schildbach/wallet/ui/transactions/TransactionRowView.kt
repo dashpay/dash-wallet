@@ -102,7 +102,14 @@ data class TransactionRowView(
             } else if (metadata?.service == ServiceName.DashDirect) {
                 icon = R.drawable.ic_gift_card_tx
                 iconBackground = R.style.TxOrangeBackground
-                title = ResourceString(R.string.gift_card_tx_title, listOf(metadata.title ?: ""))
+                title = ResourceString(
+                    if (metadata.title.isNullOrEmpty()) {
+                        R.string.explore_payment_gift_card
+                    } else {
+                        R.string.gift_card_tx_title
+                    },
+                    listOf(metadata.title ?: "")
+                )
             } else if (isInternal) {
                 icon = R.drawable.ic_internal
                 iconBackground = R.style.TxSentBackground
