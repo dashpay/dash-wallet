@@ -60,7 +60,8 @@ class GiftCardDetailsViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(GiftCardDetailsViewModel::class.java)
     }
 
-    private lateinit var transactionId: Sha256Hash
+    lateinit var transactionId: Sha256Hash
+        private set
     private var tickerJob: Job? = null
 
     private val _giftCard: MutableLiveData<GiftCard?> = MutableLiveData()
