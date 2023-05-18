@@ -100,6 +100,7 @@ class GiftCardDetailsViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         giftCardDao.observeCardForTransaction(transactionId)
+            .filterNotNull()
             .distinctUntilChanged()
             .onEach { giftCard ->
                 _giftCard.value = giftCard
