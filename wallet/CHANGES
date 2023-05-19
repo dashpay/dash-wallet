@@ -1,4 +1,16 @@
 Dash Wallet
+v9.0.0
+* Supports Dash Core 19
+* Added Masternode Keys feature
+* Request PIN code for balance (quick send)
+* Improve Transaction Error UI
+* Allow sending when exchange rate is missing
+* Redesign balance header on Home Screen
+* Redesign wallet backup
+* Update Shortcut buttons on Home Screen
+* Fixes for Crowdnode related to Android 12 and account linking
+* Improve initial sync speed when app starts
+
 v8.1.3
 * Fix Uphold Transfer Crash
 * Add Sync Explore DB button on About Screen (Testnet only)
