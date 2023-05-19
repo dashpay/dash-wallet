@@ -150,7 +150,6 @@
     <string name="buy_gift_card_text">Achetez des cartes-cadeau avec vos dashs</string>
     <string name="buy_gift_card_desc_text">Achetez des cartes-cadeau avec vos dashs pour le montant exact de vos achats.</string>
     <string name="learn_more_text">En savoir plus</string>
-    <string name="continue_text">Continuer</string>
     <string name="buy_card_header_text">Comment utiliser une carte-cadeau</string>
     <string name="buy_card_desc_text">Tous les magasins n\'acceptent pas Dash directement, mais vous pouvez acheter une carte-cadeau avec vos dashs.</string>
     <string name="find_merchant_text">Trouvez un vendeur.</string>

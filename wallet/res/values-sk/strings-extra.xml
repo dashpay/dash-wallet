@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">Overuje sa PIN</string>
     <string name="set_pin_message">Tento PIN bude potrebný na odomknutie aplikácie pri každom použití.</string>
     <string name="set_pin_confirm_pin_incorrect">Nesprávny PIN</string>
-
-    <string name="home_available_balance">Dostupný zostatok</string>
-    <string name="home_balance_hidden">Zostatok skrytý</string>
-    <string name="home_balance_show_hint">Klepnutím odkryť zostatok</string>
+    
     <string name="home_balance_hide_hint">Klepnutím skryť zostatok</string>
 
     <string name="dialog_confirm_confirm">Potvrdiť</string>
@@ -30,13 +27,11 @@
     <string name="dialog_confirm_total">Celkovo</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Zabezpečiť peňaženku teraz</string>
+    <string name="shortcut_scan_to_pay">Skenovať</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Skenovať a platiť</string>
+    <string name="shortcut_pay_to_address">Poslať</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Poslať na adresu</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Kúpiť/Predať Dash</string>
+    <string name="shortcut_buy_sell">Kúpiť a predať</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Prijať</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -49,7 +44,7 @@
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_login_with_pin">Prihlásiť sa PIN-om</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
-    <string name="lock_action_login_with_fingerprint">Prihlásiť sa odtlačkom prsta</string>
+    <string name="lock_action_login_with_fingerprint">Prihlásiť odtlačkom prsta</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_scan_to_pay">Skenovať a poslať</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
@@ -58,7 +53,7 @@
 
     <string name="perm_lock_info">Peňaženka je trvalo zamknutá</string>
     <string name="perm_lock_wipe_wallet">Vymazať Peňaženku</string>
-    <string name="perm_lock_close_app">Ukončiť</string>
+    <string name="perm_lock_close_app">Zatvoriť</string>
 
     <string name="scan_to_pay_error_dialog_title">Skenovať a poslať</string>
     <string name="scan_to_pay_error_dialog_message">V schránke nie je platná Dash adresa, alebo URL požiadavka:\n\n%s</string>
@@ -213,17 +208,6 @@
     <string name="verify_continue">Pokračovať</string>
     <string name="verify_backup_wallet">Zálohovať peňaženku</string>
     <string name="verify_show_recovery_phrase">Zobraziť frázu obnovenia</string>
-    <string name="verify_secure_now">Zabezpečiť peňaženku teraz</string>
-    <string name="verify_it_is_important">Je to dôležité</string>
-    <string name="verify_it_is_important_subtitle">Chystáme sa vám ukázať tajný kľúč k vašej peňaženke.</string>
-    <string name="verify_info_text_1">Táto fráza pre obnovenie predstavuje váš prístup k finančným prostriedkom v tejto peňaženke.</string>
-    <string name="verify_info_text_2">Túto frázu pre obnovenie neuchovávame.</string>
-    <string name="verify_info_text_3">Túto frázu pre obnovenie budete potrebovať na prístup k vašim finančným prostriedkom, ak dôjde k strate či poškodeniu tohto zariadenia alebo k náhodnému odinštalovaniu Dash Wallet z tohto zariadenia.</string>
-    <string name="verify_skip">Preskočiť</string>
-    <string name="verify_secure_now_btn">Teraz zabezbečiť</string>
-    <string name="verify_secure_now_message">Ak toto zariadenie stratíte, stratíte vaše prostriedky. Získajte frázu pre obnovenie, aby ste mohli peňaženku obnoviť na inom zariadení.</string>
-    <string name="verify_seed_title">Prosím, zapíšte si ju</string>
-    <string name="verify_seed_write_down_confirmation">Zapísal som si to</string>
     <string name="verify_seed_buttons_tip">Klepnite na slová z obnovovacej frázy v správnom poradí</string>
     <string name="verify_seed_success_title">Úspešne overené</string>
     <string name="verify_seed_success_message">Vaša peňaženka je zabezpečená. Frázu pre obnovenie môžete kedykoľvek použiť na obnovenie svojho účtu na inom zariadení.</string>
@@ -248,16 +232,15 @@
     <string name="transaction_result_paid_successfully">Úspešne poslané</string>
     <string name="transaction_result_sent_to">Poslané ku</string>
     <string name="transaction_date_and_time">Dátum</string>
-    <string name="transaction_close">Ukončiť</string>
+    <string name="transaction_close">Zatvoriť</string>
     <string name="transaction_details_amount_received">Prijatá suma</string>
     <string name="transaction_details_amount_sent">Odoslaná suma</string>
-    <string name="transaction_details_sent_from">Poslané od</string>
-    <string name="transaction_details_sent_to">Poslané ku</string>
+    <string name="transaction_details_sent_from">Poslané z</string>
+    <string name="transaction_details_sent_to">Poslané na</string>
     <string name="transaction_details_received_at">Prijaté z</string>
     <string name="transaction_details_moved_from">Presunuté z</string>
     <string name="transaction_details_moved_internally_to">Interne presunuté do</string>
     <string name="transaction_failed_details">Transakcia zlyhala</string>
-
     <string name="authenticate_fingerprint_title">Overiť</string>
     <string name="authenticate_fingerprint_message">Pre pokračovanie potvrďte odtlačok prsta</string>
     <string name="authenticate_pin_message">Pokračujte zadaním PIN kódu</string>
@@ -290,7 +273,6 @@
     <string name="about_review_and_rate">Pridať recenziu alebo ohodnotiť applikáciu</string>
     <string name="about_contact_support">Kontaktovať podporu</string>
     <string name="about_fork_disclaimer">Toto je aplikácia s otvoreným zdrojovým kódom vytvorená z bitcoin peňaženky</string>
-    <string name="about_copyright">Autorské práva © 2023 Dash Core</string>
     <string name="about_license">Všeobecná verejná licencia GNU v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
     <string name="about_last_explore_device_sync">Posledná synchronizácia preskúmania zariadenia</string>
@@ -362,7 +344,7 @@
     <string name="payment_request_problem_title">Platba nebola uznaná</string>
     <string name="payment_request_problem_message">Vaša platba nemohla byť spracovaná serverom, prosím informujte sa u obchodníka</string>
     <string name="payment_request_expired_title">Žiadosť o platbu vypršala</string>
-    <string name="payment_request_close">Ukončiť</string>
+    <string name="payment_request_close">Zatvoriť</string>
     <string name="payment_request_skip">Preskočiť</string>
     <string name="payment_request_paid_to">Zaplatené</string>
 
@@ -376,7 +358,6 @@
     <string name="yesterday">Včera</string>
 
     <string name="syncing">Synchronizuje sa</string>
-    <string name="syncing_balance">Synchronizuje sa zostatok</string>
     <string name="transaction_count">%d transakcií</string>
     <string name="all_transactions">Všetko</string>
     <string name="received_transactions">Prijté</string>
@@ -397,13 +378,20 @@
     <string name="start_reset_wallet_title">Môžete stratiť %s</string>
     <string name="reset_wallet_text">Resetovať peňaženku</string>
     <string name="reclassify_transactions_title">Preklasifikujte svoje transakcie</string>
-    <string name="reclassify_transactions_title_message">Tieto klasifikácie sa premietnu do exportu CSV, ktorý možno použiť na import do služieb daňového výkazníctva.</string>
+    <string name="reclassify_transactions_title_message">Tieto klasifikácie sa premietnu do CSV exportu, ktorý možno použiť ako import do služieb daňového výkazníctva.</string>
     <string name="reclassify_transactions_question">Kde môžem zmeniť kategóriu dane?</string>
     <string name="reclassify_transactions_outgoing_title">Odchádzajúce transakcie</string>
-    <string name="reclassify_transactions_by_default_message">predvolene bude označený ako</string>
+    <string name="reclassify_transactions_by_default_message">bude predvolene označená ako</string>
     <string name="reclassify_transactions_incoming_title">Prichádzajúce transakcie</string>
-    <string name="reclassify_transactions_change_it_message">Môžete to zmeniť na</string>
+    <string name="reclassify_transactions_change_it_message">Môžete ju zmeniť na</string>
     <string name="reclassify_transactions_linked_accounts_title">Prepojené účty</string>
     <string name="reclassify_transactions_linked_accounts_message">v predvolenom nastavení budú všetky transakcie do alebo z vašich prepojených účtov (výmeny, vkladanie atď.) označené ako prevody.</string>
-    <string name="reclassify_transactions_change_explanation">Vyberte ľubovoľnú transakciu na domovskej stránke a zmeňte kategóriu na stránke podrobností transakcie.</string>
-</resources>
+    <string name="reclassify_transactions_change_explanation">Na domovskej stránke vyberte ľubovoľnú transakciu a zmeňte kategóriu na stránke podrobností transakcie.</string>
+
+    <string name="masternode_key_type_owner">Kľúče vlastníka</string>
+    <string name="masternode_key_type_voting">Hlasovacie kľúče</string>
+    <string name="masternode_key_type_operator">Kľúče operátora</string>
+    <string name="masternode_key_address">Adresa</string>
+    <string name="masternode_key_ip_address_unknown">Neznáme</string>
+    <string name="masternode_key_revoked">Zrušený</string>
+    </resources>

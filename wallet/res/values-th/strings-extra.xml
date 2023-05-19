@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">กำลังตรวจสอบเลขรหัสส่วนตัว</string>
     <string name="set_pin_message">ต้องใช้ PIN นี้เพื่อปลดล็อคแอพของคุณทุกครั้งที่ใช้</string>
     <string name="set_pin_confirm_pin_incorrect">PIN ไม่ถูกต้อง</string>
-
-    <string name="home_available_balance">ยอดเงินคงเหลือ</string>
-    <string name="home_balance_hidden">ยอดคงเหลือถูกซ่อน</string>
-    <string name="home_balance_show_hint">กดเพื่อเลิกซ่อนยอดคงเหลือ</string>
+    
     <string name="home_balance_hide_hint">กดเพื่อซ่อนยอดคงเหลือ</string>
 
     <string name="dialog_confirm_confirm">ยืนยัน</string>
@@ -30,13 +27,13 @@
     <string name="dialog_confirm_total">ทั้งหมด</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">ทำให้ Wallet ปลอดภัยตอนนี้</string>
+    <string name="shortcut_secure_now">การสำรองข้อมูล</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">สแกนเพื่อจ่าย</string>
+    <string name="shortcut_scan_to_pay">สแกน</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">ส่งไปยังที่อยู่</string>
+    <string name="shortcut_pay_to_address">ส่ง</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">ซื้อ / ขาย Dash</string>
+    <string name="shortcut_buy_sell">ซื้อ &amp; ขาย</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">ได้รับ</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -204,17 +201,12 @@
     <string name="verify_continue">ดำเนินการต่อ</string>
     <string name="verify_backup_wallet">กระเป๋าสตางค์สำรอง</string>
     <string name="verify_show_recovery_phrase">แสดงวลีกู้คืน</string>
-    <string name="verify_secure_now">ทำให้กระเป๋าสตางค์ปลอดภัยตอนนี้</string>
-    <string name="verify_it_is_important">สำคัญ</string>
-    <string name="verify_it_is_important_subtitle">เรากำลังจะแสดงให้คุณเห็นถึง การเข้ารหัสและถอดรหัสโดยใช้กุญแจรหัสตัวเดียวกันในการเข้าถึงกระเป๋าสตางค์ของคุณ</string>
-    <string name="verify_info_text_1">วลีกู้คืนนี้จะทำให้คุณเข้าถึงจำนวนเงินในกระเป๋าสตางค์</string>
-    <string name="verify_info_text_2">เราไม่เก็บวลีการกู้คืนนี้</string>
-    <string name="verify_info_text_3">คุณจะต้องใช้วลีกู้คืนนี้เพื่อเข้าถึงเงินทุนของคุณหากอุปกรณ์นี้สูญหายได้รับความเสียหายหรือหากกระเป๋าสตางค์ Dash เคยถอนการติดตั้งโดยไม่ได้ตั้งใจจากอุปกรณ์นี้</string>
-    <string name="verify_skip">ข้าม</string>
-    <string name="verify_secure_now_btn">ปลอดภัย</string>
-    <string name="verify_secure_now_message">หากคุณทำอุปกรณ์นี้หาย เงินก็จะสูญหาย รับวลีการกู้คืนเพื่อให้คุณสามารถกู้คืนกระเป๋าเงินของคุณบนอุปกรณ์อื่น ๆ</string>
-    <string name="verify_seed_title">กรุณาเขียนลงไป</string>
-    <string name="verify_seed_write_down_confirmation">ฉันได้เขียนลงไปแล้ว</string>
+    <string name="verify_info_title">สำรองวลีการกู้คืนของคุณ</string>
+    <string name="verify_info_subtitle">คุณจะต้องใช้วลีการกู้คืนนี้เพื่อเข้าถึงเงินของคุณ หากอุปกรณ์นี้สูญหาย เสียหาย หรือหากถอนการติดตั้ง Dash Wallet จากอุปกรณ์นี้</string>
+    <string name="verify_info_title_1">กลุ่ม Dash Core ไม่ได้จัดเก็บวลีการกู้คืนนี้</string>
+    <string name="verify_info_subtitle_1">ทุกคนที่มีวลีกู้คืนของคุณสามารถเข้าถึงเงินของคุณได้</string>
+    <string name="verify_info_title_2">คุณจะไม่สามารถกู้คืนกระเป๋าเงินได้หากไม่มีวลีการกู้คืน</string>
+    <string name="verify_info_subtitle_2">เขียนไว้ในที่ปลอดภัยและอย่าแสดงให้ใครเห็น</string>
     <string name="verify_seed_buttons_tip">โปรดแตะที่คำจากวลีการกู้คืนของคุณในลำดับที่ถูกต้อง</string>
     <string name="verify_seed_success_title">้ตรวจสอบสำเร็จ</string>
     <string name="verify_seed_success_message">กระเป๋าสตางค์ของคุณปลอดภัยแล้ว คุณสามารถใช้วลีกู้คืนได้ทุกเวลาเพื่อกู้คืนบัญชีของคุณบนอุปกรณ์อื่น</string>
@@ -248,6 +240,9 @@
     <string name="transaction_details_moved_from">เคลื่อนย้ายจาก</string>
     <string name="transaction_details_moved_internally_to">ย้ายไปภายแล้ว</string>
     <string name="transaction_failed_details">การทำธุรกรรมล้มเหลว</string>
+    <string name="transaction_failed_resolve">สิ่งนี้สามารถแก้ไขได้โดย</string>
+    <string name="transaction_failed_rescan">การสแกนบล็อกเชนอีกครั้ง</string>
+    <string name="transaction_failed_in_conflict">สิ่งนี้เป็นไปได้หากติดตั้งกระเป๋าเงินบนอุปกรณ์สองเครื่อง</string>
 
     <string name="authenticate_fingerprint_title">รับรองความน่าเชื่อถือ</string>
     <string name="authenticate_fingerprint_message">ยืนยันลายนิ้วมือเพื่อดำเนินการต่อไป</string>
@@ -281,7 +276,7 @@
     <string name="about_review_and_rate">ตรวจสอบและให้คะแนนแอพ</string>
     <string name="about_contact_support">ติดต่อฝ่ายสนับสนุน</string>
     <string name="about_fork_disclaimer">นี่คือซอฟต์แวร์โอเพนซอร์ซแอพพลิเคชั่นที่แยกสาขาออกมาจากกระเป๋าสตางค์บิทคอยน์</string>
-    <string name="about_copyright">Copyright © 2023 Dash Core</string>
+    <string name="about_copyright">ลิขสิทธิ์ © 2023 Dash Core Group</string>
     <string name="about_license">สัญญาอนุญาตให้ใช้ซอฟต์แวร์ หรือไลเซนส์ แบบหนึ่ง ซึ่งสงวนลิขสิทธิ์ของซอฟต์แวร์นั้น แต่อนุญาตให้บุคคลใดๆทำซ้ำ เผยแพร่ และ/หรือดัดแปลงซอฟต์แวร์นั้นได้อย่างถูกต้องตามกฎหมาย และโดยเสรี เวอร์ชั่น3.0</string>
     <string name="about_version_name">กระเป๋าสตางค์ Dash%s</string>
     <string name="about_last_explore_device_sync">การสำรวจการซิงค์อุปกรณ์ล่าสุด</string>
@@ -397,4 +392,14 @@
     <string name="reclassify_transactions_linked_accounts_title">บัญชีที่เชื่อมโยง</string>
     <string name="reclassify_transactions_linked_accounts_message">โดยค่าเริ่มต้นการทำธุรกรรมทั้งหมดไปยังหรือจากบัญชีที่เชื่อมโยงของคุณ (การเทรด, staking, ฯลฯ) จะถูกทำเครื่องหมายเป็นการถ่ายโอน</string>
     <string name="reclassify_transactions_change_explanation">เลือกธุรกรรมใด ๆ จากหน้าแรกและเปลี่ยนหมวดหมู่ในหน้ารายละเอียดการทำธุรกรรม</string>
-</resources>
+
+    <string name="masternode_keys_title">มาสเตอร์โหนดคีย์</string>
+    <string name="masternode_key_type_owner">เจ้าของกุญแจ</string>
+    <string name="masternode_key_type_voting">Voting Keys</string>
+    <string name="masternode_key_type_operator">ตัวดำเนินการกุญแจ</string>
+    <string name="masternode_key_type_platform">คีย์ตัวดำเนินการ HPMN</string>
+    <string name="masternode_key_type_total">%d คีย์</string>
+    <string name="masternode_key_address">ที่อยู่</string>
+    <string name="masternode_key_ip_address_unknown">ซึ่งเป็นไม่เป็นที่รู้จัก</string>
+    <string name="masternode_key_revoked">ยกเลิก</string>
+    </resources>

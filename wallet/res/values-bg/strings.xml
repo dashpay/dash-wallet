@@ -303,7 +303,7 @@
     <string name="about_category_credits">Това приложение използва...</string>
     <string name="about_credits_bitcoinj_title">dashj %s, изпълнява Dash протокола</string>
     <string name="about_credits_zxing_title">ZXing, обработва QR библиотеката</string>
-    <string name="about_credits_icon_title">Това приложение използва икона от "bitboy"</string>
+    <string name="about_credits_icon_title">Това приложение използва икона от \"bitboy\"</string>
     <string name="about_credits_scrypt_title">Скрипт,осъществен от Will Glozer и Colin Percival</string>
     <string name="about_market_app_title">Google Play страница</string>
     <string name="about_market_app_summary">Прегледайте и оценете приложението</string>

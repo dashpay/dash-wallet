@@ -91,8 +91,8 @@
     <string name="crowdnode_sending_to">Odošle sa na účet CrowdNode</string>
     <string name="wallet_sending_to">Odošle sa do Dash peňaženky na tomto zariadení</string>
     <string name="available_balance">Zostatok: %s</string>
-    <string name="crowdnode_minimum_deposit">Vložte aspoň %s, aby ste mohli začať zarábať</string>
-    <string name="crowdnode_minimum_deposit_difference">Vložte %s, aby ste mohli začať zarábať</string>
+    <string name="crowdnode_minimum_deposit">Aby ste mohli začať zarábať, vložte aspoň %s</string>
+    <string name="crowdnode_minimum_deposit_difference">Aby ste mohli začať zarábať, vložte %s</string>
     <string name="crowdnode_first_deposit">Prvý vklad by mal byť vyšší ako %s</string>
     <string name="crowdnode_staking_info_title">Ako funguje stávkovanie na CrowdNode</string>
     <string name="crowdnode_staking_info_message_first">Sieť Dash je riadená množstvom Masternódov, čo je nevyhnutná súčasť pre uskutočnenie platieb.</string>
@@ -101,7 +101,7 @@
     <string name="crowdnode_staking_info_message">Zarábať začnete, ak má váš účet CrowdNode viac ako %s</string>
     <string name="staking_apy_title">Aktuálny APY je %s</string>
     <string name="crowdnode_staking_current_apy_message">To predstavuje to aktuálny ročný percentuálny výnos celého Masternódu mínus 15 % poplatok CrowdNode. Nie je to zaručená miera návratnosti a môže stúpať alebo klesať v závislosti od veľkosti fondov CrowdNode a ceny Dash.</string>
-    <string name="crowdnode_staking_leave_pool_message_one">Členovia môžu voľne ukončiť členstvo a zvyčajne môžu odísť okamžite.</string>
+    <string name="crowdnode_staking_leave_pool_message_one">Členovia môžu voľne ukončiť členstvo, a zvyčajne môžu odísť okamžite.</string>
     <string name="crowdnode_staking_leave_pool_message_two">V prípade väčších výberov, CrowdNode vyplatí výbery do dvoch týždňov. Toto je spôsobené ich bezpečnostnými protokolmi ale najčastejšie to bude oveľa skôr.</string>
 
     <string name="crowdnode_staking_leaving_the_pool_title">Ukončiť členstvo</string>
@@ -124,11 +124,11 @@
     <string name="qr_contains_request">Tento QR kód už obsahuje žiadosť o platbu pre %s Dash</string>
     <string name="verification_required">Vyžaduje sa overenie</string>
     <string name="validating_address">Overuje sa adresa…</string>
-    <string name="crowdnode_address_validated">Vaša adresa CrowdNode bola overená, ale vyžaduje sa overenie.</string>
-    <string name="crowdnode_address_confirmed">Vaša adresa CrowdNode bola potvrdená.</string>
+    <string name="crowdnode_address_validated">Vaša CrowdNode adresa bola overená, ale vyžaduje sa overenie.</string>
+    <string name="crowdnode_address_confirmed">Vaša CrowdNode adresa bola potvrdená.</string>
     <string name="crowdnode_bad_confirmation">Potvrdenie bolo odoslané z nesprávnej primárnej adresy</string>
     <string name="crowdnode_online_account_details_title">Informácie o vašom online účte</string>
-    <string name="crowdnode_online_account_details_primary">Vaša primárna Dash adresa, ktorú momentálne používate pre svoj účet CrowdNode</string>
+    <string name="crowdnode_online_account_details_primary">Vaša primárna Dash adresa, ktorú momentálne používate pre váš CrowdNode účet</string>
     <string name="crowdnode_online_account_details_api">Dash adresa určená pre váš CrowdNode účet v Dash peňaženke na tomto zariadení</string>
     <string name="crowdnode_primary_missing">Vo vašom účte chýba primárna adresa Dash. Uveďte ju na webovej stránke CrowdNode.</string>
     <string name="crowdnode_wait_signed_email">Počkajte, kým sa váš e-mail spracuje…</string>

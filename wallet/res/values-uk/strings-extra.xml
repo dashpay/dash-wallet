@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">Підтвердження PIN</string>
     <string name="set_pin_message">Цей PIN-код необхідний, щоб розблокувати вашу програму кожного разу, коли ви її використовуєте.</string>
     <string name="set_pin_confirm_pin_incorrect">Неправильний PIN-код</string>
-
-    <string name="home_available_balance">Доступний баланс</string>
-    <string name="home_balance_hidden">Баланс приховано</string>
-    <string name="home_balance_show_hint">Торкніться, щоб показати баланс</string>
+    
     <string name="home_balance_hide_hint">Торкніться, щоб приховати баланс</string>
 
     <string name="dialog_confirm_confirm">Підтверджую</string>
@@ -30,13 +27,11 @@
     <string name="dialog_confirm_total">Всього</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Захистіть гаманець зараз</string>
+    <string name="shortcut_scan_to_pay">Сканувати</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Сканувати для оплати</string>
+    <string name="shortcut_pay_to_address">Відправити</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Відправити на адресу</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Купити / Продати Dash</string>
+    <string name="shortcut_buy_sell">Купити &amp; Продати</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Отримати</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -213,17 +208,6 @@
     <string name="verify_continue">Продовжити</string>
     <string name="verify_backup_wallet">Резервна копія гаманця</string>
     <string name="verify_show_recovery_phrase">Показати фразу відновлення</string>
-    <string name="verify_secure_now">Захистіть гаманець зараз</string>
-    <string name="verify_it_is_important">Це важливо</string>
-    <string name="verify_it_is_important_subtitle">Зараз ми покажемо секретний ключ до вашого гаманця.</string>
-    <string name="verify_info_text_1">Ця фраза відновлення - ваш доступ до коштів у цьому гаманці.</string>
-    <string name="verify_info_text_2">Ми НЕ зберігаємо цю фразу відновлення.</string>
-    <string name="verify_info_text_3">Вам знадобиться ця фраза відновлення, щоб отримати доступ до своїх коштів, якщо цей пристрій буде втрачено, пошкоджено або якщо Dash Wallet буде випадково видалено з цього пристрою.</string>
-    <string name="verify_skip">Пропустити</string>
-    <string name="verify_secure_now_btn">Захистити</string>
-    <string name="verify_secure_now_message">Якщо ви втратите цей пристрій, ви втратите свої кошти. Отримайте свою фразу відновлення, щоб ви могли відновити свій гаманець на іншому пристрої.</string>
-    <string name="verify_seed_title">Будь ласка, запишіть її</string>
-    <string name="verify_seed_write_down_confirmation">Я записав її</string>
     <string name="verify_seed_buttons_tip">Будь ласка, торкніться слів з вашої фрази відновлення в правильному порядку</string>
     <string name="verify_seed_success_title">Успішно верифіковано</string>
     <string name="verify_seed_success_message">Тепер ваш гаманець у безпеці. Ви можете будь-коли використати свою фразу відновлення, щоб відновити обліковий запис на іншому пристрої.</string>
@@ -257,7 +241,6 @@
     <string name="transaction_details_moved_from">Переміщено з</string>
     <string name="transaction_details_moved_internally_to">Внутрішньо переміщено в</string>
     <string name="transaction_failed_details">Помилка транзакції</string>
-
     <string name="authenticate_fingerprint_title">Автентифікувати</string>
     <string name="authenticate_fingerprint_message">Підтвердіть відбиток пальця, щоб продовжити</string>
     <string name="authenticate_pin_message">Введіть PIN-код, щоб продовжити</string>
@@ -289,7 +272,6 @@
     <string name="about_help_us_improve">Допоможіть нам стати кращими</string>
     <string name="about_contact_support">Служба підтримки</string>
     <string name="about_fork_disclaimer">Це додаток з відкритим кодом, заснований на Bitcoin Wallet</string>
-    <string name="about_copyright">Всі права захищено © 2023 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
     <string name="about_last_explore_dash_update_error">не можу отримати</string>
@@ -368,7 +350,6 @@
     <string name="yesterday">Вчора</string>
 
     <string name="syncing">Синхронізація</string>
-    <string name="syncing_balance">Синхронізація балансу</string>
     <string name="transaction_count">%d транзакції</string>
     <string name="all_transactions">Все</string>
     <string name="received_transactions">Отримано</string>
@@ -398,4 +379,11 @@
     <string name="reclassify_transactions_linked_accounts_title">Пов’язані облікові записи</string>
     <string name="reclassify_transactions_linked_accounts_message">за замовчуванням усі транзакції до ваших пов’язаних облікових записів або з них (обміни, ставки тощо) позначатимуться як перекази.</string>
     <string name="reclassify_transactions_change_explanation">Виберіть будь-яку транзакцію на головній сторінці та змініть категорію на сторінці з деталями транзакції.</string>
-</resources>
+
+    <string name="masternode_key_type_owner">Ключі власника</string>
+    <string name="masternode_key_type_voting">Ключі голосування</string>
+    <string name="masternode_key_type_operator">Ключі оператора</string>
+    <string name="masternode_key_address">Адреса</string>
+    <string name="masternode_key_ip_address_unknown">Невідомий</string>
+    <string name="masternode_key_revoked">Анульовано</string>
+    </resources>

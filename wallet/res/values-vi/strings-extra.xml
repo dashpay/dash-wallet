@@ -15,9 +15,6 @@
     <string name="set_pin_decrypting">Giải mã ví</string>
     <string name="set_pin_verifying_pin">Đang kiểm tra mã PIN</string>
     <string name="set_pin_message">Mã PIN này sẽ được hỏi để mở ứng dụng của bạn mỗi khi bạn sử dụng nó.</string>
-    <string name="home_available_balance">Số dư hiện có</string>
-    <string name="home_balance_hidden">Số dư ẩn</string>
-    <string name="home_balance_show_hint">Bấm để hiện số dư</string>
     <string name="home_balance_hide_hint">Bấm để ẩn số dư</string>
 
     <string name="dialog_confirm_confirm">Xác nhận</string>
@@ -27,13 +24,9 @@
     <string name="dialog_confirm_total">Tổng số</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Bảo mật ví ngay</string>
+    <string name="shortcut_scan_to_pay">Quét</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Quét để thanh toán</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Gửi đến địa chỉ</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Mua &amp; Bán Dash</string>
+    <string name="shortcut_pay_to_address">Gửi</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Nhận</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -62,8 +55,6 @@
     <string name="scan_to_pay_error_dialog_message_no_data">Không phải một địa chỉ Dash hoặc URL yêu cầu trong bộ nhớ đệm.</string>
     <string name="receive_title">Nhận</string>
     <string name="receive_enter_amount_message">Hãy xác định rõ số lượng cần nhận</string>
-    <string name="receive_enter_amount_button">Hãy cung cấp số lượng</string>
-    <string name="receive_share_button">Chia sẻ</string>
 
     <string name="pay_title">Gửi</string>
     <string name="history_title">Lịch sử</string>
@@ -188,16 +179,6 @@
     <string name="verify_continue">Tiếp tục</string>
     <string name="verify_backup_wallet">Sao lưu ví</string>
     <string name="verify_show_recovery_phrase">Hiển thị câu phục hồi</string>
-    <string name="verify_secure_now">Bảo mật ví ngay</string>
-    <string name="verify_it_is_important">Điều này là quan trọng</string>
-    <string name="verify_it_is_important_subtitle">Chúng tôi sẽ hiển thị cho bạn khoá bí mật trong ví của bạn.</string>
-    <string name="verify_info_text_1">Câu phục hồi này là quyền truy cập đến tiền trong ví này của bạn.</string>
-    <string name="verify_info_text_3">Bạn cần cụm từ phục hồi để truy cập đến khoản tiền của bạn nếu thiết bị này bị mất, hỏng hoặc ví Dash Wallet vô tình bị gỡ bỏ khỏi thiết bị này.</string>
-    <string name="verify_skip">Bỏ qua</string>
-    <string name="verify_secure_now_btn">Bảo mật ngay</string>
-    <string name="verify_secure_now_message">Nếu bạn mất thiết bị này, bạn sẽ mất số tiền trong đó. Hãy thiết lập cụm từ phục hồi để bạn có thể khôi phục được ví trên một thiết bị khác.</string>
-    <string name="verify_seed_title">Hãy vui lòng ghi xuống</string>
-    <string name="verify_seed_write_down_confirmation">Tôi đã viết xuống</string>
     <string name="verify_seed_buttons_tip">Hãy bấm vào các từ trong câu phục hồi của bạn theo đúng thứ tự</string>
     <string name="verify_seed_success_title">Xác thực thành công</string>
     <string name="verify_seed_success_message">Ví của bạn bây giờ đã được bảo mật. Bạn có thể sử dụng câu phục hồi của mình bất cứ khi nào để khôi phục lại tiền của mình trên một thiết bị khác.</string>
@@ -207,6 +188,7 @@
     <string name="view_seed_done">Xong</string>
     <string name="view_seed_title">Cụm từ phục hồi</string>
     <string name="transaction_result_view_on_explorer">Xem trên công cụ khám phá khối</string>
+    <string name="transaction_result_tax_category_loading">Đang tải...</string>
     <string name="transaction_result_paid_successfully">Đã gửi thành công</string>
     <string name="transaction_result_sent_to">Gửi đến</string>
     <string name="transaction_date_and_time">Ngày</string>
@@ -242,7 +224,6 @@
     <string name="tools_show_xpub">Mã công khai mở rộng</string>
 
     <string name="about_help_us_improve">Hãy giúp chúng tôi cải thiện trải nghiệm cho bạn</string>
-    <string name="about_review_and_rate">Viết nhận xét &amp; đánh giá cho ứng dụng</string>
     <string name="about_contact_support">Liên hệ hỗ trợ</string>
     <string name="about_fork_disclaimer">Đây là một ứng dụng mã nguồn mở được xây dựng dựa trên ví Bitcoin</string>
     <string name="about_license">Giấy phép GNU General Public v3.0</string>
@@ -316,4 +297,10 @@
     <string name="sent_transactions">Đã gửi</string>
     <string name="continue_reset">Tiếp tục</string>
     <string name="reset_wallet_text">Thiết lập lại ví</string>
+    <string name="masternode_key_type_owner">Khoá của chủ sở hữu</string>
+    <string name="masternode_key_type_voting">Khoá bỏ phiếu</string>
+    <string name="masternode_key_type_operator">Chìa khoá của người vận hành</string>
+    <string name="masternode_key_address">Địa chỉ</string>
+    <string name="masternode_key_ip_address_unknown">Không biết</string>
+    <string name="masternode_key_revoked">Đã thu hồi</string>
     </resources>

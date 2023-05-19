@@ -3,12 +3,12 @@
 
     <string name="toast_wallet_reset">Peňaženka bola resetovaná.\nObnova chvíľu potrvá.</string>
     <string name="toast_start_storage_provider_selector_failed">Nie je nainštalovaný žiadny vhodný poskytovateľ cloudového úložiska.\nPotrebujete niečo ako „Nextcloud“ alebo „Disk Google“.</string>
-    <string name="wallet_disclaimer_fragment_remind_safety">Použitie na vlastné riziko. Viac informácií v sekcii &lt;u&gt;o bezpečnosti&lt;/u&gt;.</string>
+    <string name="wallet_disclaimer_fragment_remind_safety">Použitie na vlastné riziko. Viac informácií v sekcii &lt;u&gt;o zabezpečení&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Je potrebné zálohovať peňaženku!</string>
-    <string name="blockchain_state_progress_hours">%1$s, %2$d hodín pozadu</string>
-    <string name="blockchain_state_progress_days">%1$s, %2$d dní pozadu</string>
-    <string name="blockchain_state_progress_weeks">%1$s, %2$d týždňov pozadu</string>
-    <string name="blockchain_state_progress_months">%1$s, %2$d mesiacov pozadu</string>
+    <string name="blockchain_state_progress_hours">%1$s, pozadu %2$d hodín</string>
+    <string name="blockchain_state_progress_days">%1$s, pozadu %2$d dní</string>
+    <string name="blockchain_state_progress_weeks">%1$s, pozadu %2$d týždňov</string>
+    <string name="blockchain_state_progress_months">%1$s, pozadu %2$d mesiacov</string>
     <string name="blockchain_state_progress_downloading">Synchronizácia so sieťou</string>
     <string name="blockchain_state_progress_stalled">Synchronizácia pozastavená</string>
     <string name="blockchain_state_progress_problem_storage">Synchronizácia: Problém s dátovým úložiskom</string>
@@ -34,10 +34,10 @@
     <string name="wallet_transactions_options_filter_all">Všetky</string>
     <string name="wallet_transactions_options_filter_received">Prijaté</string>
     <string name="wallet_transactions_options_filter_sent">Odoslané</string>
-    <string name="wallet_options_safety_menu">Bezpečnosť</string>
+    <string name="wallet_options_safety_menu">Zabezpečenie</string>
     <string name="wallet_options_encrypt_keys_set">Nastaviť PIN</string>
     <string name="wallet_options_encrypt_keys_change">Zmeniť PIN</string>
-    <string name="wallet_options_safety">Bezpečnosť</string>
+    <string name="wallet_options_safety">Zabezpečenie</string>
     <string name="wallet_low_storage_dialog_title">Na zariadení je málo pamäťového miesta!</string>
     <string name="wallet_low_storage_dialog_msg">Peňaženka Dash používa internú pamäť pre uchovanie transakcií a blokov. Ak dôjde miesto, prestane pracovať and vaše Dashe budú v ohrození!\n\nChcete otvoriť správcu aplikácií a odinštalovať nepotrebné aplikácie?</string>
     <string name="wallet_low_storage_dialog_button_apps">Spravovať aplikácie</string>
@@ -316,7 +316,7 @@
     <string name="about_category_credits">Táto aplikácia používa...</string>
     <string name="about_credits_bitcoinj_title">dashj %s, a implementáciu protokolu Dash</string>
     <string name="about_credits_zxing_title">ZXing, knižnicu na spracovanie QR kódov</string>
-    <string name="about_credits_icon_title">Táto aplikácia používa ikony od "bitboy"</string>
+    <string name="about_credits_icon_title">Táto aplikácia používa ikony od \"bitboy\"</string>
     <string name="about_credits_scrypt_title">Scrypt, implementovali Will Glozer a Colin Percival</string>
     <string name="about_market_app_title">Stránka Google Play</string>
     <string name="about_market_app_summary">Ohodnotiť aplikáciu</string>

@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">Επαλήθευση PIN</string>
     <string name="set_pin_message">Αυτός ο κωδικός PIN θα χρειαστεί να ξεκλειδώσετε την εφαρμογή σας κάθε φορά που την χρησιμοποιείτε.</string>
     <string name="set_pin_confirm_pin_incorrect">Λανθασμένο PIN</string>
-
-    <string name="home_available_balance">Διαθέσιμο υπόλοιπο</string>
-    <string name="home_balance_hidden">Το υπόλοιπο αποκρύφτηκε</string>
-    <string name="home_balance_show_hint">Πατήστε για να αποκαλύψετε το υπόλοιπο</string>
+    
     <string name="home_balance_hide_hint">Πατήστε για να κρύψετε το υπόλοιπο</string>
 
     <string name="dialog_confirm_confirm">Επιβεβαίωση</string>
@@ -30,13 +27,13 @@
     <string name="dialog_confirm_total">Σύνολο</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Ασφαλίστε το πορτοφόλι τώρα</string>
+    <string name="shortcut_secure_now">Αντίγραφο ασφαλείας</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Σαρώστε για να πληρώσετε</string>
+    <string name="shortcut_scan_to_pay">Σάρωση</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Αποστολή στη διεύθυνση</string>
+    <string name="shortcut_pay_to_address">Αποστολή</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Αγορά / Πώληση Dash</string>
+    <string name="shortcut_buy_sell">Αγορά &amp; Πώληση</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Λήψη</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -207,17 +204,12 @@
     <string name="verify_continue">Συνέχεια</string>
     <string name="verify_backup_wallet">Backup πορτοφολιού</string>
     <string name="verify_show_recovery_phrase">Προβολή Φράσης Ανάκτησης</string>
-    <string name="verify_secure_now">Ασφαλίστε το πορτοφόλι τώρα</string>
-    <string name="verify_it_is_important">Είναι σημαντικό</string>
-    <string name="verify_it_is_important_subtitle">Θα σας αποκαλύψουμε το μυστικό κλειδί του πορτοφολιού σας.</string>
-    <string name="verify_info_text_1">Αυτή η φράση ανάκτησης σας δίνει πρόσβασή στα χρήματα αυτού του πορτοφολιού.</string>
-    <string name="verify_info_text_2">ΔΕΝ αποθηκεύουμε αυτή τη φράση ανάκτησης.</string>
-    <string name="verify_info_text_3">Θα χρειαστείτε αυτή τη φράση ανάκτησης για να αποκτήσετε πρόσβαση στα χρήματά σας εάν αυτή η συσκευή χαθεί, καταστραφεί ή εάν το Πορτοφόλι Dash απεγκατασταθει τυχαία από αυτήν τη συσκευή.</string>
-    <string name="verify_skip">Παράλειψη</string>
-    <string name="verify_secure_now_btn">Ασφαλίστε τώρα</string>
-    <string name="verify_secure_now_message">Αν χάσετε αυτή τη συσκευή, θα χάσετε και τα χρήματά σας. Πάρτε τη φράση ανάκτησης σας για να μπορέσετε να επαναφέρετε το πορτοφόλι σας σε άλλη συσκευή.</string>
-    <string name="verify_seed_title">παρακαλώ να το γράψετε</string>
-    <string name="verify_seed_write_down_confirmation">Το έγραψα</string>
+    <string name="verify_info_title">Δημιουργήστε αντίγραφα ασφαλείας της φράσης ανάκτησης</string>
+    <string name="verify_info_subtitle">Θα χρειαστείτε αυτή τη φράση ανάκτησης για να αποκτήσετε πρόσβαση στα χρήματά σας εάν αυτή η συσκευή χαθεί, καταστραφεί ή εάν το Πορτοφόλι Dash απεγκατασταθει τυχαία από αυτήν τη συσκευή.</string>
+    <string name="verify_info_title_1">Το Dash Core Group ΔΕΝ αποθηκεύει αυτή τη φράση ανάκτησης</string>
+    <string name="verify_info_subtitle_1">Οποιοσδήποτε έχει τη φράση ανάκτησης μπορεί να έχει πρόσβαση στα κεφάλαιά σας.</string>
+    <string name="verify_info_title_2">ΔΕΝ θα μπορέσετε να επαναφέρετε το πορτοφόλι χωρίς μια φράση αποκατάστασης.</string>
+    <string name="verify_info_subtitle_2">Γράψτε την σε ασφαλές μέρος και μην την δείξετε σε κανέναν.</string>
     <string name="verify_seed_buttons_tip">Πατήστε στις λέξεις από τη φράση ανάκτησης σας με τη σωστή σειρά</string>
     <string name="verify_seed_success_title">Επιβεβαιώθηκε με επιτυχία</string>
     <string name="verify_seed_success_message">Το πορτοφόλι σας είναι ασφαλές τώρα. Μπορείτε να χρησιμοποιήσετε τη φράση ανάκτησης ανά πάσα στιγμή για να ανακτήσετε το λογαριασμό σας σε άλλη συσκευή.</string>
@@ -251,6 +243,9 @@
     <string name="transaction_details_moved_from">Μετακινήθηκε από</string>
     <string name="transaction_details_moved_internally_to">Μετακινήθηκε εσωτερικά στο</string>
     <string name="transaction_failed_details">Η συναλλαγή απέτυχε</string>
+    <string name="transaction_failed_resolve">Αυτό θα μπορούσε να επιλυθεί με</string>
+    <string name="transaction_failed_rescan">εκ νέου σάρωση του blockchain</string>
+    <string name="transaction_failed_in_conflict">Αυτό είναι δυνατό εάν το πορτοφόλι είναι εγκατεστημένο σε δύο συσκευές.</string>
 
     <string name="authenticate_fingerprint_title">Ταυτοποίηση</string>
     <string name="authenticate_fingerprint_message">Επιβεβαιώστε το Δακτυλικό αποτύπωμα για να συνεχίσετε</string>
@@ -284,7 +279,7 @@
     <string name="about_review_and_rate">Κρίνετε και βαθμολογήστε την εφαρμογή</string>
     <string name="about_contact_support">Επικοινωνήστε με την υποστήριξη</string>
     <string name="about_fork_disclaimer">Πρόκειται για μια εφαρμογή ανοιχτού κώδικα που διαχωρίστηκε από το Bitcoin πορτοφόλι</string>
-    <string name="about_copyright">Copyright © 2023 Dash Core</string>
+    <string name="about_copyright">Copyright © 2023 Dash Core Group</string>
     <string name="about_license">Γενική Άδεια Δημόσιας Χρήσης GNU v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
     <string name="about_last_explore_device_sync">Τελευταίος συγχρονισμός συσκευής εξερεύνησης</string>
@@ -370,7 +365,7 @@
     <string name="yesterday">Εχθές</string>
 
     <string name="syncing">Συγχρονισμός</string>
-    <string name="syncing_balance">Συγχρονισμός Υπολοίπου</string>
+    <string name="syncing_balance">Συγχρονισμός υπόλοιπου</string>
     <string name="transaction_count">%d συναλλαγές</string>
     <string name="all_transactions">Όλα</string>
     <string name="received_transactions">Ελήφθησαν</string>
@@ -400,4 +395,24 @@
     <string name="reclassify_transactions_linked_accounts_title">Συνδεδεμένοι λογαριασμοί</string>
     <string name="reclassify_transactions_linked_accounts_message">από προεπιλογή, όλες οι συναλλαγές προς ή από τους συνδεδεμένους λογαριασμούς σας (ανταλλαγές, staking, κ.λπ.) θα επισημαίνονται ως μεταφορές.</string>
     <string name="reclassify_transactions_change_explanation">Επιλέξτε οποιαδήποτε συναλλαγή από την αρχική σελίδα και αλλάξτε την κατηγορία στη σελίδα λεπτομερειών της συναλλαγής.</string>
+
+    <string name="masternode_keys_title"> Κλειδιά Masternode</string>
+    <string name="masternode_key_type_owner">Κλειδιά Κατόχου</string>
+    <string name="masternode_key_type_voting">Κλειδιά ψήφου</string>
+    <string name="masternode_key_type_operator">Κλειδιά Χειριστή</string>
+    <string name="masternode_key_type_platform">HPMN Κλειδιά Χειριστή</string>
+    <string name="masternode_key_type_total">%d κλειδιά</string>
+    <string name="masternode_key_type_used">%d χρησιμοποιείται</string>
+    <string name="masternode_key_pair_index">Ζεύγος κλειδιών %d</string>
+    <string name="masternode_key_address">Διεύθυνση</string>
+    <string name="masternode_key_id">Id κλειδιού</string>
+    <string name="masternode_key_public">Δημόσιο κλειδί</string>
+    <string name="masternode_key_public_legacy">Δημόσιο κλειδί (legacy)</string>
+    <string name="masternode_key_private_hex">Ιδιωτικό κλειδί</string>
+    <string name="masternode_key_private_wif">Ιδιωτικό κλειδί WIF</string>
+    <string name="masternode_key_used">IP: %s</string>
+    <string name="masternode_key_ip_address_unknown">Άγνωστο</string>
+    <string name="masternode_key_not_used">Δεν χρησιμοποιείται</string>
+    <string name="masternode_key_revoked">Ανακλήθηκε</string>
+    <string name="masternode_key_private_public_base64">Ιδιωτικά/δημόσια κλειδιά (base64)</string>
 </resources>

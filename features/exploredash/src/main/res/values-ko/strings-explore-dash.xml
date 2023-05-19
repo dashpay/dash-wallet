@@ -142,7 +142,6 @@
     <string name="buy_gift_card_text">대시로 기프트 카드 구매</string>
     <string name="buy_gift_card_desc_text">정확히 당신의 구매 금액만큼 기프트 카드를 구매하세요.</string>
     <string name="learn_more_text">더 알아보기</string>
-    <string name="continue_text">계속</string>
     <string name="buy_card_header_text">기프트 카드 사용 방법</string>
     <string name="buy_card_desc_text">모든 상점에서 직접 대시를 받는 것은 아니지만, 대시를 통해 기프트 카드를 구매할 수 있습니다.</string>
     <string name="find_merchant_text">상점을 찾습니다.</string>

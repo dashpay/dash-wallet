@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">Zweryfikuj PIN</string>
     <string name="set_pin_message">Ten kod PIN będzie wymagany do odblokowania Twojej aplikacji za każdym razem, gdy z niej korzystasz.</string>
     <string name="set_pin_confirm_pin_incorrect">PIN jest niepoprawny</string>
-
-    <string name="home_available_balance">Dostępne saldo</string>
-    <string name="home_balance_hidden">Saldo ukryte</string>
-    <string name="home_balance_show_hint">Stuknij by odkryć saldo</string>
+    
     <string name="home_balance_hide_hint">Stuknij by ukryć saldo</string>
 
     <string name="dialog_confirm_confirm">Potwierdź</string>
@@ -30,13 +27,13 @@
     <string name="dialog_confirm_total">Całkowite</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Zabezpiecz Portfel Teraz</string>
+    <string name="shortcut_secure_now">Kopia zapasowa</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Zeskanuj by Zapłacić</string>
+    <string name="shortcut_scan_to_pay">Zeskanuj</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Zapłać na Adres</string>
+    <string name="shortcut_pay_to_address">Wyślij</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Kupuj / Sprzedawaj Dash</string>
+    <string name="shortcut_buy_sell">Kupuj &amp; Sprzedawaj</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Odbierz</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -213,17 +210,12 @@
     <string name="verify_continue">Kontynuuj</string>
     <string name="verify_backup_wallet">Utwórz Kopie Zapasową Portfela</string>
     <string name="verify_show_recovery_phrase">Pokaż Frazy Odzyskiwania Portfela</string>
-    <string name="verify_secure_now">Zabezpiecz Portfel Teraz</string>
-    <string name="verify_it_is_important">To ważne!</string>
-    <string name="verify_it_is_important_subtitle">Za chwilę pokażemy Ci tajny klucz do twojego portfela.</string>
-    <string name="verify_info_text_1">Ta fraza odzyskiwania jest dostępem do środków w tym portfelu.</string>
-    <string name="verify_info_text_2">NIE przechowujemy słów wymaganych do odzysku portfela</string>
-    <string name="verify_info_text_3">Fraza odzysku danych będzie potrzebna aby mieć dostęp do funduszy w wypadku utraty tego urządzenia lub jeśli Dash Wallet zostanie przypadkowo odinstalowany. </string>
-    <string name="verify_skip">Pomiń</string>
-    <string name="verify_secure_now_btn">Zabezpiecz Teraz</string>
-    <string name="verify_secure_now_message">Jeśli zgubisz to urządzenie, stracisz swoje fundusze. Zapisz słowa odzyskiwania, aby móc przywrócić portfel na innym urządzeniu.</string>
-    <string name="verify_seed_title">Proszę to zapisać</string>
-    <string name="verify_seed_write_down_confirmation">Zapisałem to</string>
+    <string name="verify_info_title">Zrób kopię zapasowAnarchicCluster</string>
+    <string name="verify_info_subtitle">Szyk słów do odzysku portfela będzie potrzebny aby mieć dostęp do funduszy w wypadku uszkodzenia, utraty tego urządzenia lub jeśli Dash Wallet zostanie przypadkowo odinstalowany. </string>
+    <string name="verify_info_title_1">Dash Core Group nie przechowuje twojej listy słów potrzebnej do odzysku portfela</string>
+    <string name="verify_info_subtitle_1">Ktokolwiek kto jest w posiadaniu twojej listy słów do odzysku portfela ma również dostęp do twoich funduszy.</string>
+    <string name="verify_info_title_2">Nie będziesz w stanie odzyskać portfela bez tej listy słów.</string>
+    <string name="verify_info_subtitle_2">Zapisz je w bezpiecznym miejscu i nie pokazuj nikomu.</string>
     <string name="verify_seed_buttons_tip">Wskaź słowa z frazy odzyskiwania w odpowiedniej kolejności</string>
     <string name="verify_seed_success_title">Zweryfikowano Pomyślnie</string>
     <string name="verify_seed_success_message">Twój portfel jest teraz zabezpieczony. Możesz użyć swojej frazy odzyskiwania w dowolnym momencie, aby odzyskać konto na innym urządzeniu.</string>
@@ -257,6 +249,9 @@
     <string name="transaction_details_moved_from">Przeniesiony z</string>
     <string name="transaction_details_moved_internally_to">Wewnętrznie przeniesiony do</string>
     <string name="transaction_failed_details">Transfer nie powiódł się</string>
+    <string name="transaction_failed_resolve">Może to być naprawione za pomocą</string>
+    <string name="transaction_failed_rescan">ponownego przeskanowania blockchainu</string>
+    <string name="transaction_failed_in_conflict">Jest to możliwe jeśli portfel jest zainstalowany na dwóch urządzeniach.</string>
 
     <string name="authenticate_fingerprint_title">Uwierzytelnij się</string>
     <string name="authenticate_fingerprint_message">Potwierdź odciskiem palca by kontynuować</string>
@@ -290,7 +285,7 @@
     <string name="about_review_and_rate">Przeglądnij i oceń appke</string>
     <string name="about_contact_support">Skontaktuj się z pomocą techniczną</string>
     <string name="about_fork_disclaimer">Jest to aplikacja typu open source opracowana na podstawie portfela Bitcoin</string>
-    <string name="about_copyright">Prawa autorskie © 2023 Dash Core</string>
+    <string name="about_copyright">Prawa autorskie © 2023 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Portfel Dash %s</string>
     <string name="about_last_explore_device_sync">Ostatnia synchronizacja Eksploruj na urządzeniu</string>
@@ -406,4 +401,14 @@
     <string name="reclassify_transactions_linked_accounts_title">Połączone konta</string>
     <string name="reclassify_transactions_linked_accounts_message">domyślnie wszystkie transakcje do lub z połączonych kont (giełdy, obstawianie itp.) będą oznaczone jako przelewy.</string>
     <string name="reclassify_transactions_change_explanation">Wybierz dowolną transakcję ze strony głównej i zmień kategorię na stronie szczegółów transakcji.</string>
-</resources>
+
+    <string name="masternode_keys_title">Klucze do Masternoda</string>
+    <string name="masternode_key_type_owner">Klucze właściciela</string>
+    <string name="masternode_key_type_voting">Klucze głosujące</string>
+    <string name="masternode_key_type_operator">Klucze operatora</string>
+    <string name="masternode_key_type_platform">Operator Kluczy do HPMN</string>
+    <string name="masternode_key_type_total">%d kluczy</string>
+    <string name="masternode_key_address">Adres</string>
+    <string name="masternode_key_ip_address_unknown">Nieznany</string>
+    <string name="masternode_key_revoked">Unieważniony</string>
+    </resources>

@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">Verifieer pin</string>
     <string name="set_pin_message">Deze PIN is vereist om je app elke keer te ontgrendelen wanneer je deze gebruikt.</string>
     <string name="set_pin_confirm_pin_incorrect">Onjuiste PIN</string>
-
-    <string name="home_available_balance">Beschikbaar saldo</string>
-    <string name="home_balance_hidden">Saldo verborgen</string>
-    <string name="home_balance_show_hint">Tik om saldo te zien</string>
+    
     <string name="home_balance_hide_hint">Tik om saldo te verbergen</string>
 
     <string name="dialog_confirm_confirm">Bevestig</string>
@@ -30,13 +27,13 @@
     <string name="dialog_confirm_total">Totaal</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Beveilig portemonnee nu</string>
+    <string name="shortcut_secure_now">Backup</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Scan om te verzenden</string>
+    <string name="shortcut_scan_to_pay">Zoeken</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Versturen naar adres</string>
+    <string name="shortcut_pay_to_address">Verzenden</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Koop / verkoop Dash</string>
+    <string name="shortcut_buy_sell">Koop &amp; verkoop</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Ontvang</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -207,17 +204,12 @@
     <string name="verify_continue">Doorgaan</string>
     <string name="verify_backup_wallet">Back-up portemonnee</string>
     <string name="verify_show_recovery_phrase">Toon herstelzin</string>
-    <string name="verify_secure_now">Beveilig portemonnee nu</string>
-    <string name="verify_it_is_important">Het is belangrijk</string>
-    <string name="verify_it_is_important_subtitle">We gaan u de geheime sleutel van je portemonnee laten zien.</string>
-    <string name="verify_info_text_1">Deze herstelzin is je toegang tot het saldo in deze portemonnee.</string>
-    <string name="verify_info_text_2">Je herstelzin wordt NIET opgeslagen</string>
-    <string name="verify_info_text_3">U hebt deze herstelzin nodig om toegang te krijgen tot je saldo als dit apparaat is verloren of beschadigd, of als Dash Wallet ooit per ongeluk van dit apparaat wordt verwijderd.</string>
-    <string name="verify_skip">Overslaan</string>
-    <string name="verify_secure_now_btn">Beveilig nu</string>
-    <string name="verify_secure_now_message">Als u dit apparaat verliest, verliest je je Dash. Download de herstelzin zodat je je portemonnee op een ander apparaat kunt herstellen.</string>
-    <string name="verify_seed_title">Schrijf het a.u.b op</string>
-    <string name="verify_seed_write_down_confirmation">ik heb het opgeschreven</string>
+    <string name="verify_info_title">Maak een back-up van je herstelzin</string>
+    <string name="verify_info_subtitle">Je hebt deze herstelzin nodig om toegang te krijgen tot je saldo als dit apparaat is verloren of beschadigd, of als de Dash Portemonnee app van dit apparaat is verwijderd.</string>
+    <string name="verify_info_title_1">Je herstelzin wordt NIET opgeslagen door Dash Core Group</string>
+    <string name="verify_info_subtitle_1">Iedereen die je herstelzin heeft, heeft toegang tot je geld.</string>
+    <string name="verify_info_title_2">Je kunt de portemonnee NIET herstellen zonder een herstelzin</string>
+    <string name="verify_info_subtitle_2">Schrijf het op en bewaar op een veilige plaats en laat het niemand zien.</string>
     <string name="verify_seed_buttons_tip">Tik a.u.b. op de woorden van je herstelzin in de juiste volgorde</string>
     <string name="verify_seed_success_title">Succesvol geverifieerd </string>
     <string name="verify_seed_success_message">Je portemonnee is nu beveiligd. U kunt je herstelzin op elk gewenst moment gebruiken om je account op een ander apparaat te herstellen.</string>
@@ -251,6 +243,9 @@
     <string name="transaction_details_moved_from">Verplaatst van</string>
     <string name="transaction_details_moved_internally_to">Intern verplaatst naar</string>
     <string name="transaction_failed_details">Transactie mislukt</string>
+    <string name="transaction_failed_resolve">Dit kan opgelost worden door</string>
+    <string name="transaction_failed_rescan">Blockchain opnieuw aan het scannen</string>
+    <string name="transaction_failed_in_conflict">Dit kan als de portemonnee op twee apparaten is geïnstalleerd.</string>
 
     <string name="authenticate_fingerprint_title">Verifieer</string>
     <string name="authenticate_fingerprint_message">Bevestig vingerafdruk om door te gaan</string>
@@ -284,7 +279,7 @@
     <string name="about_review_and_rate">Schrijf een recensie en beoordeel de app</string>
     <string name="about_contact_support">Neem contact op</string>
     <string name="about_fork_disclaimer">Dit is een open source app afgesplitst van de Bitcoin portemonnee</string>
-    <string name="about_copyright">Copyright © 2023 Dash Core</string>
+    <string name="about_copyright">Copyright © 2023 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash portemonnee%s</string>
     <string name="about_last_explore_device_sync">Laatste Explore-apparaatsynchronisatie</string>
@@ -400,4 +395,24 @@
     <string name="reclassify_transactions_linked_accounts_title">Gekoppelde accounts</string>
     <string name="reclassify_transactions_linked_accounts_message">Standaard worden alle transacties van of naar je gekoppelde rekeningen gemarkeerd als overboekingen.</string>
     <string name="reclassify_transactions_change_explanation">Kies een transactie op de startpagina en wijzig de categorie in de transactiedetails.</string>
+
+    <string name="masternode_keys_title">Masternode sleutels</string>
+    <string name="masternode_key_type_owner">Eigenaar sleutels</string>
+    <string name="masternode_key_type_voting">Stem sleutels</string>
+    <string name="masternode_key_type_operator">Operator sleutels</string>
+    <string name="masternode_key_type_platform">HPMN Operator sleutels</string>
+    <string name="masternode_key_type_total">%d sleutels</string>
+    <string name="masternode_key_type_used">%dgebruikt</string>
+    <string name="masternode_key_pair_index">Sleutelpaar %d</string>
+    <string name="masternode_key_address">Adres</string>
+    <string name="masternode_key_id">Sleutel ID</string>
+    <string name="masternode_key_public">Publieke sleutel</string>
+    <string name="masternode_key_public_legacy">Publieke sleutel (verouderd)</string>
+    <string name="masternode_key_private_hex">Persoonlijke sleutel</string>
+    <string name="masternode_key_private_wif">Persoonlijke sleutel WIF</string>
+    <string name="masternode_key_used">IP: %s</string>
+    <string name="masternode_key_ip_address_unknown">Onbekend</string>
+    <string name="masternode_key_not_used">Niet gebruikt</string>
+    <string name="masternode_key_revoked">Ingetrokken</string>
+    <string name="masternode_key_private_public_base64">persoonlijke / publieke sleutels (base64)</string>
 </resources>
