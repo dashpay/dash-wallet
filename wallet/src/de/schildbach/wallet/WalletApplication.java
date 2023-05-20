@@ -1041,6 +1041,12 @@ public class WalletApplication extends MultiDexApplication
         return new WalletObserver(wallet).observeWalletChanged();
     }
 
+    @Nullable
+    @Override
+    public Transaction getTransaction(@NonNull Sha256Hash hash) {
+        return wallet.getTransaction(hash);
+    }
+
     @NonNull
     @Override
     public Collection<Transaction> getTransactions(@NonNull TransactionFilter... filters) {

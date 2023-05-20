@@ -22,8 +22,8 @@ import org.bitcoinj.core.*
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.LeftoverBalanceException
-import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 import kotlin.jvm.Throws
 
 interface WalletDataProvider {
@@ -47,6 +47,8 @@ interface WalletDataProvider {
 
     // Treat @withConfidence with care - it may produce a lot of events and affect performance.
     fun observeTransactions(withConfidence: Boolean = false, vararg filters: TransactionFilter): Flow<Transaction>
+
+    fun getTransaction(hash: Sha256Hash): Transaction?
 
     fun getTransactions(vararg filters: TransactionFilter): Collection<Transaction>
 

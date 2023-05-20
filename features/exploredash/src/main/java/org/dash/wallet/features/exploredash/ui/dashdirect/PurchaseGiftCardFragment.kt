@@ -63,7 +63,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
                     isMaxButtonVisible = false,
                     isCurrencyOptionsPickerVisible = false,
                     showAmountResultContainer = false,
-                    faitCurrencyCode = if (viewModel.isUserSettingFiatIsNotUSD) Constants.USD_CURRENCY else null
+                    faitCurrencyCode = Constants.USD_CURRENCY
                 )
 
             fragment.setViewDetails(getString(R.string.button_next))
@@ -102,10 +102,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
         enterAmountViewModel.amount.observe(viewLifecycleOwner) { showCardPurchaseLimits() }
 
         viewModel.usdExchangeRate.observe(viewLifecycleOwner) { rate ->
-            if (viewModel.isUserSettingFiatIsNotUSD) {
-                viewModel.balance.value?.let { balance -> updateBalanceLabel(balance, rate) }
-            }
-
+            viewModel.balance.value?.let { balance -> updateBalanceLabel(balance, rate) }
             setCardPurchaseLimits()
             setDiscountHint()
             enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseCoin, true)
@@ -182,6 +179,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_gift_card) 
         binding.paymentHeaderView.setTitle(getString(R.string.explore_option_buy))
         binding.paymentHeaderView.setProposition(getString(R.string.purchase_gift_card_at))
         binding.paymentHeaderView.setOnShowHideBalanceClicked {
+            binding.paymentHeaderView.triggerRevealBalance()
             viewModel.balance.value?.let { balance ->
                 updateBalanceLabel(balance, viewModel.usdExchangeRate.value)
             }
