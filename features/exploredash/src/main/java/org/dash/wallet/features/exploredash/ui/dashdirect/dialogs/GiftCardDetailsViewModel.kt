@@ -25,8 +25,11 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.unwrap
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -54,7 +57,8 @@ class GiftCardDetailsViewModel @Inject constructor(
     private val giftCardDao: GiftCardDao,
     private val metadataProvider: TransactionMetadataProvider,
     private val analyticsService: AnalyticsService,
-    private val repository: DashDirectRepository
+    private val repository: DashDirectRepository,
+    private val walletData: WalletDataProvider
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(GiftCardDetailsViewModel::class.java)
@@ -63,6 +67,10 @@ class GiftCardDetailsViewModel @Inject constructor(
     lateinit var transactionId: Sha256Hash
         private set
     private var tickerJob: Job? = null
+
+    private val _exchangeRate: MutableLiveData<ExchangeRate?> = MutableLiveData()
+    val exchangeRate: LiveData<ExchangeRate?>
+        get() = _exchangeRate
 
     private val _giftCard: MutableLiveData<GiftCard?> = MutableLiveData()
     val giftCard: LiveData<GiftCard?>
@@ -92,6 +100,15 @@ class GiftCardDetailsViewModel @Inject constructor(
         metadataProvider.observeTransactionMetadata(transactionId)
             .filterNotNull()
             .onEach { metadata ->
+                if (!metadata.currencyCode.isNullOrEmpty() && !metadata.rate.isNullOrEmpty()) {
+                    _exchangeRate.value = ExchangeRate(
+                        Fiat.parseFiat(
+                            metadata.currencyCode,
+                            metadata.rate
+                        )
+                    )
+                }
+
                 _date.value = LocalDateTime.ofInstant(
                     Instant.ofEpochMilli(metadata.timestamp),
                     ZoneId.systemDefault()
@@ -188,8 +205,7 @@ class GiftCardDetailsViewModel @Inject constructor(
             )
         }
 
-        val price = Fiat.valueOf(giftCard.currency, giftCard.price)
-        logOnPurchaseEvents(giftCard.merchantName, price, giftCard.discount)
+        logOnPurchaseEvents(giftCard)
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -219,22 +235,28 @@ class GiftCardDetailsViewModel @Inject constructor(
         analyticsService.logEvent(event, mapOf())
     }
 
-    private fun logOnPurchaseEvents(merchantName: String?, price: Fiat, savingsPercentage: Double) {
+    private fun logOnPurchaseEvents(giftCard: GiftCard) {
         analyticsService.logEvent(AnalyticsConstants.DashDirect.SUCCESSFUL_PURCHASE, mapOf())
         analyticsService.logEvent(
             AnalyticsConstants.DashDirect.MERCHANT_NAME,
-            mapOf(AnalyticsConstants.Parameter.VALUE to (merchantName ?: ""))
-        )
-        analyticsService.logEvent(
-            AnalyticsConstants.DashDirect.PURCHASE_AMOUNT,
-            mapOf(AnalyticsConstants.Parameter.VALUE to price.toFriendlyString())
+            mapOf(AnalyticsConstants.Parameter.VALUE to giftCard.merchantName)
         )
 
-        val discountedValue = price.discountBy(savingsPercentage)
-        analyticsService.logEvent(
-            AnalyticsConstants.DashDirect.DISCOUNT_AMOUNT,
-            mapOf(AnalyticsConstants.Parameter.VALUE to discountedValue.toFriendlyString())
-        )
+        exchangeRate.value?.let {
+            val price = Fiat.valueOf(it.fiat.currencyCode, giftCard.price)
+            val transaction = walletData.getTransaction(transactionId)
+            val fiatValue = it.coinToFiat(transaction?.getValue(walletData.transactionBag) ?: Coin.ZERO)
+
+            analyticsService.logEvent(
+                AnalyticsConstants.DashDirect.PURCHASE_AMOUNT,
+                mapOf(AnalyticsConstants.Parameter.VALUE to price.toFriendlyString())
+            )
+
+            analyticsService.logEvent(
+                AnalyticsConstants.DashDirect.DISCOUNT_AMOUNT,
+                mapOf(AnalyticsConstants.Parameter.VALUE to fiatValue.toFriendlyString())
+            )
+        }
     }
 
     private fun cancelTicker() {

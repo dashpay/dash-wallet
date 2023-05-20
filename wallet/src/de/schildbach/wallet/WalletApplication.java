@@ -1022,6 +1022,12 @@ public class WalletApplication extends MultiDexApplication
         return new MasternodeObserver(authenticationGroupExtension).observeAuthenticationKeyUsage();
     }
 
+    @Nullable
+    @Override
+    public Transaction getTransaction(@NonNull Sha256Hash hash) {
+        return wallet.getTransaction(hash);
+    }
+
     @NonNull
     @Override
     public Collection<Transaction> getTransactions(@NonNull TransactionFilter... filters) {

@@ -24,8 +24,8 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletExtension
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 import org.dash.wallet.common.services.LeftoverBalanceException
-import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 import kotlin.jvm.Throws
 
 interface WalletDataProvider {
@@ -52,6 +52,7 @@ interface WalletDataProvider {
 
     fun observeAuthenticationKeyUsage(): Flow<List<AuthenticationKeyUsage>>
 
+    fun getTransaction(hash: Sha256Hash): Transaction?
     fun getTransactions(vararg filters: TransactionFilter): Collection<Transaction>
 
     fun wrapAllTransactions(vararg wrappers: TransactionWrapper): Collection<TransactionWrapper>
