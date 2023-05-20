@@ -39,6 +39,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -90,7 +91,13 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         }
 
         viewModel.giftCard.observe(viewLifecycleOwner) {
-            it?.let { bindGiftCardDetails(binding, it) }
+            it?.let { bindGiftCardDetails(binding, it, viewModel.exchangeRate.value) }
+        }
+
+        viewModel.exchangeRate.observe(viewLifecycleOwner) {
+            if (it != null && viewModel.giftCard.value != null) {
+                bindGiftCardDetails(binding, viewModel.giftCard.value!!, it)
+            }
         }
 
         viewModel.icon.observe(viewLifecycleOwner) { bitmap ->
@@ -156,10 +163,14 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         }
     }
 
-    private fun bindGiftCardDetails(binding: DialogGiftCardDetailsBinding, giftCard: GiftCard) {
+    private fun bindGiftCardDetails(
+        binding: DialogGiftCardDetailsBinding,
+        giftCard: GiftCard,
+        exchangeRate: ExchangeRate?
+    ) {
         binding.merchantName.text = giftCard.merchantName
-
-        val price = Fiat.valueOf(giftCard.currency, giftCard.price)
+        val currency = exchangeRate?.fiat?.currencyCode ?: Constants.USD_CURRENCY
+        val price = Fiat.valueOf(currency, giftCard.price)
         binding.originalPurchaseValue.text = price.toFormattedString()
 
         binding.purchaseCardNumber.text = giftCard.number
@@ -168,9 +179,9 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.cardPinGroup.isVisible = !giftCard.pin.isNullOrEmpty()
         binding.infoLoadingIndicator.isVisible = giftCard.number.isNullOrEmpty()
 
-        binding.checkCurrentBalance.isVisible = giftCard.currentBalanceUrl?.isNotEmpty() == true
+        binding.checkCurrentBalance.isVisible = giftCard.merchantUrl?.isNotEmpty() == true
         binding.checkCurrentBalance.setOnClickListener {
-            giftCard.currentBalanceUrl?.let {
+            giftCard.merchantUrl?.let {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
                 requireContext().startActivity(intent)
             }
