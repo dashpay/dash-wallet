@@ -53,6 +53,7 @@ interface WalletDataProvider {
     fun observeAuthenticationKeyUsage(): Flow<List<AuthenticationKeyUsage>>
 
     fun getTransaction(hash: Sha256Hash): Transaction?
+
     fun getTransactions(vararg filters: TransactionFilter): Collection<Transaction>
 
     fun wrapAllTransactions(vararg wrappers: TransactionWrapper): Collection<TransactionWrapper>

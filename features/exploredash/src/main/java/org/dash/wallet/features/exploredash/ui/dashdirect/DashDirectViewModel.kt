@@ -67,8 +67,6 @@ class DashDirectViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(DashDirectViewModel::class.java)
     }
 
-    val isUserSettingFiatIsNotUSD = (configuration.exchangeCurrencyCode != Constants.USD_CURRENCY)
-
     val dashFormat: MonetaryFormat
         get() = configuration.format
 
@@ -139,7 +137,11 @@ class DashDirectViewModel @Inject constructor(
     suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash {
         val transaction = sendPaymentService.payWithDashUrl(paymentUri)
         log.info("dash direct transaction: ${transaction.txId}")
-        transactionMetadata.markGiftCardTransaction(transaction.txId, giftCardMerchant.logoLocation)
+        transactionMetadata.markGiftCardTransaction(
+            transaction.txId,
+            usdExchangeRate.value,
+            giftCardMerchant.logoLocation
+        )
 
         return transaction.txId
     }
