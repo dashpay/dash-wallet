@@ -266,12 +266,14 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun markGiftCardTransaction(txId: Sha256Hash, iconUrl: String?) {
+    override suspend fun markGiftCardTransaction(txId: Sha256Hash, exchangeRate: ExchangeRate?, iconUrl: String?) {
         var transactionMetadata: TransactionMetadata
         updateAndInsertIfNotExist(txId, false) {
             transactionMetadata = it.copy(
                 service = ServiceName.DashDirect,
-                taxCategory = TaxCategory.Expense
+                taxCategory = TaxCategory.Expense,
+                currencyCode = exchangeRate?.fiat?.currencyCode,
+                rate = exchangeRate?.fiat?.value?.toString()
             )
             transactionMetadataDao.update(transactionMetadata)
             transactionMetadataChangeCacheDao.insertService(txId, ServiceName.DashDirect)

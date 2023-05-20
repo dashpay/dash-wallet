@@ -17,7 +17,7 @@
 package org.dash.wallet.features.exploredash.utils
 
 object DashDirectConstants {
-    const val BASE_URL = "https://apistaging.dashdirect.org/DashDirect/"
+    const val BASE_URL = "https://apidev.dashdirect.org/DashDirect/"
     const val requestedUUID = "requestedUUID"
     const val CLIENT_ID_PARAM_NAME = "clientId"
     @JvmField var CLIENT_ID = ""

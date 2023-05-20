@@ -18,30 +18,19 @@
 package org.dash.wallet.features.exploredash.data.dashdirect.model
 
 import androidx.room.Entity
-import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.google.zxing.BarcodeFormat
 import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.util.Constants
 
-@Entity(
-    tableName = "gift_cards",
-    indices = [
-        Index(value = ["transactionId"], unique = true)
-    ]
-)
+@Entity(tableName = "gift_cards")
 data class GiftCard(
-    @PrimaryKey var id: String = "",
-    var service: String = "",
+    @PrimaryKey var txId: Sha256Hash,
     var merchantName: String = "",
-    var transactionId: Sha256Hash = Sha256Hash.ZERO_HASH,
     var price: Long = 0,
-    var currency: String = Constants.USD_CURRENCY,
-    var discount: Double = 0.0,
     var number: String? = null,
     var pin: String? = null,
     var barcodeValue: String? = null,
     var barcodeFormat: BarcodeFormat? = null,
-    var currentBalanceUrl: String? = null,
+    var merchantUrl: String? = null,
     var note: String? = null
 )

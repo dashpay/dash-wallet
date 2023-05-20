@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 18,
-    "identityHash": "4c67f656cf1ec48b435a64c00b373f4c",
+    "identityHash": "f8ddd485c08a59085aca5ba080713340",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -251,18 +251,12 @@
       },
       {
         "tableName": "gift_cards",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `service` TEXT NOT NULL, `merchantName` TEXT NOT NULL, `transactionId` BLOB NOT NULL, `price` INTEGER NOT NULL, `currency` TEXT NOT NULL, `discount` REAL NOT NULL, `number` TEXT, `pin` TEXT, `barcodeValue` TEXT, `barcodeFormat` TEXT, `currentBalanceUrl` TEXT, `note` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`txId` BLOB NOT NULL, `merchantName` TEXT NOT NULL, `price` INTEGER NOT NULL, `number` TEXT, `pin` TEXT, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `note` TEXT, PRIMARY KEY(`txId`))",
         "fields": [
           {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "service",
-            "columnName": "service",
-            "affinity": "TEXT",
+            "fieldPath": "txId",
+            "columnName": "txId",
+            "affinity": "BLOB",
             "notNull": true
           },
           {
@@ -272,27 +266,9 @@
             "notNull": true
           },
           {
-            "fieldPath": "transactionId",
-            "columnName": "transactionId",
-            "affinity": "BLOB",
-            "notNull": true
-          },
-          {
             "fieldPath": "price",
             "columnName": "price",
             "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "currency",
-            "columnName": "currency",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "discount",
-            "columnName": "discount",
-            "affinity": "REAL",
             "notNull": true
           },
           {
@@ -320,8 +296,8 @@
             "notNull": false
           },
           {
-            "fieldPath": "currentBalanceUrl",
-            "columnName": "currentBalanceUrl",
+            "fieldPath": "merchantUrl",
+            "columnName": "merchantUrl",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -334,21 +310,11 @@
         ],
         "primaryKey": {
           "columnNames": [
-            "id"
+            "txId"
           ],
           "autoGenerate": false
         },
-        "indices": [
-          {
-            "name": "index_gift_cards_transactionId",
-            "unique": true,
-            "columnNames": [
-              "transactionId"
-            ],
-            "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_gift_cards_transactionId` ON `${TABLE_NAME}` (`transactionId`)"
-          }
-        ],
+        "indices": [],
         "foreignKeys": []
       },
       {
@@ -870,7 +836,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4c67f656cf1ec48b435a64c00b373f4c')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f8ddd485c08a59085aca5ba080713340')"
     ]
   }
 }
