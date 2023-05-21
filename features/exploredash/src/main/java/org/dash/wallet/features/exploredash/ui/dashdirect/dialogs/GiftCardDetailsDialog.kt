@@ -48,7 +48,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashdirect.model.Barcode
-import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
+import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 import org.dash.wallet.features.exploredash.repository.DashDirectException
 import java.time.format.DateTimeFormatter

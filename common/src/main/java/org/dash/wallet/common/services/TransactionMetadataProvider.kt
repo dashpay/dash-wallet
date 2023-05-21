@@ -17,12 +17,14 @@
 package org.dash.wallet.common.services
 
 import android.graphics.Bitmap
+import com.google.zxing.BarcodeFormat
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.data.entity.TransactionMetadata
 
 interface TransactionMetadataProvider {
@@ -54,6 +56,8 @@ interface TransactionMetadataProvider {
      * Mark a transaction as DashDirect gift card expense with an icon
      */
     suspend fun markGiftCardTransaction(txId: Sha256Hash, exchangeRate: ExchangeRate?, iconUrl: String?)
+    suspend fun updateGiftCardMetadata(giftCard: GiftCard)
+    suspend fun updateGiftCardBarcode(txId: Sha256Hash, barcodeValue: String, barcodeFormat: BarcodeFormat)
 
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 
