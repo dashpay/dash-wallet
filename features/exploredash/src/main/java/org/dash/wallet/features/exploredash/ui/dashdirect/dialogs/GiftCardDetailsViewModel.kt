@@ -31,6 +31,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.data.unwrap
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -39,7 +40,6 @@ import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
 import org.dash.wallet.features.exploredash.data.dashdirect.model.Barcode
-import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
 import org.dash.wallet.features.exploredash.data.dashdirect.model.giftcard.GetGiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashdirect.model.paymentstatus.PaymentStatusResponse
 import org.dash.wallet.features.exploredash.repository.DashDirectException
@@ -196,7 +196,7 @@ class GiftCardDetailsViewModel @Inject constructor(
         val giftCard = giftCard.value ?: return
 
         viewModelScope.launch {
-            giftCardDao.updateGiftCard(
+            metadataProvider.updateGiftCardMetadata(
                 giftCard.copy(
                     number = number,
                     pin = pinCode,
@@ -221,7 +221,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 val decodeResult = Qr.scanBarcode(bitmap)
 
                 if (decodeResult != null) {
-                    giftCardDao.updateBarcode(transactionId, decodeResult.first, decodeResult.second)
+                    metadataProvider.updateGiftCardBarcode(transactionId, decodeResult.first, decodeResult.second)
                 } else {
                     log.error("ScanBarcode returned null: $barcodeUrl")
                 }

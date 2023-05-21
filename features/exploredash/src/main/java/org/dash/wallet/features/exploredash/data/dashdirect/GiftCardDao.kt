@@ -25,7 +25,7 @@ import androidx.room.Update
 import com.google.zxing.BarcodeFormat
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
+import org.dash.wallet.common.data.entity.GiftCard
 
 @Dao
 interface GiftCardDao {
