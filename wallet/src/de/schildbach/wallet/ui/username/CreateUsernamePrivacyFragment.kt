@@ -7,11 +7,10 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUserNamePrivacyBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,7 +22,7 @@ import org.dash.wallet.common.ui.viewBinding
 @ExperimentalCoroutinesApi
 class CreateUsernamePrivacyFragment : Fragment(R.layout.fragment_user_name_privacy) {
     private val binding by viewBinding(FragmentUserNamePrivacyBinding::bind)
-    private val dashPayViewModel: DashPayViewModel by activityViewModels()
+    private val viewModel by viewModels<CreateUsernamePrivacyViewModel>()
     private var selectedCoinJoinMode = CoinJoinMode.BASIC
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -37,7 +36,7 @@ class CreateUsernamePrivacyFragment : Fragment(R.layout.fragment_user_name_priva
         }
 
         binding.intermediateCl.setOnClickListener {
-            if (!dashPayViewModel.isWifiConnected()) {
+            if (!viewModel.isWifiConnected()) {
                 showConnectionWaringDialog(CoinJoinMode.INTERMEDIATE)
             } else {
                 setIntermediateMode(CoinJoinMode.INTERMEDIATE)
@@ -45,21 +44,21 @@ class CreateUsernamePrivacyFragment : Fragment(R.layout.fragment_user_name_priva
         }
 
         binding.advancedCl.setOnClickListener {
-            if (!dashPayViewModel.isWifiConnected()) {
+            if (!viewModel.isWifiConnected()) {
                 showConnectionWaringDialog(CoinJoinMode.ADVANCED)
             } else {
                 setAdvancedMode(CoinJoinMode.ADVANCED)
             }
         }
         binding.continueBtn.setOnClickListener {
-            dashPayViewModel.logEvent(
+            viewModel.logEvent(
                 AnalyticsConstants.CoinJoinPrivacy.USERNAME_PRIVACY_BTN_CONTINUE,
                 bundleOf(
                     AnalyticsConstants.Parameters.VALUE to selectedCoinJoinMode.name,
                 ),
             )
 
-            dashPayViewModel.setCoinJoinMode(selectedCoinJoinMode)
+            viewModel.setCoinJoinMode(selectedCoinJoinMode)
             findNavController().previousBackStackEntry?.savedStateHandle?.set(
                 "mode",
                 selectedCoinJoinMode,
@@ -88,14 +87,14 @@ class CreateUsernamePrivacyFragment : Fragment(R.layout.fragment_user_name_priva
             getString(R.string.continue_anyway),
         ).show(requireActivity()) {
             if (it == true) {
-                dashPayViewModel.logEvent(AnalyticsConstants.CoinJoinPrivacy.USERNAME_PRIVACY_WIFI_BTN_CONTINUE)
+                viewModel.logEvent(AnalyticsConstants.CoinJoinPrivacy.USERNAME_PRIVACY_WIFI_BTN_CONTINUE)
                 if (mode == CoinJoinMode.INTERMEDIATE) {
                     setIntermediateMode(mode)
                 } else if (mode == CoinJoinMode.ADVANCED) {
                     setAdvancedMode(mode)
                 }
             } else {
-                dashPayViewModel.logEvent(AnalyticsConstants.CoinJoinPrivacy.USERNAME_PRIVACY_WIFI_BTN_CANCEL)
+                viewModel.logEvent(AnalyticsConstants.CoinJoinPrivacy.USERNAME_PRIVACY_WIFI_BTN_CANCEL)
             }
         }
     }
