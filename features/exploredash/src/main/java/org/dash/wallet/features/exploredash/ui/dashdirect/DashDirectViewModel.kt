@@ -41,7 +41,7 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
-import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
+import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.features.exploredash.data.dashdirect.model.merchant.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.dashdirect.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
