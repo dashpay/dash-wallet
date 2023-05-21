@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.data.dashdirect.model
+package org.dash.wallet.common.data.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
