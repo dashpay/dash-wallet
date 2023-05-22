@@ -75,33 +75,31 @@ class InviteFriendActivity : LockScreenActivity() {
         }
     }
 
-    private val navController by lazy {
-        val navHostFragment = supportFragmentManager
-            .findFragmentById(R.id.nav_host_invite_friends) as NavHostFragment
-
-        navHostFragment.navController
-    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_invite_friends)
 
         val userId = intent.extras?.getString(ARG_IDENTITY_ID, "") ?: ""
         val startedByHistory = intent.extras?.getBoolean(ARG_STARTED_BY_HISTORY, false) ?: false
-        val graph = navController.graph
+
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_invite_friends) as NavHostFragment
+        val graphInflater = navHostFragment.navController.navInflater
+        val navGraph = graphInflater.inflate(R.navigation.nav_invite_friends)
+        val navController = navHostFragment.navController
 
         val bundle = Bundle()
         bundle.putBoolean(ARG_STARTED_BY_HISTORY, startedByHistory)
 
-        if (userId.isEmpty()) {
-            graph.setStartDestination(R.id.inviteFriendFragment)
+        val destination = if (userId.isEmpty()) {
+            R.id.inviteFriendFragment
         } else {
             val inviteIndex = intent.extras?.getInt(ARG_INVITE_INDEX, -1) ?: -1
             bundle.putString(ARG_IDENTITY_ID, userId)
             bundle.putInt(ARG_INVITE_INDEX, inviteIndex)
-            graph.setStartDestination(R.id.inviteDetailsFragment)
+            R.id.inviteDetailsFragment
         }
-
-        navController.setGraph(graph, bundle)
+        navGraph.setStartDestination(destination)
+        navController.setGraph(navGraph, bundle)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
