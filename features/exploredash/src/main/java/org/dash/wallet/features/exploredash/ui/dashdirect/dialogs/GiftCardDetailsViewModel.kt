@@ -243,7 +243,7 @@ class GiftCardDetailsViewModel @Inject constructor(
         )
 
         exchangeRate.value?.let {
-            val price = Fiat.valueOf(it.fiat.currencyCode, giftCard.price)
+            val price = Fiat.parseFiat(it.fiat.currencyCode, giftCard.price.toString())
             val transaction = walletData.getTransaction(transactionId)
             val fiatValue = it.coinToFiat(transaction?.getValue(walletData.transactionBag) ?: Coin.ZERO)
 

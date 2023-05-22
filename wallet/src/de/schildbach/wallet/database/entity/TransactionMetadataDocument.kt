@@ -31,5 +31,12 @@ class TransactionMetadataDocument(
     var rate: Double? = null,
     var memo: String? = null,
     var service: String? = null,
-    var customIconUrl: String? = null
+    var customIconUrl: String? = null,
+    var giftCardNumber: String? = null,
+    var giftCardPin: String? = null,
+    var merchantName: String? = null,
+    var originalPrice: Double? = null,
+    var barcodeValue: String? = null,
+    var barcodeFormat: String? = null,
+    var merchantUrl: String? = null
 )

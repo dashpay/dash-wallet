@@ -20,10 +20,12 @@ package de.schildbach.wallet.service.platform
 import android.app.ActivityManager
 import android.content.Intent
 import android.text.format.DateUtils
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
+import com.google.zxing.BarcodeFormat
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
@@ -55,6 +57,7 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.EvolutionContact
+import org.bitcoinj.utils.Fiat
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
@@ -62,6 +65,8 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.util.TickerFlow
+import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.util.Constants
 import org.dashj.platform.contracts.wallet.TxMetadataItem
 import org.dashj.platform.dashpay.ContactRequest
 import org.dashj.platform.dpp.identifier.Identifier
@@ -703,6 +708,7 @@ class PlatformSynchronizationService @Inject constructor(
                         )
                         val updatedMetadata = TransactionMetadata(txIdAsHash, 0, Coin.ZERO, TransactionCategory.Invalid)
                         var iconUrl: String? = null
+                        val giftCard = GiftCard(txIdAsHash)
 
                         metadata.timestamp?.let { timestamp ->
                             metadataDocumentRecord.sentTimestamp = timestamp
@@ -799,9 +805,93 @@ class PlatformSynchronizationService @Inject constructor(
                                 iconUrl = url
                             }
                         }
+                        metadata.giftCardNumber?.let { number ->
+                            metadataDocumentRecord.giftCardNumber = number
+                            log.info("processing TxMetadata: gift card number change")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.giftCardNumber != null && it.giftCardNumber != number
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: gift card number change: changing number")
+                                giftCard.number = number
+                            }
+                        }
+                        metadata.giftCardPin?.let { pin ->
+                            metadataDocumentRecord.giftCardPin = pin
+                            log.info("processing TxMetadata: gift card pin change")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.giftCardPin != null && it.giftCardPin != pin
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: gift card pin change: changing pin")
+                                giftCard.pin = pin
+                            }
+                        }
+                        metadata.merchantName?.let { name ->
+                            metadataDocumentRecord.merchantName = name
+                            log.info("processing TxMetadata: merchant name change")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.merchantName != null && it.merchantName != name
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: merchant name change: changing name")
+                                giftCard.merchantName = name
+                            }
+                        }
+                        metadata.originalPrice?.let { price ->
+                            metadataDocumentRecord.originalPrice = price
+                            log.info("processing TxMetadata: gift card price change")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.originalPrice != null && it.originalPrice != price
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: gift card price change: changing price")
+                                giftCard.price = price
+                            }
+                        }
+                        metadata.barcodeValue?.let { barcodeValue ->
+                            metadataDocumentRecord.barcodeValue = barcodeValue
+                            log.info("processing TxMetadata: barcode value change")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.barcodeValue != null && it.barcodeValue != barcodeValue
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: barcode value change: changing value")
+                                giftCard.barcodeValue = barcodeValue
+                            }
+                        }
+                        metadata.barcodeFormat?.let { barcodeFormat ->
+                            metadataDocumentRecord.barcodeFormat = barcodeFormat
+                            log.info("processing TxMetadata: barcode format change")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.barcodeFormat != null && it.barcodeFormat != barcodeFormat
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: barcode value change: changing value")
+                                giftCard.barcodeFormat = BarcodeFormat.valueOf(barcodeFormat)
+                            }
+                        }
+                        metadata.merchantUrl?.let { url ->
+                            metadataDocumentRecord.merchantUrl = url
+                            log.info("processing TxMetadata: merchant url change")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                        it.merchantUrl != null && it.merchantUrl != url
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: merchant url change: changing url")
+                                giftCard.merchantUrl = url
+                            }
+                        }
 
                         log.info("syncing metadata with platform updates: $updatedMetadata")
-                        transactionMetadataProvider.syncPlatformMetadata(txIdAsHash, updatedMetadata, iconUrl)
+                        transactionMetadataProvider.syncPlatformMetadata(txIdAsHash, updatedMetadata, giftCard, iconUrl)
                         log.info("adding TxMetadataItem: {}", metadata)
                         transactionMetadataDocumentDao.insert(metadataDocumentRecord)
                     } else {
@@ -819,6 +909,7 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     private fun publishTransactionMetadata(txMetadataItems: List<TransactionMetadataCacheItem>) {
+        Log.i("PUBLISH", txMetadataItems.joinToString("\n") { it.toString() })
         val metadataList = txMetadataItems.map {
             TxMetadataItem(
                 it.txId.bytes,
@@ -828,7 +919,14 @@ class PlatformSynchronizationService @Inject constructor(
                 it.currencyCode,
                 it.taxCategory?.name?.lowercase(),
                 it.service,
-                it.customIconUrl
+                it.customIconUrl,
+                it.giftCardNumber,
+                it.giftCardPin,
+                it.merchantName,
+                it.originalPrice,
+                it.barcodeValue,
+                it.barcodeFormat,
+                it.merchantUrl
             )
         }
         val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
@@ -866,6 +964,27 @@ class PlatformSynchronizationService @Inject constructor(
                 }
                 changedItem.customIconUrl?.let { customIconUrl ->
                     item.customIconUrl = customIconUrl
+                }
+                changedItem.giftCardNumber?.let { giftCardNumber ->
+                    item.giftCardNumber = giftCardNumber
+                }
+                changedItem.giftCardPin?.let { giftCardPin ->
+                    item.giftCardPin = giftCardPin
+                }
+                changedItem.merchantName?.let { merchantName ->
+                    item.merchantName = merchantName
+                }
+                changedItem.originalPrice?.let { originalPrice ->
+                    item.originalPrice = originalPrice
+                }
+                changedItem.barcodeValue?.let { barcodeValue ->
+                    item.barcodeValue = barcodeValue
+                }
+                changedItem.barcodeFormat?.let { barcodeFormat ->
+                    item.barcodeFormat = barcodeFormat
+                }
+                changedItem.merchantUrl?.let { merchantUrl ->
+                    item.merchantUrl = merchantUrl
                 }
             } else {
                 itemsToPublish[changedItem.txId] = changedItem

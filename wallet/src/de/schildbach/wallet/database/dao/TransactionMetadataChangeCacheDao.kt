@@ -94,6 +94,45 @@ interface TransactionMetadataChangeCacheDao {
         cacheTimestamp: Long = System.currentTimeMillis()
     )
 
+    @Query(
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, service, taxCategory, customIconUrl, currencyCode, rate) 
+           VALUES (:txId, :cacheTimestamp, :service, :taxCategory, :customIconUrl, :currencyCode, :rate)"""
+    )
+    suspend fun markGiftCardTx(
+        txId: Sha256Hash,
+        service: String,
+        taxCategory: TaxCategory,
+        customIconUrl: String?,
+        currencyCode: String?,
+        rate: String?,
+        cacheTimestamp: Long = System.currentTimeMillis()
+    )
+
+    @Query(
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, giftCardNumber, giftCardPin, merchantName, originalPrice, merchantUrl)
+           VALUES (:txId, :cacheTimestamp, :giftCardNumber, :giftCardPin, :merchantName, :originalPrice, :merchantUrl)"""
+    )
+    suspend fun insertGiftCardData(
+        txId: Sha256Hash,
+        giftCardNumber: String?,
+        giftCardPin: String?,
+        merchantName: String?,
+        originalPrice: Double?,
+        merchantUrl: String?,
+        cacheTimestamp: Long = System.currentTimeMillis()
+    )
+
+    @Query(
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, barcodeValue, barcodeFormat) 
+           VALUES (:txId, :cacheTimestamp, :barcodeValue, :barcodeFormat)"""
+    )
+    suspend fun insertBarcode(
+        txId: Sha256Hash,
+        barcodeValue: String?,
+        barcodeFormat: String?,
+        cacheTimestamp: Long = System.currentTimeMillis()
+    )
+
     @Query("DELETE FROM transaction_metadata_cache")
     suspend fun clear()
 }

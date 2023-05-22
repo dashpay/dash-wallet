@@ -21,6 +21,7 @@ import androidx.room.*
 import de.schildbach.wallet.database.entity.TransactionMetadataDocument
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.data.entity.GiftCard
 
 /**
  * @author Eric Britten
@@ -96,11 +97,81 @@ interface TransactionMetadataDocumentDao {
     """)
     suspend fun getTransactionIconUrl(txId: Sha256Hash): String?
 
+    @Query("""
+        SELECT giftCardNumber 
+        FROM transaction_metadata_platform 
+        WHERE txId = :txId 
+            AND giftCardNumber is NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
+    suspend fun getGiftCardNumber(txId: Sha256Hash): String?
+
+    @Query("""
+        SELECT giftCardPin 
+        FROM transaction_metadata_platform 
+        WHERE txId = :txId 
+            AND giftCardPin is NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
+    suspend fun getGiftCardPin(txId: Sha256Hash): String?
+
+    @Query("""
+        SELECT merchantName 
+        FROM transaction_metadata_platform 
+        WHERE txId = :txId 
+            AND merchantName is NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
+    suspend fun getMerchantName(txId: Sha256Hash): String?
+
+    @Query("""
+        SELECT originalPrice 
+        FROM transaction_metadata_platform 
+        WHERE txId = :txId 
+            AND originalPrice is NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
+    suspend fun getOriginalPrice(txId: Sha256Hash): Double?
+
+    @Query("""
+        SELECT barcodeValue 
+        FROM transaction_metadata_platform 
+        WHERE txId = :txId 
+            AND barcodeValue is NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
+    suspend fun getBarcodeValue(txId: Sha256Hash): String?
+
+    @Query("""
+        SELECT barcodeFormat 
+        FROM transaction_metadata_platform 
+        WHERE txId = :txId 
+            AND barcodeFormat is NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
+    suspend fun getBarcodeFormat(txId: Sha256Hash): String?
+
+    @Query("""
+        SELECT merchantUrl 
+        FROM transaction_metadata_platform 
+        WHERE txId = :txId 
+            AND merchantUrl is NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """)
+    suspend fun getMerchantUrl(txId: Sha256Hash): String?
+
     @Query("SELECT MAX(timestamp) FROM transaction_metadata_platform")
-    fun getLastTimestamp() : Long
+    suspend fun getLastTimestamp() : Long
 
     @Query("SELECT COUNT(*) FROM transaction_metadata_platform")
-    fun countAllRequests(): Int
+    suspend fun countAllRequests(): Int
 
     @Query("DELETE FROM transaction_metadata_platform")
     suspend fun clear()

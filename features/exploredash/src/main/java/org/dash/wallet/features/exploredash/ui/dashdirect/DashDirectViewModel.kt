@@ -206,7 +206,7 @@ class DashDirectViewModel @Inject constructor(
         val giftCard = GiftCard(
             txId = txId,
             merchantName = giftCardMerchant.name ?: "",
-            price = giftCardPaymentValue.value,
+            price = giftCardPaymentValue.toBigDecimal().toDouble(),
             merchantUrl = giftCardMerchant.website,
             note = "$orderId+$paymentId"
         )

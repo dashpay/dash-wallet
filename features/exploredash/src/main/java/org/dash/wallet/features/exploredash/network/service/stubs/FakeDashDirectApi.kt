@@ -67,14 +67,14 @@ class FakeDashDirectApi(
                 ExchangeRate(Coin.COIN, exchangeRate.fiat)
                     .fiatToCoin(Fiat.parseFiat("USD", amountUsd.toString()))
             }
-        } ?: 0
+        } ?: Coin.ZERO
 
         delay(500.milliseconds)
         return PurchaseGiftCardResponse(
             successful = true,
             data = PurchaseGiftCardResponse.Data(
                 giftCardId = cache.giftCardId,
-                dashAmount = dashAmount.toString(),
+                dashAmount = Coin.valueOf((dashAmount.value * 0.85).toLong()).toString(),
                 orderId = cache.orderId,
                 paymentId = cache.paymentId,
                 uri = "${DASH_DIRECT_SCHEMA}example.com?amount=$dashAmount",

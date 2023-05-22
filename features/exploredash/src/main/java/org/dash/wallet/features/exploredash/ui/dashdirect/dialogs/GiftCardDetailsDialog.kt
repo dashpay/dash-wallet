@@ -170,7 +170,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
     ) {
         binding.merchantName.text = giftCard.merchantName
         val currency = exchangeRate?.fiat?.currencyCode ?: Constants.USD_CURRENCY
-        val price = Fiat.valueOf(currency, giftCard.price)
+        val price = Fiat.parseFiat(currency, giftCard.price.toString())
         binding.originalPurchaseValue.text = price.toFormattedString()
 
         binding.purchaseCardNumber.text = giftCard.number
