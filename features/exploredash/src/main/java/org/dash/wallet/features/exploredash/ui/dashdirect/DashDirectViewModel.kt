@@ -35,13 +35,13 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
-import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.features.exploredash.data.dashdirect.model.merchant.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.dashdirect.model.purchase.PurchaseGiftCardResponse
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
@@ -137,11 +137,7 @@ class DashDirectViewModel @Inject constructor(
     suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash {
         val transaction = sendPaymentService.payWithDashUrl(paymentUri)
         log.info("dash direct transaction: ${transaction.txId}")
-        transactionMetadata.markGiftCardTransaction(
-            transaction.txId,
-            usdExchangeRate.value,
-            giftCardMerchant.logoLocation
-        )
+        transactionMetadata.markGiftCardTransaction(transaction.txId, giftCardMerchant.logoLocation)
 
         return transaction.txId
     }

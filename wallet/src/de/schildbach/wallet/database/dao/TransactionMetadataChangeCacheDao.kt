@@ -95,16 +95,14 @@ interface TransactionMetadataChangeCacheDao {
     )
 
     @Query(
-        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, service, taxCategory, customIconUrl, currencyCode, rate) 
-           VALUES (:txId, :cacheTimestamp, :service, :taxCategory, :customIconUrl, :currencyCode, :rate)"""
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, service, taxCategory, customIconUrl) 
+           VALUES (:txId, :cacheTimestamp, :service, :taxCategory, :customIconUrl)"""
     )
     suspend fun markGiftCardTx(
         txId: Sha256Hash,
         service: String,
         taxCategory: TaxCategory,
         customIconUrl: String?,
-        currencyCode: String?,
-        rate: String?,
         cacheTimestamp: Long = System.currentTimeMillis()
     )
 

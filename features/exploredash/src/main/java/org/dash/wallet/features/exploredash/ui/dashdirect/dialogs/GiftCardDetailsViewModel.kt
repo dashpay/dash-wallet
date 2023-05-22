@@ -68,9 +68,7 @@ class GiftCardDetailsViewModel @Inject constructor(
         private set
     private var tickerJob: Job? = null
 
-    private val _exchangeRate: MutableLiveData<ExchangeRate?> = MutableLiveData()
-    val exchangeRate: LiveData<ExchangeRate?>
-        get() = _exchangeRate
+    private var exchangeRate: ExchangeRate? = null
 
     private val _giftCard: MutableLiveData<GiftCard?> = MutableLiveData()
     val giftCard: LiveData<GiftCard?>
@@ -101,12 +99,7 @@ class GiftCardDetailsViewModel @Inject constructor(
             .filterNotNull()
             .onEach { metadata ->
                 if (!metadata.currencyCode.isNullOrEmpty() && !metadata.rate.isNullOrEmpty()) {
-                    _exchangeRate.value = ExchangeRate(
-                        Fiat.parseFiat(
-                            metadata.currencyCode,
-                            metadata.rate
-                        )
-                    )
+                    exchangeRate = ExchangeRate(Fiat.parseFiat(metadata.currencyCode, metadata.rate))
                 }
 
                 _date.value = LocalDateTime.ofInstant(
@@ -242,14 +235,13 @@ class GiftCardDetailsViewModel @Inject constructor(
             mapOf(AnalyticsConstants.Parameter.VALUE to giftCard.merchantName)
         )
 
-        exchangeRate.value?.let {
-            val price = Fiat.parseFiat(it.fiat.currencyCode, giftCard.price.toString())
+        exchangeRate?.let {
             val transaction = walletData.getTransaction(transactionId)
             val fiatValue = it.coinToFiat(transaction?.getValue(walletData.transactionBag) ?: Coin.ZERO)
 
             analyticsService.logEvent(
                 AnalyticsConstants.DashDirect.PURCHASE_AMOUNT,
-                mapOf(AnalyticsConstants.Parameter.VALUE to price.toFriendlyString())
+                mapOf(AnalyticsConstants.Parameter.VALUE to giftCard.price)
             )
 
             analyticsService.logEvent(
