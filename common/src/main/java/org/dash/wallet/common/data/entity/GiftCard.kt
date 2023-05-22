@@ -26,7 +26,7 @@ import org.bitcoinj.core.Sha256Hash
 data class GiftCard(
     @PrimaryKey var txId: Sha256Hash,
     var merchantName: String = "",
-    var price: Long = 0,
+    var price: Double = 0.0,
     var number: String? = null,
     var pin: String? = null,
     var barcodeValue: String? = null,

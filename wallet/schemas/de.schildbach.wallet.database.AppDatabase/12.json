@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 12,
-    "identityHash": "79f5bf873b9b4e5fd14fb4554648b552",
+    "identityHash": "67ddab66e37ae3f5566c103edd606d91",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -251,7 +251,7 @@
       },
       {
         "tableName": "gift_cards",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`txId` BLOB NOT NULL, `merchantName` TEXT NOT NULL, `price` INTEGER NOT NULL, `number` TEXT, `pin` TEXT, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `note` TEXT, PRIMARY KEY(`txId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`txId` BLOB NOT NULL, `merchantName` TEXT NOT NULL, `price` REAL NOT NULL, `number` TEXT, `pin` TEXT, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `note` TEXT, PRIMARY KEY(`txId`))",
         "fields": [
           {
             "fieldPath": "txId",
@@ -268,7 +268,7 @@
           {
             "fieldPath": "price",
             "columnName": "price",
-            "affinity": "INTEGER",
+            "affinity": "REAL",
             "notNull": true
           },
           {
@@ -321,7 +321,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '79f5bf873b9b4e5fd14fb4554648b552')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '67ddab66e37ae3f5566c103edd606d91')"
     ]
   }
 }
