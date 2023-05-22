@@ -57,16 +57,14 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.EvolutionContact
-import org.bitcoinj.utils.Fiat
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.util.TickerFlow
-import org.dash.wallet.common.data.entity.GiftCard
-import org.dash.wallet.common.util.Constants
 import org.dashj.platform.contracts.wallet.TxMetadataItem
 import org.dashj.platform.dashpay.ContactRequest
 import org.dashj.platform.dpp.identifier.Identifier
