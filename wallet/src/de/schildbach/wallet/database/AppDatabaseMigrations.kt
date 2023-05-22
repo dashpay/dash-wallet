@@ -37,7 +37,7 @@ class AppDatabaseMigrations {
                     )
                     database.execSQL(
                         "CREATE TABLE IF NOT EXISTS gift_cards (txId BLOB NOT NULL PRIMARY KEY, " +
-                            "merchantName TEXT NOT NULL, price INTEGER NOT NULL, number TEXT, pin TEXT, " +
+                            "merchantName TEXT NOT NULL, price REAL NOT NULL, number TEXT, pin TEXT, " +
                             "barcodeValue TEXT, barcodeFormat TEXT, merchantUrl TEXT, note TEXT)"
                     )
                 }
