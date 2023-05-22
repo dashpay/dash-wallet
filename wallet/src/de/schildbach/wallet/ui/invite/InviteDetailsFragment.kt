@@ -102,16 +102,21 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             }
         }
         profile_button.setOnClickListener {
-            viewModel.invitedUserProfile.observeOnce(requireActivity(), Observer {
-                if(it != null) {
-                    startActivity(DashPayUserActivity.createIntent(requireContext(), it))
-                } else {
-                    /*not sure why this is happening*/
-                    val errorDialog = FancyAlertDialog.newProgress(R.string.invitation_creating_error_message_not_synced,
-                            R.string.invitation_verifying_progress_title)
-                    errorDialog.show(childFragmentManager, null)
-                }
-            })
+            viewModel.invitedUserProfile.observeOnce(
+                requireActivity(),
+                Observer {
+                    if (it != null) {
+                        startActivity(DashPayUserActivity.createIntent(requireContext(), it))
+                    } else {
+                        /*not sure why this is happening*/
+                        val errorDialog = FancyAlertDialog.newProgress(
+                            R.string.invitation_creating_error_message_not_synced,
+                            R.string.invitation_verifying_progress_title,
+                        )
+                        errorDialog.show(childFragmentManager, null)
+                    }
+                },
+            )
         }
 
         pending_view.isVisible = false
@@ -121,7 +126,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
     }
 
     private fun initViewModel() {
-        val identityId = requireArguments().getString(ARG_IDENTITY_ID)!!
+        val identityId = requireArguments().getString(ARG_IDENTITY_ID)
         inviteIndex = requireArguments().getInt(ARG_INVITE_INDEX)
         viewModel.identityIdLiveData.value = identityId
 
@@ -135,7 +140,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                 memo.text = hint
             }
 
-            date.text = WalletUtils.formatDate(it.sentAt);
+            date.text = WalletUtils.formatDate(it.sentAt)
             if (it.acceptedAt != 0L) {
                 showClaimed()
             } else {
@@ -151,7 +156,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
     }
 
     private fun getTagHint() =
-            requireContext().getString(R.string.invitation_created_title) + " " + inviteIndex
+        requireContext().getString(R.string.invitation_created_title) + " " + inviteIndex
 
     private fun showPending(it: Invitation) {
         send_button.isVisible = it.canSendAgain()
@@ -229,7 +234,8 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
     override fun onStop() {
         super.onStop()
         // save memo to the database
-        if (tagModified)
+        if (tagModified) {
             viewModel.saveTag(tag_edit.text.toString())
+        }
     }
 }
