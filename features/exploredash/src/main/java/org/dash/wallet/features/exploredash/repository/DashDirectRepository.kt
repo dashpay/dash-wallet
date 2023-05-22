@@ -124,6 +124,11 @@ class DashDirectRepository @Inject constructor(
         val deviceID = config.get(DashDirectConfig.PREFS_DEVICE_UUID)!!
         servicesApi.purchaseGiftCard(
             deviceID = deviceID,
+//            purchaseGiftCardRequest = PurchaseGiftCardRequest(
+//                paymentCurrency = paymentCurrency,
+//                amountUSD = 0.02,
+//                merchantId = 318
+//            ),
             purchaseGiftCardRequest = PurchaseGiftCardRequest(
                 paymentCurrency = paymentCurrency,
                 amountUSD = amountUSD,
@@ -138,7 +143,7 @@ class DashDirectRepository @Inject constructor(
             servicesApi.getMerchantById(
                 email = userEmail,
                 getMerchantByIdRequest = GetMerchantByIdRequest(
-                    id = /* 318,*/ merchantId,
+                    id = /*318,*/ merchantId,
                     includeLocations = includeLocations
                 )
             )

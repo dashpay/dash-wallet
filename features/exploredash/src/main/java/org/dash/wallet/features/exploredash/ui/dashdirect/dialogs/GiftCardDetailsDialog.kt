@@ -39,8 +39,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -48,10 +47,12 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashdirect.model.Barcode
-import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 import org.dash.wallet.features.exploredash.repository.DashDirectException
+import java.text.DecimalFormat
+import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
+import java.util.Currency
 
 @AndroidEntryPoint
 class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_details) {
@@ -91,13 +92,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         }
 
         viewModel.giftCard.observe(viewLifecycleOwner) {
-            it?.let { bindGiftCardDetails(binding, it, viewModel.exchangeRate.value) }
-        }
-
-        viewModel.exchangeRate.observe(viewLifecycleOwner) {
-            if (it != null && viewModel.giftCard.value != null) {
-                bindGiftCardDetails(binding, viewModel.giftCard.value!!, it)
-            }
+            it?.let { bindGiftCardDetails(binding, it) }
         }
 
         viewModel.icon.observe(viewLifecycleOwner) { bitmap ->
@@ -163,15 +158,12 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         }
     }
 
-    private fun bindGiftCardDetails(
-        binding: DialogGiftCardDetailsBinding,
-        giftCard: GiftCard,
-        exchangeRate: ExchangeRate?
-    ) {
+    private fun bindGiftCardDetails(binding: DialogGiftCardDetailsBinding, giftCard: GiftCard) {
         binding.merchantName.text = giftCard.merchantName
-        val currency = exchangeRate?.fiat?.currencyCode ?: Constants.USD_CURRENCY
-        val price = Fiat.valueOf(currency, giftCard.price)
-        binding.originalPurchaseValue.text = price.toFormattedString()
+        val currencyFormat = (NumberFormat.getCurrencyInstance() as DecimalFormat).apply {
+            this.currency = Currency.getInstance(Constants.USD_CURRENCY)
+        }
+        binding.originalPurchaseValue.text = currencyFormat.format(giftCard.price)
 
         binding.purchaseCardNumber.text = giftCard.number
         binding.cardNumberGroup.isVisible = !giftCard.number.isNullOrEmpty()
