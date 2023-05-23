@@ -45,6 +45,8 @@ interface WalletDataProvider {
         coinSelector: CoinSelector? = null
     ): Flow<Coin>
 
+    fun canAffordIdentityCreation(): Boolean
+
     // Treat @withConfidence with care - it may produce a lot of events and affect performance.
     fun observeTransactions(withConfidence: Boolean = false, vararg filters: TransactionFilter): Flow<Transaction>
 
