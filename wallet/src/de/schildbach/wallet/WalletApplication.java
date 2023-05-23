@@ -1002,6 +1002,10 @@ public class WalletApplication extends MultiDexApplication
 
     @NotNull
     public Coin getWalletBalance() {
+        if (wallet == null) {
+            return Coin.ZERO;
+        }
+
         return wallet.getBalance(Wallet.BalanceType.ESTIMATED);
     }
 
