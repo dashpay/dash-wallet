@@ -48,6 +48,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import kotlin.math.min
 
 class SendException(message: String) : Exception(message)
 
@@ -352,11 +353,12 @@ class SendCoinsViewModel @Inject constructor(
         // This is currently using the first version, but it should use the version specified
         // in the ContactInfo.accountRef related to this contact.  Ideally the user should
         // approve of a change to the "accountReference" that is used.
-        var firstTimestamp = System.currentTimeMillis()
+        var firstTimestamp = Long.MAX_VALUE
         for (contactRequest in dashPayContactRequests) {
             map[contactRequest.timestamp] = contactRequest
-            firstTimestamp = contactRequest.timestamp.coerceAtMost(firstTimestamp)
+            firstTimestamp = min(firstTimestamp, contactRequest.timestamp)
         }
+
         val mostRecentContactRequest = map[firstTimestamp]
         val address = platformRepo.getNextContactAddress(
             dashPayProfile.userId,

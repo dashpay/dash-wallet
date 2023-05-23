@@ -21,6 +21,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.data.entity.TransactionMetadata
 
 @Entity(tableName = "transaction_metadata_cache")
@@ -32,12 +33,24 @@ data class TransactionMetadataCacheItem(
     var currencyCode: String? = null,
     var rate: String? = null,
     var memo: String? = null,
-    var service: String? = null
+    var service: String? = null,
+    var customIconUrl: String? = null,
+    var giftCardNumber: String? = null,
+    var giftCardPin: String? = null,
+    var merchantName: String? = null,
+    var originalPrice: Double? = null,
+    var barcodeValue: String? = null,
+    var barcodeFormat: String? = null,
+    var merchantUrl: String? = null
 ) {
     @PrimaryKey(autoGenerate = true)
     var id: Long = 0
 
-    constructor(transactionMetadata: TransactionMetadata) : this(
+    constructor(
+        transactionMetadata: TransactionMetadata,
+        giftCard: GiftCard? = null,
+        customIconUrl: String? = null
+    ) : this(
         System.currentTimeMillis(),
         transactionMetadata.txId,
         transactionMetadata.timestamp,
@@ -45,11 +58,21 @@ data class TransactionMetadataCacheItem(
         transactionMetadata.currencyCode,
         transactionMetadata.rate,
         transactionMetadata.memo.ifEmpty { null },
-        transactionMetadata.service
+        transactionMetadata.service,
+        customIconUrl,
+        giftCard?.number,
+        giftCard?.pin,
+        giftCard?.merchantName,
+        giftCard?.price,
+        giftCard?.barcodeValue,
+        giftCard?.barcodeFormat?.toString(),
+        giftCard?.merchantUrl
     )
 
     fun isNotEmpty(): Boolean {
         return sentTimestamp != null || taxCategory != null || !memo.isNullOrEmpty() ||
-            currencyCode != null || rate != null || service != null
+            currencyCode != null || rate != null || service != null || customIconUrl != null ||
+            giftCardNumber != null || giftCardPin != null || merchantName != null || originalPrice != null ||
+            barcodeValue != null || barcodeFormat != null || merchantUrl != null
     }
 }

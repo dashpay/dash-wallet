@@ -32,14 +32,10 @@ import de.schildbach.wallet.database.AppDatabase
 import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
-import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import androidx.datastore.preferences.core.Preferences
-import androidx.lifecycle.SavedStateHandle
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletUIConfig
-import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.transactions.TxDirection
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
@@ -85,7 +81,6 @@ class MainViewModelTest {
     private val configMock = mockk<Configuration> {
         every { exchangeCurrencyCode } returns "USD"
         every { format } returns MonetaryFormat()
-        every { hideBalance } returns false
         every { registerOnSharedPreferenceChangeListener(any()) } just runs
     }
     private val exchangeRatesMock = mockk<ExchangeRatesProvider>()

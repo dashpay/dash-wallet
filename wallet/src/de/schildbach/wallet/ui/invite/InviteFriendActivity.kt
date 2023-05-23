@@ -26,9 +26,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.util.canAffordIdentityCreation
 import de.schildbach.wallet_test.R
-import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.slf4j.LoggerFactory
 
@@ -51,7 +49,7 @@ class InviteFriendActivity : LockScreenActivity() {
         }
 
         fun startOrError(activity: FragmentActivity, startedByHistory: Boolean = false) {
-            if (WalletApplication.getInstance().wallet!!.canAffordIdentityCreation()) {
+            if (WalletApplication.getInstance().canAffordIdentityCreation()) {
                 activity.startActivity(createIntent(activity, startedByHistory))
             } else {
                 val title = activity.getString(R.string.invitation_cant_afford_title)

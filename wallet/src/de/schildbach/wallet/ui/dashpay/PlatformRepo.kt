@@ -39,7 +39,6 @@ import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
-import de.schildbach.wallet.util.canAffordIdentityCreation
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
@@ -166,7 +165,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private suspend fun initializeStateRepository() {
         // load our id
 
-        if (this::blockchainIdentity.isInitialized && blockchainIdentity.registered) {
+        if (this::blockchainIdentity.isInitialized && blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED) {
             val identityId = blockchainIdentity.uniqueIdString
             platform.stateRepository.addValidIdentity(Identifier.from(identityId))
 
@@ -453,7 +452,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val hasSentInvites = invitationsDao.count() > 0
         val blockchainIdentityData = blockchainIdentityDataDao.load()
         val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.NONE
-        val canAffordIdentityCreation = walletApplication.wallet!!.canAffordIdentityCreation()
+        val canAffordIdentityCreation = walletApplication.canAffordIdentityCreation()
         return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || !hasSentInvites)
     }
 
@@ -1014,7 +1013,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet!!.context)
-        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter)
+        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter, false)
         val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
                 System.currentTimeMillis())
         // update database

@@ -37,8 +37,12 @@ interface TransactionMetadataProvider {
     suspend fun setTransactionMemo(txId: Sha256Hash, memo: String, isSyncingPlatform: Boolean = false)
     suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncingPlatform: Boolean = false)
     suspend fun setTransactionSentTime(txId: Sha256Hash, timestamp: Long, isSyncingPlatform: Boolean = false)
-
-    suspend fun syncPlatformMetadata(txId: Sha256Hash, metadata: TransactionMetadata)
+    suspend fun syncPlatformMetadata(
+        txId: Sha256Hash,
+        metadata: TransactionMetadata,
+        giftCard: GiftCard?,
+        iconUrl: String?
+    )
 
     /**
      * Checks for missing data in the metadata cache vs the Transaction and ensures that both

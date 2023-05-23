@@ -346,7 +346,6 @@ class TransactionResultViewBinder(
             taxCategoryCard.isVisible = false
             dashAmount.setStrikeThru(true)
             fiatValue.setStrikeThru(true)
-            checkIcon.setImageResource(R.drawable.ic_transaction_failed)
             transactionTitle.text = ctx.getText(R.string.transaction_failed_details)
 
             var rescanText = ""
@@ -371,58 +370,18 @@ class TransactionResultViewBinder(
             }
         } else {
             if (tx.getValue(wallet).signum() < 0) {
-                checkIcon.setImageResource(if (tx.isEntirelySelf(wallet)) {
-                    R.drawable.ic_internal
-                } else {
-                    R.drawable.ic_transaction_sent
-                })
-
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
                 transactionAmountSignal.text = "-"
                 transactionAmountSignal.isVisible = true
             } else {
-                checkIcon.setImageResource(R.drawable.ic_transaction_received)
                 transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.system_green))
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
                 transactionAmountSignal.isVisible = true
                 transactionAmountSignal.text = "+"
             }
-            checkIcon.isVisible = true
             feeRow.isVisible = isFeeAvailable(tx.fee)
         }
-    }
-
-    private fun setTransactionDirection(errorStatusStr: String) {
-        if (errorStatusStr.isNotEmpty()) {
-            errorContainer.isVisible = true
-            reportIssueContainer.isVisible = true
-            outputsContainer.isVisible = false
-            inputsContainer.isVisible = false
-            feeRow.isVisible = false
-            dateContainer.isVisible = false
-            explorerContainer.isVisible = false
-            transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.content_warning))
-            transactionTitle.text = ctx.getText(R.string.transaction_failed_details)
-            errorDescription.text = errorStatusStr
-            transactionAmountSignal.text = "-"
-        } else {
-            transactionAmountSignal.isVisible = true
-            val isSent = transaction.getValue(wallet).signum() < 0
-            transactionAmountSignal.text = if (isSent) "-" else "+"
-
-            if (customTitle == null) {
-                if (isSent) {
-                    transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.dash_blue))
-                    transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent)
-                } else {
-                    transactionTitle.setTextColor(ContextCompat.getColor(ctx, R.color.system_green))
-                    transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
-                }
-            }
-        }
-
-        feeRow.isVisible = isFeeAvailable(transaction.fee)
     }
 
     fun setOnRescanTriggered(listener: () -> Unit) {

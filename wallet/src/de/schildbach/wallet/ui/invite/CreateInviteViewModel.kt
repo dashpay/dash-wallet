@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.invite
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.asLiveData
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.BlockchainStateDao
@@ -27,14 +28,14 @@ import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
-import de.schildbach.wallet.ui.dashpay.CanAffordIdentityCreationLiveData
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 @HiltViewModel
 class CreateInviteViewModel @Inject constructor(
-    walletApplication: WalletApplication,
+    private val walletData: WalletDataProvider,
     private val analytics: AnalyticsService,
     blockchainStateDao: BlockchainStateDao,
     invitationsDao: InvitationsDao,
@@ -46,11 +47,6 @@ class CreateInviteViewModel @Inject constructor(
     val blockchainState: BlockchainState?
         get() = blockchainStateData.value
 
-    val canAffordIdentityCreationLiveData = CanAffordIdentityCreationLiveData(walletApplication)
-
-    val canAffordIdentityCreation: Boolean?
-        get() = canAffordIdentityCreationLiveData.value
-
     val isAbleToCreateInviteLiveData = MediatorLiveData<Boolean>().apply {
         addSource(blockchainStateData) {
             value = combineLatestData()
@@ -58,7 +54,7 @@ class CreateInviteViewModel @Inject constructor(
         addSource(blockchainIdentity) {
             value = combineLatestData()
         }
-        addSource(canAffordIdentityCreationLiveData) {
+        addSource(walletData.observeBalance().asLiveData()) {
             value = combineLatestData()
         }
     }
@@ -68,8 +64,7 @@ class CreateInviteViewModel @Inject constructor(
     private fun combineLatestData(): Boolean {
         val isSynced = blockchainStateData.value?.isSynced() ?: false
         val noIdentityCreatedOrInProgress = (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
-        val canAffordIdentityCreation = canAffordIdentityCreationLiveData.value ?: false
-        return isSynced && !noIdentityCreatedOrInProgress && canAffordIdentityCreation
+        return isSynced && !noIdentityCreatedOrInProgress && canAffordIdentityCreation()
     }
 
     val invitationsLiveData = invitationsDao.observe().asLiveData()
@@ -95,4 +90,7 @@ class CreateInviteViewModel @Inject constructor(
         val canAffordInviteCreation = isAbleToCreateInvite
         return hasInviteHistory || canAffordInviteCreation
     }
+
+    private fun canAffordIdentityCreation(): Boolean =
+        !walletData.getWalletBalance().isLessThan(Constants.DASH_PAY_FEE)
 }

@@ -1122,4 +1122,9 @@ public class WalletApplication extends MultiDexApplication
                 crowdNodeConfig
         );
     }
+
+    @Override
+    public boolean canAffordIdentityCreation() {
+        return !getWalletBalance().isLessThan(Constants.DASH_PAY_FEE);
+    }
 }

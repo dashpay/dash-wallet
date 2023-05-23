@@ -51,6 +51,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
@@ -179,8 +180,6 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    val canAffordIdentityCreationLiveData = CanAffordIdentityCreationLiveData(walletApplication)
-
     val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
         addSource(isPlatformAvailableData) {
             value = combineLatestData()
@@ -191,7 +190,7 @@ class MainViewModel @Inject constructor(
         addSource(blockchainIdentity) {
             value = combineLatestData()
         }
-        addSource(canAffordIdentityCreationLiveData) {
+        addSource(_balance) {
             value = combineLatestData()
         }
     }
@@ -396,7 +395,7 @@ class MainViewModel @Inject constructor(
                      metadata[it.transactions.first().txId]
                  )
              }
-            
+
             _transactions.postValue(transactionViews)
         }
     }
@@ -492,7 +491,7 @@ class MainViewModel @Inject constructor(
         val isPlatformAvailable = isPlatformAvailableData.value ?: false
         val isSynced = _isBlockchainSynced.value ?: false
         val noIdentityCreatedOrInProgress = (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
-        val canAffordIdentityCreation = canAffordIdentityCreationLiveData.value ?: false
+        val canAffordIdentityCreation = walletData.canAffordIdentityCreation()
         return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress && canAffordIdentityCreation
     }
 

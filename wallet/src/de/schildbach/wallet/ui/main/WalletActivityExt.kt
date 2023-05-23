@@ -17,9 +17,9 @@
 
 package de.schildbach.wallet.ui.main
 
-import android.util.Log
 import android.view.MenuItem
 import androidx.core.view.isVisible
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI.onNavDestinationSelected
 import androidx.navigation.ui.NavigationUI.setupWithNavController
@@ -36,7 +36,16 @@ object WalletActivityExt {
         navView.itemIconTintList = null
         navView.setOnItemSelectedListener { item: MenuItem ->
             when (item.itemId) {
-                R.id.walletFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_HOME)
+                R.id.walletFragment -> {
+                    viewModel.logEvent(AnalyticsConstants.Home.NAV_HOME)
+                    navController.navigate(
+                        R.id.walletFragment,
+                        null,
+                        NavOptions.Builder()
+                            .setPopUpTo(navController.graph.startDestinationId, true)
+                            .build()
+                    )
+                }
                 R.id.paymentsFragment -> viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
                 R.id.moreFragment -> viewModel.logEvent(AnalyticsConstants.Home.NAV_MORE)
                 else -> { }

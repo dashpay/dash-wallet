@@ -68,7 +68,7 @@ interface TransactionMetadataChangeCacheDao {
     suspend fun insertMemo(txId: Sha256Hash, memo: String, cacheTimestamp: Long = System.currentTimeMillis())
 
     @Query(
-        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, memo) 
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, service) 
            VALUES(:txId, :cacheTimestamp, :service)"""
     )
     suspend fun insertService(txId: Sha256Hash, service: String, cacheTimestamp: Long = System.currentTimeMillis())
@@ -81,6 +81,53 @@ interface TransactionMetadataChangeCacheDao {
         txId: Sha256Hash,
         currencyCode: String,
         rate: String,
+        cacheTimestamp: Long = System.currentTimeMillis()
+    )
+
+    @Query(
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, customIconUrl) 
+           VALUES (:txId, :cacheTimestamp, :customIconUrl)"""
+    )
+    suspend fun insertCustomIconUrl(
+        txId: Sha256Hash,
+        customIconUrl: String,
+        cacheTimestamp: Long = System.currentTimeMillis()
+    )
+
+    @Query(
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, service, taxCategory, customIconUrl) 
+           VALUES (:txId, :cacheTimestamp, :service, :taxCategory, :customIconUrl)"""
+    )
+    suspend fun markGiftCardTx(
+        txId: Sha256Hash,
+        service: String,
+        taxCategory: TaxCategory,
+        customIconUrl: String?,
+        cacheTimestamp: Long = System.currentTimeMillis()
+    )
+
+    @Query(
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, giftCardNumber, giftCardPin, merchantName, originalPrice, merchantUrl)
+           VALUES (:txId, :cacheTimestamp, :giftCardNumber, :giftCardPin, :merchantName, :originalPrice, :merchantUrl)"""
+    )
+    suspend fun insertGiftCardData(
+        txId: Sha256Hash,
+        giftCardNumber: String?,
+        giftCardPin: String?,
+        merchantName: String?,
+        originalPrice: Double?,
+        merchantUrl: String?,
+        cacheTimestamp: Long = System.currentTimeMillis()
+    )
+
+    @Query(
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, barcodeValue, barcodeFormat) 
+           VALUES (:txId, :cacheTimestamp, :barcodeValue, :barcodeFormat)"""
+    )
+    suspend fun insertBarcode(
+        txId: Sha256Hash,
+        barcodeValue: String?,
+        barcodeFormat: String?,
         cacheTimestamp: Long = System.currentTimeMillis()
     )
 

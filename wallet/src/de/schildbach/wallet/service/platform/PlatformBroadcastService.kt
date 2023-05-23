@@ -91,7 +91,7 @@ class PlatformDocumentBroadcastService @Inject constructor(
 
         log.info("contact request: $cr")
         val dashPayContactRequest = DashPayContactRequest.fromDocument(cr)
-        platformRepo.updateDashPayContactRequest(dashPayContactRequest) //update the database since the cr was accepted
+        platformRepo.updateDashPayContactRequest(dashPayContactRequest) // update the database since the cr was accepted
         platformRepo.updateDashPayProfile(toUserId) // update the profile
         platformSyncService.fireContactsUpdatedListeners() // trigger listeners
         return dashPayContactRequest
