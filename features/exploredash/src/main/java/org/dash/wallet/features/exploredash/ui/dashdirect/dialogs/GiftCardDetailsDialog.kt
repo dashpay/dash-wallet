@@ -24,6 +24,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.StyleRes
 import androidx.core.os.bundleOf
+import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.viewModels
@@ -204,27 +205,29 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
     }
 
     private fun decodeBarcode(barcode: Barcode) {
-        lifecycleScope.launch {
-            binding.purchaseCardBarcode.isVisible = true
+        binding.purchaseCardInfo.doOnLayout {
+            lifecycleScope.launch {
+                binding.purchaseCardBarcode.isVisible = true
 
-            if (barcode.barcodeFormat == BarcodeFormat.QR_CODE) {
-                binding.purchaseCardBarcode.updateLayoutParams<ViewGroup.LayoutParams> {
-                    height = resources.getDimensionPixelSize(R.dimen.barcode_qr_size)
+                if (barcode.barcodeFormat == BarcodeFormat.QR_CODE) {
+                    binding.purchaseCardBarcode.updateLayoutParams<ViewGroup.LayoutParams> {
+                        height = resources.getDimensionPixelSize(R.dimen.barcode_qr_size)
+                    }
                 }
-            }
 
-            val margin = resources.getDimensionPixelOffset(R.dimen.details_horizontal_margin)
-            val bitmap = withContext(Dispatchers.Default) {
-                val size = Size(
-                    binding.purchaseCardInfo.measuredWidth - margin * 2,
-                    binding.purchaseCardBarcode.layoutParams.height
-                )
-                Qr.bitmap(barcode.value, barcode.barcodeFormat, size)
-            }
+                val margin = resources.getDimensionPixelOffset(R.dimen.details_horizontal_margin)
+                val bitmap = withContext(Dispatchers.Default) {
+                    val size = Size(
+                        binding.purchaseCardInfo.measuredWidth - margin * 2,
+                        binding.purchaseCardBarcode.layoutParams.height
+                    )
+                    Qr.bitmap(barcode.value, barcode.barcodeFormat, size)
+                }
 
-            binding.purchaseCardBarcode.load(bitmap) {
-                crossfade(true)
-                scale(Scale.FILL)
+                binding.purchaseCardBarcode.load(bitmap) {
+                    crossfade(true)
+                    scale(Scale.FILL)
+                }
             }
         }
     }
