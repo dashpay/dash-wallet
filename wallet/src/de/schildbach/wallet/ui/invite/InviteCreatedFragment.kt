@@ -29,7 +29,6 @@ import kotlinx.android.synthetic.main.fragment_invite_created.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.util.KeyboardUtil
 
-
 class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_created) {
 
     companion object {
@@ -86,7 +85,7 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
     }
 
     private fun initViewModel() {
-        val identityId = requireArguments().getString(ARG_IDENTITY_ID)!!
+        val identityId = requireArguments().getString(ARG_IDENTITY_ID)
         viewModel.identityIdLiveData.value = identityId
 
         viewModel.invitationLiveData.observe(viewLifecycleOwner) {

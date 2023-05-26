@@ -31,7 +31,6 @@ import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformDocumentBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.PlatformSynchronizationService
-
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import javax.inject.Singleton
 
@@ -62,5 +61,6 @@ abstract class DashPayModule {
     abstract fun bindsPlatformBroadcastService(platformBroadcastService: PlatformDocumentBroadcastService): PlatformBroadcastService
 
     @Binds
-    abstract fun bindsCoinJoinService(coinJoinMixingService: CoinJoinMixingService) : CoinJoinService
+    @Singleton
+    abstract fun bindsCoinJoinService(coinJoinMixingService: CoinJoinMixingService): CoinJoinService
 }

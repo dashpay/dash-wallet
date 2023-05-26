@@ -17,13 +17,22 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.os.Bundle
 import androidx.core.os.bundleOf
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Transformations
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.liveData
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.*
+import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.DashPayProfileDaoAsync
+import de.schildbach.wallet.data.InvitationsDaoAsync
+import de.schildbach.wallet.data.UserAlertDaoAsync
+import de.schildbach.wallet.data.UsernameSearch
+import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
@@ -33,7 +42,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
@@ -45,13 +53,11 @@ open class DashPayViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val analytics: AnalyticsService,
     private val platformRepo: PlatformRepo,
-    private val coinJoinService: CoinJoinService,
     private val blockchainState: BlockchainStateDao,
     private val dashPayProfile: DashPayProfileDaoAsync,
     private val userAlert: UserAlertDaoAsync,
     private val invitations: InvitationsDaoAsync,
     val platformSyncService: PlatformSyncService,
-    var networkState: NetworkStateInt,
     private val platformBroadcastService: PlatformBroadcastService,
 ) : ViewModel() {
 
@@ -92,13 +98,6 @@ open class DashPayViewModel @Inject constructor(
                 "searchCount" to searchTextSize,
             ),
         )
-    }
-
-    fun isWifiConnected(): Boolean {
-        return networkState.isWifiConnected()
-    }
-    fun setCoinJoinMode(mode: CoinJoinMode) {
-        coinJoinService.setMode(mode)
     }
     val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
         getUsernameJob.cancel()

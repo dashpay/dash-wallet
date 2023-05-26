@@ -22,13 +22,13 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.fragment.app.FragmentActivity
+import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.util.canAffordIdentityCreation
 import de.schildbach.wallet_test.R
-import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.slf4j.LoggerFactory
 
@@ -40,7 +40,6 @@ class InviteFriendActivity : LockScreenActivity() {
         private const val ARG_IDENTITY_ID = "identity_id"
         private const val ARG_STARTED_BY_HISTORY = "started_by_history"
         private const val ARG_INVITE_INDEX = "invite_index"
-
 
         @JvmStatic
         fun createIntent(context: Context, startedByHistory: Boolean): Intent {
@@ -56,8 +55,13 @@ class InviteFriendActivity : LockScreenActivity() {
             } else {
                 val title = activity.getString(R.string.invitation_cant_afford_title)
                 val message = activity.getString(R.string.invitation_cant_afford_message, Constants.DASH_PAY_FEE.toPlainString())
-                val errorDialog = FancyAlertDialog.newInstance(title, message,
-                        R.drawable.ic_cant_afford_invitation, 0, R.string.invitation_preview_close)
+                val errorDialog = FancyAlertDialog.newInstance(
+                    title,
+                    message,
+                    R.drawable.ic_cant_afford_invitation,
+                    0,
+                    R.string.invitation_preview_close,
+                )
                 errorDialog.show(activity.supportFragmentManager, null)
             }
         }
@@ -73,21 +77,29 @@ class InviteFriendActivity : LockScreenActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_fragment_holder)
+        setContentView(R.layout.activity_invite_friends)
 
         val userId = intent.extras?.getString(ARG_IDENTITY_ID, "") ?: ""
         val startedByHistory = intent.extras?.getBoolean(ARG_STARTED_BY_HISTORY, false) ?: false
 
-        if (userId.isEmpty()) {
-            supportFragmentManager.beginTransaction()
-                    .replace(R.id.container, InviteFriendFragment.newInstance(startedByHistory))
-                    .commitNow()
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_invite_friends) as NavHostFragment
+        val graphInflater = navHostFragment.navController.navInflater
+        val navGraph = graphInflater.inflate(R.navigation.nav_invite_friends)
+        val navController = navHostFragment.navController
+
+        val bundle = Bundle()
+        bundle.putBoolean(ARG_STARTED_BY_HISTORY, startedByHistory)
+
+        val destination = if (userId.isEmpty()) {
+            R.id.inviteFriendFragment
         } else {
             val inviteIndex = intent.extras?.getInt(ARG_INVITE_INDEX, -1) ?: -1
-            supportFragmentManager.beginTransaction()
-                    .replace(R.id.container, InviteDetailsFragment.newInstance(userId, inviteIndex, startedByHistory))
-                    .commitNow()
+            bundle.putString(ARG_IDENTITY_ID, userId)
+            bundle.putInt(ARG_INVITE_INDEX, inviteIndex)
+            R.id.inviteDetailsFragment
         }
+        navGraph.setStartDestination(destination)
+        navController.setGraph(navGraph, bundle)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
