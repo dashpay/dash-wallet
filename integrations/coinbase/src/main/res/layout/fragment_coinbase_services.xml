@@ -289,7 +289,7 @@
         android:id="@+id/coinbase_services_group"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:constraint_referenced_ids="buy_dash_btn, convert_dash_btn, disconnect_layout"
+        app:constraint_referenced_ids="buy_dash_btn, convert_dash_btn, disconnect_layout,transfer_dash_btn"
         />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
