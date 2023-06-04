@@ -46,7 +46,7 @@ class CoinbaseActivity : BaseMenuActivity() {
 
         navController = setNavigationGraph()
 
-        broadcaster.closeCoinbasePortal.observe(this){
+        viewModel.coinbaseLogOutCallback.observe(this) {
             finish()
         }
 
@@ -62,7 +62,10 @@ class CoinbaseActivity : BaseMenuActivity() {
 
     override fun onLockScreenActivated() {
         if (navController.currentDestination?.id == R.id.enterTwoFaCodeFragment) {
-            navController.popBackStack(org.dash.wallet.integration.coinbase_integration.R.id.coinbaseServicesFragment, false)
+            navController.popBackStack(
+                org.dash.wallet.integration.coinbase_integration.R.id.coinbaseServicesFragment,
+                false
+            )
         }
     }
 }

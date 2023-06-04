@@ -36,6 +36,7 @@ class CoinbaseConfig @Inject constructor(private val context: Context) {
         private const val PREFS_KEY_LAST_COINBASE_BALANCE = "last_coinbase_balance"
         val LAST_BALANCE = longPreferencesKey("last_balance")
         val UPDATE_BASE_IDS = booleanPreferencesKey("should_update_base_ids")
+        val LOGOUT_COINBASE = booleanPreferencesKey("logout_coinbase")
     }
 
     private val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)

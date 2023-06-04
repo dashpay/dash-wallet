@@ -23,13 +23,16 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.service.CloseCoinbasePortalBroadcaster
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.BaseIdForFaitDataUIState
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.PaymentMethodsUiState
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
@@ -40,27 +43,46 @@ import javax.inject.Inject
 class CoinbaseActivityViewModel @Inject constructor(
     private val config: CoinbaseConfig,
     private val userPreference: Configuration,
-    private val coinBaseRepository: CoinBaseRepositoryInt
+    private val coinBaseRepository: CoinBaseRepositoryInt,
+    private val broadcaster: CloseCoinbasePortalBroadcaster
 ) : ViewModel() {
 
-    private val _paymentMethodsUiState = MutableLiveData<PaymentMethodsUiState>(PaymentMethodsUiState.LoadingState(true))
+    private val _paymentMethodsUiState = MutableLiveData<PaymentMethodsUiState>(
+        PaymentMethodsUiState.LoadingState(true)
+    )
     val paymentMethodsUiState: LiveData<PaymentMethodsUiState>
         get() = _paymentMethodsUiState
 
-    private val _baseIdForFaitModelCoinBase = MutableLiveData<BaseIdForFaitDataUIState>(BaseIdForFaitDataUIState.LoadingState(true))
+    private val _baseIdForFaitModelCoinBase = MutableLiveData<BaseIdForFaitDataUIState>(
+        BaseIdForFaitDataUIState.LoadingState(true)
+    )
     val baseIdForFaitModelCoinBase: LiveData<BaseIdForFaitDataUIState>
         get() = _baseIdForFaitModelCoinBase
+
+    val coinbaseLogOutCallback = SingleLiveEvent<Unit>()
+    init {
+        viewModelScope.launch {
+            config.observePreference(CoinbaseConfig.LOGOUT_COINBASE)
+                .filter { it == true }
+                .collect {
+                    config.clearAll()
+                    coinbaseLogOutCallback.call()
+                }
+        }
+    }
 
     fun getBaseIdForFaitModel() = viewModelScope.launch(Dispatchers.Main) {
         _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(true)
 
-        when (val response = userPreference.exchangeCurrencyCode?.let {
-            coinBaseRepository.getBaseIdForUSDModel(it)
-        }) {
+        when (
+            val response = userPreference.exchangeCurrencyCode?.let {
+                coinBaseRepository.getBaseIdForUSDModel(it)
+            }
+        ) {
             is ResponseResource.Success -> {
                 _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.LoadingState(false)
                 response.value?.data?.let {
-                    _baseIdForFaitModelCoinBase.value =  BaseIdForFaitDataUIState.Success(it)
+                    _baseIdForFaitModelCoinBase.value = BaseIdForFaitDataUIState.Success(it)
                 }
             }
 
@@ -107,7 +129,7 @@ class CoinbaseActivityViewModel @Inject constructor(
 
     private fun splitNameAndAccount(nameAccount: String?, type: PaymentMethodType): Pair<String, String> {
         nameAccount?.let {
-            val match = when(type) {
+            val match = when (type) {
                 PaymentMethodType.BankAccount, PaymentMethodType.Card, PaymentMethodType.PayPal -> {
                     "(\\d+)?\\s?[a-z]?\\*+".toRegex().find(nameAccount)
                 }

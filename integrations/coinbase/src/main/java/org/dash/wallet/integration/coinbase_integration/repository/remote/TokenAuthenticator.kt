@@ -52,11 +52,10 @@ class TokenAuthenticator @Inject constructor(
                 else -> {
                     userPreferences.setLastCoinBaseAccessToken(null)
                     userPreferences.setLastCoinBaseRefreshToken(null)
-                    config.clearAll()
+                    config.setPreference(CoinbaseConfig.LOGOUT_COINBASE, true)
                     closeCoinbasePortalBroadcaster.dispatchCall()
                     null
                 }
-
             }
         }
     }
