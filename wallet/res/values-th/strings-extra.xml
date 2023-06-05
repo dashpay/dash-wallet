@@ -399,7 +399,17 @@
     <string name="masternode_key_type_operator">ตัวดำเนินการกุญแจ</string>
     <string name="masternode_key_type_platform">คีย์ตัวดำเนินการ HPMN</string>
     <string name="masternode_key_type_total">%d คีย์</string>
+    <string name="masternode_key_type_used">%d ใช้แล้ว</string>
+    <string name="masternode_key_pair_index">Keypair %d</string>
     <string name="masternode_key_address">ที่อยู่</string>
+    <string name="masternode_key_id">Key Id</string>
+    <string name="masternode_key_public">Public Key</string>
+    <string name="masternode_key_public_legacy">Public Key (legacy)</string>
+    <string name="masternode_key_private_hex">Private Key</string>
+    <string name="masternode_key_private_wif">Private Key WIF</string>
+    <string name="masternode_key_used">IP: %s</string>
     <string name="masternode_key_ip_address_unknown">ซึ่งเป็นไม่เป็นที่รู้จัก</string>
+    <string name="masternode_key_not_used">ไม่ได้ใช้</string>
     <string name="masternode_key_revoked">ยกเลิก</string>
-    </resources>
+    <string name="masternode_key_private_public_base64">Private / Public Keys (base64)</string>
+</resources>

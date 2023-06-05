@@ -27,6 +27,8 @@
     <string name="dialog_confirm_total">المجموع</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_secure_now">النسخ الاحتياطية</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">مسح</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">إرسال</string>
@@ -214,6 +216,12 @@
     <string name="verify_continue">استمر</string>
     <string name="verify_backup_wallet">نسخ احتياطي للمحفظة</string>
     <string name="verify_show_recovery_phrase">اظهر جملة الاسترداد</string>
+    <string name="verify_info_title">نسخة احتياطية من عبارة الاسترداد الخاصة بك</string>
+    <string name="verify_info_subtitle">ستحتاج إلى عبارة الاسترداد هذه للوصول إلى أموالك في حالة فقد هذا الجهاز أو تلفه.</string>
+    <string name="verify_info_title_1">لا تقوم مجموعة داش كور بتخزين عبارة الاسترداد هذه</string>
+    <string name="verify_info_subtitle_1">يمكن لأي شخص لديه عبارة الاسترداد الخاصة بك الوصول إلى أموالك.</string>
+    <string name="verify_info_title_2">لن تتمكن من استعادة المحفظة بدون عبارة استرداد</string>
+    <string name="verify_info_subtitle_2">اكتبه في مكان آمن ولا تعرضه لأي شخص.</string>
     <string name="verify_seed_buttons_tip">يرجى النقر على الكلمات من عبارة الاسترداد بالترتيب الصحيح</string>
     <string name="verify_seed_success_title">تم التحقق بنجاح</string>
     <string name="verify_seed_success_message">محفظتك مؤمنة الآن. يمكنك استخدام عبارة الاسترداد في أي وقت لاسترداد حسابك على جهاز آخر.</string>
@@ -247,6 +255,10 @@
     <string name="transaction_details_moved_from">تم النقل من</string>
     <string name="transaction_details_moved_internally_to">تم النقل الداخلي إلى</string>
     <string name="transaction_failed_details">فشل الاجراء</string>
+    <string name="transaction_failed_resolve">يمكن حل هذا عن طريق</string>
+    <string name="transaction_failed_rescan">إعادة فحص بلوكشين</string>
+    <string name="transaction_failed_in_conflict">هذا ممكن إذا تم تثبيت المحفظة على جهازين.</string>
+
     <string name="authenticate_fingerprint_title">المصادقة</string>
     <string name="authenticate_fingerprint_message">تأكيد بصمة الإصبع للمتابعة</string>
     <string name="authenticate_pin_message">أدخل الرقم السري للمتابعة</string>
@@ -279,6 +291,7 @@
     <string name="about_review_and_rate">مراجعة وتقييم التطبيق</string>
     <string name="about_contact_support">اتصل بالدعم</string>
     <string name="about_fork_disclaimer">هذا هو تطبيق مفتوح المصدر متفرع من محفظة بيتكوين</string>
+    <string name="about_copyright">حقوق النشر © 2023 Dash Core Group</string>
     <string name="about_license">رخصة GNUالعمومية العامة الإصدار 3.0</string>
     <string name="about_version_name">محفظة داش %s</string>
     <string name="about_last_explore_device_sync">آخر استكشاف مزامنة الجهاز</string>
@@ -364,6 +377,7 @@
     <string name="yesterday">في الامس</string>
 
     <string name="syncing">يتم المزامنة</string>
+    <string name="syncing_balance">مزامنة الرصيد</string>
     <string name="transaction_count">%d المعاملات</string>
     <string name="all_transactions">الكل</string>
     <string name="received_transactions">تم الاستلام</string>
@@ -394,6 +408,23 @@
     <string name="reclassify_transactions_linked_accounts_message">بشكل افتراضي ، سيتم تمييز جميع المعاملات من وإلى حساباتك المرتبطة (التبادلات ، Staking ، إلخ) على أنها تحويلات.</string>
     <string name="reclassify_transactions_change_explanation">اختر أي معاملة من الصفحة الرئيسية وقم بتغيير الفئة في صفحة تفاصيل المعاملة.</string>
 
+    <string name="masternode_keys_title">مفاتيح ماسترنود</string>
+    <string name="masternode_key_type_owner">مفاتيح المالك</string>
+    <string name="masternode_key_type_voting">مفاتيح التصويت</string>
+    <string name="masternode_key_type_operator">مفاتيح المشغل</string>
+    <string name="masternode_key_type_platform">مفاتيح مشغل HPMN</string>
+    <string name="masternode_key_type_total">%dمفاتيح</string>
+    <string name="masternode_key_type_used">%dمستعملة</string>
+    <string name="masternode_key_pair_index">%dزوج المفتاح</string>
     <string name="masternode_key_address">عنوان</string>
+    <string name="masternode_key_id">معرف المفتاح</string>
+    <string name="masternode_key_public">المفتاح العام</string>
+    <string name="masternode_key_public_legacy">المفتاح العام (قديم)</string>
+    <string name="masternode_key_private_hex">المفتاح الخاص</string>
+    <string name="masternode_key_private_wif">مفتاح WIF الخاص</string>
+    <string name="masternode_key_used">IP: %s</string>
     <string name="masternode_key_ip_address_unknown">مجهول</string>
-    </resources>
+    <string name="masternode_key_not_used">غير مستعمل</string>
+    <string name="masternode_key_revoked">ملغاة</string>
+    <string name="masternode_key_private_public_base64">مفاتيح خاصة / عمومية (base64)</string>
+</resources>

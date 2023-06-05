@@ -402,7 +402,17 @@
     <string name="masternode_key_type_operator">Operator na mga Susi</string>
     <string name="masternode_key_type_platform">Mga Susi ng Operator ng HPMN</string>
     <string name="masternode_key_type_total">%d mga susi</string>
+    <string name="masternode_key_type_used">%d ginamit</string>
+    <string name="masternode_key_pair_index">Keypair %d</string>
     <string name="masternode_key_address">Address</string>
+    <string name="masternode_key_id">Key Id</string>
+    <string name="masternode_key_public">Pampublikong susi</string>
+    <string name="masternode_key_public_legacy">Pampublikong Susi (pamana)</string>
+    <string name="masternode_key_private_hex">Pribadong susi</string>
+    <string name="masternode_key_private_wif">Pribadong Susi WIF</string>
+    <string name="masternode_key_used">IP: %s</string>
     <string name="masternode_key_ip_address_unknown">Hindi kilala</string>
+    <string name="masternode_key_not_used">hindi ginagamit</string>
     <string name="masternode_key_revoked">Binawi</string>
-    </resources>
+    <string name="masternode_key_private_public_base64">Pribado / Pampublikong Susi (base64)</string>
+</resources>
