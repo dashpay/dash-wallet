@@ -25,7 +25,6 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.model.TokenResponse
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
-import org.dash.wallet.integration.coinbase_integration.service.CloseCoinbasePortalBroadcaster
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseTokenRefreshApi
 import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Inject
@@ -34,7 +33,6 @@ class TokenAuthenticator @Inject constructor(
     private val tokenApi: CoinBaseTokenRefreshApi,
     private val userPreferences: Configuration,
     private val config: CoinbaseConfig,
-    private val closeCoinbasePortalBroadcaster: CloseCoinbasePortalBroadcaster
 ) : Authenticator {
 
     override fun authenticate(route: Route?, response: Response): Request? {
@@ -53,7 +51,6 @@ class TokenAuthenticator @Inject constructor(
                     userPreferences.setLastCoinBaseAccessToken(null)
                     userPreferences.setLastCoinBaseRefreshToken(null)
                     config.setPreference(CoinbaseConfig.LOGOUT_COINBASE, true)
-                    closeCoinbasePortalBroadcaster.dispatchCall()
                     null
                 }
             }
