@@ -224,10 +224,8 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             // For initial load till coinbase exchange rate loaded
             if(enterAmountToTransferViewModel.coinbaseExchangeRate==null){
                 binding.amountReceived.text = getString(
-                    R.string.amount_to_transfer,
-                    formatDashValue,
-                    Constants.PREFIX_ALMOST_EQUAL_TO,
-                    "..."
+                    R.string.amount_to_transfer_dash,
+                    formatDashValue
                 )
             }
             enterAmountToTransferViewModel.coinbaseExchangeRate?.let {

@@ -119,6 +119,6 @@
     <string name="transfer_dash_failed_msg"> There was a problem transferring it to Dash Wallet on this device.</string>
     <string name="insufficient_money_to_transfer">The amount of coins in the wallet is too small to transfer.</string>
     <string name="amount_to_transfer">You will receive %s %s %s</string>
-
+    <string name="amount_to_transfer_dash">You will receive %s</string>
     <string name="coinbase_website" translatable="false">https://www.coinbase.com/</string>
 </resources>
