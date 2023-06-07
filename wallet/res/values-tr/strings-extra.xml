@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">PİN Doğrulanıyor</string>
     <string name="set_pin_message">Bu PİN uygulamanın açılması için her zaman gerekecektir.</string>
     <string name="set_pin_confirm_pin_incorrect">Hatalı PIN</string>
-
-    <string name="home_available_balance">Mevcut bakiye</string>
-    <string name="home_balance_hidden">Bakiye gizlendi</string>
-    <string name="home_balance_show_hint">Bakiyeyi görmek için tıkla</string>
+    
     <string name="home_balance_hide_hint">Bakiyeyi gizlemek için tıkla</string>
 
     <string name="dialog_confirm_confirm">Onayla</string>
@@ -30,13 +27,13 @@
     <string name="dialog_confirm_total">Toplam</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Şimdi Cüzdanını Korumaya Al</string>
+    <string name="shortcut_secure_now">Yedekle</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Ödemek için Tara</string>
+    <string name="shortcut_scan_to_pay">Tara</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Adrese Gönder</string>
+    <string name="shortcut_pay_to_address">Gönder</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Dash Al / Sat</string>
+    <string name="shortcut_buy_sell">Al &amp; Sat</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Al</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -207,17 +204,12 @@
     <string name="verify_continue">Devam</string>
     <string name="verify_backup_wallet">Cüzdanı Yedekle</string>
     <string name="verify_show_recovery_phrase">Kurtarma Sözcük Grubunu Göster</string>
-    <string name="verify_secure_now">Şimdi Cüzdanını Korumaya Al</string>
-    <string name="verify_it_is_important">Bu önemli</string>
-    <string name="verify_it_is_important_subtitle">Size cüzdanınızın gizli anahtarını göstermek üzereyiz.</string>
-    <string name="verify_info_text_1">Bu kurtarma sözcük grubu cüzdanınızdaki paranıza erişmenizi sağlar.</string>
-    <string name="verify_info_text_2">Bu kurtarma sözcük grubunu SAKLAMIYORUZ.</string>
-    <string name="verify_info_text_3">Bu cihazın kaybolması / hasar görmesi, Dash cüzdanının bu cihazdan yanlışlıkla silinmesi durumunda paranıza erişmek için bu kurtarma ifadesine ihtiyacınız olacaktır.</string>
-    <string name="verify_skip">Atla</string>
-    <string name="verify_secure_now_btn">Şimdi Korumaya Al</string>
-    <string name="verify_secure_now_message">Bu cihazı kaybederseniz, paranızı kaybedersiniz. Cüzdanınızı başka bir cihaza geri yükleyebilmeniz için kurtarma sözcük grubunuzu sahip olun.</string>
-    <string name="verify_seed_title">Lütfen bir yere yazın</string>
-    <string name="verify_seed_write_down_confirmation">Not aldım</string>
+    <string name="verify_info_title">Kurtarma sözcük grubunu yedekle</string>
+    <string name="verify_info_subtitle">Bu cihaz kaybolursa, hasar görürse veya Dash Cüzdan\'ı bu cihazdan kaldırılırsa paranıza erişmek için bu kurtarma ifadesine ihtiyacınız olacaktır.</string>
+    <string name="verify_info_title_1">Dash Core Group bu kurtarma sözcük grubunu SAKLAMAZ</string>
+    <string name="verify_info_subtitle_1">Kurtarma sözcük grubunuza sahip olan herkes fonlarınıza erişebilir.</string>
+    <string name="verify_info_title_2">Bir kurtarma sözcük grubu olmadan cüzdanı geri yükleyemezsiniz</string>
+    <string name="verify_info_subtitle_2">Güvenli bir yere yazın ve kimseye göstermeyin.</string>
     <string name="verify_seed_buttons_tip">Lütfen kurtarma sözcük grubunuzu doğru şekilde sıralayın</string>
     <string name="verify_seed_success_title">Başarıyla Doğrulandı</string>
     <string name="verify_seed_success_message">Cüzdanınız artık güvende. Hesabınızı başka bir cihaza aktarmak için kurtarma sözcük grubunuzu istediğiniz zaman kullanabilirsiniz.</string>
@@ -251,6 +243,9 @@
     <string name="transaction_details_moved_from">Taşındı</string>
     <string name="transaction_details_moved_internally_to">Dahili olarak taşındı</string>
     <string name="transaction_failed_details">İşlem başarısız</string>
+    <string name="transaction_failed_resolve">Bu, şu şekilde çözülebilir:</string>
+    <string name="transaction_failed_rescan">blok zincirini yeniden tarıyor</string>
+    <string name="transaction_failed_in_conflict">Bu cüzdan iki cihazda kuruluysa mümkündür.</string>
 
     <string name="authenticate_fingerprint_title">Doğrulama</string>
     <string name="authenticate_fingerprint_message">Devam etmek için parmak iziyle onaylayın</string>
@@ -284,7 +279,7 @@
     <string name="about_review_and_rate">Uygulamamızı değerlendirip puanlayın</string>
     <string name="about_contact_support">Destekle İletişime Geçin</string>
     <string name="about_fork_disclaimer">Bu uygulama açık kaynak kodlu bir Bitcoin çatallanmasıdır</string>
-    <string name="about_copyright">Telif Hakkı © 2023 Dash Core</string>
+    <string name="about_copyright">Telif Hakkı © 2023 Dash Core Group</string>
     <string name="about_license">GNU Genel Kamu Lisansı v3.0</string>
     <string name="about_version_name">Dash Cüzdanı %s</string>
     <string name="about_last_explore_device_sync">Son Explore cihaz senkronizasyonu</string>
@@ -400,4 +395,24 @@
     <string name="reclassify_transactions_linked_accounts_title">Bağlı hesaplar</string>
     <string name="reclassify_transactions_linked_accounts_message">Varsayılan olarak, bağlı hesaplarınıza yapılan veya bu hesaplardan yapılan tüm işlemler (borsalar, vb.) transfer olarak işaretlenecektir.</string>
     <string name="reclassify_transactions_change_explanation">Ana sayfadan herhangi bir işlemi seçin ve işlem ayrıntıları sayfasında kategoriyi değiştirin.</string>
+
+    <string name="masternode_keys_title">Ana düğüm Anahtarları</string>
+    <string name="masternode_key_type_owner">Sahip Anahtarları</string>
+    <string name="masternode_key_type_voting">Oy Verme Anahtarları</string>
+    <string name="masternode_key_type_operator">Operatör Anahtarları</string>
+    <string name="masternode_key_type_platform">HPMN Operatör Anahtarları</string>
+    <string name="masternode_key_type_total">%d anahtarları</string>
+    <string name="masternode_key_type_used">%d kullanıldı</string>
+    <string name="masternode_key_pair_index">Tuş Çifti %d</string>
+    <string name="masternode_key_address">Adres</string>
+    <string name="masternode_key_id">Anahtar Kimliği</string>
+    <string name="masternode_key_public">Genel Anahtar</string>
+    <string name="masternode_key_public_legacy">Genel Anahtar (miras)</string>
+    <string name="masternode_key_private_hex">Özel Anahtar</string>
+    <string name="masternode_key_private_wif">Özel Anahtar WIF</string>
+    <string name="masternode_key_used">IP: %s</string>
+    <string name="masternode_key_ip_address_unknown">Bilinmeyen</string>
+    <string name="masternode_key_not_used">Kullanılmamış</string>
+    <string name="masternode_key_revoked">İptal edildi</string>
+    <string name="masternode_key_private_public_base64">Özel / Genel Anahtarlar (base64)</string>
 </resources>

@@ -29,7 +29,7 @@
     <string name="crowdnode_link">Bestehendes CrowdNode-Konto verbinden</string>
     <string name="required_passphrase_backup">Du musst die Passphrase in deiner Dash Wallet sichern</string>
     <string name="backup_passphrase">Passphrase sichern</string>
-    <string name="required_dash_amount">Du benötigst mindestens %s in deiner Dash Wallet</string>
+    <string name="required_dash_amount">Du benötigst mindestens %s in deiner Dash Wallet.</string>
     <string name="crowdnode_new_account_warning_1">Crowdnode nutzt die Adresse als deine Konto ID. Wenn du die zugehörige Passphrase zu der Adresse verlierst, wirst du auch keinen Zugriff auf dein Guthaben und dein Crowdnode Konto mehr besitzen.</string>
     <string name="crowdnode_new_account_warning_2">Es werden nun kleine Dash Beträge nach und von Crowdnode gesendet um dich als Besitzer deiner Adresse zu verifizieren.</string>
     <string name="crowdnode_link_account_description">Alle Transfers von und zu Crowdnode auf diesem Gerät werden über die unten stehende Dash Adresse abgewickelt.</string>
@@ -116,12 +116,12 @@
     <string name="crowdnode_staking_toast_address_copied">CrowdNode Adresse zu in die Zwischenablage kopiert</string>
     <string name="crowdnode_verify_api_address">API Dash Adresse verifizieren</string>
     <string name="crowdnode_how_to_verify">Wie du deine API Dash Adresse bestätigst</string>
-    <string name="crowdnode_how_to_verify_description1">Sende %s Dash von deiner primären Dash Adresse, die du derzeit für dein CrowdNode Konto nutzt</string>
+    <string name="crowdnode_how_to_verify_description1">Sende %s Dash von deiner primären Dash Adresse, die du derzeit für dein CrowdNode Konto nutzt.</string>
     <string name="crowdnode_how_to_verify_description2">zu der vorgesehenen Dash Adresse für dein CrowdNode Konto in der Dash Wallet dieses Gerätes</string>
     <string name="crowdnode_how_to_verify_description3">Wir werden diese Transaktion automatisch erkennen und den gleichen Betrag deinem CrowdNode Konto gutschreiben. Danach wirst du Einzahlungen und Auszahlung in deine Dash Wallet auf diesem Gerät vornehmen können.</string>
     <string name="button_show_qr">QR Code anzeigen</string>
     <string name="scan_qr">QR Code scannen</string>
-    <string name="qr_contains_request">Dieser QR Code enthält die Zahlungsaufforderung für %s Dash</string>
+    <string name="qr_contains_request">Dieser QR Code enthält die Zahlungsaufforderung für %s Dash.</string>
     <string name="verification_required">Verifizierung notwendig</string>
     <string name="validating_address">Adresse validieren...</string>
     <string name="crowdnode_address_validated">Deine CrowdNode Adresse wurde validiert, aber Verifizierung ist notwendig.</string>
