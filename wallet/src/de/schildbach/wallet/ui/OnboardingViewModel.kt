@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui
 
 import android.app.Application
 import android.content.Intent
-import androidx.core.os.bundleOf
 import androidx.lifecycle.AndroidViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.InvitationLinkData

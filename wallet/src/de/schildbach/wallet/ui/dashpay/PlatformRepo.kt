@@ -44,10 +44,13 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.bitcoinj.core.*
+import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.quorums.InstantSendLock
+import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -72,8 +75,6 @@ import org.dashj.platform.sdk.platform.multicall.MulticallQuery
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeoutException
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
@@ -110,6 +111,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     val hasIdentity: Boolean
         get() = this::blockchainIdentity.isInitialized
 
+    var authenticationGroupExtension: AuthenticationGroupExtension? = null
+        private set
+
     private val entryPoint = fromApplication(walletApplication, PlatformRepoEntryPoint::class.java)
     private val appDatabase = entryPoint.provideAppDatabase()
     private val blockchainIdentityDataDao = appDatabase.blockchainIdentityDataDao()
@@ -124,6 +128,18 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val analytics: AnalyticsService by lazy {
         walletApplication.analyticsService
     }
+
+    // TODO: do we need only Platform types in here?
+    private val keyChainTypes = EnumSet.of(
+        AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
+        AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
+        AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
+        AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING,
+        AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
+        AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
+        AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
+        AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER
+    )
 
     init {
         backgroundThread.start()
@@ -535,9 +551,28 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun addWalletAuthenticationKeysAsync(seed: DeterministicSeed, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
-            val wallet = walletApplication.wallet
+            val wallet = walletApplication.wallet!!
             // this will initialize any missing key chains
-            wallet!!.initializeAuthenticationKeyChains(seed, keyParameter)
+            val authenticationGroupExtension = AuthenticationGroupExtension(wallet)
+
+            if (keyParameter != null) {
+                authenticationGroupExtension.addEncryptedKeyChains(
+                    wallet.params,
+                    seed,
+                    keyParameter,
+                    keyChainTypes
+                )
+            } else {
+                // TODO: do we need this branch? addWalletAuthenticationKeysAsync is only called with non-null keyParameter
+                authenticationGroupExtension.addKeyChains(
+                    wallet.params,
+                    seed,
+                    keyChainTypes
+                )
+            }
+
+            wallet.addOrGetExistingExtension(authenticationGroupExtension)
+            this@PlatformRepo.authenticationGroupExtension = authenticationGroupExtension
         }
     }
 
@@ -949,9 +984,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    fun getBlockchainIdentityKey(index: Int, keyParameter: KeyParameter?): ECKey? {
+    fun getBlockchainIdentityKey(index: Int, keyParameter: KeyParameter?): IDeterministicKey? {
+        val authenticationChain = authenticationGroupExtension?.getKeyChain(
+            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY
+        ) ?: return null
 
-        val authenticationChain = walletApplication.wallet!!.blockchainIdentityKeyChain
         // decrypt keychain
         val decryptedChain = if (walletApplication.wallet!!.isEncrypted) {
             authenticationChain.toDecrypted(keyParameter)
@@ -965,11 +1002,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
-        if (walletApplication.wallet!!.blockchainIdentityKeyChain == null) {
-            return null
-        }
         val encryptionKey = getWalletEncryptionKey()
-        val firstIdentityKey = getBlockchainIdentityKey(0, encryptionKey)!!
+        val firstIdentityKey = getBlockchainIdentityKey(0, encryptionKey) ?: return null
+
         return try {
             val identityBytes = platform.client.getIdentityByFirstPublicKey(firstIdentityKey.pubKeyHash, true)
             if (identityBytes != null && identityBytes.isNotEmpty()) {
@@ -1162,17 +1197,25 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun handleSentCreditFundingTransaction(cftx: CreditFundingTransaction, blockTimestamp: Long) {
-        if (this::blockchainIdentity.isInitialized) {
+        val extension = authenticationGroupExtension
+
+        if (this::blockchainIdentity.isInitialized && extension != null) {
             GlobalScope.launch(Dispatchers.IO) {
-                //Context.getOrCreate(platform.params)
-                val isInvite = walletApplication.wallet!!.invitationFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
-                val isTopup = walletApplication.wallet!!.blockchainIdentityTopupKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
-                val isIdentity = walletApplication.wallet!!.blockchainIdentityFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
+                // Context.getOrCreate(platform.params)
+                val isInvite = extension.invitationFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
+                val isTopup = extension.identityTopupKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
+                val isIdentity = extension.identityFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
                 val identityId = cftx.creditBurnIdentityIdentifier.toStringBase58()
                 if (isInvite && !isTopup && !isIdentity && invitationsDao.loadByUserId(identityId) == null) {
                     // this is not in our database
-                    val invite = Invitation(identityId, cftx.txId, blockTimestamp,
-                            "", blockTimestamp, 0)
+                    val invite = Invitation(
+                        identityId,
+                        cftx.txId,
+                        blockTimestamp,
+                        "",
+                        blockTimestamp,
+                        0
+                    )
 
                     // profile information here
                     try {

@@ -372,12 +372,22 @@ public class WalletApplication extends MultiDexApplication
                     wallet.getParams(),
                     wallet.getKeyChainSeed(),
                     EnumSet.of(
+                            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
+                            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
+                            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
+                            AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING,
                             AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
                             AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
                             AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
                             AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR
                     )
             );
+
+            // TODO: do we need these?
+            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY);
+            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING);
+            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP);
+            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING);
 
             authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
             authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
@@ -1074,12 +1084,6 @@ public class WalletApplication extends MultiDexApplication
         }
 
         return new WalletObserver(wallet).observeWalletChanged();
-    }
-
-    @Nullable
-    @Override
-    public Transaction getTransaction(@NonNull Sha256Hash hash) {
-        return wallet.getTransaction(hash);
     }
 
     @NonNull

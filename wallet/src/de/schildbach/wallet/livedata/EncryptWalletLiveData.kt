@@ -25,8 +25,11 @@ import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.SecurityGuard
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
+import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.slf4j.LoggerFactory
+import java.util.EnumSet
 
 class EncryptWalletLiveData(
     private val walletApplication: WalletApplication,
@@ -90,7 +93,25 @@ class EncryptWalletLiveData(
                 val newKey = keyCrypter.deriveKey(password)
                 wallet.encrypt(keyCrypter, newKey)
                 // initialize the authentication key chains to allow recovery of the username
-                wallet.initializeAuthenticationKeyChains(decryptedSeed, newKey);
+
+                // TODO: is there a simpler way to do this?
+                val authenticationGroupExtension = AuthenticationGroupExtension(wallet)
+                authenticationGroupExtension.addEncryptedKeyChains(
+                    wallet.params,
+                    decryptedSeed,
+                    newKey,
+                    EnumSet.of(
+                        AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
+                        AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
+                        AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
+                        AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING,
+                        AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
+                        AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
+                        AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
+                        AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER
+                    )
+                )
+                wallet.addOrGetExistingExtension(authenticationGroupExtension)
 
                 securityGuard.savePassword(password)
 
