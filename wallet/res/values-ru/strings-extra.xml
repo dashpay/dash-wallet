@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">Подтверждение PIN-кода</string>
     <string name="set_pin_message">Этот PIN нужно будет вводить для разблокировки приложения при каждом его использовании.</string>
     <string name="set_pin_confirm_pin_incorrect">Неверный PIN</string>
-
-    <string name="home_available_balance">Доступный баланс</string>
-    <string name="home_balance_hidden">Баланс скрыт</string>
-    <string name="home_balance_show_hint">Нажмите, чтобы показать баланс</string>
+    
     <string name="home_balance_hide_hint">Нажмите, чтобы скрыть баланс</string>
 
     <string name="dialog_confirm_confirm">Подтвердить</string>
@@ -30,13 +27,13 @@
     <string name="dialog_confirm_total">Итого</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Сохраните кошелёк</string>
+    <string name="shortcut_secure_now">Сохранить</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Оплатить по QR-коду</string>
+    <string name="shortcut_scan_to_pay">Скан.</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Отправить на адрес</string>
+    <string name="shortcut_pay_to_address">Отправить</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Купить / Продать</string>
+    <string name="shortcut_buy_sell">Купить и Продать</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Получить</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -213,17 +210,12 @@
     <string name="verify_continue">Продолжить</string>
     <string name="verify_backup_wallet">Резервное копирование кошелька</string>
     <string name="verify_show_recovery_phrase">Показать фразу восстановления</string>
-    <string name="verify_secure_now">Сохранить кошелёк сейчас</string>
-    <string name="verify_it_is_important">Это важно</string>
-    <string name="verify_it_is_important_subtitle">Сейчас мы покажем секретный ключ к Вашему кошельку.</string>
-    <string name="verify_info_text_1">Эта фраза восстановления - Ваш доступ к средствам на этом кошельке.</string>
-    <string name="verify_info_text_2">Мы НЕ ХРАНИМ эту фразу восстановления.</string>
-    <string name="verify_info_text_3">Вам понадобится эта фраза восстановления для доступа к Вашим средствам, если это устройство будет утеряно, повреждено или приложение Dash Wallet будет случайно удалено.</string>
-    <string name="verify_skip">Пропустить</string>
-    <string name="verify_secure_now_btn">Сохранить кошелек</string>
-    <string name="verify_secure_now_message">Если Вы потеряете это устройство, то Вы потеряете доступ к Вашим средствам. Сохраните Вашу фразу восстановления, чтобы иметь возможность восстановить кошелек на другом устройстве.</string>
-    <string name="verify_seed_title">Пожалуйста, запишите её</string>
-    <string name="verify_seed_write_down_confirmation">Я записал</string>
+    <string name="verify_info_title">Сохранить фразу восстановления</string>
+    <string name="verify_info_subtitle">Вам понадобится эта фраза восстановления для доступа к Вашим средствам, если это устройство будет утеряно, повреждено или приложение Dash Wallet будет случайно удалено.</string>
+    <string name="verify_info_title_1">Dash Core Group НЕ хранит эту фразу восстановления</string>
+    <string name="verify_info_subtitle_1">Любой, у кого есть ваша фраза восстановления, может получить доступ к вашим средствам.</string>
+    <string name="verify_info_title_2">Вы НЕ сможете восстановить кошелёк без фразы восстановления</string>
+    <string name="verify_info_subtitle_2">Запишите её в надёжном месте и никому не показывайте.</string>
     <string name="verify_seed_buttons_tip">Пожалуйста, нажмите на слова из Вашей фразы восстановления в правильном порядке</string>
     <string name="verify_seed_success_title">Успешно подтверждено</string>
     <string name="verify_seed_success_message">Сейчас Ваш кошелёк защищён. Вы можете использовать фразу восстановления в любое время, чтобы получить доступ к Вашему аккаунту на другом устройстве.</string>
@@ -257,6 +249,9 @@
     <string name="transaction_details_moved_from">Перемещено из</string>
     <string name="transaction_details_moved_internally_to">Перемещено в </string>
     <string name="transaction_failed_details">Ошибка транзакции</string>
+    <string name="transaction_failed_resolve">Это может быть решено путём</string>
+    <string name="transaction_failed_rescan">повторной синхронизации блокчейна</string>
+    <string name="transaction_failed_in_conflict">Это возможно, если кошелёк установлен на два устройства.</string>
 
     <string name="authenticate_fingerprint_title">Аутентифицировать</string>
     <string name="authenticate_fingerprint_message">Подтвердите отпечаток пальца, чтобы продолжить</string>
@@ -290,7 +285,7 @@
     <string name="about_review_and_rate">Напишите отзыв и оцените приложение</string>
     <string name="about_contact_support">Связаться с поддержкой</string>
     <string name="about_fork_disclaimer">Это приложение с открытым кодом, основанное на Bitcoin Wallet</string>
-    <string name="about_copyright">Все права защищены © 2023 Dash Core</string>
+    <string name="about_copyright">Авторские права © 2023 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
     <string name="about_last_explore_device_sync">Синхронизация с последним устройством с Explore</string>
@@ -406,4 +401,24 @@
     <string name="reclassify_transactions_linked_accounts_title">Привязанные аккаунты</string>
     <string name="reclassify_transactions_linked_accounts_message">по умолчанию все транзакции с привязанных аккаунтов или на них (биржи, стейкинг и т.д.) будут отмечены как переводы.</string>
     <string name="reclassify_transactions_change_explanation">Выберите любую транзакцию на домашней странице и измените категорию на странице сведений о транзакции.</string>
+
+    <string name="masternode_keys_title">Masternode ключи</string>
+    <string name="masternode_key_type_owner">Ключи владельца</string>
+    <string name="masternode_key_type_voting">Ключи голосования</string>
+    <string name="masternode_key_type_operator">Ключи оператора</string>
+    <string name="masternode_key_type_platform">HPMN Ключи оператора</string>
+    <string name="masternode_key_type_total">ключи</string>
+    <string name="masternode_key_type_used">%d использовано</string>
+    <string name="masternode_key_pair_index">Ключи %d</string>
+    <string name="masternode_key_address">Адрес</string>
+    <string name="masternode_key_id">Ключ Id</string>
+    <string name="masternode_key_public">Публичный ключ</string>
+    <string name="masternode_key_public_legacy">Публичный ключ (legacy)</string>
+    <string name="masternode_key_private_hex">Приватный ключ</string>
+    <string name="masternode_key_private_wif">Приватный ключ WIF</string>
+    <string name="masternode_key_used">IP: %s</string>
+    <string name="masternode_key_ip_address_unknown">Неизвестный</string>
+    <string name="masternode_key_not_used">не использован</string>
+    <string name="masternode_key_revoked">Аннулирован</string>
+    <string name="masternode_key_private_public_base64">Приватные / Публичные ключи (base64)</string>
 </resources>

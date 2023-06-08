@@ -116,6 +116,12 @@ jobs:
         APP_DISTRIBUTION_KEY_JSON: ${{secrets.APP_DISTRIBUTION_KEY_JSON}}
         GC_STORAGE_SERVICE_ACCOUNT_KEY_JSON: ${{secrets.GC_STORAGE_SERVICE_ACCOUNT_KEY_JSON}}
 
+    - name: Extract Secrets
+      run: |
+        echo "$GOOGLE_SERVICES_JSON" > wallet/google-services.json
+      env:
+        GOOGLE_SERVICES_JSON : ${{secrets.GOOGLE_SERVICES_JSON}}
+
     - name: Copy explore.db from GC Storage
       run: |
         gem install google-cloud-storage

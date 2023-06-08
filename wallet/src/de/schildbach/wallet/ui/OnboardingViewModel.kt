@@ -60,6 +60,9 @@ class OnboardingViewModel @Inject constructor(
     fun createNewWallet(onboardingInvite: InvitationLinkData?) {
         walletApplication.initEnvironmentIfNeeded()
         val wallet = Wallet(Constants.NETWORK_PARAMETERS)
+        for (extension in walletApplication.getWalletExtensions()) {
+            wallet.addExtension(extension)
+        }
         log.info("successfully created new wallet")
         walletApplication.setWallet(wallet)
         walletApplication.configuration.armBackupSeedReminder()

@@ -82,6 +82,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
 
 
     private AppCompatActivity activity;
+    WalletApplication application;
     private Wallet wallet;
 
     @Override
@@ -89,7 +90,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
         super.onAttach(activity);
 
         this.activity = (AppCompatActivity) activity;
-        WalletApplication application = (WalletApplication) activity.getApplication();
+        application = (WalletApplication) activity.getApplication();
         this.wallet = application.getWallet();
     }
 
@@ -193,7 +194,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
         final MainActivity activity = (MainActivity) this.activity;
         try {
             MnemonicCodeExt.getInstance().check(activity, words);
-            activity.restoreWallet(WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS));
+            activity.restoreWallet(WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS, application.getWalletExtensions()));
 
             log.info("successfully restored wallet from seed: {}", words.size());
         } catch (final IOException | MnemonicException x) {

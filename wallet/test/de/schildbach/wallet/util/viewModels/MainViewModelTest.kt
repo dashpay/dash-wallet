@@ -33,9 +33,9 @@ import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.transactions.TxFilterType
 import androidx.datastore.preferences.core.Preferences
 import de.schildbach.wallet.WalletUIConfig
-import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals

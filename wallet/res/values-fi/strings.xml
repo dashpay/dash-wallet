@@ -3,7 +3,6 @@
 
     <string name="toast_wallet_reset">Lompakkosi nollattiin!\nPalautuminen kestää hetken.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Käytä omalla vastuullasi. Lue &lt;u&gt;turvallisuusohjeet&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Sinun on &lt;u&gt;varmuuskopioitava lompakkosi&lt;/u&gt;!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d tuntia takana</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d päivää takana</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d viikkoa takana</string>
@@ -16,28 +15,18 @@
     <string name="wallet_address_dialog_fragment_hint">Suojellaksesi yksityisyyttäsi, osoitteesi vaihtuu aina kerran kun se vastaanottaa maksun.</string>
     <string name="wallet_balance_fragment_too_much">Tämä määrä on melko suuri kannettavaksi taskussasi. Siirrä se johonkin turvallisempaan paikkaan.</string>
     <string name="wallet_balance_fragment_replaying">Saldo ei ole saatavilla uusinnan aikaan.</string>
-    <string name="exchange_rates_activity_title">Vaihtokurssit:</string>
     <string name="exchange_rates_fragment_empty_text">Kurssien arvoja ei saatu ladattua.</string>
     <string name="exchange_rates_fragment_empty_search">Rahanvaihtokurssia ei löytynyt.</string>
     <string name="exchange_rates_fragment_default">(oletus)</string>
-    <string name="exchange_rates_fragment_rate">kurssi</string>
-    <string name="exchange_rates_fragment_balance">saldo</string>
     <string name="exchange_rates_fragment_source">Hinta paikasta %s</string>
     <string name="exchange_rates_options_search">Etsi rahanvaihtokurssi</string>
     <string name="exchange_rates_context_set_as_default_title">Aseta oletukseksi</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Dasheja ei ole vielä vastaanotettu.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Dasheja ei ole vielä lähetetty.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Kuinka saada Dasheja?\nVaihda perinteiseen rahaan,\nmyy tuotteita tai palveluita\ntai tienaa työskentelemällä.</string>
-    <string name="wallet_transactions_row_warning_backup">Onnittelut, olet vastaanottanut ensimmäisen rahansiirtosi! Onko sinulla jo &lt;u&gt;varmuuskopio lompakostasi&lt;/u&gt; suojataksesi sitä katoamiselta?</string>
     <string name="wallet_transactions_fragment_coinbase">louhittu</string>
     <string name="wallet_transactions_fragment_internal">sisäinen</string>
-    <string name="wallet_transactions_options_filter">Suodata</string>
     <string name="wallet_transactions_options_filter_all">Kaikki maksut</string>
     <string name="wallet_transactions_options_filter_received">Vastaanotetut maksut</string>
     <string name="wallet_transactions_options_filter_sent">Lähetetyt maksut</string>
     <string name="wallet_options_safety_menu">Turvallisuus</string>
-    <string name="wallet_options_encrypt_keys_set">Aseta PIN maksamista varten</string>
-    <string name="wallet_options_encrypt_keys_change">Vaihda maksamiseen käytettävä PIN</string>
     <string name="wallet_options_safety">Turvallisuustiedot</string>
     <string name="wallet_low_storage_dialog_title">Sisäinen tallennustila on vähissä!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet käyttää sisäistä tallennustilaa muistaakseen varainsiirrot ja lohkot. Jos se ei saa tarpeeksi tallennustilaa, se lakkaa toimimasta ja Dashisi ovat silloin vaarassa!\n\nHaluatko avata ohjelmien hallinan poistaaksesi tarpeettomia ohjelmia?</string>
@@ -54,15 +43,11 @@
     <string name="send_coins_fragment_request_payment_request_failed_title">Allekirjoituksen nouto epäonnistui</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Väärä allekirjoitus!</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">tuntematon</string>
-    <string name="send_coins_fragment_receiving_address_label">Vastaanottaja</string>
     <string name="send_coins_fragment_receiving_address_hint">kirjoita osoite tai nimi</string>
     <string name="send_coins_fragment_receiving_address_error">Epäkelpo Dash-osoite!</string>
     <string name="send_coins_fragment_receiving_address_own">Olet aikeissa maksaa itsellesi!</string>
     <string name="send_coins_fragment_receiving_address_complex">monimutkainen\nosoite</string>
     <string name="send_coins_fragment_pending">(%s odottaa vahvistusta)</string>
-    <string name="send_coins_fragment_amount_label">Maksettava määrä</string>
-    <string name="send_coins_error_dusty_send">Määrä lähettämistä varten on liian pieni.</string>
-    <string name="send_coins_error_insufficient_money">Käytettäviä varoja ei ole tarpeeksi. Sinulta puuttuu %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Pieniä maksuja lompakossasi ei yhteenlasketa lähetyskelpoiseen arvoon.</string>
     <string name="send_coins_fragment_direct_payment_enable">Lähetä maksu suoraan saajalle.</string>
     <string name="send_coins_fragment_direct_payment_ack">Maksu lähetettiin onnistuneesti suoraan.</string>
@@ -73,7 +58,6 @@
     <string name="send_coins_fragment_button_back">Takaisin</string>
     <string name="send_coins_fragment_insufficient_money_title">Käytettäviä varoja ei ole tarpeeksi</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Sinulta puuttuu %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">Haluatko maksaa kaikkia varoja käyttäen?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Lompakon tyhjennys epäonnistui</string>
     <string name="send_coins_fragment_state_decrypting">Puretaan salausta…</string>
     <string name="send_coins_preparation_msg">Allekirjoitetaan…</string>
@@ -85,17 +69,10 @@
     <string name="send_coins_options_fee_category_economic">Taloudellinen</string>
     <string name="send_coins_options_fee_category_priority">Prioriteetti</string>
     <string name="send_coins_options_empty">Tyhjä lompakko</string>
-    <string name="raise_fee_dialog_title">Korota verkon maksukulua</string>
-    <string name="raise_fee_dialog_state_decrypting">Puretaan salausta…</string>
-    <string name="raise_fee_dialog_state_done">Valmis.</string>
-    <string name="raise_fee_dialog_button_raise">Korota</string>
-    <string name="sweep_wallet_activity_title">Pyyhkäise paperinen lompakko</string>
     <string name="sweep_wallet_fragment_intro">Olet pyykäisemässä paperista lompakkoa tai kuponkia. Tämä siirtää kaikki varat paperisesta lompakosta omaan lompakkoosi tässä laitteessa. Kun rahansiirto on vahvistettu, paperinen versio on mitätön eikä sitä pidä käyttää uudelleen turvallisuussyistä.</string>
     <string name="sweep_wallet_fragment_hint">Paperisia lompakoita käytetään yleensä kylmää varastoa varten. Jotkut automaatit tulostavat suoraan paperille eivätkä lähetä varoja suoraan mobiililaitteeseesi. Ihmiset joskus käyttävät esiladattuja paperilompakoita kiertääkseen rahan arvoa (ei suositeltu).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Aloita skannaamalla yksityisavain paperisesta lompakosta. Käytä kameran laukaisinta.</string>
     <string name="sweep_wallet_fragment_encrypted">Tämä yksityinen avain on salasanasuojattu.</string>
-    <string name="sweep_wallet_fragment_password">salasana</string>
-    <string name="sweep_wallet_fragment_bad_password">huono salasana!</string>
     <string name="sweep_wallet_fragment_balance">Pyyhkäistävä varojen määrä</string>
     <string name="sweep_wallet_fragment_button_decrypt">Pura salaus</string>
     <string name="sweep_wallet_fragment_button_sweep">Pyyhkäise</string>
@@ -116,7 +93,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Anna lähettäjän skannata tämä koodi.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Tai yhdistä NFC-laitteeseen.</string>
     <string name="request_coins_clipboard_msg">Dash-pyyntö kopioitu leikepöydälle</string>
-    <string name="request_coins_share_dialog_title">Jaa Dash-pyyntö</string>
     <string name="request_coins_no_local_app_msg">Ei löydetty toista Dash-asiakasohjelmaa</string>
     <string name="request_coins_options_local_app_title">Pyyntö paikalliselta sovellukselta</string>
     <string name="address_book_activity_title">Osoitekirja</string>
@@ -175,7 +151,6 @@
     <string name="backup_wallet_dialog_message">Varmuuskopiosi salataan valitulla salasanalla ja kirjoitetaan erilliselle tallennusvälineelle.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Lompakkosi käyttö on suojattu PIN-koodilla. Varmista, että muistat PIN-koodisi varmuuskopion salasanan ohella!</string>
     <string name="export_keys_dialog_button_export">Varmuuskopioi</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Lompakkosi on varmuuskopioitu <tt>%s</tt></p><p>Jos laitteessasi on muistikortti, varmuuskopiosi <i>pitäisi</i> olla kyseisellä kortilla. Poista kortti laitteesta ja pidä sitä turvallisessa paikassa. Jos kortti <i>ei ole</i> irroitettava, sinun tulee arkistoida varmuuskopiosi johonkin toiseen paikkaan kuin tähän laitteeseen.</p><p><b>Jos ainoa paikka jossa varmuuskopiosi sijaitsee on laitteesi, sinulla on vaara menettää molemmat samaan aikaan!</b></p><p>Joka tapauksessa, varmista, että muistat varmuuskopiosi salasanan. Haluatko arkistoida lompakkosi nyt?</p>]]></string>
     <string name="export_keys_dialog_failure">Lompakkoasi ei voitu varmuuskopioida:\n%s</string>
     <string name="export_keys_dialog_button_archive">Arkistoi</string>
     <string name="export_keys_dialog_mail_subject">Dash-lompakon varmuuskopio</string>
@@ -188,7 +163,6 @@
     <string name="import_export_keys_dialog_show">Näytä salasana</string>
     <string name="import_export_keys_dialog_failure_title">Virhe</string>
     <string name="import_keys_intent_filter_action">Palauta lompakko</string>
-    <string name="encrypt_keys_dialog_title">Maksu-PIN</string>
     <string name="encrypt_keys_dialog_message">Lompakon varojen käyttö suojataan valitulla PIN-koodilla.</string>
     <string name="encrypt_keys_dialog_warning">Tärkeää: Sinun on muistettava PIN-koodisi! Älä käytä yleisiä numeroyhdistelmiä (kuten syntymäpäiviä).</string>
     <string name="encrypt_keys_dialog_password_old">Vanha PIN</string>
@@ -199,7 +173,6 @@
     <string name="encrypt_keys_dialog_show">näytä PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Salataan…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Puretaan salausta…</string>
-    <string name="encrypt_keys_dialog_state_done">Valmis.</string>
     <string name="scan_camera_problem_dialog_title">Pahoittelut</string>
     <string name="scan_camera_problem_dialog_message">Kameran kanssa on ongelma. Sinun on luultavasti uudelleenkäynnistettävä laitteesi</string>
     <string name="input_parser_io_error">Ei voida lukea dataa:\n%s</string>
@@ -230,8 +203,6 @@
     <string name="preferences_data_usage_title">Tietojen käyttö</string>
     <string name="preferences_data_usage_summary">Näytä asetukset rajoittaaksesi datan käyttöä mobiiliverkoissa.</string>
     <string name="preferences_report_issue_title">Ilmoita ongelma</string>
-    <string name="preferences_initiate_reset_title">Nollaa lohkoketju</string>
-    <string name="preferences_initiate_reset_dialog_positive">Nollaa</string>
     <string name="preferences_extended_public_key_title">Näytä xpub</string>
     <string name="preferences_extended_public_key_summary">Näytä lompakkosi laajennettu julkinen avain, jotta se voidaan tuoda toisiin sovelluksiin ja palveluihin. Ole varovainen: tekemällä näin, luovutat rahallisen yksityisyytesi tälle sovellukselle.</string>
     <string name="bitmap_fragment_share">Jaa…</string>
@@ -271,10 +242,10 @@
     <string name="button_edit">Muokkaa</string>
     <string name="button_copy">Kopioi</string>
     <string name="button_paste">Liitä</string>
-    <string name="button_share">Jaa</string>
     <string name="button_set_as_default">Aseta oletukseksi</string>
-    <string name="button_request_coins">Vastaanota</string>
-    <string name="button_send_coins">Lähetä</string>
+    <string name="button_request_coins">Vastaanota Dasheja</string>
+    <string name="button_send_coins">Lähetä Dasheja</string>
+    <string name="button_pay">Lähetä</string>
     <string name="button_scan">Skannaa</string>
     <string name="button_settings">Asetukset</string>
     <string name="action_show_qr">Näytä QR-koodi</string>
@@ -284,12 +255,11 @@
     <string name="time_today">tänään</string>
     <string name="address_unlabeled">(nimeämätön)</string>
     <string name="private_key_password">PIN</string>
-    <string name="private_key_bad_password">väärä PIN!</string>
-
     <!-- generic error messages -->
     <string name="error_io">I/O-virhe: %s</string>
     <string name="error_parse">Jäsennysvirhe: %s</string>
     <string name="error_http">HTTP-virhe %1$s:\n%2$s</string>
     <string name="error_bluetooth">Bluetooth-virhe: %1$s</string>
 
+    <string name="activity_buy_and_sell_dash_filter">Suodata</string>
     </resources>

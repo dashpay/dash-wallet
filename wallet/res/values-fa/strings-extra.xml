@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">در حال تائید پین کد</string>
     <string name="set_pin_message">برای هر بار باز کردن قفل اپلیکیشن در مواقع استفاده، به این پین کد نیاز خواهید داشت.</string>
     <string name="set_pin_confirm_pin_incorrect">رمز نادرست بود</string>
-
-    <string name="home_available_balance">موجودی در دسترس</string>
-    <string name="home_balance_hidden">موجودی مخفی</string>
-    <string name="home_balance_show_hint">مشاهده موجودی مخفی</string>
+    
     <string name="home_balance_hide_hint">مخفی کردن موجودی</string>
 
     <string name="dialog_confirm_confirm">تائید</string>
@@ -30,13 +27,13 @@
     <string name="dialog_confirm_total">مجموع</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">کیف پول اکنون امن است</string>
+    <string name="shortcut_secure_now">نسخه پشتیبان‌گیری</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">اسکن برای پرداخت</string>
+    <string name="shortcut_scan_to_pay">اسکن</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">ارسال به نشانی</string>
+    <string name="shortcut_pay_to_address">ارسال</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">خرید / فروش دش</string>
+    <string name="shortcut_buy_sell">خرید &amp;؛ فروش</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">دریافت</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -209,17 +206,12 @@
     <string name="verify_continue">ادامه</string>
     <string name="verify_backup_wallet">کیف پول پشتیبان</string>
     <string name="verify_show_recovery_phrase">نشان دادن عبارت بازیابی</string>
-    <string name="verify_secure_now">کیف پول اکنون امن است</string>
-    <string name="verify_it_is_important">مهم</string>
-    <string name="verify_it_is_important_subtitle">می‌خواهیم کلید مخفی برای باز کردن کیف پول‌تان را نشان دهیم.</string>
-    <string name="verify_info_text_1">داشتن این عبارت بازیابی، به معنای دسترسی به موجودی کیف پول‌تان است.</string>
-    <string name="verify_info_text_2">ما عبارت بازیابی را ذخیره نمی‌کنیم. </string>
-    <string name="verify_info_text_3">اگر دستگاه‌تان گم شود یا آسیب ببیند یا دش والت به صورت تصادفی از روی دستگاه‌تان پاک شود، برای دسترسی به موجودی‌تان به این عبارت بازیابی نیاز خواهید داشت. </string>
-    <string name="verify_skip">رد کردن</string>
-    <string name="verify_secure_now_btn">اکنون امن است</string>
-    <string name="verify_secure_now_message">اگر این دستگاه‌تان را گم کنید، موجودی‌تان را نیز از دست خواهید داد. عبارت بازیابی را دریافت کنید تا بتوانید کیف پول‌تان را روی دستگاهی دیگر بازگردانی کنید. </string>
-    <string name="verify_seed_title">لطفا آن را یادداشت کنید</string>
-    <string name="verify_seed_write_down_confirmation">عبارت بازیابی را نوشتم</string>
+    <string name="verify_info_title">گرفتن نسخه پشتیبان از عبارت بازیابی</string>
+    <string name="verify_info_subtitle">اگر دستگاه‌تان گم شود یا آسیب ببیند یا دش والت از روی دستگاه‌تان پاک شود، برای دسترسی به موجودی‌تان به این عبارت بازیابی نیاز خواهید داشت. </string>
+    <string name="verify_info_title_1">دش کر گروپ این عبارت بازیابی را ذخیره نمی‌کند. </string>
+    <string name="verify_info_subtitle_1">هر کسی که عبارت بازیابی‌تان را داشته باشد، به موجودی‌تان دسترسی خواهد داشت. </string>
+    <string name="verify_info_title_2">بدون داشتن عبارت بازیابی، نمی‌توانید کیف پول‌تان را بازیابی کنید. </string>
+    <string name="verify_info_subtitle_2">این عبارت را در جایی امن بنویسید و آن را به کسی نشان ندهید. </string>
     <string name="verify_seed_buttons_tip">لطفا این کلمات را بر اساس ترتیب کلمات در عبارت بازیابی، به ترتیب انتخاب کنید. </string>
     <string name="verify_seed_success_title">با موفقیت تائید شد</string>
     <string name="verify_seed_success_message">کیف پول‌تان اکنون امن است. هر گاه خواستید می‌توانید از این عبارت بازیابی برای بازگرداندن حساب‌تان روی دستگاهی دیگر استفاده کنید. </string>
@@ -253,6 +245,9 @@
     <string name="transaction_details_moved_from">منتقل شد از</string>
     <string name="transaction_details_moved_internally_to">به صورت داخلی منتقل شد به</string>
     <string name="transaction_failed_details">تراکنش ناموفق</string>
+    <string name="transaction_failed_resolve">این مشکل می‌تواند حل شود از طریق</string>
+    <string name="transaction_failed_rescan">اسکن دوباره بلاکچین</string>
+    <string name="transaction_failed_in_conflict">این امکان وجود دارد که کیف پول روی دو دستگاه نصب شود. </string>
 
     <string name="authenticate_fingerprint_title">تائید</string>
     <string name="authenticate_fingerprint_message">برای ادامه، اثرانگشت‌ را تائید کنید</string>
@@ -286,7 +281,7 @@
     <string name="about_review_and_rate">امتیاز‌دهی و نوشتن نقدونظر برای این اپلیکیشن</string>
     <string name="about_contact_support">تماس با پشتیبانی</string>
     <string name="about_fork_disclaimer">این یک اپلیکیشن متن‌ باز است که از بیت کوین والت انشعاب گرفته است</string>
-    <string name="about_copyright">Copyright © 2023 Dash Core</string>
+    <string name="about_copyright">کپی رایت © ۲۰۲۳ دش کر گروپ</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">دش والت %s</string>
     <string name="about_last_explore_device_sync">آخرین کاوش همگام‌سازی دستگاه </string>
@@ -402,4 +397,24 @@
     <string name="reclassify_transactions_linked_accounts_title">حساب‌های متصل</string>
     <string name="reclassify_transactions_linked_accounts_message">به صورت پیشفرض، همه تراکنش‌‌ها به یا از حساب‌های متصل (صرافی‌ها، استیکینگ و ...) به عنوان تراکنش در نظر گرفته می‌شوند. </string>
     <string name="reclassify_transactions_change_explanation">هر تراکنشی که خواستید را از صفحه اصلی انتخاب کنید و دسته‌بندی آن را در صفحه جزئیات تغییر دهید. </string>
+
+    <string name="masternode_keys_title">کلید مسترنود</string>
+    <string name="masternode_key_type_owner">کلیدهای مالک</string>
+    <string name="masternode_key_type_voting">کلیدهای رای‌دهی</string>
+    <string name="masternode_key_type_operator">کلیدهای اپراتور</string>
+    <string name="masternode_key_type_platform">کلیدهای اپراتور اچ‌پی‌ام‌ان</string>
+    <string name="masternode_key_type_total">%dعدد کلید</string>
+    <string name="masternode_key_type_used">%dعدد استفاده شده</string>
+    <string name="masternode_key_pair_index">%dعدد جفت‌کلید</string>
+    <string name="masternode_key_address">نشانی</string>
+    <string name="masternode_key_id">کلید شناسه</string>
+    <string name="masternode_key_public">کلید عمومی</string>
+    <string name="masternode_key_public_legacy">کلید عمومی (رایج)</string>
+    <string name="masternode_key_private_hex">کلید خصوصی</string>
+    <string name="masternode_key_private_wif">کلید خصوصی دابلیوآی‌اف</string>
+    <string name="masternode_key_used">آی‌پی: %s</string>
+    <string name="masternode_key_ip_address_unknown">ناشناخته</string>
+    <string name="masternode_key_not_used">استفاده‌نشده</string>
+    <string name="masternode_key_revoked">لغوشده</string>
+    <string name="masternode_key_private_public_base64">کلیدهای خصوصی/عمومی (بیش۶۴)</string>
 </resources>

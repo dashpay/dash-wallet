@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">Verificando PIN</string>
     <string name="set_pin_message">Este PIN será requerido para desbloquear tu app cada vez que la utilices.</string>
     <string name="set_pin_confirm_pin_incorrect">PIN incorrecto</string>
-
-    <string name="home_available_balance">Saldo disponible</string>
-    <string name="home_balance_hidden">Saldo oculto</string>
-    <string name="home_balance_show_hint">Tocar para mostrar saldo</string>
+    
     <string name="home_balance_hide_hint">Tocar para ocultar saldo</string>
 
     <string name="dialog_confirm_confirm">Confirmar</string>
@@ -30,13 +27,13 @@
     <string name="dialog_confirm_total">Total</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Asegurar Billetera Ahora</string>
+    <string name="shortcut_secure_now">Respaldo</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Escanear para Paga</string>
+    <string name="shortcut_scan_to_pay">Explorar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Enviar a Dirección</string>
+    <string name="shortcut_pay_to_address">Enviar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Comprar / Vender Dash</string>
+    <string name="shortcut_buy_sell">Comprar y Vender</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Recibir</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -210,17 +207,12 @@
     <string name="verify_continue">Continuar</string>
     <string name="verify_backup_wallet">Hacer Backup de Billetera</string>
     <string name="verify_show_recovery_phrase">Mostrar Frase de Recuperación</string>
-    <string name="verify_secure_now">Asegurar Billetera Ahora</string>
-    <string name="verify_it_is_important">Es importante</string>
-    <string name="verify_it_is_important_subtitle">Estamos a punto de mostrar la frase de recuperación de tu billetera.</string>
-    <string name="verify_info_text_1">Esta frase de recuperación es tu acceso para los fondos en esta billetera.</string>
-    <string name="verify_info_text_2">Nosotros NO almacenamos esta frase de recuperación.</string>
-    <string name="verify_info_text_3">Necesitarás esta frase de recuperación para acceder a tus fondos si este dispositivo se pierde, daña o si la billetera de Dash se desinstala accidentalmente de este dispositivo.</string>
-    <string name="verify_skip">Salta</string>
-    <string name="verify_secure_now_btn">Asegurar ahora</string>
-    <string name="verify_secure_now_message">Si pierdes este dispositivo, podrás perder tus fondos. Obtén tu frase de recuperación para que puedas restaurar tu billetera en otro dispositivo.</string>
-    <string name="verify_seed_title">Anótala, por favor</string>
-    <string name="verify_seed_write_down_confirmation">Ya la escribí</string>
+    <string name="verify_info_title">Haz una copia de respaldo de tu frase de recuperación</string>
+    <string name="verify_info_subtitle">Necesitarás esta frase de recuperación para acceder a tus fondos si este dispositivo se pierde, se daña o si la billetera de Dash se desinstala de este dispositivo.</string>
+    <string name="verify_info_title_1">El grupo de Dash Core NO almacena esta frase de recuperación</string>
+    <string name="verify_info_subtitle_1">Cualquiera que tenga su frase de recuperación puede acceder a sus fondos.</string>
+    <string name="verify_info_title_2">NO podrás restaurar la billetera sin una frase de recuperación</string>
+    <string name="verify_info_subtitle_2">Escríbela en un lugar seguro y no se lo muestres a nadie.</string>
     <string name="verify_seed_buttons_tip">Por favor escribe las palabras de tu frase de recuperación en el orden correcto</string>
     <string name="verify_seed_success_title">Verificado Exitosamente</string>
     <string name="verify_seed_success_message">Tu billetera está segura ahora. Podrás utilizar tu frase de recuperación en cualquier momento para recuperar tu cuenta en otro dispositivo.</string>
@@ -254,6 +246,9 @@
     <string name="transaction_details_moved_from">Movido de</string>
     <string name="transaction_details_moved_internally_to">Movido internamente para</string>
     <string name="transaction_failed_details">Transferencia fallida</string>
+    <string name="transaction_failed_resolve">Esto podría ser resuelto por</string>
+    <string name="transaction_failed_rescan">volver a escanear la cadena de bloques</string>
+    <string name="transaction_failed_in_conflict">Esto es posible si la billetera está instalada en dos dispositivos.</string>
 
     <string name="authenticate_fingerprint_title">Autenticar</string>
     <string name="authenticate_fingerprint_message">Confirma la huella dactilar para continuar</string>
@@ -287,7 +282,7 @@
     <string name="about_review_and_rate">Critica o evalúa la aplicación</string>
     <string name="about_contact_support">Contactar Soporte</string>
     <string name="about_fork_disclaimer">Esta es una aplicación de código abierto derivada de una billetera de Bitcoin</string>
-    <string name="about_copyright"> Dash Core 2023 Derechos reservados ©</string>
+    <string name="about_copyright">Derechos de autor © 2023 Dash Core Group</string>
     <string name="about_license">Licencia pública general GNU v3.0</string>
     <string name="about_version_name">Billetera de Dash %s</string>
     <string name="about_last_explore_device_sync">Última exploración de sincronización del dispositivo</string>
@@ -373,7 +368,7 @@
     <string name="yesterday">Ayer</string>
 
     <string name="syncing">Sincronizando</string>
-    <string name="syncing_balance">Sincronizando Balance </string>
+    <string name="syncing_balance">Sincronizando saldo</string>
     <string name="transaction_count">%d transferencias</string>
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recibido</string>
@@ -403,4 +398,24 @@
     <string name="reclassify_transactions_linked_accounts_title">Cuentas vinculadas</string>
     <string name="reclassify_transactions_linked_accounts_message">de forma predeterminada, todas las transacciones hacia o desde tus cuentas vinculadas (intercambios, apuestas, etc.) se marcarán como transferencias.</string>
     <string name="reclassify_transactions_change_explanation">Elije cualquier transacción de la página de inicio y cambia la categoría en la página de detalles de la transacción.</string>
+
+    <string name="masternode_keys_title">Llave de Masternodo</string>
+    <string name="masternode_key_type_owner">Llaves del propietario</string>
+    <string name="masternode_key_type_voting">Llaves para votar</string>
+    <string name="masternode_key_type_operator">Llaves de operador</string>
+    <string name="masternode_key_type_platform">Llaves de operador HPMN</string>
+    <string name="masternode_key_type_total">%d llaves</string>
+    <string name="masternode_key_type_used">%d usado</string>
+    <string name="masternode_key_pair_index">Par de llaves %d</string>
+    <string name="masternode_key_address">Dirección</string>
+    <string name="masternode_key_id">Identificación de llave</string>
+    <string name="masternode_key_public">Llave pública</string>
+    <string name="masternode_key_public_legacy">Llave pública (heredada)</string>
+    <string name="masternode_key_private_hex">Llave privada</string>
+    <string name="masternode_key_private_wif">WIF de llave privada</string>
+    <string name="masternode_key_used">IP: %s</string>
+    <string name="masternode_key_ip_address_unknown">Desconocido</string>
+    <string name="masternode_key_not_used">No usada</string>
+    <string name="masternode_key_revoked">Revocado</string>
+    <string name="masternode_key_private_public_base64">Llaves privadas / públicas (base64)</string>
 </resources>

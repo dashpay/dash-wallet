@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.more
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -39,7 +39,7 @@ class ToolsViewModel @Inject constructor(
     private val walletData: WalletDataProvider,
     private val clipboardManager: ClipboardManager,
     private val transactionMetadataProvider: TransactionMetadataProvider,
-    val blockchainStateDao: BlockchainStateDao
+    val blockchainStateDao: BlockchainStateDao,
 ) : ViewModel() {
 
     val blockchainState = blockchainStateDao.load()
@@ -49,12 +49,12 @@ class ToolsViewModel @Inject constructor(
 
     init {
         val extendedKey: DeterministicKey = walletData.wallet!!.watchingKey
-        xpub = extendedKey.serializePubB58(Constants.NETWORK_PARAMETERS);
+        xpub = extendedKey.serializePubB58(Constants.NETWORK_PARAMETERS)
         xpubWithCreationDate = String.format(
             Locale.US,
             "%s?c=%d&h=bip44",
             xpub,
-            extendedKey.creationTimeSeconds
+            extendedKey.creationTimeSeconds,
         )
     }
 
@@ -62,8 +62,8 @@ class ToolsViewModel @Inject constructor(
         clipboardManager.setPrimaryClip(
             ClipData.newPlainText(
                 "Dash Wallet extended public key",
-                xpub
-            )
+                xpub,
+            ),
         )
     }
 
@@ -79,7 +79,7 @@ class ToolsViewModel @Inject constructor(
             }
             transactionExporter.value = TaxBitExporter(
                 walletData.wallet!!,
-                map
+                map,
             )
         }
     }
