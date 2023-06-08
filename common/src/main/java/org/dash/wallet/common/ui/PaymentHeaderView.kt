@@ -34,19 +34,12 @@ class PaymentHeaderView @JvmOverloads constructor(
 ) : ConstraintLayout(context, attrs, defStyleAttr) {
 
     private var binding = PaymentHeaderViewBinding.inflate(LayoutInflater.from(context), this, true)
-    private var revealBalance = false
     private var onShowHideBalanceClicked: ((Boolean) -> Unit)? = null
+    var revealBalance = false
+        private set
 
     init {
         binding.hideButton.setOnClickListener {
-            revealBalance = !revealBalance
-            binding.hideButton.setImageResource(
-                if (revealBalance) {
-                    R.drawable.ic_show
-                } else {
-                    R.drawable.ic_hide
-                }
-            )
             onShowHideBalanceClicked?.invoke(revealBalance)
         }
     }
@@ -90,5 +83,16 @@ class PaymentHeaderView @JvmOverloads constructor(
 
     fun setOnShowHideBalanceClicked(listener: (Boolean) -> Unit) {
         this.onShowHideBalanceClicked = listener
+    }
+
+    fun triggerRevealBalance() {
+        revealBalance = !revealBalance
+        binding.hideButton.setImageResource(
+            if (revealBalance) {
+                R.drawable.ic_show
+            } else {
+                R.drawable.ic_hide
+            }
+        )
     }
 }

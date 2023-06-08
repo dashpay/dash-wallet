@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2023 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.features.exploredash.network.service
 
-object DashDirectClientConstants {
-    @kotlin.jvm.JvmField var CLIENT_ID = ""
+package de.schildbach.wallet.ui.more.masternode_keys
+
+enum class MasternodeKeyType(val type: Int) {
+    OWNER(0),
+    VOTING(1),
+    OPERATOR(2),
+    PLATFORM(3),
+    ;
+
+    companion object {
+        fun fromCode(code: Int): MasternodeKeyType {
+            return values().find { code == it.type }!!
+        }
+    }
 }

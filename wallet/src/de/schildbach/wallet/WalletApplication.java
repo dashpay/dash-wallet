@@ -62,11 +62,19 @@ import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.core.VersionMessage;
+import org.bitcoinj.crypto.IKey;
+import org.bitcoinj.crypto.LinuxSecureRandom;
+import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.AuthenticationKeyChain;
 import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
+import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
@@ -76,10 +84,11 @@ import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
-import org.dash.wallet.features.exploredash.network.service.DashDirectClientConstants;
+import org.dash.wallet.features.exploredash.utils.DashDirectConstants;
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseClientConstants;
 
 import de.schildbach.wallet.service.PackageInfoProvider;
+import de.schildbach.wallet.transactions.MasternodeObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integration.uphold.api.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
@@ -98,6 +107,7 @@ import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -153,6 +163,7 @@ public class WalletApplication extends MultiDexApplication
 
     private File walletFile;
     private Wallet wallet;
+    private AuthenticationGroupExtension authenticationGroupExtension;
 
     public static final String ACTION_WALLET_REFERENCE_CHANGED = WalletApplication.class.getPackage().getName()
             + ".wallet_reference_changed";
@@ -202,6 +213,7 @@ public class WalletApplication extends MultiDexApplication
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         autoLogout = new AutoLogout(config);
+        authenticationGroupExtension = new AuthenticationGroupExtension(Constants.NETWORK_PARAMETERS);
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
             @Override
@@ -311,8 +323,26 @@ public class WalletApplication extends MultiDexApplication
 
     public void setWallet(Wallet newWallet) {
         this.wallet = newWallet;
+        // TODO: move to a wallet creation class
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
             wallet.addKeyChain(Constants.BIP44_PATH);
+        }
+        if (!authenticationGroupExtension.hasKeyChains()) {
+            authenticationGroupExtension.addKeyChains(
+                    wallet.getParams(),
+                    wallet.getKeyChainSeed(),
+                    EnumSet.of(
+                            AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
+                            AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
+                            AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
+                            AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR
+                    )
+            );
+
+            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER);
+            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING);
+            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR);
+            authenticationGroupExtension.freshKey(AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR);
         }
     }
 
@@ -372,7 +402,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void initDashDirect() {
-        DashDirectClientConstants.CLIENT_ID = BuildConfig.DASHDIRECT_CLIENT_ID;
+        DashDirectConstants.CLIENT_ID = BuildConfig.DASHDIRECT_CLIENT_ID;
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -538,7 +568,7 @@ public class WalletApplication extends MultiDexApplication
         try {
             final Stopwatch watch = Stopwatch.createStarted();
             walletStream = new FileInputStream(walletFile);
-            wallet = new WalletProtobufSerializer().readWallet(walletStream);
+            wallet = new WalletProtobufSerializer().readWallet(walletStream, authenticationGroupExtension);
 
             if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
                 throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
@@ -585,8 +615,7 @@ public class WalletApplication extends MultiDexApplication
 
         try {
             is = openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
-
-            final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, null);
+            final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, getWalletExtensions());
 
             if (!wallet.isConsistent())
                 throw new Error("inconsistent backup");
@@ -892,7 +921,9 @@ public class WalletApplication extends MultiDexApplication
         // clear data on wallet reset
         transactionMetadataProvider.clear();
         // wallet must be null for the OnboardingActivity flow
+        log.info("removing wallet from memory during wipe");
         wallet = null;
+        clearExtensions();
     }
 
     private void notifyWalletWipe() {
@@ -983,6 +1014,22 @@ public class WalletApplication extends MultiDexApplication
 
     @NonNull
     @Override
+    public Flow<List<AuthenticationKeyUsage>> observeAuthenticationKeyUsage() {
+        if (wallet == null) {
+            return FlowKt.emptyFlow();
+        }
+
+        return new MasternodeObserver(authenticationGroupExtension).observeAuthenticationKeyUsage();
+    }
+
+    @Nullable
+    @Override
+    public Transaction getTransaction(@NonNull Sha256Hash hash) {
+        return wallet.getTransaction(hash);
+    }
+
+    @NonNull
+    @Override
     public Collection<Transaction> getTransactions(@NonNull TransactionFilter... filters) {
         Set<Transaction> transactions = wallet.getTransactions(true);
 
@@ -1055,5 +1102,14 @@ public class WalletApplication extends MultiDexApplication
                 amount,
                 crowdNodeConfig
         );
+    }
+
+    public void clearExtensions() {
+        log.info("clearing extensions: authentication");
+        authenticationGroupExtension = new AuthenticationGroupExtension(Constants.NETWORK_PARAMETERS);
+    }
+
+    public WalletExtension[] getWalletExtensions() {
+        return new WalletExtension[] {authenticationGroupExtension};
     }
 }

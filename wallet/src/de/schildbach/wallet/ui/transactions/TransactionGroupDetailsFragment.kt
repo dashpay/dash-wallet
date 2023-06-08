@@ -69,11 +69,13 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment(R.layout.transact
 
         binding.transactions.adapter = adapter
         val divider = ResourcesCompat.getDrawable(resources, R.drawable.list_divider, null)
-        binding.transactions.addItemDecoration(ListDividerDecorator(
-            divider!!,
-            showAfterLast = false,
-            marginStart = resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start)
-        ))
+        binding.transactions.addItemDecoration(
+            ListDividerDecorator(
+                divider!!,
+                showAfterLast = false,
+                marginStart = resources.getDimensionPixelOffset(R.dimen.transaction_row_divider_margin_start)
+            )
+        )
 
         viewModel.transactions.observe(viewLifecycleOwner) { transactions ->
             adapter.submitList(transactions)
@@ -104,7 +106,9 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment(R.layout.transact
         if (dashValue != null && exchangeRate != null) {
             binding.fiatValue.isVisible = true
             binding.fiatValue.setFiatAmount(
-                dashValue, exchangeRate, Constants.LOCAL_FORMAT,
+                dashValue,
+                exchangeRate,
+                Constants.LOCAL_FORMAT,
                 exchangeRate.fiat?.currencySymbol
             )
         } else {

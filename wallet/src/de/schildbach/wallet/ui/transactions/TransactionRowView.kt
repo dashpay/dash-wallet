@@ -93,14 +93,26 @@ data class TransactionRowView(
             @DrawableRes val icon: Int
             @StyleRes val iconBackground: Int
             var title = ResourceString(resourceMapper.getTransactionTypeName(tx, bag))
+            val hasErrors = tx.confidence.hasErrors()
 
-            if (metadata?.service == ServiceName.DashDirect) {
+            if (hasErrors) {
+                icon = R.drawable.ic_transaction_failed
+                iconBackground = R.style.TxErrorBackground
+                title = ResourceString(resourceMapper.getErrorName(tx))
+            } else if (metadata?.service == ServiceName.DashDirect) {
                 icon = R.drawable.ic_gift_card_tx
-                iconBackground = R.style.TxTangerineBackground
-                title = ResourceString(R.string.gift_card_tx_title, listOf(metadata.title ?: ""))
+                iconBackground = R.style.TxOrangeBackground
+                title = ResourceString(
+                    if (metadata.title.isNullOrEmpty()) {
+                        R.string.explore_payment_gift_card
+                    } else {
+                        R.string.gift_card_tx_title
+                    },
+                    listOf(metadata.title ?: "")
+                )
             } else if (isInternal) {
-                icon = R.drawable.ic_shuffle
-                iconBackground = R.style.TxTangerineBackground
+                icon = R.drawable.ic_internal
+                iconBackground = R.style.TxSentBackground
             } else if (isSent) {
                 icon = R.drawable.ic_transaction_sent
                 iconBackground = R.style.TxSentBackground
@@ -109,9 +121,7 @@ data class TransactionRowView(
                 iconBackground = R.style.TxReceivedBackground
             }
 
-            val status = if (tx.confidence.hasErrors()) {
-                resourceMapper.getErrorName(tx)
-            } else if (!isSent) {
+            val status = if (!hasErrors && !isSent) {
                 resourceMapper.getReceivedStatusString(tx, context)
             } else {
                 -1
@@ -129,7 +139,7 @@ data class TransactionRowView(
                 1,
                 tx.updateTime.time,
                 resourceMapper.dateTimeFormat,
-                tx.confidence.hasErrors(),
+                hasErrors,
                 metadata?.service,
                 null
             )

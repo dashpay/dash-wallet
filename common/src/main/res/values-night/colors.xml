@@ -14,9 +14,10 @@
 <!--    <color name="divider_color">@color/extra_dark_gray</color>-->
 
 <!--    &lt;!&ndash; Background &ndash;&gt;-->
-<!--    <color name="background_primary">@color/dash_black</color>-->
-<!--    <color name="background_secondary">#202326</color>-->
-<!--    <color name="background_tertiary">@color/dash_black</color>-->
+<!--    <color name="background_primary">#10151F</color>-->
+<!--    <color name="background_secondary">#1D2532</color>-->
+<!--    <color name="background_tertiary">@android:color/transparent</color>-->
+<!--    <color name="blue_background_color">#01589B</color>-->
 <!--    <color name="button_ripple_color">#30ffffff</color>-->
 <!--    <color name="tx_category_example_background">@color/extra_dark_gray</color>-->
 <!--    <color name="tx_sent_background">#20262E</color>-->

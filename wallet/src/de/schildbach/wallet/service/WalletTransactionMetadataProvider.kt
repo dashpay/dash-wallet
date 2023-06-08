@@ -34,6 +34,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.*
 import org.dash.wallet.common.data.entity.AddressMetadata
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.data.entity.IconBitmap
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -166,6 +167,14 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 log.error("Failed to make an http call for icon: $iconUrl")
             }
         }
+    }
+
+    override suspend fun updateGiftCardMetadata(giftCard: GiftCard) {
+        giftCardDao.updateGiftCard(giftCard)
+    }
+
+    override suspend fun updateGiftCardBarcode(txId: Sha256Hash, barcodeValue: String, barcodeFormat: BarcodeFormat) {
+        giftCardDao.updateBarcode(txId, barcodeValue, barcodeFormat)
     }
 
     override fun syncTransactionBlocking(tx: Transaction) {
@@ -415,7 +424,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                             val imageData = getBitmapData(icon)
                             val imageHash = Sha256Hash.of(imageData)
 
-                            iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, icon.height, icon.width))
+                            iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, iconUrl, icon.height, icon.width))
                             transactionMetadataDao.updateIconId(txId, imageHash)
                         } catch (ex: Exception) {
                             log.error("Failed to resize and save the icon for url: $iconUrl", ex)

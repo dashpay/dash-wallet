@@ -24,6 +24,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.StyleRes
 import androidx.core.os.bundleOf
+import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.viewModels
@@ -39,7 +40,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -47,10 +48,12 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashdirect.model.Barcode
-import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 import org.dash.wallet.features.exploredash.repository.DashDirectException
+import java.text.DecimalFormat
+import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
+import java.util.Currency
 
 @AndroidEntryPoint
 class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_details) {
@@ -150,13 +153,18 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let { transactionId ->
             viewModel.init(transactionId)
         }
+
+        binding.viewTransactionDetailsCard.setOnClickListener {
+            deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
+        }
     }
 
     private fun bindGiftCardDetails(binding: DialogGiftCardDetailsBinding, giftCard: GiftCard) {
         binding.merchantName.text = giftCard.merchantName
-
-        val price = Fiat.valueOf(giftCard.currency, giftCard.price)
-        binding.originalPurchaseValue.text = price.toFormattedString()
+        val currencyFormat = (NumberFormat.getCurrencyInstance() as DecimalFormat).apply {
+            this.currency = Currency.getInstance(Constants.USD_CURRENCY)
+        }
+        binding.originalPurchaseValue.text = currencyFormat.format(giftCard.price)
 
         binding.purchaseCardNumber.text = giftCard.number
         binding.cardNumberGroup.isVisible = !giftCard.number.isNullOrEmpty()
@@ -164,16 +172,12 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.cardPinGroup.isVisible = !giftCard.pin.isNullOrEmpty()
         binding.infoLoadingIndicator.isVisible = giftCard.number.isNullOrEmpty()
 
-        binding.checkCurrentBalance.isVisible = giftCard.currentBalanceUrl?.isNotEmpty() == true
+        binding.checkCurrentBalance.isVisible = giftCard.merchantUrl?.isNotEmpty() == true
         binding.checkCurrentBalance.setOnClickListener {
-            giftCard.currentBalanceUrl?.let {
+            giftCard.merchantUrl?.let {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
                 requireContext().startActivity(intent)
             }
-        }
-
-        binding.viewTransactionDetailsCard.setOnClickListener {
-            deepLinkNavigate(DeepLinkDestination.Transaction(giftCard.transactionId.toString()))
         }
     }
 
@@ -201,27 +205,29 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
     }
 
     private fun decodeBarcode(barcode: Barcode) {
-        lifecycleScope.launch {
-            binding.purchaseCardBarcode.isVisible = true
+        binding.purchaseCardInfo.doOnLayout {
+            lifecycleScope.launch {
+                binding.purchaseCardBarcode.isVisible = true
 
-            if (barcode.barcodeFormat == BarcodeFormat.QR_CODE) {
-                binding.purchaseCardBarcode.updateLayoutParams<ViewGroup.LayoutParams> {
-                    height = resources.getDimensionPixelSize(R.dimen.barcode_qr_size)
+                if (barcode.barcodeFormat == BarcodeFormat.QR_CODE) {
+                    binding.purchaseCardBarcode.updateLayoutParams<ViewGroup.LayoutParams> {
+                        height = resources.getDimensionPixelSize(R.dimen.barcode_qr_size)
+                    }
                 }
-            }
 
-            val margin = resources.getDimensionPixelOffset(R.dimen.details_horizontal_margin)
-            val bitmap = withContext(Dispatchers.Default) {
-                val size = Size(
-                    binding.purchaseCardInfo.measuredWidth - margin * 2,
-                    binding.purchaseCardBarcode.layoutParams.height
-                )
-                Qr.bitmap(barcode.value, barcode.barcodeFormat, size)
-            }
+                val margin = resources.getDimensionPixelOffset(R.dimen.details_horizontal_margin)
+                val bitmap = withContext(Dispatchers.Default) {
+                    val size = Size(
+                        binding.purchaseCardInfo.measuredWidth - margin * 2,
+                        binding.purchaseCardBarcode.layoutParams.height
+                    )
+                    Qr.bitmap(barcode.value, barcode.barcodeFormat, size)
+                }
 
-            binding.purchaseCardBarcode.load(bitmap) {
-                crossfade(true)
-                scale(Scale.FILL)
+                binding.purchaseCardBarcode.load(bitmap) {
+                    crossfade(true)
+                    scale(Scale.FILL)
+                }
             }
         }
     }

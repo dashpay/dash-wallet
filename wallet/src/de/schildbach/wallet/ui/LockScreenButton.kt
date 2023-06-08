@@ -19,19 +19,19 @@ package de.schildbach.wallet.ui
 
 import android.content.Context
 import android.util.AttributeSet
+import android.view.LayoutInflater
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.lock_screen_button.view.*
+import de.schildbach.wallet_test.databinding.LockScreenButtonBinding
+import org.dash.wallet.common.ui.getRoundedRippleBackground
 
-
-class LockScreenButton(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs, R.style.Button_Primary_Large_Inverted) {
+class LockScreenButton(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
+    private val binding = LockScreenButtonBinding.inflate(LayoutInflater.from(context), this)
 
     init {
-        inflate(context, R.layout.lock_screen_button, this)
-
-        setBackgroundResource(R.drawable.transparent_button_background)
+        background = resources.getRoundedRippleBackground(R.style.TertiaryButtonTheme_Large_White)
         orientation = VERTICAL
 
         val attrsArray = context.obtainStyledAttributes(attrs, R.styleable.LockScreenButton)
@@ -40,7 +40,7 @@ class LockScreenButton(context: Context, attrs: AttributeSet) : LinearLayout(con
             if (drawableResId > -1) {
                 val actionIconDrawable = AppCompatResources.getDrawable(context, drawableResId)
                 if (actionIconDrawable != null) {
-                    action_icon.setImageDrawable(actionIconDrawable)
+                    binding.actionIcon.setImageDrawable(actionIconDrawable)
                 }
             }
             val actionText = attrsArray.getString(R.styleable.LockScreenButton_text)
@@ -48,8 +48,7 @@ class LockScreenButton(context: Context, attrs: AttributeSet) : LinearLayout(con
                 findViewById<TextView>(R.id.action_text).text = actionText
             }
             val actionPadding = attrsArray.getDimensionPixelSize(R.styleable.LockScreenButton_action_icon_padding, 0)
-            action_icon.setPadding(actionPadding, actionPadding, actionPadding, actionPadding)
-
+            binding.actionIcon.setPadding(actionPadding, actionPadding, actionPadding, actionPadding)
         } finally {
             attrsArray.recycle()
         }
@@ -58,7 +57,7 @@ class LockScreenButton(context: Context, attrs: AttributeSet) : LinearLayout(con
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
         val alpha = if (enabled) 1.0f else 0.5f
-        action_icon.alpha = alpha
-        action_text.alpha = alpha
+        binding.actionIcon.alpha = alpha
+        binding.actionText.alpha = alpha
     }
 }

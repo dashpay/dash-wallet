@@ -20,7 +20,7 @@ import com.google.gson.annotations.SerializedName
 
 data class PaymentStatusResponse(
     @SerializedName("Data") val `data`: Data? = Data(),
-    @SerializedName("ErrorMessage") val errorMessage: String? = "",
+    @SerializedName("ErrorMessage") val errorMessage: String? = null,
     @SerializedName("IsDelayed") val isDelayed: Boolean? = false,
     @SerializedName("Successful") val successful: Boolean? = false
 ) {

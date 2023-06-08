@@ -3,7 +3,7 @@ project_id = "dash-wallet-firebase"
 key_file   = ".deploy/gc-storage-service-account.json"
 bucket_name = "dash-wallet-firebase.appspot.com"
 flavor = ARGV[0]
-file_name = "explore/explore.db"
+file_name = "explore/explore-devnet.db"
 if flavor == "prod"
   puts "Downloading the production database"
 else
@@ -26,7 +26,8 @@ end
 bucket = storage.bucket bucket_name, skip_lookup: true
 file = bucket.file file_name
 timestamp = file.updated_at.strftime("%Q")
-target_file_path = "#{assets_path}#{file_name}"
+target_file_name = "explore/explore.db"
+target_file_path = "#{assets_path}#{target_file_name}"
 
 # create output file
 # out_file = File.new(target_file_path, "w")

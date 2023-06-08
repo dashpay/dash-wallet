@@ -24,12 +24,15 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder
 import de.schildbach.wallet.ui.TransactionResultViewModel
+import de.schildbach.wallet.ui.main.WalletActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionDetailsDialogBinding
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
@@ -114,6 +117,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
         contentBinding.taxCategoryLayout.setOnClickListener {
             viewOnTaxCategory()
         }
+        transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
     }
 
     private fun showReportIssue() {
@@ -135,5 +139,23 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
     private fun viewOnTaxCategory() {
         // this should eventually trigger the observer to update the view
         viewModel.toggleTaxCategory()
+    }
+
+    private fun rescanBlockchain() {
+        AdaptiveDialog.create(
+            null,
+            getString(R.string.preferences_initiate_reset_title),
+            getString(R.string.preferences_initiate_reset_dialog_message),
+            getString(R.string.button_cancel),
+            getString(R.string.preferences_initiate_reset_dialog_positive)
+        ).show(requireActivity()) {
+            if (it == true) {
+                log.info("manually initiated blockchain reset")
+                viewModel.rescanBlockchain()
+                dismiss()
+            } else {
+                viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS)
+            }
+        }
     }
 }

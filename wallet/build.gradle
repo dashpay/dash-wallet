@@ -48,7 +48,7 @@ dependencies {
     implementation "androidx.biometric:biometric:1.1.0"
 
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation "org.dashj.android:dashj-bls-android:0.18.1"
+    implementation "org.dashj.android:dashj-bls-android:1.0.0"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
     implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
@@ -188,8 +188,8 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 31
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 80130
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "8.1.3"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 90020
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "9.0.2"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -263,6 +263,9 @@ android {
         _testNet3 {
             res.srcDirs = ["testNet3/res"]
         }
+        devnet {
+            res.srcDirs = ["schnapps/res"]
+        }
     }
     flavorDimensions "default"
     productFlavors {
@@ -332,7 +335,22 @@ android {
             }
             buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
         }
+        devnet {
+            applicationId = "org.dash.wallet.devnet"
+            buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
+            buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
+            buildConfigField("String", "COINBASE_CLIENT_ID", "\"\"")
+            buildConfigField("String", "COINBASE_CLIENT_SECRET", "\"\"")
+
+            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
+
+            if (dashDirectClientId == null) {
+                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
+            }
+            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
+        }
     }
+
     packagingOptions {
         jniLibs {
             excludes += ['lib/x86_64/freebsd/libscrypt.so', 'lib/x86_64/linux/libscrypt.so']
@@ -363,6 +381,15 @@ android {
     }
     buildFeatures {
         viewBinding true
+    }
+    lint {
+        abortOnError false
+        disable 'MissingTranslation'
+    }
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
+        }
     }
     lint {
         abortOnError false

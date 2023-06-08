@@ -17,10 +17,10 @@
 package org.dash.wallet.features.exploredash.utils
 
 object DashDirectConstants {
-    const val BASE_URL = "https://apidev.dashdirect.org/DashDirect/"
-    const val API_KEY = "apikey"
+    const val BASE_URL = "https://apistaging.dashdirect.org/DashDirect/"
     const val requestedUUID = "requestedUUID"
-    const val CLIENT_ID = "clientId"
+    const val CLIENT_ID_PARAM_NAME = "clientId"
+    @JvmField var CLIENT_ID = ""
     const val EMAIL = "email"
     const val DASH_DIRECT_URL = "https://www.dashdirect.org/"
     const val DEFAULT_DISCOUNT = 0.0

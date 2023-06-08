@@ -34,25 +34,20 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
-import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
 import org.dash.wallet.features.exploredash.data.dashdirect.model.merchant.GetMerchantByIdResponse
 import org.dash.wallet.features.exploredash.data.dashdirect.model.purchase.PurchaseGiftCardResponse
-import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
-import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.dash.wallet.features.exploredash.repository.DashDirectException
 import org.dash.wallet.features.exploredash.repository.DashDirectRepositoryInt
-import org.dash.wallet.features.exploredash.utils.DashDirectConstants
 import org.slf4j.LoggerFactory
-import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
@@ -63,7 +58,6 @@ class DashDirectViewModel @Inject constructor(
     private val sendPaymentService: SendPaymentService,
     private val repository: DashDirectRepositoryInt,
     private val transactionMetadata: TransactionMetadataProvider,
-    private val exploreData: ExploreDataSource,
     private val giftCardDao: GiftCardDao,
     networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
@@ -72,8 +66,6 @@ class DashDirectViewModel @Inject constructor(
     companion object {
         private val log = LoggerFactory.getLogger(DashDirectViewModel::class.java)
     }
-
-    val isUserSettingFiatIsNotUSD = (configuration.exchangeCurrencyCode != Constants.USD_CURRENCY)
 
     val dashFormat: MonetaryFormat
         get() = configuration.format
@@ -208,14 +200,10 @@ class DashDirectViewModel @Inject constructor(
 
     fun saveGiftCardDummy(txId: Sha256Hash, orderId: String, paymentId: String) {
         val giftCard = GiftCard(
-            id = UUID.randomUUID().toString(),
-            service = ServiceName.DashDirect,
+            txId = txId,
             merchantName = giftCardMerchant.name ?: "",
-            price = giftCardPaymentValue.value,
-            discount = giftCardMerchant.savingsPercentage ?: DashDirectConstants.DEFAULT_DISCOUNT,
-            currency = giftCardPaymentValue.currencyCode,
-            transactionId = txId,
-            currentBalanceUrl = giftCardMerchant.website,
+            price = giftCardPaymentValue.toBigDecimal().toDouble(),
+            merchantUrl = giftCardMerchant.website,
             note = "$orderId+$paymentId"
         )
         viewModelScope.launch {
@@ -235,31 +223,5 @@ class DashDirectViewModel @Inject constructor(
 
     fun logEvent(event: String) {
         analyticsService.logEvent(event, mapOf())
-    }
-
-    // TODO Remove the test merchent
-    suspend fun insertTestMerchent() {
-        repository.getDashDirectEmail()?.let { email ->
-            val response = repository.getMerchantById(merchantId = 318, includeLocations = false, userEmail = email)
-            if (response is ResponseResource.Success) {
-                response.value?.data?.merchant?.let {
-                    var merchant =
-                        Merchant().apply {
-                            id = 318
-                            name = "Cray Pay"
-                            website = "http://www.craypay.com"
-                            deeplink = "http://www.craypay.com"
-                            merchantId = 318
-                            coverImage = "https://craypaystorage.blob.core.windows.net/prod/content/craypay.png"
-                            source = "DashDirect"
-                            type = MerchantType.ONLINE
-                            maxCardPurchase = it.maximumCardPurchase
-                            minCardPurchase = it.minimumCardPurchase
-                            savingsPercentage = it.savingsPercentage
-                        }
-                    exploreData.insertMerchant(merchant)
-                }
-            }
-        }
     }
 }

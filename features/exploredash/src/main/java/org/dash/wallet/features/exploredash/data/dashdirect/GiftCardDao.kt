@@ -25,7 +25,7 @@ import androidx.room.Update
 import com.google.zxing.BarcodeFormat
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
+import org.dash.wallet.common.data.entity.GiftCard
 
 @Dao
 interface GiftCardDao {
@@ -35,16 +35,16 @@ interface GiftCardDao {
     @Update(entity = GiftCard::class)
     suspend fun updateGiftCard(giftCard: GiftCard)
 
-    @Query("SELECT * FROM gift_cards WHERE transactionId = :transactionId")
-    suspend fun getCardForTransaction(transactionId: Sha256Hash): GiftCard?
+    @Query("SELECT * FROM gift_cards WHERE txId = :txId")
+    suspend fun getCardForTransaction(txId: Sha256Hash): GiftCard?
 
-    @Query("SELECT * FROM gift_cards WHERE transactionId = :transactionId")
-    fun observeCardForTransaction(transactionId: Sha256Hash): Flow<GiftCard>
+    @Query("SELECT * FROM gift_cards WHERE txId = :txId")
+    fun observeCardForTransaction(txId: Sha256Hash): Flow<GiftCard?>
 
-    @Query("UPDATE gift_cards SET barcodeValue = :value, barcodeFormat = :barcodeFormat WHERE transactionId = :txId")
+    @Query("UPDATE gift_cards SET barcodeValue = :value, barcodeFormat = :barcodeFormat WHERE txId = :txId")
     suspend fun updateBarcode(txId: Sha256Hash, value: String, barcodeFormat: BarcodeFormat)
 
-    @MapInfo(keyColumn = "transactionId")
+    @MapInfo(keyColumn = "txId")
     @Query("SELECT * FROM gift_cards")
     fun observeGiftCards(): Flow<Map<Sha256Hash, GiftCard>>
 }

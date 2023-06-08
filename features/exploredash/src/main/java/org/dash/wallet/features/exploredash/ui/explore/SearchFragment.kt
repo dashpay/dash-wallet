@@ -204,8 +204,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             merchantLocationsAdapter.submitList(merchantLocations)
         }
 
-        lifecycleScope.launch { dashDirectViewModel.insertTestMerchent() }
-
         viewModel.syncStatus.observe(viewLifecycleOwner) { syncProgress ->
             lastSyncProgress = syncProgress
             when (syncProgress.status) {
@@ -559,7 +557,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                             savedLocationsScrollPosition = firstVisiblePosition
                         }
 
-                        launch { dashDirectViewModel.updateMerchantDetails(viewModel.selectedItem.value as Merchant) }
+                        if (viewModel.selectedItem.value is Merchant) {
+                            launch {
+                                dashDirectViewModel.updateMerchantDetails(viewModel.selectedItem.value as Merchant)
+                            }
+                        }
                         transitToDetails()
                     }
                     ScreenState.MerchantLocations -> {

@@ -28,7 +28,7 @@ import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.IconBitmap
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.features.exploredash.data.dashdirect.GiftCardDao
-import org.dash.wallet.features.exploredash.data.dashdirect.model.GiftCard
+import org.dash.wallet.common.data.entity.GiftCard
 
 @Database(
     entities =
