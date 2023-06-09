@@ -129,16 +129,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         walletApplication.analyticsService
     }
 
-    // TODO: do we need only Platform types in here?
     private val keyChainTypes = EnumSet.of(
         AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY,
         AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING,
         AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
-        AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING,
-        AuthenticationKeyChain.KeyChainType.MASTERNODE_PLATFORM_OPERATOR,
-        AuthenticationKeyChain.KeyChainType.MASTERNODE_OPERATOR,
-        AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
-        AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER
+        AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING
     )
 
     init {
@@ -549,27 +544,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     // Step 1 is to upgrade the wallet to support authentication keys
     //
-    suspend fun addWalletAuthenticationKeysAsync(seed: DeterministicSeed, keyParameter: KeyParameter?) {
+    suspend fun addWalletAuthenticationKeysAsync(seed: DeterministicSeed, keyParameter: KeyParameter) {
         withContext(Dispatchers.IO) {
             val wallet = walletApplication.wallet!!
             // this will initialize any missing key chains
             val authenticationGroupExtension = AuthenticationGroupExtension(wallet)
-
-            if (keyParameter != null) {
-                authenticationGroupExtension.addEncryptedKeyChains(
-                    wallet.params,
-                    seed,
-                    keyParameter,
-                    keyChainTypes
-                )
-            } else {
-                // TODO: do we need this branch? addWalletAuthenticationKeysAsync is only called with non-null keyParameter
-                authenticationGroupExtension.addKeyChains(
-                    wallet.params,
-                    seed,
-                    keyChainTypes
-                )
-            }
+            authenticationGroupExtension.addEncryptedKeyChains(wallet.params, seed, keyParameter, keyChainTypes)
 
             wallet.addOrGetExistingExtension(authenticationGroupExtension)
             this@PlatformRepo.authenticationGroupExtension = authenticationGroupExtension

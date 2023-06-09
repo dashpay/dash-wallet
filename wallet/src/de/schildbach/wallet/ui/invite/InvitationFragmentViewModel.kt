@@ -141,25 +141,6 @@ open class InvitationFragmentViewModel @Inject constructor(
     val invitation: Invitation
         get() = invitationLiveData.value!!
 
-    // TODO: not used. Do we need this?
-//    val invitationLinkData = liveData(Dispatchers.IO) {
-//        val tx = walletApplication.wallet!!.getTransaction(invitation.txid)
-//        val cftx = walletApplication.wallet!!.getCreditFundingTransaction(tx)
-//
-//        val wallet = WalletApplication.getInstance().wallet!!
-//        val password = SecurityGuard().retrievePassword()
-//        var encryptionKey: KeyParameter? = null
-//        try {
-//            encryptionKey = wallet.keyCrypter!!.deriveKey(password)
-//        } catch (ex: KeyCrypterException) {
-//            analytics.logError(ex, "create invitation link: failed to derive encryption key")
-//            emit("")
-//        }
-//
-//        val invite = platformRepo.blockchainIdentity.getInvitationString(cftx, encryptionKey)
-//        emit(invite)
-//    }
-
     suspend fun getInvitedUserProfile(): DashPayProfile? =
         dashPayProfileDao.loadByUserId(identityIdLiveData.value!!)
 }

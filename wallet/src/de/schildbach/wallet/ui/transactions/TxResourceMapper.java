@@ -75,7 +75,6 @@ public class TxResourceMapper {
                     if (dashPayWallet != null && CreditFundingTransaction.isCreditFundingTransaction(tx)) {
                         AuthenticationGroupExtension authExtension =
                                 (AuthenticationGroupExtension) dashPayWallet.addOrGetExistingExtension(
-                                        // TODO: do we need to call addKeyChains here?
                                         new AuthenticationGroupExtension(dashPayWallet.getParams())
                                 );
                         CreditFundingTransaction cftx = authExtension.getCreditFundingTransaction(tx);

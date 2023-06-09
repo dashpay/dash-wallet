@@ -319,7 +319,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 // Handle credit function transactions (username creation, topup, invites)
                 AuthenticationGroupExtension authExtension =
                         (AuthenticationGroupExtension) wallet.addOrGetExistingExtension(
-                                // TODO: do we need to call addKeyChains here?
                                 new AuthenticationGroupExtension(wallet.getParams())
                         );
                 CreditFundingTransaction cftx = authExtension.getCreditFundingTransaction(tx);

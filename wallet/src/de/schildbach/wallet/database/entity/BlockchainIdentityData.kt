@@ -65,9 +65,6 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
         }
         if (wallet != null) {
             creditFundingTransactionCache = wallet.getTransaction(creditFundingTxId)?.run {
-                // TODO: is this the right way to get the auth extension?
-                // Should we have static ID for the extension?
-                // Do we need to call addKeyChains here?
                 val authExtension = wallet.addOrGetExistingExtension(
                     AuthenticationGroupExtension(wallet.params)
                 ) as AuthenticationGroupExtension
