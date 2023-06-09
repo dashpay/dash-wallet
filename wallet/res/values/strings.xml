@@ -378,7 +378,6 @@
     <string name="activity_security_hide_balance">Autohide Balance</string>
     <string name="reset_to_default">Reset to Default</string>
 
-    <string name="payment_protocol_default_error_title">Payment error</string>
     <string name="payment_protocol_insufficient_funds_error_title">Insufficient Funds</string>
     <string name="payment_protocol_insufficient_funds_error_message">You do not have sufficient funds to complete this transaction</string>
 
