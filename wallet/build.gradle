@@ -57,10 +57,9 @@ dependencies {
     implementation 'org.dashj:dashj-merk:0.22-SNAPSHOT'
     implementation 'org.dashj.android:dashj-merk:0.22-SNAPSHOT'
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
-    implementation "org.dashj.android:dashj-bls-android:0.18.1"
+    implementation "org.dashj.android:dashj-bls-android:1.0.0"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
     implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
-    implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation 'com.google.guava:guava:29.0-android'
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"

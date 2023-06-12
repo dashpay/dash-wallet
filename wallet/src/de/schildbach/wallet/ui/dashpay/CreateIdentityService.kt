@@ -680,7 +680,7 @@ class CreateIdentityService : LifecycleService() {
         val seed = decryptSeed(backgroundHandler, wallet, encryptionKey)
 
         // create the Blockchain Identity object
-        val blockchainIdentity = BlockchainIdentity(platformRepo.platform, 0, wallet)
+        val blockchainIdentity = BlockchainIdentity(platformRepo.platform, 0, wallet, authExtension)
         // this process should have been done already, otherwise the credit funding transaction
         // will not have the credit burn keys associated with it
         platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
