@@ -29,7 +29,7 @@ import javax.inject.Inject
 class FakeDashDirectSendService @Inject constructor(
     private val realService: SendPaymentService,
     private val walletDataProvider: WalletDataProvider
-): SendPaymentService {
+) : SendPaymentService {
     internal companion object {
         const val DASH_DIRECT_SCHEMA = "dashdirect://"
     }
