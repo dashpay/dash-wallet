@@ -222,13 +222,18 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
     }
 
     private fun loadImage(image: String?, into: ImageView) {
-        Glide.with(context)
-            .load(image)
-            .placeholder(R.drawable.ic_image_placeholder)
-            .error(R.drawable.ic_image_placeholder)
-            .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
-            .transition(DrawableTransitionOptions.withCrossFade(200))
-            .into(into)
+        if (image.isNullOrEmpty()) {
+            into.isVisible = false
+        } else {
+            into.isVisible = true
+            Glide.with(context)
+                .load(image)
+                .placeholder(R.drawable.ic_image_placeholder)
+                .error(R.drawable.ic_image_placeholder)
+                .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
+                .transition(DrawableTransitionOptions.withCrossFade(200))
+                .into(into)
+        }
     }
 
     private fun openMaps(item: SearchResult) {
