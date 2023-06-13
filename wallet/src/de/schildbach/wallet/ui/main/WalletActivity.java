@@ -63,8 +63,6 @@ import de.schildbach.wallet.ui.util.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder;
 import de.schildbach.wallet.ui.RestoreWalletFromSeedDialogFragment;
 import de.schildbach.wallet.ui.SetPinActivity;
-import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment;
-import de.schildbach.wallet.ui.backup.RestoreFromFileHelper;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Nfc;
@@ -81,10 +79,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener {
 
-    private static final int DIALOG_BACKUP_WALLET_PERMISSION = 0;
-    private static final int DIALOG_RESTORE_WALLET_PERMISSION = 1;
     private static final int DIALOG_TIMESKEW_ALERT = 3;
-    private static final int DIALOG_VERSION_ALERT = 4;
     private static final int DIALOG_LOW_STORAGE_ALERT = 5;
 
     private static final Logger log = LoggerFactory.getLogger(WalletActivity.class);
@@ -201,29 +196,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     @Override
     protected Dialog onCreateDialog(final int id, final Bundle args) {
-        if (id == DIALOG_BACKUP_WALLET_PERMISSION)
-            return createBackupWalletPermissionDialog();
-        else if (id == DIALOG_RESTORE_WALLET_PERMISSION)
-            return createRestoreWalletPermissionDialog();
-        else if (id == DIALOG_TIMESKEW_ALERT)
+        if (id == DIALOG_TIMESKEW_ALERT)
             return createTimeskewAlertDialog(args.getLong("diff_minutes"));
-        else if (id == DIALOG_VERSION_ALERT)
-            return createVersionAlertDialog();
         else if (id == DIALOG_LOW_STORAGE_ALERT)
             return createLowStorageAlertDialog();
         else
             throw new IllegalArgumentException();
-    }
-
-    private Dialog createBackupWalletPermissionDialog() {
-        baseAlertDialogBuilder.setTitle(getString(R.string.backup_wallet_permission_dialog_title));
-        baseAlertDialogBuilder.setMessage(getString(R.string.backup_wallet_permission_dialog_message));
-        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-        return baseAlertDialogBuilder.buildAlertDialog();
-    }
-
-    private Dialog createRestoreWalletPermissionDialog() {
-        return RestoreFromFileHelper.createRestoreWalletPermissionDialog(this, this, this);
     }
 
     private void showRestoreWalletFromSeedDialog() {
@@ -253,7 +231,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void checkAlerts() {
-
         final PackageInfo packageInfo = getWalletApplication().packageInfo();
         final int versionNameSplit = packageInfo.versionName.indexOf('-');
         final HttpUrl.Builder url = HttpUrl
@@ -307,7 +284,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 }
             };
 
-
             alertDialog = dialog.buildAlertDialog();
             alertDialog.show();
         }
@@ -324,42 +300,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             baseAlertDialogBuilder.setPositiveAction(
                     () -> {
                         startActivity(settingsIntent);
-                        finish();
-                        return Unit.INSTANCE;
-                    }
-            );
-        }
-        baseAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
-        baseAlertDialogBuilder.setShowIcon(true);
-        return baseAlertDialogBuilder.buildAlertDialog();
-    }
-
-    private Dialog createVersionAlertDialog() {
-        final PackageManager pm = getPackageManager();
-        final Intent marketIntent = new Intent(Intent.ACTION_VIEW,
-                Uri.parse(String.format(Constants.MARKET_APP_URL, getPackageName())));
-        final Intent binaryIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(Constants.BINARY_URL));
-        final StringBuilder message = new StringBuilder(getString(R.string.wallet_version_dialog_msg));
-        if (Build.VERSION.SDK_INT < Constants.SDK_DEPRECATED_BELOW)
-            message.append("\n\n").append(getString(R.string.wallet_version_dialog_msg_deprecated));
-
-        baseAlertDialogBuilder.setTitle(getString(R.string.wallet_version_dialog_title));
-        baseAlertDialogBuilder.setMessage(message);
-        if (pm.resolveActivity(marketIntent, 0) != null){
-            baseAlertDialogBuilder.setPositiveText(getString(R.string.wallet_version_dialog_button_market));
-            baseAlertDialogBuilder.setPositiveAction(
-                    () -> {
-                        startActivity(marketIntent);
-                        finish();
-                        return Unit.INSTANCE;
-                    }
-            );
-        }
-        if (pm.resolveActivity(binaryIntent, 0) != null){
-            baseAlertDialogBuilder.setNeutralText(getString(R.string.wallet_version_dialog_button_binary));
-            baseAlertDialogBuilder.setNeutralAction(
-                    () -> {
-                        startActivity(binaryIntent);
                         finish();
                         return Unit.INSTANCE;
                     }
