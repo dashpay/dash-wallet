@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">PIN 인증 중</string>
     <string name="set_pin_message">당신이 어플을 잠금 해제하실 때마다 이 PIN이 필요합니다.</string>
     <string name="set_pin_confirm_pin_incorrect">유효하지 않은 핀</string>
-
-    <string name="home_available_balance">이용 가능한 잔고</string>
-    <string name="home_balance_hidden">숨긴 잔고</string>
-    <string name="home_balance_show_hint">잔고를 확인하시려면 탭하세요</string>
+    
     <string name="home_balance_hide_hint">잔고를 숨기시려면 탭하세요</string>
 
     <string name="dialog_confirm_confirm">승인</string>
@@ -30,13 +27,13 @@
     <string name="dialog_confirm_total">총계</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">현재 지갑이 안전합니다</string>
+    <string name="shortcut_secure_now">백업</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">지불을 위해 스캔합니다</string>
+    <string name="shortcut_scan_to_pay">스캔</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">주소로 전송합니다</string>
+    <string name="shortcut_pay_to_address">보내기</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">대시 매수 / 매도</string>
+    <string name="shortcut_buy_sell">매수 &amp; 매도</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">받기</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -204,17 +201,12 @@
     <string name="verify_continue">계속</string>
     <string name="verify_backup_wallet">지갑 백업</string>
     <string name="verify_show_recovery_phrase">복원 문구 확인하기</string>
-    <string name="verify_secure_now">현재 지갑이 안전합니다</string>
-    <string name="verify_it_is_important">중요</string>
-    <string name="verify_it_is_important_subtitle">곧 당신의 지갑에 따른 비밀 키를 표시할 예정입니다.</string>
-    <string name="verify_info_text_1">이 지갑 내에서 자금에 접근하기 위해서는 이 복원 문구가 필요합니다</string>
-    <string name="verify_info_text_2">우리는 이 복원 문구를 저장하지 않습니다.</string>
-    <string name="verify_info_text_3">이 기기를 분실하거나 기기가 파손되는 경우, 혹은 대시 지갑이 이 기기에서 실수로 삭제되는 경우에는 당신의 자금에 접근하기 위해 이 복원 문구가 필요합니다.</string>
-    <string name="verify_skip">건너뛰기</string>
-    <string name="verify_secure_now_btn">현재 안전합니다</string>
-    <string name="verify_secure_now_message">이 기기를 분실하시면 당신의 자금 역시 잃게 됩니다. 다른 기기에서 당신의 지갑을 복구할 수 있도록 복원 문구를 설정하세요.</string>
-    <string name="verify_seed_title">다음을 옮겨 적으십시오</string>
-    <string name="verify_seed_write_down_confirmation">옮겨 적었습니다</string>
+    <string name="verify_info_title">복구 문구를 백업하세요</string>
+    <string name="verify_info_subtitle">이 기기가 분실되거나 망가지는 경우, 혹은 이 기기에서 대시 월렛이 삭제 되는 경우 자금에 접근하기 위해서는 이 복구 문구가 필요합니다.</string>
+    <string name="verify_info_title_1">대시 코어 그룹은 이 복구 문구를 저장하지 않습니다.</string>
+    <string name="verify_info_subtitle_1">당신의 복구 문구가 있는 사람이라면 누구나 당신의 자금에 접근할 수 있습니다.</string>
+    <string name="verify_info_title_2">복구 문구 없이는 지갑을 복구할 수 없습니다.</string>
+    <string name="verify_info_subtitle_2">안전한 장소에 적어두고 누구에게도 보여주지 마세요.</string>
     <string name="verify_seed_buttons_tip">당신의 복원 문구의 단어를 올바른 순서로 탭하십시오</string>
     <string name="verify_seed_success_title">성공적으로 인증되었습니다</string>
     <string name="verify_seed_success_message">이제 당신의 지갑은 안전합니다. 언제든 당신의 복원 문구를 사용하셔서 당신의 계정을 다른 기기에서 복원하실 수 있습니다.</string>
@@ -248,6 +240,9 @@
     <string name="transaction_details_moved_from">다음에서 이동</string>
     <string name="transaction_details_moved_internally_to">다음에 내부적으로 이동</string>
     <string name="transaction_failed_details">거래에 실패하였습니다</string>
+    <string name="transaction_failed_resolve">이는 다음으로 해결할 수 있습니다</string>
+    <string name="transaction_failed_rescan">블록체인 재스캔 중</string>
+    <string name="transaction_failed_in_conflict">이는 지갑이 두 개의 기기에 설치된 경우 가능합니다.</string>
 
     <string name="authenticate_fingerprint_title">인증하기</string>
     <string name="authenticate_fingerprint_message">계속하시려면 지문을 확인하세요</string>
@@ -281,7 +276,7 @@
     <string name="about_review_and_rate">어플 리뷰 및 평점</string>
     <string name="about_contact_support">고객 지원부에 문의하기</string>
     <string name="about_fork_disclaimer">이 어플은 비트코인 지갑에서 포크한 오픈 소스 어플입니다.</string>
-    <string name="about_copyright">Copyright © 2023 대시 코어</string>
+    <string name="about_copyright">Copyright © 2023 대시 코어 그룹</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">대시 지갑 %s</string>
     <string name="about_last_explore_device_sync">마지막 익스플로어 기기 동기화</string>
@@ -397,4 +392,24 @@
     <string name="reclassify_transactions_linked_accounts_title">연결된 계정</string>
     <string name="reclassify_transactions_linked_accounts_message">귀하의 연결된 계정 (거래소, 스테이킹 외 기타) 으로 받거나 보내는 모든 거래는 기본값으로써 송금으로 표시됩니다.</string>
     <string name="reclassify_transactions_change_explanation">홈페이지에서 거래를 선택하여 거래 세부 내역 페이지의 카테고리를 변경하세요.</string>
+
+    <string name="masternode_keys_title">마스터노드 키</string>
+    <string name="masternode_key_type_owner">소유자 키</string>
+    <string name="masternode_key_type_voting">투표 키</string>
+    <string name="masternode_key_type_operator">운영자 키</string>
+    <string name="masternode_key_type_platform">HPMN 운영자 키</string>
+    <string name="masternode_key_type_total">%d 키</string>
+    <string name="masternode_key_type_used">%d 사용됨</string>
+    <string name="masternode_key_pair_index">키페어 %d</string>
+    <string name="masternode_key_address">주소</string>
+    <string name="masternode_key_id">키 Id</string>
+    <string name="masternode_key_public">공공 키</string>
+    <string name="masternode_key_public_legacy">공공 키 (레거시)</string>
+    <string name="masternode_key_private_hex">개인 키</string>
+    <string name="masternode_key_private_wif">개인 키 WIF</string>
+    <string name="masternode_key_used">IP: %s</string>
+    <string name="masternode_key_ip_address_unknown">알 수 없음</string>
+    <string name="masternode_key_not_used">사용되지 않음</string>
+    <string name="masternode_key_revoked">취소됨</string>
+    <string name="masternode_key_private_public_base64">개인 / 공공 키 (base64)</string>
 </resources>

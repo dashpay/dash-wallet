@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">Verifiziere PIN</string>
     <string name="set_pin_message">Die PIN muss bei jedem Verwenden der App zum Entsperren eingegeben werden.</string>
     <string name="set_pin_confirm_pin_incorrect">Falsche PIN</string>
-
-    <string name="home_available_balance">Verfügbares Guthaben</string>
-    <string name="home_balance_hidden">Guthaben nicht angezeigt</string>
-    <string name="home_balance_show_hint">Zum Anzeigen des Guthabens tippen</string>
+    
     <string name="home_balance_hide_hint">Zum Verbergen des Guthabens tippen</string>
 
     <string name="dialog_confirm_confirm">Bestätigen</string>
@@ -30,13 +27,13 @@
     <string name="dialog_confirm_total">Gesamt</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Wallet jetzt absichern</string>
+    <string name="shortcut_secure_now">Backup</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Zur Zahlung scannen</string>
+    <string name="shortcut_scan_to_pay">Scannen</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Zur Adresse senden</string>
+    <string name="shortcut_pay_to_address">Senden</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Kaufe / Verkaufe Dash</string>
+    <string name="shortcut_buy_sell">Kaufen &amp; Verkaufen</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Empfangen</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -207,17 +204,12 @@
     <string name="verify_continue">Fortfahren</string>
     <string name="verify_backup_wallet">Wallet-Backup</string>
     <string name="verify_show_recovery_phrase">Wiederherstellungsphrase anzeigen</string>
-    <string name="verify_secure_now">Wallet jetzt absichern</string>
-    <string name="verify_it_is_important">Dies ist wichtig</string>
-    <string name="verify_it_is_important_subtitle">Wir zeigen dir nun den geheimen Zugangsschlüssel zu deiner Wallet.</string>
-    <string name="verify_info_text_1">Diese Wiederherstellungsphrase stellt den Zugang zu dieser Wallet dar.</string>
-    <string name="verify_info_text_2">Wir speichern die Wiederherstellungsphrase NICHT.</string>
-    <string name="verify_info_text_3">Diese Wiederherstellungsphrase wird zum Zugriff auf das Guthaben benötigt, sollte das Gerät verloren oder kaputt gehen, oder falls die App fälschlicherweise deinstalliert wird.</string>
-    <string name="verify_skip">Überspringen</string>
-    <string name="verify_secure_now_btn">Jetzt sichern</string>
-    <string name="verify_secure_now_message">Wenn Du dieses Gerät verlierst, verlierst Du dein Geld. Sicher Deine Wiederherstellungsphrase, damit Du Deine Wallet auf einem anderen Gerät wiederherstellen kannst.</string>
-    <string name="verify_seed_title">Bitte aufschreiben</string>
-    <string name="verify_seed_write_down_confirmation">Ich habe es aufgeschrieben</string>
+    <string name="verify_info_title">Wiederherstellungsphrase sichern</string>
+    <string name="verify_info_subtitle">Du benötigst diese Wiederherstellungsphrase, um auf dein Guthaben zuzugreifen, wenn dieses Gerät verloren geht, beschädigt wird oder die Wallet von diesem Gerät deinstalliert wird.</string>
+    <string name="verify_info_title_1">Die Dash Core Group speichert deine Wiederherstellungsphrase NICHT.</string>
+    <string name="verify_info_subtitle_1">Jede Person mit deiner Wiederherstellungsphrase, kann auf dein Guthaben zugreifen.</string>
+    <string name="verify_info_title_2">Du kannst die Wallet ohne Wiederherstellungsphrase NICHT wiederherstellen.</string>
+    <string name="verify_info_subtitle_2">Schreibe es auf, lege es an einen sicheren Platz und zeige es niemanden.</string>
     <string name="verify_seed_buttons_tip">Bitte tippe die Wörter deiner Wiederherstellungsphrase in der richtigen Reihenfolge an</string>
     <string name="verify_seed_success_title">Erfolgreich verifiziert</string>
     <string name="verify_seed_success_message">Deine Wallet ist jetzt gesichert. Du kannst die Phrase jederzeit nutzen, um die Wallet auf einem anderen Gerät wiederherzustellen.</string>
@@ -251,6 +243,9 @@
     <string name="transaction_details_moved_from">Verschoben von</string>
     <string name="transaction_details_moved_internally_to">Intern verschoben nach</string>
     <string name="transaction_failed_details">Transaktion fehlgeschlagen</string>
+    <string name="transaction_failed_resolve">Dies könnte gelöst werden durch</string>
+    <string name="transaction_failed_rescan">Blockchain wird erneut gescannt.</string>
+    <string name="transaction_failed_in_conflict">Dies ist möglich, wenn die Wallet auf zweit verschiedenen Geräten installiert ist.</string>
 
     <string name="authenticate_fingerprint_title">Authentifizieren</string>
     <string name="authenticate_fingerprint_message">Fingerabdruck zum Fortfahren bestätigen</string>
@@ -284,7 +279,7 @@
     <string name="about_review_and_rate">Bewerte und beurteile die App</string>
     <string name="about_contact_support">Support kontaktieren</string>
     <string name="about_fork_disclaimer">Dies ist eine Open Source App, die von der Bitcoin Wallet geforked wurde</string>
-    <string name="about_copyright">Copyright © 2023 Dash Core</string>
+    <string name="about_copyright">Copyright © 2023 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
     <string name="about_last_explore_device_sync">Letzte Explore Dash Gerätesynchronisierung</string>
@@ -370,7 +365,7 @@
     <string name="yesterday">Gestern</string>
 
     <string name="syncing">Synchronisiere</string>
-    <string name="syncing_balance">Synchronisiere Guthaben</string>
+    <string name="syncing_balance">Guthaben wird synchronisiert.</string>
     <string name="transaction_count">%d Transaktionen</string>
     <string name="all_transactions">Alles</string>
     <string name="received_transactions">Erhalten</string>
@@ -400,4 +395,24 @@
     <string name="reclassify_transactions_linked_accounts_title">Verknüpfte Konten</string>
     <string name="reclassify_transactions_linked_accounts_message">Standardmäßig werden alle Transaktionen auf oder von Ihren verknüpften Konten (Tausch, Staking, usw.) als Überweisungen gekennzeichnet.</string>
     <string name="reclassify_transactions_change_explanation">Wähle eine beliebige Transaktion von der Webseite und ändere die Kategorie auf der Seite mit den Transaktionsdetails.</string>
+
+    <string name="masternode_keys_title">Masternode-Schlüssel</string>
+    <string name="masternode_key_type_owner">Besitzer-Schlüssel (Owner Keys)</string>
+    <string name="masternode_key_type_voting">Abstimmungs-Schlüssel</string>
+    <string name="masternode_key_type_operator">Betreiber-Schlüssel (Operator Keys)</string>
+    <string name="masternode_key_type_platform">HPMN Betreiber-Schlüssel</string>
+    <string name="masternode_key_type_total">%d Schlüssel</string>
+    <string name="masternode_key_type_used">%d verwendet</string>
+    <string name="masternode_key_pair_index">Schlüsselpaar %d</string>
+    <string name="masternode_key_address">Adresse</string>
+    <string name="masternode_key_id">Schlüssel als Zeichenkette</string>
+    <string name="masternode_key_public">Öffentlicher Schlüssel </string>
+    <string name="masternode_key_public_legacy">Öffentlicher Schlüssel (Legacy)</string>
+    <string name="masternode_key_private_hex">Privater Schlüssel</string>
+    <string name="masternode_key_private_wif">Privater WIF Schlüssel</string>
+    <string name="masternode_key_used">IP: %s</string>
+    <string name="masternode_key_ip_address_unknown">Unbekannt</string>
+    <string name="masternode_key_not_used">Nicht benutzt</string>
+    <string name="masternode_key_revoked">Widerrufen</string>
+    <string name="masternode_key_private_public_base64">Privater/ Öffentlicher Schlüssel (base64)</string>
 </resources>

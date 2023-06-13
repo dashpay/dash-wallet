@@ -17,41 +17,28 @@
 
 package de.schildbach.wallet.data;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.res.AssetManager;
+
+import androidx.loader.content.AsyncTaskLoader;
+
+import com.google.common.base.Charsets;
 
 import org.bitcoinj.core.Coin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Stopwatch;
-import com.squareup.okhttp.internal.http.HttpDate;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.service.PackageInfoProvider;
-import de.schildbach.wallet.util.Io;
-
-import android.content.Context;
-import android.content.pm.PackageInfo;
-import android.content.res.AssetManager;
-import androidx.loader.content.AsyncTaskLoader;
-import okhttp3.Call;
 import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
 
 /**
  * @author Andreas Schildbach
@@ -149,47 +136,5 @@ public class DynamicFeeLoader extends AsyncTaskLoader<Map<FeeCategory, Coin>> {
             is.close();
         }
         return dynamicFees;
-    }
-
-    private static void fetchDynamicFees(final HttpUrl url, final File tempFile, final File targetFile,
-            final String userAgent) {
-        final Stopwatch watch = Stopwatch.createStarted();
-
-        final Request.Builder requestBuilder = new Request.Builder()
-                .url(url)
-                .header("User-Agent", userAgent);
-        if (targetFile.exists())
-            requestBuilder.header("If-Modified-Since", HttpDate.format(new Date(targetFile.lastModified())));
-
-        final OkHttpClient httpClient = org.dash.wallet.common.util.Constants.INSTANCE.getHTTP_CLIENT().newBuilder()
-                .connectTimeout(5, TimeUnit.SECONDS)
-                .writeTimeout(5, TimeUnit.SECONDS)
-                .readTimeout(5, TimeUnit.SECONDS)
-                .build();
-        final Call call = httpClient.newCall(requestBuilder.build());
-        try {
-            final Response response = call.execute();
-            final int status = response.code();
-            if (status == HttpURLConnection.HTTP_NOT_MODIFIED) {
-                log.info("Dynamic fees not modified at {}, took {}", url, watch);
-            } else if (status == HttpURLConnection.HTTP_OK) {
-                final ResponseBody body = response.body();
-                final FileOutputStream os = new FileOutputStream(tempFile);
-                Io.copy(body.byteStream(), os);
-                os.close();
-                final Date lastModified = response.headers().getDate("Last-Modified");
-                if (lastModified != null)
-                    tempFile.setLastModified(lastModified.getTime());
-                body.close();
-                if (!tempFile.renameTo(targetFile))
-                    throw new IllegalStateException("Cannot rename " + tempFile + " to " + targetFile);
-                watch.stop();
-                log.info("Dynamic fees fetched from {}, took {}", url, watch);
-            } else {
-                log.warn("HTTP status {} when fetching dynamic fees from {}", response.code(), url);
-            }
-        } catch (final Exception x) {
-            log.warn("Problem when fetching dynamic fees rates from " + url, x);
-        }
     }
 }

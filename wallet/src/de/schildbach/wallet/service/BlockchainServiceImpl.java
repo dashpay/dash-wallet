@@ -81,7 +81,9 @@ import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DefaultRiskAnalysis;
+import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dashj.platform.dapiclient.DapiClient;
@@ -315,7 +317,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
             if(CreditFundingTransaction.isCreditFundingTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
                 // Handle credit function transactions (username creation, topup, invites)
-                CreditFundingTransaction cftx = wallet.getCreditFundingTransaction(tx);
+                AuthenticationGroupExtension authExtension =
+                        (AuthenticationGroupExtension) wallet.addOrGetExistingExtension(
+                                new AuthenticationGroupExtension(wallet.getParams())
+                        );
+                CreditFundingTransaction cftx = authExtension.getCreditFundingTransaction(tx);
 
                 long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
                 platformRepo.handleSentCreditFundingTransaction(cftx, blockChainHeadTime);

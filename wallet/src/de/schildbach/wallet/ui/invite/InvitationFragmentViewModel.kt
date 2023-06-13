@@ -32,15 +32,12 @@ import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
-import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
-import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.wallet.AuthenticationKeyChain
-import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -59,7 +56,9 @@ open class InvitationFragmentViewModel @Inject constructor(
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     private val log = LoggerFactory.getLogger(InvitationFragmentViewModel::class.java)
 
-    private val pubkeyHash = walletApplication.wallet!!.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
+    private val pubkeyHash = platformRepo.authenticationGroupExtension!!.currentKey(
+        AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING
+    ).pubKeyHash
 
     private val inviteId = Address.fromPubKeyHash(walletApplication.wallet!!.params, pubkeyHash).toBase58()
 
@@ -141,24 +140,6 @@ open class InvitationFragmentViewModel @Inject constructor(
 
     val invitation: Invitation
         get() = invitationLiveData.value!!
-
-    val invitationLinkData = liveData(Dispatchers.IO) {
-        val tx = walletApplication.wallet!!.getTransaction(invitation.txid)
-        val cftx = walletApplication.wallet!!.getCreditFundingTransaction(tx)
-
-        val wallet = WalletApplication.getInstance().wallet!!
-        val password = SecurityGuard().retrievePassword()
-        var encryptionKey: KeyParameter? = null
-        try {
-            encryptionKey = wallet.keyCrypter!!.deriveKey(password)
-        } catch (ex: KeyCrypterException) {
-            analytics.logError(ex, "create invitation link: failed to derive encryption key")
-            emit("")
-        }
-
-        val invite = platformRepo.blockchainIdentity.getInvitationString(cftx, encryptionKey)
-        emit(invite)
-    }
 
     suspend fun getInvitedUserProfile(): DashPayProfile? =
         dashPayProfileDao.loadByUserId(identityIdLiveData.value!!)

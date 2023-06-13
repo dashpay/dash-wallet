@@ -3,7 +3,6 @@
 
     <string name="toast_wallet_reset">Din tegnebog blev nulstillet!\nDet tager nogen tid at genoprette.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Brug for egen risiko. Læs &lt;u&gt;sikkerhedsnoterne&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Du bør &lt;u&gt;tage sikkerhedskopi af din tegnebog&lt;/u&gt;!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d timer bagefter</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d dage bagefter</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d uger bagefter</string>
@@ -16,28 +15,18 @@
     <string name="wallet_address_dialog_fragment_hint">For at beskytte dit privatliv vil din adresse ændres, så snart den modtager en betaling.</string>
     <string name="wallet_balance_fragment_too_much">Dette beløb er ret stort at gå rundt med i din lomme. Du bør flytte noget af det til et mere sikkert sted.</string>
     <string name="wallet_balance_fragment_replaying">Saldo er ikke tilgængelig under gennemløb af blokkæden.</string>
-    <string name="exchange_rates_activity_title">Valutakurser</string>
     <string name="exchange_rates_fragment_empty_text">Kunne ikke indlæse vekselkurser.</string>
     <string name="exchange_rates_fragment_empty_search">Kunne ikke finde vekselkurs.</string>
     <string name="exchange_rates_fragment_default">(standard)</string>
-    <string name="exchange_rates_fragment_rate">kurs</string>
-    <string name="exchange_rates_fragment_balance">saldo</string>
     <string name="exchange_rates_fragment_source">Pris fra %s</string>
     <string name="exchange_rates_options_search">Søg iblandt vekselkurser</string>
     <string name="exchange_rates_context_set_as_default_title">Sæt som standard</string>
-    <string name="wallet_transactions_fragment_empty_text_received">Ingen Dash modtaget endnu.</string>
-    <string name="wallet_transactions_fragment_empty_text_sent">Ingen Dash sendt endnu.</string>
-    <string name="wallet_transactions_fragment_empty_text_howto">Hvordan får man Dash?\n\nKøb for traditionelle penge,\nsælg varer eller ydelser eller\ntjen dem ved at arbejde.</string>
-    <string name="wallet_transactions_row_warning_backup">Tillykke, du har modtaget din første betaling! Har du &lt;u&gt;taget en sikkerhedskopi af din tegnebog&lt;/u&gt;, for at beskytte dig mod tab?</string>
     <string name="wallet_transactions_fragment_coinbase">mined</string>
     <string name="wallet_transactions_fragment_internal">intern</string>
-    <string name="wallet_transactions_options_filter">Filter</string>
     <string name="wallet_transactions_options_filter_all">Alle betalinger</string>
     <string name="wallet_transactions_options_filter_received">Modtagne betalinger</string>
     <string name="wallet_transactions_options_filter_sent">Sendte betalinger</string>
     <string name="wallet_options_safety_menu">Sikkerhed</string>
-    <string name="wallet_options_encrypt_keys_set">Sæt spenderings-PIN</string>
-    <string name="wallet_options_encrypt_keys_change">Ændr spenderings-PIN</string>
     <string name="wallet_options_safety">Sikkerhedsnoter</string>
     <string name="wallet_low_storage_dialog_title">Enheds interne lagerplads er lav!</string>
     <string name="wallet_low_storage_dialog_msg">Dash Wallet bruger intern lager til at huske overførsler og blokke. Hvis den løber tør for plads, vil den stoppe med at virke og dine Dash vil være i fare!\n\nVil du åbne app-håndteringen for at afinstallere ubrugte apps?</string>
@@ -54,15 +43,11 @@
     <string name="send_coins_fragment_request_payment_request_failed_title">Hentning af signatur mislykkedes</string>
     <string name="send_coins_fragment_request_payment_request_wrong_signature">Forkert signatur!</string>
     <string name="send_coins_fragment_payee_verified_by_unknown">ukendt</string>
-    <string name="send_coins_fragment_receiving_address_label">Betal til</string>
     <string name="send_coins_fragment_receiving_address_hint">skriv adresse eller navn</string>
     <string name="send_coins_fragment_receiving_address_error">Ugyldig Dash-adresse!</string>
     <string name="send_coins_fragment_receiving_address_own">Du er ved at sende til dig selv!</string>
     <string name="send_coins_fragment_receiving_address_complex">kompleks\nadresse</string>
     <string name="send_coins_fragment_pending">(%s venter på bekræftelse)</string>
-    <string name="send_coins_fragment_amount_label">Beløb at betale</string>
-    <string name="send_coins_error_dusty_send">Beløbet er for lille til at blive sendt.</string>
-    <string name="send_coins_error_insufficient_money">Ikke nok tilgængelige Dash. Du mangler %s.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Det samlede beløb af bittesmå betalinger i din tegnebog er ikke nok til at kunne sendes.</string>
     <string name="send_coins_fragment_direct_payment_enable">Send betaling direkte til modtageren.</string>
     <string name="send_coins_fragment_direct_payment_ack">Din betaling blev sendt direkte med succes.</string>
@@ -73,7 +58,6 @@
     <string name="send_coins_fragment_button_back">Tilbage</string>
     <string name="send_coins_fragment_insufficient_money_title">Ikke nok tilgængelig Dash</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Du mangler %s.</string>
-    <string name="send_coins_fragment_insufficient_money_msg2">Vil du betale alt hvad du har?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Tømning af tegnebog mislykkedes</string>
     <string name="send_coins_fragment_state_decrypting">Afkrypterer …</string>
     <string name="send_coins_preparation_msg">Signerer …</string>
@@ -85,17 +69,10 @@
     <string name="send_coins_options_fee_category_economic">Økonomisk</string>
     <string name="send_coins_options_fee_category_priority">Prioriteret</string>
     <string name="send_coins_options_empty">Tøm tegnebog</string>
-    <string name="raise_fee_dialog_title">Forhøj netværksgebyr</string>
-    <string name="raise_fee_dialog_state_decrypting">Afkrypterer …</string>
-    <string name="raise_fee_dialog_state_done">Færdig.</string>
-    <string name="raise_fee_dialog_button_raise">Forhøj</string>
-    <string name="sweep_wallet_activity_title">Ryd papirtegnebog</string>
     <string name="sweep_wallet_fragment_intro">Du er ved at rydde en papirtegnebog eller kupon. Dette vil flytte alle Dash fra dette stykke papir til din tegnebog på denne enhed. Når overførslen er bekræftet, vil papiret være værdiløst og bør ikke genanvendes af sikkerhedsgrunde.</string>
     <string name="sweep_wallet_fragment_hint">Papirtegnebøger bruges oftest som kold opbevaring. Nogle hæveautomater udskriver dem på deres papirbon\'er frem for at sende Dash direkte til din mobile enhed. Folk bruger nogle gange papirtegnebøger til at sende værdier omkring (anbefales ikke).</string>
     <string name="sweep_wallet_fragment_wallet_unknown">Start ved at scanne papirtegnebogens private nøgle. Brug kamera-knappen.</string>
     <string name="sweep_wallet_fragment_encrypted">Denne private nøgle beskyttes med en adgangskode.</string>
-    <string name="sweep_wallet_fragment_password">kodeord</string>
-    <string name="sweep_wallet_fragment_bad_password">forkert adgangskode!</string>
     <string name="sweep_wallet_fragment_balance">Saldo der skal ryddes</string>
     <string name="sweep_wallet_fragment_button_decrypt">Afkryptér</string>
     <string name="sweep_wallet_fragment_button_sweep">Ryd</string>
@@ -116,7 +93,6 @@
     <string name="request_coins_fragment_initiate_request_qr">Få afsenderen til at scanne denne kode.</string>
     <string name="request_coins_fragment_initiate_request_nfc">Eller berør en NFC-aktiveret enhed.</string>
     <string name="request_coins_clipboard_msg">Dash-forespørgsel kopieret til udklipsholderen</string>
-    <string name="request_coins_share_dialog_title">Del forespørgsel efter Dash …</string>
     <string name="request_coins_no_local_app_msg">Ingen anden Dash-app fundet</string>
     <string name="request_coins_options_local_app_title">Forespørg fra lokal app</string>
     <string name="address_book_activity_title">Adressebog</string>
@@ -175,7 +151,6 @@
     <string name="backup_wallet_dialog_message">Din sikkerhedskopi vil blive krypteret med det valgte kodeord og skrevet til eksternt lager.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Din tegnebog beskyttes af en spenderings-PIN. Vær sikker på, at du kan huske din PIN udover dit kodeord til sikkerhedskopien!</string>
     <string name="export_keys_dialog_button_export">Sikkerskopiér</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Din tegnebog er blevet sikkerhedskopieret til <tt>%s</tt></p><p>Hvis din enhed har et SD-kort, der kan fjernes, <i>burde</i> sikkerhedskopien være på det kort. Fjern det og opbevar det et sikkert sted. Hvis kortet <i>ikke</i> kan fjernes, er du nødt til at arkivere din sikkerhedskopi et andet sted end på din enhed.</p><p><b>Hvis din sikkerhedskopi kun findes på din enhed, løber du risikoen at miste begge dele på én gang!</b></p><p>Uanset hvad, så vær sikker på, at du kan huske dit kodeord til sikkerhedskopien. Vil du arkivere din tegnebog nu?</p>]]></string>
     <string name="export_keys_dialog_failure">Din tegnebog kunne ikke sikkerhedskopieres:\n%s</string>
     <string name="export_keys_dialog_button_archive">Arkivér</string>
     <string name="export_keys_dialog_mail_subject">Sikkerhedskopi af Dash-tegnebog</string>
@@ -188,7 +163,6 @@
     <string name="import_export_keys_dialog_show">Vis kodeord</string>
     <string name="import_export_keys_dialog_failure_title">Fejl</string>
     <string name="import_keys_intent_filter_action">Genopret tegnebog</string>
-    <string name="encrypt_keys_dialog_title">Spenderings-PIN</string>
     <string name="encrypt_keys_dialog_message">Spendering fra din tegnebog vil blive beskyttet med den valgte PIN.</string>
     <string name="encrypt_keys_dialog_warning">Vigtigt: Du er nødt til at huske din PIN! Brug ikke almindelige tal (som fx fødselsdage).</string>
     <string name="encrypt_keys_dialog_password_old">Gammel PIN</string>
@@ -199,7 +173,6 @@
     <string name="encrypt_keys_dialog_show">Vis PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Krypterer …</string>
     <string name="encrypt_keys_dialog_state_decrypting">Afkrypterer …</string>
-    <string name="encrypt_keys_dialog_state_done">Færdig.</string>
     <string name="scan_camera_problem_dialog_title">Beklager</string>
     <string name="scan_camera_problem_dialog_message">Der er et problem med kameraet. En gentstart af enheden er sandsynligvis nødvendig.</string>
     <string name="input_parser_io_error">Kan ikke læse data:\n%s</string>
@@ -230,8 +203,6 @@
     <string name="preferences_data_usage_title">Dataforbrug</string>
     <string name="preferences_data_usage_summary">Vis indstillinger for restriktion på dataforbrug på mobile netværk.</string>
     <string name="preferences_report_issue_title">Rapportér problem</string>
-    <string name="preferences_initiate_reset_title">Nulstil blokkæde</string>
-    <string name="preferences_initiate_reset_dialog_positive">Nulstil</string>
     <string name="preferences_extended_public_key_title">Vis xpub</string>
     <string name="preferences_extended_public_key_summary">Vis din tegnebogs udvidede offentlige nøgle så den kan importeres til andre apps og tjenester. Vær forsigtig: Du vil afsløre dit økonomiske privatliv til pågældende app, hvis du gør dette.</string>
     <string name="bitmap_fragment_share">Del …</string>
@@ -271,10 +242,10 @@
     <string name="button_edit">Redigér</string>
     <string name="button_copy">Kopiér</string>
     <string name="button_paste">Indsæt</string>
-    <string name="button_share">Del</string>
     <string name="button_set_as_default">Sæt som standard</string>
-    <string name="button_request_coins">Modtag Dash</string>
+    <string name="button_request_coins">Forespørg Dash</string>
     <string name="button_send_coins">Send Dash</string>
+    <string name="button_pay">Send</string>
     <string name="button_scan">Scan</string>
     <string name="button_settings">Opsætning</string>
     <string name="action_show_qr">Vis QR-kode</string>
@@ -284,12 +255,11 @@
     <string name="time_today">i dag</string>
     <string name="address_unlabeled">(uden etikette)</string>
     <string name="private_key_password">PIN</string>
-    <string name="private_key_bad_password">forkert PIN!</string>
-
     <!-- generic error messages -->
     <string name="error_io">I/O-fejl: %s</string>
     <string name="error_parse">Fortolkningsfejl: %s</string>
     <string name="error_http">HTTP-fejl %1$s:\n%2$s</string>
     <string name="error_bluetooth">Bluetooth-fejl: %1$s</string>
 
+    <string name="activity_buy_and_sell_dash_filter">Filter</string>
     </resources>

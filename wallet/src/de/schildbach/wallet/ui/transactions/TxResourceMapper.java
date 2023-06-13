@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.ui.transactions;
 
+import static org.bitcoinj.wallet.AuthenticationKeyChain.KeyChainType.*;
+
 import android.text.format.DateUtils;
 
 import androidx.annotation.NonNull;
@@ -28,7 +30,10 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.evolution.CreditFundingTransaction;
+import org.bitcoinj.wallet.AuthenticationKeyChain;
+import org.bitcoinj.wallet.AuthenticationKeyChainGroup;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.dash.wallet.common.transactions.TransactionUtils;
 
 import de.schildbach.wallet.Constants;
@@ -68,8 +73,14 @@ public class TxResourceMapper {
                     }
 
                     if (dashPayWallet != null && CreditFundingTransaction.isCreditFundingTransaction(tx)) {
-                        CreditFundingTransaction cftx = dashPayWallet.getCreditFundingTransaction(tx);
-                        switch (dashPayWallet.getAuthenticationKeyType(cftx.getCreditBurnPublicKeyId().getBytes())) {
+                        AuthenticationGroupExtension authExtension =
+                                (AuthenticationGroupExtension) dashPayWallet.addOrGetExistingExtension(
+                                        new AuthenticationGroupExtension(dashPayWallet.getParams())
+                                );
+                        CreditFundingTransaction cftx = authExtension.getCreditFundingTransaction(tx);
+                        // TODO: getKeyChainGroup and getKeyChainType are protected. Any other way to get the type?
+                        AuthenticationKeyChainGroup group = ((AuthenticationKeyChainGroup)authExtension.getKeyChainGroup());
+                        switch (group.getKeyChainType(cftx.getCreditBurnPublicKeyId().getBytes())) {
                             case INVITATION_FUNDING:
                                 typeId = R.string.dashpay_invite_fee;
                                 break;

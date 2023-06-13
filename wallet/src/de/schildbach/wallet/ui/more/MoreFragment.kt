@@ -106,7 +106,14 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             startActivity(Intent(requireContext(), SettingsActivity::class.java))
         }
         binding.tools.setOnClickListener {
-            startActivity(Intent(requireContext(), ToolsActivity::class.java))
+            //startActivity(Intent(requireContext(), ToolsActivity::class.java))
+            findNavController().navigate(
+                R.id.toolsFragment,
+                bundleOf(),
+                NavOptions.Builder()
+                    .setEnterAnim(R.anim.slide_in_bottom)
+                    .build()
+            )
         }
         binding.contactSupport.setOnClickListener {
             val alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(

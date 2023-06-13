@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">PINを検証中</string>
     <string name="set_pin_message">このアプリをアンロックして使用するときは必ずこのPINが必要となります</string>
     <string name="set_pin_confirm_pin_incorrect">不正な暗証番号</string>
-
-    <string name="home_available_balance">ご利用可能な残高</string>
-    <string name="home_balance_hidden">非表示にされた残高</string>
-    <string name="home_balance_show_hint">タップして残高を表示させる</string>
+    
     <string name="home_balance_hide_hint">タップして残高を非表示にする</string>
 
     <string name="dialog_confirm_confirm">承認</string>
@@ -30,13 +27,13 @@
     <string name="dialog_confirm_total">総計</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">ウォレットをすぐに安全な状態にする</string>
+    <string name="shortcut_secure_now">バックアップ</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">スキャンして支払う</string>
+    <string name="shortcut_scan_to_pay">スキャン</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">アドレスへ送金する</string>
+    <string name="shortcut_pay_to_address">送金する</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Dashを買う/売る</string>
+    <string name="shortcut_buy_sell">購入・売却</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">入金</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -204,20 +201,12 @@
     <string name="verify_continue">続ける</string>
     <string name="verify_backup_wallet">ウォレットをバックアップする</string>
     <string name="verify_show_recovery_phrase">復元フレーズを表示する</string>
-    <string name="verify_secure_now">ウォレットをすぐに安全な状態にする</string>
-    <string name="verify_it_is_important">それは大切です</string>
-    <string name="verify_it_is_important_subtitle">これからあなたのウォレットの秘密鍵を表示します</string>
-    <string name="verify_info_text_1">この復元フレーズがあれば、このウォレットの中の資金へのアクセスできます</string>
-    <string name="verify_info_text_2">このリカバリーフレーズは保存されません。</string>
-    <string name="verify_info_text_3">この端末を紛失したり故障した場合やこの端末からDashウォレットを
-誤まってアンインストールしてしまった場合に、あなたの資金にアクセス
-するためには、この復元フレーズが必要となります。</string>
-    <string name="verify_skip">スキップする</string>
-    <string name="verify_secure_now_btn">すぐに安全な状態にする</string>
-    <string name="verify_secure_now_message">もしこの端末をなくすと、あなたの資金も失われてしまいます。
-復元フレーズを取得すれば、他のデバイスでも自分のウォレットを復元できます。</string>
-    <string name="verify_seed_title">紙に書き留めて下さい</string>
-    <string name="verify_seed_write_down_confirmation">紙に書き留めました</string>
+    <string name="verify_info_title">リカバリーフレーズをバックアップ</string>
+    <string name="verify_info_subtitle">このデバイスを紛失したり破損した場合、またはDash Walletがこのデバイスからアンインストールされた場合は、資金にアクセスするためにこのリカバリーフレーズが必要です。</string>
+    <string name="verify_info_title_1">Dashコアグループは、このリカバリーフレーズを保存していません</string>
+    <string name="verify_info_subtitle_1">お客様のリカバリーフレーズをお持ちの方は、どなたでもお客様の資金にアクセスすることができます。</string>
+    <string name="verify_info_title_2">リカバリーフレーズがないとウォレットの復元はできません</string>
+    <string name="verify_info_subtitle_2">リカバリーフレーズを安全な場所に書き留め、他人に見せないでください。</string>
     <string name="verify_seed_buttons_tip">復元フレーズの言葉を正しい順番にタップしてください</string>
     <string name="verify_seed_success_title">IPアドレスで使用済みです
 </string>
@@ -253,6 +242,9 @@
     <string name="transaction_details_moved_from">から移動した</string>
     <string name="transaction_details_moved_internally_to">内部で移転</string>
     <string name="transaction_failed_details">送金に失敗しました</string>
+    <string name="transaction_failed_resolve">この問題を解決するには</string>
+    <string name="transaction_failed_rescan">ブロックチェーンを再スキャンする</string>
+    <string name="transaction_failed_in_conflict">ウォレットが2つのデバイスにインストールされている場合、これが可能になります。</string>
 
     <string name="authenticate_fingerprint_title">認証する</string>
     <string name="authenticate_fingerprint_message">指紋を確認して続ける</string>
@@ -286,7 +278,7 @@
     <string name="about_review_and_rate">アプリのレビューを書いて評価する</string>
     <string name="about_contact_support">サポートへ連絡する</string>
     <string name="about_fork_disclaimer">これはビットコインウォレットからフォークしたオープンソースのアプリです</string>
-    <string name="about_copyright">Copyright © 2023 Dash Core</string>
+    <string name="about_copyright">Copyright © 2023 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dashウォレット %s</string>
     <string name="about_last_explore_device_sync">前回のExploreのデバイスの同期</string>
@@ -374,7 +366,7 @@
     <string name="yesterday">昨日</string>
 
     <string name="syncing">同期中</string>
-    <string name="syncing_balance">同期バランス</string>
+    <string name="syncing_balance">残高を同期中</string>
     <string name="transaction_count">%d件</string>
     <string name="all_transactions">全て</string>
     <string name="received_transactions">受取済み</string>
@@ -404,4 +396,24 @@
     <string name="reclassify_transactions_linked_accounts_title">連携アカウント</string>
     <string name="reclassify_transactions_linked_accounts_message">デフォルトでは、お客様の連携アカウントとのすべての取引（交換、ステーキングなど）は、送金と表示されます。</string>
     <string name="reclassify_transactions_change_explanation">ホームページからいずれかの取引を選択し、取引詳細ページでカテゴリを変更します。</string>
+
+    <string name="masternode_keys_title">マスターノードキー</string>
+    <string name="masternode_key_type_owner">所有者の諸々のキー</string>
+    <string name="masternode_key_type_voting">投票の諸々のキー</string>
+    <string name="masternode_key_type_operator">運用者の諸々のキー</string>
+    <string name="masternode_key_type_platform">HPMNのオペレーターキー</string>
+    <string name="masternode_key_type_total">%d キー</string>
+    <string name="masternode_key_type_used">%dは使用済みです</string>
+    <string name="masternode_key_pair_index">キーペア%d</string>
+    <string name="masternode_key_address">アドレス</string>
+    <string name="masternode_key_id">キーID</string>
+    <string name="masternode_key_public">パブリックキー</string>
+    <string name="masternode_key_public_legacy">パブリックキー(レガシー)</string>
+    <string name="masternode_key_private_hex">プライベートキー</string>
+    <string name="masternode_key_private_wif">プライベートキーWIF</string>
+    <string name="masternode_key_used">IP: %s</string>
+    <string name="masternode_key_ip_address_unknown">未知の</string>
+    <string name="masternode_key_not_used">未使用です</string>
+    <string name="masternode_key_revoked">無効になっています</string>
+    <string name="masternode_key_private_public_base64">プライベート/パブリックキー(ベース64)</string>
 </resources>

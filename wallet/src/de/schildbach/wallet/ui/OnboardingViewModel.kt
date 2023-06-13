@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui
 
 import android.app.Application
 import android.content.Intent
-import androidx.core.os.bundleOf
 import androidx.lifecycle.AndroidViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.InvitationLinkData
@@ -60,6 +59,9 @@ class OnboardingViewModel @Inject constructor(
     fun createNewWallet(onboardingInvite: InvitationLinkData?) {
         walletApplication.initEnvironmentIfNeeded()
         val wallet = Wallet(Constants.NETWORK_PARAMETERS)
+        for (extension in walletApplication.getWalletExtensions()) {
+            wallet.addExtension(extension)
+        }
         log.info("successfully created new wallet")
         walletApplication.setWallet(wallet)
         walletApplication.configuration.armBackupSeedReminder()

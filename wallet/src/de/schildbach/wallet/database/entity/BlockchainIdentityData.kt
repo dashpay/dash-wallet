@@ -25,6 +25,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.identity.IdentityPublicKey
@@ -64,7 +65,10 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
         }
         if (wallet != null) {
             creditFundingTransactionCache = wallet.getTransaction(creditFundingTxId)?.run {
-                wallet.getCreditFundingTransaction(this)
+                val authExtension = wallet.addOrGetExistingExtension(
+                    AuthenticationGroupExtension(wallet.params)
+                ) as AuthenticationGroupExtension
+                authExtension.getCreditFundingTransaction(this)
             }
         }
         return creditFundingTransactionCache

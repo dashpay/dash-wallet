@@ -34,6 +34,7 @@ import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -645,7 +646,10 @@ class CreateIdentityService : LifecycleService() {
         // use an "empty" state for each
         blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null, null, true)
 
-        val cftxs = walletApplication.wallet!!.creditFundingTransactions
+        val authExtension = walletApplication.wallet!!.addOrGetExistingExtension(
+            AuthenticationGroupExtension(walletApplication.wallet!!.params)
+        ) as AuthenticationGroupExtension
+        val cftxs = authExtension.creditFundingTransactions
 
         val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { it.creditBurnIdentityIdentifier.bytes!!.contentEquals(identity) }
 
@@ -676,7 +680,7 @@ class CreateIdentityService : LifecycleService() {
         val seed = decryptSeed(backgroundHandler, wallet, encryptionKey)
 
         // create the Blockchain Identity object
-        val blockchainIdentity = BlockchainIdentity(platformRepo.platform, 0, wallet)
+        val blockchainIdentity = BlockchainIdentity(platformRepo.platform, 0, wallet, authExtension)
         // this process should have been done already, otherwise the credit funding transaction
         // will not have the credit burn keys associated with it
         platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
