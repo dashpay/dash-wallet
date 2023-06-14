@@ -17,6 +17,8 @@
 package org.dash.wallet.integration.coinbase_integration.repository.remote
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
@@ -32,26 +34,32 @@ import javax.inject.Inject
 class TokenAuthenticator @Inject constructor(
     private val tokenApi: CoinBaseTokenRefreshApi,
     private val userPreferences: Configuration,
-    private val config: CoinbaseConfig,
+    private val config: CoinbaseConfig
 ) : Authenticator {
+
+    // For multiple call to refresh token sync
+    private val tokenMutex = Mutex()
 
     override fun authenticate(route: Route?, response: Response): Request? {
         return runBlocking {
-            when (val tokenResponse = getUpdatedToken()) {
-                is ResponseResource.Success -> {
-                    tokenResponse.value?.let {
-                        userPreferences.setLastCoinBaseAccessToken(it.accessToken)
-                        userPreferences.setLastCoinBaseRefreshToken(it.refreshToken)
-                        response.request.newBuilder()
-                            .header("Authorization", "Bearer ${it.accessToken}")
-                            .build()
+            tokenMutex.withLock {
+                when (val tokenResponse = getUpdatedToken()) {
+                    is ResponseResource.Success -> {
+                        tokenResponse.value?.let {
+                            userPreferences.setLastCoinBaseAccessToken(it.accessToken)
+                            userPreferences.setLastCoinBaseRefreshToken(it.refreshToken)
+                            response.request.newBuilder()
+                                .header("Authorization", "Bearer ${it.accessToken}")
+                                .build()
+                        }
                     }
-                }
-                else -> {
-                    userPreferences.setLastCoinBaseAccessToken(null)
-                    userPreferences.setLastCoinBaseRefreshToken(null)
-                    config.setPreference(CoinbaseConfig.LOGOUT_COINBASE, true)
-                    null
+
+                    else -> {
+                        userPreferences.setLastCoinBaseAccessToken(null)
+                        userPreferences.setLastCoinBaseRefreshToken(null)
+                        config.setPreference(CoinbaseConfig.LOGOUT_COINBASE, true)
+                        null
+                    }
                 }
             }
         }
@@ -59,6 +67,8 @@ class TokenAuthenticator @Inject constructor(
 
     private suspend fun getUpdatedToken(): ResponseResource<TokenResponse?> {
         val refreshToken = userPreferences.lastCoinbaseRefreshToken
+        println(" --- lastCoinbaseAccessToken --- ${userPreferences.lastCoinbaseAccessToken}")
+        println(" === lastCoinbaseRefreshToken === ${userPreferences.lastCoinbaseRefreshToken}")
         return safeApiCall { tokenApi.refreshToken(refreshToken = refreshToken) }
     }
 }
