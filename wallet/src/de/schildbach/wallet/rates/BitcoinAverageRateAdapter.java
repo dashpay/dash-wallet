@@ -3,7 +3,7 @@ package de.schildbach.wallet.rates;
 import com.squareup.moshi.FromJson;
 import com.squareup.moshi.JsonReader;
 
-import org.dash.wallet.common.data.ExchangeRate;
+import org.dash.wallet.common.data.entity.ExchangeRate;
 
 import java.io.IOException;
 import java.util.ArrayList;

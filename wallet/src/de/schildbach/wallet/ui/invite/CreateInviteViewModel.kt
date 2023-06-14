@@ -1,57 +1,60 @@
 /*
- * Copyright 2021 Dash Core Group
+ * Copyright 2021 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package de.schildbach.wallet.ui.invite
 
-import androidx.core.os.bundleOf
 import androidx.lifecycle.MediatorLiveData
+import androidx.lifecycle.asLiveData
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityData
-import org.dash.wallet.common.data.BlockchainState
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.BlockchainStateDao
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
-import de.schildbach.wallet.ui.dashpay.CanAffordIdentityCreationLiveData
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 @HiltViewModel
 class CreateInviteViewModel @Inject constructor(
-    application: WalletApplication,
+    private val walletData: WalletDataProvider,
     private val analytics: AnalyticsService,
-    appDatabase: AppDatabase
-) : BaseProfileViewModel(application, appDatabase) {
+    blockchainStateDao: BlockchainStateDao,
+    invitationsDao: InvitationsDao,
+    blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    dashPayProfileDao: DashPayProfileDao
+) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
-    val blockchainStateData = AppDatabase.getAppDatabase().blockchainStateDao().load()
+    val blockchainStateData = blockchainStateDao.load()
     val blockchainState: BlockchainState?
         get() = blockchainStateData.value
-
-    val canAffordIdentityCreationLiveData = CanAffordIdentityCreationLiveData(walletApplication)
-
-    val canAffordIdentityCreation: Boolean?
-        get() = canAffordIdentityCreationLiveData.value
 
     val isAbleToCreateInviteLiveData = MediatorLiveData<Boolean>().apply {
         addSource(blockchainStateData) {
             value = combineLatestData()
         }
-        addSource(blockchainIdentityData) {
+        addSource(blockchainIdentity) {
             value = combineLatestData()
         }
-        addSource(canAffordIdentityCreationLiveData) {
+        addSource(walletData.observeBalance().asLiveData()) {
             value = combineLatestData()
         }
     }
@@ -60,12 +63,11 @@ class CreateInviteViewModel @Inject constructor(
 
     private fun combineLatestData(): Boolean {
         val isSynced = blockchainStateData.value?.isSynced() ?: false
-        val noIdentityCreatedOrInProgress = (blockchainIdentityData.value == null) || blockchainIdentityData.value!!.creationState == BlockchainIdentityData.CreationState.NONE
-        val canAffordIdentityCreation = canAffordIdentityCreationLiveData.value ?: false
-        return isSynced && !noIdentityCreatedOrInProgress && canAffordIdentityCreation
+        val noIdentityCreatedOrInProgress = (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
+        return isSynced && !noIdentityCreatedOrInProgress && canAffordIdentityCreation()
     }
 
-    val invitationsLiveData = AppDatabase.getAppDatabase().invitationsDaoAsync().loadAll()
+    val invitationsLiveData = invitationsDao.observe().asLiveData()
 
     val invitationCount: Int
         get() = invitationsLiveData.value?.size ?: 0
@@ -80,7 +82,7 @@ class CreateInviteViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, bundleOf())
+        analytics.logEvent(event, mapOf())
     }
 
     private fun combineLatestInviteActionData(): Boolean {
@@ -88,4 +90,7 @@ class CreateInviteViewModel @Inject constructor(
         val canAffordInviteCreation = isAbleToCreateInvite
         return hasInviteHistory || canAffordInviteCreation
     }
+
+    private fun canAffordIdentityCreation(): Boolean =
+        !walletData.getWalletBalance().isLessThan(Constants.DASH_PAY_FEE)
 }

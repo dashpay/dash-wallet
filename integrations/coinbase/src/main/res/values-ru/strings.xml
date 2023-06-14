@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >Последний известный баланс</string>
+    <string name="coinbase_link_title">Привяжите ваш аккаунт Coinbase</string>
+    <string name="coinbase_link">Привязать аккаунт Coinbase</string>
+    <string name="coinbase_transfer_details">Между Dash Wallet и вашим аккаунтом Coinbase</string>
     <string name="coinbase_dash_wallet_error_title">Мы не нашли Dash Wallet в вашем аккаунте Coinbase</string>
     <string name="coinbase_dash_wallet_error_message">Для продолжения создайте Dash Wallet на Coinbase</string>
     <string name="create_dash_account">Создать Dash аккаунт</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">Отключить аккаунт Coinbase</string>
     <string name="receive_directly_into_dash_wallet">Получать напрямую на Dash Wallet.</string>
     <string name="buy_dash">Купить Dash</string>
-    <string name="balance">Баланс:</string>
     <string name="balance_on_coinbase">Баланс Coinbase</string>
     <string name="sending_to">Отправка</string>
     <string name="dash_wallet_device">Dash Wallet на этом устройстве</string>
@@ -41,8 +43,11 @@
     <string name="cancel">Отмена</string>
     <string name="confirm_sec">Подтвердить (%s)</string>
     <string name="confirm">Подтвердить</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Способ оплаты не найден.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Для продолжения обновите свой аккаунт на Coinbase.</string>
+    <string name="coinbase_no_payment_methods_error_title">Способ оплаты не найден.</string>
+    <string name="coinbase_no_payment_methods_error_message">Для продолжения обновите свой аккаунт на Coinbase.</string>
+    <string name="coinbase_unusable_payment_method_error_title">Этот способ оплаты использовать невозможно. </string>
+    <string name="coinbase_unusable_payment_method_error_message">Разрешите использование этого способа оплаты в вашем аккаунте Coinbase.</string>
+    <string name="coinbase_open_account">Открыть аккаунт Coinbase</string>
     <string name="add_payment_method">Добавить способ оплаты</string>
     <string name="error">Ошибка</string>
     <string name="cancel_transaction">Отменить транзакцию?</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">Неправильный код. Пожалуйста, попробуйте ещё раз</string>
     <string name="verify_code">Подтвердить</string>
     <string name="you_dont_have_enough_balance">Средств на балансе недостаточно</string>
-    <string name="transfer_dash">Перевести Dash</string>
     <string name="transfer_amount">Перевести</string>
     <string name="dash_wallet_limit_description">Эта сумма превышает остаток на балансе</string>
     <string name="address_creation_failed">Мы не смогли создать адрес аккаунта, чтобы завершить транзакцию. Пожалуйста, попробуйте ещё раз чуть позже.</string>

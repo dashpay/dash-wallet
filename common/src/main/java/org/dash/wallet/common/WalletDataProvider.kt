@@ -19,10 +19,13 @@ package org.dash.wallet.common
 
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.*
+import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletExtension
+import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 import org.dash.wallet.common.services.LeftoverBalanceException
-import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 import kotlin.jvm.Throws
 
 interface WalletDataProvider {
@@ -39,10 +42,19 @@ interface WalletDataProvider {
 
     fun observeWalletChanged(): Flow<Unit>
 
-    fun observeBalance(balanceType: Wallet.BalanceType = Wallet.BalanceType.ESTIMATED): Flow<Coin>
+    fun observeBalance(
+        balanceType: Wallet.BalanceType = Wallet.BalanceType.ESTIMATED,
+        coinSelector: CoinSelector? = null
+    ): Flow<Coin>
+
+    fun canAffordIdentityCreation(): Boolean
 
     // Treat @withConfidence with care - it may produce a lot of events and affect performance.
     fun observeTransactions(withConfidence: Boolean = false, vararg filters: TransactionFilter): Flow<Transaction>
+
+    fun observeAuthenticationKeyUsage(): Flow<List<AuthenticationKeyUsage>>
+
+    fun getTransaction(hash: Sha256Hash): Transaction?
 
     fun getTransactions(vararg filters: TransactionFilter): Collection<Transaction>
 
@@ -58,4 +70,6 @@ interface WalletDataProvider {
     fun checkSendingConditions(address: Address?, amount: Coin)
 
     fun observeMostRecentTransaction(): Flow<Transaction>
+
+    fun getWalletExtensions(): Array<WalletExtension>
 }

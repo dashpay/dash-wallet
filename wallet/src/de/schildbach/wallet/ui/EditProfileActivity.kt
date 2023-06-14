@@ -50,7 +50,7 @@ import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIO
 import com.google.api.services.drive.Drive
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
@@ -63,6 +63,7 @@ import kotlinx.android.synthetic.main.upload_policy_dialog.*
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.avatar.ProfilePictureTransformation
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileNotFoundException
@@ -219,7 +220,7 @@ class EditProfileActivity : BaseMenuActivity() {
     private fun pictureFromUrl() {
         if (editProfileViewModel.createTmpPictureFile()) {
             val initialUrl = externalUrlSharedViewModel.externalUrl?.toString()
-                    ?: editProfileViewModel.dashPayProfile?.avatarUrl
+                    ?: editProfileViewModel.dashPayProfile.value?.avatarUrl
             ExternalUrlProfilePictureDialog.newInstance(initialUrl).show(supportFragmentManager, "")
         } else {
             Toast.makeText(this, "Unable to create temporary file", Toast.LENGTH_LONG).show()
@@ -228,7 +229,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private fun initViewModel() {
         // first ensure that we have a registered username
-        editProfileViewModel.dashPayProfileData.observe(this) { dashPayProfile ->
+        editProfileViewModel.dashPayProfile.observe(this) { dashPayProfile ->
             if (dashPayProfile != null) {
                 showProfileInfo(dashPayProfile)
             } else {
@@ -243,7 +244,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 editProfileViewModel.saveExternalBitmap(it)
                 setEditingState(true)
             } else {
-                val username = editProfileViewModel.dashPayProfile!!.username
+                val username = editProfileViewModel.dashPayProfile.value!!.username
                 ProfilePictureDisplay.displayDefault(dashpayUserAvatar, username)
             }
             profilePictureChanged = true
@@ -347,7 +348,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 editProfileViewModel.profilePictureUploadLiveData.value!!.data
             }
         } else {
-            editProfileViewModel.dashPayProfile!!.avatarUrl
+            editProfileViewModel.dashPayProfile.value!!.avatarUrl
         }
 
         editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl ?: "")
@@ -434,7 +435,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 turnOnAutoLogout()
                 if (resultCode == RESULT_OK) {
                     // picture saved in editProfileViewModel.profilePictureTmpFile
-                    editProfileViewModel.onTmpPictureReadyForEditEvent.call(editProfileViewModel.tmpPictureFile)
+                    editProfileViewModel.onTmpPictureReadyForEditEvent.postValue(editProfileViewModel.tmpPictureFile)
                 }
             }
             REQUEST_CODE_URI -> {
@@ -469,10 +470,10 @@ class EditProfileActivity : BaseMenuActivity() {
                 } else if (resultCode == Activity.RESULT_CANCELED) {
                     // if crop was canceled, then return the externalUrl to its original state
                     if (externalUrlSharedViewModel.externalUrl != null)
-                        externalUrlSharedViewModel.externalUrl = if (editProfileViewModel.dashPayProfile!!.avatarUrl == "") {
+                        externalUrlSharedViewModel.externalUrl = if (editProfileViewModel.dashPayProfile.value!!.avatarUrl == "") {
                             null
                         } else {
-                            Uri.parse(editProfileViewModel.dashPayProfile!!.avatarUrl)
+                            Uri.parse(editProfileViewModel.dashPayProfile.value!!.avatarUrl)
                         }
                 }
             }
@@ -629,27 +630,22 @@ class EditProfileActivity : BaseMenuActivity() {
 
     override fun finish() {
         if (showSaveReminderDialog) {
-            // TODO
-//            SaveProfileReminderDialog().show(supportFragmentManager, null)
-//            agree_btn.setOnClickListener {
-//                dismiss()
-//                editProfileViewModel.saveReminderConfirmationLiveData.postValue(true)
-//            }
-//            cancel_btn.setOnClickListener {
-//                dismiss()
-//                editProfileViewModel.saveReminderConfirmationLiveData.postValue(false)
-//            }
-//
-//            editProfileViewModel.saveReminderConfirmationLiveData.observe(this, { saveChanges ->
-//                if (saveChanges) {
-//                    save()
-//                } else {
-//                    showSaveReminderDialog = false
-//                    finish()
-//                }
-//            })
+            AdaptiveDialog.create(
+                R.drawable.ic_info_blue,
+                getString(R.string.save_changes),
+                getString(R.string.save_profile_reminder_text),
+                getString(R.string.no),
+                getString(R.string.yes)
+            ).show(this) {
+                if (it == true) {
+                    save()
+                } else {
+                    finish()
+                }
+            }
             return
         }
+
         super.finish()
     }
 }

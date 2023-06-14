@@ -1,0 +1,392 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="15dp"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:paddingTop="@dimen/transaction_row_vertical_padding"
+    android:paddingBottom="@dimen/transaction_row_vertical_padding"
+    android:tag="masternode_key_type"
+    tools:context="de.schildbach.wallet.ui.more.masternode_keys.MasternodeKeyTypeAdapter">
+
+    <TextView
+        android:id="@+id/keypair_index"
+        style="@style/Subtitle1.Bold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="Keypair 0" />
+
+    <TextView
+        android:id="@+id/keypair_usage"
+        style="@style/Caption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="10dp"
+        android:textSize="13sp"
+        app:layout_constraintBottom_toBottomOf="@id/keypair_index"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/keypair_index"
+        tools:text="Used" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/white_background_rounded"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/keypair_index">
+
+        <RelativeLayout
+            android:id="@+id/address_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="15dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/address_header"
+                style="@style/Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@id/copy_address"
+                android:text="@string/masternode_key_address" />
+
+            <TextView
+                android:id="@+id/address"
+                style="@style/Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/address_header"
+                android:layout_toStartOf="@id/copy_address"
+                tools:text="XuuRQMVEK9fQMsoAegE32Bdc1XvHhAiWa9" />
+
+            <ImageView
+                android:id="@+id/copy_address"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerInParent="true"
+                android:layout_marginStart="17dp"
+                android:layout_marginEnd="7dp"
+                android:src="@drawable/ic_copy" />
+        </RelativeLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            app:layout_constraintTop_toBottomOf="@id/address_container"
+            android:background="@color/background_primary"
+            />
+
+        <RelativeLayout
+            android:id="@+id/key_id_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="15dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/address_container">
+
+            <TextView
+                android:id="@+id/key_id_header"
+                style="@style/Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@id/copy_key_id"
+                android:text="@string/masternode_key_id" />
+
+            <TextView
+                android:id="@+id/key_id"
+                style="@style/Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/key_id_header"
+                android:layout_toStartOf="@id/copy_key_id"
+                tools:text="000000000000000000000000000000000000000000" />
+
+            <ImageView
+                android:id="@+id/copy_key_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerInParent="true"
+                android:layout_marginStart="17dp"
+                android:layout_marginEnd="7dp"
+                android:src="@drawable/ic_copy" />
+        </RelativeLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            app:layout_constraintTop_toBottomOf="@id/key_id_container"
+            android:background="@color/background_primary"
+            />
+
+        <RelativeLayout
+            android:id="@+id/public_key_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="15dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/key_id_container">
+
+            <TextView
+                android:id="@+id/public_key_header"
+                style="@style/Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@id/copy_public_key"
+                android:text="@string/masternode_key_public" />
+
+            <TextView
+                android:id="@+id/public_key"
+                style="@style/Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/public_key_header"
+                android:layout_toStartOf="@id/copy_public_key"
+                tools:text="03eeda68f0eb482935c7ecbebf7b6497756e471b7a0fad5014bbe6ab593cb6127" />
+
+            <ImageView
+                android:id="@+id/copy_public_key"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerInParent="true"
+                android:layout_marginStart="17dp"
+                android:layout_marginEnd="7dp"
+                android:src="@drawable/ic_copy" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/public_key_legacy_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="15dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/public_key_container">
+
+            <TextView
+                android:id="@+id/public_key_legacy_header"
+                style="@style/Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@id/copy_public_key_legacy"
+                android:text="@string/masternode_key_public_legacy" />
+
+            <TextView
+                android:id="@+id/public_key_legacy"
+                style="@style/Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/public_key_legacy_header"
+                android:layout_toStartOf="@id/copy_public_key_legacy"
+                tools:text="03eeda68f0eb482935c7ecbebf7b6497756e471b7a0fad5014bbe6ab593cb6127" />
+
+            <ImageView
+                android:id="@+id/copy_public_key_legacy"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerInParent="true"
+                android:layout_marginStart="17dp"
+                android:layout_marginEnd="7dp"
+                android:src="@drawable/ic_copy" />
+        </RelativeLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            app:layout_constraintTop_toBottomOf="@id/public_key_legacy_container"
+            android:background="@color/background_primary"
+            />
+
+        <RelativeLayout
+            android:id="@+id/private_key_hex_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="15dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/public_key_legacy_container">
+
+            <TextView
+                android:id="@+id/private_key_hex_header"
+                style="@style/Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@id/copy_private_key"
+                android:text="@string/masternode_key_private_hex" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/private_key_hex_header"
+                android:layout_toStartOf="@id/copy_private_key">
+                <TextView
+                    android:id="@+id/private_key_hex"
+                    style="@style/Body2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    tools:text="03eeda68f0eb482935c7ecbebf7b6497756e471b7a0fad5014bbe6ab593cb6127" />
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/private_key_hex_loading_indicator"
+                    style="@style/ContentLoadingIndicator"
+                    android:layout_width="150dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    tools:visibility="gone" />
+            </FrameLayout>
+            <ImageView
+                android:id="@+id/copy_private_key"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerInParent="true"
+                android:layout_marginStart="17dp"
+                android:layout_marginEnd="7dp"
+                android:src="@drawable/ic_copy" />
+        </RelativeLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            app:layout_constraintTop_toBottomOf="@id/private_key_hex_container"
+            android:background="@color/background_primary"
+            />
+
+        <RelativeLayout
+            android:id="@+id/private_key_wif_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="15dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/private_key_hex_container">
+
+            <TextView
+                android:id="@+id/private_key_wif_header"
+                style="@style/Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/masternode_key_private_wif" />
+
+             <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/private_key_wif_header"
+                android:layout_toStartOf="@id/copy_private_key_wif">
+                <TextView
+                    android:id="@+id/private_key_wif"
+                    style="@style/Body2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    tools:text="XBnarGif2izUGvmGVCKTPFBvPknVzv3Gah5XsgpNhuwjAo8CEXTr" />
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/private_key_wif_loading_indicator"
+                    style="@style/ContentLoadingIndicator"
+                    android:layout_width="150dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    tools:visibility="gone" />
+            </FrameLayout>
+
+            <ImageView
+                android:id="@+id/copy_private_key_wif"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerInParent="true"
+                android:layout_marginStart="17dp"
+                android:layout_marginEnd="7dp"
+                android:src="@drawable/ic_copy" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/private_public_key_base64_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="15dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/private_key_wif_container">
+
+            <TextView
+                android:id="@+id/private_public_key_base64_header"
+                style="@style/Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/masternode_key_private_public_base64" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/private_public_key_base64_header"
+                android:layout_toStartOf="@id/copy_private_public_key_base64">
+                <TextView
+                    android:id="@+id/private_public_key_base64"
+                    style="@style/Body2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    tools:text="DuTbuvzwuD6V40XVWXQjPtEfYjKTrvmXtGqNGNKETQnDgumK3nPfUM39TUWdpkRhJlIa91JsUp2VdbA6oXS2AA==" />
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/private_public_key_base64_loading_indicator"
+                    style="@style/ContentLoadingIndicator"
+                    android:layout_width="150dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    tools:visibility="gone" />
+            </FrameLayout>
+
+            <ImageView
+                android:id="@+id/copy_private_public_key_base64"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerInParent="true"
+                android:layout_marginStart="17dp"
+                android:layout_marginEnd="7dp"
+                android:src="@drawable/ic_copy" />
+        </RelativeLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

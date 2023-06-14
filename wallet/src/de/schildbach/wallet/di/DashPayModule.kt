@@ -41,16 +41,6 @@ abstract class DashPayModule {
         @Provides
         @Singleton
         fun providePlatformRepo(): PlatformRepo = PlatformRepo.getInstance()
-
-        @Provides
-        fun provideTransactionMetadata(appDatabase: AppDatabase): TransactionMetadataChangeCacheDao {
-            return appDatabase.transactionMetadataCacheDao()
-        }
-
-        @Provides
-        fun provideTransactionMetadataDocumentDao(appDatabase: AppDatabase): TransactionMetadataDocumentDao {
-            return appDatabase.transactionMetadataDocumentDao()
-        }
     }
 
     @Singleton // only want one of PlatformSyncService created

@@ -1,4 +1,4 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-	<string name="net_type_indicator">Krupnik Devnet</string>
+	<string name="net_type_indicator">Devnet</string>
 </resources>

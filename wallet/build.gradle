@@ -40,7 +40,7 @@ dependencies {
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.annotation:annotation:1.2.0'
     implementation "androidx.core:core-ktx:$jetpackVersion"
-    implementation "androidx.fragment:fragment-ktx:1.3.6"
+    implementation "androidx.fragment:fragment-ktx:1.5.5"
     implementation('androidx.legacy:legacy-support-v13:1.0.0') {
         exclude(group: 'com.android.support', module: 'support-fragment')
         exclude(group: 'com.android.support', module: 'support-media-compat')
@@ -57,13 +57,12 @@ dependencies {
     implementation 'org.dashj:dashj-merk:0.22-SNAPSHOT'
     implementation 'org.dashj.android:dashj-merk:0.22-SNAPSHOT'
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
-    implementation "org.dashj.android:dashj-bls-android:0.18.1"
+    implementation "org.dashj.android:dashj-bls-android:1.0.0"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
     implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
-    implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation 'com.google.guava:guava:29.0-android'
     //noinspection GradleDependency
-    implementation 'com.google.zxing:core:3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
+    implementation "com.google.zxing:core:$zxingVersion"
 
     implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
     implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
@@ -91,6 +90,7 @@ dependencies {
     implementation "com.github.bumptech.glide:glide:$glideVersion"
     kapt "com.github.bumptech.glide:compiler:$glideVersion"
     implementation 'com.github.MikeOrtiz:TouchImageView:3.0.3'
+    implementation "io.coil-kt:coil:$coilVersion"
 
     // Navigation
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
@@ -102,13 +102,14 @@ dependencies {
     kapt "androidx.room:room-compiler:$roomVersion"
 
     // Prefs
-    implementation 'androidx.preference:preference-ktx:1.1.1'
+    implementation "androidx.preference:preference-ktx:$preferenceVersion"
     implementation 'com.scottyab:secure-preferences-lib:0.1.7'
+    implementation "androidx.datastore:datastore-preferences:$datastoreVersion"
 
     implementation 'androidx.multidex:multidex:2.0.1'
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
 
     // Firebase
     // Import the BoM for the Firebase platform
@@ -147,10 +148,10 @@ dependencies {
     testImplementation "junit:junit:$junitVersion"
     testImplementation "io.mockk:mockk:1.12.3"
     testImplementation "androidx.arch.core:core-testing:$coreTestingVersion"
-    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
 
     // Instrumental tests
-    androidTestImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"
+    androidTestImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
     androidTestImplementation "androidx.room:room-testing:$roomVersion"
     androidTestImplementation "androidx.test.ext:junit:$junitExtVersion"
     androidTestImplementation('androidx.test:runner:1.3.0') {
@@ -230,6 +231,7 @@ android {
         buildConfigField("String", "COINBASE_CLIENT_ID", "\"COINBASE_CLIENT_ID\"")
         buildConfigField("String", "COINBASE_CLIENT_SECRET", "\"COINBASE_CLIENT_SECRET\"")
 
+        buildConfigField("String", "DASHDIRECT_CLIENT_ID", "\"DASHDIRECT_CLIENT_ID\"")
 
         def supportEmail = localProps.getProperty("SUPPORT_EMAIL")
         if (supportEmail != null) {
@@ -310,7 +312,7 @@ android {
         staging {
             res.srcDirs = ["staging/res"]
         }
-        schnapps {
+        devnet {
             res.srcDirs = ["schnapps/res"]
         }
     }
@@ -341,6 +343,14 @@ android {
             buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
             buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
 
+            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
+
+            if (dashDirectClientId == null) {
+                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
+            }
+
+            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
+
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
@@ -367,32 +377,52 @@ android {
             buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
             buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
 
+            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
+            if (dashDirectClientId == null) {
+                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
+            }
+            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
         }
         staging {
             applicationId = "org.dash.dashpay.testnet"
             def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
             def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
-            def liquidClientId = props.getProperty("LIQUID_PUBLIC_API_KEY_SANDBOX")
             if (imgurClientId == null) {
                 imgurClientId = "\"UPHOLD_CLIENT_ID\""
             }
             if (imgurClientSecret == null) {
                 imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
             }
-            if (liquidClientId == null) {
-                liquidClientId = "\"LIQUID_PUBLIC_API_KEY\""
+            buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
+            buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
+
+            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
+            if (dashDirectClientId == null) {
+                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
+            }
+            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
+        }
+        devnet {
+            applicationId = "org.dash.dashpay.schnapps"
+            def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
+            def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
+            if (imgurClientId == null) {
+                imgurClientId = "\"UPHOLD_CLIENT_ID\""
+            }
+            if (imgurClientSecret == null) {
+                imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
             }
             buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
-            buildConfigField("String", "LIQUID_PUBLIC_API_KEY", liquidClientId)
-        }
-        schnapps {
-            applicationId = "org.dash.dashpay.schnapps"
-            buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
-            buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
-            buildConfigField("String", "LIQUID_PUBLIC_API_KEY", "\"LIQUID_PUBLIC_API_KEY\"")
+
+            def dashDirectClientId = props.getProperty("DASHDIRECT_CLIENT_ID")
+            if (dashDirectClientId == null) {
+                dashDirectClientId = "\"DASHDIRECT_CLIENT_ID\""
+            }
+            buildConfigField("String", "DASHDIRECT_CLIENT_ID", dashDirectClientId)
         }
     }
+
     packagingOptions {
         jniLibs {
             excludes += ['lib/x86_64/freebsd/libscrypt.so', 'lib/x86_64/linux/libscrypt.so']

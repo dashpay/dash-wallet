@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">Memverifikasi PIN</string>
     <string name="set_pin_message">PIN ini akan diperlukan untuk membuka kunci aplikasi Anda setiap kali saat Anda menggunakannya.</string>
     <string name="set_pin_confirm_pin_incorrect">PIN salah</string>
-
-    <string name="home_available_balance">Saldo tersedia</string>
-    <string name="home_balance_hidden">Saldo disembunyikan</string>
-    <string name="home_balance_show_hint">Ketuk untuk melihat saldo</string>
+    
     <string name="home_balance_hide_hint">Ketuk untuk menyembunyikan saldo</string>
 
     <string name="dialog_confirm_confirm">Memastikan</string>
@@ -30,13 +27,11 @@
     <string name="dialog_confirm_total">Total</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Amankan Dompet Sekarang</string>
+    <string name="shortcut_scan_to_pay">Pindai</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Pindai untuk membayar</string>
+    <string name="shortcut_pay_to_address">Kirim</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Kirim ke alamat</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Beli / Jual Dash</string>
+    <string name="shortcut_buy_sell">Beli &amp; Jual</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Terima</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -204,17 +199,6 @@
     <string name="verify_continue">Teruskan</string>
     <string name="verify_backup_wallet">Cadangkan Dompet</string>
     <string name="verify_show_recovery_phrase">Tampilkan Frasa pemulihan</string>
-    <string name="verify_secure_now">Amankan Dompet Sekarang</string>
-    <string name="verify_it_is_important">Ini penting</string>
-    <string name="verify_it_is_important_subtitle">Kami akan menunjukkan kepada Anda kunci rahasia ke dompet Anda.</string>
-    <string name="verify_info_text_1">Frasa pemulihan ini adalah akses Anda ke dana di dompet ini.</string>
-    <string name="verify_info_text_2">Kami TIDAK menyimpan frasa pemulihan ini.</string>
-    <string name="verify_info_text_3">Anda akan memerlukan frasa pemulihan ini untuk mengakses dana Anda jika perangkat ini hilang, rusak, atau jika Dash Wallet secara tidak sengaja dihapus dari perangkat ini.</string>
-    <string name="verify_skip">Lewati</string>
-    <string name="verify_secure_now_btn">Amankan sekarang</string>
-    <string name="verify_secure_now_message">Jika Anda kehilangan perangkat ini, Anda akan kehilangan dana Anda. Dapatkan UniqueSecretKey Anda sehingga Anda dapat memulihkan dompet di perangkat lain.</string>
-    <string name="verify_seed_title">Tolong catat</string>
-    <string name="verify_seed_write_down_confirmation">Saya telah mencatat</string>
     <string name="verify_seed_buttons_tip">Ketuk kata-kata dari frasa pemulihan Anda dalam urutan yang benar</string>
     <string name="verify_seed_success_title">Berhasil Diverifikasi</string>
     <string name="verify_seed_success_message">Dompet Anda aman sekarang. Anda dapat menggunakan frasa pemulihan kapan saja untuk memulihkan akun di perangkat lain.</string>
@@ -248,7 +232,6 @@
     <string name="transaction_details_moved_from">Pindah dari</string>
     <string name="transaction_details_moved_internally_to">Pindah ke internal</string>
     <string name="transaction_failed_details">Transaksi  gagal</string>
-
     <string name="authenticate_fingerprint_title">Membuktikan</string>
     <string name="authenticate_fingerprint_message">Konfirmasikan sidik jari untuk melanjutkan</string>
     <string name="authenticate_pin_message">Masukkan PIN Anda untuk melanjutkan</string>
@@ -278,13 +261,20 @@
     <string name="tools_show_xpub">Kunci Publik Diperpanjang</string>
 
     <string name="about_help_us_improve">Bantu kami meningkatkan pengalaman Anda</string>
+    <string name="about_review_and_rate">Tinjau dan beri peringkat aplikasi</string>
     <string name="about_contact_support">Hubungi Dukungan</string>
     <string name="about_fork_disclaimer">Ini adalah aplikasi open source yang bercabang dari Bitcoin Wallet</string>
-    <string name="about_copyright">Hak Cipta © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_device_sync">Sinkronisasi perangkat Explore Terakhir</string>
+    <string name="about_last_explore_server_update">Pembaruan server Explore terakhir</string>
+    <string name="about_firebase_installation_id">ID penginstalan Firebase</string>
+    <string name="about_fcm_token">Token perpesanan cloud Firebase</string>
     <string name="about_last_explore_dash_update_error">tidak bisa mengambil</string>
     <string name="about_last_explore_dash_sync_never">tak pernah</string>
+    <string name="about_explore_failed_sync">Gagal menyinkronkan %s</string>
+    <string name="about_explore_preloaded_on">Pra-muat dalam %s</string>
+
     <string name="block">Blok</string>
     <string name="time">Waktu</string>
     <string name="hash">Hash</string>
@@ -359,7 +349,6 @@
     <string name="yesterday">Kemarin</string>
 
     <string name="syncing">Menyingkronkan:</string>
-    <string name="syncing_balance">Menyinkronkan Saldo</string>
     <string name="transaction_count">%dtransaksi</string>
     <string name="all_transactions">Semua</string>
     <string name="received_transactions">Diterima</string>
@@ -389,4 +378,11 @@
     <string name="reclassify_transactions_linked_accounts_title">Akun terhubung</string>
     <string name="reclassify_transactions_linked_accounts_message">secara default semua transaksi ke atau dari akun tertaut Anda (pertukaran, staking, dll) akan ditandai sebagai transfer.</string>
     <string name="reclassify_transactions_change_explanation">Pilih transaksi apa pun dari beranda dan ubah kategori di halaman detail transaksi.</string>
-</resources>
+
+    <string name="masternode_key_type_owner">Kunci Pemilik</string>
+    <string name="masternode_key_type_voting">Kunci pemungutan suara</string>
+    <string name="masternode_key_type_operator">Kunci Operator</string>
+    <string name="masternode_key_address">Alamat</string>
+    <string name="masternode_key_ip_address_unknown">Tidak diketahui</string>
+    <string name="masternode_key_revoked">Dicabut</string>
+    </resources>

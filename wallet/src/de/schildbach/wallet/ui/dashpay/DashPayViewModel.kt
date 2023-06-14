@@ -1,46 +1,41 @@
 /*
- * Copyright 2020 Dash Core Group
+ * Copyright (c) 2020. Dash Core Group.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package de.schildbach.wallet.ui.dashpay
 
-import android.os.Bundle
-import androidx.core.os.bundleOf
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.liveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainStateDao
-import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.DashPayProfileDaoAsync
-import de.schildbach.wallet.data.InvitationsDaoAsync
-import de.schildbach.wallet.data.UserAlertDaoAsync
-import de.schildbach.wallet.data.UsernameSearch
-import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.data.*
+import de.schildbach.wallet.database.dao.BlockchainIdentityDataDao
+import de.schildbach.wallet.database.dao.BlockchainStateDao
+import de.schildbach.wallet.database.dao.DashPayContactRequestDao
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Address
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -54,12 +49,16 @@ open class DashPayViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val platformRepo: PlatformRepo,
     private val blockchainState: BlockchainStateDao,
-    private val dashPayProfile: DashPayProfileDaoAsync,
-    private val userAlert: UserAlertDaoAsync,
-    private val invitations: InvitationsDaoAsync,
+    dashPayProfileDao: DashPayProfileDao,
+    blockchainIdentityDataDao: BlockchainIdentityDataDao,
+    private val userAlert: UserAlertDao,
+    private val invitations: InvitationsDao,
     val platformSyncService: PlatformSyncService,
     private val platformBroadcastService: PlatformBroadcastService,
-) : ViewModel() {
+    private val dashPayContactRequestDao: DashPayContactRequestDao,
+    private val userAlertDao: UserAlertDao,
+    private val dashPayConfig: DashPayConfig
+) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
     companion object {
         private val log = LoggerFactory.getLogger(DashPayViewModel::class.java)
@@ -70,10 +69,11 @@ open class DashPayViewModel @Inject constructor(
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String?>()
 
-    val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
+    val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope, userAlertDao)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformSyncService)
     val frequentContactsLiveData = FrequentContactsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope)
     val blockchainStateData = blockchainState.load()
+
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
@@ -94,9 +94,9 @@ open class DashPayViewModel @Inject constructor(
     fun reportUsernameSearchTime(resultSize: Int, searchTextSize: Int) {
         timerUsernameSearch?.logTiming(
             mapOf(
-                "resultCount" to resultSize,
-                "searchCount" to searchTextSize,
-            ),
+                AnalyticsConstants.Parameter.ARG1 to resultSize,
+                AnalyticsConstants.Parameter.ARG2 to searchTextSize
+            )
         )
     }
     val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
@@ -114,10 +114,6 @@ open class DashPayViewModel @Inject constructor(
 
     fun searchUsername(username: String?) {
         usernameLiveData.value = username
-    }
-
-    fun dashPayProfileData(username: String): LiveData<DashPayProfile?> {
-        return dashPayProfile.loadByUsernameDistinct(username)
     }
 
     override fun onCleared() {
@@ -147,9 +143,9 @@ open class DashPayViewModel @Inject constructor(
                 if (search.text.length >= 3) {
                     timerIsLock.logTiming(
                         mapOf(
-                            "resultCount" to result.size,
-                            "searchCount" to search.text.length,
-                        ),
+                            AnalyticsConstants.Parameter.ARG1 to result.size,
+                            AnalyticsConstants.Parameter.ARG2 to search.text.length
+                        )
                     )
                 }
             } catch (ex: Exception) {
@@ -199,13 +195,7 @@ open class DashPayViewModel @Inject constructor(
         }
     }
 
-    fun getNextContactAddress(userId: String, accountReference: Int): Address {
-        return platformRepo.getNextContactAddress(userId, accountReference)
-    }
-
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
-
-    fun allUsersLiveData() = dashPayProfile.loadByUserId()
 
     fun sendContactRequest(toUserId: String) {
         var recentlyModifiedContacts = recentlyModifiedContactsLiveData.value
@@ -273,8 +263,8 @@ open class DashPayViewModel @Inject constructor(
         frequentContactsLiveData.getFrequentContacts()
     }
 
-    fun logEvent(event: String, params: Bundle = bundleOf()) {
-        analytics.logEvent(event, params)
+    fun logEvent(event: String) {
+        analytics.logEvent(event, mapOf())
     }
 
     protected fun formatExceptionMessage(description: String, e: Exception): String {
@@ -301,11 +291,20 @@ open class DashPayViewModel @Inject constructor(
         }
     }
 
+    suspend fun getInviteHistory() = invitations.loadAll()
+
+    fun contactRequestsTo(userId: String): LiveData<List<DashPayContactRequest>> =
+        dashPayContactRequestDao.observeToOthers(userId).distinctUntilChanged().asLiveData()
+
+    suspend fun getLastNotificationTime(): Long =
+        dashPayConfig.get(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME) ?: 0
+
+    suspend fun setLastNotificationTime(time: Long) =
+        dashPayConfig.set(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME, time)
+
     private inner class UserSearch(
         val text: String,
         val limit: Int = 100,
         val excludeIds: ArrayList<String> = arrayListOf(),
     )
-
-    val inviteHistory = invitations.loadAll()
 }

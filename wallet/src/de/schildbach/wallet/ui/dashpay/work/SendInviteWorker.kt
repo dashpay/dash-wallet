@@ -27,8 +27,7 @@ import com.google.firebase.dynamiclinks.ShortDynamicLink
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
@@ -40,9 +39,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.security.InvalidKeyException
-import java.util.*
-import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -97,7 +93,7 @@ class SendInviteWorker @AssistedInject constructor(
         }
 
         return try {
-            val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
+            val blockchainIdentity = platformRepo.blockchainIdentity
             val cftx = platformRepo.createInviteFundingTransactionAsync(blockchainIdentity, encryptionKey)
             val dashPayProfile = platformRepo.getLocalUserProfile()
             val dynamicLink = createDynamicLink(dashPayProfile!!, cftx, encryptionKey)

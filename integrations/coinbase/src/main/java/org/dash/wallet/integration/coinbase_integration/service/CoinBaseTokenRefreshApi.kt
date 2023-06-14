@@ -17,7 +17,6 @@
 package org.dash.wallet.integration.coinbase_integration.service
 
 import org.dash.wallet.integration.coinbase_integration.model.TokenResponse
-import retrofit2.Response
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.POST

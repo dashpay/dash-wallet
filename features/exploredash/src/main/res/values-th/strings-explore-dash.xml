@@ -142,7 +142,6 @@
     <string name="buy_gift_card_text">ซื้อบัตรของขวัญด้วย Dash ของคุณ</string>
     <string name="buy_gift_card_desc_text">ซื้อบัตรของขวัญด้วย Dash ของคุณสำหรับจำนวนที่แน่นอนของการซื้อของคุณ</string>
     <string name="learn_more_text">เรียนรู้เพิ่มเติม</string>
-    <string name="continue_text">ดำเนินการต่อ</string>
     <string name="buy_card_header_text">การใช้บัตรของขวัญ</string>
     <string name="buy_card_desc_text">ไม่ใช่ร้านค้าทั้งหมดที่ยอมรับ Dash โดยตรง แต่คุณสามารถซื้อบัตรของขวัญด้วย Dash ของคุณ</string>
     <string name="find_merchant_text">ค้นหาร้านค้า</string>

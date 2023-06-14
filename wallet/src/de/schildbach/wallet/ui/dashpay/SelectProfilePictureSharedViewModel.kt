@@ -17,17 +17,17 @@
 package de.schildbach.wallet.ui.dashpay
 
 import androidx.lifecycle.ViewModel
-import de.schildbach.wallet.ui.SingleLiveEventExt
+import org.dash.wallet.common.data.SingleLiveEvent
 
 class SelectProfilePictureSharedViewModel : ViewModel() {
 
-    val onFromGravatarCallback = SingleLiveEventExt<Void>()
+    val onFromGravatarCallback = SingleLiveEvent<Void>()
 
-    val onFromUrlCallback = SingleLiveEventExt<Void>()
+    val onFromUrlCallback = SingleLiveEvent<Void>()
 
-    val onTakePictureCallback = SingleLiveEventExt<Void>()
+    val onTakePictureCallback = SingleLiveEvent<Void>()
 
-    val onChoosePictureCallback = SingleLiveEventExt<Void>()
+    val onChoosePictureCallback = SingleLiveEvent<Void>()
 
-    val onChooseStorageService = SingleLiveEventExt<EditProfileViewModel.ProfilePictureStorageService>()
+    val onChooseStorageService = SingleLiveEvent<EditProfileViewModel.ProfilePictureStorageService>()
 }

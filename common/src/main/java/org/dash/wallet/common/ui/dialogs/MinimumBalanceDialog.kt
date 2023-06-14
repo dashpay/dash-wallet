@@ -32,7 +32,7 @@ class MinimumBalanceDialog : AdaptiveDialog(R.layout.dialog_adaptive) {
     lateinit var analytics: AnalyticsService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        arguments = bundleOf (
+        arguments = bundleOf(
             ICON_RES_ARG to R.drawable.ic_info_blue,
             TITLE_ARG to getString(R.string.empty_wallet_warning_title),
             MESSAGE_ARG to getString(R.string.empty_wallet_crowdnode_warning),
@@ -44,12 +44,12 @@ class MinimumBalanceDialog : AdaptiveDialog(R.layout.dialog_adaptive) {
     }
 
     override fun onPositiveAction() {
-        analytics.logEvent(AnalyticsConstants.CrowdNode.LOW_BALANCE_PROCEED, bundleOf())
+        analytics.logEvent(AnalyticsConstants.CrowdNode.LOW_BALANCE_PROCEED, mapOf())
         super.onPositiveAction()
     }
 
     override fun onNegativeAction() {
-        analytics.logEvent(AnalyticsConstants.CrowdNode.LOW_BALANCE_CANCEL, bundleOf())
+        analytics.logEvent(AnalyticsConstants.CrowdNode.LOW_BALANCE_CANCEL, mapOf())
         super.onNegativeAction()
     }
 }

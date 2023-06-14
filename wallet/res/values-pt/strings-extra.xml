@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">Verificando PIN</string>
     <string name="set_pin_message">Este PIN será requerido para desbloquear o seu app toda vez que o utilize</string>
     <string name="set_pin_confirm_pin_incorrect">PIN Incorreto</string>
-
-    <string name="home_available_balance">Saldo disponível</string>
-    <string name="home_balance_hidden">Saldo escondido</string>
-    <string name="home_balance_show_hint">Toque para mostrar o saldo</string>
+    
     <string name="home_balance_hide_hint">Toque para esconder o saldo</string>
 
     <string name="dialog_confirm_confirm">Confirme</string>
@@ -30,13 +27,13 @@
     <string name="dialog_confirm_total">Total</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Proteger Carteira Agora</string>
+    <string name="shortcut_secure_now">Backup</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Escanear para Pagar</string>
+    <string name="shortcut_scan_to_pay">Escanear</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Enviar para Endereço</string>
+    <string name="shortcut_pay_to_address">Enviar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Comprar / Vender Dash</string>
+    <string name="shortcut_buy_sell">Comprar &amp; Vender</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Receber</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -210,17 +207,12 @@
     <string name="verify_continue">Continuar</string>
     <string name="verify_backup_wallet">Fazer Backup</string>
     <string name="verify_show_recovery_phrase">Mostrar Frase de Recuperação</string>
-    <string name="verify_secure_now">Proteger Carteira Agora</string>
-    <string name="verify_it_is_important">É Importante</string>
-    <string name="verify_it_is_important_subtitle">Estamos prestes a te mostrar a chave secreta para a sua carteira.</string>
-    <string name="verify_info_text_1">Esta frase de recuperação é o seu acesso aos fundos desta carteira.</string>
-    <string name="verify_info_text_2">Nós NÃO guardamos esta frase de recuperação.</string>
-    <string name="verify_info_text_3">Você precisará de esta frase de recuperação para acessar os seus fundos se este dispositivo se perca, danifique ou se Dash Wallet seja desinstalada acidentalmente de este dispositivo.</string>
-    <string name="verify_skip">Pular</string>
-    <string name="verify_secure_now_btn">Proteger agora</string>
-    <string name="verify_secure_now_message">Se você perder este dispositivo, perderá seus fundos. Obtenha a sua frase de recuperação para que você possa restaurar sua carteira em outro dispositivo.</string>
-    <string name="verify_seed_title">Por favor, anote</string>
-    <string name="verify_seed_write_down_confirmation">Eu anotei</string>
+    <string name="verify_info_title">Faça backup da sua frase de recuperação.</string>
+    <string name="verify_info_subtitle">Você precisará desta frase de recuperação para acessar seus fundos caso este dispositivo seja perdido, danificado ou se a Carteira Dash for desinstalada deste dispositivo.</string>
+    <string name="verify_info_title_1">Dash Core Group NÃO guarda esta frase de recuperação.</string>
+    <string name="verify_info_subtitle_1">Qualquer pessoa que possua sua frase de recuperação pode acessar seus fundos.</string>
+    <string name="verify_info_title_2">Você NÃO poderá restaurar a carteira sem uma frase de recuperação.</string>
+    <string name="verify_info_subtitle_2">Escreva em um local seguro e não a mostre para ninguém. </string>
     <string name="verify_seed_buttons_tip">Por favor, toque as palavras da sua frase de recuperação na ordem correta</string>
     <string name="verify_seed_success_title">Verificado com Sucesso</string>
     <string name="verify_seed_success_message"> Sua carteira está segura agora. Você pode usar sua frase de recuperação em qualquer momento para recuperar sua conta em outro dispositivo.</string>
@@ -254,6 +246,9 @@
     <string name="transaction_details_moved_from">Movido de</string>
     <string name="transaction_details_moved_internally_to">Movido internamente para</string>
     <string name="transaction_failed_details">Falha na transação</string>
+    <string name="transaction_failed_resolve">Isso pode ser resolvido ao</string>
+    <string name="transaction_failed_rescan">reexaminar o blockchain</string>
+    <string name="transaction_failed_in_conflict">Isso é possível se a carteira estiver instalada em dois dispositivos. </string>
 
     <string name="authenticate_fingerprint_title">Autenticar</string>
     <string name="authenticate_fingerprint_message">Confirmar digital para continuar</string>
@@ -275,7 +270,7 @@
     <string name="menu_rescan_blockchain">Reexaminar blockchain</string>
     <string name="menu_contact_support_title">Contato com o Suporte</string>
     <string name="menu_contact_support_subtitle">Reportar um problema</string>
-    <string name="menu_explore_title">Explorar</string>
+    <string name="menu_explore_title">Explorador</string>
     <string name="menu_explore_subtitle">Compre com DASH em mais de 155.000 comércios</string>
 
     <string name="tools_address_book">Livro de endereços</string>
@@ -284,13 +279,21 @@
     <string name="tools_show_xpub">Chave Pública Estendida</string>
 
     <string name="about_help_us_improve">Ajude-nos a melhorar a sua experiência</string>
+    <string name="about_review_and_rate">Avalie o aplicativo</string>
     <string name="about_contact_support">Contato com o Suporte</string>
     <string name="about_fork_disclaimer">Este é um aplicativo de código aberto bifurcado da Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2022 Dash Core</string>
+    <string name="about_copyright">Copyright © 2023 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_device_sync">Última sincronização do dispositivo Explore</string>
+    <string name="about_last_explore_server_update">Última atualização do servidor Explore</string>
+    <string name="about_firebase_installation_id">ID de instalação do Firebase</string>
+    <string name="about_fcm_token">Token de mensagens na nuvem do Firebase</string>
     <string name="about_last_explore_dash_update_error">não foi possível buscar</string>
     <string name="about_last_explore_dash_sync_never">nunca</string>
+    <string name="about_explore_failed_sync">Falha ao sincronizar em %s</string>
+    <string name="about_explore_preloaded_on">Pré-carregado em %s</string>
+
     <string name="block">Bloquear</string>
     <string name="time">Tempo</string>
     <string name="hash">Hash</string>
@@ -365,7 +368,7 @@
     <string name="yesterday">Ontem</string>
 
     <string name="syncing">Sincronizando</string>
-    <string name="syncing_balance">Sincronizando Saldo</string>
+    <string name="syncing_balance">Sincronizando saldo</string>
     <string name="transaction_count">%d transações</string>
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recebido</string>
@@ -395,4 +398,24 @@
     <string name="reclassify_transactions_linked_accounts_title">Contas associadas</string>
     <string name="reclassify_transactions_linked_accounts_message">por padrão, todas as transações de ou para suas contas vinculadas (trocas, staking, etc.) serão marcadas como transferências.</string>
     <string name="reclassify_transactions_change_explanation">Escolha qualquer transação na página inicial e altere a categoria na página de detalhes da transação.</string>
+
+    <string name="masternode_keys_title">Chaves do Masternode</string>
+    <string name="masternode_key_type_owner">Chaves do Proprietário</string>
+    <string name="masternode_key_type_voting">Chaves de Votação</string>
+    <string name="masternode_key_type_operator">Chaves do Operador</string>
+    <string name="masternode_key_type_platform">Chaves do Operador HPMN</string>
+    <string name="masternode_key_type_total">%d chaves</string>
+    <string name="masternode_key_type_used">%d utilizado</string>
+    <string name="masternode_key_pair_index">Par de chaves %d</string>
+    <string name="masternode_key_address">Endereço</string>
+    <string name="masternode_key_id">Identificador de Chave</string>
+    <string name="masternode_key_public">Chave Pública</string>
+    <string name="masternode_key_public_legacy">Chave Pública (legado)</string>
+    <string name="masternode_key_private_hex">Chave Privada</string>
+    <string name="masternode_key_private_wif">Chave Privada WIF</string>
+    <string name="masternode_key_used">IP: %s</string>
+    <string name="masternode_key_ip_address_unknown">Desconhecido</string>
+    <string name="masternode_key_not_used">Não utilizado</string>
+    <string name="masternode_key_revoked">Revogado</string>
+    <string name="masternode_key_private_public_base64">Chaves Públicas / Privadas (base64)</string>
 </resources>

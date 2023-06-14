@@ -37,11 +37,14 @@ import android.content.Intent;
 import android.os.Bundle;
 import androidx.annotation.Nullable;
 import com.google.android.material.tabs.TabLayout;
+
+import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.viewpager.widget.PagerAdapter;
 import androidx.viewpager.widget.ViewPager;
+
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -68,6 +71,9 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.address_book_content);
+		Toolbar toolbar = findViewById(R.id.toolbar);
+		toolbar.setTitle(getString(R.string.address_book_activity_title));
+		toolbar.setNavigationOnClickListener(v -> finish());
 
 		final FragmentManager fragmentManager = getSupportFragmentManager();
 

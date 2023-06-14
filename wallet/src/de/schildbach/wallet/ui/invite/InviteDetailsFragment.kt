@@ -1,17 +1,18 @@
 /*
- * Copyright 2021 Dash Core Group
+ * Copyright 2021 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package de.schildbach.wallet.ui.invite
@@ -22,23 +23,24 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
-import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.data.Invitation
-import de.schildbach.wallet.observeOnce
+
+import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_payments.toolbar
+import kotlinx.android.synthetic.main.activity_forgot_pin.toolbar
 import kotlinx.android.synthetic.main.fragment_invite_details.*
 import kotlinx.android.synthetic.main.fragment_invite_details.copy_invitation_link
 import kotlinx.android.synthetic.main.fragment_invite_details.preview_button
 import kotlinx.android.synthetic.main.fragment_invite_details.send_button
 import kotlinx.android.synthetic.main.fragment_invite_details.tag_edit
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.KeyboardUtil
 
 @AndroidEntryPoint
@@ -102,21 +104,21 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             }
         }
         profile_button.setOnClickListener {
-            viewModel.invitedUserProfile.observeOnce(
-                requireActivity(),
-                Observer {
-                    if (it != null) {
-                        startActivity(DashPayUserActivity.createIntent(requireContext(), it))
-                    } else {
-                        /*not sure why this is happening*/
-                        val errorDialog = FancyAlertDialog.newProgress(
-                            R.string.invitation_creating_error_message_not_synced,
-                            R.string.invitation_verifying_progress_title,
-                        )
-                        errorDialog.show(childFragmentManager, null)
-                    }
-                },
-            )
+            lifecycleScope.launch {
+                val profile = viewModel.getInvitedUserProfile()
+
+                if (profile != null) {
+                    startActivity(DashPayUserActivity.createIntent(requireContext(), profile))
+                } else {
+                    /*not sure why this is happening*/
+                    AdaptiveDialog.create(
+                        R.drawable.ic_warning,
+                        getString(R.string.invitation_creating_error_message_not_synced),
+                        getString(R.string.invitation_verifying_progress_title),
+                        getString(R.string.button_ok)
+                    ).show(requireActivity())
+                }
+            }
         }
 
         pending_view.isVisible = false
@@ -148,7 +150,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             }
         }
 
-        viewModel.dashPayProfileData.observe(viewLifecycleOwner) {
+        viewModel.dashPayProfile.observe(viewLifecycleOwner) {
             setupInvitationPreviewTemplate(it!!)
         }
         viewModel.updateInvitedUserProfile()

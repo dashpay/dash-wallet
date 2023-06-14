@@ -16,6 +16,12 @@
     <string name="error">錯誤</string>
     <string name="select_a_coin">選擇一個幣</string>
     <string name="request_coins_share_dialog_title">分享索取達世幣的資訊…</string>
+    <string name="buy_with_fiat">用法定貨幣來購買達世幣</string>
+    <string name="buy_and_convert">用另一種加密貨幣購買和兌換達世幣</string>
+    <string name="transfer_dash">轉賬達世幣</string>
+    <string name="login_error_title">無法登錄您的 %s 帳戶</string>
+    <string name="login_error_message">登錄您的 %s 帳戶時出錯。</string>
+    <string name="balance">結餘:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">我明白</string>
     <string name="button_okay">好的</string>
     <string name="button_share">分享</string>
+    <string name="share_address">分享位址</string>
     <string name="verify">檢查</string>
     <string name="receive_enter_amount_button">指定金額</string>
 

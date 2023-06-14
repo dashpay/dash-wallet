@@ -24,12 +24,12 @@ import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import javax.inject.Inject
 
-@ExperimentalCoroutinesApi
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class EnterAmountViewModel @Inject constructor(
     var exchangeRates: ExchangeRatesProvider,
@@ -64,16 +64,29 @@ class EnterAmountViewModel @Inject constructor(
     val amount: LiveData<Coin>
         get() = _amount
 
+    private val _callerBlocksContinue = MutableLiveData(false)
+    var blockContinue: Boolean
+        get() = _callerBlocksContinue.value ?: false
+        set(value) { _callerBlocksContinue.value = value }
+
+    private var _minIsIncluded = false
+
     val canContinue: LiveData<Boolean>
         get() = MediatorLiveData<Boolean>().apply {
             fun canContinue(): Boolean {
                 val amount = _amount.value ?: Coin.ZERO
                 val minAmount = _minAmount.value ?: Coin.ZERO
                 val maxAmount = _maxAmount.value ?: Coin.ZERO
+                val minCheck = if (_minIsIncluded) {
+                    amount >= minAmount
+                } else {
+                    amount > minAmount
+                }
 
-                return amount > minAmount && (maxAmount == Coin.ZERO || amount <= maxAmount)
+                return !blockContinue && minCheck && (maxAmount == Coin.ZERO || amount <= maxAmount)
             }
 
+            addSource(_callerBlocksContinue) { value = canContinue() }
             addSource(_amount) { value = canContinue() }
             addSource(_minAmount) { value = canContinue() }
             addSource(_maxAmount) { value = canContinue() }
@@ -94,7 +107,8 @@ class EnterAmountViewModel @Inject constructor(
         _maxAmount.value = coin
     }
 
-    fun setMinAmount(coin: Coin) {
+    fun setMinAmount(coin: Coin, isIncludedMin: Boolean = false) {
         _minAmount.value = coin
+        _minIsIncluded = isIncludedMin
     }
 }

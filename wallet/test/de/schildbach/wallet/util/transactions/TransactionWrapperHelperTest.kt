@@ -28,7 +28,7 @@ import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletTransaction
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
-import org.dashj.bls.Utils
+import org.bitcoinj.core.Utils
 import org.junit.Before
 import org.junit.Test
 

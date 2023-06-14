@@ -8,21 +8,17 @@
     android:background="@color/background_primary"
     android:orientation="vertical"
     android:fitsSystemWindows="true"
-    tools:context="de.schildbach.wallet.ui.QuickReceiveActivity">
+    tools:context="de.schildbach.wallet.ui.payments.QuickReceiveActivity">
 
-    <FrameLayout
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/nav_host_fragment"
+        android:name="androidx.navigation.fragment.NavHostFragment"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
+        app:navGraph="@navigation/nav_quick_receive"
+        app:defaultNavHost="true"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <FrameLayout
-            android:id="@+id/container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical" />
-    </FrameLayout>
+        app:layout_constraintTop_toTopOf="parent" />
 
     <ImageButton
         android:id="@+id/close_button"

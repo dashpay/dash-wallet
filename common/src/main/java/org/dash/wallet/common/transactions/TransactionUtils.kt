@@ -86,8 +86,8 @@ object TransactionUtils {
         return result
     }
 
-    fun isEntirelySelf(tx: Transaction, bag: TransactionBag): Boolean {
-        for (input in tx.inputs) {
+    fun Transaction.isEntirelySelf(bag: TransactionBag): Boolean {
+        for (input in inputs) {
             val connectedOutput = input.connectedOutput
 
             if (connectedOutput == null || !connectedOutput.isMine(bag)) {
@@ -95,7 +95,7 @@ object TransactionUtils {
             }
         }
 
-        for (output in tx.outputs) {
+        for (output in outputs) {
             if (!output.isMine(bag)) {
                 return false
             }

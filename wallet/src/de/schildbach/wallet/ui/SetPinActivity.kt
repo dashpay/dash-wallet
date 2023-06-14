@@ -34,8 +34,9 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
 import de.schildbach.wallet.service.RestartService
-import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.security.SecurityFunctions
+import de.schildbach.wallet.service.PackageInfoProvider
+import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
@@ -59,6 +60,7 @@ class SetPinActivity : InteractionAwareActivity() {
 
     @Inject lateinit var restartService: RestartService
     @Inject lateinit var authManager: SecurityFunctions
+    @Inject lateinit var packageInfoProvider: PackageInfoProvider
 
     val pin = arrayListOf<Int>()
     var seed = listOf<String>()
@@ -135,10 +137,10 @@ class SetPinActivity : InteractionAwareActivity() {
         initView()
         initViewModel()
 
-        if (viewModel.walletApplication.wallet == null) {
+        if (viewModel.walletData.wallet == null) {
             showErrorDialog(false, NullPointerException("wallet is null in SetPinActivity"))
         } else {
-            if (viewModel.walletApplication.wallet!!.isEncrypted) {
+            if (viewModel.walletData.wallet!!.isEncrypted) {
                 if (initialPin != null) {
                     if (changePin) {
                         viewModel.oldPinCache = initialPin
@@ -363,7 +365,7 @@ class SetPinActivity : InteractionAwareActivity() {
     private fun warnLastAttempt() {
         if (viewModel.getRemainingAttempts() == 1) {
             val dialog = AdaptiveDialog.create(
-                R.drawable.ic_info_red,
+                R.drawable.ic_error,
                 getString(R.string.wallet_last_attempt),
                 getString(R.string.wallet_last_attempt_message),
                 "",
@@ -404,7 +406,7 @@ class SetPinActivity : InteractionAwareActivity() {
                 }
                 Status.SUCCESS -> {
                     if (state == State.DECRYPTING) {
-                        seed = viewModel.walletApplication.wallet!!.keyChainSeed.mnemonicCode!!
+                        seed = viewModel.walletData.wallet!!.keyChainSeed.mnemonicCode!!
                         setState(State.SET_PIN)
                     } else {
                         if (changePin) {
@@ -474,10 +476,7 @@ class SetPinActivity : InteractionAwareActivity() {
             } else {
                 goHome()
             }
-            viewModel.walletApplication.autoLogout.apply {
-                maybeStartAutoLogoutTimer()
-                keepLockedUntilPinEntered = false
-            }
+            viewModel.startAutoLogout()
         }
     }
 
@@ -506,8 +505,12 @@ class SetPinActivity : InteractionAwareActivity() {
         dialog.isCancelable = false
         dialog.show(this) {
             if (it == true) {
-                alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
-                    viewModel.walletApplication).buildAlertDialog()
+                alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
+                    this,
+                    packageInfoProvider,
+                    viewModel.configuration,
+                    viewModel.walletData.wallet
+                ).buildAlertDialog()
                 alertDialog?.show()
             }
         }

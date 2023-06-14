@@ -41,4 +41,5 @@
 
     <dimen name="identity_complete_text_size">24sp</dimen>
     <dimen name="invite_header_size">16sp</dimen>
+    <dimen name="home_toolbar_height">60dp</dimen>
 </resources>

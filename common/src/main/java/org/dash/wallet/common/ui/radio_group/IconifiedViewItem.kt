@@ -27,11 +27,12 @@ data class IconifiedViewItem(
     val title: String,
     val subtitle: String = "",
     @DrawableRes
-    val icon: Int? = null,
+    val iconRes: Int? = null,
+    /** Only checked if iconRes is null */
+    val iconUrl: String? = null,
     val iconSelectMode: IconSelectMode = IconSelectMode.Tint,
     val additionalInfo: String? = null,
     @DrawableRes
     val subtitleDrawable: Int? = null,
     val subtitleAdditionalInfo: String? = null,
-    val iconUrl: String? = null
 )

@@ -16,6 +16,12 @@
     <string name="error">Chyba</string>
     <string name="select_a_coin">Vyberte mincu</string>
     <string name="request_coins_share_dialog_title">Zdieľať požiadavku na Dash…</string>
+    <string name="buy_with_fiat">Kúpiť si Dash za hotovosť</string>
+    <string name="buy_and_convert">Kúpte a preveďte Dash pomocou inej kryptomeny</string>
+    <string name="transfer_dash">Preniesť Dash</string>
+    <string name="login_error_title">Nedá sa prihlásiť na váš účet %s</string>
+    <string name="login_error_message">Pri prihlasovaní do vášho účtu %s sa vyskytla chyba</string>
+    <string name="balance">Zostatok:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernseyova libra</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">Rozumiem</string>
     <string name="button_okay">Dobre</string>
     <string name="button_share">Zdieľať</string>
+    <string name="share_address">Zdieľať adresu</string>
     <string name="verify">Overiť</string>
     <string name="receive_enter_amount_button">Zadať množstvo</string>
 

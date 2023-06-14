@@ -24,11 +24,12 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import de.schildbach.wallet.security.BiometricHelper
-import de.schildbach.wallet.ui.preference.PinRetryController
-import de.schildbach.wallet.security.SecurityFunctions
+import de.schildbach.wallet.security.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.util.Constants.ANDROID_KEY_STORE
+import org.dash.wallet.common.util.security.EncryptionProvider
+import java.security.KeyStore
 import javax.inject.Singleton
 
 @Module
@@ -48,6 +49,15 @@ abstract class SecurityModule {
             context,
             configuration
         )
+
+        @Provides
+        fun provideEncryptionProvider(@ApplicationContext context: Context): EncryptionProvider {
+            val securityPrefs = context.getSharedPreferences(SecurityGuard.SECURITY_PREFS_NAME, Context.MODE_PRIVATE)
+            val keyStore = KeyStore.getInstance(ANDROID_KEY_STORE)
+            keyStore.load(null)
+
+            return ModernEncryptionProvider(keyStore, securityPrefs)
+        }
     }
 
     @Binds

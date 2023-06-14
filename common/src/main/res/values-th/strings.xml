@@ -16,6 +16,12 @@
     <string name="error">ผิดพลาด</string>
     <string name="select_a_coin">เลือกเหรียญ</string>
     <string name="request_coins_share_dialog_title">แชร์คำขอสำหรับ Dash</string>
+    <string name="buy_with_fiat">ซื้อ Dash ด้วยเงินสด</string>
+    <string name="buy_and_convert">ซื้อและแลกเปลี่ยน Dash ด้วยคริปโตอื่น ๆ</string>
+    <string name="transfer_dash">โอน Dash</string>
+    <string name="login_error_title">ไม่สามารถเข้าสู่ระบบบัญชี %s  ของคุณได้</string>
+    <string name="login_error_message">เกิดข้อผิดพลาดขณะลงชื่อเข้าใช้บัญชี %s ของคุณ</string>
+    <string name="balance">ยอดคงเหลือ:</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -49,6 +55,7 @@
     <string name="button_understand">ฉันเข้าใจ</string>
     <string name="button_okay">ตกลง</string>
     <string name="button_share">แบ่งปัน</string>
+    <string name="share_address">แชร์ที่อยู่</string>
     <string name="verify">ตรวจสอบ</string>
     <string name="receive_enter_amount_button">ระบุจำนวน</string>
 

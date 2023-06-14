@@ -12,7 +12,7 @@
     <string name="copied">Zkopírováno</string>
     <string name="staking_title">Úročení</string>
     <string name="error">Chyba</string>
-
+    <string name="request_coins_share_dialog_title">Sdílet požadavek na Dash…</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernseyská libra</string>
     <!-- Local Currency List: JEP -->
@@ -44,14 +44,17 @@
     <string name="button_okay">Dobře</string>
     <string name="button_share">Sdílet</string>
     <string name="verify">Ověřit</string>
+    <string name="receive_enter_amount_button">Uvést částku</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Vyhledávání</string>
     <string name="permission_allow">Povolit</string>
     <string name="permission_deny">Odmítnout</string>
     <string name="max">Max</string>
+    <string name="dash">Dash</string>
     <string name="select_currency">Vybrat měnu</string>
     <string name="send_coins_error_dusty_send">Částka je příliš nízká pro odeslání</string>
     <string name="send_coins_error_insufficient_money">Nedostatečný zůstatek</string>
 
-    </resources>
+    <string name="syncing">Synchronizace</string>
+</resources>

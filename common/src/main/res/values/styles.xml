@@ -112,13 +112,6 @@
         <item name="android:drawablePadding">4dp</item>
     </style>
 
-    <style name="ListSeparator">
-        <item name="android:alpha">0.25</item>
-        <item name="android:background">@color/old_gray</item>
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">1dp</item>
-    </style>
-
     <style name="OldCheckBox">
         <item name="android:layout_marginLeft">-2dp</item>
         <item name="android:layout_marginStart">-2dp</item>
@@ -252,11 +245,6 @@
         <item name="cornerRadius">2dp</item>
     </style>
 
-    <style name="GrayBackground">
-        <item name="backgroundColor">@color/gray_40</item>
-        <item name="strokeColor">@color/gray_40</item>
-    </style>
-
     <style name="TaxCategoryExampleBackground">
         <item name="backgroundColor">@color/tx_category_example_background</item>
         <item name="strokeColor">@color/tx_category_example_background</item>
@@ -267,7 +255,9 @@
         <item name="cornerRadius">25dp</item>
     </style>
 
-    <style name="SearchInputBackground" parent="GrayBackground">
+    <style name="SearchInputBackground">
+        <item name="backgroundColor">@color/input_background</item>
+        <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">8dp</item>
     </style>
 
@@ -362,6 +352,14 @@
     </style>
 
     <style name="Headline4.White">
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="Headline4.Medium">
+        <item name="fontFamily">@font/inter_medium</item>
+    </style>
+
+    <style name="Headline4.Medium.White">
         <item name="android:textColor">@color/white</item>
     </style>
 
@@ -632,8 +630,8 @@
         <item name="android:textColor">@color/content_tertiary</item>
     </style>
 
-    <style name="Caption.Tangerine">
-        <item name="android:textColor">@color/tangerine</item>
+    <style name="Caption.Orange">
+        <item name="android:textColor">@color/orange</item>
     </style>
 
     <style name="Caption.Medium">
@@ -722,6 +720,10 @@
         <item name="android:textColor">@color/content_secondary</item>
     </style>
 
+    <style name="Overline.Medium.Tertiary">
+        <item name="android:textColor">@color/content_tertiary</item>
+    </style>
+
     <style name="Overline.Medium.White">
         <item name="android:textColor">@color/dash_white</item>
     </style>
@@ -805,6 +807,12 @@
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
+    <style name="PrimaryButtonTheme.Large.Orange">
+        <item name="backgroundColor">@color/orange</item>
+        <item name="strokeColor">@color/orange</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
     <style name="PrimaryButtonTheme.Large.TransparentBlue">
         <item name="backgroundColor">@color/light_blue</item>
         <item name="strokeColor">@android:color/transparent</item>
@@ -814,6 +822,12 @@
     <style name="PrimaryButtonTheme.Large.White">
         <item name="backgroundColor">@color/dash_white</item>
         <item name="strokeColor">@color/dash_white</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.Large.Inverted">
+        <item name="backgroundColor">@color/background_secondary</item>
+        <item name="strokeColor">@color/background_secondary</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
@@ -837,7 +851,8 @@
     </style>
 
     <style name="PrimaryButtonTheme.Small.Round">
-        <item name="cornerRadius">16dp</item>
+        <item name="cornerRadius">20dp</item>
+        <item name="titleTextColor">@color/dash_blue</item>
         <item name="backgroundColor">@color/max_button_bg</item>
         <item name="strokeColor">@android:color/transparent</item>
         <item name="rippleColor">@color/button_ripple_color</item>
@@ -894,6 +909,14 @@
         <item name="android:theme">@style/PrimaryButtonTheme.Large.White</item>
     </style>
 
+    <style name="Button.Primary.Large.Orange">
+        <item name="android:theme">@style/PrimaryButtonTheme.Large.Orange</item>
+    </style>
+
+    <style name="Button.Primary.Large.Inverted">
+        <item name="android:theme">@style/PrimaryButtonTheme.Large.Inverted</item>
+    </style>
+
     <style name="Button.Primary.Large.LightGrey">
         <item name="android:theme">@style/PrimaryButtonTheme.Large.LightGrey</item>
     </style>
@@ -916,9 +939,10 @@
         <item name="android:paddingEnd">0dp</item>
         <item name="android:minHeight">20dp</item>
         <item name="android:minWidth">20dp</item>
-        <item name="android:textSize">10sp</item>
+        <item name="android:textSize">11sp</item>
         <item name="android:theme">@style/PrimaryButtonTheme.Small.Round</item>
     </style>
+
 
     <style name="Button.Primary.ExtraSmall">
         <item name="android:theme">@style/PrimaryButtonTheme.ExtraSmall</item>
@@ -988,22 +1012,6 @@
     <style name="Button.Secondary.Small.Blue">
         <item name="android:theme">@style/SecondaryButtonTheme.Small.Blue</item>
     </style>
-
-    <style name="SecondaryButtonTheme.Small.Round">
-        <item name="titleTextColor">@color/content_primary</item>
-        <item name="strokeColor">@color/steel_gray_150</item>
-        <item name="cornerRadius">16dp</item>
-    </style>
-
-    <style name="Button.Secondary.Small.Round">
-        <item name="android:paddingStart">0dp</item>
-        <item name="android:paddingEnd">0dp</item>
-        <item name="android:minHeight">20dp</item>
-        <item name="android:minWidth">20dp</item>
-        <item name="android:textSize">10sp</item>
-        <item name="android:theme">@style/SecondaryButtonTheme.Small.Round</item>
-    </style>
-
 
     <!-- Tertiary -->
 
@@ -1096,6 +1104,7 @@
     <style name="Button.Tertiary.Small">
         <item name="android:textSize">13sp</item>
         <item name="android:minHeight">36dp</item>
+        <item name="android:minWidth">50dp</item>
         <item name="android:theme">@style/TertiaryButtonTheme.Small</item>
     </style>
 
@@ -1152,14 +1161,6 @@
         <item name="android:background">@android:color/transparent</item>
     </style>
 
-    <style name="NavigationIconStyle">
-        <item name="android:layout_width">14dp</item>
-        <item name="android:layout_height">14dp</item>
-        <item name="android:rotation">180</item>
-        <item name="android:src">@drawable/ic_arrow_back</item>
-        <item name="android:tint">@color/steel_gray_200</item>
-    </style>
-
     <style name="Explore.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
         <item name="android:background">@color/background_secondary</item>
         <item name="android:textColor">@color/content_primary</item>
@@ -1175,13 +1176,25 @@
 
     <style name="TxSentBackground">
         <item name="backgroundColor">@color/tx_sent_background</item>
-        <item name="strokeColor">@color/tx_sent_background</item>
+        <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">19dp</item>
     </style>
 
     <style name="TxReceivedBackground">
         <item name="backgroundColor">@color/tx_received_background</item>
-        <item name="strokeColor">@color/tx_received_background</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">19dp</item>
+    </style>
+
+    <style name="TxErrorBackground">
+        <item name="backgroundColor">@color/tx_error_background</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">19dp</item>
+    </style>
+
+    <style name="TxOrangeBackground">
+        <item name="backgroundColor">@color/tx_orange_background</item>
+        <item name="strokeColor">@color/tx_orange_background</item>
         <item name="cornerRadius">19dp</item>
     </style>
 
@@ -1224,7 +1237,7 @@
         <item name="android:layout_width">16dp</item>
         <item name="android:layout_height">16dp</item>
         <item name="android:rotation">180</item>
-        <item name="android:src">@drawable/ic_arrow_back</item>
+        <item name="android:src">@drawable/ic_back_arrow</item>
         <item name="android:tint">@color/light_gray</item>
     </style>
 
@@ -1234,5 +1247,11 @@
         <item name="trackColor">@color/content_loading_track</item>
         <item name="trackCornerRadius">2dp</item>
         <item name="trackThickness">15dp</item>
+    </style>
+
+    <style name="ImageButtonGrayTheme">
+        <item name="backgroundColor">@color/dash_black_0.05</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">12dp</item>
     </style>
 </resources>

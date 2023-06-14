@@ -17,10 +17,7 @@
     <string name="set_pin_verifying_pin">Ověřování PIN kódu</string>
     <string name="set_pin_message">Tento PIN bude požadován pro odemčení aplikace pokaždé, když ji budete chtít použít.</string>
     <string name="set_pin_confirm_pin_incorrect">Nesprávný PIN</string>
-
-    <string name="home_available_balance">Dostupný zůstatek</string>
-    <string name="home_balance_hidden">Skrytý zůstatek</string>
-    <string name="home_balance_show_hint">Klepněte pro zobrazení zůstatku</string>
+    
     <string name="home_balance_hide_hint">Klepněte pro skrytí zůstatku</string>
 
     <string name="dialog_confirm_confirm">Potvrdit</string>
@@ -30,13 +27,11 @@
     <string name="dialog_confirm_total">Celkem</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_secure_now">Ihned peněženku zabezpečit</string>
+    <string name="shortcut_scan_to_pay">Skenovat</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Platit skenováním</string>
+    <string name="shortcut_pay_to_address">Poslat</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Odeslat na adresu</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Koupit / Prodat Dash</string>
+    <string name="shortcut_buy_sell">Nákup &amp; Prodej</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Přijmout</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -211,17 +206,6 @@
     <string name="verify_continue">Pokračovat</string>
     <string name="verify_backup_wallet">Zálohovat peněženku</string>
     <string name="verify_show_recovery_phrase">Zobrazit frázi pro obnovení</string>
-    <string name="verify_secure_now">Ihned zabezpečit peněženku</string>
-    <string name="verify_it_is_important">Je důležité</string>
-    <string name="verify_it_is_important_subtitle">Ukážeme vám privátní klíč od vaší peněženky.</string>
-    <string name="verify_info_text_1">Tato fráze pro obnovení slouží jako přístup k prostředkům na peněžence.</string>
-    <string name="verify_info_text_2">Neuchováváme tuto frázi pro obnovení.</string>
-    <string name="verify_info_text_3">Pokud toto zařízení ztratíte, poškodíte nebo odinstalujete Dash Wallet, budete potřebovat frázi pro obnovení, abyste mohli nakládat s vašimi prostředky.</string>
-    <string name="verify_skip">Přeskočit</string>
-    <string name="verify_secure_now_btn">Ihned zabezpečit</string>
-    <string name="verify_secure_now_message">Pokud toto zařízení ztratíte, přijdete o všechny prostředky. Získejte vaší frázi pro obnovení, takže budete moci peněženku obnovit na jiném zařízení.</string>
-    <string name="verify_seed_title">Poznamenejte si ji</string>
-    <string name="verify_seed_write_down_confirmation">Mám poznamenáno</string>
     <string name="verify_seed_buttons_tip">Klepněte na slova z vaší fráze pro obnovení ve správném pořadí</string>
     <string name="verify_seed_success_title">Úspěšně verifikováno</string>
     <string name="verify_seed_success_message">Peněženka je teď zabezpečena. Frázi pro obnovení můžete kdykoliv použít pro obnovení na jiném zařízení.</string>
@@ -278,7 +262,6 @@
     <string name="about_help_us_improve">Pomoztne nám aplikaci vylepšit</string>
     <string name="about_contact_support">Podpora</string>
     <string name="about_fork_disclaimer">Toto je aplikace s otevřeným zdrojovým kódem vycházející z bitcoinové peněženky.</string>
-    <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
     <string name="about_last_explore_dash_update_error">nelze načíst</string>
@@ -354,7 +337,6 @@
     <string name="import_image_invalid_private">Neplatný privátní klíč</string>
 
     <string name="syncing">Synchronizace</string>
-    <string name="syncing_balance">Synchronizace zůstatku</string>
     <string name="all_transactions">Vše</string>
     <string name="received_transactions">Přijato</string>
     <string name="sent_transactions">Odesláno</string>
@@ -366,4 +348,10 @@
 
     <string name="continue_reset">Pokračovat</string>
     <string name="reset_wallet_text">Resetovat peněženku</string>
+    <string name="masternode_key_type_owner">Klíče majitele</string>
+    <string name="masternode_key_type_voting">Klíče pro hlasování</string>
+    <string name="masternode_key_type_operator">Klíče operátora</string>
+    <string name="masternode_key_address">Adresa</string>
+    <string name="masternode_key_ip_address_unknown">Neznámý</string>
+    <string name="masternode_key_revoked">Zrušeno</string>
     </resources>

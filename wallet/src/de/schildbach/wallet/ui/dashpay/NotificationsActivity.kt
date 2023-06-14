@@ -26,11 +26,11 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.widget.doAfterTextChanged
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
@@ -39,6 +39,7 @@ import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityNotificationsBinding
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -81,7 +82,9 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        lastSeenNotificationTime = walletApplication.configuration.lastSeenNotificationTime
+        lifecycleScope.launch {
+            lastSeenNotificationTime = dashPayViewModel.getLastNotificationTime()
+        }
 
         notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet!!,
                 true, this, this, this)
@@ -137,8 +140,10 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
                 if (it.data != null) {
                     val results = arrayListOf<NotificationItem>()
                     results.addAll(it.data)
-                    processResults(results)
-                    showHideAlert()
+                    lifecycleScope.launch {
+                        processResults(results)
+                        showHideAlert()
+                    }
                 }
             }
         }
@@ -157,12 +162,12 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
         }
     }
 
-    private fun processResults(data: ArrayList<NotificationItem>) {
+    private suspend fun processResults(data: ArrayList<NotificationItem>) {
 
         val results = ArrayList<NotificationsAdapter.NotificationViewItem>()
 
         // get the last seen date from the configuration
-        val newDate = walletApplication.configuration.lastSeenNotificationTime
+        val newDate = dashPayViewModel.getLastNotificationTime()
 
 
         // find the most recent notification timestamp
@@ -246,13 +251,15 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
                 Toast.makeText(this, "payment $tx", Toast.LENGTH_LONG).show()
             }
             is NotificationItemUserAlert -> {
-                dashPayViewModel.inviteHistory.observeOnce(this) {
+                lifecycleScope.launch {
+                    val inviteHistory = dashPayViewModel.getInviteHistory()
                     userAlertItem = null
                     dashPayViewModel.dismissUserAlert(R.string.invitation_notification_text)
-                    if (it == null || it.isEmpty()) {
-                        InviteFriendActivity.startOrError(this)
+
+                    if (inviteHistory.isEmpty()) {
+                        InviteFriendActivity.startOrError(this@NotificationsActivity)
                     } else {
-                        startActivity(InvitesHistoryActivity.createIntent(this))
+                        startActivity(InvitesHistoryActivity.createIntent(this@NotificationsActivity))
                     }
                 }
             }
@@ -270,8 +277,14 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
     }
 
     override fun onDestroy() {
-        walletApplication.configuration.lastSeenNotificationTime = max(lastSeenNotificationTime,
-            walletApplication.configuration.lastSeenNotificationTime) + DateUtils.SECOND_IN_MILLIS
+        lifecycleScope.launch {
+            dashPayViewModel.setLastNotificationTime(
+                max(
+                    lastSeenNotificationTime,
+                    dashPayViewModel.getLastNotificationTime()
+                ) + DateUtils.SECOND_IN_MILLIS
+            )
+        }
         super.onDestroy()
     }
 
@@ -295,5 +308,4 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
         userAlertItem = null
         dashPayViewModel.dismissUserAlert(alertId)
     }
-
 }

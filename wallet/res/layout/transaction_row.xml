@@ -26,13 +26,14 @@
     android:paddingEnd="15dp"
     android:paddingTop="@dimen/transaction_row_vertical_padding"
     android:paddingBottom="@dimen/transaction_row_vertical_padding"
+    android:clipToPadding="false"
     android:tag="transaction"
     tools:context="de.schildbach.wallet.ui.main.TransactionAdapter">
 
     <ImageView
         android:id="@+id/primary_icon"
-        android:layout_width="38dp"
-        android:layout_height="38dp"
+        android:layout_width="@dimen/transaction_icon_size"
+        android:layout_height="@dimen/transaction_icon_size"
         android:padding="@dimen/transaction_icon_padding"
         android:layout_marginHorizontal="15dp"
         android:src="@drawable/ic_transaction_received"
@@ -125,7 +126,7 @@
 
     <TextView
         android:id="@+id/secondary_status"
-        style="@style/Caption.Tangerine"
+        style="@style/Caption.Orange"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:paddingStart="4dp"
@@ -168,7 +169,7 @@
             app:tint="@color/content_primary"
             tools:tint="@color/content_primary" />
 
-        <org.dash.wallet.common.ui.CurrencyTextView
+        <TextView
             android:id="@+id/value"
             style="@style/Caption.Medium"
             android:layout_width="wrap_content"

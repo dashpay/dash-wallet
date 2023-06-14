@@ -25,8 +25,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import androidx.annotation.NonNull;
-import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.ui.preference.PinRetryController;
+import org.dash.wallet.common.util.Constants;
+import de.schildbach.wallet.security.PinRetryController;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -43,7 +43,7 @@ public abstract class RetrofitClient {
     protected RetrofitClient(String baseUrl) {
         PinRetryController pinRetryController = PinRetryController.getInstance();
 
-        OkHttpClient okClient = Constants.HTTP_CLIENT.newBuilder()
+        OkHttpClient okClient = Constants.INSTANCE.getHTTP_CLIENT().newBuilder()
                 .addInterceptor(new SecureTimeInterceptor(pinRetryController))
                 .build();
 

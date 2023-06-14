@@ -25,21 +25,17 @@ import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.SphericalUtil
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.features.exploredash.data.model.GeoBounds
+import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.*
 
-
-data class UserLocation(var latitude: Double,
-                        var longitude: Double,
-                        var accuracy: Double)
+data class UserLocation(var latitude: Double, var longitude: Double, var accuracy: Double)
 
 interface UserLocationStateInt {
     fun calculateBounds(center: LatLng, radius: Double): LatLngBounds
@@ -51,8 +47,9 @@ interface UserLocationStateInt {
     fun getRadiusBounds(centerLat: Double, centerLng: Double, radius: Double): GeoBounds
 }
 
-@ExperimentalCoroutinesApi
-class UserLocationState @Inject constructor(private val context: Context, private val client: FusedLocationProviderClient): UserLocationStateInt  {
+class UserLocationState
+@Inject
+constructor(private val context: Context, private val client: FusedLocationProviderClient) : UserLocationStateInt {
     companion object {
         private const val UPDATE_INTERVAL_SECS = 10L
         private const val FASTEST_UPDATE_INTERVAL_SECS = 2L
@@ -67,13 +64,14 @@ class UserLocationState @Inject constructor(private val context: Context, privat
             .include(SphericalUtil.computeOffset(center, radius, 0.0))
             .include(SphericalUtil.computeOffset(center, radius, 90.0))
             .include(SphericalUtil.computeOffset(center, radius, 180.0))
-            .include(SphericalUtil.computeOffset(center, radius, 270.0)).build()
+            .include(SphericalUtil.computeOffset(center, radius, 270.0))
+            .build()
     }
 
     @SuppressLint("MissingPermission")
     override fun observeUpdates(): Flow<UserLocation> = callbackFlow {
-        val locationRequest: LocationRequest = LocationRequest.create()
-            .apply {
+        val locationRequest: LocationRequest =
+            LocationRequest.create().apply {
                 interval = TimeUnit.SECONDS.toMillis(UPDATE_INTERVAL_SECS)
                 fastestInterval = TimeUnit.SECONDS.toMillis(FASTEST_UPDATE_INTERVAL_SECS)
                 priority = LocationRequest.PRIORITY_HIGH_ACCURACY
@@ -85,44 +83,53 @@ class UserLocationState @Inject constructor(private val context: Context, privat
         val task = settingsClient.checkLocationSettings(builder.build())
         task.addOnSuccessListener { locationSettingsResponse ->
             locationSettingsResponse.locationSettingsStates?.let { states ->
-                log.info("checkLocationSettings, isGpsPresent: ${states.isGpsPresent}, " +
+                log.info(
+                    "checkLocationSettings, isGpsPresent: ${states.isGpsPresent}, " +
                         "isGpsUsable: ${states.isGpsUsable}, " +
                         "isNetworkLocationPresent: ${states.isNetworkLocationPresent}, " +
-                        "isNetworkLocationUsable: ${states.isNetworkLocationUsable}")
+                        "isNetworkLocationUsable: ${states.isNetworkLocationUsable}"
+                )
             }
         }
 
-        task.addOnFailureListener { exception ->
-            log.info("checkLocationSettings failure: $exception")
-        }
+        task.addOnFailureListener { exception -> log.info("checkLocationSettings failure: $exception") }
 
-        val callback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                super.onLocationResult(locationResult)
-                val location = locationResult.lastLocation
-                val newLocation = Pair(location.latitude, location.longitude)
-                val distance = distanceBetween(previousLocation.first, previousLocation.second, newLocation.first, newLocation.second)
+        val callback =
+            object : LocationCallback() {
+                override fun onLocationResult(locationResult: LocationResult) {
+                    super.onLocationResult(locationResult)
+                    val location = locationResult.lastLocation
+                    val newLocation = Pair(location.latitude, location.longitude)
+                    val distance =
+                        distanceBetween(
+                            previousLocation.first,
+                            previousLocation.second,
+                            newLocation.first,
+                            newLocation.second
+                        )
 
-                if (distance > 50) {
-                    previousLocation = Pair(location.latitude, location.longitude)
-                    trySend(UserLocation(previousLocation.first, previousLocation.second, location.accuracy.toDouble()))
+                    if (distance > 50) {
+                        previousLocation = Pair(location.latitude, location.longitude)
+                        trySend(
+                            UserLocation(previousLocation.first, previousLocation.second, location.accuracy.toDouble())
+                        )
+                    }
                 }
             }
-        }
 
-        client.lastLocation.addOnSuccessListener { location ->
-            log.info("getLastLocation() success, location available: ${location != null}")
-            location?.let {
-                trySend(UserLocation(location.latitude, location.longitude, location.accuracy.toDouble()))
+        client.lastLocation
+            .addOnSuccessListener { location ->
+                log.info("getLastLocation() success, location available: ${location != null}")
+                location?.let {
+                    trySend(UserLocation(location.latitude, location.longitude, location.accuracy.toDouble()))
+                }
             }
-        }.addOnFailureListener {
-            log.info("getLastLocation() failure")
-        }
+            .addOnFailureListener { log.info("getLastLocation() failure") }
         client.requestLocationUpdates(locationRequest, callback, Looper.getMainLooper())
         awaitClose { client.removeLocationUpdates(callback) }
     }
 
-   override fun getCurrentLocationAddress(lat: Double, lng: Double): Address? {
+    override fun getCurrentLocationAddress(lat: Double, lng: Double): Address? {
         return try {
             val geocoder = Geocoder(context, GenericUtils.getDeviceLocale())
             val addresses = geocoder.getFromLocation(lat, lng, 1)
@@ -155,8 +162,7 @@ class UserLocationState @Inject constructor(private val context: Context, privat
         val sindLat = sin(dLat / 2)
         val sindLng = sin(dLng / 2)
 
-        val a = sindLat.pow(2.0) +
-                (sindLng.pow(2.0) * cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)))
+        val a = sindLat.pow(2.0) + (sindLng.pow(2.0) * cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)))
 
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
 

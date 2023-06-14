@@ -26,12 +26,14 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.Constants
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.ui.WebViewFragmentDirections
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
@@ -84,8 +86,12 @@ class StakingActivity : LockScreenActivity() {
             }
             NavigationRequest.SendReport -> {
                 log.info("CrowdNode initiated report")
-                alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
-                    walletApplication).buildAlertDialog()
+                alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(
+                    this,
+                    packageInfoProvider,
+                    configuration,
+                    walletData.wallet
+                ).buildAlertDialog()
                 alertDialog.show()
             }
             else -> { }
@@ -96,6 +102,13 @@ class StakingActivity : LockScreenActivity() {
         when (status) {
             OnlineAccountStatus.None -> { }
             OnlineAccountStatus.Linking, OnlineAccountStatus.SigningUp -> super.turnOffAutoLogout()
+            OnlineAccountStatus.Validating -> {
+                val isWebView = navController.currentDestination?.id == R.id.crowdNodeWebViewFragment
+                if (isWebView) {
+                    navController.navigate(WebViewFragmentDirections.webViewToPortal())
+                }
+                super.turnOnAutoLogout()
+            }
             else -> super.turnOnAutoLogout()
         }
     }
@@ -120,7 +133,7 @@ class StakingActivity : LockScreenActivity() {
                 val intent = VerifySeedActivity.createIntent(
                     this@StakingActivity,
                     pin,
-                    goHomeOnClose = false
+                    startMainActivityOnClose = false
                 )
                 startActivity(intent)
             }

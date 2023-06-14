@@ -152,7 +152,6 @@
     <string name="buy_gift_card_text">Nákup dárkových poukazů za Dash</string>
     <string name="buy_gift_card_desc_text">Kupte si dárkové poukazy za Dash za přesnou částku vašeho nákupu.</string>
     <string name="learn_more_text">Více informací</string>
-    <string name="continue_text">Pokračovat</string>
     <string name="buy_card_header_text">Jak použít dárkový poukaz</string>
     <string name="buy_card_desc_text">Ne všechny obchody přijímají přímo DASH, můžete si ale za Dash koupit dárkový poukaz.</string>
     <string name="find_merchant_text">Najít obchodníka.</string>

@@ -14,6 +14,7 @@
         android:layout_height="match_parent"
         android:background="@color/bg_bright"
         android:gravity="center"
+        android:textAlignment="gravity"
         android:text="@string/peer_list_fragment_empty"
         style="@style/Subtitle2"/>
 

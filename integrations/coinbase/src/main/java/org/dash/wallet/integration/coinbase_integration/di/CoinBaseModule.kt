@@ -16,10 +16,12 @@
  */
 package org.dash.wallet.integration.coinbase_integration.di
 
+import android.content.Context
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.CoinbaseAddressMapper
@@ -32,6 +34,7 @@ import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepos
 import org.dash.wallet.integration.coinbase_integration.service.CloseCoinbasePortalBroadcaster
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
+import org.dash.wallet.integration.coinbase_integration.utils.CoinbaseConfig
 import javax.inject.Singleton
 
 @Module
@@ -39,9 +42,13 @@ import javax.inject.Singleton
 object CoinBaseModule {
     @Singleton
     @Provides
-    fun provideRemoteDataSource(userPreferences: Configuration, broadcaster: CloseCoinbasePortalBroadcaster)
+    fun provideRemoteDataSource(
+        userPreferences: Configuration,
+        config: CoinbaseConfig,
+        broadcaster: CloseCoinbasePortalBroadcaster,
+        @ApplicationContext context: Context)
     : RemoteDataSource {
-        return RemoteDataSource(userPreferences, broadcaster)
+        return RemoteDataSource(context, userPreferences, config, broadcaster)
     }
 
     @Singleton

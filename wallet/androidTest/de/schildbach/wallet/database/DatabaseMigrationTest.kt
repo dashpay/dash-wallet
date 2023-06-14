@@ -23,14 +23,12 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.data.AppDatabaseMigrations
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
-import org.dash.wallet.common.data.TransactionMetadata
+import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.junit.Rule
 import org.junit.Test
@@ -155,7 +153,7 @@ open class DatabaseMigrationTest {
             assert(savedBlockchainState!!.bestChainHeight == BLOCKCHAIN_HEIGHT)
 
             val savedRate = db.exchangeRatesDao().getRateSync("ARS")
-            assert(savedRate.rate == EXCHANGE_RATE)
+            assert(savedRate?.rate == EXCHANGE_RATE)
 
             val savedAddressMetadata = db.addressMetadataDao().loadRecipient(address)
             assert(savedAddressMetadata?.address == address)

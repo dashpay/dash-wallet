@@ -19,13 +19,11 @@ package de.schildbach.wallet.ui.notifications
 
 import android.app.NotificationManager
 import android.content.Context
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.bumptech.glide.Glide
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
 
 @AndroidEntryPoint
@@ -59,9 +57,11 @@ class PushMessagingService : FirebaseMessagingService() {
 
             notificationBuilder
                 .setLargeIcon(bitmap)
-                .setStyle(NotificationCompat.BigPictureStyle()
-                    .bigPicture(bitmap)
-                    .bigLargeIcon(null))
+                .setStyle(
+                    NotificationCompat.BigPictureStyle()
+                        .bigPicture(bitmap)
+                        .bigLargeIcon(null)
+                )
 
             Glide.with(this).clear(futureTarget)
         }

@@ -20,7 +20,6 @@ package org.dash.wallet.common.ui.receive
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.util.AttributeSet
 import android.view.LayoutInflater
@@ -154,8 +153,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
 
         if (address != null) {
             paymentRequestUri = BitcoinURI.convertToBitcoinURI(address, amount, null, null)
-            val qrCodeBitmap = BitmapDrawable(resources, Qr.bitmap(paymentRequestUri))
-            qrCodeBitmap.isFilterBitmap = false
+            val qrCodeBitmap = Qr.themeAwareDrawable(paymentRequestUri, resources)
             binding.qrPreview.setImageDrawable(qrCodeBitmap)
         } else {
             paymentRequestUri = ""

@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="uphold_link_title">ربط حساب Uphold الخاص بك</string>
+    <string name="uphold_transfer_details">من Uphold إلى محفظة داش</string>
     <string name="uphold_buy_dash_activity_title">شراء/بيع داش مع Uphold</string>
     <string name="uphold_buy_dash_with_uphold">شراء داش من حساب Uphold</string>
     <string name="uphold_buy_dash_button">شراء داش</string>

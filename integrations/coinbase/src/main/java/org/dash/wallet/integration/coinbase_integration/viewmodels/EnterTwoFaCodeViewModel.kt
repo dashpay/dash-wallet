@@ -31,7 +31,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integration.coinbase_integration.CoinbaseConstants
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseErrorResponse
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams
-import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseResultDialog
 import java.io.IOException
@@ -95,7 +95,7 @@ class EnterTwoFaCodeViewModel @Inject constructor(
                 is ResponseResource.Failure -> {
                     _loadingState.value = false
                     try {
-                        val error = result.errorBody?.string()
+                        val error = result.errorBody
                         if (result.errorCode == 400 || result.errorCode == 402 || result.errorCode == 429) {
                             error?.let { errorMsg ->
                                 val errorContent = CoinbaseErrorResponse.getErrorMessage(errorMsg)
@@ -120,13 +120,13 @@ class EnterTwoFaCodeViewModel @Inject constructor(
     fun logRetry(type: CoinBaseResultDialog.Type) {
         when (type) {
             CoinBaseResultDialog.Type.DEPOSIT_ERROR -> {
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_ERROR_RETRY, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_ERROR_RETRY, mapOf())
             }
             CoinBaseResultDialog.Type.CONVERSION_ERROR -> {
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_RETRY, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_RETRY, mapOf())
             }
             CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR -> {
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_RETRY, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_RETRY, mapOf())
             }
             else -> {}
         }
@@ -135,22 +135,22 @@ class EnterTwoFaCodeViewModel @Inject constructor(
     fun logClose(type: CoinBaseResultDialog.Type) {
         when (type) {
             CoinBaseResultDialog.Type.DEPOSIT_SUCCESS -> {
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_SUCCESS_CLOSE, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_SUCCESS_CLOSE, mapOf())
             }
             CoinBaseResultDialog.Type.DEPOSIT_ERROR -> {
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_ERROR_CLOSE, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_ERROR_CLOSE, mapOf())
             }
             CoinBaseResultDialog.Type.CONVERSION_SUCCESS -> {
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SUCCESS_CLOSE, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SUCCESS_CLOSE, mapOf())
             }
             CoinBaseResultDialog.Type.CONVERSION_ERROR -> {
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_CLOSE, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_CLOSE, mapOf())
             }
             CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_SUCCESS_CLOSE, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_SUCCESS_CLOSE, mapOf())
             }
             CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR -> {
-                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_CLOSE, bundleOf())
+                analyticsService.logEvent(AnalyticsConstants.Coinbase.TRANSFER_ERROR_CLOSE, mapOf())
             }
             else -> {}
         }

@@ -18,8 +18,8 @@
 package org.dash.wallet.features.exploredash.ui.extensions
 
 import android.Manifest
-import android.content.pm.PackageManager
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.result.ActivityResultLauncher
@@ -28,80 +28,77 @@ import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.ui.ExploreTopic
+import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
+import org.dash.wallet.features.exploredash.utils.ExploreConfig
 
 val Fragment.isLocationPermissionGranted: Boolean
-    get() = listOf(Manifest.permission.ACCESS_FINE_LOCATION,
-                   Manifest.permission.ACCESS_COARSE_LOCATION
-    ).any {
-        ActivityCompat.checkSelfPermission(
-            requireContext(), it
-        ) == PackageManager.PERMISSION_GRANTED
-    }
-
-fun Fragment.registerPermissionLauncher(
-    onResult: (Boolean) -> Unit
-): ActivityResultLauncher<Array<String>> {
-    return registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()) { permissionResults ->
-            onResult.invoke(permissionResults.any { it.value })
+    get() =
+        listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION).any {
+            ActivityCompat.checkSelfPermission(requireContext(), it) == PackageManager.PERMISSION_GRANTED
         }
+
+fun Fragment.registerPermissionLauncher(onResult: (Boolean) -> Unit): ActivityResultLauncher<Array<String>> {
+    return registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissionResults ->
+        onResult.invoke(permissionResults.any { it.value })
+    }
 }
 
-fun Fragment.requestLocationPermission(
+suspend fun Fragment.requestLocationPermission(
     exploreTopic: ExploreTopic,
-    configuration: Configuration,
+    configuration: ExploreConfig,
     requestLauncher: ActivityResultLauncher<Array<String>>
 ) {
-    if (configuration.hasExploreDashLocationDialogBeenShown()) {
-        requestLauncher.launch(arrayOf(
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ))
+    val isLocationDialogShown = configuration.get(ExploreConfig.HAS_LOCATION_DIALOG_BEEN_SHOWN) ?: false
+
+    if (isLocationDialogShown) {
+        requestLauncher.launch(
+            arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
+        )
     } else {
         lifecycleScope.launch {
             val result = showPermissionExplainerDialog(exploreTopic)
 
             if (result == true) {
-                configuration.setHasExploreDashLocationDialogBeenShown(true)
-                requestLauncher.launch(arrayOf(
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ))
+                configuration.set(ExploreConfig.HAS_LOCATION_DIALOG_BEEN_SHOWN, true)
+                requestLauncher.launch(
+                    arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
+                )
             }
         }
     }
 }
 
 suspend fun Fragment.showPermissionExplainerDialog(exploreTopic: ExploreTopic): Boolean? {
-    val title = if (exploreTopic == ExploreTopic.Merchants) {
-        R.string.explore_merchant_location_explainer_title
-    } else {
-        R.string.explore_atm_location_explainer_title
-    }
+    val title =
+        if (exploreTopic == ExploreTopic.Merchants) {
+            R.string.explore_merchant_location_explainer_title
+        } else {
+            R.string.explore_atm_location_explainer_title
+        }
 
-    val message = if (exploreTopic == ExploreTopic.Merchants) {
-        R.string.explore_merchant_location_explainer_message
-    } else {
-        R.string.explore_atm_location_explainer_message
-    }
+    val message =
+        if (exploreTopic == ExploreTopic.Merchants) {
+            R.string.explore_merchant_location_explainer_message
+        } else {
+            R.string.explore_atm_location_explainer_message
+        }
 
-    val dialog = AdaptiveDialog.create(
-        R.drawable.ic_location,
-        getString(title),
-        getString(message),
-        getString(R.string.permission_deny),
-        getString(R.string.permission_allow)
-    )
+    val dialog =
+        AdaptiveDialog.create(
+            R.drawable.ic_location,
+            getString(title),
+            getString(message),
+            getString(R.string.permission_deny),
+            getString(R.string.permission_allow)
+        )
     return dialog.showAsync(requireActivity())
 }
 
-fun Fragment.runLocationFlow(
+suspend fun Fragment.runLocationFlow(
     exploreTopic: ExploreTopic,
-    configuration: Configuration,
+    configuration: ExploreConfig,
     requestLauncher: ActivityResultLauncher<Array<String>>
 ) {
     if (isLocationPermissionGranted) {
@@ -112,11 +109,12 @@ fun Fragment.runLocationFlow(
 }
 
 fun Fragment.openAppSettings() {
-    val intent = Intent().apply {
-        action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-        data = Uri.fromParts("package", requireContext().packageName, null)
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    }
+    val intent =
+        Intent().apply {
+            action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+            data = Uri.fromParts("package", requireContext().packageName, null)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
 
     startActivity(intent)
 }

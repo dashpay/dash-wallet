@@ -34,6 +34,7 @@ import de.schildbach.wallet.ui.username.CreateUsernameFragment
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class CreateUsernameActivity : InteractionAwareActivity() {

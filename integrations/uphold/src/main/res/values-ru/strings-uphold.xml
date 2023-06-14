@@ -2,6 +2,8 @@
 <resources>
 
     <string name="uphold_account">Uphold</string>
+    <string name="uphold_link_title">Привяжите ваш аккаунт Uphold</string>
+    <string name="uphold_transfer_details">С Uphold на ваш кошелёк Dash Wallet</string>
     <string name="uphold_buy_dash_activity_title">Купить/продать Dash с помощью Uphold</string>
     <string name="uphold_buy_dash_with_uphold">Купить Dash с помощью аккаунта Uphold</string>
     <string name="uphold_buy_dash_button">Купить Dash</string>

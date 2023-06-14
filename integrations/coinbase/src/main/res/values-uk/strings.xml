@@ -17,6 +17,9 @@
 <resources>
     <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >Останній відомий баланс</string>
+    <string name="coinbase_link_title">Прив’яжіть свій обліковий запис Coinbase</string>
+    <string name="coinbase_link">Прив’яжіть обліковий запис Coinbase</string>
+    <string name="coinbase_transfer_details">Між Dash Wallet і вашим Coinbase акаунтом</string>
     <string name="coinbase_dash_wallet_error_title">Ми не знайшли Dash Wallet у вашому обліковому записі Coinbase.</string>
     <string name="coinbase_dash_wallet_error_message">Щоб продовжити, створіть гаманець Dash на Coinbase.</string>
     <string name="create_dash_account">Створити обліковий запис Dash</string>
@@ -26,7 +29,6 @@
     <string name="disconnect_coinbase_account">ВІдключити обліковий запис Coinbase</string>
     <string name="receive_directly_into_dash_wallet">Отримуйте безпосередньо в Dash Wallet.</string>
     <string name="buy_dash">Купити Dash</string>
-    <string name="balance">Баланс:</string>
     <string name="balance_on_coinbase">Баланс на Coinbase</string>
     <string name="sending_to">Відправка</string>
     <string name="dash_wallet_device">Dash Wallet на цьому пристрої</string>
@@ -41,8 +43,11 @@
     <string name="cancel">Відміна</string>
     <string name="confirm_sec">Підтвердження (%s сек.)</string>
     <string name="confirm">Підтвердити</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_title">Ми не знайшли способів оплати.</string>
-    <string name="coinbase_dash_wallet_no_payment_methods_error_message">Щоб продовжити, оновіть свій обліковий запис Coinbase.</string>
+    <string name="coinbase_no_payment_methods_error_title">Ми не знайшли способів оплати.</string>
+    <string name="coinbase_no_payment_methods_error_message">Щоб продовжити, оновіть свій обліковий запис Coinbase.</string>
+    <string name="coinbase_unusable_payment_method_error_title">Цей спосіб оплати не можна використати.</string>
+    <string name="coinbase_unusable_payment_method_error_message">Дозвольте купувати за допомогою цього способу оплати у своєму обліковому записі Coinbase.</string>
+    <string name="coinbase_open_account">Відкрити Coindase акаунт</string>
     <string name="add_payment_method">Додати спосіб оплати</string>
     <string name="error">Помилка</string>
     <string name="cancel_transaction">Відмінити транзакцію?</string>
@@ -103,7 +108,6 @@
     <string name="invalid_code">Цей код був недійсним. Будь ласка спробуйте ще раз</string>
     <string name="verify_code">Підтвердити</string>
     <string name="you_dont_have_enough_balance">Ваш баланс недостатній</string>
-    <string name="transfer_dash">Переказати Dash</string>
     <string name="transfer_amount">Переказати</string>
     <string name="dash_wallet_limit_description">Сума перевищує ваш баланс</string>
     <string name="address_creation_failed">Нам не вдалося створити адресу для вашого облікового запису, щоб завершити транзакцію. Спробуйте пізніше.</string>

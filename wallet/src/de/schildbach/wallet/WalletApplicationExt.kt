@@ -21,10 +21,8 @@ package de.schildbach.wallet
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.util.concurrent.Executors
 
 object WalletApplicationExt {
@@ -33,11 +31,10 @@ object WalletApplicationExt {
      *
      * @param isWalletWipe This is true for Reset Wallet, false for Rescan Blockchain
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
     fun WalletApplication.clearDatabases(isWalletWipe: Boolean) {
-        val scope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
+        val scope = CoroutineScope(Dispatchers.IO)
 
-        scope.launch(Dispatchers.IO) {
+        scope.launch {
             platformSyncService.clearDatabases()
             if (isWalletWipe) {
                 transactionMetadataProvider.clear()

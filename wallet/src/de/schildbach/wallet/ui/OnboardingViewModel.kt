@@ -1,24 +1,24 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2019 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package de.schildbach.wallet.ui
 
 import android.app.Application
 import android.content.Intent
-import androidx.core.os.bundleOf
 import androidx.lifecycle.AndroidViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.InvitationLinkData
@@ -27,6 +27,7 @@ import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.util.SingleLiveEvent
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.script.Script
@@ -59,12 +60,15 @@ class OnboardingViewModel @Inject constructor(
     fun createNewWallet(onboardingInvite: InvitationLinkData?) {
         walletApplication.initEnvironmentIfNeeded()
         val wallet = WalletEx.createDeterministic(Constants.NETWORK_PARAMETERS, Script.ScriptType.P2PKH)
+        for (extension in walletApplication.getWalletExtensions()) {
+            wallet.addExtension(extension)
+        }
         log.info("successfully created new wallet")
         walletApplication.setWallet(wallet)
         walletApplication.configuration.armBackupSeedReminder()
 
         if (onboardingInvite != null) {
-            analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, mapOf())
             startActivityAction.call(AcceptInviteActivity.createIntent(getApplication(), onboardingInvite, true))
         } else {
             finishCreateNewWalletAction.call(Unit)

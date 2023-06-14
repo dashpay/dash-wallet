@@ -21,8 +21,8 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.main.WalletFragment
-import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
@@ -94,19 +94,19 @@ class WalletFragmentTest {
         }
 
         val walletFragment = spyk(WalletFragment())
-        mockkStatic(SendCoinsInternalActivity::class)
+        mockkStatic(SendCoinsActivity::class)
         val slot = slot<PaymentIntent>()
 
-        every { SendCoinsInternalActivity.start(any(), capture(slot)) } answers {
-            SendCoinsInternalActivity.start(mockk(), "", slot.captured, true, true)
+        every { SendCoinsActivity.start(any(), capture(slot)) } answers {
+            SendCoinsActivity.start(mockk(), "", slot.captured, true)
         }
-        every { SendCoinsInternalActivity.start(any(), capture(slot), any()) } answers {
-            SendCoinsInternalActivity.start(mockk(), "", slot.captured, true, true)
+        every { SendCoinsActivity.start(any(), capture(slot)) } answers {
+            SendCoinsActivity.start(mockk(), "", slot.captured, true)
         }
-        every { SendCoinsInternalActivity.start(any(), any(), capture(slot), any(), any()) } returns Unit
+        every { SendCoinsActivity.start(any(), any(), capture(slot), any()) } returns Unit
 
         walletFragment.handlePaste(dashAddress)
-        verify(exactly = 1) { SendCoinsInternalActivity.start(any(), any(), any(), any(), any()) }
+        verify(exactly = 1) { SendCoinsActivity.start(any(), any(), any(), any()) }
         assertEquals(dashAddress, slot.captured.address?.toBase58())
     }
 
@@ -120,28 +120,28 @@ class WalletFragmentTest {
         }
 
         val walletFragment = spyk(WalletFragment())
-        mockkStatic(SendCoinsInternalActivity::class)
+        mockkStatic(SendCoinsActivity::class)
         val slot = slot<PaymentIntent>()
 
-        every { SendCoinsInternalActivity.start(any(), capture(slot)) } answers {
-            SendCoinsInternalActivity.start(mockk(), "", slot.captured, true, true)
+        every { SendCoinsActivity.start(any(), capture(slot)) } answers {
+            SendCoinsActivity.start(mockk(), "", slot.captured, true)
         }
-        every { SendCoinsInternalActivity.start(any(), capture(slot), any()) } answers {
-            SendCoinsInternalActivity.start(mockk(), "", slot.captured, true, true)
+        every { SendCoinsActivity.start(any(), capture(slot)) } answers {
+            SendCoinsActivity.start(mockk(), "", slot.captured, true)
         }
-        every { SendCoinsInternalActivity.start(any(), any(), capture(slot), any(), any()) } returns Unit
+        every { SendCoinsActivity.start(any(), any(), capture(slot), any()) } returns Unit
 
         var request = "dash:${dashAddress}?amount=${amount}&cy=USD&local=96.20"
 
         walletFragment.handlePaste(request)
-        verify(exactly = 1) { SendCoinsInternalActivity.start(any(), any(), any(), any(), any()) }
+        verify(exactly = 1) { SendCoinsActivity.start(any(), any(), any(), any()) }
         assertEquals(dashAddress, slot.captured.address?.toBase58())
         assertEquals(Coin.parseCoin(amount.toString()), slot.captured.amount)
 
         request = "pay:${dashAddress}?amount=${amount}"
 
         walletFragment.handlePaste(request)
-        verify(exactly = 2) { SendCoinsInternalActivity.start(any(), any(), any(), any(), any()) }
+        verify(exactly = 2) { SendCoinsActivity.start(any(), any(), any(), any()) }
         assertEquals(dashAddress, slot.captured.address?.toBase58())
         assertEquals(Coin.parseCoin(amount.toString()), slot.captured.amount)
     }
@@ -228,7 +228,7 @@ class WalletFragmentTest {
         }
 
         mockkObject(AdaptiveDialog.Companion)
-        mockkStatic(SendCoinsInternalActivity::class)
+        mockkStatic(SendCoinsActivity::class)
         val mockedDialog = spyk(AdaptiveDialog(0))
         val walletFragment = spyk(WalletFragment())
 
@@ -242,13 +242,13 @@ class WalletFragmentTest {
             dialogCallbackSlot.captured.invoke(true)
         }
 
-        every { SendCoinsInternalActivity.start(any(), capture(paymentIntentSlot)) } answers {
-            SendCoinsInternalActivity.start(mockk(), "", paymentIntentSlot.captured, true, true)
+        every { SendCoinsActivity.start(any(), capture(paymentIntentSlot)) } answers {
+            SendCoinsActivity.start(mockk(), "", paymentIntentSlot.captured, true)
         }
-        every { SendCoinsInternalActivity.start(any(), capture(paymentIntentSlot), any()) } answers {
-            SendCoinsInternalActivity.start(mockk(), "", paymentIntentSlot.captured, true, true)
+        every { SendCoinsActivity.start(any(), capture(paymentIntentSlot)) } answers {
+            SendCoinsActivity.start(mockk(), "", paymentIntentSlot.captured, true)
         }
-        every { SendCoinsInternalActivity.start(any(), any(), capture(paymentIntentSlot), any(), any()) } returns Unit
+        every { SendCoinsActivity.start(any(), any(), capture(paymentIntentSlot), any()) } returns Unit
 
         var input = "some text $dashAddress some text"
         walletFragment.handlePaste(input)
@@ -256,7 +256,7 @@ class WalletFragmentTest {
         assertTrue(paymentIntentSlot.captured.shouldConfirmAddress)
         verify(exactly = 1) { AdaptiveDialog.Companion.custom(any(), any(), confirmDialogTitle, dashAddress, any(), any()) }
         assertEquals(dashAddress, paymentIntentSlot.captured.address?.toBase58())
-        verify(exactly = 1) { SendCoinsInternalActivity.start(any(), any(), any(), any(), any()) }
+        verify(exactly = 1) { SendCoinsActivity.start(any(), any(), any(), any()) }
 
         input = "dash:${dashAddress}?amount=234¤cy=USD&local=96.20" // Payment request with an error
         walletFragment.handlePaste(input)
@@ -264,6 +264,6 @@ class WalletFragmentTest {
         assertTrue(paymentIntentSlot.captured.shouldConfirmAddress)
         verify(exactly = 2) { AdaptiveDialog.Companion.custom(any(), any(), confirmDialogTitle, dashAddress, any(), any()) }
         assertEquals(dashAddress, paymentIntentSlot.captured.address?.toBase58())
-        verify(exactly = 2) { SendCoinsInternalActivity.start(any(), any(), any(), any(), any()) }
+        verify(exactly = 2) { SendCoinsActivity.start(any(), any(), any(), any()) }
     }
 }

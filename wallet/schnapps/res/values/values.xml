@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<string name="app_name">DashPay Krupnik</string>
-	<string name="app_name_short">DashPay [krupnik]</string>
+	<string name="app_name">DashPay Devnet</string>
+	<string name="app_name_short">DashPay [devnet]</string>
 
 	<string-array name="preferences_precision_values">
 		<item>8</item>

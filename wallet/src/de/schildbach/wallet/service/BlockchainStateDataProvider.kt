@@ -1,13 +1,32 @@
+/*
+ * Copyright 2023 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package de.schildbach.wallet.service
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.data.BlockchainStateDao
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.AbstractBlockChain
@@ -19,6 +38,7 @@ import org.bitcoinj.core.StoredBlock
 import org.bitcoinj.store.BlockStoreException
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.BlockchainState
 import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -56,6 +76,7 @@ class BlockchainStateDataProvider @Inject constructor(
         const val DAYS_PER_YEAR = 365.242199
         const val SECONDS_PER_DAY = 24 * 60 * 60
         val MASTERNODE_COST: Coin = Coin.valueOf(1000, 0)
+        const val MASTERNODE_COUNT = 3800
     }
 
     private val providerScope = CoroutineScope(
@@ -70,7 +91,7 @@ class BlockchainStateDataProvider @Inject constructor(
     }
 
     override fun observeState(): Flow<BlockchainState?> {
-        return blockchainStateDao.observeState()
+        return blockchainStateDao.observeState().distinctUntilChanged()
     }
 
     override fun getLastMasternodeAPY(): Double {
@@ -126,12 +147,18 @@ class BlockchainStateDataProvider @Inject constructor(
                     prevBlock = mnlist.storedBlock
                 }
 
+                val validMNsCount = if (mnlist.size() != 0) {
+                    mnlist.validMNsCount
+                } else {
+                    MASTERNODE_COUNT
+                }
+
                 if (prevBlock != null) {
                     val apy = getMasternodeAPY(
                         walletDataProvider.wallet!!.params,
                         mnlist.storedBlock.height,
                         prevBlock.header.difficultyTarget,
-                        mnlist.validMNsCount
+                        validMNsCount
                     )
                     configuration.prefsKeyCrowdNodeStakingApy = apy.toFloat()
                     return apy
@@ -238,7 +265,7 @@ class BlockchainStateDataProvider @Inject constructor(
      */
     private fun getEstimatedMasternodeAPY(): Double {
         val masternodeCount = when (walletDataProvider.networkParameters.id) {
-            NetworkParameters.ID_MAINNET -> 4200
+            NetworkParameters.ID_MAINNET -> MASTERNODE_COUNT
             NetworkParameters.ID_TESTNET -> 150
             else -> {
                 walletDataProvider.networkParameters.defaultMasternodeList.size

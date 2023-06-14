@@ -146,7 +146,6 @@
     <string name="buy_gift_card_text">Dash\'iniz ile hediye kartları satın alın</string>
     <string name="buy_gift_card_desc_text">Satın alma işleminizin tam tutarı için Dash\'ınızla hediye kartları satın alın.</string>
     <string name="learn_more_text">Daha fazla bilgi edin</string>
-    <string name="continue_text">Devam</string>
     <string name="buy_card_header_text">Hediye Kartı Nasıl Kullanılır</string>
     <string name="buy_card_desc_text">Tüm mağazalar DASH\'i doğrudan kabul etmez, ancak Dash\'inizle bir hediye kartı satın alabilirsiniz.</string>
     <string name="find_merchant_text">Bir tüccar bulun.</string>

@@ -22,7 +22,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     tools:parentTag="android.widget.LinearLayout"
-    tools:context="org.dash.wallet.features.exploredash.ui.ItemDetails">
+    tools:context="org.dash.wallet.features.exploredash.ui.explore.ItemDetails">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/buy_sell_container"
@@ -234,18 +234,51 @@
             </LinearLayout>
         </LinearLayout>
 
-        <Button
+        <TextView
+            android:id="@+id/login_dash_direct_user"
+            style="@style/Overline.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:visibility="gone"
+            android:paddingBottom="10dp"
+            tools:visibility="visible"
+            tools:text="@string/logged_in_as"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:layout_width="match_parent"
             android:id="@+id/pay_btn"
             style="@style/Button.Primary.Large.Blue"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            app:layout_goneMarginBottom="28dp"
             android:layout_marginTop="28dp"
-            android:layout_marginBottom="18dp"
-            android:drawableStart="@drawable/ic_dash"
-            android:drawableTint="@color/dash_white"
-            android:paddingStart="92dp"
-            android:paddingEnd="76dp"
-            android:text="@string/explore_pay_with_dash"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            android:orientation="horizontal"
+            android:layout_marginBottom="10dp"
+            app:layout_constraintBottom_toTopOf="@+id/login_dash_direct_user"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:id="@+id/pay_btn_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_dash_inverted"
+                app:tint="@color/dash_white"/>
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/pay_btn_txt"
+                 style="@style/Headline5.SemiBold.White"
+                android:textSize="14sp"
+                android:paddingStart="14dp"
+                android:text="@string/explore_buy_gift_card"
+                android:layout_width="wrap_content"
+                android:includeFontPadding="false"
+                android:layout_height="wrap_content" />
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </merge>

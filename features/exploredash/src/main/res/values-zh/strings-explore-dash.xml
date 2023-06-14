@@ -142,7 +142,6 @@
     <string name="buy_gift_card_text">使用Dash购买礼品卡</string>
     <string name="buy_gift_card_desc_text">使用Dash购买与您购物金额相等的礼品卡.</string>
     <string name="learn_more_text">了解更多</string>
-    <string name="continue_text">继续</string>
     <string name="buy_card_header_text">如何使用礼品卡</string>
     <string name="buy_card_desc_text">并非所有商店都直接接受Dash支付, 但您可以使用Dash购买礼品卡.</string>
     <string name="find_merchant_text">查找商户.</string>

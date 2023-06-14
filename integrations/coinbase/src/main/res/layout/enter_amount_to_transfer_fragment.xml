@@ -25,7 +25,7 @@
     android:background="@color/background_primary"
     tools:context=".ui.EnterAmountToTransferFragment">
 
-    <org.dash.wallet.common.ui.vertical_segmented_picker.VerticalSegmentedPicker
+    <org.dash.wallet.common.ui.segmented_picker.VerticalSegmentedPicker
         android:id="@+id/currency_options"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -73,7 +73,7 @@
 
         <Button
             android:id="@+id/max_button"
-            style="@style/Button.Secondary.Small.Round"
+            style="@style/Button.Primary.Small.Round"
             android:layout_width="34dp"
             android:layout_height="34dp"
             android:text="@string/max"
